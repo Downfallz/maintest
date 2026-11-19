@@ -117,17 +117,22 @@ test('the practice briefing shares the concept card\'s frame and title step, in 
   assert.doesNotMatch(css, /#practice-brief h2 \{/);
 });
 
-// #869: the coach's window and the opponent's card, beside the briefing, write their colours in the same tokens.
-test('the coach\'s window and the opponent\'s card name no raw colour', () => {
+// #869, #895: the coach's window, the opponent's card and the header's chip, beside the briefing, write their colours
+// in the same tokens.
+test('the coach\'s window, the opponent\'s card and its chip name no raw colour', () => {
   const css = read('table/battle.css');
-  // The card's own rules; its medallion, shared with the header's chip, is a portrait and keeps its colours.
-  const card = /\.coach\b|#opponent-dialog|\.opponent-(?:head|rank|note|ladder)|#opponent-(?:problem|close|friend|react)/;
-  const rules = [...css.matchAll(/^([^{}\n@]*)\{([^}]*)\}/gm)].filter(([, selector]) => card.test(selector) && !/opponent-avatar/.test(selector));
+  // The round's own rules that only ask whether the chip shows are the round's, not the chip's.
+  const card = /\.coach\b|#opponent-|\.opponent-/;
+  const rules = [...css.matchAll(/^([^{}\n@]*)\{([^}]*)\}/gm)].filter(([, selector]) => card.test(selector) && !/\.round\b/.test(selector));
   assert.ok(rules.filter(([, selector]) => /\.coach\b/.test(selector)).length >= 8, 'the coach\'s rules');
-  for (const name of ['#opponent-dialog {', '#opponent-dialog::backdrop {', '.opponent-head .eyebrow {', '.opponent-rank {', '.opponent-note {', '#opponent-problem {', '#opponent-close {']) {
+  for (const name of ['#opponent-dialog {', '#opponent-dialog::backdrop {', '.opponent-head .eyebrow {', '.opponent-rank {', '.opponent-note {', '#opponent-problem {', '#opponent-close {',
+    '.opponent-chip {', '.opponent-chip:hover {', '.opponent-avatar {', '.opponent-vs {', '.opponent-badge {', '.opponent-heart {', ':is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar {']) {
     assert.ok(rules.some(([whole]) => whole.trimStart().startsWith(name)), name);
   }
-  for (const [, selector, body] of rules) assert.doesNotMatch(body, /#[0-9a-f]{3,8}\b/i, `${selector.trim()} names a raw colour`);
+  // The medallion's gradients are a portrait and keep their colours (the owner, #895); its rings and letter do not.
+  const portrait = /background: radial-gradient\([^;]*\);/;
+  for (const [, selector, body] of rules) assert.doesNotMatch(body.replace(portrait, ''), /#[0-9a-f]{3,8}\b/i, `${selector.trim()} names a raw colour`);
+  assert.equal(rules.filter(([, selector, body]) => /opponent-avatar/.test(selector) && portrait.test(body)).length, 2, 'the two portraits');
   // A refusal reads in the refused colour, as everywhere else.
   assert.match(css, /#opponent-problem \{[^}]*color: var\(--refused\)/);
 });

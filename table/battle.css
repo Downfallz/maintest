@@ -1152,20 +1152,20 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 #battle .hud-top { container: hud / inline-size; }
 /* The round never gives up its number to the chip: the chip's name shortens instead. */
 #battle .hud-top:has(#opponent-open:not([hidden])) .round { flex: none; margin-right: 0; }
-.opponent-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 44px; max-width: 300px; min-height: 44px; margin: 0 auto 0 14px; padding: 3px 12px 3px 3px; border: 1px solid #d98b6f55; border-radius: var(--radius-sharp); background: linear-gradient(90deg, #d98b6f26, #d98b6f08 70%); color: #f2eee2; font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
-.opponent-chip:hover { border-color: #d98b6faa; background: linear-gradient(90deg, #d98b6f3a, #d98b6f12 70%); }
+.opponent-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 44px; max-width: 300px; min-height: 44px; margin: 0 auto 0 14px; padding: 3px 12px 3px 3px; border: 1px solid color-mix(in srgb, var(--brand-ember) 33%, transparent); border-radius: var(--radius-sharp); background: linear-gradient(90deg, color-mix(in srgb, var(--brand-ember) 15%, transparent), color-mix(in srgb, var(--brand-ember) 3%, transparent) 70%); color: var(--ink); font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
+.opponent-chip:hover { border-color: color-mix(in srgb, var(--brand-ember) 67%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--brand-ember) 23%, transparent), color-mix(in srgb, var(--brand-ember) 7%, transparent) 70%); }
 .opponent-chip:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .opponent-chip[hidden] { display: none; }
-.opponent-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 2px #0c181c, 0 0 0 3px #d98b6f88; background: radial-gradient(circle at 35% 30%, #f0b48a, #a2533a); color: #1a1d1a; font: 700 15px/1 var(--font-display); }
-:is(.opponent-chip, #opponent-dialog)[data-kind="bot"] .opponent-avatar { box-shadow: 0 0 0 2px #0c181c, 0 0 0 3px #7f948a; background: radial-gradient(circle at 35% 30%, #8ea79c, #3c4d47); color: #e6f0ea; font-family: system-ui, sans-serif; }
-:is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar { box-shadow: 0 0 0 2px #0c181c, 0 0 0 3px #52695e; background: #24343a; color: #aebbb4; }
+.opponent-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 0 0 2px var(--soot), 0 0 0 3px color-mix(in srgb, var(--brand-ember) 53%, transparent); background: radial-gradient(circle at 35% 30%, #f0b48a, #a2533a); color: var(--accent-ink); font: 700 15px/1 var(--font-display); }
+:is(.opponent-chip, #opponent-dialog)[data-kind="bot"] .opponent-avatar { box-shadow: 0 0 0 2px var(--soot), 0 0 0 3px var(--muted); background: radial-gradient(circle at 35% 30%, #8ea79c, #3c4d47); color: var(--ink); font-family: system-ui, sans-serif; }
+:is(.opponent-chip, #opponent-dialog)[data-kind="waiting"] .opponent-avatar { box-shadow: 0 0 0 2px var(--soot), 0 0 0 3px var(--line); background: var(--raised); color: var(--muted); }
 .opponent-text { display: grid; min-width: 0; line-height: 1.1; text-align: left; }
-.opponent-vs { color: #d98b6f; font: 800 8px/1.2 system-ui, sans-serif; letter-spacing: .2em; }
+.opponent-vs { color: var(--brand-ember); font: 800 8px/1.2 system-ui, sans-serif; letter-spacing: .2em; }
 #opponent-name { overflow: hidden; max-width: 170px; font: 15px/1.2 var(--font-display); white-space: nowrap; text-overflow: ellipsis; }
-.opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; background: #0c181ccc; color: #f6e7c4; font: 800 10px/1.5 system-ui, sans-serif; }
+.opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; background: color-mix(in srgb, var(--soot) 80%, transparent); color: var(--ink); font: 800 10px/1.5 system-ui, sans-serif; }
 .opponent-badge[hidden], .opponent-heart[hidden] { display: none; }
-.opponent-chip[data-kind="bot"] .opponent-badge { border-color: #7f948a; color: #cfe0d7; }
-.opponent-heart { flex: none; color: #ef7a6c; font-size: 15px; line-height: 1; text-shadow: 0 0 6px #ef7a6c66; }
+.opponent-chip[data-kind="bot"] .opponent-badge { border-color: var(--muted); color: var(--ink); }
+.opponent-heart { flex: none; color: var(--enemy); font-size: 15px; line-height: 1; text-shadow: 0 0 6px color-mix(in srgb, var(--enemy) 40%, transparent); }
 @container hud (max-width: 760px) {
   .opponent-chip { gap: 6px; margin-left: 10px; padding-right: 10px; }
   #opponent-name { max-width: 110px; font-size: 14px; }
