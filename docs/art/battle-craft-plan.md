@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC7 are built; BC8 is next.
+Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC8 are built; BC9 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -327,6 +327,42 @@ that extends it.
    - Frame time is not measured: BC10. The `pulse` is used once in this family, on Devour's caster.
 8. **BC8, the elemental, astral and necromantic spells.** 14 stagings, the blood cost and the wards among them.
    Same tests.
+
+   *Built (2026-11-19)*: the 14 stagings, each with its storyboard ([elemental](storyboards/elemental.md),
+   [astral](storyboards/astral.md), [necromantic](storyboards/necromantic.md)) and its `staging` in
+   `data/presentation/spell-art.json`, filmed before and after and read by the designer. All 44 entries are staged.
+
+   - On the ladder as BC6 left it: 2 spells at Stage I (4 beats), 6 at Stage II (6 or 7), 6 at Stage III (9 or
+     10). The necromantic family has no Stage I spell. `studio/staging-ladder.test.js` now holds every family.
+   - Each spell has one signature a player could name: Shock's crackle, Ice Grip's shards at the legs, Emberstorm's
+     three flares, Incinerate's charge and burst, Deep Freeze's shards closing in and its ring; Revitalize's rise,
+     Vital Echo's second wave, Whisper's low mist, Renewal Burst's burst and the family's one halo, Void Pulse's
+     pieces drawn in; Bonewall's bone rising from the feet, Infestation's swarm that settles, Wraithguard's
+     standing rings, Death Wail's arcs going through.
+   - The blood cost has one look in the four necromantic spells: red drops leaving the caster in the windup, 6, 8
+     or 14 by the price, before the scene's own wound. A Stage III spell lights its caster red first, and again at
+     home. Wraithguard carries the price along the ground to each ally.
+   - A ward does not shake the view and has no halo: bone for Bonewall, the family's blue-green ring standing at
+     the feet for Wraithguard. The tight ring that lingers at the feet stays the stun's in every family (Deep
+     Freeze), a slow has none (Ice Grip), and blood stays a Bleed, even from fire or the void.
+   - The bench gave a caster who pays in blood the wound alone, so a ward cast on oneself was filmed without its
+     ward. A caster among its own recipients now receives the spell too (`benchFrame`, `table/battle-bench.js`).
+   - The pass ran two rounds. The designer's first reading asked for 37 changes (8, 14 and 15 by family), nearly all
+     of three causes: a beat in the windup nobody could see, soft dots piled in one cloud, a trail too short to
+     show. They were made and the spells filmed again. The designer read the second films and the data was not
+     changed after them: what they still found is under each storyboard's **Left**.
+
+   Left:
+
+   - The choices under each storyboard's **Left** wait for the owner, with the sheets.
+   - A trail that is not a projectile's eases in and its pieces live half its length at most, so the line from a
+     caster to an ally hardly shows (Revitalize, Vital Echo, Renewal Burst, Incinerate). A change to the kit.
+   - Still short on the second films: Ice Grip's shards clump under the crystal, Bonewall's stay inside the
+     figure, Infestation's Bleed is lost under its own light, Renewal Burst's sparks of energy and its halo are
+     hard to pick out, the column that says regeneration does not climb.
+   - Not built, though the craft book had named them for this stage: Shock's arc redrawn with a flicker, a slow
+     push of the camera on a Stage III spell, a dark of its own for the void, a chain from one target to the next.
+   - Frame time is not measured: BC10. The `pulse` is used once in these families, on Renewal Burst's target.
 9. **BC9, the ground.** Parallax on the horizon plates, fog and embers, the eclipse's light answering a cast.
    Tests: nothing moves under reduced motion; a hidden tab stops the emitters; the art budget holds.
 10. **BC10, acceptance.** Frame time under the browser's CPU throttle at phone size for every staging, the budgets,

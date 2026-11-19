@@ -118,7 +118,10 @@ export function benchFrame({ entry, actor, targets, stage, outcome = 'played', w
   });
   const paid = Boolean(wound && caster);
   const recipients = paid && !known.includes(actor) ? [...known, actor] : known;
-  const effects = paid ? [{ creature: actor, text: 'Blood cost', tone: 'harm', wound: true }] : [];
+  // A caster among its own recipients received the spell as well as its cost: with the wound alone, the scene
+  // draws the cost and nothing of the spell on it.
+  const own = paid && known.includes(actor) ? [{ creature: actor, text: '', tone: 'neutral' }] : [];
+  const effects = paid ? [{ creature: actor, text: 'Blood cost', tone: 'harm', wound: true }, ...own] : [];
   return { ...frame, cue: { kind: struck.length || paid ? 'strike' : 'pulse',
     visual: { family: entry.family, motif: entry.motif, delivery: entry.delivery, ...(entry.staging ? { staging: entry.staging } : {}) },
     recipients, contact, struck, effects, changes, roll: null } };

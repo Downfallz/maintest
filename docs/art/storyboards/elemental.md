@@ -23,6 +23,15 @@ The two spells of Cataclysm are told apart by shape before colour: Incinerate is
 target, Deep Freeze is cold that closes in on it and holds. Stormborn's two are told apart the same way: Ice Grip
 grasps from the ground, Emberstorm flares on three figures at once.
 
+The pass (2026-11-19) ran two rounds. The designer read the first films of all five against these storyboards and
+asked for 8 changes, with three causes. Particles too few or too faint did not show on a body or beside it (Shock's
+crackle, Emberstorm's windup sparks and its beads, Incinerate's gather and charge). A trail that eases in never left
+the caster before the contact (Incinerate's trail, Deep Freeze's crack). A burst from one point piled into one blob
+(Ice Grip's grip). The second films showed six of them made: Emberstorm agrees, Deep Freeze agrees, and three things
+are still short: Ice Grip's shards still stand in one clump, Incinerate's trail is a quarter of the way to b1 at
+780 ms, Shock's crackle is gone by 1320 ms. The designer read the second films; the data was not changed after them.
+The coded rows below are the stagings as built, and each spell's **Left** holds what a later pass would change.
+
 ## Shock (`spell:lightning_bolt:v1`)
 
 ### Intent
@@ -79,10 +88,12 @@ node scripts/battle/filmstrip.mjs spell:lightning_bolt:v1 --actor a1 --targets b
 ```
 
 - 0 to 780 ms (contact): no staged particle or light anywhere; only the scene's charge circle on a1 early.
-- 840 and 900 ms: the arc from a1 to b1; b1 filled flat in bone; blue sparks above a1's head, short.
-- 960 ms: blue sparks around b1, some past its outline, none reaching b2; the arc jagged, not a smooth curve.
-- 1080 to 1380 ms: the arc still drawn; a few small blue sparks on b1's body and just past its outline, visible on
-  every frame to 1380 ms, none on b2.
+- 840 and 900 ms: the arc from a1 to b1; b1 filled flat in bone. 900 ms: short blue sparks on a1's back, where the
+  arc leaves it.
+- 960 and 1020 ms: blue sparks around b1, some past its outline, none reaching b2; the arc jagged, not a smooth
+  curve, ending in a small circle on b1's chest.
+- 1080 to 1260 ms: the arc still drawn; a few small blue sparks on b1's belly at the arc's end, on every frame. 1320
+  ms: one or two, faint; 1380 ms: none. None on b2.
 - 1440 ms (whole): the arc faint. 1680 ms (whole) and every frame after: no effect object on the field.
 - b2 and b3 are not lit, moved or marked on any frame. Nothing in the effect is gold.
 
@@ -94,6 +105,8 @@ The sheets cannot show the stop, the flicker at full speed, or the sound.
   twice. The arc is the motif.
 - The sparks off a1's head stand for "the fractured skull": a beat on a caster sits at its home ([biological.md](biological.md)'s
   open point), so the sparks may show over the back rather than the skull. A point on the skull is a kit change.
+- The crackle reads to 1260 ms, not to the arc's end: on the second film, at 10 sparks and strength 0.35, the last
+  frames show one spark or none. A later pass: count 14, strength 0.45 (*house*), the film to check 1380 ms.
 - The craft book's chain entry is about an arc between targets; Shock uses its drawing for one jump only. No chain
   to a second figure exists in the kit, and Shock strikes one.
 
@@ -156,10 +169,12 @@ node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a1 --targets b1 --d
 
 - 0 to 780 ms (contact): no staged particle or light; only the scene's charge circle on a1 early.
 - 840 and 900 ms: b1 filled flat in bone, a blue light over it.
-- 960 to 1140 ms: blue shards standing up from the ground at b1's legs, apart from each other across the width of
-  its ground ring, pointing up, none above its back; the crystal on b1's chest above them, not covered.
+- 960 to 1140 ms: blue shards standing up at b1's legs, pointing up, none above its back; but in one tight clump
+  under the crystal, about a third of the width of its ground ring, crossing the crystal's lower arm at 1020 and
+  1080 ms (see **Left**).
 - 1080 ms: no hard light left on b1; a soft blue light low on its legs.
-- 1200 to 1380 ms: pale blue dots on b1's legs and belly, not over its head; no ring on the ground at its feet.
+- 1200 to 1440 ms: two or three soft pale blue spots at b1's feet, on its ground ring, not over its body or head;
+  not a closed ring.
 - 1440 ms (whole): the crystal faded, the frost still low. 1920 ms (whole) and every frame after: no effect object.
 - Set beside Deep Freeze's sheet at 1200 ms: Ice Grip has dots low on b1 and no ring; Deep Freeze a ring at the feet.
 - b2 and b3 are not lit, moved or marked on any frame. Nothing in the effect is gold.
@@ -170,8 +185,12 @@ The sheets cannot show the stop, the feel at full speed, or the sound.
 
 - The slow is drawn as frost clinging low, chosen over a ring at the feet: the ring is the stun's in every family, and
   initiative lowered is not a stun. The owner may refuse; a slow of its own (a look that drags) would be a kit change.
-- The shards spring up from the ground (*house*, `level feet`, `direction up`). If the film shows them inside the
-  body rather than around the legs, the reach goes up before the count.
+- The shards spring up from the ground (*house*, `level feet`, `direction up`). The second film, at spread 100 and
+  reach 200, still shows one clump a third of the ground ring wide, over the crystal's lower arm. A later pass:
+  spread 160, reach 280 (*house*); if they still clump, a burst that starts from points across the ground ring is
+  a kit change, and the grip waits for it.
+- The frost lies on the ground at the feet, not on the legs: at reach 60 the dots barely rise. Spots, not a closed
+  ring, so it is not Deep Freeze's pin; a later pass raises its reach to 120 (*house*) so it climbs the legs.
 - No windup beat: "a cold grasp" happens at the victim, and the Stage II band allows none.
 
 ## Emberstorm (`spell:meteor:v1`)
@@ -235,12 +254,13 @@ node scripts/battle/filmstrip.mjs spell:meteor:v1 --actor a1 --targets b1,b2,b3 
   --frames 24 --interval 60 --columns 6 --out <folder>/emberstorm-contact.png
 ```
 
-- 360 to 720 ms (contact): warm sparks rising off a1, above its back and clear of its gold outline, on at least
-  three frames; none past the middle of the field. 840 ms: none.
+- 480 to 660 ms (contact): small pale warm sparks rising off a1, above its back and clear of its gold outline, on
+  four frames; none at 360, 420 or 720 ms; none past the middle of the field. 840 ms: none.
 - 840 and 900 ms: b1, b2 and b3 filled flat in bone, a warm light on each.
 - 960 to 1140 ms: warm sparks around each of the three, the same on each; none reaching a neighbour's body; the
   tongues upright on each, not covered.
-- 1200 to 1440 ms: warm motes rising slowly over each; a few deep red beads on each body, not pink, not orange.
+- 1200 to 1380 ms: warm motes rising slowly over each; a few deep red smudges on each body, behind the tongues,
+  red, not pink, not orange.
 - 1680 ms (whole): at most a bead or a mote. 1920 ms (whole) and every frame after: no effect object on the field.
 - Set beside Incinerate's sheet at 960 ms: Emberstorm's sparks are short and alike on three; Incinerate's one burst
   is larger and clears b1's body.
@@ -320,10 +340,11 @@ node scripts/battle/filmstrip.mjs spell:engulfing_flames:v1 --actor a1 --targets
   --frames 24 --interval 60 --columns 6 --out <folder>/incinerate-contact.png
 ```
 
-- 240 to 660 ms (contact): warm motes on a ring around a1, outside its gold outline at 300 ms, closing on it; none
-  left by 720 ms.
-- 480 to 720 ms: a warm light on a1, its body visibly warmer than at 420 ms. 720 to 780 ms: warm dots in the gap
-  between a1 and b1, at 780 ms past the middle of the field, the leading ones nearest b1.
+- 360 to 540 ms (contact): warm motes around a1, outside its gold outline at 360 ms, on its edge at 420 ms, inside
+  it at 540 ms; none at 300 ms.
+- 540 to 660 ms: a warm light on a1, its body visibly warmer than at 420 ms.
+- 720 ms: a column of warm dots rising inside a1's body. 780 ms: the dots just above a1's back, the head about a
+  quarter of the way to b1 (b1 stands straight above a1 in this layout; see **Left**).
 - 840 and 900 ms: b1 filled flat in bone under a hard warm light wider than its body; no dot left in the gap.
 - 960 to 1140 ms: warm sparks all around b1, the outer ones clearly past its outline, toward b2 but not on it; the
   tongues on b1, not hidden.
@@ -347,7 +368,10 @@ The sheets cannot show the stop, the weight of the shake, or the sound.
 - The gather draws motes, not sparks: the family's motes are heat, and heat drawn in is the charge. Chosen after the
   first film, where ember sparks were lost on a1's warm body; the owner may prefer sparks, then the kit's spark
   needs to be drawn larger.
-- The trail eases in, so its head crosses most of the gap in its last 150 ms; the film checks it at 780 ms.
+- The trail eases in, so its head crosses most of the gap in its last 150 ms. Started at 440 ms after the first
+  film, it now leaves a1's body by 780 ms, but its head is a quarter of the way to b1 there, and the flash hides
+  the rest. Starting it earlier again buys little: a later pass needs a trail that does not ease in (linear or
+  easing out), a kit change, then the film checks the head past the middle at 780 ms.
 
 ## Deep Freeze (`spell:ice_spear:v1`)
 
@@ -415,15 +439,16 @@ node scripts/battle/filmstrip.mjs spell:ice_spear:v1 --actor a1 --targets b1 --d
   --frames 24 --interval 60 --columns 6 --out <folder>/deep-freeze-contact.png
 ```
 
-- 120 to 480 ms (contact): blue shards on a ring around a1, outside its outline at 240 ms, closing on it; none left
+- 240 to 480 ms (contact): blue shards on a ring around a1, outside its outline at 240 ms, closing on it; none left
   by 540 ms.
-- 300 to 540 ms: a soft blue light on a1.
-- 600 to 780 ms: blue shards lying on the ground, a line from a1 toward b1 that can be followed by eye, its head a
-  step nearer b1 on each frame; nothing in the air above the line.
+- 360 to 480 ms: a soft blue light on a1.
+- 660 to 780 ms: blue shards in a line from a1 toward b1 that can be followed by eye, its head a step nearer b1 on
+  each frame, near the middle of the gap at 780 ms. b1 stands straight above a1 in this layout, so the line on the
+  ground runs over a1's back on the sheet: the sheet cannot tell ground from air here.
 - 840 and 900 ms: b1 filled flat in bone under a hard blue light; blue shards on a wide ring around b1.
 - 960 to 1140 ms: the shards nearer b1 on each frame, none going outward; the crystal on b1's chest, not hidden.
 - 1080 to 1380 ms: a tight blue ring on the ground at b1's feet, about as wide as its ground ring, never past it; a
-  few small shards closing on b1 from 1200 ms.
+  few small shards closing on b1 from 1200 ms, faint.
 - 1440 to 1680 ms (whole): the ring faint at b1's feet; the crystal fading. 2160 ms (whole) and every frame after: no
   effect object on the field.
 - Set beside Ice Grip's at 1200 ms: Deep Freeze a ring at the feet, Ice Grip none; beside Incinerate's at 960 ms, the
