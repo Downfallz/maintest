@@ -28,7 +28,15 @@
   "spell:bone_ward:v1": {
     "family": "necromantic",
     "motif": "bones",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "burst", "at": 420, "lasts": 340, "on": "caster", "count": 6, "shape": "dot", "tint": "blood", "direction": "up", "spread": 90, "reach": 150, "strength": 0.45, "blend": "normal" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "burst", "at": 840, "lasts": 420, "on": "target", "count": 14, "shape": "shard", "tint": "bone", "direction": "up", "spread": 60, "reach": 220, "strength": 0.25, "blend": "normal", "level": "feet" },
+      { "beat": "burst", "at": 860, "lasts": 380, "on": "target", "count": 8, "shape": "dot", "tint": "bone", "direction": "out", "spread": 360, "reach": 220, "strength": 0.4, "blend": "normal", "level": "feet" },
+      { "beat": "flow", "at": 900, "lasts": 700, "on": "target", "count": 10, "shape": "shard", "tint": "bone", "direction": "up", "spread": 40, "reach": 180, "strength": 0.2, "blend": "normal", "level": "feet" },
+      { "beat": "glow", "at": 900, "lasts": 600, "on": "target", "tint": "bone", "reach": 220, "strength": 0.4, "blend": "screen" }
+    ]
   },
   "spell:chain_slash:v1": {
     "family": "physical",
@@ -49,7 +57,19 @@
   "spell:crazed_specter:v1": {
     "family": "necromantic",
     "motif": "spirits",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "glow", "at": 160, "lasts": 440, "on": "caster", "tint": "blood", "reach": 200, "strength": 0.6, "blend": "screen" },
+      { "beat": "burst", "at": 360, "lasts": 340, "on": "caster", "count": 14, "shape": "dot", "tint": "blood", "direction": "up", "spread": 120, "reach": 180, "strength": 0.45, "blend": "normal" },
+      { "beat": "gather", "at": 480, "lasts": 360, "on": "caster", "count": 12, "shape": "spark", "tint": "family", "reach": 300, "strength": 0.25, "blend": "add" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "shake", "at": 840, "strength": 0.3 },
+      { "beat": "glow", "at": 840, "lasts": 280, "on": "target", "tint": "family", "reach": 260, "strength": 0.75, "blend": "add" },
+      { "beat": "glow", "at": 840, "lasts": 480, "on": "target", "shape": "ring", "tint": "family", "direction": "along", "spread": 140, "reach": 320, "strength": 0.7, "blend": "screen" },
+      { "beat": "burst", "at": 900, "lasts": 420, "on": "target", "count": 14, "shape": "spark", "tint": "family", "direction": "along", "spread": 50, "reach": 400, "strength": 0.3, "blend": "add" },
+      { "beat": "flow", "at": 1100, "lasts": 900, "on": "target", "count": 8, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 110, "strength": 0.45, "blend": "normal" },
+      { "beat": "glow", "at": 1500, "lasts": 500, "on": "caster", "tint": "blood", "reach": 160, "strength": 0.4, "blend": "screen" }
+    ]
   },
   "spell:crushing_stomp:v1": {
     "family": "physical",
@@ -72,7 +92,18 @@
   "spell:engulfing_flames:v1": {
     "family": "elemental",
     "motif": "fire",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "gather", "at": 240, "lasts": 480, "on": "caster", "count": 14, "shape": "spark", "tint": "ember", "reach": 260, "strength": 0.3, "blend": "add" },
+      { "beat": "glow", "at": 480, "lasts": 300, "on": "caster", "tint": "ember", "reach": 180, "strength": 0.5, "blend": "screen" },
+      { "beat": "trail", "at": 600, "lasts": 240, "on": "target", "count": 16, "shape": "dot", "tint": "ember", "strength": 0.4, "blend": "add" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "glow", "at": 840, "lasts": 280, "on": "target", "tint": "ember", "reach": 240, "strength": 0.9, "blend": "add" },
+      { "beat": "shake", "at": 840, "lasts": 160, "strength": 0.3 },
+      { "beat": "burst", "at": 860, "lasts": 420, "on": "target", "count": 24, "shape": "spark", "tint": "ember", "direction": "out", "spread": 360, "reach": 320, "strength": 0.3, "blend": "add" },
+      { "beat": "flow", "at": 1000, "lasts": 900, "on": "target", "count": 14, "shape": "dot", "tint": "ember", "direction": "up", "spread": 40, "reach": 160, "strength": 0.45, "blend": "screen" },
+      { "beat": "glow", "at": 1100, "lasts": 700, "on": "target", "tint": "ember", "reach": 160, "strength": 0.35, "blend": "screen" }
+    ]
   },
   "spell:enraged_charge:v1": {
     "family": "physical",
@@ -104,7 +135,15 @@
   "spell:frostbite:v1": {
     "family": "elemental",
     "motif": "ice",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 800 },
+      { "beat": "glow", "at": 840, "lasts": 260, "on": "target", "tint": "family", "reach": 170, "strength": 0.6, "blend": "add" },
+      { "beat": "shake", "at": 840, "lasts": 120, "strength": 0.1 },
+      { "beat": "burst", "at": 900, "lasts": 360, "on": "target", "count": 10, "shape": "shard", "tint": "family", "direction": "up", "spread": 50, "reach": 140, "strength": 0.25, "blend": "normal", "level": "feet" },
+      { "beat": "flow", "at": 1000, "lasts": 900, "on": "target", "count": 10, "shape": "dot", "tint": "family", "direction": "up", "spread": 60, "reach": 60, "strength": 0.45, "blend": "screen", "level": "feet" },
+      { "beat": "glow", "at": 1000, "lasts": 900, "on": "target", "tint": "family", "reach": 140, "strength": 0.35, "blend": "screen", "level": "feet" }
+    ]
   },
   "spell:full_plate:v1": {
     "family": "physical",
@@ -150,7 +189,16 @@
   "spell:healing_screech:v1": {
     "family": "astral",
     "motif": "vital",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "gather", "at": 360, "lasts": 400, "on": "caster", "count": 10, "shape": "dot", "tint": "family", "reach": 240, "strength": 0.45, "blend": "add" },
+      { "beat": "trail", "at": 840, "lasts": 200, "count": 8, "shape": "dot", "tint": "family", "strength": 0.5, "blend": "add" },
+      { "beat": "motif", "at": 1040, "lasts": 900 },
+      { "beat": "glow", "at": 1040, "lasts": 360, "on": "target", "tint": "family", "reach": 220, "strength": 0.45, "blend": "screen" },
+      { "beat": "burst", "at": 1040, "lasts": 400, "on": "target", "count": 10, "shape": "dot", "tint": "family", "direction": "up", "spread": 50, "reach": 260, "strength": 0.45, "blend": "add" },
+      { "beat": "glow", "at": 1440, "lasts": 500, "on": "target", "shape": "ring", "tint": "family", "reach": 200, "strength": 0.35, "blend": "screen" },
+      { "beat": "flow", "at": 1440, "lasts": 540, "on": "target", "count": 10, "shape": "dot", "tint": "family", "direction": "up", "spread": 30, "reach": 200, "strength": 0.4, "blend": "add", "level": "feet" }
+    ]
   },
   "spell:heavy_strike:v1": {
     "family": "physical",
@@ -164,7 +212,18 @@
   "spell:ice_spear:v1": {
     "family": "elemental",
     "motif": "ice",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "gather", "at": 120, "lasts": 400, "on": "caster", "count": 12, "shape": "shard", "tint": "family", "reach": 260, "strength": 0.25, "blend": "add" },
+      { "beat": "glow", "at": 240, "lasts": 360, "on": "caster", "tint": "family", "reach": 170, "strength": 0.5, "blend": "screen" },
+      { "beat": "trail", "at": 520, "lasts": 320, "on": "target", "count": 14, "shape": "shard", "tint": "family", "strength": 0.2, "blend": "add", "level": "feet" },
+      { "beat": "motif", "at": 840, "lasts": 1000 },
+      { "beat": "glow", "at": 840, "lasts": 300, "on": "target", "tint": "family", "reach": 200, "strength": 0.8, "blend": "add" },
+      { "beat": "shake", "at": 840, "lasts": 120, "strength": 0.15 },
+      { "beat": "gather", "at": 840, "lasts": 360, "on": "target", "count": 20, "shape": "shard", "tint": "family", "reach": 320, "strength": 0.3, "blend": "add" },
+      { "beat": "glow", "at": 1000, "lasts": 1000, "on": "target", "shape": "ring", "tint": "family", "reach": 130, "strength": 0.6, "blend": "screen" },
+      { "beat": "gather", "at": 1200, "lasts": 400, "on": "target", "count": 8, "shape": "shard", "tint": "family", "reach": 170, "strength": 0.2, "blend": "screen" }
+    ]
   },
   "spell:infectious_blast:v1": {
     "family": "biological",
@@ -198,12 +257,27 @@
   "spell:lightning_bolt:v1": {
     "family": "elemental",
     "motif": "arc",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "motif", "at": 840, "lasts": 700 },
+      { "beat": "burst", "at": 840, "lasts": 240, "on": "caster", "count": 6, "shape": "spark", "tint": "family", "direction": "up", "spread": 90, "reach": 160, "strength": 0.2, "blend": "add", "level": "head" },
+      { "beat": "burst", "at": 840, "lasts": 280, "on": "target", "count": 12, "shape": "spark", "tint": "family", "direction": "out", "spread": 360, "reach": 260, "strength": 0.25, "blend": "add" },
+      { "beat": "flow", "at": 960, "lasts": 600, "on": "target", "count": 6, "shape": "spark", "tint": "family", "direction": "out", "spread": 360, "reach": 130, "strength": 0.2, "blend": "add" }
+    ]
   },
   "spell:meteor:v1": {
     "family": "elemental",
     "motif": "fire",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "flow", "at": 360, "lasts": 420, "on": "caster", "count": 12, "shape": "spark", "tint": "ember", "direction": "up", "spread": 50, "reach": 200, "strength": 0.25, "blend": "add" },
+      { "beat": "motif", "at": 840, "lasts": 800 },
+      { "beat": "glow", "at": 840, "lasts": 240, "on": "target", "tint": "ember", "reach": 160, "strength": 0.6, "blend": "add" },
+      { "beat": "shake", "at": 840, "lasts": 120, "strength": 0.12 },
+      { "beat": "burst", "at": 860, "lasts": 360, "on": "target", "count": 12, "shape": "spark", "tint": "ember", "direction": "out", "spread": 360, "reach": 220, "strength": 0.25, "blend": "add" },
+      { "beat": "flow", "at": 960, "lasts": 700, "on": "target", "count": 8, "shape": "dot", "tint": "ember", "direction": "up", "spread": 40, "reach": 120, "strength": 0.4, "blend": "screen" },
+      { "beat": "flow", "at": 1000, "lasts": 700, "on": "target", "count": 4, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 50, "strength": 0.4, "blend": "normal" }
+    ]
   },
   "spell:momentum:v1": {
     "family": "biological",
@@ -343,12 +417,29 @@
   "spell:rejuvenate:v1": {
     "family": "astral",
     "motif": "vital",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "burst", "at": 840, "lasts": 240, "on": "caster", "count": 6, "shape": "dot", "tint": "family", "direction": "up", "spread": 90, "reach": 160, "strength": 0.45, "blend": "add" },
+      { "beat": "trail", "at": 840, "lasts": 200, "count": 8, "shape": "dot", "tint": "family", "strength": 0.5, "blend": "add" },
+      { "beat": "motif", "at": 1040, "lasts": 640 },
+      { "beat": "burst", "at": 1040, "lasts": 560, "on": "target", "count": 14, "shape": "dot", "tint": "family", "direction": "up", "spread": 50, "reach": 300, "strength": 0.45, "blend": "add" }
+    ]
   },
   "spell:restorative_burst:v1": {
     "family": "astral",
     "motif": "vital",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "gather", "at": 120, "lasts": 440, "on": "caster", "count": 14, "shape": "dot", "tint": "family", "reach": 260, "strength": 0.45, "blend": "add" },
+      { "beat": "glow", "at": 360, "lasts": 400, "on": "caster", "tint": "family", "reach": 180, "strength": 0.55, "blend": "screen" },
+      { "beat": "trail", "at": 560, "lasts": 280, "count": 16, "shape": "dot", "tint": "family", "strength": 0.6, "blend": "add" },
+      { "beat": "motif", "at": 840, "lasts": 1100 },
+      { "beat": "glow", "at": 840, "lasts": 440, "on": "target", "tint": "family", "reach": 280, "strength": 0.65, "blend": "add" },
+      { "beat": "burst", "at": 840, "lasts": 420, "on": "target", "count": 18, "shape": "dot", "tint": "family", "direction": "out", "spread": 360, "reach": 300, "strength": 0.5, "blend": "screen" },
+      { "beat": "burst", "at": 880, "lasts": 560, "on": "target", "count": 14, "shape": "dot", "tint": "family", "direction": "up", "spread": 50, "reach": 320, "strength": 0.5, "blend": "add" },
+      { "beat": "pulse", "at": 900, "lasts": 700, "on": "target", "tint": "family", "strength": 0.5 },
+      { "beat": "flow", "at": 1000, "lasts": 900, "on": "target", "count": 10, "shape": "spark", "tint": "family", "direction": "up", "spread": 40, "reach": 280, "strength": 0.25, "blend": "add" }
+    ]
   },
   "spell:restorative_gush:v1": {
     "family": "physical",
@@ -369,7 +460,18 @@
   "spell:revenant_guards:v1": {
     "family": "necromantic",
     "motif": "spirits",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "glow", "at": 160, "lasts": 440, "on": "caster", "tint": "blood", "reach": 200, "strength": 0.6, "blend": "screen" },
+      { "beat": "burst", "at": 360, "lasts": 340, "on": "caster", "count": 14, "shape": "dot", "tint": "blood", "direction": "up", "spread": 120, "reach": 180, "strength": 0.45, "blend": "normal" },
+      { "beat": "gather", "at": 520, "lasts": 300, "on": "caster", "count": 12, "shape": "dot", "tint": "family", "reach": 320, "strength": 0.45, "blend": "screen" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "trail", "at": 840, "lasts": 360, "count": 10, "shape": "dot", "tint": "blood", "strength": 0.4, "blend": "normal" },
+      { "beat": "glow", "at": 880, "lasts": 1200, "on": "target", "shape": "ring", "tint": "family", "reach": 260, "strength": 0.6, "blend": "screen" },
+      { "beat": "flow", "at": 900, "lasts": 1100, "on": "target", "count": 10, "shape": "dot", "tint": "family", "direction": "up", "spread": 40, "reach": 220, "strength": 0.5, "blend": "screen", "level": "feet" },
+      { "beat": "glow", "at": 900, "lasts": 800, "on": "target", "tint": "family", "reach": 220, "strength": 0.35, "blend": "screen" },
+      { "beat": "glow", "at": 1500, "lasts": 500, "on": "caster", "tint": "blood", "reach": 160, "strength": 0.4, "blend": "screen" }
+    ]
   },
   "spell:shield_bash:v1": {
     "family": "physical",
@@ -388,7 +490,15 @@
   "spell:soothing_chant:v1": {
     "family": "astral",
     "motif": "vital",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "glow", "at": 360, "lasts": 400, "on": "caster", "tint": "family", "reach": 170, "strength": 0.3, "blend": "screen" },
+      { "beat": "motif", "at": 840, "lasts": 1000 },
+      { "beat": "flow", "at": 840, "lasts": 600, "on": "target", "count": 6, "shape": "dot", "tint": "family", "direction": "out", "spread": 360, "reach": 140, "strength": 0.4, "blend": "screen", "level": "feet" },
+      { "beat": "glow", "at": 900, "lasts": 500, "on": "target", "tint": "family", "reach": 180, "strength": 0.25, "blend": "screen" },
+      { "beat": "glow", "at": 1300, "lasts": 500, "on": "target", "shape": "ring", "tint": "family", "reach": 200, "strength": 0.35, "blend": "screen" },
+      { "beat": "flow", "at": 1300, "lasts": 540, "on": "target", "count": 8, "shape": "dot", "tint": "family", "direction": "up", "spread": 30, "reach": 200, "strength": 0.4, "blend": "add", "level": "feet" }
+    ]
   },
   "spell:soul_devourer:v1": {
     "family": "biological",
@@ -410,7 +520,15 @@
   "spell:summon_minions:v1": {
     "family": "necromantic",
     "motif": "spirits",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "burst", "at": 420, "lasts": 340, "on": "caster", "count": 8, "shape": "dot", "tint": "blood", "direction": "up", "spread": 100, "reach": 160, "strength": 0.45, "blend": "normal" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "gather", "at": 840, "lasts": 400, "on": "target", "count": 12, "shape": "dot", "tint": "family", "reach": 300, "strength": 0.5, "blend": "screen" },
+      { "beat": "glow", "at": 840, "lasts": 700, "on": "target", "tint": "family", "reach": 220, "strength": 0.3, "blend": "screen" },
+      { "beat": "flow", "at": 1000, "lasts": 900, "on": "target", "count": 10, "shape": "dot", "tint": "family", "direction": "out", "spread": 360, "reach": 130, "strength": 0.45, "blend": "screen" },
+      { "beat": "flow", "at": 1100, "lasts": 800, "on": "target", "count": 6, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 110, "strength": 0.4, "blend": "normal" }
+    ]
   },
   "spell:throwing_star:v1": {
     "family": "biological",
@@ -461,7 +579,18 @@
   "spell:toxic_waves:v1": {
     "family": "astral",
     "motif": "void",
-    "delivery": "cast"
+    "delivery": "cast",
+    "staging": [
+      { "beat": "gather", "at": 120, "lasts": 480, "on": "caster", "count": 12, "shape": "shard", "tint": "family", "reach": 260, "strength": 0.3, "blend": "normal" },
+      { "beat": "glow", "at": 360, "lasts": 360, "on": "caster", "tint": "family", "reach": 170, "strength": 0.35, "blend": "screen" },
+      { "beat": "gather", "at": 600, "lasts": 240, "on": "target", "count": 6, "shape": "dot", "tint": "family", "reach": 320, "strength": 0.4, "blend": "normal" },
+      { "beat": "motif", "at": 840, "lasts": 900 },
+      { "beat": "gather", "at": 840, "lasts": 420, "on": "target", "count": 14, "shape": "shard", "tint": "family", "reach": 300, "strength": 0.3, "blend": "normal" },
+      { "beat": "glow", "at": 840, "lasts": 320, "on": "target", "tint": "family", "reach": 220, "strength": 0.4, "blend": "screen" },
+      { "beat": "gather", "at": 1100, "lasts": 400, "on": "target", "count": 10, "shape": "dot", "tint": "family", "reach": 220, "strength": 0.45, "blend": "normal" },
+      { "beat": "burst", "at": 1300, "lasts": 300, "on": "target", "count": 6, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 160, "strength": 0.45, "blend": "normal" },
+      { "beat": "flow", "at": 1400, "lasts": 700, "on": "target", "count": 6, "shape": "dot", "tint": "blood", "direction": "out", "spread": 360, "reach": 130, "strength": 0.45, "blend": "normal" }
+    ]
   },
   "spell:tranquilizer_dart:v1": {
     "family": "biological",
