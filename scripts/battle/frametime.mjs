@@ -33,9 +33,9 @@ export const FRAME_MS = 1000 / 60;
 const LONG_FRAME_MS = 2 * FRAME_MS - 1;
 // The health the fixture says each creature struck loses: a medium blow, as the stagings' spec plays.
 const DAMAGE = 5;
-const SPEEDS = [0.5, 1, 2];
+const SPEEDS = new Set([0.5, 1, 2]);
 // The bench's samples measured beside the spells: the motif alone, the field's particles at their cap, one halo.
-const BASELINES = ['kit:plain', 'kit:budget', 'kit:pulse'];
+const BASELINES = new Set(['kit:plain', 'kit:budget', 'kit:pulse']);
 
 const sorted = samples => [...samples].sort((one, other) => one - other);
 const centre = ordered => ordered.length % 2 ? ordered[(ordered.length - 1) / 2] : (ordered[ordered.length / 2 - 1] + ordered[ordered.length / 2]) / 2;
@@ -125,9 +125,19 @@ const VALUED = {
   '--throttle': { name: 'throttle', accepts: number => number >= 1, says: '--throttle is the browser\'s CPU slowdown, 1 (none) or more.' },
   // An odd number: the middle one of the runs is then a run's own number, and a count stays whole.
   '--runs': { name: 'runs', accepts: number => Number.isInteger(number) && number >= 1 && number % 2 === 1, says: '--runs is an odd number of runs, 1 or more: each number is the middle one of the runs.' },
-  '--speed': { name: 'speed', accepts: number => SPEEDS.includes(number), says: '--speed is 0.5, 1 or 2, as the page offers.' },
+  '--speed': { name: 'speed', accepts: number => SPEEDS.has(number), says: '--speed is 0.5, 1 or 2, as the page offers.' },
 };
 const TEXTS = { '--out': 'out', '--url': 'base' };
+
+// The value of a flag that takes one: a text as it is, a number once it is one the flag accepts.
+function valueOf(word, text) {
+  if (text === undefined) throw new Error(`${word} needs a value.`);
+  if (Object.hasOwn(TEXTS, word)) return [TEXTS[word], text];
+  const { name, accepts, says } = VALUED[word];
+  const number = Number(text);
+  if (!Number.isFinite(number) || !accepts(number)) throw new Error(says);
+  return [name, number];
+}
 
 export function parseArguments(argv) {
   const options = { spells: [], all: false, throttle: 4, runs: 3, speed: 1, out: null, base: null, markdown: false };
@@ -137,12 +147,8 @@ export function parseArguments(argv) {
     else if (word === '--markdown') options.markdown = true;
     else if (Object.hasOwn(VALUED, word) || Object.hasOwn(TEXTS, word)) {
       index += 1;
-      if (index >= argv.length) throw new Error(`${word} needs a value.`);
-      if (Object.hasOwn(TEXTS, word)) { options[TEXTS[word]] = argv[index]; continue; }
-      const { name, accepts, says } = VALUED[word];
-      const number = Number(argv[index]);
-      if (!Number.isFinite(number) || !accepts(number)) throw new Error(says);
-      options[name] = number;
+      const [name, value] = valueOf(word, argv[index]);
+      options[name] = value;
     } else if (word.startsWith('--')) throw new Error(`Unknown option ${word}.`);
     else options.spells.push(word);
   }
@@ -153,8 +159,9 @@ export function parseArguments(argv) {
 // What draws the canvas: a phone's number is read against it, and a software renderer's is not a phone's.
 const renderer = page => page.evaluate(() => {
   const gl = document.createElement('canvas').getContext('webgl2');
-  const named = gl?.getExtension('WEBGL_debug_renderer_info');
-  return gl ? String(gl.getParameter(named ? named.UNMASKED_RENDERER_WEBGL : gl.RENDERER)) : 'no WebGL';
+  if (!gl) return 'no WebGL';
+  const named = gl.getExtension('WEBGL_debug_renderer_info');
+  return String(gl.getParameter(named ? named.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
 });
 
 async function main(argv) {
@@ -172,8 +179,10 @@ async function main(argv) {
     const listed = await page.evaluate(() => [...window.battleBench.entries, ...window.battleBench.samples].map(({ id, name, staging }) => ({ id, name, staging: staging ?? [] })));
     const targetsOf = castTargets(root);
     // With --all: every spell, and the three samples the record reads the spells against.
-    const asked = options.all ? listed.filter(one => !one.id.startsWith('kit:') || BASELINES.includes(one.id)) : options.spells.map(id => listed.find(one => one.id === id) ?? { id, name: id, staging: [] });
+    const asked = options.all ? listed.filter(one => !one.id.startsWith('kit:') || BASELINES.has(one.id)) : options.spells.map(id => listed.find(one => one.id === id) ?? { id, name: id, staging: [] });
     const effects = [];
+    // One effect after the other, on purpose: they are all played on the one bench this page holds, and a
+    // second play beside the first would be measured with it.
     for (const { id, name, staging } of asked) {
       // A sample of the kit is no content: it is played on the three figures across the field, the most a spell reaches.
       const targets = id.startsWith('kit:') ? ['b1', 'b2', 'b3'] : targetsOf(id);
