@@ -51,6 +51,7 @@
 | [tabletop/admin-plan.md](tabletop/admin-plan.md) | Plan: the admin panel as the host's headquarters: tabs, players, the jobs' runs, registration. |
 | [tabletop/scenarios-plan.md](tabletop/scenarios-plan.md) | Plan: a recorded match cut at the top of a round, played as practice, shared as a link or a `scenario.json`, and the admin diagnosis of a stuck table. |
 | [tabletop/onboarding-plan.md](tabletop/onboarding-plan.md) | Plan: onboarding, tutorials played from repository scenarios straight into combat, and concept cards for the rule words. |
+| [tabletop/tutorial-follow-ups-plan.md](tabletop/tutorial-follow-ups-plan.md) | Plan: the tutorials' follow-ups, tutorial 4's result as the tutorial's end, tutorial 2 cut at round 2, and Learn to play in the main menu's bar. |
 | [tabletop/rulebook-plan.md](tabletop/rulebook-plan.md) | Plan: the official rulebook as one source in `rules/`, the app's edition, the `/rules` page the concept cards link to, and the keeper that holds it true. |
 | [tabletop/feedback-plan.md](tabletop/feedback-plan.md) | Plan: feedback from the table. A bug report carries its position, is reproduced as a scenario, filed as a public issue from a redacted copy and kept as a regression test; an idea is grouped with its duplicates and led to a plan. |
 | [tabletop/async-recap-plan.md](tabletop/async-recap-plan.md) | Plan: the recap a player reads in an asynchronous game, on coming back or at any time: where it stands, the two teams, the recent rounds with what was not seen marked, what they had chosen, what they are asked. |
