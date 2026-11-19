@@ -20,6 +20,8 @@ export interface BeatPlay {
   /** The direction of the blow, in radians, from the caster to the target; null when there is none. */
   heading: number | null;
   from?: Anchor;
+  /** The beat follows a projectile: its head keeps to the arc the projectile flies (`flightAt`). */
+  flight?: boolean;
   figure?: Phaser.GameObjects.Image;
 }
 /**

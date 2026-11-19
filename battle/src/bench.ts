@@ -282,6 +282,6 @@ Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => s
   shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   places: () => scene.effectsPlaces, anchors: () => scene.anchors, halo: () => scene.actingHalo,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => {
-    const { alpha, x, y } = child as Phaser.GameObjects.Graphics;
-    return { ...child.data.getAll(), alpha, x, y };
+    const { alpha, x, y, visible } = child as Phaser.GameObjects.Graphics;
+    return { ...child.data.getAll(), alpha, x, y, visible };
   }) } });

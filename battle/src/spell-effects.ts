@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { DRAW_MS, IMPACT_MS, STRIKE_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
+import { IMPACT_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
 import { stagingBeats } from '../../table/battle-staging.js';
-import { BONE } from '../../table/battle-motion.js';
+import { BONE, FLIGHT, flightAt } from '../../table/battle-motion.js';
 import type { SpellVisual } from './types';
 import type { EffectsKit, StagedBeat } from './fx';
 
@@ -74,7 +74,9 @@ export class SpellEffects {
     const origin = from ?? on.anchor, aim = toward ?? on.anchor;
     const heading = origin.x === aim.x && origin.y === aim.y ? null : Math.atan2(aim.y - origin.y, aim.x - origin.x);
     const color = TINTS[beat.tint ?? ''] ?? PALETTE[visual.family] ?? PALETTE.neutral;
-    this.kit!.play({ beat, at: on.anchor, creature: on.id, figure: on.image, color, rate, heading, from });
+    // A projectile's trail keeps to the arc its quill flies.
+    const flight = beat.beat === 'trail' && visual.delivery === 'projectile';
+    this.kit!.play({ beat, at: on.anchor, creature: on.id, figure: on.image, color, rate, heading, from, flight });
   }
 
   /** The beats of a window that play once a cast: those on the caster, and the shake, which is the view's. */
@@ -127,12 +129,20 @@ export class SpellEffects {
     }
     if (visual.delivery === 'projectile') {
       for (const { id, anchor } of destinations) {
-        const quill = this.graphic('quill', id, 'windup').setPosition(actor.x, actor.y);
+        // The quill leaves the caster's back as its body throws, and not before: until then it is not drawn, where
+        // it once stood on the body for the whole draw back and 300 ms of an eased flight (#909).
+        const quill = this.graphic('quill', id, 'windup').setVisible(false);
         quill.fillStyle(0xdfd9c9).fillTriangle(-16, -3, 16, 0, -16, 3);
         quill.lineStyle(1.5, color).lineBetween(-18, 0, 5, 0);
-        quill.setRotation(Math.atan2(anchor.y - actor.y, anchor.x - actor.x));
-        this.scene.tweens.add({ targets: quill, x: anchor.x, y: anchor.y, duration: STRIKE_MS / rate,
-          delay: DRAW_MS / rate, ease: 'Cubic.In' });
+        const fly = (share: number) => {
+          if (!quill.active) return;
+          const at = flightAt(actor, anchor, share);
+          quill.setPosition(at.x, at.y).setRotation(at.angle);
+        };
+        fly(0);
+        const flight = this.scene.tweens.addCounter({ from: 0, to: 1, duration: FLIGHT.lasts / rate, delay: FLIGHT.at / rate,
+          onStart: () => quill.setVisible(true), onUpdate: tween => fly(tween.getValue() ?? 0), onComplete: () => this.timers.delete(flight) });
+        this.timers.add(flight);
       }
       return;
     }

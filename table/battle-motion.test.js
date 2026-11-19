@@ -7,8 +7,8 @@ import assert from 'node:assert/strict';
 import { DRAW_MS, STRIKE_MS, WINDUP_MS, IMPACT_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from './battle-timing.js';
 import { readFileSync } from 'node:fs';
 
-import { ACTION_END_MS, BONE, BREATH, DRAINED, CAST, DEATH, FLASH_MS, PUNCH, THROW, TRAUMA, WEIGHTS, blowWeight, breath, lastBeat, lossOf, meleeBeats,
-  punches, reaction, shakeOf, traumaAfter, traumaOf, wander, weightOf } from './battle-motion.js';
+import { ACTION_END_MS, BONE, BREATH, DRAINED, CAST, DEATH, FLASH_MS, FLIGHT, PUNCH, THROW, TRAUMA, WEIGHTS, blowWeight, breath, flightAt, lastBeat, lossOf,
+  meleeBeats, punches, reaction, shakeOf, traumaAfter, traumaOf, wander, weightOf } from './battle-motion.js';
 
 const cue = (changes, extra = {}) => ({ recipients: changes.map(one => one.creature), changes, ...extra });
 
@@ -148,4 +148,42 @@ test('the zoom punches on a defeat or a critical hit only', () => {
   // A caster felled by its own cost is not a killing blow.
   assert.equal(punches(cue([{ creature: 'a1', defeated: true }]), 'a1'), false);
   assert.ok(PUNCH.lasts <= IMPACT_MS);
+});
+
+// #909: the body let go at 240 ms and the quill, eased in, was seen to leave it only near 600 ms.
+test('a projectile leaves with the throw, at an even pace, and lands as the windup ends', () => {
+  assert.equal(FLIGHT.at, THROW.toss.at, 'it leaves when the thrower lets go');
+  assert.equal(FLIGHT.at + FLIGHT.lasts, WINDUP_MS, 'it lands on the contact');
+  const from = { x: 100, y: 600, radius: 40 }, to = { x: 300, y: 200, radius: 40 };
+  const start = flightAt(from, to, 0), end = flightAt(from, to, 1), whole = Math.hypot(end.x - start.x, end.y - start.y);
+  assert.deepEqual([end.x, end.y], [to.x, to.y]);
+  // It starts on the thrower's back, above its centre and inside its body.
+  assert.equal(start.x, from.x);
+  assert.ok(start.y < from.y && start.y > from.y - from.radius * 1.4);
+  // One tenth of the flight, 60 ms after the throw: already a tenth of the way, where the ease in had moved it a thousandth.
+  const early = flightAt(from, to, .1);
+  assert.ok(Math.hypot(early.x - start.x, early.y - start.y) >= whole * .1);
+  // Never ahead of an even pace by much, and never back: the distance covered only grows.
+  let last = 0;
+  for (let step = 1; step <= 20; step++) {
+    const now = flightAt(from, to, step / 20), covered = Math.hypot(now.x - start.x, now.y - start.y);
+    assert.ok(covered > last, `the quill goes on at ${step / 20}`);
+    last = covered;
+  }
+});
+
+test('a projectile flies a low arc, and points where it flies', () => {
+  const from = { x: 100, y: 400, radius: 40 }, to = { x: 400, y: 400 - 40 * FLIGHT.back, radius: 40 };
+  // Thrown across the field at one height: the middle of the flight is above the straight line by half the lift.
+  const start = flightAt(from, to, 0), middle = flightAt(from, to, .5);
+  assert.ok(Math.abs(start.y - to.y) < 1e-9);
+  assert.ok(Math.abs((to.y - middle.y) - 300 * FLIGHT.lift / 2) < 1e-9);
+  // It climbs as it leaves, flies level at the top and comes down onto its target.
+  assert.ok(flightAt(from, to, 0).angle < 0);
+  assert.ok(Math.abs(middle.angle) < 1e-9);
+  assert.ok(flightAt(from, to, 1).angle > 0);
+  assert.ok(FLIGHT.lift > 0 && FLIGHT.lift <= .3, 'low: a lob would read as a mortar');
+  // A place outside the flight is its nearest end.
+  assert.deepEqual(flightAt(from, to, -1), flightAt(from, to, 0));
+  assert.deepEqual(flightAt(from, to, 2), flightAt(from, to, 1));
 });

@@ -372,8 +372,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.lifespan` and a scale that falls to 0.
 - **Cost**: one draw call. Keep the trail dimmer and smaller than the head.
 - **Reduced motion**: nothing.
-- **Here**: the quill flies bare. The kit's `trail` (`battle/src/fx/trail.ts`) follows a head that eases as the
-  quill does; BC7 gives it to the two projectile spells. At the feet it is a crack: the head goes at an even pace
+- **Here**: the kit's `trail` (`battle/src/fx/trail.ts`). Behind a projectile its head is the quill's own place
+  on its arc (`flightAt`), so it leaves with the quill and never runs ahead of it; Paralyzing Barb has one, and
+  Quill, a Stage I spell with no beat in its windup, flies bare. At the feet it is a crack: the head goes at an even pace
   and what it leaves stays for the whole beat, since a head that eased in crossed the field between two frames
   (#918, Groundbreaker).
 
@@ -537,8 +538,11 @@ bake the drawing to a texture first, or filter a container.
   along the curve.
 - **Cost**: one counter tween.
 - **Reduced motion**: nothing. No projectile is launched, as today.
-- **Here**: the quill flies straight, 600 ms of `Cubic.In` after the draw back (`battle/src/spell-effects.ts`).
-  BC7 gives the two projectile spells a low arc.
+- **Here**: since BC7 every projectile flies `flightAt` (`table/battle-motion.js`): it leaves the thrower's back
+  with the toss, at 240 ms, and lands on the contact, 600 ms at an even pace on a curve whose control point
+  stands above the middle by 16% of the flight's length (*house*). The curve is written by hand: the effects kit
+  holds no engine, and its trail follows the same one. Eased in, the quill stood on the thrower's body for
+  300 ms after the throw (#909).
 
 ### Ribbon
 

@@ -74,6 +74,27 @@ export const THROW = Object.freeze({
   home: Object.freeze({ at: DRAW_MS + 120, lasts: WINDUP_MS - DRAW_MS - 120 }),
 });
 
+/**
+ * A projectile's flight (the craft book, "Arcing travel"): it leaves the thrower's back with the toss, at an even
+ * pace, on a low arc, and lands as the windup ends (#909: eased in, it stood on the body for 300 ms after the
+ * throw). `back` is how far above the thrower's centre it starts, in radii; `lift` is how far the arc's control
+ * point stands above the middle of the flight, as a share of its length. Both are house numbers.
+ */
+export const FLIGHT = Object.freeze({ at: THROW.toss.at, lasts: WINDUP_MS - THROW.toss.at, back: .6, lift: .16 });
+
+/** Where a projectile is at a share `t` of its flight from one figure to another, and the angle it points at, in radians. */
+export function flightAt(from, to, t) {
+  const share = Math.min(1, Math.max(0, t)), rest = 1 - share;
+  const start = { x: from.x, y: from.y - from.radius * FLIGHT.back };
+  // One control point above the middle: a quadratic curve, by hand, since the effects kit holds no engine.
+  const control = { x: (start.x + to.x) / 2, y: (start.y + to.y) / 2 - Math.hypot(to.x - start.x, to.y - start.y) * FLIGHT.lift };
+  return {
+    x: rest * rest * start.x + 2 * rest * share * control.x + share * share * to.x,
+    y: rest * rest * start.y + 2 * rest * share * control.y + share * share * to.y,
+    angle: Math.atan2(rest * (control.y - start.y) + share * (to.y - control.y), rest * (control.x - start.x) + share * (to.x - control.x)),
+  };
+}
+
 export const FLASH_MS = 80;
 
 /**
