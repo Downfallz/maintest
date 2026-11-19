@@ -254,8 +254,9 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
      content holds (what Regeneration does, the stun's immunity), which stay true until the file is cut again.
    - A person who plays something else than the recorded answers reads steps written for the recorded board:
      the steps still show by the question asked (ADR 0187).
-   - Tutorial 4 ends the match: its result opens over the coach card, and offers Rematch and Lobby beside the
-     coach's **Leave the tutorial**, which shows once the result is closed.
+   - Tutorial 4 ends the match: its result opened over the coach card and offered Rematch and Lobby. Since T1 of
+     [tutorial-follow-ups-plan.md](tutorial-follow-ups-plan.md) the result is the tutorial's end: it says
+     **Tutorial complete** and offers **Play again** and **Leave the tutorial**.
    - Tutorials 1, 3 and 2 were rounds 2, 3 and 4 of one match: tutorial 2's creatures already carried the
      mutations tutorial 3 teaches (until #727, below).
    - **Learn to play** in the main menu's bar stays the owner's (#669).
