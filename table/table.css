@@ -888,6 +888,8 @@ body:has(#table) { padding-bottom: 24px; }
 .notices-offer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .notices-offer-actions button { min-height: 40px; }
 .invitation-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
+.invitation-actions :is(button, .admin-link) { min-height: 44px; }
+.invitation-actions .admin-link { display: inline-flex; align-items: center; margin-top: 0; }
 .practice-panel h2, .practice-panel p { margin: 0; }
 .practice-panel select { min-height: 44px; max-width: 100%; color: inherit; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-soft); padding: .6rem; font: inherit; }
 .practice-panel output { font-size: .8rem; color: #bbc9c2; }

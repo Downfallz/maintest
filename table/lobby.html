@@ -17,22 +17,23 @@
 <body class="lobby-page home-page" data-home="loading">
   <header class="masthead lobby-header home-header" data-navigation="lobby"></header>
   <main class="lobby-main">
-    <section id="sign-in-panel" class="sign-in-panel" aria-labelledby="sign-in-heading" hidden>
+    <section id="sign-in-panel" class="sign-in-panel" aria-labelledby="sign-in-heading" data-door="plain" hidden>
+      <div id="sign-in-art" class="sign-in-art" aria-hidden="true"></div>
       <div class="sign-in-content">
-        <p class="eyebrow">Player lobby · Beta</p>
+        <p id="sign-in-eyebrow" class="eyebrow">Beta</p>
         <h2 id="sign-in-heading">Sign in to play.</h2>
-        <p class="muted">Start a battle or pick up where you left off.</p>
+        <p id="sign-in-game" class="sign-in-game">A turn-based duel: your three creatures mutate against another player's three.</p>
+        <p id="sign-in-account" class="muted">Your games follow you on every device.</p>
         <div class="sign-in-actions">
           <div id="google-button" class="google-button" hidden></div>
           <form id="dev-sign-in" hidden>
             <label for="dev-username">Developer sign-in: any player name</label>
-            <div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button type="submit">Sign in →</button></div>
+            <div class="code-row"><input id="dev-username" name="dev-username" autocomplete="off" spellcheck="false" maxlength="20" required /><button id="dev-sign-in-submit" class="primary" type="submit">Sign in →</button></div>
           </form>
           <p id="sign-in-problem" class="problem" role="alert" hidden></p>
         </div>
         <a class="sign-in-policy" href="https://downfallinstinct.com/privacy/">Privacy policy</a>
       </div>
-      <div class="sign-in-art" aria-hidden="true"></div>
     </section>
     <div id="home-games" hidden>
       <section class="lobby-hero" aria-labelledby="welcome"><div><p class="eyebrow"><span id="hero-eyebrow">Your games</span> · Beta</p><h2 id="welcome">Your next battle.</h2><p class="hero-detail">Continue a match, challenge a friend, or start something new.</p></div><button id="new-table" class="primary" type="button">＋ New battle</button></section>
@@ -90,12 +91,13 @@
   </dialog>
   <dialog id="name-dialog" aria-labelledby="name-title">
     <form id="name-form"><p class="eyebrow">Welcome to Downfall Instinct</p><h2 id="name-title" class="name-title">Choose your player name</h2>
-      <p class="muted">This is the name other players see on every table. It can't be changed for now.</p>
+      <p class="muted">Other players see it on every table. It can't be changed for now.</p>
       <label for="username">Player name</label><input id="username" name="username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" required />
-      <p id="name-check" class="name-check" role="status" hidden></p>
+      <div class="name-check-room"><p id="name-check" class="name-check" role="status" hidden></p></div>
       <p class="muted">3 to 20 characters: letters, digits, _ and -. Starts with a letter.</p>
+      <p id="name-next" class="name-next" role="status" hidden></p>
       <p id="name-problem" class="problem" role="alert" hidden></p>
-      <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Play Downfall Instinct →</button></div>
+      <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Take this name →</button></div>
     </form>
   </dialog>
   <script type="module" src="lobby.js"></script>

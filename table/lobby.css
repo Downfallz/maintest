@@ -163,7 +163,9 @@
 /* Home: a restrained header, a game-focused dashboard and, for guests, a focused sign-in panel. */
 .home-page { padding-top: 0; }
 .home-header { position: relative; min-height: 100px; gap: 24px; z-index: 35; }
-.home-header .brand { flex: none; }
+.home-header .brand { flex: none; min-height: 44px; }
+/* Until the host says who is here the footer waits, so it does not jump below the panel or the home that arrives. */
+.home-page[data-home="loading"] .home-footer { visibility: hidden; }
 .home-header .brand .eyebrow { font-size: 8px; letter-spacing: 1.6px; }
 .home-header h1 { font-size: 23px; white-space: nowrap; }
 .home-header .home-navigation { flex: none; margin-left: auto; display: flex; align-items: center; gap: 3px; }
@@ -217,21 +219,32 @@
 .home-page .lobby-games { padding-bottom: 10px; }
 /* The player doorway sits beside a single painted silhouette. Only account hosts show it. */
 .sign-in-panel { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; min-height: clamp(360px, 48vw, 550px); margin-block: clamp(24px, 5vw, 72px); border-block: 1px solid var(--line); background: var(--soot); }
-.sign-in-panel::before { content: ''; position: absolute; inset: 0; z-index: -2; background: linear-gradient(90deg, var(--soot) 4%, rgb(7 13 16 / .86) 41%, transparent 100%), url('battle-art/eclipse-battle.webp') center / cover; }
+/* The paintings are the picture kit's <img> (ADR 0198), placed by door.js: the ground covers the panel under a veil that
+   keeps the words readable, and the creature stands on the veil. */
+.sign-in-panel::before { content: ''; position: absolute; inset: 0; z-index: -2; background: linear-gradient(90deg, var(--soot) 4%, rgb(7 13 16 / .86) 41%, transparent 100%); }
+.sign-in-ground { position: absolute; inset: 0; z-index: -3; width: 100%; height: 100%; max-width: none; object-fit: cover; }
+.sign-in-creature { position: absolute; z-index: -1; right: 2%; bottom: 6%; width: min(46%, 550px); height: auto; max-height: 86%; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 12px 8px #000a); }
 .sign-in-content { width: min(60%, 560px); min-width: 0; padding: clamp(24px, 5vw, 72px); }
 .sign-in-content .eyebrow { color: var(--brand-ember); }
-.sign-in-content h2 { font: 400 clamp(38px, 5vw, 76px)/1.06 var(--font-display); letter-spacing: -.04em; color: var(--bone); margin: 16px 0 12px; }
-.sign-in-content .muted { font-size: 15px; line-height: 1.6; }
+.sign-in-content h2 { font: 400 clamp(38px, 5vw, 76px)/1.06 var(--font-display); letter-spacing: -.04em; color: var(--bone); margin: 16px 0 12px; overflow-wrap: anywhere; }
+.sign-in-panel[data-door="invited"] .sign-in-content h2 { font-size: clamp(30px, 4vw, 60px); }
+.sign-in-content .sign-in-game { margin: 0 0 6px; color: var(--bone); font-size: 15px; line-height: 1.6; }
+.sign-in-content .muted { margin: 0; font-size: 15px; line-height: 1.6; }
 .sign-in-actions { display: grid; gap: 8px; margin-top: 26px; min-width: 0; }
-.sign-in-art { position: absolute; z-index: -1; inset: 8% 2% 6% 52%; background: url('battle-art/evolutions/warped-stage3-revenant.webp') right bottom / contain no-repeat; filter: drop-shadow(0 12px 8px #000a); }
+.sign-in-actions .google-button:not([hidden]) { display: flex; align-items: center; min-width: 200px; }
 .sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
 .sign-in-policy:hover { color: var(--gold); }
+.name-check-room { min-height: 30px; }
+.name-next { margin: 4px 0 0; color: var(--bone); font-size: 14px; }
+#name-dialog .dialog-actions button { flex: 1 1 auto; }
+#name-submit { white-space: nowrap; }
 .home-footer a, .account-menu .site-link { color: var(--gold); }
 .account-menu .site-link { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding-inline: 12px; text-decoration: none; }
 .account-menu .site-link:hover { background: var(--raised); }
 .home-footer { max-width: 1280px; margin: 32px auto 0; padding: 24px 0 0; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .home-footer span:first-child { color: var(--gold); letter-spacing: .8px; }
 .home-footer-links { display: flex; align-items: center; gap: 18px; }
+.home-footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
 .home-page .home-dialog { width: min(640px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
 .home-page #friends-dialog { width: min(720px, calc(100vw - 24px)); }
 .home-dialog[open] { display: flex; flex-direction: column; }
@@ -272,16 +285,17 @@
   .home-header h1 { font-size: 19px; }
   .home-header .brand .eyebrow { font-size: 6px; letter-spacing: 1.2px; }
   .home-header .brand-mark { width: 31px; height: 38px; font-size: 24px; }
-  .home-menu-toggle { padding: 8px; }
+  .home-menu-toggle { padding: 8px; min-width: 44px; justify-content: center; }
   .home-menu-toggle > span:last-child, .home-header #account-name { display: none; }
   .home-header .account-chip { padding: 4px; min-width: 44px; min-height: 44px; justify-content: center; }
   .home-header .account-menu { position: fixed; top: 78px; right: 18px; max-width: calc(100vw - 36px); }
   .sign-in-panel { min-height: 0; margin-block: 20px; }
   .sign-in-content { width: 100%; padding: 26px 16px 28px; }
-  .sign-in-content h2 { max-width: 70%; }
-  .sign-in-content .muted { max-width: 61%; }
-  .sign-in-panel::before { opacity: .5; }
-  .sign-in-art { inset: 8px 0 auto 70%; height: 86px; }
+  .sign-in-content h2 { max-width: 70%; font-size: clamp(30px, 9vw, 38px); }
+  .sign-in-content :is(.sign-in-game, .muted) { max-width: 100%; }
+  .sign-in-panel::before { background: linear-gradient(180deg, color-mix(in srgb, var(--soot) 45%, transparent), var(--soot) 72%); }
+  .sign-in-ground { height: 300px; }
+  .sign-in-creature { top: 8px; right: 0; bottom: auto; width: 107px; max-height: 86px; }
   .sign-in-actions { margin-top: 22px; }
   .home-page .lobby-hero { padding: 28px 0 22px; }
   .home-page .hero-detail { font-size: 14px; }

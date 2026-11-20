@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX6 are built; UX7 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX7 are built; UX8 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -406,6 +406,36 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    details available to that visitor. Carry one cue through naming and into the destination: the inviter and
    seat on the invited path, or the lesson and its creature on the tutorial path. Record both arrivals, including
    a slow response. The player can identify where they landed with the sound off, even across an immediate page cut.
+
+   *Built (2026-11-20)*: the signed-out panel is drawn by `table/door.js`: "Beta", "Sign in to play.", one line on
+   the game and one on what an account gives. A visitor sent back to an invitation is told "Rook invited you to a
+   3v3 battle." and that signing in takes their place. Who invites needed no host change: `POST
+   /api/lobby/invitations` already describes a link's table to whoever holds its key, signed out, and spends
+   nothing (ADR 0116); a seat kept for a friend answers spent to anybody else (ADR 0129), and the panel then names
+   nobody. The ground and the Revenant are the kit's `<img>`, placed only once the host says nobody is signed in,
+   so a player's home loads none of them. On the slow profile the panel's largest paint went from 4.7 s to 2.0 s
+   and its pictures from 809 KB to 34 KB, its layout's shift from 0.04 to 0, since the footer now waits with the
+   panel; the home's went from 0.26 to 0.21 for the same reason. The developer's Sign in is the one filled action
+   and says Signing in… while the host answers; the footer's links, the brand and the menu reach 44 px. The name window says "Take this name →" and where the
+   press leads: the invited place from the start, or the first lesson once the host names it, the window staying
+   open with "✓ <name> is yours" until the lesson's page replaces it. Closed without a name, it gives the focus
+   back to the sign-in. The place taken names the inviter's table, its Take the place is filled and says Taking
+   the place…, and Tables reaches 44 px. The walk's invitation now comes from a person's table, so the panel's
+   sheet names them. `accounts-plan.md` and `home-navigation.md` describe the same short panel. Two clips at
+   390 px were recorded in real time for the owner: a plain visit to tutorial 1's brief, and the invitation
+   followed on a slow network to the battle view. `table/door.test.js` holds the words and the keys read off
+   `next`; `lobby-home.spec.js` the pictures, the invited panel and a slow answer, the name window's line on both
+   paths and the focus, and a home that loads none of the door's paintings.
+
+   Left: the first paint does not hold the panel's room, since a signed-in player would see the sign-in flash
+   before their home; that needs the host to say who is signed in with the page. The friend's step between the
+   panel and the place taken is the classic table's page, which says Connecting… for seconds on a slow network
+   before its question: the brief's **Left** already asks whether the invitation should open on the lobby. The
+   name window was filmed staged, as in UX2: a developer account names itself, so the clips show the developer's
+   form and not the window. The cue stops at the battle view, which says Loading the match with no inviter or
+   seat: UX11's frame. The duel picture for the invited friend is still asked of the owner; the ground and the
+   Revenant hold its place. Google's pill and the other choices wait under the brief's **Left**. The home's shift
+   of 0.21 is still UX9's to bring under 0.1.
 8. **UX8, the lessons.** The brief window, the coach, the concept cards and the phase tips under a budget of
    words, a hint when a player stalls, the end of a tutorial as a moment, Learn to play with a picture and a
    progress. What `onboarding-plan.md` and `docs/tabletop/tutorial-follow-ups-plan.md` left open is settled here

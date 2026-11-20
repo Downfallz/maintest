@@ -205,6 +205,8 @@ function invite(plan) {
 
   const accept = async also => {
     for (const id of Object.keys(buttons)) element(id).disabled = true;
+    // The press is answered at once: the host's answer can take a while on a phone's network.
+    if (!also.length) element('invitation-take').textContent = 'Taking the place…';
     try {
       const claimed = await lobbyPost('/api/lobby/claim', { tokens: plan.offered.map(one => one.token) });
       panel.hidden = true;

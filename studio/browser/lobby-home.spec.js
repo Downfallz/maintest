@@ -9,8 +9,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null } = {}) {
-  const state = { account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null } = {}) {
+  const state = { holdInvitation, account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -29,6 +29,15 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator, notice });
     // A first sign-in while the operator has registration closed (ADR 0177) is refused rather than asked for a name.
     if (path === '/api/account/google' && registrationClosed) return route.fulfill({ status: 409, json: { error: 'Account.RegistrationClosed', message: 'New accounts are closed for now. Try again later.' } });
+    // A first sign-in names itself in the name window: the host hands a ticket, then takes the name.
+    if (path === '/api/account/google' && newAccount) return json({ needsUsername: true, ticket: 'name-ticket' });
+    if (path === '/api/account' && route.request().method() === 'POST') { state.named = route.request().postDataJSON(); state.account = { id: player.id, username: state.named.username }; return json({}); }
+    // What a link's keys are, asked signed out: the same answer the table's page reads before a seat is taken.
+    if (path === '/api/lobby/invitations') {
+      state.invitationAsks = [...(state.invitationAsks ?? []), route.request().postDataJSON()];
+      if (state.holdInvitation) await state.holdInvitation;
+      return json({ invitations: invited ? [{ token: 'inv', kind: 'invitation', seat: 'player2', table: invited }] : [{ token: 'inv', kind: 'spent', seat: null, table: null }] });
+    }
     // A table asked for is noted and refused: the dialog's request is what the tests read.
     if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
@@ -920,4 +929,98 @@ test('a guest is not asked for the tutorials: no Learn to play, in the page or t
   await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('button', { name: 'Settings' }).click();
   await expect(page.locator('#tutorial-again-row')).toBeHidden();
   expect(state.tutorialReads ?? 0).toBe(0);
+});
+
+const rooks = { id: 'rooks-table', format: '3v3', waiting: true, over: false, round: null, openSeats: 1,
+  seats: [{ seat: 'player1', kind: 'person', name: 'Rook' }, { seat: 'player2', kind: 'open', name: 'Open seat' }] };
+const invitedSearch = `?next=${encodeURIComponent('/?player2=inv')}`;
+
+test('the game\'s door shows its paintings as pictures of the kit, the ground asked for first, and the sign-in within reach at 320 px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const state = await home(page, { account: null, mode: 'google' });
+
+  await expect(page.locator('#sign-in-eyebrow')).toHaveText('Beta');
+  await expect(page.locator('#sign-in-game')).toHaveText('A turn-based duel: your three creatures mutate against another player\'s three.');
+  const ground = page.locator('#sign-in-art img.sign-in-ground');
+  await expect(ground).toHaveAttribute('fetchpriority', 'high');
+  await expect(ground).toHaveAttribute('alt', '');
+  for (const image of await page.locator('#sign-in-art img').all()) {
+    expect(Number(await image.getAttribute('width'))).toBeGreaterThan(0);
+    expect(Number(await image.getAttribute('height'))).toBeGreaterThan(0);
+  }
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeInViewport();
+  await noOverflow(page);
+  expect(state.invitationAsks).toBeUndefined();
+  expect(state.errors).toEqual([]);
+});
+
+test('a friend who follows an invitation signed out is told who invites them, and the name window carries the place to the table', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google', newAccount: true, invited: rooks, search: invitedSearch });
+
+  await expect(page.getByRole('heading', { name: 'Rook invited you to a 3v3 battle.' })).toBeVisible();
+  await expect(page.locator('#sign-in-eyebrow')).toHaveText('Invitation');
+  await expect(page.locator('#sign-in-account')).toHaveText('Sign in to take your place. Your games follow you everywhere.');
+  expect(state.invitationAsks).toEqual([{ tokens: ['inv'] }]);
+
+  await page.evaluate(() => window.googleSignIn({ credential: 'a-token-google-signed' }));
+  const named = page.getByRole('dialog', { name: 'Choose your player name' });
+  await expect(named).toBeVisible();
+  await expect(page.locator('#name-next')).toHaveText('Next: your place as Player 2 at Rook\'s table.');
+  await expect(named.getByRole('button', { name: 'Take this name →' })).toBeVisible();
+
+  // Closed without a name, the focus goes back to the way in.
+  await page.keyboard.press('Escape');
+  await expect(named).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeFocused();
+
+  // Named, the page goes back to the invitation it was sent from, the window still saying where.
+  await page.route('**/?player2=inv', route => route.fulfill({ contentType: 'text/html', body: '<title>The invitation</title>' }));
+  await page.evaluate(() => window.googleSignIn({ credential: 'a-token-google-signed' }));
+  await page.locator('#username').fill('Walker');
+  await named.getByRole('button', { name: 'Take this name →' }).click();
+  await expect(page).toHaveTitle('The invitation');
+  expect(state.named).toEqual({ ticket: 'name-ticket', username: 'Walker' });
+  expect(state.errors).toEqual([]);
+});
+
+test('an invitation the host cannot describe still says it is one, and a slow answer keeps the panel where it is', async ({ page }) => {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const state = await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch, holdInvitation: held });
+
+  await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
+  const button = await page.getByRole('button', { name: 'Continue with Google' }).boundingBox();
+  release();
+  await expect.poll(() => state.invitationAsks?.length ?? 0).toBe(1);
+  await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
+  expect(await page.getByRole('button', { name: 'Continue with Google' }).boundingBox()).toEqual(button);
+  expect(state.errors).toEqual([]);
+});
+
+test('a new account named on a plain visit is told the first lesson in the window before the lesson opens', async ({ page }) => {
+  // What the window said as the page left, kept where the next page of this origin can read it.
+  await page.addInitScript(() => addEventListener('pagehide', () => {
+    const next = document.getElementById('name-next'), window = document.getElementById('name-dialog');
+    if (next) sessionStorage.setItem('left-with', JSON.stringify([next.textContent, window.open]));
+  }));
+  const state = await home(page, { account: null, mode: 'google', newAccount: true, tutorials: series('new') });
+
+  await page.evaluate(() => window.googleSignIn({ credential: 'a-token-google-signed' }));
+  await expect(page.locator('#name-next')).toBeHidden();
+  await page.locator('#username').fill('Walker');
+  await page.getByRole('button', { name: 'Take this name →' }).click();
+
+  await expect(page).toHaveTitle('Tutorial');
+  expect(JSON.parse(await page.evaluate(() => sessionStorage.getItem('left-with')))).toEqual(['Next: Tutorial 1, Your first combat.', true]);
+  expect(state.errors).toEqual([]);
+});
+
+test('a signed-in player\'s home loads none of the door\'s paintings', async ({ page }) => {
+  const asked = [];
+  page.on('request', request => { if (request.url().includes('/page-art/')) asked.push(request.url()); });
+  const state = await home(page);
+
+  await expect(page.locator('#sign-in-art img')).toHaveCount(0);
+  expect(asked).toEqual([]);
+  expect(state.errors).toEqual([]);
 });

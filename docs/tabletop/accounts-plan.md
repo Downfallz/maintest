@@ -161,19 +161,23 @@ The original mockup: <https://claude.ai/artifact/7aDdifjT6H1kpNAmuGBqhN> (privat
 The current layout is documented in [Home navigation](home-navigation.md), using the
 [official slate/gold/copper palette](../art/branding.md). Four states, all on `/`:
 
-1. **Signed out.** A short introduction to the tactical duel, creature artwork and three steps explaining
-   mutations, tempo and spells. **Enter the battle view** leads to **Continue with Google** (Google's own button).
-   The dashboard and account-only navigation are hidden. Leaderboard has its own page; **Your data** and
-   **Join with a code** open dialogs from the responsive menu. An invitation follows `/j/<code>` and the
-   existing `next` sign-in return path. The operator's **Admin** link remains permission-gated.
-2. **Choose your name** (first sign-in only). One card: the field, a live *available / taken / reserved* line,
-   the rules in one sentence, **Enter the battle view →**. *This is the name other players see on every table.*
+1. **Signed out.** A short panel, since the [showcase](../../showcase/README.md) is the introduction
+   ([the doors' brief](../art/journeys/doors.md), UX7): one line on the game, what an account gives, a painting of
+   the ground and a creature, and **Continue with Google** (Google's own button). The dashboard and account-only
+   navigation are hidden. Leaderboard has its own page; **Your data** and **Join with a code** open dialogs from
+   the responsive menu. An invitation follows `/j/<code>` and the existing `next` sign-in return path. The
+   operator's **Admin** link remains permission-gated.
+2. **Choose your name** (first sign-in only). One window: the field, a live *available / taken / reserved* line,
+   the rules in one sentence, a line saying where the press leads (the invited place, or the first lesson once the
+   host names it), **Take this name →**. *Other players see it on every table.*
 3. **Signed in: the lobby.** Today's lobby, with the account chip (username, *Sign out*, *Sign out everywhere*)
    in the masthead. **Your games** comes from the host, so it is the same on the phone and the laptop, and a card
    says *Your turn* when a question waits for one of your seats. Invitations, **Find an opponent** and
    **New battle** stay on the dashboard; Friends and Notifications open dialogs from the menu.
-4. **Arriving with an invitation, signed out.** *bastien invited you to a 2v2 battle* — sign in to accept —
-   then ADR 0116's confirmation.
+4. **Arriving with an invitation, signed out.** The same panel says *bastien invited you to a 2v2 battle*, read
+   from `POST /api/lobby/invitations`, which answers whoever holds the link's key and needs no account. A seat
+   kept for a friend answers spent to anybody else, and the panel then says *You are invited to a battle*. Sign
+   in, then ADR 0116's confirmation, which names the inviter's table too.
 
 The match card: the format and state on top, then the versus line, Player 1's side in the ally colour and
 Player 2's in the enemy colour, a bot with a small *bot* tag, an open place as a dashed *open seat*. The table

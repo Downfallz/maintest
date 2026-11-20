@@ -267,19 +267,22 @@ Your games follow you on every device.
 Privacy policy
 ```
 
-Invited, when the host says who invites (see **Left**):
+Invited, when the host says who invites:
 
 ```text
 Invitation
 bastien invited you to a 3v3 battle.
 A turn-based duel: your three creatures mutate against another player's three.
-Sign in to take your place. Your games follow you on every device.
+Sign in to take your place. Your games follow you everywhere.
 [Continue with Google]
 Privacy policy
 ```
 
-When the host does not say who, the page knows only that its address carries an invitation, and the title
-reads "You are invited to a battle." The eyebrow "Player lobby" goes: the visitor is not in a lobby yet.
+When the host does not say who (a seat kept for a friend, which answers spent to anybody else, or a bot's
+table), the title reads "You are invited to a battle.", or "to a 2v2 battle." when the format is known. The line
+on the game counts the format's creatures. The eyebrow "Player lobby" goes: the visitor is not in a lobby yet.
+The walk measures the developer's form, whose label and button are four words more than Google's button: 41
+words plain and 48 invited on the sheet are 37 and 44 on the public host.
 
 ### Pictures
 
@@ -308,14 +311,18 @@ sizes `scripts/ux/pictures.mjs` derives.
 
 ### States
 
-- **First paint**: the header and the panel's room, before `/api/me` answers; today the panel is `hidden` until
-  then and the page is blank under the header. Its room is held, with the title and the line on the game, which
-  are the same in every state.
+- **First paint**: the header, before `/api/me` answers; the panel stays `hidden` until then, since a
+  signed-in player must not see a sign-in flash before their home. Its paintings are placed once the host says
+  nobody is signed in, so a player's home loads none. The words come first and the ground after: on a slow
+  network it fills the panel about a second later, with nothing moving, since the picture is behind the words
+  (see **Left**). The footer waits with the panel, so it does not jump below it.
 - **Empty**: cannot be: a visitor signed out always has the panel.
 - **Loaded**: the panel, plain or invited, as under **Words**; Google's button in its box of 44 px, at least
   200 px wide, held before Google's script draws it.
-- **Waiting**: after a press on the sign-in, until the host answers: the button is disabled and says Signing in.
-  Read in the code, not seen: today nothing changes on the page until the answer.
+- **Waiting**: after a press on the developer's Sign in, until the host answers: the button is disabled and says
+  Signing in…. Google's button answers in its own popup. While the host describes an invitation the panel says
+  "You are invited to a battle." and gains the name when it comes; the button does not move
+  (`lobby-home.spec.js`).
 - **Error**: `#sign-in-problem`, an alert under the button: Google's script that did not load, a refused
   sign-in. When the host cannot be reached the panel offers no sign-in and says "Could not reach the host to
   check your account. Reload the page to try again." Read in `table/account.js`, not seen.
@@ -342,8 +349,9 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - **Names**: the pictures are decoration, `alt=""`; the title and the line on the game carry what they show. The
   panel is a `section` named by its title; the invited title names the inviter, so a screen reader hears it first.
 - **Announced**: the error through `#sign-in-problem`, `role="alert"`, already in the HTML.
-- **Targets**: 4 of 7 under 44 px, 2 under 24 (the footer's Copyright and About the game, about 12 px tall). Each
-  reaches 44 px. Google's button is held at 44 px (`table/lobby.css`).
+- **Targets**: 4 of 7 under 44 px before UX7, 2 under 24 (the footer's Copyright and About the game, about 12 px
+  tall), then the brand at 28 px tall and the menu at 34 px wide. Each reaches 44 px. Google's button is held at
+  44 px (`table/lobby.css`).
 
 ### Cost
 
@@ -359,14 +367,19 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - A fault in the flow: `docs/tabletop/accounts-plan.md` (the signed-out home, states 1 and 4) describes an
   introduction in three steps and "bastien invited you"; `docs/tabletop/home-navigation.md` says sign-in at once.
   UX7 brings the two to agree on this brief: a short panel, plus the inviter when there is one.
-- Who invites is the host's to say. Signed out, the page knows the code in its address and nothing else today.
-  A route that names the inviter and the format of a code to a visitor who is not signed in is a host change:
-  `host-reviewer` and `security-reviewer` read it, and it may be refused. Until then: "You are invited to a battle."
+- Who invites: decided in UX7 with no host change. `POST /api/lobby/invitations` already describes a link's
+  table to whoever holds its key, signed in or not, and spends nothing (ADR 0116): the table's page asked it
+  before any sign-in. The panel asks it with the key the `next` address carries. A seat kept for a friend
+  answers spent to anybody but that friend (ADR 0129), so the panel names nobody then.
+- The first paint does not hold the panel's room: a signed-in player would see the sign-in flash before their
+  home. Holding it needs the host to say who is signed in with the page itself, which is not this stage's.
 - Google draws a pill (`shape: 'pill'` in `table/account.js`) where the identity's buttons are square. Google's
   `rectangular` shape is closer; the owner chooses.
 - The panel's arrival, once the host says signed out, is not one of the kit's five uses: it appears at once in
   its held room. A fade would need the craft book to count a section that arrives among the kit's uses.
 - The line on the game is mine; the owner may prefer the showcase's own kicker, "Turn-based 3v3 combat".
+- The account line reads "on every device" plain and "everywhere" invited, to keep the invited panel under its 45
+  words.
 
 ## The name window (`name-window`)
 
@@ -381,8 +394,10 @@ Google's button cannot be pressed by a walk, and the developer's form names the 
 
 ### Words
 
-- **Order**: the eyebrow, the title, why the name matters, the field and its check, the rule of a name, the button.
-- **Budget**: 44 words with the check's line shown, today 41 without it: the walk films the field empty.
+- **Order**: the eyebrow, the title, why the name matters, the field and its check, the rule of a name, where the
+  press leads, the button.
+- **Budget**: 50 words with the check's line and where it leads shown; 41 before UX7, 47 on the invited sheet,
+  whose field is empty.
 
 ```text
 Welcome to Downfall Instinct
@@ -391,6 +406,7 @@ Other players see it on every table. It can't be changed for now.
 Player name [            ]
 ✓ bastien is available
 3 to 20 characters: letters, digits, _ and -. Starts with a letter.
+Next: your place as Player 2 at bastien's table.
 [Cancel]  [Take this name →]
 ```
 
@@ -452,6 +468,10 @@ into tutorial 1 is UX7's part of the lessons: it ends where `lesson-1-brief` beg
 
 - "Take this name" is my choice: it says what the press does on either path, and fits one line at 320 px.
   The owner may keep a label that names the game.
+- The line that says where the press leads: on the invited path it is there from the start ("Next: your place as
+  Player 2 at bastien's table."); on a plain visit the host names the first lesson only once the account exists,
+  so the line appears after the press ("Next: Tutorial 1, Your first combat.") and the window stays open, with
+  "✓ bastien is yours", until the lesson's page replaces it.
 - Whether a newcomer who came by an invitation should see tutorial 1 before the invited game is
   `docs/tabletop/onboarding-plan.md`'s, not this brief's. Today they go to the invitation.
 
@@ -462,21 +482,22 @@ into tutorial 1 is UX7's part of the lessons: it ends where `lesson-1-brief` beg
 The invited friend, signed in and named, accepts the place they were invited to. One tap takes it and the
 invitation is spent (ADR 0116). Built by `table/invitation.js` and `table/table.js` on `table/index.html`.
 
-- **Filled action**: Take the place as Player 1. Today it is an outline with a gold ring, and the measure counts
+- **Filled action**: Take the place as Player 2. Today it is an outline with a gold ring, and the measure counts
   no filled action. The Tables link stays quiet.
 
 ### Words
 
 - **Order**: the eyebrow, the question, where the table stands, what accepting does, the button, Tables.
-- **Budget**: 40 words, today 51. The table's own chrome above it (Your table, An invitation to a table, the
-  round guide, the sound) is not this screen's job: it stays, quieter, and the panel comes first.
+- **Budget**: 40 words of its own; the screen measured 51 before UX7 and 42 after, its chrome included. The
+  table's own chrome above it (Your table, An invitation to a table, the round guide, the sound) is not this
+  screen's job: it stays, quieter, and the panel comes first.
 
 ```text
 Invitation
-Join as Player 1?
-3v3 table, waiting for its players.
+Join as Player 2?
+bastien's 3v3 table, waiting for you.
 Once you take the place, this link stops working for anyone else.
-[Take the place as Player 1]
+[Take the place as Player 2]
 Tables
 ```
 
@@ -517,8 +538,10 @@ None. The friend has just seen the sign-in panel's pictures; the battle view com
 - **Focus**: on Take the place when the panel appears (it is today, `table/table.js`), then Tables.
 - **Names**: the panel is a `section` named by its question. The button's name is its words.
 - **Announced**: a failure through `#invitation-problem`, polite, already in the HTML.
-- **Targets**: 3 of 8 under 44 px at 390, 4 at 320: Tables, set as a small tag, and the table's header. Each
-  reaches 44 px.
+- **Targets**: 3 of 8 under 44 px at 390, 4 at 320, before UX7: Tables, set as a small tag, and the table's
+  header. Tables, the brand and the menu reach 44 px. The sound's and the touch's switches beside ♪ are the
+  classic table's 13 px boxes inside their labels, and the notifications' button is 40 px at 320, where a wider
+  one would push the header past the screen: both stay, under **Left**.
 
 ### Cost
 
@@ -530,5 +553,10 @@ None. The friend has just seen the sign-in panel's pictures; the battle view com
 
 - The friend lands on the classic table's page, with its round guide and its sound, for one question. Whether the
   invitation should open on the lobby instead is `docs/tabletop/home-navigation.md`'s; this brief stages it as it is.
-- "Player 1" is the seat's name. The inviter's name would say more, and is the host's to give, as on the
-  panel.
+- The inviter is named on the standing line ("bastien's 3v3 table, waiting for you."), from the same answer as
+  the panel's.
+- The cue stops at the battle view: its first frames say Loading the match, with no inviter and no seat. Naming
+  them there is the match's frame, UX11's, read from the seat the host gives.
+- On a slow network the classic table's page says Connecting… for seconds before its question. Its room and a
+  line saying which invitation it reads are this page's to add when the invitation moves to the lobby, or before.
+- The classic table's switches beside ♪ stay at 13 px, and the notifications' button at 40 px at 320.

@@ -29,6 +29,20 @@ async function home(page, origin) {
   await page.waitForFunction(() => !/Finding/.test(document.querySelector('#my-tables')?.textContent ?? 'Finding'));
 }
 
+// A table a person opens for another player, and the link its waiting room passes on: the friend's invitation.
+async function invitationFrom(walk, name) {
+  const inviter = await walk.person();
+  await account(walk, inviter, name);
+  const headers = { Origin: walk.set.game };
+  const made = await inviter.request.post(`${walk.set.game}/api/lobby/tables`, { data: { opponent: 'person' }, headers });
+  if (!made.ok()) throw new Error(`The host refused ${name}'s table: ${made.status()}`);
+  const [seat] = (await made.json()).seats;
+  const room = await inviter.request.get(`${walk.set.game}/api/seat/${seat.seat}`, { headers: { 'X-Seat-Token': seat.token } });
+  const join = (await room.json()).waiting?.seats?.[0]?.join;
+  if (!join) throw new Error(`${name}'s table names no link for its open place.`);
+  return `${walk.set.game}${join}`;
+}
+
 const doors = {
   id: 'doors',
   title: 'The two doors',
@@ -62,9 +76,11 @@ const doors = {
     await page.goto(`${set.game}${new URL(play).pathname}`);
     await page.locator('#sign-in-panel').waitFor();
     await walk.screen('sign-in-panel');
-    // The second door: a friend's invitation, followed signed out.
-    await page.goto(set.invitation);
-    await page.locator('#sign-in-panel').waitFor();
+    // The second door: a friend's invitation, followed signed out. The friend opens a table with a place for
+    // another player and passes on its link, as the waiting room shows it, so the panel can name who invites.
+    await page.goto(await invitationFrom(walk, FRIEND));
+    await page.locator('#sign-in-panel[data-door="invited"]').waitFor();
+    await page.getByRole('heading', { name: `${FRIEND} invited you` }).waitFor();
     await walk.screen('invitation-sign-in');
     // A new Google account names itself in this window, over the panel; a developer account is named by its
     // form. Opened by the walk so the window is seen, and marked staged.
