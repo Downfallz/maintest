@@ -34,11 +34,23 @@ export function invitationPlan(invitations, held) {
   return { kind: 'confirm', table, offered: offered.map(({ seat, token }) => ({ seat, token })), own, seats };
 }
 
+/**
+ * Who invites, as the host names the table's seats: the person sitting at a seat the link does not offer. None for a
+ * bot, an open seat, or a seat older than accounts, which the host calls "Player".
+ */
+export function inviterOf(table, offered) {
+  const host = (table?.seats ?? []).find(one => one.kind === 'person' && !(offered ?? []).some(seat => seat.seat === one.seat));
+  return host?.name && host.name !== 'Player' ? host.name : null;
+}
+
 /** Where the table stands, in a few words: a link should say which game it opens before anybody accepts it. */
-function standing(table) {
+function standing(table, inviter) {
   if (!table) return '';
-  const where = table.waiting ? 'waiting for its players' : table.round ? `round ${table.round}` : 'under way';
-  return `${table.format ?? ''} table, ${where}.`.trim();
+  let where = 'under way';
+  if (table.waiting) where = inviter ? 'waiting for you' : 'waiting for its players';
+  else if (table.round) where = `round ${table.round}`;
+  const whose = inviter ? `${inviter}'s ` : '';
+  return `${whose}${table.format ?? ''} table, ${where}.`.trim();
 }
 
 /** The words and the buttons for a plan: what accepting would do, and the way out that keeps things as they are. */
@@ -73,7 +85,7 @@ export function invitationText(plan) {
 
   return {
     title: `Join as ${invited}?`,
-    body: `${standing(plan.table)} An invitation can be accepted once: once you take the place, this link and its code stop working for anyone else.`.trim(),
+    body: `${standing(plan.table, inviterOf(plan.table, plan.offered))} Once you take the place, this link stops working for anyone else.`.trim(),
     take: `Take the place as ${invited}`, here: null, keep: null,
   };
 }

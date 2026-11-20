@@ -96,9 +96,9 @@ function mountSignIn(doc, { request, google, refresh, say }) {
       say('name-check');
       el('name-dialog').showModal();
       el('username').focus();
-      return;
+      return false;
     }
-    await refresh();
+    return (await refresh()).leaving;
   }
 
   async function withGoogle(state) {
@@ -111,16 +111,27 @@ function mountSignIn(doc, { request, google, refresh, say }) {
         ux_mode: 'popup',
         cancel_on_tap_outside: true,
       });
-      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'pill', text: 'continue_with', size: 'large' });
+      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large' });
     } catch (error) {
       say('sign-in-problem', error.message);
     }
   }
 
-  el('dev-sign-in').addEventListener('submit', event => {
+  // The press is answered at once: the button says it is signing in until the host has.
+  el('dev-sign-in').addEventListener('submit', async event => {
     event.preventDefault();
     say('sign-in-problem');
-    request('/api/account/dev', { username: el('dev-username').value }).then(signedIn).catch(error => say('sign-in-problem', error.message));
+    const button = el('dev-sign-in-submit'), label = button?.textContent;
+    if (button) { button.disabled = true; button.textContent = 'Signing in…'; }
+    let leaving = false;
+    try {
+      leaving = await signedIn(await request('/api/account/dev', { username: el('dev-username').value }));
+    } catch (error) {
+      say('sign-in-problem', error.message);
+    } finally {
+      // A page on its way elsewhere keeps the button as it is: a second press would sign in again.
+      if (button && !leaving) { button.disabled = false; button.textContent = label; }
+    }
   });
 
   el('username').addEventListener('input', () => {
@@ -146,15 +157,28 @@ function mountSignIn(doc, { request, google, refresh, say }) {
     el('name-submit').disabled = true;
     try {
       await request('/api/account', { ticket, username: value.trim() });
-      ticket = null;
-      el('name-dialog').close();
-      await refresh();
     } catch (error) {
       say('name-problem', error.code === 'Account.TicketExpired' ? 'That sign-in ran out. Close this and sign in again.' : error.message);
-    } finally { el('name-submit').disabled = false; }
+      el('name-submit').disabled = false;
+      return;
+    }
+    ticket = null;
+    say('name-check', `✓ ${value.trim()} is yours`);
+    el('name-check').className = 'name-check good';
+    // The window stays while the page goes where the press leads, its line saying where: the cue the player
+    // carries across the page that changes. Its button stays off, since the name is taken. It closes when the
+    // account stays on this page, or when the page could not be read again.
+    const leaving = await refresh().then(state => state.leaving, () => false);
+    if (!leaving) { el('name-dialog').close(); el('name-submit').disabled = false; }
   });
 
-  el('name-cancel').addEventListener('click', () => { ticket = null; el('name-dialog').close(); });
+  // Closed without a name, the focus goes back to the way in: the developer's button, or Google's.
+  el('name-dialog').addEventListener('close', () => {
+    if (!ticket) return;
+    ticket = null;
+    (el('dev-sign-in').hidden ? el('google-button').querySelector('[role="button"], button, iframe') : el('dev-sign-in-submit'))?.focus();
+  });
+  el('name-cancel').addEventListener('click', () => el('name-dialog').close());
 
   return withGoogle;
 }
@@ -190,7 +214,8 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
         el('app-settings-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
       }
     }
-    onChange(state.account, state.mode);
+    // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so.
+    state.leaving = Boolean(await Promise.resolve(onChange(state.account, state.mode)));
     return state;
   }
 

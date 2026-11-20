@@ -61,9 +61,10 @@ function made(doc, tag, text, className) {
 /**
  * Draws the Learn to play section for whoever is signed in, and opens the first tutorial for an account it is new
  * to: `setAccount(account)` reads the series again for them, and hides the section for nobody.
- * @param {{ request?: (path: string) => Promise<Response>, session?: Storage | null, go?: (link: string) => void, hash?: () => string, plain?: () => boolean }} [options]
+ * Resolves true when it opens the first tutorial, which `opening` is told first.
+ * @param {{ request?: (path: string) => Promise<Response>, session?: Storage | null, go?: (link: string) => void, hash?: () => string, plain?: () => boolean, opening?: (tutorial: object) => void }} [options]
  */
-export function mountTutorials(doc, { request = fetched, session = null, go = link => globalThis.location.assign(link), hash = () => globalThis.location?.hash ?? '', plain = () => !globalThis.location?.search && !globalThis.location?.hash } = {}) {
+export function mountTutorials(doc, { request = fetched, session = null, go = link => globalThis.location.assign(link), hash = () => globalThis.location?.hash ?? '', plain = () => !globalThis.location?.search && !globalThis.location?.hash, opening = () => {} } = {}) {
   const section = doc.getElementById('learn-to-play');
   const cards = doc.getElementById('tutorial-cards');
   let reading = 0;
@@ -80,7 +81,8 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
     // An address that asks for something (a rematch, the main menu's Learn to play) is answered first: the tutorial
     // waits for a plain visit.
     const first = plain() ? opensByItself(answer, session) : null;
-    if (first) { go(first); return; }
+    // Said before the page changes, so the window the player named themselves in can say where they are going.
+    if (first) { opening(answer.tutorials.find(one => one.link === first) ?? {}); go(first); return true; }
     const listed = tutorialCards(answer);
     cards.replaceChildren(...listed.map(card => {
       const root = made(doc, 'article', undefined, 'game-card practice');

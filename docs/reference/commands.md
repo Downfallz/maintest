@@ -592,6 +592,9 @@ The seat's view says the lesson under `practice.tutorial`:
   (ADR 0111).
 - A seat's link or code carries an invitation, not the seat: the page asks before accepting it, it is accepted
   once, and the admin panel's New invitation cuts off a lost device (ADR 0116).
+  `POST /api/lobby/invitations` answers what a link's keys are to whoever holds them, signed in or not, and
+  spends nothing: the signed-out door reads from it who invites and to what format. `POST /api/lobby/claim`
+  takes the place and needs an account.
 
 #### "Your turn" on a phone
 

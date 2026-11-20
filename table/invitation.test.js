@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addressAfter, battleAddress, invitationPlan, invitationText, spentLink } from './invitation.js';
+import { addressAfter, battleAddress, invitationPlan, invitationText, inviterOf, spentLink } from './invitation.js';
 
 const table = { id: 't1', format: '3v3', waiting: true, round: null };
 const invitation = (seat, token, at = table) => ({ token, kind: 'invitation', seat, table: at });
@@ -57,10 +57,24 @@ test('an invitation is asked about before it is accepted, and says it can be acc
   assert.deepEqual(plan.own, []);
   const text = invitationText(plan);
   assert.equal(text.title, 'Join as Player 2?');
-  assert.match(text.body, /3v3 table, waiting for its players/);
-  assert.match(text.body, /accepted once/);
+  assert.equal(text.body, '3v3 table, waiting for its players. Once you take the place, this link stops working for anyone else.');
   assert.equal(text.take, 'Take the place as Player 2');
   assert.equal(text.here, null);
+});
+
+test('the player who sits at the table and invites is named, so the friend knows whose game it is', () => {
+  const kept = { ...table, seats: [{ seat: 'player1', kind: 'person', name: 'bastien' }, { seat: 'player2', kind: 'open', name: 'Open seat' }] };
+  const plan = invitationPlan([invitation('player2', 'inv', kept)], []);
+
+  assert.equal(inviterOf(plan.table, plan.offered), 'bastien');
+  assert.equal(invitationText(plan).body, 'bastien\'s 3v3 table, waiting for you. Once you take the place, this link stops working for anyone else.');
+});
+
+test('a table with nobody to name, a bot or a seat older than accounts, names no inviter', () => {
+  const offered = [{ seat: 'player1', token: 'inv' }];
+  assert.equal(inviterOf({ seats: [{ seat: 'player1', kind: 'open' }, { seat: 'player2', kind: 'bot', name: 'Hard' }] }, offered), null);
+  assert.equal(inviterOf({ seats: [{ seat: 'player1', kind: 'open' }, { seat: 'player2', kind: 'person', name: 'Player' }] }, offered), null);
+  assert.equal(inviterOf(null, offered), null);
 });
 
 test('the player who opens the link they meant to send is offered their own seat back first', () => {

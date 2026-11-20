@@ -741,6 +741,8 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `GET /api/lobby/finished/<bots\|players>/<page>` | account | Finished games, six at a time (ADR 0147). |
 | `POST /api/lobby/tables` | anyone, account | Opens a table: `opponent`, `friend`, `level` (ADR 0180), `ranked` (ADR 0155), `turnLimit` (ADR 0169), format. |
 | `POST /api/lobby/adopt` | account | Adopts the browser's saved seats into the account. |
+| `POST /api/lobby/invitations` | anyone holding the link's key | What the keys a link carries are: an invitation with its table described, a seat, or spent. Spends nothing (ADR 0116); a seat kept for a friend is spent to anyone else (ADR 0129). The table's page and the signed-out door ask it. |
+| `POST /api/lobby/claim` | account | Accepts the invitations a link carries; the first browser takes the seat (ADR 0116). |
 | `POST /api/lobby/tables/<id>/accept`, `.../decline` | account | The invited friend answers (ADR 0129). |
 | `DELETE`/`POST /api/lobby/tables/<id>/invitation`, `POST .../open`, `DELETE /api/lobby/tables/<id>` | account | The inviter cancels, re-invites, opens, or closes an unbegun table. |
 | `GET /api/lobby/tables/<table>/replay` | account | A finished game's replay, for an account that sat at it (ADR 0156). |

@@ -1,5 +1,6 @@
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { nextPath } from './account.js';
+import { mountDoor } from './door.js';
 import { onLobbyChange } from './changes.js';
 import { mountNavigation } from './navigation.js';
 import { sinceVisitLine, turnOf } from './players.js';
@@ -906,21 +907,23 @@ if (typeof document !== 'undefined') {
   const practiceList = mountPracticeList(document);
   let session = null;
   try { session = globalThis.sessionStorage; } catch { /* No tutorial opens by itself; Learn to play still lists them. */ }
-  const tutorials = mountTutorials(document, { session, plain: () => plainVisit });
+  const door = mountDoor(document);
+  const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson });
   const next = nextPath(globalThis.location.search);
   const navigation = mountNavigation(document, storage, {
     onInvite: lobby.invite,
     onFriends: lobby.friendsChanged,
     onInbox: () => lobby.refresh(),
-    onChange(account, mode) {
-      if (account && next) { globalThis.location.assign(next); return; }
+    async onChange(account, mode) {
+      if (account && next) { globalThis.location.assign(next); return true; }
       const playable = Boolean(account) || mode === 'off';
+      if (!playable) door.signedOut();
       document.getElementById('home-games').hidden = !playable;
       document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'Your games';
       lobby.setAccount(account, mode);
       practiceList.setAccount(account);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
-      void tutorials.setAccount(account);
+      return Boolean(await tutorials.setAccount(account));
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);

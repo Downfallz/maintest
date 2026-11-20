@@ -273,7 +273,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
       showAgain.setAccount(account);
       friends.setAccount(account);
       inbox.setAccount(account);
-      onChange(account, mode);
+      return onChange(account, mode);
     },
   });
   return { setOutstanding: friends.setOutstanding, inbox };
