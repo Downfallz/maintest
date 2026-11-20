@@ -2037,6 +2037,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle .hud-top > .practice-band .eyebrow, .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow {
   font-size: .6875rem;
 }
+/* "TUTORIAL 1 OF 4" on two lines at 11 px: its column is as wide as its longest word. */
+.battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { max-width: none; width: min-content; letter-spacing: 0; }
 
 /* The round's bar under 360 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
    drawn on the menu's button, and History leaves it, so the round, the opponent, Help and Settings keep their own

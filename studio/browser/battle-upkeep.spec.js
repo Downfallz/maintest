@@ -117,7 +117,7 @@ test('a change told while a read is on its way reaches the board the read did no
   // change is answered after it, with the board it was asked for, and the change's notice is owed one more read.
   h.state.hold = true; await page.evaluate(() => window.notifyBattle()); await expect.poll(() => h.state.held).toBe(true);
   await h.publish([], { board: { ...h.state.view.board, allies: [creature(1, 0), ...roster.slice(1, 3)] } });
-  await expect(page.locator('[data-creature="1"]')).toHaveAccessibleName(/Warden, \w[^,]*, 0 of 20 HP/);
+  await expect(page.locator('[data-creature="1"]')).toHaveAccessibleName(/Warden of your team, 0 of 20 HP/);
   expect(h.state.errors).toEqual([]);
 });
 test('inspection reads current conditions while the receipt keeps the damage of a bleed since expired', async ({ page }) => {

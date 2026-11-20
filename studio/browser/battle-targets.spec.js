@@ -102,7 +102,7 @@ test('a stunned legal target keeps its stun visible and spoken while targets are
   const h = await mount(page); h.view.board.enemies[1].isStunned = true; await notify(page);
   await expect(target(page, 5)).toContainText('STUNNED'); await choose(page);
   await expect(target(page, 5).locator('.creature-tag')).toHaveText('+ Stunned');
-  await expect(target(page, 5)).toHaveAttribute('aria-label', /Stunned\. Select target\. Target selection\./);
+  await expect(target(page, 5)).toHaveAccessibleName(/Stunned\. Select target\. Target selection\./);
   await expect(target(page, 4).locator('.creature-tag')).toHaveText('+ Select target');
   await target(page, 5).click(); await expect(target(page, 5).locator('.creature-tag')).toHaveText('✓ Stunned');
   await expect(target(page, 5)).toHaveAttribute('data-target-state', 'selected');
