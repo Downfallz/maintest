@@ -1128,7 +1128,7 @@ node scripts/ux/baseline.mjs <folder> --commit <sha> --date <day> > docs/art/jou
 Walks one journey of docs/art/ux-craft-plan.md in Chromium as a new player would, at 320 by 568 and 390 by 844
 (`--width 320` or `--width 390` for one), and writes for each width a contact sheet (`doors-390.png`: the
 screens in order, numbered and named) and a file of measures (`doors-390.measures.jsonl`: a header, then a
-line a screen). The journeys are `doors`, `lessons`, `lobby`, `pages` and `match`; `--all` walks the five, and
+line a screen). The journeys are `doors`, `lessons`, `lobby`, `pages`, `match` and `windows` (the match's windows, UX12); `--all` walks the six, and
 `--list` prints their screens and their strips. Each walk builds its own set: the showcase built into a temporary
 folder and served from it (`--showcase <folder>` reads one already built), and a table host with developer
 accounts, a recording of its own and a table of seed 7. It needs the engine built (`dotnet build`), the content

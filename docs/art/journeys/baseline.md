@@ -216,6 +216,34 @@ At 390 by 844:
 | concede | 228 px, a window | 15 | 0 | 1 background | 16 px | 0 | 0 of 2 | 0 | 0 | 1 | 0.22 | nothing |
 | match-result | 818 px, a window | 112 | 1 | 1 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 3 | 0 | 0.22 | nothing |
 
+## The match's windows
+
+Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20.
+
+At 320 by 568:
+
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| mutation-pick | 568 px | 78 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 19 | 0 | 1 | 0 | 0.03 | label-content-name-mismatch (3) |
+| mutation-tree | 568 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 4 | 0 | 0.03 | label-content-name-mismatch (8) |
+| spell-choice | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 1 | 0 | 0.03 | nothing |
+| spell-choice-foot | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 18 | 0 | 0.03 | nothing |
+| history | 534 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 7 of 12 | 0 | 2 | 0 | 0.24 | label-content-name-mismatch (3) |
+
+Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
+
+- after spell-choice-foot: #history-open could not be pressed
+
+At 390 by 844:
+
+| Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| mutation-pick | 844 px | 86 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 24 | 0 | 1 | 0 | 0.00 | label-content-name-mismatch (3) |
+| mutation-tree | 844 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 2 | 0 | 0.00 | label-content-name-mismatch (8) |
+| spell-choice | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 1 | 0 | 0.00 | nothing |
+| spell-choice-foot | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 5 | 0 | 0.00 | nothing |
+| history | 698 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 9 of 12 | 0 | 2 | 1 | 0.29 | label-content-name-mismatch (6) |
+
 ## The first paints, on a slow phone
 
 Each page loaded 5 times with nothing cached, at 390 by 844, the network held to 1.6 Mbit/s down with 150 ms of latency and the processor 4 times slower. The median, with the fastest and the slowest run. A paint depends on the machine that measures it: these compare with one another and with a later walk on the same machine, not with a phone.

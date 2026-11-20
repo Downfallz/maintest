@@ -1,6 +1,6 @@
-// The five journeys of docs/art/ux-craft-plan.md, each walked as a new player would walk it: the screens it
-// names, in order, and how to get from one to the next. A walk presses what a player presses; where it cannot
-// (Google's own button), it says so with a staged screen. `strips` names the interactions `--strip` films.
+// The five journeys of docs/art/ux-craft-plan.md, and the match's windows of its UX12, each walked as a new player
+// would walk it: the screens it names, in order, and how to get from one to the next. A walk presses what a player
+// presses; where it cannot (Google's own button), it says so with a staged screen. `strips` names the interactions `--strip` films.
 
 import { GAME_ORIGIN } from '../../table/site-origins.js';
 import { choose, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
@@ -353,4 +353,47 @@ const match = {
   },
 };
 
-export const JOURNEYS = [doors, theLessons, lobby, pages, match];
+// The match's windows whose pictures docs/art/ux12-pictures-plan.md settles: the pick and the Mutation Tree opened
+// from it, the spellbook at its top and at its foot, and the journal once a round is played. UX12 adds the others.
+const windows = {
+  id: 'windows',
+  title: "The match's windows",
+  screens: ['mutation-pick', 'mutation-tree', 'spell-choice', 'spell-choice-foot', 'history'],
+  strips: {
+    // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
+    'history-window': { at: 'history', act: async ({ page }) => { await page.locator('#history-close').click(); await page.locator('#history-open').click(); } },
+  },
+  async walk(walk) {
+    const { page, set } = walk;
+    await account(walk, page, WALKER);
+    await takeSeat(page, set.invitation);
+    const look = async () => {
+      if (!walk.seen('mutation-pick') && await page.locator('#planning-dialog[data-kind="Evolution"]').isVisible()) {
+        await walk.screen('mutation-pick');
+        // The Mutation Tree as the pick opens it, a package's detail open: the tree and the detail on one screen.
+        await choose(page, '#mutation-atlas-open', walk.blocked);
+        await page.locator('#atlas-dialog[open]').waitFor();
+        await choose(page, '#atlas-board [data-package]', walk.blocked);
+        await page.locator('#atlas-detail:not([hidden])').waitFor();
+        await walk.screen('mutation-tree');
+        await page.locator('#atlas-close').click();
+        await page.locator('#atlas-dialog').waitFor({ state: 'hidden' });
+      }
+      if (!walk.seen('spell-choice') && await page.locator('#combat-dialog').isVisible()) {
+        await walk.screen('spell-choice');
+        // The foot of the spellbook: its last spell, where a docked sheet on a short phone must keep its foot.
+        await page.locator('#combat-browser').evaluate(node => { node.scrollTop = node.scrollHeight; });
+        await walk.screen('spell-choice-foot');
+        await page.locator('#combat-browser').evaluate(node => { node.scrollTop = 0; });
+      }
+    };
+    await playUntil(page, view => view.board.roundNumber > 1, { look, blocked: walk.blocked });
+    // A round played, the journal holds its casts.
+    await readUntilAsked(page);
+    await choose(page, '#history-open', walk.blocked);
+    await page.locator('#history-dialog[open]').waitFor();
+    await walk.screen('history');
+  },
+};
+
+export const JOURNEYS = [doors, theLessons, lobby, pages, match, windows];

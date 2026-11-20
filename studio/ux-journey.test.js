@@ -13,8 +13,8 @@ import { spread, summary } from '../scripts/ux/paint.mjs';
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const script = new URL('../scripts/ux/journey.mjs', import.meta.url).pathname;
 
-test('the five journeys of the plan are walked, each with screens named once', () => {
-  assert.deepEqual(JOURNEYS.map(journey => journey.id), ['doors', 'lessons', 'lobby', 'pages', 'match']);
+test('the five journeys of the plan and the match\'s windows are walked, each with screens named once', () => {
+  assert.deepEqual(JOURNEYS.map(journey => journey.id), ['doors', 'lessons', 'lobby', 'pages', 'match', 'windows']);
   for (const journey of JOURNEYS) {
     assert.ok(journey.screens.length >= 5, `${journey.id} names its screens`);
     assert.equal(new Set(journey.screens).size, journey.screens.length, `${journey.id} names a screen twice`);

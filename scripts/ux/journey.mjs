@@ -5,7 +5,7 @@
 // measures, a line a screen. Two walks of one journey give the same measures.
 //
 //   node scripts/ux/journey.mjs doors                         # artifacts/journeys/doors-390.png, doors-390.measures.jsonl, and -320
-//   node scripts/ux/journey.mjs --all --out <folder>          # the five journeys
+//   node scripts/ux/journey.mjs --all --out <folder>          # every journey
 //   node scripts/ux/journey.mjs lobby --width 390             # one width
 //   node scripts/ux/journey.mjs lobby --strip create-window   # one interaction across time: lobby-create-window-390.png
 //   node scripts/ux/journey.mjs --paint                       # the first paints on a slow phone: paint.json

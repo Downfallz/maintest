@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). Nothing is built.
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 is built; P2 is next.
 
 ## What the owner asked for
 
@@ -66,6 +66,16 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    `spell-choice` at 320 by 568. The brief measures the bytes of each screen with the proposed sizes, and says
    which picture is left out if the budget is short. `docs/art/journeys/README.md` gains its row. Tests: the
    walk's own tests and `studio/prompts.test.js`.
+
+   *Built (2026-11-20)*: the walk's sixth journey, `windows` (`scripts/ux/journeys.mjs`), films `mutation-pick`,
+   `mutation-tree` (the tree opened from the pick, a package's detail open), `spell-choice`, `spell-choice-foot`
+   (the spellbook at its last spell, the plan's docked spellbook at 320 by 568, since the walk films every screen
+   at both widths) and `history`, with the strip `history-window`; its lines are in the baseline. The
+   `ux-designer` wrote [the brief](journeys/windows.md) from both sheets. The bytes were measured with the kit's
+   encoder at the proposed sizes, outside the repository: 322,218 B for the page in all, so the brief proposes
+   320 KiB for "table/battle", first bytes 0; the forms go first if it is short. Left to P2: `budgetOf` counts a
+   picture once at its first width, so a spell drawn at 24 and 40 must be counted at both. Left to the owner: the
+   brief reads answer 1 as the pick and the tree's detail, and leaves the tree's board without forms.
 2. **P2, the sizes.** `page-pictures.json` declares the spell portraits at 24 and 40 px for `table/battle`, and
    the forms at 64 px; the files are regenerated; `page-budget.json` holds the number
    question 4 settles. Tests: `studio/ux-pictures.test.js` (every picture has its size, the budget holds) and
