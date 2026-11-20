@@ -5,17 +5,18 @@ The brief of the match's frame around the canvas: the round's bar (`.hud-top`), 
 (`.command-dock`, `#playback-pacing`). UX11 of [the pages' craft plan](../ux-craft-plan.md) builds it, with its
 paragraph "Make one exchange readable across field and frame". What a phase asks and in what order is
 `docs/tabletop/battle-ux-parity-plan.md`'s; inside the canvas is the battle craft's (`docs/art/battle-craft-plan.md`),
-and where the frame answers a blow it follows `table/battle-timing.js`. A proposal until the owner has seen the
-journey's sheets.
+and where the frame answers a blow it follows `table/battle-timing.js`. Still a proposal: the owner has not yet
+seen the journey's sheets.
 
 Written from the walk `node scripts/ux/journey.mjs match --out <folder>` on `main` at `ab08cbc`. Both contact sheets
 were read screen by screen, at 320 by 568 and 390 by 844, with their measures. No strip and no `--paint` were run
 for this brief. At 320 the walk could not press `#settings` after `second-round`: the notifications bell covers it.
 At 390 the walk films `result-read` before `order-of-play`; at 320 after it.
 
-Critiqued on the build of UX11 (`00e5951`), the same walk, both sheets and the strip
-`node scripts/ux/journey.mjs match --strip exchange` (24 frames, 120 ms apart, from Next on `result-read`) at 320
-and 390, against the film before it on the same machine. The numbers below marked "today" are the build's.
+Critiqued on the build of UX11 (`00e5951`): the same walk, both sheets, and the strip
+`node scripts/ux/journey.mjs match --strip exchange` (24 frames, 120 ms apart, from Next on `result-read`). Both
+widths were compared with the film before it, on the same machine. "Today" below means `main` before UX11, and
+"built" means the build above.
 
 The windows are UX12's, and are named here only for what of the frame shows behind them: `upkeep` and
 `phase-tip` (the bar and the order row above a window, the captions behind it), `mutation-tree` and `tempo-sheet`
@@ -110,7 +111,8 @@ What holds for every screen of the journey:
 
 - **Docked captions**: name and health (and defense); initiative and energy dropped.
 - **The order row's side line under 360 px**: the side alone; tempo and initiative in `#order-why`.
-- **History under 360 px**: off the bar, opened from Help's window, the upkeep and the sheets.
+- **History under 360 px**: off the bar, opened from Help's window, the upkeep and the sheets. Its unread mark goes
+  with it: under 360 px nothing on the bar says an event is new.
 - **The round's end still shifts the frame**: 0.23 at 320 and 0.30 at 390 summed over the walk (0.47 and 0.44
   before), against an aim of 0.1. The creatures' buttons now move by a translation; the rest is the dock's card and
   the bar's tools moving as a sheet closes, for a later pass.

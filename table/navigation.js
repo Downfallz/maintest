@@ -16,7 +16,7 @@ if (typeof document !== 'undefined' && !ownSheet) catchPageErrors(globalThis, pa
 
 const headerContent = `
     <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><h1>Downfall Instinct</h1></a>
-    <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation"><span aria-hidden="true">☰</span><span id="menu-inbox-badge" class="nav-badge menu-inbox-badge" aria-hidden="true" hidden></span><span>Menu</span></button>
+    <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation" aria-describedby="menu-inbox-said"><span aria-hidden="true">☰</span><span id="menu-inbox-said" hidden></span><span id="menu-inbox-badge" class="nav-badge menu-inbox-badge" aria-hidden="true" hidden></span><span>Menu</span></button>
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
       <a id="play-link-home" href="/">Lobby</a>
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>

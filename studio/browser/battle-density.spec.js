@@ -95,6 +95,14 @@ test('the match frame is written at 11 px at least and no two of its controls sh
     await page.setViewportSize({ width: page.viewportSize().width, height });
     await signedInSeat(page);
     await expect.poll(() => frameReading(page), { timeout: 10000 }).toEqual({ small: [], overlaps: [] });
+    // The creature acting opens its spell sheet docked under the field: a caption keeps its name, its health and its
+    // defense, and no other creature's tag shows.
+    await expect(page.locator('#battle')).toHaveAttribute('data-docked', 'true');
+    await expect(page.locator('#actor-layer .creature-name').first()).toBeVisible();
+    await expect(page.locator('#actor-layer .stat-health').first()).toBeVisible();
+    await expect(page.locator('#actor-layer .creature-defense').first()).toBeVisible();
+    for (const hidden of ['.creature-init', '.stat-energy', '.team-label']) await expect(page.locator(hidden).first()).toBeHidden();
+    await expect(page.locator('#actor-layer .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag:visible')).toHaveCount(0);
     await fitsViewport(page, '#recap-open, #opponent-open, #order-open, #history-open, #help-open, #settings, .home-menu-toggle, .inbox-button, .account-chip');
   }
   // Under 360 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell").

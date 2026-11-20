@@ -57,7 +57,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   }
   // A strip entry lights its creature on the field rather than opening its sheet: the card it opens offers the sheet.
   // Its name is the creature's as shown, then one sentence: the drawn place and line are silent (WCAG 2.5.3).
-  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition, 'highlight on the field'].filter(Boolean).join(' · ');
+  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition, 'highlight on the field'].filter(Boolean).join(', ');
   function stripButton(row: Row) {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.orderCreature = row.id;
     button.disabled = !row.inspectable;

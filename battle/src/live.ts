@@ -522,7 +522,7 @@ function render() {
     // and the engine's words stay in each badge's title, in the spoken label and in the inspection.
     // Initiative is the cue set's mark and the number: the word INIT did not fit beside health at 11 px (UX11).
     const init = node.querySelector<HTMLElement>('.creature-init')!, initiative = String(one.currentInitiative ?? '—');
-    init.title = `${initiative} initiative`;
+    init.title = one.currentInitiative == null ? 'No initiative yet' : `${initiative} initiative`;
     if (init.dataset.value !== initiative) { init.dataset.value = initiative; init.replaceChildren(iconElement('initiative-gain'), document.createTextNode(initiative)); }
     const defense = node.querySelector<HTMLElement>('.creature-defense')!;
     const defended = Number.isFinite(one.totalDefense) && one.totalDefense > 0;
@@ -698,7 +698,8 @@ function render() {
 function statChips(stats: HTMLElement, health: number, maxHealth: number, energy: number) {
   const key = `${health}/${maxHealth}/${energy}`;
   if (stats.dataset.value === key) return;
-  // Health answers the blow on the frame that carries it (the playback's impact): the kit's number that changes.
+  // Health that changes is the kit's number that changes: a blow on the frame that carries it (the playback's
+  // impact), and a heal or a board read again alike.
   const struck = stats.dataset.health !== undefined && stats.dataset.health !== String(health);
   stats.dataset.value = key; stats.dataset.health = String(health);
   const unseen = (value: string) => { const span = document.createElement('span'); span.className = 'unseen'; span.textContent = value; return span; };

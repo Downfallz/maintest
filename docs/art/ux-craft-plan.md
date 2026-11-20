@@ -623,25 +623,25 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     Settings is pressable at 320 and 390 px; nothing in the frame overlaps.
 
     The exchange: while an action winds up, the dock's card names who acts and with what, and its outcome waits. On
-    the impact, the chips show, the target's health changes as the kit's number that changes, and the
+    the impact, the chips show, the target's health changes and its number fades in, and the
     announcement says it. The strip `exchange` films it (`--frames 24 --interval 120`).
 
     Names: a creature, an order entry, the round, History and the dock's card are named by their visible words first,
     then one unseen sentence. axe's `label-content-name-mismatch` went from 8–12 a frame screen to none.
 
     Icons from `table/icons.js`: Settings, Order, Inspect, Last result, Close and the reaction. The creatures' buttons
-    are placed by a translation: the round's end shift went from 0.47 to 0.23 at 320 and from 0.44 to 0.30 at 390.
+    are placed by a translation: the layout shift at the round's end went from 0.47 to 0.23 at 320 and from 0.44 to 0.30 at 390.
     Tests: the frame's floor and overlaps, signed in, at 320 and 390 px (`battle-density.spec.js`), and the battle
     specs this change touches, updated for the names (`battle-inspection`, `battle-targets`, `battle-upkeep`,
     `battle-order`, `lobby-home`).
 
     Left, as the brief's **Left** lists it ([the match](journeys/match.md)):
     - The round's end still shifts the frame, above the 0.1 aimed for.
-    - The word Friend for the ♥.
+    - The opponent's badge: the word Friend in place of the ♥.
     - The NEW ROUND toast under 620 px, and the team labels at 568 tall.
     - The History and › icons.
     - The sheets' own text under 11 px (UX12).
-    - The sound-off clip at natural speed: the strips are filmed on a held clock.
+    - The sound-off clip at natural speed: the strips are filmed on a fixed clock, not in real time.
 12. **UX12, the match's windows.** The 18 windows as one family: how each enters, leaves and returns the focus,
     the spellbook and the mutation tree on a phone, the result of a match as a moment. Tests: each window's
     contract (the focus goes in, stays in, comes back; Escape closes); the battle specs.
