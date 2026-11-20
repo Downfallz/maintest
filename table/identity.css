@@ -71,7 +71,7 @@ html dialog { --cut: 16px; }
 .friend-list .empty-state { padding: 10px 0 10px 14px; }
 .presentation-choice select { width: auto; min-width: min(240px, 100%); }
 .lobby-page label.ranked-row { display: flex; }
-.lobby-page .ranked-row input { width: 22px; min-height: 22px; }
+.lobby-page .ranked-row input { width: 24px; min-height: 24px; }
 .lobby-page :is(input, select) { background-color: color-mix(in srgb, var(--soot) 70%, var(--paper)); }
 .account-menu, .guide-body { border-color: color-mix(in srgb, var(--bone) 26%, var(--line-soft)); background: var(--tex-grain), var(--panel); }
 .home-footer { border-top-color: var(--line-soft); }

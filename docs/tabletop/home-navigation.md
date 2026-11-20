@@ -12,8 +12,11 @@ to sign-in or to their next battle. Both use the [official palette](../art/brand
   developer form use the existing account flow. Operator notices and account errors appear on this screen.
   [`accounts-plan.md`](accounts-plan.md#the-home-page) describes the same panel, and
   [the doors' brief](../art/journeys/doors.md) its words.
-- **Signed in:** a greeting, New battle, invitations, Your games, and Find an opponent. Account actions stay
-  behind the player's avatar/name. Match cards retain resume, join, invitation and turn-state behaviours.
+- **Signed in:** a featured space, then invitations, Your games, Learn to play and Find an opponent. The featured
+  space holds the home's one filled action, by what the player came to do: a turn of theirs (a person's before a
+  bot's), a game of theirs waiting on someone else, the next lesson, or a bot to play, with New battle quiet under
+  it ([the lobby's brief](../art/journeys/lobby.md)). Account actions stay behind the player's avatar/name. Match
+  cards keep their resume, join, invitation and turn-state behaviours, and their actions are outlines.
   Your games groups its Ongoing and Finished tabs against players and against bots, at most five of each in
   progress; Finished pages the kept results six at a time ([ADR 0147](../adr/0147-list-every-finished-game-and-cap-the-ones-in-progress.md)).
 - **Accounts off:** the playable local lobby still resumes held seats and creates games. It does not show

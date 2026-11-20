@@ -235,7 +235,10 @@ nodes and focus. Viewpoint changes, hidden tabs, access loss and renderer failur
 inspection. `sessionStorage` key `downfall.arena.upkeep.seen.v1` keeps at most 32 table/seat round high-water
 marks, never tokens, questions, choices or event facts. These prevent duplicate announcements on reconnect
 and reload in the same tab; blocked storage falls back to memory. A new browser tab can announce its first
-round once. Marks record presentation, not a host acknowledgement.
+round once. Marks record presentation, not a host acknowledgement. `sessionStorage` key `downfall.arena.arrival.v1`
+is the lobby's cue (`table/arrival.js`, UX9): the line of the game its featured space opened, with that address's
+seat tokens and when, which the dock's headline shows from the start of discovery until the board arrives. It is
+spent once read for its table, and stale after a minute.
 
 `battle-upkeep.spec.js` covers arrivals, recorded amounts, zero healing, inspection, History, deferred drafts,
 closing-action boundaries, legacy data, reconnect/reload, access loss, renderer interruption, 320px portrait,

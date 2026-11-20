@@ -9,6 +9,8 @@ export { codePath } from './navigation.js';
 import { activateSeats, savedSeats } from './session.js';
 import { mountPracticeList } from './lobby-practice.js';
 import { mountTutorials } from './lobby-tutorials.js';
+import { mountFeatured } from './lobby-featured.js';
+import { motion } from './motion.js';
 
 export function visibleTables(tables, mine, all = false) {
   const held = new Set(mine.map(entry => entry.table.id));
@@ -135,6 +137,16 @@ export function ongoingLimit(count, limit) {
   return { text: `${count} / ${limit}`, full: count >= limit };
 }
 
+/**
+ * A table's action as a screen reader is told it: its visible words first, then the battle and whom it is against
+ * from the player's side, and the table, so two alike stay apart (UX9; WCAG 2.5.3).
+ */
+export function actionName(words, table, held = []) {
+  const others = versus(table).filter(side => !held.includes(side.seat) && side.kind !== 'open').map(side => side.kind === 'bot' ? `${side.name} (bot)` : side.name).filter(Boolean);
+  const against = held.length && others.length ? ` against ${others.join(' and ')}` : '';
+  return `${words.endsWith(' →') ? words.slice(0, -2) : words}: ${table.format} battle${against}, table ${table.id}`;
+}
+
 function cardAction(table, entry) {
   if (!entry) return 'Take a seat →';
   return table.over ? 'View game →' : 'Resume game →';
@@ -241,13 +253,13 @@ export function challengeRequest(opponent) {
   return { friend: opponent.id, format: opponent.format || null, ranked: opponent.casual !== true };
 }
 
+// Empty at rest (UX9): the host's count of every table read as the player's own on an empty home, and was said
+// again on every change. Find an opponent counts the tables; the featured space says a turn that arrives.
 function statusText(state) {
-  if (!state.recording) return 'This host is not saving games. New tables are unavailable until recording is enabled.';
-  const count = Number.isInteger(state.ongoing) ? state.ongoing : (state.tables ?? []).length;
-  return `${count} ${count === 1 ? 'table' : 'tables'} ongoing · updates automatically`;
+  return state.recording ? '' : 'This host is not saving games. New tables are unavailable until recording is enabled.';
 }
 
-export function mountLobby(doc, location, storage, { changes = onLobbyChange } = {}) {
+export function mountLobby(doc, location, storage, { changes = onLobbyChange, featured = null } = {}) {
   const el = id => doc.getElementById(id);
   // Games open in the battle view (ADR 0157); only a browser that asked for the archived table opens /play.
   const presentation = preferredPresentation(storage);
@@ -373,9 +385,9 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     const turn = turnOf(table, held);
     let action = null;
     if (entry || table.openSeats > 0) {
-      action = node('button', cardAction(table, entry), entry ? 'primary' : 'secondary');
+      action = node('button', cardAction(table, entry), 'secondary');
       action.type = 'button';
-      action.setAttribute('aria-label', `${entry ? 'Resume' : 'Join'} ${table.format} table ${table.id}`);
+      action.setAttribute('aria-label', actionName(cardAction(table, entry), table, held));
       if (entry) action.addEventListener('click', () => enter(entry));
       else action.addEventListener('click', () => act(action, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/join`, {})));
     }
@@ -404,7 +416,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     });
     line.setAttribute('aria-label', sides.map(side => side.name).join(' versus '));
     root.append(top, line);
-    if (turn) root.append(node('p', turn.mine ? `${turn.text} · ${tableState(table)}` : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
+    // Under its Your turn tag, the line says what follows it: the round, and the time left.
+    if (turn) root.append(node('p', turn.mine ? [turn.text.replace(/^Your turn(?: · )?/, ''), tableState(table)].filter(Boolean).join(' · ').replace(/^./, first => first.toUpperCase()) : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
     // What happened since this player's last visit, on their own turn (async recap plan, R4).
     const since = turn?.mine ? sinceVisitLine(entry?.recap) : null;
     if (since) root.append(node('p', since[0].toUpperCase() + since.slice(1), 'game-since'));
@@ -419,8 +432,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     root.append(node('p', table.id, 'game-id'));
     const button = node('button', cardAction(table, entry));
     button.type = 'button';
-    button.setAttribute('aria-label', `${entry ? 'Resume' : 'Join'} ${table.format} table ${table.id}`);
-    if (entry) { button.className = 'primary'; button.addEventListener('click', () => enter(entry)); }
+    button.setAttribute('aria-label', actionName(cardAction(table, entry), table, (entry?.seats ?? []).map(held => held.seat)));
+    if (entry) { button.className = 'secondary'; button.addEventListener('click', () => enter(entry)); }
     else button.addEventListener('click', () => act(button, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/join`, {})));
     if (entry || table.openSeats > 0) root.append(button);
     if (invited) {
@@ -446,7 +459,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     top.append(node('h3', invitationLine(invitation)), node('span', 'Invitation', 'status-tag invited'));
     root.append(top, node('p', `${table.format} battle · ${table.id}`, 'game-id'));
     const ways = node('div', '', 'card-ways');
-    const accept = node('button', 'Accept & play →', 'primary');
+    // Quiet too: the bell counts it, and the featured space holds the home's one filled action.
+    const accept = node('button', 'Accept & play →', 'secondary');
     accept.type = 'button';
     accept.addEventListener('click', () => act(accept, () => lobbyRequest(`/api/lobby/tables/${encodeURIComponent(table.id)}/accept`, {})));
     ways.append(accept, tableAction('Decline', 'secondary', `/api/lobby/tables/${encodeURIComponent(table.id)}/decline`));
@@ -465,7 +479,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     root.append(top, node('p', [opponent.format, opponent.casual ? 'unranked' : '', when].filter(Boolean).join(' · '), 'game-turn'));
     const action = opponentAction(opponent);
     if (action) {
-      const button = node('button', action.label, action.primary ? 'primary' : 'secondary');
+      // Quiet, as every action below the featured space is (UX9): the home has one filled action.
+      const button = node('button', action.label, 'secondary');
       button.type = 'button';
       button.disabled = !action.act;
       if (action.act === 'challenge') button.addEventListener('click', () => openCreate(challengeRequest(opponent)));
@@ -514,7 +529,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     const head = node('header', '', 'your-turn-head');
     const heading = node('h3', `Your turn · ${waiting.length}`);
     heading.id = 'your-turn-heading';
-    const next = node('button', 'Play next →', 'primary');
+    const next = node('button', 'Play next →', 'secondary');
     next.type = 'button';
     next.id = 'play-next';
     next.setAttribute('aria-label', `Play next: ${waiting[0].table.format} battle`);
@@ -525,7 +540,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
       const held = (entry.seats ?? []).map(seat => seat.seat);
       const play = node('button', 'Play →', 'secondary');
       play.type = 'button';
-      play.setAttribute('aria-label', `Play ${entry.table.format} table ${entry.table.id}`);
+      play.setAttribute('aria-label', actionName('Play', entry.table, held));
       play.addEventListener('click', () => enter(entry));
       return row({ heading: `${entry.table.format} battle`, tag: isRanked(entry.table) ? 'Ranked' : 'Unranked', tone: isRanked(entry.table) ? 'ranked' : '',
         sides: versus(entry.table).map(side => ({ ...side, you: held.includes(side.seat) })), detail: [`${turnOf(entry.table, held).text} · ${tableState(entry.table)}`, sinceVisitLine(entry.recap)].filter(Boolean).join(' · '), action: play, className: 'mine' });
@@ -533,11 +548,26 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     root.append(head, rows);
     return root;
   }
+  // An empty list teaches and links (UX9): what fills it, in a sentence, and one quiet button that does it.
+  function emptyState(text, label, act) {
+    const root = node('div', '', 'empty-state');
+    root.append(node('p', text));
+    if (label && listing?.recording !== false && !signInFirst()) {
+      const button = node('button', label, 'secondary');
+      button.type = 'button';
+      button.addEventListener('click', act);
+      root.append(button);
+    }
+    return root;
+  }
+  const playABot = () => openCreate({ opponent: 'bot' });
   // A kind's games in progress: all of them, since the host keeps at most a few of each (ADR 0147).
   function ongoingGroup(kind, label, entries) {
     const count = ongoingLimit(entries.length, limit), root = group(kind, label, count);
     const cards = node('div', '', 'lobby-grid');
-    cards.append(...(entries.length ? entries.map(entry => card(entry.table, entry)) : [node('p', `No games ${label.toLowerCase()} in progress.`, 'empty-state')]));
+    cards.append(...(entries.length ? entries.map(entry => card(entry.table, entry)) : [kind === 'bots'
+      ? emptyState('No games against bots in progress. A bot answers at once, any time.', 'Play a bot →', playABot)
+      : emptyState('No games against players in progress. Take an open seat below, or open a table.', 'Open a table →', () => openCreate())]));
     root.append(cards);
     if (count.full) root.append(node('p', `That is the most at once: finish one to start another ${kind === 'bots' ? 'against a bot' : 'against a player'}.`, 'mine-limit'));
     return root;
@@ -600,7 +630,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     void loadOpponents();
   }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables, minute]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables, minute, featured?.shown() ?? null]);
     if (key === drawn) return;
     drawn = key;
     // A host without accounts cannot tell whose seats this browser holds: its own open tables are left out here.
@@ -619,18 +649,22 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     el('ongoing-count').textContent = ongoing.players.length + ongoing.bots.length ? `· ${ongoing.players.length + ongoing.bots.length}` : '';
     el('finished-count').textContent = loaded && finishedTotal ? `· ${finishedTotal}` : '';
     el('tables-count').textContent = shownTables ? shownTables.total : '';
-    const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'No games here yet. Create a table, take an open seat or enter an invitation code.';
+    const none = signInFirst() ? 'Sign in to see your games on any device.' : 'Your games appear here, on every device you sign in on. The quickest first one is against a bot.';
     const waiting = signInFirst() ? [] : yourTurn(mine);
-    el('your-turn').replaceChildren(...(waiting.length ? [yourTurnBand(waiting)] : []));
-    el('your-turn').hidden = waiting.length === 0;
-    if (signInFirst() || (!mine.length && !finishedTotal && mineTab === 'ongoing')) el('my-tables').replaceChildren(node('p', none, 'empty-state'));
+    featured?.setGames(signInFirst() ? [] : mine);
+    // One turn alone is the featured space's already: the band would repeat it, and push the lists down as it arrives.
+    const band = waiting.length > 1 || (waiting.length === 1 && featured?.shown() !== waiting[0].table.id);
+    el('your-turn').replaceChildren(...(band ? [yourTurnBand(waiting)] : []));
+    el('your-turn').hidden = !band;
+    if (signInFirst() || (!mine.length && !finishedTotal && mineTab === 'ongoing')) el('my-tables').replaceChildren(emptyState(none, 'Play a bot →', playABot));
     else el('my-tables').replaceChildren(...KINDS.map(([kind, label]) => mineTab === 'ongoing' ? ongoingGroup(kind, label, ongoing[kind]) : finishedGroup(kind, label)));
     const rows = node('div', '', 'game-rows');
     if (!available) rows.append(node('p', 'Finding open tables…', 'empty-state'));
-    else rows.append(...(available.length ? available.map(tableRow) : [node('p', showAll ? 'No battles underway. Create the first table.' : 'No open seats right now. Create a table and invite another player, or play a bot.', 'empty-state')]));
+    else rows.append(...(available.length ? available.map(tableRow) : [emptyState(showAll ? 'No battles underway. Open the first table.' : 'No open seats right now. Open a table and another player can take its seat.', 'Open a table →', () => openCreate())]));
     const tablePages = pager(showAll ? 'Pages of the battles underway' : 'Pages of the open seats', shownTables, page => { publicTables.page = page; void loadTables(); });
     el('open-tables').replaceChildren(rows, ...(tablePages ? [tablePages] : []));
     el('new-table').disabled = !listing.recording;
+    featured?.setDisabled(!listing.recording);
     el('lobby-status').textContent = statusText(listing);
     const options = listing.formats;
     if (el('format').options.length === 0) {
@@ -676,6 +710,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
     } catch (error) {
       if (reading === revision) {
         el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
+        // A first read that failed still draws the featured space, from nothing, so the home is not a blank panel.
+        if (!listing) featured?.setGames(mine);
         // Tried again, later each time, until it answers: a retry, not a clock.
         failures += 1;
         globalThis.clearTimeout(retry);
@@ -863,6 +899,12 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
   globalThis.addEventListener?.('online', resume);
   const unlisten = changes(resume);
   return {
+    /** Opens a game of the player's, as its card's Resume does. */
+    enter,
+    /** Draws the lists again: the featured space chose another table, which the Your turn band leaves out or not. */
+    redraw: () => { if (listing) render(); },
+    /** Opens the create dialog, as New battle does. */
+    create: asked => openCreate(asked),
     stop: () => { unlisten(); globalThis.clearTimeout(retry); doc.removeEventListener('visibilitychange', resume); globalThis.removeEventListener?.('online', resume); },
     /** Opens the create dialog with that friend chosen: what the Friends panel's Invite does. */
     invite: friend => openCreate({ friend: friend?.id ?? null }),
@@ -890,6 +932,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange } =
         publicTables.page = 0; publicTables.data = null;
         for (const [kind] of KINDS) finished[kind] = { page: 0, data: null };
         if (dialog.open) dialog.close();
+        featured?.reset();
         problem();
         if (listing) render();
         void refresh();
@@ -903,12 +946,16 @@ if (typeof document !== 'undefined') {
   try { storage = globalThis.localStorage; } catch { /* Invitations still work without browser storage. */ }
   // Read before the lobby answers the address and clears it: what the address asked for comes before a tutorial.
   const plainVisit = !globalThis.location.search && !globalThis.location.hash;
-  const lobby = mountLobby(document, globalThis.location, storage);
-  const practiceList = mountPracticeList(document);
   let session = null;
   try { session = globalThis.sessionStorage; } catch { /* No tutorial opens by itself; Learn to play still lists them. */ }
+  // The featured space opens a game through the lobby, which mounts after it: each press reaches it then.
+  let lobby = null;
+  const featured = mountFeatured(document, { enter: entry => lobby.enter(entry), openCreate: asked => lobby.create(asked), go: link => globalThis.location.assign(link),
+    session, ambience: () => motion?.watch(), changed: () => lobby?.redraw() });
+  lobby = mountLobby(document, globalThis.location, storage, { featured });
+  const practiceList = mountPracticeList(document);
   const door = mountDoor(document);
-  const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson });
+  const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson, listed: featured.setLessons });
   const next = nextPath(globalThis.location.search);
   const navigation = mountNavigation(document, storage, {
     onInvite: lobby.invite,
@@ -919,7 +966,7 @@ if (typeof document !== 'undefined') {
       const playable = Boolean(account) || mode === 'off';
       if (!playable) door.signedOut();
       document.getElementById('home-games').hidden = !playable;
-      document.getElementById('hero-eyebrow').textContent = account ? `Welcome back, ${account.username}` : 'Your games';
+      if (playable) featured.playable();
       lobby.setAccount(account, mode);
       practiceList.setAccount(account);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.

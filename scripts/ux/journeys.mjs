@@ -143,11 +143,24 @@ const theLessons = {
   },
 };
 
+// The link to the open seat of the walker's table for another player, as its waiting room passes it on: where the
+// friend takes the seat and the walker's turn arrives (UX9). Set by the lobby's walk before the screen it is used at.
+let openSeat = null;
+
+// The friend takes the open seat from their own browser: the match begins, and the walker is asked to choose.
+async function friendTakesTheSeat(walk) {
+  const friend = await walk.person();
+  await account(walk, friend, FRIEND);
+  await takeSeat(friend, openSeat);
+}
+
 const lobby = {
   id: 'lobby',
   title: 'The lobby',
-  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended'],
+  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended', 'home-turn-arrives'],
   strips: {
+    // The turn that arrives: the friend takes the open seat while the walker's home is open, a bot's turn on show.
+    'turn-arrives': { at: 'home-game-ended', act: walk => friendTakesTheSeat(walk) },
     'create-window': { at: 'home-menu', act: async ({ page }) => { await page.keyboard.press('Escape'); await page.locator('#new-table').click(); } },
     'menu': { at: 'home-new', act: ({ page }) => page.locator('#home-menu-toggle').click() },
   },
@@ -181,6 +194,10 @@ const lobby = {
     await page.locator('#create-submit').click();
     await page.waitForURL(/\/(battle|play)/);
     await page.locator('#battle[data-connection="live"], #waiting-room, [data-waiting]').first().waitFor({ timeout: 30000 });
+    const [seat, token] = [...new URL(page.url()).searchParams][0];
+    const room = await page.request.get(`${set.game}/api/seat/${seat}`, { headers: { 'X-Seat-Token': token } });
+    openSeat = `${set.game}${(await room.json()).waiting?.seats?.[0]?.join ?? ''}`;
+    if (openSeat === set.game) throw new Error('The waiting room names no link for its open seat.');
     await walk.screen('waiting-room');
     await home(page, set.game);
     await walk.screen('home-waiting');
@@ -188,9 +205,24 @@ const lobby = {
     await page.goto(game);
     await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
     await concede(walk);
+    // A second game against a bot, left in progress: two games, the bot's turn featured while the friend's table waits.
+    await home(page, set.game);
+    await page.locator('#new-table').click();
+    await page.locator('#create-dialog[open]').waitFor();
+    await page.locator('#create-solo').click();
+    await page.locator('#create-submit').click();
+    await page.waitForURL(/\/battle/);
+    await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
     await home(page, set.game);
     await page.locator('#mine-finished').click();
     await walk.screen('home-game-ended');
+    // The friend takes the open seat: a person's turn arrives on the open home, and outranks the bot's on show.
+    await friendTakesTheSeat(walk);
+    await page.locator('#welcome', { hasText: FRIEND }).waitFor({ timeout: 30000 });
+    await walk.screen('home-turn-arrives');
+    // Its action opens the friend's game, not the bot's, and the battle's first frame names it.
+    await page.locator('#featured-action').click();
+    await page.waitForURL(new RegExp(`[?&]${seat}=${token}`));
   },
 };
 

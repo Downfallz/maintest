@@ -202,6 +202,8 @@ public sealed class LobbyAccountsTests : IDisposable
         var visited = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
 
         before.GetProperty("recap").ValueKind.ShouldBe(JsonValueKind.Null);
+        // The home's featured space names a game by its round and draws its ground by it (UX9).
+        unvisited.GetProperty("table").GetProperty("round").GetInt32().ShouldBe(1, "a game begun says its round");
         unvisited.GetProperty("recap").GetProperty("casts").ValueKind.ShouldBe(JsonValueKind.Null, "no last visit, nothing to count from");
         visited.GetProperty("recap").GetProperty("casts").GetInt32().ShouldBe(0, "nobody has cast yet");
     }

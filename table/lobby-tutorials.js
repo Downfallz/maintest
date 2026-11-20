@@ -29,6 +29,7 @@ export function tutorialCards(answer) {
       place: `Tutorial ${one.order} of ${Math.max(one.of ?? 0, one.order ?? 0)}`,
       goal: one.goal ?? '',
       done,
+      skipped: one.state === 'skipped',
       next: one === next,
       tag: TAGS[one.state] ?? 'New',
       action: done ? 'Play again' : 'Play',
@@ -83,10 +84,11 @@ function made(doc, tag, text, className) {
 /**
  * Draws the Learn to play section for whoever is signed in, and opens the first tutorial for an account it is new
  * to: `setAccount(account)` reads the series again for them, and hides the section for nobody.
- * Resolves true when it opens the first tutorial, which `opening` is told first.
- * @param {{ request?: (path: string) => Promise<Response>, session?: Storage | null, go?: (link: string) => void, hash?: () => string, plain?: () => boolean, opening?: (tutorial: object) => void }} [options]
+ * Resolves true when it opens the first tutorial, which `opening` is told first. `listed` is told the cards each
+ * read draws (null for nobody signed in): the home's featured space offers the next one.
+ * @param {{ request?: (path: string) => Promise<Response>, session?: Storage | null, go?: (link: string) => void, hash?: () => string, plain?: () => boolean, opening?: (tutorial: object) => void, listed?: (cards: object[] | null) => void }} [options]
  */
-export function mountTutorials(doc, { request = fetched, session = null, go = link => globalThis.location.assign(link), hash = () => globalThis.location?.hash ?? '', plain = () => !globalThis.location?.search && !globalThis.location?.hash, opening = () => {} } = {}) {
+export function mountTutorials(doc, { request = fetched, session = null, go = link => globalThis.location.assign(link), hash = () => globalThis.location?.hash ?? '', plain = () => !globalThis.location?.search && !globalThis.location?.hash, opening = () => {}, listed: told = () => {} } = {}) {
   const section = doc.getElementById('learn-to-play');
   const cards = doc.getElementById('tutorial-cards');
   let reading = 0;
@@ -96,6 +98,7 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
     if (!section) return;
     if (!account) {
       section.hidden = true;
+      told(null);
       return;
     }
     const answer = await series(request);
@@ -106,6 +109,7 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
     // Said before the page changes, so the window the player named themselves in can say where they are going.
     if (first) { opening(answer.tutorials.find(one => one.link === first) ?? {}); go(first); return true; }
     const listed = tutorialCards(answer);
+    told(listed);
     cards.replaceChildren(...listed.map(card => {
       const root = made(doc, 'article', undefined, 'game-card practice tutorial-card motion-arrive');
       root.dataset.tutorial = card.id;
@@ -116,8 +120,10 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
       root.append(top);
       if (card.goal) root.append(made(doc, 'p', card.goal, 'practice-goal'));
       const ways = made(doc, 'div', undefined, 'card-ways');
-      // The next lesson not done is the section's one filled action; every other card's is an outline.
-      const open = made(doc, 'a', card.action, card.next ? 'primary' : 'button-link');
+      // Every card's action is an outline: the next lesson not done is filled once, in the home's featured space
+      // (lobby-featured.js), when it is what the player came to do. Here it is marked, not filled.
+      const open = made(doc, 'a', card.action, 'button-link');
+      if (card.next) root.dataset.next = 'true';
       // Its place in the series, which the card no longer writes, is in its name for whoever cannot see the order.
       open.setAttribute?.('aria-label', `${card.action}: ${card.title}, ${card.place.toLowerCase()}`);
       open.href = card.link;

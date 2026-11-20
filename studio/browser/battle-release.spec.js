@@ -13,6 +13,6 @@ test('the lobby opens every seat in the battle view, with no view to choose, wha
   // A browser that once chose the table in the old dropdown plays the battle too.
   await page.addInitScript(() => localStorage.setItem('downfall.presentation', 'table'));
   await page.goto('/table/lobby.html'); await expect(page.locator('#presentation')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Resume 3v3 table release-table' }).click();
+  await page.getByRole('button', { name: /^Resume game: 3v3 battle.*, table release-table$/ }).click();
   await expect(page).toHaveURL(/\/battle\?player1=accepted-seat$/);
 });

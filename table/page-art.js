@@ -141,32 +141,74 @@ export const PAGE_ART = {
       { file: 'specimen-warped-revenant-brute-930.252728d8.webp', width: 930, height: 620, bytes: 282728 },
     ],
   },
+  'home-ground-eclipse': {
+    from: 'a2a31537b442b4d2', frames: 1, drawn: [390,640], pages: {"table/home":"largest"},
+    sizes: [
+      { file: 'home-ground-eclipse-390.4bd412a5.webp', width: 390, height: 219, bytes: 15656 },
+      { file: 'home-ground-eclipse-640.1f8d140c.webp', width: 640, height: 360, bytes: 35506 },
+      { file: 'home-ground-eclipse-780.b3af8028.webp', width: 780, height: 439, bytes: 51476 },
+      { file: 'home-ground-eclipse-1280.eba4bcaa.webp', width: 1280, height: 720, bytes: 114160 },
+    ],
+  },
+  'home-ground-breach': {
+    from: '13d2503be7c20e11', frames: 1, drawn: [390,640], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'home-ground-breach-390.9109b627.webp', width: 390, height: 219, bytes: 13642 },
+      { file: 'home-ground-breach-640.4a92f701.webp', width: 640, height: 360, bytes: 32404 },
+      { file: 'home-ground-breach-780.a5bf1677.webp', width: 780, height: 439, bytes: 45978 },
+      { file: 'home-ground-breach-1280.b33101b0.webp', width: 1280, height: 720, bytes: 103604 },
+    ],
+  },
+  'home-ground-sky': {
+    from: '2df05f959ee2e0cd', frames: 1, drawn: [390,640], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'home-ground-sky-390.63ae9416.webp', width: 390, height: 112, bytes: 9794 },
+      { file: 'home-ground-sky-640.1620eb02.webp', width: 640, height: 184, bytes: 23064 },
+      { file: 'home-ground-sky-780.01fd9c46.webp', width: 780, height: 224, bytes: 31930 },
+      { file: 'home-ground-sky-1280.6fa095b2.webp', width: 1280, height: 367, bytes: 67062 },
+    ],
+  },
+  'home-ancestral': {
+    from: '45fae4f3bda07c4f', frames: 1, drawn: [150], pages: {"table/home":"first"},
+    sizes: [
+      { file: 'home-ancestral-150.a8be6bd5.webp', width: 150, height: 100, bytes: 9598 },
+      { file: 'home-ancestral-300.bf5bdbef.webp', width: 300, height: 200, bytes: 24618 },
+    ],
+  },
   'lesson-base': {
-    from: 'b1ddcb487abc5728', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    from: 'fa26d4c30ae79f2c', frames: 1, drawn: [96,150], pages: {"table/home":"lazy"},
     sizes: [
       { file: 'lesson-base-96.27f6d709.webp', width: 96, height: 64, bytes: 5344 },
+      { file: 'lesson-base-150.a8be6bd5.webp', width: 150, height: 100, bytes: 9598 },
       { file: 'lesson-base-192.ec175d35.webp', width: 192, height: 128, bytes: 13466 },
+      { file: 'lesson-base-300.bf5bdbef.webp', width: 300, height: 200, bytes: 24618 },
     ],
   },
   'lesson-brute': {
-    from: 'c8389e6ee54b5847', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    from: '2135c0c91f565cb9', frames: 1, drawn: [96,150], pages: {"table/home":"lazy"},
     sizes: [
       { file: 'lesson-brute-96.cbe3c10d.webp', width: 96, height: 64, bytes: 4828 },
+      { file: 'lesson-brute-150.6793d430.webp', width: 150, height: 100, bytes: 8956 },
       { file: 'lesson-brute-192.0d19ab32.webp', width: 192, height: 128, bytes: 12992 },
+      { file: 'lesson-brute-300.cb594bc5.webp', width: 300, height: 200, bytes: 23812 },
     ],
   },
   'lesson-ironhide': {
-    from: '4503152c2faf1c0a', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    from: '55be45010d3a8046', frames: 1, drawn: [96,150], pages: {"table/home":"lazy"},
     sizes: [
       { file: 'lesson-ironhide-96.f7386764.webp', width: 96, height: 64, bytes: 4204 },
+      { file: 'lesson-ironhide-150.0266eb6b.webp', width: 150, height: 100, bytes: 7454 },
       { file: 'lesson-ironhide-192.a675984c.webp', width: 192, height: 128, bytes: 10630 },
+      { file: 'lesson-ironhide-300.17edafe2.webp', width: 300, height: 200, bytes: 19070 },
     ],
   },
   'lesson-colossus': {
-    from: '7e6c19bfd1cae161', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    from: '5a91a2cb052ed0b9', frames: 1, drawn: [96,150], pages: {"table/home":"lazy"},
     sizes: [
       { file: 'lesson-colossus-96.e8ea353d.webp', width: 96, height: 64, bytes: 4782 },
+      { file: 'lesson-colossus-150.b82e721c.webp', width: 150, height: 100, bytes: 8808 },
       { file: 'lesson-colossus-192.bad52f58.webp', width: 192, height: 128, bytes: 12368 },
+      { file: 'lesson-colossus-300.5565ad61.webp', width: 300, height: 200, bytes: 21992 },
     ],
   },
 };

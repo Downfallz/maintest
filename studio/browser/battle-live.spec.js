@@ -92,6 +92,21 @@ test('no seat is read before a seat is chosen, and only the chosen one after', a
   expect(reads.every(one => one.token === 'second' && one.path.includes('player2'))).toBe(true);
 });
 
+test('a game the lobby opened names itself in the first frame, until its board arrives (UX9)', async ({ page }) => {
+  // The lobby hands the line over with the seat tokens of the address it opens, and when.
+  await page.addInitScript(() => sessionStorage.setItem('downfall.arena.arrival.v1', JSON.stringify({ table: 'table-a', line: 'Round 4 against Rook', tokens: ['second'], at: Date.now() })));
+  const state = await mount(page);
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route('**/api/seat/player2', async route => { await held; await route.fulfill({ json: state.second }); });
+  await page.locator('#seat-choices button').filter({ hasText: 'Player 2' }).click();
+  await expect(page.locator('#actor-name')).toHaveText('Round 4 against Rook');
+  release();
+  await expect(page.locator('#actor-name')).toHaveText('Creature 2');
+  // Read once: the line is not carried to a later visit.
+  expect(await page.evaluate(() => sessionStorage.getItem('downfall.arena.arrival.v1'))).toBeNull();
+});
+
 test('the board is drawn from the chosen seat: its side, its round, its cursor', async ({ page }) => {
   await mount(page); await choose(page, 2);
   await expect(page.locator('.creature')).toHaveCount(6);

@@ -99,27 +99,51 @@
       "pages": { "showcase/home": "lazy" }
     },
     {
+      "name": "home-ground-eclipse",
+      "source": "table/battle-art/eclipse-battle.webp",
+      "drawn": [390, 640],
+      "pages": { "table/home": "largest" }
+    },
+    {
+      "name": "home-ground-breach",
+      "source": "table/battle-art/horizon/breach.webp",
+      "drawn": [390, 640],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "home-ground-sky",
+      "source": "table/battle-art/horizon/shattered-sky.webp",
+      "drawn": [390, 640],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "home-ancestral",
+      "source": "table/battle-art/evolutions/base-creature.webp",
+      "drawn": [150],
+      "pages": { "table/home": "first" }
+    },
+    {
       "name": "lesson-base",
       "source": "table/battle-art/evolutions/base-creature.webp",
-      "drawn": [96],
+      "drawn": [96, 150],
       "pages": { "table/home": "lazy" }
     },
     {
       "name": "lesson-brute",
       "source": "table/battle-art/evolutions/brute-base.webp",
-      "drawn": [96],
+      "drawn": [96, 150],
       "pages": { "table/home": "lazy" }
     },
     {
       "name": "lesson-ironhide",
       "source": "table/battle-art/evolutions/brute-stage2-ironhide.webp",
-      "drawn": [96],
+      "drawn": [96, 150],
       "pages": { "table/home": "lazy" }
     },
     {
       "name": "lesson-colossus",
       "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
-      "drawn": [96],
+      "drawn": [96, 150],
       "pages": { "table/home": "lazy" }
     }
   ]

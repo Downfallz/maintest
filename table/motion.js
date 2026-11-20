@@ -33,10 +33,16 @@ export function wantsLessMotion(win = globalThis) {
   return win.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true || win.document?.documentElement.dataset.motion === 'less';
 }
 
-/** The one ambience a screen plays: the first in the page's order that is in view, none in a hidden tab. */
-export function ambienceToPlay(elements, inView, hidden) {
-  return hidden ? null : elements.find(element => inView.has(element)) ?? null;
+/**
+ * The one ambience a screen plays: the first in the page's order that is in view, and none while the page is
+ * `unseen`: a hidden tab, or a window or a menu that covers it, since it would move behind them.
+ */
+export function ambienceToPlay(elements, inView, unseen) {
+  return unseen ? null : elements.find(element => inView.has(element)) ?? null;
 }
+
+/** What covers a page: an open window, or the home's menu (navigation.js). */
+export const COVERS = 'dialog[open], #home-menu-toggle[aria-expanded="true"]';
 
 /** A number that changed plays its beat, again each time: call it once the new text is set. */
 export function numberChanged(element) {
@@ -55,7 +61,7 @@ function watchAmbience(win) {
   const doc = win.document, inView = new Set();
   const elements = () => [...doc.querySelectorAll(AMBIENCE)];
   function play() {
-    const playing = ambienceToPlay(elements(), inView, doc.hidden);
+    const playing = ambienceToPlay(elements(), inView, doc.hidden || Boolean(doc.querySelector(COVERS)));
     for (const element of elements()) {
       if (element === playing) element.dataset.ambient = 'playing'; else delete element.dataset.ambient;
     }
@@ -70,6 +76,8 @@ function watchAmbience(win) {
     play();
   };
   doc.addEventListener('visibilitychange', play);
+  // A window that opens or closes, or the menu, decides again.
+  if (win.MutationObserver) new win.MutationObserver(play).observe(doc.documentElement, { subtree: true, attributes: true, attributeFilter: ['open', 'aria-expanded'] });
   watch();
   return watch;
 }
@@ -87,4 +95,8 @@ export function mountMotion(win = globalThis) {
   return { watch: watchAmbience(win) };
 }
 
-if (globalThis.document?.documentElement) mountMotion();
+/**
+ * The kit on this page, mounted once whichever loads it first, the page's `<script>` or a module that imports it:
+ * a page that adds an ambience after the first paint (the home's featured space) calls `watch()` on it.
+ */
+export const motion = globalThis.document?.documentElement ? mountMotion() : null;

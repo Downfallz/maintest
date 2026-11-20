@@ -173,11 +173,12 @@ test('less motion is one attribute on the root, set and taken away', () => {
   assert.equal('motion' in html.dataset, false);
 });
 
-test('one ambience plays a screen: the first in view, and none in a hidden tab', () => {
+test('one ambience plays a screen: the first in view, and none in a hidden tab or behind a window', () => {
   const [a, b, c] = [{}, {}, {}];
   assert.equal(ambienceToPlay([a, b, c], new Set([b, c]), false), b);
   assert.equal(ambienceToPlay([a, b, c], new Set(), false), null);
   assert.equal(ambienceToPlay([a, b, c], new Set([a]), true), null);
+  assert.equal(ambienceToPlay([a, b, c], new Set([a]), true), null, 'none behind a window or the menu either');
 });
 
 test('a number that changes plays its beat again each time', () => {
