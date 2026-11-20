@@ -45,9 +45,11 @@ the heading, nine `###` parts, in this order:
 
   A picture the session makes from the game itself, a frame of the battle or a screen of a journey, names the
   script that makes it (`scripts/battle/filmstrip.mjs`, `scripts/ux/journey.mjs`) and what is filmed.
-  A picture the library lacks is asked of the owner: its row says `asked of the owner` and which painting of the
-  library holds its place until it comes, and under the table a fenced block holds the prompt to paste. A stage
-  never waits for a picture.
+  A picture the library lacks is asked of the owner: its row says `asked of the owner` and, in backticks, the
+  painting of the library that holds its place until it comes; under the table a fenced block holds the prompt
+  to paste, one block a request, in the rows' order. `node scripts/ux/pictures.mjs --asked` lists them, and
+  [the pages' pictures](../page-pictures.md#a-picture-asked-of-the-owner) says how the painting comes back. A
+  stage never waits for a picture.
 - **States**: six lines, what the screen shows in each: **First paint** (before anything the host sends),
   **Empty**, **Loaded**, **Waiting** (after a press, before the answer), **Error**, **Offline**. A state the
   screen cannot be in says so, and why.

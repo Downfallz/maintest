@@ -1,0 +1,16 @@
+{
+  "about": "What a page may load and how fast it paints (ADR 0197, ADR 0198). The bytes are read by studio/ux-pictures.test.js against the pictures of docs/art/page-pictures.json, as a phone 390 px wide takes them; the times by scripts/ux/journey.mjs --paint.",
+  "density": 2,
+  "largestPaintMs": 2500,
+  "shift": 0.1,
+  "pages": {
+    "showcase/home": {
+      "first": 180224,
+      "all": 180224
+    },
+    "table/sign-in": {
+      "first": 131072,
+      "all": 131072
+    }
+  }
+}

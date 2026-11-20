@@ -47,10 +47,13 @@ export function numberChanged(element) {
   element.classList.add('motion-changed');
 }
 
-/** Plays `.motion-breath` only in view and in a visible tab, one a screen. The kit's CSS leaves it still otherwise. */
+/** What plays unasked: a picture that breathes, and a strip of frames (picture.js). */
+export const AMBIENCE = '.motion-breath, .motion-strip';
+
+/** Plays ambience only in view and in a visible tab, one a screen. The kit's CSS leaves it still otherwise. */
 function watchAmbience(win) {
   const doc = win.document, inView = new Set();
-  const elements = () => [...doc.querySelectorAll('.motion-breath')];
+  const elements = () => [...doc.querySelectorAll(AMBIENCE)];
   function play() {
     const playing = ambienceToPlay(elements(), inView, doc.hidden);
     for (const element of elements()) {

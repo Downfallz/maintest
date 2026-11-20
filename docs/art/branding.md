@@ -80,6 +80,20 @@ of `table/identity.css`, with `table/motion.js`, and the showcase's part in `sho
 - A new part of the kit that fades under less motion is added to the exceptions of the net in `table/table.css`.
 - No spring. An exit is shorter than its entry. Nothing starts on a clock.
 
+## Pictures and icons
+
+How a painting reaches a page and how an icon is drawn is decided in
+[ADR 0198](../adr/0198-send-a-pages-pictures-at-the-size-they-are-drawn-and-draw-one-icon-set.md), and the steps
+are in [the pages' pictures](page-pictures.md).
+
+- A painting on a page is an `<img>` written by `table/picture.js`, with its width and its height, sent at the
+  size it is drawn. It is declared in `docs/art/page-pictures.json` and counted in the page's budget.
+- A picture moves by the breath, or as a strip of frames (`.motion-strip`): ambience, one a screen, its first
+  frame under less motion.
+- The icons are one set, `table/icons.js`: strokes of 1.75 on a grid of 24, square ends, mitred corners, no fill,
+  in the colour and at the size of the text beside them. An icon never stands in for a control's name, and no
+  emoji is an icon. A reaction a player sends is a message, and stays an emoji.
+
 ## Usage
 
 - Let slate occupy most of the page. Use gold for the action or selection that needs attention; do not

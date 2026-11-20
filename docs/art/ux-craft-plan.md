@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX4 are built; UX5 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX5 are built; UX6 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -337,6 +337,36 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    request reaches the owner and comes back through the intake. Tests: every picture a page names has its size
    and its dimensions; the budget holds; a new file is in `TableFiles`
    (`src/DownfallArena.Cli/Table/TableFiles.cs`).
+
+   *Built (2026-11-19)*: [ADR 0198](../adr/0198-send-a-pages-pictures-at-the-size-they-are-drawn-and-draw-one-icon-set.md)
+   and [the pages' pictures](page-pictures.md), the page a session follows. A picture is declared in
+   `docs/art/page-pictures.json`; `scripts/ux/pictures.mjs` derives it at the size it is drawn, once and twice,
+   into `table/page-art/`, each file named by its own bytes, and writes `table/page-art.js`. `table/picture.js`
+   writes the `<img>` with its width, its height, its `srcset` and its `sizes`, the picture that is the largest
+   paint asked for first, as an element for the table and as text for the showcase's build. The doors' three paintings are
+   derived: the eclipse ground, the Colossus and the Revenant, 146 KB for the showcase's first screen and 108 KB
+   for the sign-in panel as a phone takes them, against 744 KB and 790 KB sent today.
+   `docs/art/page-budget.json` holds each page's bytes, and ADR 0197's two times. A strip of frames is
+   `.motion-strip` in the kit: one file, stepped by `translate` over `--motion-strip`, played once by
+   `table/motion.js` as the screen's ambience and still on its first frame under less motion. The icon set is
+   `table/icons.js`, twenty drawings for the glyphs and emoji the pages write today. The host serves the
+   folder and the three modules. A brief's request is listed by `pictures.mjs --asked`; the painting comes
+   back under `docs/art/sources/pages/`.
+
+   `studio/ux-pictures.test.js` holds the committed files against the declaration and the budget, with no image
+   library; `table/picture.test.js` the form, and that every `<img>` a page names has its dimensions;
+   `table/icons.test.js` the set; `studio/browser/picture-kit.spec.js` a strip, a picture and an icon in a
+   browser; `TableFilesTests` the routes.
+
+   Left: no page shows a picture of the kit, a strip or an icon yet. UX6 and UX7 place the doors' pictures, and
+   UX6 moves the showcase's own twelve to the form: until then the budget holds the kit's files, not what a
+   door loads. UX6 has the showcase's build copy `table/page-art/` and carries the strip's and the icon's rules
+   to `showcase/showcase.css`. No strip is committed: the first is UX6's, from the battle's films, and the
+   encoder's strip was tried by hand, not in the gate. The `drawn` widths for a wide screen are estimated from
+   the sheets' CSS, not measured. A painting is made smaller and never cut, so a ground that covers its box is sent
+   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` reports the paints and holds them to
+   nothing: the budget's two times are read by a person. The design system's page is not republished: the owner runs `/design-system`
+   after the merge, as for UX4.
 6. **UX6, the showcase.** The first door shows the game played: a round in pictures of the real battle view,
    taken from the films the battle craft makes, beside the three sentences. Its pictures at the size they are
    drawn, the hero's as an `<img>` asked for first. The kit's motion on its parts. Tests:

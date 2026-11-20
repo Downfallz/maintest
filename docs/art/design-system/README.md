@@ -5,7 +5,7 @@ Downfall Instinct is a two-player tactical board game played online at a shared 
 - The name is **Downfall Instinct**, two words, a space, no punctuation, in English and in French. A wordmark may uppercase both words (`wordmark`).
 - Say **Battle view** for the animated presentation and **battlefield** for the combat surface. The two play styles share one identity.
 - Write for a player: short labels that state what happens ("New game", "Concede", "Your turn"). Sentence case for titles and buttons; uppercase only in `eyebrow`, `tag` and `wordmark`, always with letter-spacing.
-- No emoji. State labels are explicit words, never colour alone.
+- No emoji as an icon or in a label. State labels are explicit words, never colour alone.
 
 ## Colour
 
@@ -71,7 +71,8 @@ Downfall Instinct is a two-player tactical board game played online at a shared 
 - `assets/Logos/brand-mark.svg` is the rune alone in `bone` (#D8C7A7) for page headers. `icon.svg` is the rune on a deep slate square, the favicon and app icon. Never put `icon.svg` on a surface lighter than deep slate: the square shows as a dark box.
 - `icon-512.png` and `icon-maskable-512.png` are textured artwork (cracked bone on deep slate). They are not regenerated from the SVG. The maskable one shrinks the rune into the launcher's safe circle.
 - `notification-badge.svg` is the white silhouette Android masks into the status bar.
-- The interface uses no icon set beyond the rune: actions are words.
+- The interface has one icon set (`icons.js` of the table, ADR 0198): twenty drawings in strokes of 1.75 on a grid of 24, square ends, mitred corners, no fill, in `currentColor` at 1.25em. An icon sits beside a label or inside a control that has a name. It never replaces the words of an action, and a screen reader skips it.
+- A painting on a page is an `<img>` with its width and height, sent at the size it is drawn, at one and at two times the density. A picture that moves breathes, or is a strip of frames stepped by `translate`; both are ambience and are still under less motion.
 
 ## Where it applies
 
