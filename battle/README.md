@@ -1086,3 +1086,17 @@ apart at 1×; `--interval` takes another multiple of 20, and `--speed` is 0.5, 1
 Two sheets of one effect are the same file, byte for byte, on one machine: `studio/browser/battle-bench.spec.js`
 films twice and compares. The renderer may differ across machines, so compare a sheet only with one filmed on
 the same machine, before and after a change.
+
+What a staging costs a frame is measured on the same bench (docs/art/battle-craft-plan.md, BC10):
+
+```bash
+node scripts/battle/frametime.mjs spell:pummel:v1     # the step and the frame, the processor slowed four times
+node scripts/battle/frametime.mjs --all --markdown    # the table of docs/art/battle-acceptance.md
+```
+
+The step is what one 20 ms step of the game costs the page's thread, on the film's clock: the number the browser's
+CPU throttle slows, and so the one that speaks for a slow phone's processor. The frame is the time between two
+animation frames while the effect plays on the page's own loop: it holds what the renderer does, and in a session
+that is a software renderer. [The acceptance record](../docs/art/battle-acceptance.md) holds the numbers of all
+44 stagings, and says what they do not prove. No test holds a number: `battle-stagings.spec.js` holds that the
+script measures.

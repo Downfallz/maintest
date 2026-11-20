@@ -60,7 +60,7 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 | One texture a batch on a phone | `Phaser.Types.Core.RenderConfig.autoMobileTextures` is on by default, and the view does not turn it off: on iOS and Android a batch holds one texture. | Each creature's picture is already its own draw call there. Put the kit's shapes on one texture, or each one costs one more draw call. |
 | What a filter costs | The object is drawn to a framebuffer, then one pass per active filter. | A filter is a draw call or more, each frame, for as long as it is active. Remove it when the effect ends. |
 | What the engine warns about | "Draw calls are expensive. Don't use more than a few hundred." "Filling pixels is expensive." | On a phone the limit is pixels filled, before objects counted. |
-| Frame time on a phone | Not measured. No device is attached to a session. | BC10 measures every staging under the browser's CPU throttle. The physical gate stays with ADR 0136. |
+| Frame time on a phone | Measured for the page's thread, not for the graphics card ([the acceptance record](battle-acceptance.md), BC10). With the processor slowed four times, no step of any of the 44 stagings takes a frame: the worst is 11.8 ms. No device is attached to a session, and a session draws in software. | A staging's code does not use up a phone's frame. What its pixels cost a phone's graphics card stays with the physical gate of ADR 0136. `node scripts/battle/frametime.mjs` measures a new staging against the record. |
 
 ## Timing
 
@@ -420,9 +420,12 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   Phaser Studio: "Filling pixels is expensive".
 - **Phaser**: `Phaser.Types.GameObjects.Particles.ParticleEmitterConfig.maxAliveParticles` is the cap, and
   `Phaser.GameObjects.Particles.ParticleEmitter#getAliveParticleCount` is what a test reads.
-- **Cost**: this entry is the cost. Not measured on a phone; BC10 measures it.
+- **Cost**: the particle cap is the cost. On the page's thread it is small: the bench's sample at the cap
+  steps in 2.0 ms at the median with the processor slowed four times ([the acceptance record](battle-acceptance.md)).
+  The pixels are not measured: no phone is attached to a session.
 - **Reduced motion**: nothing.
-- **Here**: 24 particles a beat and 150 alive on the field (*house*), until BC10 measures: a beat gets only
+- **Here**: 24 particles a beat and 150 alive on the field (*house*; BC10's measure gave no reason to move
+  them): a beat gets only
   the room left under the 150, counted as what the living emitters may hold (`battle/src/fx/kit.ts`).
 
 ## Light and surface
@@ -447,7 +450,9 @@ bake the drawing to a texture first, or filter a container.
   cheap form, and its `pulse` is the filter, for one hero effect in each family. The kit calls
   `Phaser.Filters.Controller#setPaddingOverride` with null so the filter has room around its object: without
   that call the halo is cut at the picture's edge. Under a renderer with no graphics card a frame with the
-  pulse takes about ten times a frame without (*house*, measured on the bench): BC10 measures it on a phone.
+  pulse takes about 300 ms where a frame without one holds its 16.7 ms, and three pulses about 830 ms (*house*,
+  [the acceptance record](battle-acceptance.md)): the page's thread pays nothing, the renderer all of it. So a
+  pulse stays on one figure, and what it costs a phone's graphics card is the physical gate's to say.
   Since BC6 a `glow` with the shape of a ring is a shock ring: one image of a thin ring, flattened onto the
   ground under the figure, that opens to its reach over the whole beat and fades (*house*). Two of them 160 ms
   apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
@@ -463,7 +468,8 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: the most expensive common filter: several samples per pixel. On the camera it is the whole screen.
   A smear is cheaper as a stretched sprite.
 - **Reduced motion**: nothing.
-- **Here**: not used. BC9 may blur the ground during a capstone's push, and only if BC10's measure allows it.
+- **Here**: not used. BC9 did not blur the ground. BC10 says nothing about it: a full-screen filter costs the
+  renderer, and a session cannot measure that for a phone.
 
 ### Displacement
 
@@ -759,7 +765,8 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: none.
 - **Reduced motion**: no flash at all. The limit holds with the setting off, for everyone.
 - **Here**: at 2× an action lasts about 1.5 s, and one spell can hit three figures. A staging holds at most
-  one `flash` and one `shake`; the builder refuses a second. That is one flash per figure per action. BC10 checks all 44 stagings.
+  one `flash` and one `shake`; the builder refuses a second. That is one flash per figure per action.
+  All 44 stagings hold it (`studio/battle-frametime.test.js`).
 
 ### Reduced motion
 

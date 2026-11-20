@@ -1085,6 +1085,28 @@ set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for on
 (`artifacts/filmstrips/` by default). It exits 1 with no effect named and no `--still`, an option it cannot film, or an effect
 the bench does not list.
 
+### battle/frametime.mjs
+
+```bash
+node scripts/battle/frametime.mjs spell:pummel:v1
+node scripts/battle/frametime.mjs --all --out artifacts/frametime.json
+node scripts/battle/frametime.mjs --all --markdown
+node scripts/battle/frametime.mjs --all --throttle 6 --runs 5 --speed 2
+```
+
+Measures what an effect costs while it plays on the effects bench, at phone size, with the page's processor slowed
+by the browser's own throttle (docs/art/battle-acceptance.md). A spell is played on as many figures as its content
+lets it reach. Two measures an effect: the step, what one 20 ms step of the game costs the page's thread on the
+film's clock, and the frame, the time between two animation frames while the effect plays on the page's own loop.
+A step is over when it takes more than a sixty-hertz frame; a frame is long when it takes two or more. `--throttle`
+is the slowdown (4 by default, 1 for none), `--runs` how many times each effect is measured (3, always an odd number: each number is
+the middle one of the runs), `--speed` the playback speed (0.5, 1 or 2). `--all` measures every entry of the spell art
+and three of the bench's samples: the motif alone, the particles at their cap, one halo. It prints JSON, with the
+renderer's name, or the record's table with `--markdown`; `--out` writes the JSON to a file too. It needs the built
+bundle and the browser suite's Playwright, and serves `table/` itself; `--url` measures a laboratory page served
+elsewhere. The frame is the renderer's number: on a machine with no graphics card it is a software renderer's, and
+no phone's. It exits 1 with no effect named, an option it cannot take, or an effect the bench does not list.
+
 ### ux/journey.mjs
 
 ```bash

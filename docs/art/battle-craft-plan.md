@@ -1,6 +1,6 @@
 # Plan: the battle's craft, every spell, attack, move and the ground staged by a designer who can see
 
-Status: accepted, 2026-11-18 (the owner settled the questions at the end). BC1 to BC9 are built; BC10 is next.
+Status: built, 2026-11-19. The frame time on a phone is still open, at the physical gate of ADR 0136.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -45,8 +45,8 @@ Measured on `main` at `fc07dcb`, the bundle built in this session.
 | Seeing | The browser suite takes screenshots in 20 battle specs, each a still. Nothing captures an effect across time. |
 | Review | `design-reviewer` reads a diff against the identity and the art docs. It does not look at a render. |
 
-Not measured: frame time on a phone. No device is attached to a session; BC10 measures it with the browser's CPU
-throttle and leaves the physical gate where ADR 0136 already holds it.
+Not measured then: frame time on a phone. No device is attached to a session; BC10 measured it with the browser's CPU
+throttle ([the acceptance record](battle-acceptance.md)) and left the physical gate where ADR 0136 already holds it.
 
 ## The craft book
 
@@ -419,6 +419,35 @@ that extends it.
 
 10. **BC10, acceptance.** Frame time under the browser's CPU throttle at phone size for every staging, the budgets,
     reduced motion across all 44, the gallery of film strips published. The record goes in `docs/art/`.
+
+    *Built (2026-11-19)*: [the acceptance record](battle-acceptance.md), on `main` at `c10507f`.
+
+    - Frame time. `scripts/battle/frametime.mjs` plays each staging on the bench at phone size, on the figures
+      its spell reaches, the page's processor slowed four times, and takes two measures: what a step of the game
+      costs the page's thread, on the film's clock, and the time between two frames of the page's own loop.
+    - The page's thread has room: no step of any of the 44 stagings takes a frame. The worst is 11.8 ms of
+      16.7, the medians 1.3 to 3.1 ms. 26 stagings drop no frame, 12 double one or a few (Contagion 12).
+    - The `pulse` is the one heavy beat, and all of its cost is the renderer's: two or three frames of about
+      300 ms for one figure, 833 ms for three, with or without the throttle. A session draws in software, so
+      this is no phone's number. What it settles is the question ADR 0196 left: a pulse stays on one figure,
+      as `studio/staging-ladder.test.js` already holds. No staging was changed.
+    - The budgets hold, all five. The live bundle grew by 27,655 bytes over the whole plan and has 30 KiB left;
+      the kit is 11,045 of 49,152 bytes.
+    - Less motion: `battle-stagings.spec.js` now holds all 44 entries to the settled frame through the time
+      the action would take, and reads the figures and the view as well as the kit and the motifs.
+    - The gallery: the 44 film strips on one page, each with its measures. The page is private to the owner;
+      the record links it and names the command that films the sheets again.
+    - `scripts/battle/cast.mjs` says whom a spell is cast on, from the content, for the spec and the measure.
+
+    Left:
+
+    - A phone. Nothing here measures a graphics card: the physical-device gate of
+      `docs/tabletop/battle-release-acceptance.md` is still pending, and the record names what to watch there
+      (a spell with a pulse, Contagion on three figures, the breath and the air at the resting rate). If a
+      phone stalls on a pulse, the craft book's cheap halo replaces the filter and no staging changes.
+    - No test holds a frame time: a shared runner's number moves too much to gate a pull request.
+    - The kit's faults BC7 and BC8 listed (a beat that stays at the caster's home, a trail that hardly shows,
+      no chain from one target to the next) are not acceptance: each is a change to the kit, for an issue.
 
 BC6 to BC8 each end with the owner approving the family's sheets before the pull request is reported ready.
 

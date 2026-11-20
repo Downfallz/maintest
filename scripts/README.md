@@ -15,7 +15,7 @@ The scripts the gate, the learning loop and the reports run. Each command, with 
 | `ops/` | The production report (`/ops`, ADR 0186). |
 | `spells-report/` | The spells the bots cast and leave (`/spells-report`). |
 | `design-system/` | The design system rebuilt from the repository (`/design-system`). |
-| `battle/` | The names the installed Phaser declares, for the craft book (docs/art/battle-craft.md) and its test; and the film strip of one effect, filmed on the bench (`battle/README.md`). |
+| `battle/` | The names the installed Phaser declares, for the craft book (docs/art/battle-craft.md) and its test; the film strip of one effect, filmed on the bench (`battle/README.md`); and the frame time of each staging under the browser's CPU throttle (`frametime.mjs`, docs/art/battle-acceptance.md). |
 | `ux/` | The journey film (docs/art/ux-craft-plan.md, UX2): the five journeys walked on the built showcase and a real host, a contact sheet and a file of measures each, one interaction across time, the first paints, and the baseline's page. `ux/pictures.mjs` is the picture kit's script (UX5, ADR 0198): it derives a page's pictures at the size they are drawn from `docs/art/page-pictures.json`, holds them against the declaration and the budget, and lists what the briefs ask of the owner; `ux/encode.py` is its encoder (Pillow). |
 | `markdown-anchors.mjs` | The anchors GitHub gives a markdown file's headings, for the tests that follow a link to one (`studio/prompts.test.js`, `studio/storyboards.test.js`, `studio/journey-briefs.test.js`). |
 | `terminology.mjs` | The one reader of docs/domain/player-terminology.md's tables, for every scanner of the player's words. |

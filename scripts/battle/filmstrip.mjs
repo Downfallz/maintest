@@ -113,7 +113,7 @@ export async function filmRecord(page, options = {}) {
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
 
 /** Serve `table/` on a free local port, as the host does for what the laboratory loads. */
-async function serveTable() {
+export async function serveTable() {
   const table = join(root, 'table');
   const server = createServer(async (request, response) => {
     const pathname = new URL(request.url, 'http://localhost').pathname;
@@ -129,7 +129,7 @@ async function serveTable() {
 }
 
 // The browser suite's pinned Playwright when it is installed, or the machine's own.
-function playwright() {
+export function playwright() {
   for (const from of [join(root, 'studio/browser/package.json'), import.meta.url]) {
     try { return createRequire(from)('playwright'); } catch { /* try the next one */ }
   }

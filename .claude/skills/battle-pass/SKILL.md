@@ -81,7 +81,8 @@ npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
   across machines (`battle/README.md`, "The effects bench"). Film the before sheets before the first change.
 - The sheets are not committed: they stay in the folder outside the repository, and on the published page.
 - A sheet shows frames, not time: it cannot say the frame time, nor how the effect feels at full speed. Say so
-  when reporting; BC10 measures the frame time.
+  when reporting. `node scripts/battle/frametime.mjs <id>` measures what a staging costs a frame, against the
+  record in `docs/art/battle-acceptance.md`: run it on a staging that adds a `pulse` or many particles.
 - A pattern the craft book lacks is added to the book first, with its six lines and its source, in its own
   change. A staging does not carry a pattern nobody wrote down.
 - Nothing here changes a rule, a timing window or what the host sends. An effect that would need one stops the
