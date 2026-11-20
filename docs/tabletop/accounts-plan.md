@@ -175,9 +175,9 @@ The current layout is documented in [Home navigation](home-navigation.md), using
    says *Your turn* when a question waits for one of your seats. Invitations, **Find an opponent** and
    **New battle** stay on the dashboard; Friends and Notifications open dialogs from the menu.
 4. **Arriving with an invitation, signed out.** The same panel says *bastien invited you to a 2v2 battle*, read
-   from `POST /api/lobby/invitations`, which answers whoever holds the link's key and needs no account. A seat
-   kept for a friend answers spent to anybody else, and the panel then says *You are invited to a battle*. Sign
-   in, then ADR 0116's confirmation, which names the inviter's table too.
+   from `POST /api/lobby/invitations`, which answers whoever holds the link's key and needs no account. A link
+   the host reports as spent (a seat kept for a friend is reported so to anyone else) says *This invitation can
+   no longer be used*. Sign in, then ADR 0116's confirmation, which names the inviter's table too.
 
 The match card: the format and state on top, then the versus line, Player 1's side in the ally colour and
 Player 2's in the enemy colour, a bot with a small *bot* tag, an open place as a dashed *open seat*. The table

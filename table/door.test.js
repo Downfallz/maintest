@@ -22,9 +22,8 @@ test('an invited friend is told who invites them and to what, and that signing i
   assert.equal(words.account, 'Sign in to take your place. Your games follow you everywhere.');
 });
 
-test('an invitation the host has not described yet, or cannot, still says it is one', () => {
+test('an invitation the host has not described yet, or could not be asked about, still says it is one', () => {
   assert.equal(doorWords({}).title, 'You are invited to a battle.');
-  assert.equal(doorWords(invitationOf({ invitations: [{ token: 'inv', kind: 'spent', seat: null, table: null }] })).title, 'You are invited to a battle.');
   assert.equal(doorWords(invitationOf(offered({ format: '2v2', seats: [{ seat: 'player1', kind: 'bot', name: 'Hard' }] }, 'player2'))).title, 'You are invited to a 2v2 battle.');
 });
 
@@ -47,4 +46,20 @@ test('the name window says where the press leads: the invited place, or the firs
   assert.equal(nameNext({ invitation: {} }), 'Next: the battle you were invited to.');
   assert.equal(nameNext({ lesson: { order: 1, title: 'Your first combat' } }), 'Next: Tutorial 1, Your first combat.');
   assert.equal(nameNext({}), null);
+});
+
+test('a link the host says is spent is not called an invitation that waits: the visitor is asked to sign in to play', () => {
+  const spent = invitationOf({ invitations: [{ token: 'inv', kind: 'spent', seat: null, table: null }] });
+
+  assert.deepEqual(doorWords(spent), {
+    eyebrow: 'Invitation',
+    title: 'This invitation can no longer be used.',
+    game: doorWords(null).game,
+    account: 'Sign in to play. Your games follow you on every device.',
+  });
+  assert.equal(nameNext({ invitation: spent }), null);
+});
+
+test('a link that carries the visitor\'s own seat is a way back to their game, not an invitation', () => {
+  assert.equal(invitationOf({ invitations: [{ token: 'mine', kind: 'seat', seat: 'player1', table: bastiens }] }), null);
 });

@@ -278,11 +278,13 @@ Sign in to take your place. Your games follow you everywhere.
 Privacy policy
 ```
 
-When the host does not say who (a seat kept for a friend, which answers spent to anybody else, or a bot's
-table), the title reads "You are invited to a battle.", or "to a 2v2 battle." when the format is known. The line
-on the game counts the format's creatures. The eyebrow "Player lobby" goes: the visitor is not in a lobby yet.
-The walk measures the developer's form, whose label and button are four words more than Google's button: 41
-words plain and 48 invited on the sheet are 37 and 44 on the public host.
+When the host names nobody (a bot's table, or a link it has not described yet), the title reads "You are
+invited to a battle.", or "to a 2v2 battle." when the format is known. When the host reports the link as spent
+(taken, replaced, mistyped, or a seat kept for a friend, which it reports as spent to anyone else), the title
+reads "This invitation can no longer be used." and the account line "Sign in to play." A link to the visitor's
+own seat is the plain door. The line on the game counts the format's creatures. The eyebrow "Player lobby" goes:
+the visitor is not in a lobby yet. The walk films the developer's form, which has four more words than Google's
+button. On the sheet the panel counts 41 words plain and 48 invited. On the public host it counts 37 and 44.
 
 ### Pictures
 
@@ -349,9 +351,9 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - **Names**: the pictures are decoration, `alt=""`; the title and the line on the game carry what they show. The
   panel is a `section` named by its title; the invited title names the inviter, so a screen reader hears it first.
 - **Announced**: the error through `#sign-in-problem`, `role="alert"`, already in the HTML.
-- **Targets**: 4 of 7 under 44 px before UX7, 2 under 24 (the footer's Copyright and About the game, about 12 px
-  tall), then the brand at 28 px tall and the menu at 34 px wide. Each reaches 44 px. Google's button is held at
-  44 px (`table/lobby.css`).
+- **Targets**: before UX7, 4 of 7 were under 44 px, 2 of them under 24 (the footer's Copyright and About the
+  game, about 12 px tall). The brand is 28 px tall and the menu 34 px wide. Each now reaches 44 px. Google's
+  button is held at 44 px (`table/lobby.css`).
 
 ### Cost
 
@@ -369,8 +371,9 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
   UX7 brings the two to agree on this brief: a short panel, plus the inviter when there is one.
 - Who invites: decided in UX7 with no host change. `POST /api/lobby/invitations` already describes a link's
   table to whoever holds its key, signed in or not, and spends nothing (ADR 0116): the table's page asked it
-  before any sign-in. The panel asks it with the key the `next` address carries. A seat kept for a friend
-  answers spent to anybody but that friend (ADR 0129), so the panel names nobody then.
+  before any sign-in. The panel asks it with the key the `next` address carries. The host reports a seat kept
+  for a friend as spent to anyone but that friend (ADR 0129), so the panel says the invitation can no longer be
+  used; the friend accepts it from their lobby, signed in.
 - The first paint does not hold the panel's room: a signed-in player would see the sign-in flash before their
   home. Holding it needs the host to say who is signed in with the page itself, which is not this stage's.
 - Google draws a pill (`shape: 'pill'` in `table/account.js`) where the identity's buttons are square. Google's
@@ -396,8 +399,8 @@ Google's button cannot be pressed by a walk, and the developer's form names the 
 
 - **Order**: the eyebrow, the title, why the name matters, the field and its check, the rule of a name, where the
   press leads, the button.
-- **Budget**: 50 words with the check's line and where it leads shown; 41 before UX7, 47 on the invited sheet,
-  whose field is empty.
+- **Budget**: 50 words with the check's line and the line on where the press leads shown. The walk films the
+  field empty: 41 words before UX7, 47 on the invited sheet.
 
 ```text
 Welcome to Downfall Instinct
@@ -488,8 +491,8 @@ invitation is spent (ADR 0116). Built by `table/invitation.js` and `table/table.
 ### Words
 
 - **Order**: the eyebrow, the question, where the table stands, what accepting does, the button, Tables.
-- **Budget**: 40 words of its own; the screen measured 51 before UX7 and 42 after, its chrome included. The
-  table's own chrome above it (Your table, An invitation to a table, the round guide, the sound) is not this
+- **Budget**: 40 words for the panel itself. The screen, chrome included, measured 51 before UX7 and 42 after.
+  The table's own chrome above it (Your table, An invitation to a table, the round guide, the sound) is not this
   screen's job: it stays, quieter, and the panel comes first.
 
 ```text

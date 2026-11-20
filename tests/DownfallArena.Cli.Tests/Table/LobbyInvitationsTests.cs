@@ -158,6 +158,28 @@ public sealed class LobbyInvitationsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_link_s_table_is_described_to_a_visitor_who_is_not_signed_in_naming_the_player_who_opened_it()
+    {
+        var rook = await PlayerAsync("Rook");
+        var lobby = await LobbyAsync();
+        var opened = await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: rook);
+        var table = (await _registry.ByIdAsync(Read(opened).GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
+
+        var answer = Read(await lobby.HandleAsync("POST", "/api/lobby/invitations", JsonSerializer.Serialize(new { tokens = new[] { table.Seats[1].Invitation } }), player: null)).GetProperty("invitations")[0];
+
+        answer.GetProperty("kind").GetString().ShouldBe("invitation");
+        answer.GetProperty("seat").GetString().ShouldBe("player2");
+        var described = answer.GetProperty("table");
+        described.GetProperty("format").GetString().ShouldBe(table.Session.Rules.Format.ToString());
+        described.GetProperty("waiting").GetBoolean().ShouldBeTrue();
+        var seats = described.GetProperty("seats");
+        seats[0].GetProperty("seat").GetString().ShouldBe("player1");
+        seats[0].GetProperty("kind").GetString().ShouldBe("person");
+        seats[0].GetProperty("name").GetString().ShouldBe("Rook", "the signed-out door names who invites from this answer");
+        seats[1].GetProperty("kind").GetString().ShouldBe("open");
+    }
+
+    [Fact]
     public async Task Only_the_invited_friend_accepts_and_only_once_and_the_inviter_is_told()
     {
         var mark = await PlayerAsync("MarkF");

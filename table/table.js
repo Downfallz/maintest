@@ -203,10 +203,16 @@ function invite(plan) {
   panel.hidden = false;
   (element('invitation-take').hidden ? element('invitation-keep').hidden ? element('invitation-lobby') : element('invitation-keep') : element('invitation-take')).focus();
 
+  let taking = false;
   const accept = async also => {
-    for (const id of Object.keys(buttons)) element(id).disabled = true;
-    // The press is answered at once: the host's answer can take a while on a phone's network.
-    if (!also.length) element('invitation-take').textContent = 'Taking the place…';
+    if (taking) return;
+    taking = true;
+    // The press is answered at once: the host's answer can take a while on a phone's network. The pressed button
+    // is marked busy rather than disabled, so the focus stays on it and its new words are read.
+    const pressed = element(also.length ? 'invitation-here' : 'invitation-take');
+    for (const id of Object.keys(buttons)) if (element(id) !== pressed) element(id).disabled = true;
+    pressed.setAttribute('aria-disabled', 'true');
+    if (!also.length) pressed.textContent = 'Taking the place…';
     try {
       const claimed = await lobbyPost('/api/lobby/claim', { tokens: plan.offered.map(one => one.token) });
       panel.hidden = true;
@@ -215,6 +221,8 @@ function invite(plan) {
       // Somebody accepted it first, or it was replaced: what the page says is what the host said.
       element('invitation-problem').textContent = failure.message;
       for (const id of Object.keys(buttons)) element(id).disabled = false;
+      pressed.setAttribute('aria-disabled', 'false');
+      taking = false;
       element('invitation-take').hidden = true;
       element('invitation-here').hidden = true;
       (element('invitation-keep').hidden ? element('invitation-lobby') : element('invitation-keep')).focus();

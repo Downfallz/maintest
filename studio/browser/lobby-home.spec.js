@@ -983,18 +983,36 @@ test('a friend who follows an invitation signed out is told who invites them, an
   expect(state.errors).toEqual([]);
 });
 
-test('an invitation the host cannot describe still says it is one, and a slow answer keeps the panel where it is', async ({ page }) => {
+test('an invitation is one before the host describes it, and a late answer naming the inviter leaves the sign-in where it was', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
   let release;
   const held = new Promise(resolve => { release = resolve; });
-  const state = await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch, holdInvitation: held });
+  const state = await home(page, { account: null, mode: 'google', invited: rooks, search: invitedSearch, holdInvitation: held });
 
   await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
   const button = await page.getByRole('button', { name: 'Continue with Google' }).boundingBox();
   release();
-  await expect.poll(() => state.invitationAsks?.length ?? 0).toBe(1);
-  await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Rook invited you to a 3v3 battle.' })).toBeVisible();
+
   expect(await page.getByRole('button', { name: 'Continue with Google' }).boundingBox()).toEqual(button);
   expect(state.errors).toEqual([]);
+});
+
+test('a spent link is not called an invitation that waits', async ({ page }) => {
+  await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch });
+  await expect(page.getByRole('heading', { name: 'This invitation can no longer be used.' })).toBeVisible();
+  await expect(page.locator('#sign-in-account')).toHaveText('Sign in to play. Your games follow you on every device.');
+});
+
+test('the door\'s ground covers the panel at every width', async ({ page }) => {
+  for (const width of [320, 390, 760, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    await home(page, { account: null, mode: 'google' });
+    const [panel, ground] = await Promise.all(['#sign-in-panel', '#sign-in-art .sign-in-ground'].map(one => page.locator(one).boundingBox()));
+    expect(Math.abs(ground.width - panel.width), `at ${width}`).toBeLessThanOrEqual(2);
+    // A phone's ground is 300 px under a veil that runs on into the panel's soot; a wider one covers it whole.
+    expect(ground.height, `at ${width}`).toBeGreaterThanOrEqual((width > 700 ? panel.height : Math.min(panel.height, 300)) - 2, 'within the panel\'s two borders');
+  }
 });
 
 test('a new account named on a plain visit is told the first lesson in the window before the lesson opens', async ({ page }) => {

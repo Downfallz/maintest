@@ -27,6 +27,9 @@ export function doorWords(invitation) {
   if (!invitation) {
     return { eyebrow: 'Beta', title: 'Sign in to play.', game: gameLine('3v3'), account: 'Your games follow you on every device.' };
   }
+  if (invitation.spent) {
+    return { eyebrow: 'Invitation', title: 'This invitation can no longer be used.', game: gameLine('3v3'), account: 'Sign in to play. Your games follow you on every device.' };
+  }
   const battle = invitation.format ? `a ${invitation.format} battle` : 'a battle';
   return {
     eyebrow: 'Invitation',
@@ -43,15 +46,20 @@ export function invitationKeys(search) {
   return seatsFromLocation(next.slice(next.indexOf('?'))).map(one => one.token);
 }
 
-/** The invitation as the host described it: its inviter, its format and the seat, or nothing known when it is spent. */
+/**
+ * The invitation as the host described it: its inviter, its format and the seat. Null when the link holds the
+ * visitor's own seat, which is a way back to their game; spent when the host offers nothing (ADR 0116, 0129).
+ */
 export function invitationOf(answer) {
-  const offered = (answer?.invitations ?? []).find(one => one.kind === 'invitation' && one.table);
-  if (!offered) return {};
+  const answers = answer?.invitations ?? [];
+  const offered = answers.find(one => one.kind === 'invitation' && one.table);
+  if (!offered) return answers.some(one => one.kind === 'seat') ? null : { spent: true };
   return { inviter: inviterOf(offered.table, [offered]), format: offered.table.format ?? null, seat: offered.seat };
 }
 
 /** Where the name window's press leads, said in it so the cue survives the page that changes after it. */
 export function nameNext({ invitation, lesson } = {}) {
+  if (invitation?.spent) return null;
   if (invitation) {
     return invitation.inviter && invitation.seat
       ? `Next: your place as ${seatLabel(invitation.seat)} at ${invitation.inviter}'s table.`
@@ -83,8 +91,8 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
     el('sign-in-account').textContent = words.account;
     el('sign-in-panel').dataset.door = invitation ? 'invited' : 'plain';
     const next = nameNext({ invitation });
+    // Never hidden, only empty: a live region shown and filled in one step is often not announced.
     el('name-next').textContent = next ?? '';
-    el('name-next').hidden = !next;
   };
 
   const keys = invitationKeys(search);
@@ -100,15 +108,14 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
       const art = el('sign-in-art');
       if (!art || art.childElementCount) return;
       art.append(
-        pictureElement(doc, 'eclipse-ground', { page: 'table/sign-in', class: 'sign-in-ground', sizes: '(min-width: 620px) 100vw, 533px' }),
-        pictureElement(doc, 'revenant', { page: 'table/sign-in', class: 'sign-in-creature', sizes: '(min-width: 620px) 550px, 107px' }),
+        pictureElement(doc, 'eclipse-ground', { page: 'table/sign-in', class: 'sign-in-ground', sizes: '(min-width: 701px) 100vw, 533px' }),
+        pictureElement(doc, 'revenant', { page: 'table/sign-in', class: 'sign-in-creature', sizes: '(min-width: 701px) 550px, 107px' }),
       );
     },
     lesson(card) {
       const next = nameNext({ lesson: card });
       if (!next) return;
       el('name-next').textContent = next;
-      el('name-next').hidden = false;
     },
   };
 }

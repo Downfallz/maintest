@@ -96,9 +96,9 @@ function mountSignIn(doc, { request, google, refresh, say }) {
       say('name-check');
       el('name-dialog').showModal();
       el('username').focus();
-      return;
+      return false;
     }
-    await refresh();
+    return (await refresh()).leaving;
   }
 
   async function withGoogle(state) {
@@ -123,12 +123,14 @@ function mountSignIn(doc, { request, google, refresh, say }) {
     say('sign-in-problem');
     const button = el('dev-sign-in-submit'), label = button?.textContent;
     if (button) { button.disabled = true; button.textContent = 'Signing in…'; }
+    let leaving = false;
     try {
-      await signedIn(await request('/api/account/dev', { username: el('dev-username').value }));
+      leaving = await signedIn(await request('/api/account/dev', { username: el('dev-username').value }));
     } catch (error) {
       say('sign-in-problem', error.message);
     } finally {
-      if (button) { button.disabled = false; button.textContent = label; }
+      // A page on its way elsewhere keeps the button as it is: a second press would sign in again.
+      if (button && !leaving) { button.disabled = false; button.textContent = label; }
     }
   });
 
@@ -155,16 +157,19 @@ function mountSignIn(doc, { request, google, refresh, say }) {
     el('name-submit').disabled = true;
     try {
       await request('/api/account', { ticket, username: value.trim() });
-      ticket = null;
-      say('name-check', `✓ ${value.trim()} is yours`);
-      el('name-check').className = 'name-check good';
-      // The window stays while the page goes where the press leads, its line saying where: the cue the player
-      // carries across the page that changes. It closes when the account stays on this page.
-      const state = await refresh();
-      if (!state.leaving) el('name-dialog').close();
     } catch (error) {
       say('name-problem', error.code === 'Account.TicketExpired' ? 'That sign-in ran out. Close this and sign in again.' : error.message);
-    } finally { el('name-submit').disabled = false; }
+      el('name-submit').disabled = false;
+      return;
+    }
+    ticket = null;
+    say('name-check', `✓ ${value.trim()} is yours`);
+    el('name-check').className = 'name-check good';
+    // The window stays while the page goes where the press leads, its line saying where: the cue the player
+    // carries across the page that changes. Its button stays off, since the name is taken. It closes when the
+    // account stays on this page, or when the page could not be read again.
+    const leaving = await refresh().then(state => state.leaving, () => false);
+    if (!leaving) { el('name-dialog').close(); el('name-submit').disabled = false; }
   });
 
   // Closed without a name, the focus goes back to the way in: the developer's button, or Google's.
