@@ -261,10 +261,10 @@ export const PAGE_ART = {
     ],
   },
   'mutation-predator-base': {
-    from: '2cea23fe18a4eaf1', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    from: '9615b96f064f34ac', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
     sizes: [
-      { file: 'mutation-predator-base-144.12105221.webp', width: 144, height: 72, bytes: 8500 },
-      { file: 'mutation-predator-base-288.bb90d269.webp', width: 288, height: 144, bytes: 22408 },
+      { file: 'mutation-predator-base-144.f8781775.webp', width: 144, height: 72, bytes: 8552 },
+      { file: 'mutation-predator-base-288.d5862369.webp', width: 288, height: 144, bytes: 23376 },
     ],
   },
   'mutation-predator-stage2-blighted': {

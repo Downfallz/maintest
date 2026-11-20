@@ -15,7 +15,7 @@ const entries = [
   // id, family, stage, [width, height], [left, top, right, bottom]
   ['base-creature', 'base', 0, [1536, 1024], [139, 47, 1368, 999]],
   ['brute-base', 'brute', 1, [1536, 1024], [74, 10, 1457, 987]],
-  ['predator-base', 'predator', 1, [1774, 887], [10, 9, 1767, 880]],
+  ['predator-base', 'predator', 1, [1774, 887], [9, 9, 1769, 885]],
   ['warped-base', 'warped', 1, [1536, 1024], [179, 22, 1372, 1002]],
   ['brute-stage2-oppressor', 'brute', 2, [1536, 1024], [24, 7, 1515, 1010]],
   ['brute-stage2-frenzied', 'brute', 2, [1536, 1024], [13, 8, 1531, 1022]],
