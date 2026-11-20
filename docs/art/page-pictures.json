@@ -145,6 +145,132 @@
       "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
       "drawn": [96, 150],
       "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "mutation-brute-base",
+      "source": "table/battle-art/evolutions/brute-base.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-brute-stage2-frenzied",
+      "source": "table/battle-art/evolutions/brute-stage2-frenzied.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-brute-stage2-ironhide",
+      "source": "table/battle-art/evolutions/brute-stage2-ironhide.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-brute-stage2-oppressor",
+      "source": "table/battle-art/evolutions/brute-stage2-oppressor.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-brute-stage3-colossus",
+      "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-brute-stage3-oppressor",
+      "source": "table/battle-art/evolutions/brute-stage3-oppressor.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-brute-stage3-ravager",
+      "source": "table/battle-art/evolutions/brute-stage3-ravager.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-base",
+      "source": "table/battle-art/evolutions/predator-base.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-stage2-blighted",
+      "source": "table/battle-art/evolutions/predator-stage2-blighted.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-stage2-open-maw",
+      "source": "table/battle-art/evolutions/predator-stage2-open-maw.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-stage2-scythe",
+      "source": "table/battle-art/evolutions/predator-stage2-scythe.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-stage3-blightweaver",
+      "source": "table/battle-art/evolutions/predator-stage3-blightweaver.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-stage3-deathstalker",
+      "source": "table/battle-art/evolutions/predator-stage3-deathstalker.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-predator-stage3-soulreaver",
+      "source": "table/battle-art/evolutions/predator-stage3-soulreaver.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-base",
+      "source": "table/battle-art/evolutions/warped-base.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-stage2-ethereal",
+      "source": "table/battle-art/evolutions/warped-stage2-ethereal.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-stage2-necrotic",
+      "source": "table/battle-art/evolutions/warped-stage2-necrotic.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-stage2-stormborn",
+      "source": "table/battle-art/evolutions/warped-stage2-stormborn.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-stage3-cataclysm",
+      "source": "table/battle-art/evolutions/warped-stage3-cataclysm.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-stage3-revenant",
+      "source": "table/battle-art/evolutions/warped-stage3-revenant.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "mutation-warped-stage3-transcendent",
+      "source": "table/battle-art/evolutions/warped-stage3-transcendent.webp",
+      "drawn": [144],
+      "pages": { "table/stats": "lazy" }
     }
   ]
 }

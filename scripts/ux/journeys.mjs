@@ -229,9 +229,14 @@ const lobby = {
 const pages = {
   id: 'pages',
   title: "The player's pages",
-  screens: ['friends-empty', 'friends-asked', 'friends-with-a-friend', 'friend-invited', 'leaderboard', 'statistics'],
+  screens: ['friends-empty', 'friends-asked', 'friends-with-a-friend', 'friend-invited', 'leaderboard', 'statistics', 'leaderboard-ranked', 'statistics-ranked'],
   strips: {
-    'friends-window': { at: 'friends-empty', act: async ({ page }) => { await page.locator('[data-home-close]:visible').click(); await page.locator('#friends-open').click(); } },
+    // The window closed and opened again from the menu, which closes behind the window.
+    'friends-window': { at: 'friends-empty', act: async ({ page }) => {
+      await page.locator('[data-home-close]:visible').click();
+      if (!await page.locator('#friends-open').isVisible()) await page.locator('#home-menu-toggle').click();
+      await page.locator('#friends-open').click();
+    } },
   },
   async walk(walk) {
     const { page, set } = walk;
@@ -239,6 +244,8 @@ const pages = {
     const friend = await walk.person();
     await account(walk, friend, FRIEND);
     await home(page, set.game);
+    // Friends is in the menu once the host says who is signed in: opening the menu before that finds it hidden.
+    await page.locator('#friends-open:not([hidden])').waitFor({ state: 'attached' });
     await page.locator('#home-menu-toggle').click();
     await page.locator('#friends-open').click();
     await page.locator('#friends-dialog[open]').waitFor();
@@ -261,8 +268,39 @@ const pages = {
     await page.goto(`${set.game}/stats`);
     await page.locator('main').waitFor();
     await walk.screen('statistics');
+    // The same pages once something is on them: one ranked game against the friend, played through its first round
+    // by both, then conceded by the walker, so the ladder has two players and the statistics a record.
+    await rankedGame(walk, friend);
+    await page.goto(`${set.game}/leaderboard`);
+    await page.locator('#ladder-rows tr').first().waitFor();
+    await walk.screen('leaderboard-ranked');
+    await page.goto(`${set.game}/stats`);
+    await page.locator('#stats-body:not([hidden])').waitFor();
+    await walk.screen('statistics-ranked');
   },
 };
+
+// A ranked 3v3 game between the walker and the friend: an open seat from the Create window, taken by the friend,
+// a first round played by both with the first choices offered, then conceded by the walker.
+async function rankedGame(walk, friend) {
+  const { page, set } = walk;
+  await home(page, set.game);
+  await page.locator('#new-table').click();
+  await page.locator('#create-dialog[open]').waitFor();
+  await page.locator('#opponent').selectOption('person');
+  await page.locator('#create-submit').click();
+  await page.waitForURL(/\/(battle|play)/);
+  await page.locator('#battle[data-connection="live"], #waiting-room, [data-waiting]').first().waitFor({ timeout: 30000 });
+  const [seat, token] = [...new URL(page.url()).searchParams][0];
+  const room = await page.request.get(`${set.game}/api/seat/${seat}`, { headers: { 'X-Seat-Token': token } });
+  const join = (await room.json()).waiting?.seats?.[0]?.join;
+  if (!join) throw new Error('The waiting room names no link for its open seat.');
+  await takeSeat(friend, `${set.game}${join}`);
+  await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
+  const second = view => view.board.roundNumber > 1;
+  await Promise.all([playUntil(page, second, { blocked: walk.blocked }), playUntil(friend, second, { blocked: walk.blocked })]);
+  await concede(walk);
+}
 
 async function concede(walk) {
   const { page } = walk;

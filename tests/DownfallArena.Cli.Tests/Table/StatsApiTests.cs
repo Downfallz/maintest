@@ -5,6 +5,7 @@ using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Resources;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.Infrastructure.Resources;
 using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -84,6 +85,31 @@ public sealed class StatsApiTests : IDisposable
         var cast = read.GetProperty("spells").EnumerateArray().ShouldHaveSingleItem();
         cast.GetProperty("name").GetString().ShouldBe(spell.Name);
         cast.GetProperty("casts").GetInt32().ShouldBe(4);
+    }
+
+    [Fact]
+    public async Task A_mutation_names_the_painting_it_draws_and_one_that_draws_none_names_null()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("Bastien");
+        var creature = Resources.Creatures.First();
+        await _results.RecordAsync(
+            new MatchResult(Guid.CreateVersion7().ToString(), Start, "3v3", "at-activation", "hash", 10, "player1", [new("player1", mark.Id, null), new("player2", bastien.Id, null)])
+            {
+                Teams = [new PlayedCreature("player1", creature.Id.Value, ["tier:dreadnought:v1", "tier:gone:v1"], Survived: true, new Dictionary<string, int>())],
+            },
+            Cancel);
+        var accounts = await AccountsAsync();
+        Directory.CreateDirectory(_root);
+        await File.WriteAllTextAsync(Path.Combine(_root, MutationArt.FileName), """{ "tier:dreadnought:v1": { "family": "brute", "motif": "plates", "artwork": "brute-stage3-colossus" } }""", Cancel);
+        var art = MutationArt.ReadNextTo(Path.Combine(_root, "game.schema.json"));
+        var stats = new StatsApi(_results, accounts, Resources, art);
+
+        var read = Read(await stats.HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
+
+        var mutations = read.GetProperty("mutations").EnumerateArray().ToDictionary(one => one.GetProperty("id").GetString()!);
+        mutations["tier:dreadnought:v1"].GetProperty("artwork").GetString().ShouldBe("brute-stage3-colossus");
+        mutations["tier:gone:v1"].GetProperty("artwork").ValueKind.ShouldBe(JsonValueKind.Null, "a mutation nobody drew names no painting");
     }
 
     [Fact]
