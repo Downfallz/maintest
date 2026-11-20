@@ -232,6 +232,17 @@ function replaceKeepingFocus(doc, place, children) {
   if (focused) place.querySelector('.page-action')?.focus();
 }
 
+/** Your place for a signed-in player: who they are, then where they stand, or how to get on the ladder. */
+function playerParts(doc, ladder, standing, move) {
+  const head = node(doc, 'p', null, 'you-who');
+  head.append(initial(doc, ladder.you.username), node(doc, 'strong', ladder.you.username));
+  if (!standing) {
+    return [head, node(doc, 'p', 'Not on the ladder yet. Your first ranked game against another player puts you on it.', 'you-line'), openRanked(doc, true)];
+  }
+  head.append(node(doc, 'span', placeText(standing), 'you-place motion-number'));
+  return [head, ...standingParts(doc, ladder, standing, move)];
+}
+
 export function drawLadder(doc, ladder, { storage = browserStorage(), first = true } = {}) {
   const el = id => doc.getElementById(id);
   drawPlayers(doc, ladder);
@@ -245,18 +256,9 @@ export function drawLadder(doc, ladder, { storage = browserStorage(), first = tr
   drawnStanding = key;
   const move = standing ? placeMove(seenAtOpen, standing) : null;
 
-  const you = [];
-  if (ladder.you) {
-    const head = node(doc, 'p', null, 'you-who');
-    head.append(initial(doc, ladder.you.username), node(doc, 'strong', ladder.you.username));
-    if (standing) head.append(node(doc, 'span', placeText(standing), 'you-place motion-number'));
-    you.push(head);
-    if (standing) you.push(...standingParts(doc, ladder, standing, move));
-    else you.push(node(doc, 'p', 'Not on the ladder yet. Your first ranked game against another player puts you on it.', 'you-line'), openRanked(doc, true));
-    remember(storage, ladder.you.username, standing);
-  } else you.push(node(doc, 'p', youSummary(null).text, 'you-line'));
-  you.push(...botsParts(doc, ladder.you?.bots));
-  replaceKeepingFocus(doc, el('you'), you);
+  const you = ladder.you ? playerParts(doc, ladder, standing, move) : [node(doc, 'p', youSummary(null).text, 'you-line')];
+  if (ladder.you) remember(storage, ladder.you.username, standing);
+  replaceKeepingFocus(doc, el('you'), [...you, ...botsParts(doc, ladder.you?.bots)]);
 
   // A place that moved plays the kit's value that changes, once: when the page opens on a move since this browser
   // last showed it, and when a later read changes what the page shows; not on a read that changes nothing.
