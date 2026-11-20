@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { conceptsOf } from './concepts.js';
-import { CONTROLS, assistedQuestion, coachCard, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, lessonStep, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
+import { CONTROLS, assistedQuestion, coachCard, coachHint, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, lessonStep, nextLesson, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const concepts = conceptsOf(JSON.parse(readFileSync(join(root, 'table/rules.json'), 'utf8')));
@@ -73,7 +73,7 @@ test('once the tutorial is done the next round opens nothing by itself over the 
 });
 
 test('once the tutorial is done the dock says so, in place of waiting for a decision', () => {
-  assert.equal(lessonOverText(view({}, lesson({ done: true }))), 'Tutorial complete. Play it again, or leave.');
+  assert.equal(lessonOverText(view({}, lesson({ done: true }))), 'Tutorial complete.');
   assert.equal(lessonOverText(view()), null);
   assert.equal(lessonOverText({ board: {} }), null);
 });
@@ -136,9 +136,9 @@ test('the coach card is held while results are read, and absent between question
 test('a tutorial the host says is done ends on its own card, and a later step still shows', () => {
   const done = coachCard(view({}, lesson({ shown: 3, done: true })));
   assert.equal(done.key, 'done');
-  assert.equal(done.eyebrow, 'TUTORIAL COMPLETE');
-  assert.match(done.lines[0], /Your first combat/);
-  assert.equal(done.lines[1], 'Play it again, or leave: nothing played here counts.');
+  assert.equal(done.eyebrow, 'TUTORIAL 1 OF 4 · COMPLETE');
+  assert.equal(done.lines[0], 'You finished Your first combat.');
+  assert.equal(done.lines.length, 1);
   assert.equal(coachCard(view(asked('Action', 2), lesson({ done: true }))).key, 'step:0');
 });
 
@@ -158,6 +158,36 @@ test('a tutorial\'s first card offers Start and Skip the tutorial, and says wher
   assert.equal(brief.begin, 'Start');
   assert.equal(brief.skip, 'Skip the tutorial');
   assert.match(brief.note, /Learn to play/);
+});
+
+test('a tutorial\'s first card says its round in a few words, under the brief\'s budget (UX8)', () => {
+  const brief = tutorialBrief(lesson(), 2);
+  assert.equal(brief.start, 'Round 2, against a bot.');
+  assert.equal(brief.note, 'Nothing played here counts. Play it again any time from Learn to play.');
+  const words = [brief.start, brief.note, brief.begin, brief.skip].join(' ').split(/\s+/).length;
+  assert.ok(words <= 22, `${words} words the page writes`);
+});
+
+test('the end card says how the board stands, read from the host\'s board', () => {
+  const alive = (n, isAlive = true) => ({ id: n, isAlive });
+  const done = coachCard({ ...view({}, lesson({ shown: 3, done: true })), board: { roundNumber: 2, allies: [alive(1), alive(2), alive(3, false)], enemies: [alive(4, false), alive(5), alive(6)] } });
+  assert.deepEqual(done.lines, ['You finished Your first combat.', 'Your team: 2 of 3 standing. Opponent: 2 of 3.']);
+});
+
+test('the end card names the next lesson the host lists, and none after the last', () => {
+  const series = { tutorials: [{ order: 1, title: 'Your first combat', link: '/battle?scenario=a' }, { order: 2, title: 'Who acts first', link: '/battle?scenario=b' }] };
+  assert.deepEqual(nextLesson(series, lesson()), { label: 'Next: Who acts first', link: '/battle?scenario=b' });
+  // The series not read, or the next one not listed: its place, and Learn to play, which lists it.
+  assert.deepEqual(nextLesson(null, lesson()), { label: 'Next: tutorial 2 of 4', link: '/#learn-to-play' });
+  assert.deepEqual(nextLesson({ tutorials: [{ order: 2, title: 'X', link: 'https://elsewhere.example/' }] }, lesson()), { label: 'Next: tutorial 2 of 4', link: '/#learn-to-play' });
+  assert.equal(nextLesson(series, lesson({ order: 4 })), null);
+});
+
+test('a hint names the control the step asks for, by its own words, and nothing without one', () => {
+  assert.equal(coachHint('Choose spell'), 'Next: Choose spell.');
+  assert.equal(coachHint('  Choose tempos  '), 'Next: Choose tempos.');
+  assert.equal(coachHint(''), null);
+  assert.equal(coachHint(null), null);
 });
 
 test('a tutorial that is done is not skipped: its card offers no Skip, and leaving it is only leaving', () => {

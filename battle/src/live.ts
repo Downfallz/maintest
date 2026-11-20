@@ -351,9 +351,10 @@ type GrowthRow = { creature: number; mutation: string; stage: number | null; col
 // A new round gets a short announcement at the top of the field when the shown board reaches it live; a page
 // opening on a round, a replay or a seat change is a baseline, never a new round.
 let announcedRound: number | null = null, roundToastTimer = 0;
-function announceRound(round: number | null) {
+function announceRound(round: number | null, quiet = false) {
   if (round == null) { announcedRound = null; return; }
-  if (announcedRound !== null && round > announcedRound) {
+  // A tutorial done announces no round it will not play (UX8): the lesson ends on its own card.
+  if (!quiet && announcedRound !== null && round > announcedRound) {
     const toast = $('round-toast');
     text('round-toast-number', `Round ${round}`);
     toast.hidden = false; toast.classList.remove('showing'); void toast.offsetWidth; toast.classList.add('showing');
@@ -536,7 +537,7 @@ function render() {
     node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
-  announceRound(view && !replay.active ? board.round : null);
+  announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));
   // Before both players are seated there is no phase yet: the header says the table is waiting.
   text('round-phase', view?.waiting && !view.over ? 'WAITING' : phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');

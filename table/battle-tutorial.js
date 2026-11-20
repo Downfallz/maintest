@@ -37,16 +37,46 @@ export function tutorialBand(lesson) {
 }
 
 /**
- * What the briefing adds in a tutorial (O4): it says what this is and how to get out of it, **Start** in place of
- * Begin, and **Skip the tutorial** until the tutorial is done.
+ * What the briefing adds in a tutorial (O4): where it starts, that it does not count, **Start** in place of Begin,
+ * and **Skip the tutorial** until the tutorial is done. Under the brief's budget (docs/art/journeys/lessons.md, UX8):
+ * Leave stands in the band on every step, so the card does not say it.
  */
-export function tutorialBrief(lesson) {
+export function tutorialBrief(lesson, round) {
   return {
     begin: 'Start',
     skip: lesson?.done ? null : 'Skip the tutorial',
-    note: 'A short lesson on a real board: nothing played here counts. You can skip it now or leave at any time. You can play it again from Learn to play.',
+    start: `Round ${round ?? '—'}, against a bot.`,
+    note: 'Nothing played here counts. Play it again any time from Learn to play.',
   };
 }
+
+const SAME_SITE = /^\/(?!\/)/;
+
+/**
+ * The lesson after this one, as the end card offers it (UX8): its title and link from the series the host lists
+ * (`GET /api/tutorials`), or, the series not read, its place and Learn to play, which lists it. None after the last.
+ */
+export function nextLesson(answer, lesson) {
+  const order = lesson?.order ?? 0, of = Math.max(lesson?.of ?? 0, order);
+  if (!Number.isInteger(order) || order >= of) return null;
+  const listed = (answer?.tutorials ?? []).find(one => one?.order === order + 1 && typeof one.link === 'string' && SAME_SITE.test(one.link));
+  return listed ? { label: `Next: ${listed.title || `tutorial ${order + 1} of ${of}`}`, link: listed.link }
+    : { label: `Next: tutorial ${order + 1} of ${of}`, link: '/#learn-to-play' };
+}
+
+/**
+ * The hint a step shows once the person turned away from its question (UX8): the words on the control that asks
+ * it, read from the page. The page names a button; it decides no move.
+ */
+export function coachHint(label) {
+  const words = typeof label === 'string' ? label.trim() : '';
+  return words ? `Next: ${words}.` : null;
+}
+
+const standing = creatures => {
+  const all = list(creatures);
+  return { alive: all.filter(one => one?.isAlive !== false).length, of: all.length };
+};
 
 /**
  * Whether leaving now is skipping: a tutorial the host has not said is done, whose match still plays on. It never
@@ -101,7 +131,7 @@ export function holdsTheNextRound(view) {
  * and none outside a tutorial.
  */
 export function lessonOverText(view) {
-  return tutorialOf(view)?.done ? 'Tutorial complete. Play it again, or leave.' : null;
+  return tutorialOf(view)?.done ? 'Tutorial complete.' : null;
 }
 
 /**
@@ -147,7 +177,10 @@ export function coachCard(view, { held = false, concepts = NO_CONCEPTS } = {}) {
       names: list(at.step.concepts).filter(id => typeof id === 'string').length, ...pointer(at.step) };
   }
   if (!lesson.done) return null;
-  return { key: 'done', done: true, eyebrow: 'TUTORIAL COMPLETE',
-    lines: [`You finished ${lesson.title || 'the tutorial'}.`, 'Play it again, or leave: nothing played here counts.'],
+  // How the board stands, as the host's board says: who is still standing on each side.
+  const ours = standing(view.board?.allies), theirs = standing(view.board?.enemies);
+  const board = ours.of && theirs.of ? [`Your team: ${ours.alive} of ${ours.of} standing. Opponent: ${theirs.alive} of ${theirs.of}.`] : [];
+  return { key: 'done', done: true, eyebrow: `${tutorialBand(lesson).eyebrow} · COMPLETE`,
+    lines: [`You finished ${lesson.title || 'the tutorial'}.`, ...board],
     cards: [], names: 0, creature: null, control: null };
 }

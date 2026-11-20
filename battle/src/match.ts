@@ -128,7 +128,7 @@ async function playAgain(plan: NonNullable<Rematch>) {
  * complete, and Play again and Leave the tutorial take the places of Rematch and Lobby.
  */
 export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null,
-  cues: () => Parameters<typeof resultCardElement>[1] = () => [], tutorial: () => { again: () => void; done: boolean } | null = () => null) {
+  cues: () => Parameters<typeof resultCardElement>[1] = () => [], tutorial: () => { again: () => void; done: boolean; eyebrow: string; last: boolean } | null = () => null) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
   let roundsKey = '', resultKey = '', reportKey = '', cardKey = '', starting = false, rematchError = '';
   el('match-rematch').addEventListener('click', async () => {
@@ -149,9 +149,14 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
   function drawEnding(model: ReturnType<Controller['model']>) {
     const lesson = model.over ? tutorial() : null;
     const round = Number.isInteger(model.result?.round) ? ` · ROUND ${model.result.round}` : '';
-    text('match-eyebrow', lesson?.done ? 'TUTORIAL COMPLETE' : `MATCH COMPLETE${round}`);
+    text('match-eyebrow', lesson?.done ? lesson.eyebrow : `MATCH COMPLETE${round}`);
     result.dataset.tutorial = String(Boolean(lesson));
     el('match-again').hidden = !lesson; el('match-leave').hidden = !lesson; el('match-lobby').hidden = Boolean(lesson);
+    // The last tutorial done ends the series: it says so, and Leave the tutorial, to the lobby, is the filled way on (UX8).
+    const seriesDone = Boolean(lesson?.done && lesson.last);
+    text('match-series', seriesDone ? 'You finished every tutorial.' : '');
+    el('match-series').hidden = !seriesDone;
+    el('match-leave').classList.toggle('primary', seriesDone); el('match-again').classList.toggle('primary', !seriesDone);
     el<HTMLButtonElement>('match-again').disabled = model.busy;
     return lesson;
   }

@@ -94,7 +94,7 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
 - **Starting and starting again.** A new account's first visit opens tutorial 1 at once. It must read as a
   tutorial from the first second, and leave in one tap: the band says **Tutorial 1 of 4** where a practice says
   Practice, the first card says what it is and offers **Start** and **Skip the tutorial**, and **Leave** stays in
-  the band on every step. A skipped tutorial never opens by itself again. The home page shows **Learn to play**, the series with each one's state (new, done), open to play again
+  the band on every step. A skipped tutorial never opens by itself again. The home page shows **Learn to play**, the series with each one's state (new, skipped, done) and its painting, open to play again
   at any time. The main menu has **Learn to play** too, and the game settings **Show the first tutorial again**.
 
 ## Stages

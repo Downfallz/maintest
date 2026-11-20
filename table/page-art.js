@@ -141,4 +141,32 @@ export const PAGE_ART = {
       { file: 'specimen-warped-revenant-brute-930.252728d8.webp', width: 930, height: 620, bytes: 282728 },
     ],
   },
+  'lesson-base': {
+    from: 'b1ddcb487abc5728', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'lesson-base-96.27f6d709.webp', width: 96, height: 64, bytes: 5344 },
+      { file: 'lesson-base-192.ec175d35.webp', width: 192, height: 128, bytes: 13466 },
+    ],
+  },
+  'lesson-brute': {
+    from: 'c8389e6ee54b5847', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'lesson-brute-96.cbe3c10d.webp', width: 96, height: 64, bytes: 4828 },
+      { file: 'lesson-brute-192.0d19ab32.webp', width: 192, height: 128, bytes: 12992 },
+    ],
+  },
+  'lesson-ironhide': {
+    from: '4503152c2faf1c0a', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'lesson-ironhide-96.f7386764.webp', width: 96, height: 64, bytes: 4204 },
+      { file: 'lesson-ironhide-192.a675984c.webp', width: 192, height: 128, bytes: 10630 },
+    ],
+  },
+  'lesson-colossus': {
+    from: '7e6c19bfd1cae161', frames: 1, drawn: [96], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'lesson-colossus-96.e8ea353d.webp', width: 96, height: 64, bytes: 4782 },
+      { file: 'lesson-colossus-192.bad52f58.webp', width: 192, height: 128, bytes: 12368 },
+    ],
+  },
 };

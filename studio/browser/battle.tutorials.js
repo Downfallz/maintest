@@ -117,7 +117,7 @@ const shows = page => page.evaluate(() => {
   const battle = document.getElementById('battle');
   const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
   return {
-    step, done: step === 'TUTORIAL COMPLETE',
+    step, done: /^TUTORIAL .* COMPLETE$/.test(step),
     cards: shown('concept-dialog'), reading: battle.dataset.reading === 'true',
     sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
     command: shown('planning-open') || shown('combat-open'),
@@ -225,7 +225,7 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   // result, which is the tutorial's end: it is left from there (tutorial-follow-ups-plan.md T1).
   if (tutorial.name === ENDS_THE_MATCH) {
     await matchResult(page);
-    await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+    await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 4 OF 4 · COMPLETE');
     await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
     await fitsViewport(page, '#match-again, #match-leave');
     await page.screenshot({ path: info.outputPath('tutorial-result.png') });

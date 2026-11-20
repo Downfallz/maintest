@@ -16,6 +16,7 @@ One file a journey, named as `scripts/ux/journeys.mjs` names it: `doors.md`, `le
 | File | What it stages | Built by |
 | --- | --- | --- |
 | [doors.md](doors.md) | The two doors: the showcase, the game's sign-in panel, an invitation followed, the name window and the step into the first lesson. The worked example. | UX6, UX7 |
+| [lessons.md](lessons.md) | The lessons: the four tutorials' brief window, concept cards, the step on the field with its coach and hint, a lesson's end, tutorial 4's result, and Learn to play on the home. | UX8 |
 | [baseline.md](baseline.md) | Not a brief: the five journeys as they stood before any pass, a line of measures a screen. | UX2 |
 
 ## The format

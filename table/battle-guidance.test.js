@@ -214,3 +214,13 @@ test('each phase tip links to its section of the rulebook, and Help with no tip 
   assert.equal(battleGuidance(view('Action', { practice: { scenario: 'sc-repo-tutorial-a', title: 'A', round: 1, tutorial: lesson } }), catalogue).rules, '/rules#the-round');
   assert.equal(battleGuidance(null, catalogue).rules, null);
 });
+
+test('every phase tip is held to 40 words, its title and Read the rules not counted (UX8)', () => {
+  const kinds = [['Evolution', 'AtActivation'], ['Speed', 'AtActivation'], ['TieOrder', 'AtActivation'], ['Action', 'AtActivation'], ['Intent', 'HiddenIntent'], ['Target', 'HiddenIntent']];
+  for (const [kind, combatDeclaration] of kinds) {
+    const g = battleGuidance(view(kind), { rules: { combatDeclaration } });
+    const words = g.lines.join(' ').split(/\s+/).filter(Boolean).length;
+    assert.ok(g.lines.length > 0, kind);
+    assert.ok(words <= 40, `${kind}: ${words} words`);
+  }
+});

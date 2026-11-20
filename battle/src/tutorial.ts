@@ -1,4 +1,5 @@
-import { coachCard, leavePath, leavingSkips, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
+import { coachCard, coachHint, leavePath, leavingSkips, nextLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
+import { iconElement } from '../../table/icons.js';
 import { NO_CONCEPTS, RULES_BOOK, loadConcepts } from '../../table/concepts.js';
 
 type Coach = NonNullable<ReturnType<typeof coachCard>>;
@@ -17,6 +18,11 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   const dialog = el<HTMLDialogElement>('concept-dialog'), coach = el('coach');
   let shown: Coach | null = null, key = '', queue: Concept[] = [], pointed: HTMLElement[] = [];
   let latest: unknown = null, doneSaid = false, concepts = NO_CONCEPTS, asked = false, reading = false;
+  // The series the host lists, read once a lesson is done, for the end card's next lesson (UX8).
+  let series: unknown = null, seriesAsked = false, endFocused = false;
+  // The question the person turned away from: its sheet closed with nothing sent (UX8, the hint).
+  let turnedAway: number | null = null;
+  let total = 0;
   const opened = new Set<string>();
   /**
    * Reads the rulebook's cards once a tutorial shows, and not in a game; until they are there a step shows without
@@ -63,8 +69,12 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     const sheet = docked ? [combat, planning].find(one => one.open) ?? null : null;
     if (sheet === combat && coach.previousElementSibling?.id !== 'combat-heading') el('combat-heading').after(coach);
     else if (sheet === planning && coach.parentElement !== planning) planning.prepend(coach);
-    else if (!sheet && coach.parentElement !== home.parent) home.parent.insertBefore(coach, home.before);
+    // The lesson done, on a phone, its end card takes the dock's place, so the field it ends on stays in view (UX8).
+    const dock = !sheet && shown?.done && !beside.matches ? document.querySelector<HTMLElement>('#battle .command-dock') : null;
+    if (dock && coach.parentElement !== dock) dock.prepend(coach);
+    else if (!sheet && !dock && coach.parentElement !== home.parent) home.parent.insertBefore(coach, home.before);
     coach.classList.toggle('in-sheet', Boolean(sheet));
+    coach.classList.toggle('in-dock', Boolean(dock));
   }
 
   /** Says to the host that the account skipped or finished this tutorial; the host keeps it, or not: the page goes on. */
@@ -105,7 +115,38 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     event.preventDefault();
     void leaveTo((event.currentTarget as HTMLAnchorElement).href);
   }
-  for (const id of ['practice-leave', 'coach-leave', 'match-leave']) el(id).addEventListener('click', leave);
+  for (const id of ['practice-leave', 'coach-leave', 'coach-next', 'match-leave']) el(id).addEventListener('click', leave);
+  // Restart the round is an icon where the card stands in a sheet, named by its words (battle.css).
+  el('coach-restart').prepend(iconElement(document, 'reset'));
+  /** Reads the series once the lesson is done; not read, the end card offers the next lesson's place and Learn to play. */
+  async function readSeries() {
+    if (seriesAsked) return;
+    seriesAsked = true;
+    try {
+      const response = await request('/api/tutorials');
+      series = response.ok ? await response.json() : null;
+    } catch { series = null; }
+    key = '';
+    onChange();
+  }
+  /**
+   * The hint (UX8): started by the person, never by a clock. Closing the question's sheet with nothing sent, while the
+   * host still asks the same question, says the person turned away from it; the hint names the control that asks it.
+   */
+  const askedNow = () => {
+    const now = latest as { waitingAsked?: unknown } | null;
+    return Number.isInteger(now?.waitingAsked) ? now!.waitingAsked as number : null;
+  };
+  const turnAway = () => { turnedAway = askedNow(); queueMicrotask(onChange); };
+  for (const id of ['planning-close', 'combat-dialog-close']) el(id).addEventListener('click', turnAway);
+  for (const id of ['planning-dialog', 'combat-dialog']) el(id).addEventListener('cancel', turnAway);
+  function hint() {
+    const sheet = ['combat-dialog', 'planning-dialog'].some(id => el<HTMLDialogElement>(id).open);
+    const command = ['combat-open', 'planning-open'].map(id => el(id)).find(one => !one.hidden);
+    const words = shown && !shown.done && !sheet && turnedAway !== null && turnedAway === askedNow() ? coachHint(command?.textContent ?? null) : null;
+    text('coach-hint', words ?? '');
+    el('coach-hint').hidden = !words;
+  }
   el('practice-brief-skip').addEventListener('click', () => {
     el<HTMLButtonElement>('practice-brief-skip').disabled = true;
     void leaveTo('/');
@@ -119,10 +160,15 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     el('concept-rulebook').setAttribute('aria-label', `${card.rules.label}, opens in a new tab`);
     el('concept-lines').replaceChildren(...paragraphs(card.lines));
     text('concept-next', queue.length > 1 ? `Next card · ${queue[1].title}` : 'Back to the battle');
+    // How many cards stand between the person and the board, when more than one opened (UX8).
+    text('concept-eyebrow', total > 1 ? `CONCEPT CARD · ${total - queue.length + 1} OF ${total}` : 'CONCEPT CARD');
   }
   function open(cards: Concept[]) {
     if (!cards.length || dialog.open) return false;
-    queue = [...cards]; draw(); dialog.showModal(); onChange();
+    queue = [...cards]; total = queue.length; draw(); dialog.showModal();
+    // The card's own button takes the focus, so Enter goes on; the rulebook's link comes after it.
+    el('concept-next').focus();
+    onChange();
     return true;
   }
   el('concept-next').addEventListener('click', () => { queue.shift(); if (queue.length) draw(); else dialog.close(); });
@@ -137,7 +183,10 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
    * is the host's word that the tutorial is complete: a match that is over on a table that could not go on keeps
    * the tutorial's doors, but is not called complete (#912).
    */
-  const ending = () => tutorialOf(latest) ? { again, done: tutorialOf(latest)?.done === true } : null;
+  const ending = () => {
+    const lesson = tutorialOf(latest);
+    return lesson ? { again, done: lesson.done === true, eyebrow: `${tutorialBand(lesson).eyebrow} · COMPLETE`, last: lesson.order >= (lesson.of ?? 0) } : null;
+  };
   // On the smallest phone the band's place in the series takes Restart's place in the header, and the card offers it (#728).
   el('coach-restart').addEventListener('click', () => el('practice-restart').click());
 
@@ -154,11 +203,12 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     const lesson = tutorialOf(view);
     if (lesson) { latest = view; void readConcepts(); }
     if (lesson) {
-      const brief = tutorialBrief(lesson);
-      text('practice-brief-begin', brief.begin); text('practice-brief-note', brief.note);
+      const brief = tutorialBrief(lesson, (view as { practice?: { round?: number } }).practice?.round);
+      text('practice-brief-begin', brief.begin); text('practice-brief-start', brief.start); text('practice-brief-note', brief.note);
       el('practice-brief-skip').hidden = !brief.skip;
       // The host says the tutorial is done: the account keeps it, said once for this practice.
       if (lesson.done && !doneSaid) { doneSaid = true; void say('done'); }
+      if (lesson.done) void readSeries();
       // Kept until the next practice is opened: a view that is not there yet leaves the band as it reads.
       document.getElementById('battle')!.dataset.tutorial = String(lesson.order);
       const band = tutorialBand(lesson);
@@ -183,10 +233,22 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
       }));
       el('coach-cards').hidden = shown.cards.length === 0;
       el('coach-end').hidden = !shown.done;
+      const next = shown.done ? nextLesson(series, lesson) : null;
+      el('coach-next').hidden = !next;
+      if (next) { text('coach-next', next.label); el<HTMLAnchorElement>('coach-next').href = next.link; }
+      // Play again is filled only where no lesson follows: the series is the point (UX8).
+      el('coach-again').classList.toggle('primary', Boolean(shown.done && !next));
     }
+    if (!shown) turnedAway = null;
+    hint();
     key = nextKey;
     place();
     point(shown);
+    // The end arrives: its first way on takes the focus, once it stands where it stays, when nothing else holds it.
+    if (shown?.done && !endFocused && !document.querySelector('dialog[open]')) {
+      endFocused = true;
+      (el('coach-next').hidden ? el('coach-again') : el('coach-next')).focus({ preventScroll: true });
+    }
     // Read only once it has opened: a step whose cards could not open yet still owes them.
     if (shown && owed() && canAuto && open(shown.cards)) opened.add(shown.key);
   }
@@ -199,7 +261,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   const pending = () => dialog.open || owed() || (reading && Boolean(shown?.names) && !opened.has(shown!.key));
   /** A new practice teaches its steps again. */
   function reset() {
-    document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false;
+    document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false; endFocused = false; turnedAway = null;
     if (!concepts.all.length) asked = false;
     toField(); text('practice-restart', 'Restart the round');
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;

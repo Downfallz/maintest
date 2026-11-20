@@ -15,6 +15,10 @@
     "table/sign-in": {
       "first": 131072,
       "all": 131072
+    },
+    "table/home": {
+      "first": 0,
+      "all": 65536
     }
   }
 }

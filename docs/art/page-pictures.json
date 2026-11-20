@@ -97,6 +97,30 @@
       "source": "table/battle-art/evolutions/hybrids/warped-revenant-brute.webp",
       "drawn": [315, 465],
       "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "lesson-base",
+      "source": "table/battle-art/evolutions/base-creature.webp",
+      "drawn": [96],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "lesson-brute",
+      "source": "table/battle-art/evolutions/brute-base.webp",
+      "drawn": [96],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "lesson-ironhide",
+      "source": "table/battle-art/evolutions/brute-stage2-ironhide.webp",
+      "drawn": [96],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "lesson-colossus",
+      "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
+      "drawn": [96],
+      "pages": { "table/home": "lazy" }
     }
   ]
 }
