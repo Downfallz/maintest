@@ -73,32 +73,34 @@ function roundFlow(mode) {
 // links to the round. The ids are the book's, which its build holds every link of a page to. The book teaches the
 // spell chosen at the turn (ADR 0112): the hidden-intent tips link nowhere rather than to a page that says otherwise.
 const ROUND_RULES = '/rules#the-round';
+// Each tip is held to 40 words (docs/art/journeys/lessons.md, UX8): what to press, in the words on the controls; what
+// a rule says is the rulebook's, which Help links to.
 const tips = {
   mutation: { title: 'What is a mutation?', rules: '/rules#evolution', lines: [
-    'A mutation develops your creature: new spells or a passive, plus initiative. Its branch explains what the creature gains.',
-    'Picks are shared across your team, and each creature takes at most one per Mutation phase. With 2 picks and 3 creatures, you choose which 2 mutate now; later Mutation phases bring new picks, so the one left out can mutate then. Both teams choose privately, then reveal together.',
-    'The mutation tree opens with the phase. Choose an eligible creature on the battlefield, preview a branch, then confirm the named mutation and recipient. The tree stays open while team picks remain. Pass remaining picks gives up all your unused picks for this round.',
+    'A mutation gives new spells and initiative; a capstone gives a passive instead.',
+    'Your team’s picks go to different creatures. Choose a creature on the field, a mutation, then confirm.',
+    'Pass remaining picks gives up all your unused picks.',
   ] },
   tempo: { title: 'Choose how your team acts', rules: '/rules#tempo', lines: [TEMPO_RULE,
-    'Open Team tempos and draft a tempo in every creature tab. Return to any tab to edit, then Confirm tempos once. All tempos reveal together.',
-    'Check the creature’s spells and energy when deciding. Choosing a tempo does not choose a spell.',
+    'Open Team tempos, choose a tempo in every creature tab, then Confirm tempos once.',
+    'All tempos reveal together. Choosing a tempo does not choose a spell.',
   ] },
   ties: { title: 'Order your tied creatures', rules: '/rules#tie-order', lines: [
     'The dice settle places between teams. You decide the order within your own tied groups.',
-    'Open Order ties, choose an order or keep the current order, then Confirm choice. Both teams’ orders reveal together.',
+    'Open Order ties, choose an order or keep it, then Confirm choice. Both orders reveal together.',
   ] },
   action: { title: 'Choose a spell on your turn', rules: '/rules#your-turn', lines: [
-    'Open Choose spell and select an offered spell. Its legal targets appear on the battlefield.',
-    'Select targets, then Confirm cast. A spell without targets still needs confirmation. No hidden spell declaration is required in this mode.',
-    'History explains the applied result after the action resolves; a spell preview is not a guaranteed outcome.',
+    'Open Choose spell and pick a spell: its legal targets appear on the field.',
+    'Select targets, then Confirm cast. No hidden spell declaration is required in this mode.',
+    'A spell with no target still needs Confirm cast.',
   ] },
   intent: { title: 'Declare a hidden spell', rules: null, lines: [
-    'Open Choose spell, select a spell, then use Declare to confirm your intent. The opponent cannot see it before its reveal.',
-    'You choose targets later, when this creature’s spell is revealed. A plan that cannot be paid for or resolved at that time may fizzle.',
+    'Open Choose spell, pick a spell, then Declare. The opponent sees it only when it is revealed.',
+    'You choose targets later, when it is revealed. Short of Energy or of a legal target then, it fizzles.',
   ] },
   target: { title: 'Choose targets for the revealed spell', rules: null, lines: [
     'Your spell is already declared. Open Choose targets, select legal creatures on the field, then Confirm cast.',
-    'Tap a selected creature again to deselect it. Follow the offered target count; a targetless spell still needs confirmation.',
+    'Tap a selected creature again to deselect it. A spell with no target still needs Confirm cast.',
   ] },
 };
 function question(view) {

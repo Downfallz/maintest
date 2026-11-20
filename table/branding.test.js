@@ -96,7 +96,7 @@ test('the battle page draws the rune in its navigation header', () => {
 // The battle's concept dialog and the rulebook's card are one card: both carry identity.css's .concept-card, and
 // neither page sheet styles its parts again, which is how the two drifted apart (#699).
 test('the concept card of the battle and of the rulebook is drawn by one rule of the identity sheet', () => {
-  assert.match(read('table/battle.html'), /<dialog id="concept-dialog" class="concept-card"[^>]*>\s*<p class="eyebrow">[^<]*<\/p>\s*<h2 id="concept-title" class="concept-card-title">/);
+  assert.match(read('table/battle.html'), /<dialog id="concept-dialog" class="concept-card"[^>]*>\s*<p class="eyebrow"[^>]*>[^<]*<\/p>\s*<h2 id="concept-title" class="concept-card-title">/);
   assert.match(read('table/rules.js'), /node\(doc, 'aside', 'rules-card concept-card'\)/);
   assert.match(read('table/rules.js'), /node\(doc, 'h4', 'concept-card-title', card\.title\)/);
   const identity = read('table/identity.css');

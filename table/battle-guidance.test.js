@@ -10,7 +10,7 @@ test('mutation guidance uses the team offer and explains the actual pass semanti
   const g = battleGuidance(view(), catalogue);
   assert.equal(g.topic, 'mutation'); assert.match(g.objective, /2 team picks left/);
   assert.equal(g.round, 'Round 1 of 17'); assert.equal(g.next, 'Mutation opportunity this round.');
-  for (const word of ['spells or a passive', 'plus initiative', 'shared across your team', 'all your unused picks']) assert.ok(text(g).includes(word));
+  for (const word of ['new spells and initiative', 'a capstone gives a passive instead', 'go to different creatures', 'all your unused picks']) assert.ok(text(g).includes(word));
 });
 test('depleted picks and empty offers never tell the player to buy an unavailable mutation', () => {
   const depleted = battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 0 } } }), catalogue);
@@ -213,4 +213,14 @@ test('each phase tip links to its section of the rulebook, and Help with no tip 
   const lesson = { order: 1, of: 4, title: 'Your first combat', teaches: ['Action'], assisted: [], steps: [{ at: { kind: 'Action', round: 1 }, says: ['A line.'], concepts: [] }], shown: 0, done: false };
   assert.equal(battleGuidance(view('Action', { practice: { scenario: 'sc-repo-tutorial-a', title: 'A', round: 1, tutorial: lesson } }), catalogue).rules, '/rules#the-round');
   assert.equal(battleGuidance(null, catalogue).rules, null);
+});
+
+test('every phase tip is held to 40 words, its title and Read the rules not counted (UX8)', () => {
+  const kinds = [['Evolution', 'AtActivation'], ['Speed', 'AtActivation'], ['TieOrder', 'AtActivation'], ['Action', 'AtActivation'], ['Intent', 'HiddenIntent'], ['Target', 'HiddenIntent']];
+  for (const [kind, combatDeclaration] of kinds) {
+    const g = battleGuidance(view(kind), { rules: { combatDeclaration } });
+    const words = g.lines.join(' ').split(/\s+/).filter(Boolean).length;
+    assert.ok(g.lines.length > 0, kind);
+    assert.ok(words <= 40, `${kind}: ${words} words`);
+  }
 });

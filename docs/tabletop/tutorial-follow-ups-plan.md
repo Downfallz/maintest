@@ -112,6 +112,8 @@ tutorial 2 carries nothing tutorial 3 teaches.
    (ADR 0187: done when the match ends, won or lost). A match that is over without the host saying the tutorial is
    done keeps the tutorial's doors (Play again, Leave the tutorial), but its eyebrow does not say TUTORIAL
    COMPLETE. Leaving it skips nothing, and on the next open the host starts the tutorial again from its cut.
+   Since UX8 ([the lessons' brief](../art/journeys/lessons.md)) the eyebrow names the lesson, `TUTORIAL 4 OF 4 ·
+   COMPLETE`, and on the last tutorial Leave the tutorial is the filled action.
 2. **T2, tutorial 2 cut at round 2.** A new `who-acts-first.json` from `scenario-generate`, its steps written
    again with the rulebook-writer and the copy-editor, onboarding-plan.md's series table and O5 note brought in
    line, `scenarios/README.md`. Tests: the new `TutorialFileTests` fact, `LessonReach` on the file, the series

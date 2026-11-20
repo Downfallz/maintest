@@ -155,7 +155,7 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 /* A concept card (ADR 0187): the same eyebrow, title, lines and example in the battle's #concept-dialog and on the
    rulebook page's .rules-card. A player meets both, so they must look alike (#699). The title is the section-title
    step in bone, the example a gold rule and gold words. */
-.concept-card .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+.concept-card .eyebrow { margin: 0; color: var(--gold); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
 .concept-card-title { margin: 4px 0 8px; font: 400 22px/1.15 var(--font-display); color: var(--bone); overflow-wrap: anywhere; }
 .concept-card .concept-lines p { margin: 0 0 8px; font-size: 15px; line-height: 1.4; }
 .concept-card .concept-example { margin: 4px 0 8px; padding-left: 10px; border-left: 2px solid var(--gold); color: var(--gold); font-size: 14px; line-height: 1.4; }

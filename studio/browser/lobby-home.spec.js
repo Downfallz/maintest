@@ -878,10 +878,14 @@ test('a skipped tutorial never opens by itself again: it waits under Learn to pl
   expect(new URL(page.url()).pathname).toBe('/table/lobby.html');
   const cards = section.locator('.game-card');
   await expect(cards.nth(0).locator('h3')).toHaveText('Your first combat');
-  await expect(cards.nth(0)).toContainText('Tutorial 1 of 4');
-  await expect(cards.nth(0).locator('.status-tag')).toHaveText('New');
-  await expect(cards.nth(0).locator('a')).toHaveText('Play →');
+  // UX8: the state as the host says it, the next lesson's Play filled, its painting, and the progress in words.
+  await expect(cards.nth(0).locator('.status-tag')).toHaveText('Skipped');
+  await expect(cards.nth(0).locator('a')).toHaveText('Play');
+  await expect(cards.nth(0).locator('a')).toHaveClass(/primary/);
+  await expect(cards.nth(0).locator('img.tutorial-picture')).toHaveAttribute('alt', '');
   await expect(cards.nth(1).locator('.status-tag')).toHaveText('Done');
+  await expect(cards.nth(1).locator('a')).not.toHaveClass(/primary/);
+  await expect(page.locator('#tutorial-progress')).toHaveText('1 of 2 done');
   await section.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('lobby-learn.png') });
   await noOverflow(page);
@@ -899,7 +903,7 @@ test('a finished tutorial is played again from Learn to play', async ({ page }) 
   await home(page, { tutorials: series('done', 'done') });
   const card = page.locator('#learn-to-play .game-card').first();
 
-  await expect(card.locator('a')).toHaveText('Play again →');
+  await expect(card.locator('a')).toHaveText('Play again');
   await card.locator('a').click();
 
   await expect(page).toHaveTitle('Tutorial');

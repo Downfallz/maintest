@@ -34,8 +34,9 @@ const shows = page => page.evaluate(() => {
   const battle = document.getElementById('battle');
   const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
   return {
-    step, done: step === 'TUTORIAL COMPLETE', over: shown('match-dialog') || shown('match-open'),
-    cards: shown('concept-dialog'), tip: shown('help-dialog'), reading: battle.dataset.reading === 'true',
+    step, done: /^TUTORIAL .* COMPLETE$/.test(step), over: shown('match-dialog') || shown('match-open'),
+    // A closed card fades out still displayed: open is what says it is there (table/AGENTS.md).
+    cards: document.getElementById('concept-dialog').open, tip: shown('help-dialog'), reading: battle.dataset.reading === 'true',
     sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
     command: shown('planning-open') || shown('combat-open'),
     press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,
@@ -109,7 +110,9 @@ async function answerEvolution(page, view, next, blocked) {
   const one = next === nothingRecorded ? offered[0] : offered.find(creature => creature.availableTiers.includes(next.peek('Evolution', creature.creature)?.tier));
   if (!one) { await page.locator('#planning-pass').click(); await confirm(page, '#planning-confirm'); return; }
   const tier = next('Evolution', one.creature)?.tier ?? one.availableTiers[0];
-  await choose(page, `#planning-creatures [data-creature="${one.creature}"]`, blocked);
+  // A short portrait folds the creature tabs away (battle.css): there the creature is chosen on the field.
+  const tab = page.locator(`#planning-creatures [data-creature="${one.creature}"]`);
+  await choose(page, await tab.isVisible() ? `#planning-creatures [data-creature="${one.creature}"]` : `#actor-layer [data-creature="${one.creature}"]`, blocked);
   await choose(page, `[data-mutation="${tier}"]`, blocked);
   await confirm(page, '#planning-confirm');
 }

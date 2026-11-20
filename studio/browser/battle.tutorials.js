@@ -117,8 +117,9 @@ const shows = page => page.evaluate(() => {
   const battle = document.getElementById('battle');
   const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
   return {
-    step, done: step === 'TUTORIAL COMPLETE',
-    cards: shown('concept-dialog'), reading: battle.dataset.reading === 'true',
+    step, done: /^TUTORIAL .* COMPLETE$/.test(step),
+    // A closed card fades out still displayed: open is what says it is there (table/AGENTS.md).
+    cards: document.getElementById('concept-dialog').open, reading: battle.dataset.reading === 'true',
     sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
     command: shown('planning-open') || shown('combat-open'),
     press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,
@@ -165,7 +166,8 @@ async function playLesson(page, tutorial, seat, info) {
     await page.screenshot({ path: info.outputPath(`step-${step[1]}.png`) });
   };
   const readCards = async () => {
-    while (await page.locator('#concept-dialog').isVisible()) {
+    // Open, not visible: a closed card stays displayed while it fades out (UX8), and is not to be pressed again.
+    while (await page.locator('#concept-dialog').evaluate(dialog => dialog.open)) {
       opened.push(await page.locator('#concept-title').textContent());
       await fitsViewport(page, '#concept-next');
       await page.locator('#concept-next').click();
@@ -225,7 +227,7 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   // result, which is the tutorial's end: it is left from there (tutorial-follow-ups-plan.md T1).
   if (tutorial.name === ENDS_THE_MATCH) {
     await matchResult(page);
-    await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+    await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 4 OF 4 · COMPLETE');
     await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
     await fitsViewport(page, '#match-again, #match-leave');
     await page.screenshot({ path: info.outputPath('tutorial-result.png') });
@@ -237,6 +239,6 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   await page.waitForURL(`${origin}/`);
   const card = page.locator(`#tutorial-cards [data-tutorial="${tutorial.id}"]`);
   await expect(card).toContainText('Done');
-  await expect(card.locator('a')).toHaveText('Play again →');
+  await expect(card.locator('a')).toHaveText('Play again');
   expect(errors).toEqual([]);
 });

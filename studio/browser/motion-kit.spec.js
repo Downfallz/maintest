@@ -114,7 +114,8 @@ for (const name of ['lobby.html', 'admin.html']) {
 test('the match\'s windows open and close at once, as before: they are staged as one family later', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await open(page, 'battle.html');
-  const ids = await page.locator(WINDOWS).evaluateAll(all => all.map(one => one.id));
+  // The lessons' two windows, the briefing and the concept card, took the kit's form in UX8 (lessons.md).
+  const ids = await page.locator(`${WINDOWS}:not(#practice-brief, #concept-dialog)`).evaluateAll(all => all.map(one => one.id));
   expect(ids.length).toBeGreaterThan(10);
   const moved = await page.evaluate(ids => ids.filter(id => {
     const dialog = document.getElementById(id);

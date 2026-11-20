@@ -27,7 +27,7 @@
     <section id="battle-zone" aria-label="Battlefield">
       <aside id="order-why" class="order-why" aria-label="Why this place in the turn order" aria-live="polite" hidden><div class="order-why-head"><span id="order-why-rank" class="order-why-rank" aria-hidden="true"></span><p class="order-why-who"><strong id="order-why-name"></strong><small id="order-why-meta"></small></p><button id="order-why-inspect" type="button" class="order-why-inspect">Inspect ↗</button><button id="order-why-close" type="button" aria-label="Clear the highlight">×</button></div><ul id="order-why-lines" class="order-why-lines"></ul><div id="order-why-dice" class="order-why-dice" hidden></div></aside>
       <aside id="practice-band" class="practice-band" aria-label="Practice" hidden><p class="eyebrow" id="practice-eyebrow">PRACTICE</p><strong id="practice-title"></strong><small id="practice-detail"></small><small id="practice-goal" hidden></small><div class="practice-actions"><button id="practice-brief-open" type="button">Briefing</button><button id="practice-restart" type="button">Restart the round</button><a id="practice-leave" href="/">Leave</a></div></aside>
-      <aside id="coach" class="coach" aria-label="Tutorial coach" hidden><p class="eyebrow" id="coach-step"></p><div id="coach-lines" class="coach-lines" aria-live="polite"></div><button id="coach-restart" type="button">Restart the round</button><div id="coach-cards" class="coach-cards" hidden></div><div id="coach-end" class="coach-end" hidden><button id="coach-again" type="button">Play again</button><a id="coach-leave" href="/">Leave the tutorial</a></div></aside>
+      <aside id="coach" class="coach" aria-label="Tutorial coach" hidden><p class="eyebrow" id="coach-step"></p><div id="coach-lines" class="coach-lines" aria-live="polite"></div><p id="coach-hint" class="coach-hint" aria-live="polite" hidden></p><button id="coach-restart" type="button" aria-label="Restart the round"><span class="coach-restart-words">Restart the round</span></button><div id="coach-cards" class="coach-cards" hidden></div><div id="coach-end" class="coach-end" hidden><a id="coach-next" class="primary" href="/#learn-to-play" hidden>Next</a><button id="coach-again" type="button">Play again</button><a id="coach-leave" href="/">Leave the tutorial</a></div></aside>
       <div id="round-toast" role="status" aria-live="polite" hidden><span class="eyebrow">NEW ROUND</span><strong id="round-toast-number"></strong></div>
       <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
       <p id="reaction-theirs" class="reaction-bubble theirs" role="status" hidden></p><p id="reaction-mine" class="reaction-bubble mine" hidden></p>
@@ -95,7 +95,7 @@
     <button id="practice-brief-skip" type="button" hidden>Skip the tutorial</button>
   </dialog>
   <dialog id="concept-dialog" class="concept-card" aria-labelledby="concept-title" aria-describedby="concept-lines">
-    <p class="eyebrow">CONCEPT CARD</p>
+    <p class="eyebrow" id="concept-eyebrow">CONCEPT CARD</p>
     <h2 id="concept-title" class="concept-card-title">Concept card</h2>
     <div id="concept-lines" class="concept-lines"></div>
     <p id="concept-example" class="concept-example"></p>
@@ -143,7 +143,7 @@
     <div class="planning-footer"><button id="planning-close" type="button" aria-label="Close planning choices">Close</button><p id="planning-selection" aria-live="polite"></p><button id="planning-confirm" type="button" class="primary">Confirm choice</button><p id="planning-dialog-error" role="alert"></p></div>
   </dialog>
   <dialog id="match-dialog" aria-labelledby="match-title">
-    <header class="match-header"><span class="match-crest" aria-hidden="true"></span><div><p class="eyebrow" id="match-eyebrow">MATCH COMPLETE</p><h2 id="match-title">Match complete</h2><p id="match-outcome"></p></div><form method="dialog"><button class="match-close" aria-label="Close match result">×</button></form></header>
+    <header class="match-header"><span class="match-crest" aria-hidden="true"></span><div><p class="eyebrow" id="match-eyebrow">MATCH COMPLETE</p><h2 id="match-title">Match complete</h2><p id="match-outcome"></p><p id="match-series" class="match-series" hidden></p></div><form method="dialog"><button class="match-close" aria-label="Close match result">×</button></form></header>
     <div class="match-body"><div id="match-stats"></div><section id="match-report" class="match-report" aria-labelledby="match-report-title" hidden><h3 id="match-report-title" class="match-report-title">Battle report</h3><div id="match-mvp"></div><div id="match-report-sides"></div></section><output id="match-replay-error"></output></div>
     <div id="match-zoom" class="inspect-zoom match-zoom" hidden><button id="match-zoom-close" class="inspect-zoom-picture" type="button" aria-label="Back to the battle report"></button></div>
     <footer class="match-footer"><button class="primary" id="match-rematch" type="button" hidden>Rematch</button><button class="primary" id="match-again" type="button" hidden>Play again</button><button id="match-replay" type="button">Replay the match</button><a id="match-lobby" href="/">Lobby</a><a id="match-leave" href="/" hidden>Leave the tutorial</a><button id="feedback-open-match" type="button" data-feedback-open>Report or suggest…</button></footer>

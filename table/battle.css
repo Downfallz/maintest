@@ -972,6 +972,16 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .mutation-node:not([data-status="available"]) svg { display: none; }
 #mutation-preview-region { flex: none; max-height: min(17dvh,150px); overflow: auto; overscroll-behavior: contain; }
 #planning-dialog[data-kind="Evolution"] #mutation-preview-region { max-height: 28dvh; }
+/* A narrow sheet gives its rule its own row under the heading, beside the tools: in one cell the two ran into each
+   other on a 320 px phone (UX8). From 360 px the heading fits beside the tools, and the extra rows would push the
+   sheet's Confirm row off a short phone's screen (the iOS release profile at 390 px). */
+@media (max-width: 359px) {
+  #planning-dialog[data-kind="Evolution"] .planning-header { grid-template-rows: auto auto auto auto; row-gap: 4px; }
+  #planning-dialog[data-kind="Evolution"] #planning-heading { grid-area: 1 / 1 / auto / -1; align-self: center; margin: 4px 0 0; }
+  #planning-dialog[data-kind="Evolution"] .planning-tools { grid-area: 2 / 1 / auto / -1; justify-self: start; }
+  #planning-dialog[data-kind="Evolution"] #planning-help { grid-area: 3 / 1 / auto / -1; align-self: start; margin: 0 0 4px; }
+  #planning-dialog[data-kind="Evolution"] #planning-creatures { grid-area: 4 / 1 / auto / -1; }
+}
 /* A short portrait keeps the confirmation in reach: the field's creatures switch the recipient there, so the tabs
    give way, and the preview keeps a smaller share. */
 @media (orientation: portrait) and (max-height: 660px) {
@@ -1364,7 +1374,10 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   display: inline-flex; align-items: center; justify-content: center; }
 /* A tutorial's result (tutorial-follow-ups-plan.md T1): Play again stands where Rematch does, Leave the tutorial where Lobby does. */
 #match-dialog .match-footer :is(#match-rematch, #match-again) { flex: 1 1 100%; }
-#match-dialog .match-footer :is(#match-replay, #match-lobby, #match-leave) { flex: 1 1 0; border: 1px solid var(--line); background: #172a30; color: var(--ink); }
+#match-dialog .match-footer :is(#match-replay, #match-lobby, #match-leave, #match-again):not(.primary) { flex: 1 1 0; border: 1px solid var(--line); background: #172a30; color: var(--ink); }
+/* The last tutorial's result ends the series (UX8): Leave the tutorial is its one filled action, first, and Play again
+   steps back beside Replay the match. */
+#match-dialog .match-footer #match-leave.primary { flex: 1 1 100%; order: -1; }
 #match-dialog .match-footer :is(#match-rematch, #match-again, #match-lobby, #match-leave)[hidden] { display: none; }
 /* Report or suggest is the quiet last line of the result: it never competes with playing again. */
 #match-dialog .match-footer #feedback-open-match { flex: 1 1 100%; min-height: 44px; border: 0; background: transparent; color: var(--muted); font-weight: 400; }
@@ -1781,7 +1794,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
    .concept-card-title) and the identity's tokens (#809). */
 #practice-brief, #concept-dialog { width: min(380px, calc(100vw - 32px)); padding: 18px; border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent); border-radius: var(--radius-soft); background: var(--panel); color: var(--ink); box-shadow: 0 18px 40px color-mix(in srgb, var(--soot) 70%, transparent); }
 #practice-brief::backdrop, #concept-dialog::backdrop { background: color-mix(in srgb, var(--soot) 70%, transparent); }
-#practice-brief .eyebrow, .coach .eyebrow { margin: 0; color: var(--gold); font-size: 10px; letter-spacing: 1.6px; }
+#practice-brief .eyebrow, .coach .eyebrow { margin: 0; color: var(--gold); font-size: 11px; letter-spacing: 1.6px; }
 .practice-brief-goal { margin: 0 0 10px; color: var(--gold); font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; }
 .practice-brief-start, .practice-brief-note { margin: 0 0 8px; color: var(--muted); font-size: 13px; line-height: 1.4; }
 #practice-brief-begin, #practice-brief-skip, #concept-next { width: 100%; min-height: 44px; margin-top: 8px; }
@@ -1799,6 +1812,15 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .coach-cards { display: flex; flex-wrap: wrap; gap: 6px; }
 .coach-cards[hidden] { display: none; }
 .coach-cards button { min-height: 44px; padding: 4px 12px; font-size: 12px; }
+/* The hint (UX8): what to press next, once the person closed the question's sheet with nothing sent. */
+.coach-hint { margin: 0; color: var(--gold); font-size: 13px; line-height: 1.35; }
+.coach-hint[hidden] { display: none; }
+.coach-hint:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter); }
+@starting-style { .coach-hint:not([hidden]) { opacity: 0; } }
+#coach-restart .icon { margin-right: 6px; }
+/* The lesson's end and the last tutorial's result say where the series stands (UX8). */
+.match-series { margin: 4px 0 0; color: var(--gold); font-size: 13px; line-height: 1.4; }
+.match-series[hidden] { display: none; }
 [data-coach="true"]:not(:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
 /* The card's eyebrow, title, lines and example are identity.css's .concept-card, shared with the rulebook (#699). */
 .concept-rulebook { margin: 0 0 8px; font-size: 12px; }
@@ -1809,7 +1831,9 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .coach-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .coach-end[hidden] { display: none; }
 .coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
-.coach-end a { color: var(--muted); }
+.coach-end a:not(.primary) { color: var(--muted); }
+.coach-end a.primary { flex: 1 1 100%; justify-content: center; padding: 4px 16px; font-weight: 600; text-decoration: none; }
+.coach-end [hidden] { display: none; }
 /* Where a sheet docks under the field (a phone), the field is too short to carry the card (#650): the card moves
    into the sheet, at its top, and scrolls with what the sheet asks. */
 /* In the sheet, the concept cards stand on the step's row where they fit, not on a row of their own: on a 320 px
@@ -1821,6 +1845,23 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .coach.in-sheet .coach-cards { order: 1; margin-left: auto; }
 .coach.in-sheet .coach-lines { order: 2; flex: 1 0 100%; }
 .coach.in-sheet .coach-end { order: 3; flex: 1 0 100%; }
+.coach.in-sheet .coach-hint { order: 2; flex: 1 0 100%; }
+/* A lesson's end on a phone stands on the dock, in place of what the dock says, not over the player's team (UX8). The
+   dock keeps its size, its own content hidden, so the field does not move: the card is laid over it from its foot, and
+   rises over the field's lower edge only as far as its three actions need. */
+#battle .command-dock:has(> .coach.in-dock:not([hidden])) { position: relative; }
+#battle .command-dock:has(> .coach.in-dock:not([hidden])) > :not(.coach) { visibility: hidden; }
+/* The dock's resting rule lifts every child of it (position: relative) with a selector of six states; the card is the
+   one child laid over the rest, and says so outright. */
+.coach.in-dock { position: absolute !important; left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; margin: 0; }
+.coach.in-dock .coach-end { column-gap: 8px; row-gap: 6px; }
+/* A docked command sheet that carries the card scrolls as one between its edges, the card, the tabs and the choices
+   together, and never lets its footer cover a choice (UX8): on a 320 by 568 phone the card, the tabs and the Confirm
+   row left the tempos, or a second creature's tab, out of reach. It keeps its height, so the field keeps its row of names. */
+#planning-dialog[open]:has(> .coach.in-sheet) { overflow-y: auto; overscroll-behavior: contain; scroll-padding-block: 8px 64px; }
+#planning-dialog[open]:has(> .coach.in-sheet) > :is(.coach, .planning-header) { flex: none; }
+#planning-dialog[open]:has(> .coach.in-sheet) #planning-choices { flex: none; overflow: visible; }
+#planning-dialog[open]:has(> .coach.in-sheet) .planning-footer { position: sticky; bottom: 0; z-index: 3; margin-top: auto; }
 /* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
 #battle[data-combat="targets"] .coach { display: none; }
 /* A tutorial's band stands in the header, not over the field: there it hid the top row of creatures, worst on a phone
@@ -1867,7 +1908,11 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
   .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-leave { padding: 0 4px; }
   .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-restart { display: none; }
   .battle-page[data-home="member"] .coach:not([data-done="true"]) #coach-restart { display: inline-flex; align-items: center; justify-self: start; min-height: 44px; padding: 4px 12px; font-size: 12px; }
-  .battle-page[data-home="member"] .coach.in-sheet #coach-restart { order: 3; }
+  /* In a sheet the card takes one row for its step, its cards and Restart, an icon there, named by its words (UX8):
+     the row of its own it took left a 568 px screen no room for the tempos. */
+  .battle-page[data-home="member"] .coach.in-sheet:not([data-done="true"]) #coach-restart { order: 1; justify-content: center; width: 44px; padding: 0; }
+  .battle-page[data-home="member"] .coach.in-sheet #coach-restart .icon { margin: 0; }
+  .battle-page[data-home="member"] .coach.in-sheet .coach-restart-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 /* Wider than a phone, the creatures stand low on the field: the coach card takes the top left corner, across from the band. */
 @media (min-width: 701px) {
@@ -1875,6 +1920,32 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 }
 /* A short screen (a phone held sideways) scrolls the card, so its way back stays in reach. */
 #concept-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
+/* The lessons' two windows take the kit's form now (UX8; the match's other windows are UX12's): a fade, and under full
+   motion a short rise, as identity.css's window does on the other pages. */
+.battle-page :is(#practice-brief, #concept-dialog), .battle-page :is(#practice-brief, #concept-dialog)::backdrop {
+  opacity: 0; transition: opacity var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+}
+.battle-page :is(#practice-brief, #concept-dialog)[open], .battle-page :is(#practice-brief, #concept-dialog)[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
+@starting-style {
+  .battle-page :is(#practice-brief, #concept-dialog)[open], .battle-page :is(#practice-brief, #concept-dialog)[open]::backdrop { opacity: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog) {
+    translate: 0 8px;
+    transition: opacity var(--motion-fast) var(--motion-exit), translate var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
+  }
+  :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog)[open] { translate: 0 0; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
+  @starting-style {
+    :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog)[open] { translate: 0 8px; }
+  }
+}
+/* The coach arrives with its step (UX8): a fade, and under full motion a short rise. */
+.coach:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter); }
+@starting-style { .coach:not([hidden]) { opacity: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-motion="less"]) .coach:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter), translate var(--motion-normal) var(--motion-enter); }
+  @starting-style { :root:not([data-motion="less"]) .coach:not([hidden]) { translate: 0 6px; } }
+}
 
 /* The recap, Where you are (docs/tabletop/async-recap-plan.md, R3): one sheet over the battle view, read top to
    bottom on a phone, its body scrolling between the header and the two buttons. What the seat had not seen is

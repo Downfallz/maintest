@@ -128,7 +128,7 @@ async function playAgain(plan: NonNullable<Rematch>) {
  * complete, and Play again and Leave the tutorial take the places of Rematch and Lobby.
  */
 export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null,
-  cues: () => Parameters<typeof resultCardElement>[1] = () => [], tutorial: () => { again: () => void; done: boolean } | null = () => null) {
+  cues: () => Parameters<typeof resultCardElement>[1] = () => [], tutorial: () => { again: () => void; done: boolean; eyebrow: string; last: boolean; finished: boolean } | null = () => null) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
   let roundsKey = '', resultKey = '', reportKey = '', cardKey = '', starting = false, rematchError = '';
   el('match-rematch').addEventListener('click', async () => {
@@ -149,9 +149,15 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
   function drawEnding(model: ReturnType<Controller['model']>) {
     const lesson = model.over ? tutorial() : null;
     const round = Number.isInteger(model.result?.round) ? ` · ROUND ${model.result.round}` : '';
-    text('match-eyebrow', lesson?.done ? 'TUTORIAL COMPLETE' : `MATCH COMPLETE${round}`);
+    text('match-eyebrow', lesson?.done ? lesson.eyebrow : `MATCH COMPLETE${round}`);
     result.dataset.tutorial = String(Boolean(lesson));
     el('match-again').hidden = !lesson; el('match-leave').hidden = !lesson; el('match-lobby').hidden = Boolean(lesson);
+    // The last tutorial done: Leave the tutorial, to the lobby, is the filled way on (UX8), and the result says the
+    // series is finished only when the host lists every other tutorial done.
+    const lastDone = Boolean(lesson?.done && lesson.last), finished = Boolean(lastDone && lesson?.finished);
+    text('match-series', finished ? 'You finished every tutorial.' : '');
+    el('match-series').hidden = !finished;
+    el('match-leave').classList.toggle('primary', lastDone); el('match-again').classList.toggle('primary', !lastDone);
     el<HTMLButtonElement>('match-again').disabled = model.busy;
     return lesson;
   }

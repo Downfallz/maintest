@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX7 are built; UX8 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX8 are built; UX9 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -441,6 +441,35 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    control and move it out of the way once the choice is made. Close a lesson on its actual result and show
    which lesson is available next. Record one uninterrupted choice, impact and return to control. At 320 px,
    reach the second creature and its tempo by touch in the lessons that use them.
+
+   *Built (2026-11-20)*: [the lessons' brief](journeys/lessons.md), written by the designer from the walk and
+   corrected after its critique. The owner chose four of its proposals: Next is the end card's filled action, Leave
+   the tutorial the last result's, the hint starts on a gesture and never on a clock, and the lessons' two windows
+   take the kit's form now. The brief window says its round in five words and its note in thirteen: 39 to 42 words
+   where it was 64 to 67. Eyebrows are 11 px. A concept card says `1 OF 2` and gives its button the focus. The brief
+   window and the concept card enter and leave as the kit's window does. The coach fades in. In a sheet, under
+   360 px, Restart the round is an icon on the step's row. A docked command sheet that carries the coach scrolls
+   as one, its footer held at its foot: at 320 by 568 the walk now presses every tab and every tempo by touch,
+   where it could not reach nine tabs and tempos. Under 660 px tall the mutation sheet folds its tabs by design, and the walk taps
+   the creature on the field, as a player does. Closing a step's sheet with nothing sent shows `Next: <the
+   command's words>.` until the question changes. The end of a lesson says `TUTORIAL N OF 4 · COMPLETE`, how the
+   teams stand from the host's board, and offers the next lesson by its title from `GET /api/tutorials`, or its
+   place and Learn to play when the series cannot be read. On a phone the end card is laid over the dock, which
+   keeps its size, so the field stays in view. No new round is announced once the lesson is done. Tutorial 4's
+   result puts Leave the tutorial first, and says `You finished every tutorial.` when the host lists the three others done. Learn to play shows each
+   lesson's painting (four of the library, 96 px, lazy, declared for `table/home`), its state as the host says it,
+   the progress in words, and one filled Play, on the next lesson not done: the home went from five filled actions
+   to one. The six phase tips are 40 words or fewer each. Tests: `battle-tutorial.test.js`,
+   `lobby-tutorials.test.js`, `battle-guidance.test.js` (the budget), four new cases in
+   `battle-tutorial.spec.js`, the walk's empty list of what it could not press.
+
+   Left: the step lines over 16 words and the Mutation and Conditions cards over 60 are the rulebook-writer's, in
+   `scenarios/tutorials/` and `rules/`; the ring's one-time fade, the coach's fade as it steps aside and the strip
+   `first-cast` (the brief's **Left**); the end screens' shift, summed over the lesson's round (UX11); the last
+   result's report that pushes its actions (UX12). Of what `onboarding-plan.md` and
+   `tutorial-follow-ups-plan.md` left open: a skipped tutorial now reads Skipped, and the next lesson is named on
+   the end; the novice observation stays open for UX14, and a person who plays off the recorded board still
+   reads the recorded board's lines (ADR 0187).
 9. **UX9, the lobby.** One action that follows the player's state (a turn that waits, a lesson to continue, a new
    battle), a game's card with its creatures and its standing, empty lists that teach and link, room held for
    what arrives, a turn that arrives seen arriving, the waiting room, the Create window. Tests:

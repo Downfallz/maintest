@@ -23,7 +23,7 @@ const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });
 const creature = (number, health = 30) => ({ id: number, name: `Creature ${number}`, health, maxHealth: 30, energy: 4, totalDefense: number === 5 ? 2 : 0,
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
-async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false, endsMatch = false } = {}) {
+async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false, endsMatch = false, order: place = lesson.order, series = null } = {}) {
   const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
@@ -40,7 +40,7 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
     const board = { slot: 'Player1', roundNumber: done ? 3 : 2, phase: done || assisted ? 'Planning' : 'Combat', subPhase: done || assisted ? 'Speed' : 'Activation', activationCursor: 0,
       allies: [1, 2, 3].map(number => creature(number)), enemies: over ? [4, 5, 6].map(number => ({ ...creature(number, 0), isAlive: false })) : [creature(4, Math.max(1, 9 - 3 * state.answered)), creature(5), creature(6)],
       timeline: done || assisted ? [] : [{ creature: order[state.answered], owner: 'Player1', speed: 'Standard' }], speedChoices: [] };
-    const tutorial = { order: lesson.order, of: 4, title: lesson.title, teaches: lesson.teaches,
+    const tutorial = { order: place, of: 4, title: lesson.title, teaches: lesson.teaches,
       assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done: done && !state.notYetDone };
     const question = assisted || (done && state.handedBack) ? { waitingFor: 'Speed', waitingAsked: state.asked, waitingCreature: 1, options: { speed: { missing: [1, 2, 3] } } }
       : done ? { waitingFor: null }
@@ -76,6 +76,8 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
     }
     // What the page says of the account's progress (O4): skipped, or done once the host's view says so.
     if (url.pathname.startsWith(`/api/tutorials/${id}/`) && request.method() === 'POST') { const what = url.pathname.split('/').at(-1); state.said.push(what); return route.fulfill({ json: { id, state: what === 'done' ? 'done' : 'skipped' } }); }
+    // The series, as the home reads it: the end card names the next lesson from it (UX8).
+    if (url.pathname === '/api/tutorials') return series ? route.fulfill({ json: series }) : route.fulfill({ status: 404, json: {} });
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: { id: 'acct_learnerlearnerlea', username: 'Learner' } } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { roundCap: 12, combatDeclaration: 'AtActivation' }, cards: [{ id: 'shock', name: 'Shock', cost: 2, targeting: 'One enemy', effects: ['Damage 7'] }], packages: [] } });
     // Held, the last answer is written but the view that says the lesson is done waits for the test to let it through.
@@ -173,7 +175,7 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
 
   expect(state.writes.map(one => [one.kind, one.creature, one.targets])).toEqual(lesson.steps.map(step => ['Action', step.at.creature, [4]]));
   // Its last step shown and its round ended: the host says it is done, and the coach says so.
-  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#practice-detail')).toHaveText('Tutorial complete');
   await expect(page.locator('#coach')).toHaveAttribute('data-done', 'true');
   await expect(page.locator('#practice-leave')).toBeVisible();
@@ -189,6 +191,25 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await fitsViewport(page, '#coach-again, #coach-leave, #practice-restart, #practice-leave');
   await expect(page.locator('#coach-again')).toHaveText('Play again');
   await expect(page.locator('#coach-leave')).toHaveAttribute('href', '/');
+  // The end says how the board stands and leads on to the next lesson, its one filled action, focused (UX8). The
+  // series not read here, it names the next lesson's place and Learn to play, which lists it.
+  await expect(page.locator('#coach-lines')).toContainText('Your team: 3 of 3 standing.');
+  await expect(page.locator('#coach-next')).toHaveText('Next: tutorial 2 of 4');
+  await expect(page.locator('#coach-next')).toHaveAttribute('href', '/#learn-to-play');
+  await expect(page.locator('#coach-next')).toHaveClass(/primary/);
+  await expect(page.locator('#coach-again')).not.toHaveClass(/primary/);
+  await expect(page.locator('#coach-next')).toBeFocused();
+  await expect(page.locator('#instruction')).toHaveText('Tutorial complete.');
+  // No new round is announced for a round the lesson will not play.
+  await expect(page.locator('#round-toast')).toBeHidden();
+  // On a phone the end card stands on the dock, which keeps its size, so the field it ends on stays in view.
+  if (await page.evaluate(() => !matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)').matches)) {
+    await expect(page.locator('#battle .command-dock > #coach')).toHaveCount(1);
+    expect(await page.evaluate(() => {
+      const card = document.getElementById('coach').getBoundingClientRect(), dock = document.querySelector('#battle .command-dock').getBoundingClientRect();
+      return Math.abs(card.bottom - dock.bottom) <= 1;
+    })).toBe(true);
+  } else await expect(page.locator('#battle .command-dock > #coach')).toHaveCount(0);
   // Leaving a finished tutorial is not skipping it, and lets go of its practice: it opens from its cut the next time.
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click();
@@ -243,7 +264,7 @@ test('a tutorial done opens nothing over its end card: the next round\'s upkeep 
   await expect(page.locator('#practice-detail')).toHaveText('Tutorial complete');
   await page.keyboard.press('Escape');
   await expect(page.locator('#settings-dialog')).toBeHidden();
-  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click({ timeout: 5000 });
@@ -270,7 +291,7 @@ test('an upkeep already open when the tutorial is done is put away: the end card
   await expect(page.locator('#upkeep-dialog')).toBeVisible();
   state.notYetDone = false;
   await page.evaluate(() => window.notifyBattle());
-  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click({ timeout: 5000 });
@@ -406,7 +427,7 @@ test('Play again on the end card starts the tutorial over from its cut', async (
   const state = await mount(page);
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
-  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   const opened = state.opened;
 
   state.answered = 0;
@@ -428,7 +449,7 @@ test('a tutorial that ends the match ends on its result: Tutorial complete, Play
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
 
   await matchResult(page);
-  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#match-title')).toHaveText('Victory');
   await expect(page.locator('#match-again')).toHaveText('Play again');
   await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
@@ -461,7 +482,7 @@ test('Play again on a tutorial\'s result starts it over from its cut, and the re
   // Closed, the coach card's end shows, as in a tutorial that ends before its match does.
   await page.keyboard.press('Escape');
   await expect(page.locator('#match-dialog')).toBeHidden();
-  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#coach-again')).toBeVisible();
   await matchResult(page);
   const opened = state.opened;
@@ -479,7 +500,7 @@ test('Play again on a tutorial\'s result starts it over from its cut, and the re
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await expect(page.locator('#match-dialog')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#match-title')).toHaveText('Victory');
   await expect(page.locator('#match-again')).toHaveText('Play again');
   await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
@@ -500,7 +521,7 @@ test('a match over before the host says the tutorial done is not called complete
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await matchResult(page);
-  await expect(page.locator('#match-eyebrow')).not.toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-eyebrow')).not.toHaveText(/^TUTORIAL .* COMPLETE/);
   await expect(page.locator('#match-again')).toBeVisible(); await expect(page.locator('#match-leave')).toBeVisible();
   await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
@@ -522,7 +543,7 @@ test('Replay the match from a tutorial\'s result, closed, gives back Tutorial co
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await matchResult(page);
-  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
 
   await page.locator('#match-replay').click();
 
@@ -534,10 +555,85 @@ test('Replay the match from a tutorial\'s result, closed, gives back Tutorial co
   await page.locator('#replay-close').click();
   await expect(page.locator('#replay-controls')).toBeHidden();
   await expect(page.locator('#match-dialog')).toBeVisible();
-  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL COMPLETE');
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
   await expect(page.locator('#match-title')).toHaveText('Victory');
   await expect(page.locator('#match-again')).toHaveText('Play again');
   await expect(page.locator('#match-leave')).toHaveText('Leave the tutorial');
   await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});
+
+test('the end card names the next lesson the host lists, and Next leaves this one for it', async ({ page }) => {
+  test.setTimeout(120000);
+  const series = { tutorials: [{ id, order: 1, of: 4, title: 'Your first combat', link: `/battle?scenario=${id}` },
+    { id: 'sc-repo-tutorial-who-acts-first', order: 2, of: 4, title: 'Who acts first', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' }] };
+  const state = await mount(page, { series });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await expect(page.locator('#coach-next')).toHaveText('Next: Who acts first');
+  await fitsViewport(page, '#coach-next, #coach-again, #coach-leave');
+  await page.route('**/battle?scenario=sc-repo-tutorial-who-acts-first', route => route.fulfill({ contentType: 'text/html', body: '<title>Next lesson</title>' }));
+  await page.locator('#coach-next').click();
+  await expect(page).toHaveTitle('Next lesson');
+  // Finished, not skipped, and its practice let go of, as Leave does.
+  await expect.poll(() => state.left).toBe(1);
+  expect(state.said).toEqual(['done']);
+  expect(state.errors).toEqual([]);
+});
+
+test('a step whose sheet is closed with nothing sent shows a hint naming the control, and the cast puts it away', async ({ page }) => {
+  const state = await mount(page);
+  await page.locator('#practice-brief-begin').click();
+  // Two cards open at the first step: the eyebrow says how many stand between the person and the board, and the
+  // card's own button holds the focus.
+  await expect(page.locator('#concept-dialog')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#concept-eyebrow')).toHaveText(`CONCEPT CARD · 1 OF ${lesson.steps[0].concepts.length}`);
+  await expect(page.locator('#concept-next')).toBeFocused();
+  while (await page.locator('#concept-dialog').evaluate(dialog => dialog.open)) await page.locator('#concept-next').click();
+  await openSpells(page);
+  await expect(page.locator('#coach-hint')).toBeHidden();
+  await page.locator('#combat-dialog-close').click();
+  await expect(page.locator('#combat-dialog')).toBeHidden();
+  const words = (await page.locator('#combat-open').textContent()).trim();
+  await expect(page.locator('#coach-hint')).toHaveText(`Next: ${words}.`);
+  await openSpells(page);
+  await page.locator('[data-spell="shock"]').click();
+  await page.locator('[data-creature="4"]').click();
+  await page.locator('#combat-confirm').click();
+  await expect.poll(() => state.writes.length).toBe(1);
+  await expect(page.locator('#coach-step')).toHaveText(`STEP 2 OF ${lesson.steps.length}`);
+  await expect(page.locator('#coach-hint')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});
+
+const seriesOf = state => ({ tutorials: [1, 2, 3, 4].map(order => ({ id: order === 4 ? id : `sc-repo-tutorial-${order}`, order, of: 4, title: `Tutorial ${order}`, link: `/battle?scenario=sc-repo-tutorial-${order}`, state: order === 4 ? 'new' : state })) });
+
+test('the last tutorial\'s result ends the series: Leave the tutorial is its filled way on', async ({ page }) => {
+  test.setTimeout(120000);
+  const state = await mount(page, { endsMatch: true, order: 4, series: seriesOf('done') });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await matchResult(page);
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 4 OF 4 · COMPLETE');
+  await expect(page.locator('#match-series')).toHaveText('You finished every tutorial.');
+  await expect(page.locator('#match-leave')).toHaveClass(/primary/);
+  await expect(page.locator('#match-again')).not.toHaveClass(/primary/);
+  await fitsViewport(page, '#match-leave, #match-again, #match-replay');
+  // The match over, the end card is not laid over the dock: the result is the end, and the dock keeps its Match result.
+  await expect(page.locator('#battle .command-dock > #coach')).toHaveCount(0);
+  // Leave the tutorial stands first.
+  expect(await page.evaluate(() => document.getElementById('match-leave').getBoundingClientRect().top <= document.getElementById('match-again').getBoundingClientRect().top)).toBe(true);
+  expect(state.errors).toEqual([]);
+});
+
+test('the last tutorial played with an earlier one skipped does not say the series is finished', async ({ page }) => {
+  test.setTimeout(120000);
+  const state = await mount(page, { endsMatch: true, order: 4, series: seriesOf('skipped') });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await matchResult(page);
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 4 OF 4 · COMPLETE');
+  await expect(page.locator('#match-series')).toBeHidden();
+  await expect(page.locator('#match-leave')).toHaveClass(/primary/);
   expect(state.errors).toEqual([]);
 });
