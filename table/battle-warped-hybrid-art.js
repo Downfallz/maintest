@@ -17,7 +17,7 @@ const variants = [
   ['cataclysm', 'ultimate', 'ultimate', [1536, 1024], [22, 17, 1516, 1009]],
   ['revenant', 'sibling', { artworks: [stormborn, ethereal] }, [1536, 1024], [6, 8, 1525, 1019]],
   ['revenant', 'predator', { family: 'predator' }, [1536, 1024], [3, 9, 1529, 1017]],
-  ['revenant', 'brute', { family: 'brute' }, [1536, 1024], [6, 6, 1527, 1019]],
+  ['revenant', 'brute', { family: 'brute' }, [1536, 1024], [11, 7, 1525, 1015]],
   ['revenant', 'ultimate', 'ultimate', [1536, 1024], [7, 5, 1531, 1020]],
   ['transcendent', 'sibling', { artworks: [stormborn, necrotic] }, [1536, 1024], [7, 10, 1526, 1012]],
   ['transcendent', 'predator', { family: 'predator' }, [1536, 1024], [0, 1, 1536, 1022]],
