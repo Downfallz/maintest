@@ -1,0 +1,137 @@
+// The picture kit's script and its files (ADR 0198, docs/art/page-pictures.md): what a page draws is declared in
+// docs/art/page-pictures.json, derived once into table/page-art/ and table/page-art.js by
+// scripts/ux/pictures.mjs, and held under the budget of docs/art/page-budget.json. Nothing is encoded here: the
+// committed files are read, so the gate needs no image library.
+import assert from 'node:assert/strict';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import test from 'node:test';
+import { PAGE_ART } from '../table/page-art.js';
+import { asked, budgetOf, check, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
+
+const root = new URL('../', import.meta.url);
+const read = path => readFileSync(new URL(path, root));
+const json = path => JSON.parse(read(path).toString('utf8'));
+const authored = json('docs/art/page-pictures.json'), budget = json('docs/art/page-budget.json');
+
+test('a picture is sent at the size it is drawn, once and twice, and never past its painting', () => {
+  assert.deepEqual(widthsOf([308], 1536), [308, 616]);
+  assert.deepEqual(widthsOf([533, 1440], 1672), [533, 1066, 1440, 1672], 'twice 1440 stops at the painting');
+  assert.deepEqual(widthsOf([308, 620], 1536), [308, 620, 1240], 'a size within a tenth of a larger one is not kept twice');
+  assert.deepEqual(widthsOf([2000], 1536), [1536]);
+});
+
+test('a WebP file says its width and its height, in each of its three forms', () => {
+  const header = (tag, body) => Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBP' + tag), Buffer.from([body.length, 0, 0, 0]), Buffer.from(body)]);
+  assert.deepEqual(webpSize(header('VP8 ', [0, 0, 0, 0x9d, 0x01, 0x2a, 0x34, 0x01, 0xcd, 0x00])), { width: 308, height: 205 });
+  assert.deepEqual(webpSize(header('VP8L', [0x2f, 0x33, 0x01, 0x33, 0x00])), { width: 308, height: 205 });
+  assert.deepEqual(webpSize(header('VP8X', [0, 0, 0, 0, 0x33, 0x01, 0x00, 0xcc, 0x00, 0x00])), { width: 308, height: 205 });
+  assert.throws(() => webpSize(Buffer.from('not a picture')), /not a WebP file/);
+});
+
+test('a painting the owner hands over as a PNG says its size too, so it can be derived and held', () => {
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]), Buffer.from('IHDR'), Buffer.from([0, 0, 6, 0, 0, 0, 4, 0])]);
+  assert.deepEqual(paintingSize(png), { width: 1536, height: 1024 });
+  assert.deepEqual(paintingSize(read('table/battle-art/eclipse-battle.webp')), { width: 1672, height: 941 });
+  const one = authored.pictures[0], drawn = { ...authored, pictures: [{ ...one, source: 'painting.png' }, ...authored.pictures.slice(1)] };
+  const problems = check({ authored: drawn, art: PAGE_ART, read: path => (path === 'painting.png' ? png : read(path)), list: () => readdirSync(new URL('table/page-art', root)) });
+  assert.doesNotMatch(problems.join('\n'), /neither a PNG nor a WebP/);
+});
+
+test('a file is named by its picture, its width and its own bytes, so a day-long cache never shows the old one', () => {
+  assert.match(fileName('colossus', 308, Buffer.from('a')), /^colossus-308\.[0-9a-f]{8}\.webp$/);
+  assert.notEqual(fileName('colossus', 308, Buffer.from('a')), fileName('colossus', 308, Buffer.from('b')));
+});
+
+test('a phone takes the smallest file that fills what it draws at its density', () => {
+  const sizes = [{ width: 308, bytes: 10 }, { width: 616, bytes: 30 }, { width: 1240, bytes: 90 }];
+  assert.equal(phoneSize(sizes, 308, 2).width, 616);
+  assert.equal(phoneSize(sizes, 308, 1).width, 308);
+  assert.equal(phoneSize(sizes, 900, 2).width, 1240, 'the largest when none fills it');
+  const strip = [{ width: 1848, bytes: 10 }, { width: 3696, bytes: 30 }];
+  assert.equal(phoneSize(strip, 308, 2, 6).width, 3696, 'a strip is as many pictures as it has frames');
+});
+
+test('a page counts the pictures asked for before any scroll, then all of them', () => {
+  const art = {
+    ground: { drawn: [400], frames: 1, pages: { home: 'largest' }, sizes: [{ width: 400, bytes: 20 }, { width: 800, bytes: 50 }] },
+    beast: { drawn: [100], frames: 1, pages: { home: 'first', ladder: 'lazy' }, sizes: [{ width: 100, bytes: 5 }, { width: 200, bytes: 9 }] },
+    round: { drawn: [100], frames: 1, pages: { home: 'lazy' }, sizes: [{ width: 200, bytes: 7 }] },
+  };
+  assert.deepEqual(budgetOf(art, 'home', 2), { first: 59, all: 66, largest: 1 });
+  assert.deepEqual(budgetOf(art, 'ladder', 2), { first: 0, all: 9, largest: 0 });
+});
+
+test('the committed pictures are the ones the declaration asks for: every file, its size, its bytes, its painting', () => {
+  assert.deepEqual(check({ authored, art: PAGE_ART, read, list: () => readdirSync(new URL('table/page-art', root)) }), []);
+});
+
+test('a painting that changed, a file that went or a stranger in the folder is said', () => {
+  const list = () => readdirSync(new URL('table/page-art', root));
+  const stale = check({ authored, art: PAGE_ART, read: path => (path === authored.pictures[0].source ? Buffer.from('repainted') : read(path)), list });
+  assert.match(stale.join('\n'), /eclipse-ground: its painting or its declaration changed/);
+  const one = PAGE_ART[authored.pictures[0].name].sizes[0].file;
+  assert.match(check({ authored, art: PAGE_ART, read, list: () => list().filter(file => file !== one) }).join('\n'), new RegExp(`${one.replaceAll('.', '\\.')} is missing`));
+  assert.match(check({ authored, art: PAGE_ART, read, list: () => [...list(), 'stray.webp'] }).join('\n'), /stray\.webp is no picture of the declaration/);
+  const name = authored.pictures[0].name, short = { ...PAGE_ART, [name]: { ...PAGE_ART[name], sizes: PAGE_ART[name].sizes.slice(1) } };
+  assert.match(check({ authored, art: short, read, list: () => list().filter(file => file !== one) }).join('\n'), /eclipse-ground: it is sent at 533, 1066, 1440, 1672 px, and the module names 1066, 1440, 1672/);
+  const fewer = { ...authored, pictures: authored.pictures.slice(1) };
+  assert.match(check({ authored: fewer, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is derived but not declared/);
+});
+
+test('the module the pages import is what the script writes from its entries', () => {
+  assert.equal(read('table/page-art.js').toString('utf8'), moduleText(PAGE_ART));
+  assert.equal(origin({ name: 'a', source: 'x', drawn: [1] }, [Buffer.from('p')], authored.encoding).length, 16);
+});
+
+test('every page of the declaration has a budget, and its pictures hold under it', () => {
+  const pages = new Set(authored.pictures.flatMap(picture => Object.keys(picture.pages)));
+  assert.deepEqual([...pages].sort(), Object.keys(budget.pages).sort(), 'a page with pictures has a budget, and a budget has a page');
+  assert.equal(budget.largestPaintMs, 2500, 'ADR 0197');
+  assert.equal(budget.shift, 0.1, 'ADR 0197');
+  for (const [page, limit] of Object.entries(budget.pages)) {
+    const measured = budgetOf(PAGE_ART, page, budget.density);
+    assert.ok(measured.first <= limit.first, `${page}: ${measured.first} bytes before any scroll, over ${limit.first}`);
+    assert.ok(measured.all <= limit.all, `${page}: ${measured.all} bytes of pictures, over ${limit.all}`);
+    assert.ok(limit.first <= measured.first * 1.5 + 4096, `${page}: a budget half again over what is loaded holds nothing`);
+    assert.ok(measured.largest <= 2, `${page}: one or two pictures are asked for first, or the hint means nothing`);
+  }
+});
+
+test('a declaration is refused when a role is unknown, a name is no file name, or a strip has one frame', () => {
+  const list = () => readdirSync(new URL('table/page-art', root));
+  const bad = change => check({ authored: { ...authored, pictures: [{ ...authored.pictures[0], ...change }, ...authored.pictures.slice(1)] }, art: PAGE_ART, read, list }).join('\n');
+  assert.match(bad({ pages: { 'showcase/home': 'soon' } }), /largest, first or lazy/);
+  assert.match(bad({ name: 'Eclipse Ground' }), /lower case, digits and hyphens/);
+  assert.match(bad({ source: undefined, frames: ['table/battle-art/eclipse-battle.webp'] }), /a strip has at least two frames/);
+  assert.match(bad({ drawn: [] }), /the width it is drawn at/);
+  assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
+  assert.throws(() => webpSize(Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8X'), Buffer.alloc(10)])), /not a WebP file/, 'a header cut short');
+});
+
+test('a brief\'s request is listed with its screen, its size, what holds its place and its prompt', () => {
+  const brief = ['# The two doors', '', '## The sign-in panel (`sign-in-panel`)', '', '### Pictures', '',
+    '| Picture | Drawn at | Answers | From |', '| --- | --- | --- | --- |',
+    '| The ground. | 358 by 300 px | Where? | `table/battle-art/eclipse-battle.webp` |',
+    '| Two teams facing each other. | 358 by 300 px | Who invites me? | asked of the owner; `table/battle-art/eclipse-battle.webp` holds its place |',
+    '', 'Some words.', '', '```text', 'Two teams of three creatures.', 'Keep the centre readable.', '```', '', '### States'].join('\n');
+  assert.deepEqual(asked(brief, 'docs/art/journeys/doors.md'), [{
+    brief: 'docs/art/journeys/doors.md', screen: 'The sign-in panel', shows: 'Two teams facing each other.', drawn: '358 by 300 px',
+    holds: 'table/battle-art/eclipse-battle.webp', prompt: 'Two teams of three creatures.\nKeep the centre readable.',
+  }]);
+  assert.deepEqual(asked('# A\n\n## B\n\n### Pictures\n\nNone.\n', 'x.md'), []);
+});
+
+test('every request of the briefs in the repository can be listed, and the doors ask for one painting', () => {
+  const folder = new URL('docs/art/journeys/', root);
+  const requests = readdirSync(folder).filter(name => name.endsWith('.md'))
+    .flatMap(name => asked(readFileSync(new URL(name, folder), 'utf8'), `docs/art/journeys/${name}`));
+  assert.equal(requests.filter(one => one.brief.endsWith('doors.md')).length, 1);
+  for (const one of requests) assert.ok(one.prompt.length > 40 && existsSync(new URL(one.holds, root)), `${one.shows}: a prompt, and a painting that holds its place`);
+});
+
+test('the script and the kit are where a session looks for them', () => {
+  const commands = read('docs/reference/commands.md').toString('utf8');
+  assert.match(commands, /^### ux\/pictures\.mjs$/m);
+  assert.match(read('scripts/README.md').toString('utf8'), /ux\/pictures\.mjs/);
+  assert.match(read('docs/README.md').toString('utf8'), /art\/page-pictures\.md/);
+});

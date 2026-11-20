@@ -12,6 +12,8 @@ What the client may never decide is in docs/tabletop/playtest-app.md; the routes
   headers (ADR 0158, docs/art/branding.md). `fonts/` holds the display face the host serves.
 - The motion kit (ADR 0197, `docs/art/branding.md#motion`): its forms at the foot of `identity.css`, and
   `motion.js`, which every page that loads `identity.css` also loads: it handles less motion and ambience.
+- The picture kit (ADR 0198, docs/art/page-pictures.md): `picture.js` writes a painting's `<img>` and a strip of
+  frames from `page-art.js`, which `scripts/ux/pictures.mjs` derives with `page-art/`; `icons.js` is the icon set.
 - `battle-*.js`: the shared modules the battle view imports. `battle-build/` is the bundle `battle/` builds:
   ignored, never committed, never edited by hand.
 - `/battle-lab` is an isolated visual study on fictional sample frames, not a live seat
@@ -49,6 +51,10 @@ Every flag of `table` is in docs/reference/commands.md.
   and its test (`TableFilesTests`); a missing one is a 404 in production, not a failing page test. A module
   only the battle bundle imports joins it too: `Every_module_beside_the_page_is_served` asks it of every script here.
 - `identity.css` stays last in every page's `<head>`.
+- A painting on a page comes from `picture.js`, declared for that page in `docs/art/page-pictures.json` and under
+  its budget (`docs/art/page-budget.json`); never a file of `battle-art/` sent whole, never a derived file's name
+  written in a page. `page-art.js` and `page-art/` are generated: derive them again, do not edit them. An icon
+  comes from `icons.js`, inside a control that has a name; a new emoji or glyph as an icon is refused in review.
 - Motion comes from the kit: a token of `docs/art/branding.css`, never a number; `transform` and `opacity` only;
   travel under full motion alone. A `<dialog>` stays displayed while it fades after closing: test `open`, not `display`. The
   match's windows are not in the kit yet (UX12).

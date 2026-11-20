@@ -73,6 +73,10 @@ internal sealed partial class TableFiles
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),
             ["/game-preferences.js"] = (Path.Combine(tableDirectory, "game-preferences.js"), JavaScript),
             ["/motion.js"] = (Path.Combine(tableDirectory, "motion.js"), JavaScript),
+            // The picture kit (ADR 0198): the form, the sizes a script derived, and the icon set.
+            ["/picture.js"] = (Path.Combine(tableDirectory, "picture.js"), JavaScript),
+            ["/page-art.js"] = (Path.Combine(tableDirectory, "page-art.js"), JavaScript),
+            ["/icons.js"] = (Path.Combine(tableDirectory, "icons.js"), JavaScript),
             ["/friends.js"] = (Path.Combine(tableDirectory, "friends.js"), JavaScript),
             ["/inbox.js"] = (Path.Combine(tableDirectory, "inbox.js"), JavaScript),
             ["/changes.js"] = (Path.Combine(tableDirectory, "changes.js"), JavaScript),
@@ -238,6 +242,19 @@ internal sealed partial class TableFiles
         foreach (var art in EvolutionArt)
         {
             _routes[$"/battle-art/evolutions/{art}.webp"] = (Path.Combine([tableDirectory, "battle-art", "evolutions", .. $"{art}.webp".Split('/')]), Webp);
+        }
+
+        // A page's pictures at the size they are drawn (ADR 0198). Each file is named by its own bytes and derived
+        // again when its painting changes, so the folder is read rather than listed here: a list would go stale at
+        // every derivation. `page-art.js` names the same files, and a test holds the two together. The folder is
+        // read once: a host running from a checkout is started again after a picture is derived.
+        var pageArt = Path.Combine(tableDirectory, "page-art");
+        if (Directory.Exists(pageArt))
+        {
+            foreach (var file in Directory.EnumerateFiles(pageArt, "*.webp"))
+            {
+                _routes[$"/page-art/{Path.GetFileName(file)}"] = (file, Webp);
+            }
         }
     }
 

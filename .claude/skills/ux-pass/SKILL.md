@@ -49,7 +49,8 @@ dotnet build && dotnet run --project tools/DownfallArena.DataBuilder -- data dat
    once lose a screen or "fix" the other's half-written one. Read what it wrote. A choice a person could refuse,
    it wrote under **Left**: ask the owner now (AskUserQuestion) when the build depends on it, otherwise carry on
    and show it with the sheets. A picture it asks of the owner goes to the owner now, as numbered steps with
-   the prompt to paste; the build goes on with the painting that holds its place.
+   the prompt to paste (`node scripts/ux/pictures.mjs --asked` lists them); the build goes on with the painting
+   that holds its place, declared in `docs/art/page-pictures.json`.
 
 4. **Build it**, tests first (the area's `AGENTS.md`, and the stage's own tests in the plan). Read the craft
    book's entry before writing a rule of CSS. A new file of `table/` joins
