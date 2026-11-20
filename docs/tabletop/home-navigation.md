@@ -5,9 +5,13 @@ to sign-in or to their next battle. Both use the [official palette](../art/brand
 
 ## Page states
 
-- **Signed out on an account host:** the player sees sign-in immediately and can return to the showcase from
-  the footer. Google sign-in and the local developer form use the existing account flow. Operator notices and
-  account errors appear on this screen.
+- **Signed out on an account host:** the player sees sign-in immediately, in a short panel: one line on the game,
+  what an account gives, and the ground and a creature as pictures of the kit. The showcase is the introduction,
+  reached from the footer. A visitor who follows a friend's invitation is told who invites them and to what,
+  which the host answers to whoever holds the link (`POST /api/lobby/invitations`). Google sign-in and the local
+  developer form use the existing account flow. Operator notices and account errors appear on this screen.
+  [`accounts-plan.md`](accounts-plan.md#the-home-page) describes the same panel, and
+  [the doors' brief](../art/journeys/doors.md) its words.
 - **Signed in:** a greeting, New battle, invitations, Your games, and Find an opponent. Account actions stay
   behind the player's avatar/name. Match cards retain resume, join, invitation and turn-state behaviours.
   Your games groups its Ongoing and Finished tabs against players and against bots, at most five of each in

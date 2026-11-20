@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX6 and UX8 are built; UX7 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX8 are built; UX9 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -406,6 +406,31 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    details available to that visitor. Carry one cue through naming and into the destination: the inviter and
    seat on the invited path, or the lesson and its creature on the tutorial path. Record both arrivals, including
    a slow response. The player can identify where they landed with the sound off, even across an immediate page cut.
+
+   *Built (2026-11-20)*: [the doors' brief](journeys/doors.md) holds the words, screen by screen. The signed-out
+   panel (`table/door.js`) says one line on the game and one on what an account gives. A visitor sent back to an
+   invitation is told who invites them and to what; the walk's inviter is Rook. Who invites needed no host change:
+   `POST /api/lobby/invitations` already describes a link's table to whoever holds its key, signed in or not, and
+   spends nothing (ADR 0116). A link it reports as spent says so, and a link to the visitor's own seat is the plain
+   door. The ground and the Revenant are the kit's `<img>`, placed only once the host says nobody is signed in, so
+   a player's home loads neither. On the slow profile the panel's largest paint went from 4.7 s to 2.0 s, its
+   pictures from 809 KB to 34 KB, its layout shift from 0.04 to 0. The footer now waits with the panel, and the
+   home's layout shift went from 0.26 to 0.21 for the same reason. Every target of the panel reaches 44 px. The
+   name window says "Take this name →" and where the press leads, and stays open until the next page replaces it.
+   The place taken names the inviter's table, and its one filled action says Taking the place… while the host
+   answers. `accounts-plan.md` and `home-navigation.md` describe the same short panel. Two clips at 390 px were
+   recorded in real time: a plain visit to tutorial 1's brief, and the invitation followed on a slow network to
+   the battle view. Tests: `table/door.test.js`, the door's cases in `lobby-home.spec.js`, and
+   `LobbyInvitationsTests` for the route's answer that names who invites.
+
+   Left: the first paint does not hold the panel's room, since a signed-in player would see the sign-in flash.
+   On a slow network the classic table's page says Connecting… for seconds before its question. The cue stops at
+   the battle view, which names no inviter or seat: UX11's frame. The name window was filmed staged, since a
+   developer account names itself. Each refresh of the account now waits for the tutorials' answer before the
+   page knows whether it leaves. An inviter's name longer than the title's held four lines still moves the
+   sign-in when it arrives late. The duel picture for the invited friend is still asked of the owner. The owner
+   settled the rest of the brief's choices on the sheets: Google's button rectangular, the line on the game and
+   "Take this name" as they are. The home's shift of 0.21 is UX9's.
 8. **UX8, the lessons.** The brief window, the coach, the concept cards and the phase tips under a budget of
    words, a hint when a player stalls, the end of a tutorial as a moment, Learn to play with a picture and a
    progress. What `onboarding-plan.md` and `docs/tabletop/tutorial-follow-ups-plan.md` left open is settled here
