@@ -21,3 +21,14 @@ breaks ties within a rank. A creature with only the prerequisite line displays i
 The Ravager × Predator master uses the corrected side-view layout with three legs on each flank. The
 [portrait polish guide](hybrid-portrait-polish.md) covers the matte and export.
 `table/battle-brute-hybrid-art.js` records each final canvas and its measured alpha-128 bounds for combat placement.
+
+### Exporting the Brute silhouettes
+
+These black-background masters also use near-black shadows in the muscles and under the armour.
+Export them with `scripts/matte-opaque-art.py SOURCE DESTINATION --outline`.
+For openings enclosed by horns or legs, append `--opening X Y` once per opening. The approved
+coordinates for each portrait are in `scripts/check-brute-portrait-alpha.py`.
+
+Run `python3 scripts/check-brute-portrait-alpha.py` against the encoded WebPs. It samples the
+previously lost body shadows, the exterior and the enclosed openings. Inspect all twelve on a light
+checkerboard at battle size when changing a master, and update the silhouette bounds in the registry.

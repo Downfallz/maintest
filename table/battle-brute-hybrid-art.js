@@ -3,18 +3,18 @@
 const frenzied = 'brute-stage2-frenzied', ironhide = 'brute-stage2-ironhide', oppressor = 'brute-stage2-oppressor';
 const variants = [
   // Stage 3, variant, qualifying influence, canvas, measured alpha >= 128 bounds
-  ['oppressor', 'warped', { family: 'warped' }, [1536, 1024], [14, 4, 1531, 1017]],
-  ['oppressor', 'predator', { family: 'predator' }, [1536, 1024], [14, 5, 1523, 1015]],
-  ['oppressor', 'sibling', { artworks: [frenzied, ironhide] }, [1536, 1024], [17, 4, 1522, 1016]],
-  ['oppressor', 'ultimate', null, [1536, 1024], [11, 11, 1529, 1011]],
-  ['colossus', 'warped', { family: 'warped' }, [1536, 1024], [39, 19, 1494, 1008]],
-  ['colossus', 'predator', { family: 'predator' }, [1536, 1024], [19, 16, 1522, 1007]],
-  ['colossus', 'sibling', { artworks: [oppressor, frenzied] }, [1536, 1024], [38, 19, 1495, 1010]],
-  ['colossus', 'ultimate', null, [1536, 1024], [16, 14, 1526, 1015]],
-  ['ravager', 'warped', { family: 'warped' }, [1536, 1024], [14, 15, 1529, 1021]],
-  ['ravager', 'predator', { family: 'predator' }, [1774, 887], [10, 6, 1759, 887]],
-  ['ravager', 'sibling', { artworks: [oppressor, ironhide] }, [1536, 1024], [8, 12, 1533, 1020]],
-  ['ravager', 'ultimate', null, [1536, 1024], [26, 15, 1515, 984]],
+  ['oppressor', 'warped', { family: 'warped' }, [1536, 1024], [10, 2, 1534, 1017]],
+  ['oppressor', 'predator', { family: 'predator' }, [1536, 1024], [12, 0, 1526, 1016]],
+  ['oppressor', 'sibling', { artworks: [frenzied, ironhide] }, [1536, 1024], [16, 2, 1525, 1017]],
+  ['oppressor', 'ultimate', null, [1536, 1024], [10, 9, 1531, 1013]],
+  ['colossus', 'warped', { family: 'warped' }, [1536, 1024], [37, 17, 1495, 1009]],
+  ['colossus', 'predator', { family: 'predator' }, [1536, 1024], [16, 15, 1524, 1008]],
+  ['colossus', 'sibling', { artworks: [oppressor, frenzied] }, [1536, 1024], [37, 16, 1498, 1010]],
+  ['colossus', 'ultimate', null, [1536, 1024], [16, 12, 1527, 1016]],
+  ['ravager', 'warped', { family: 'warped' }, [1536, 1024], [13, 14, 1532, 1023]],
+  ['ravager', 'predator', { family: 'predator' }, [1774, 887], [7, 5, 1762, 887]],
+  ['ravager', 'sibling', { artworks: [oppressor, ironhide] }, [1536, 1024], [8, 10, 1536, 1023]],
+  ['ravager', 'ultimate', null, [1536, 1024], [25, 13, 1519, 987]],
 ];
 
 export const BRUTE_HYBRID_ART = variants.map(([form, variant, influence, [width, height], bounds]) => {
