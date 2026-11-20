@@ -16,7 +16,7 @@ if (typeof document !== 'undefined' && !ownSheet) catchPageErrors(globalThis, pa
 
 const headerContent = `
     <a class="brand" href="/" aria-label="Downfall Instinct home"><span class="brand-mark" aria-hidden="true"></span><h1>Downfall Instinct</h1></a>
-    <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation"><span aria-hidden="true">☰</span><span>Menu</span></button>
+    <button id="home-menu-toggle" class="home-menu-toggle" type="button" aria-expanded="false" aria-controls="home-navigation" aria-label="Open navigation" aria-describedby="menu-inbox-said"><span aria-hidden="true">☰</span><span id="menu-inbox-said" hidden></span><span id="menu-inbox-badge" class="nav-badge menu-inbox-badge" aria-hidden="true" hidden></span><span>Menu</span></button>
     <nav id="home-navigation" class="home-navigation" aria-label="Main navigation">
       <a id="play-link-home" href="/">Lobby</a>
       <button id="friends-open" type="button" data-home-dialog="friends-dialog" hidden>Friends <span id="friend-requests-badge" class="nav-badge" aria-label="Pending friend requests" hidden></span></button>
@@ -26,6 +26,7 @@ const headerContent = `
       <a id="learn-link" href="/#learn-to-play" hidden>Learn to play</a>
       <button id="join-open" type="button" data-home-dialog="join-dialog" hidden>Join with a code</button>
       <button id="app-settings-open" type="button" data-home-dialog="app-settings-dialog">Settings</button>
+      <button id="inbox-open-menu" class="menu-inbox" type="button" data-home-dialog="inbox-dialog" hidden>Notifications <span id="inbox-menu-count" class="nav-badge" hidden></span></button>
       <a id="nav-admin-link" href="/admin" hidden>Admin</a>
     </nav>
     <button id="inbox-open" class="inbox-button" type="button" data-home-dialog="inbox-dialog" aria-label="Notifications · nothing waiting" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.4 15.5A1 1 0 0 0 5.3 17h13.4a1 1 0 0 0 .9-1.5L18 12.6V9a6 6 0 0 0-6-6Z"/><path d="M9.5 19.5a2.6 2.6 0 0 0 5 0"/></svg><span id="inbox-badge" class="nav-badge inbox-badge" aria-hidden="true" hidden></span></button>

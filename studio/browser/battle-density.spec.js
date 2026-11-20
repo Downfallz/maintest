@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { fitsBattlefield } from './fit.js';
+import { fitsBattlefield, fitsViewport } from './fit.js';
 
 test.use({ deviceScaleFactor: 3, reducedMotion: 'reduce' });
 
@@ -17,4 +17,98 @@ test('the dense framebuffer keeps the battlefield and touch targets in CSS coord
     await expect(page.locator('[data-creature="b2"]')).toHaveClass(/is-selected/);
     await page.locator('#cancel').click();
   }
+});
+
+// The match's frame (docs/art/ux-craft-plan.md, UX11; docs/art/journeys/match.md): every word around the canvas
+// at the floor of 11 px, and no two of its controls on one spot, on a seat signed in, whose site menu, notices
+// and account fold into the round's bar. Read at 320 and 390 px, upright, while a creature acts.
+const fighter = (id, name) => ({ id, name, health: 21, maxHealth: 30, energy: 5, totalDefense: 2, currentInitiative: 7, isAlive: true,
+  isStunned: false, isStunImmune: false, knownSpells: ['spell:host:v1'], conditions: [] });
+const acting = { seat: 'player1', waitingFor: 'Action', waitingAsked: 11, feedNext: 83, feed: [{ sequence: 72 }], over: false,
+  board: { slot: 'Player1', roundNumber: 4, phase: 'Combat', subPhase: 'Activation', activationCursor: 1,
+    allies: [fighter(1, 'Ashen Brute'), fighter(2, 'Tide Warden'), fighter(3, 'Gloom Stalker')],
+    enemies: [fighter(4, 'Ember Hound'), fighter(5, 'Rift Seer'), fighter(6, 'Bone Herald')],
+    timeline: [1, 2, 3, 4, 5, 6].map(id => ({ creature: id, owner: id < 4 ? 'Player1' : 'Player2', speed: id < 4 ? 'Quick' : 'Standard' })) } };
+
+async function signedInSeat(page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'first' }));
+    localStorage.setItem('downfall.arena.help.v1', JSON.stringify({ version: 1, muted: true, seen: [] }));
+    localStorage.setItem('downfall.arena.game-settings.v1', JSON.stringify({ pace: 'auto', speed: 1, help: false, reducedMotion: true }));
+  });
+  await page.route('**/api/**', route => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: { id: 'acct_one', username: 'Walker' } } });
+    if (url.pathname === '/api/friends') return route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } });
+    if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'one', format: '3v3',
+      seats: [{ seat: 'player1', kind: 'person', name: 'Walker', account: 'acct_one' }, { seat: 'player2', kind: 'bot', name: 'Bot' }] }, seats: [{ seat: 'player1', token: 'first' }] }] } });
+    if (url.pathname === '/api/lobby/invitations') return route.fulfill({ json: { invitations: [] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'spell:host:v1', name: 'Strike' }], packages: [] } });
+    if (url.pathname.endsWith('/events')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
+    if (url.pathname === '/api/seat/player1') return route.fulfill({ json: acting });
+    return route.fulfill({ status: 204 });
+  });
+  await page.goto('/table/battle.html');
+  await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'member');
+  await expect(page.locator('#opponent-open')).toBeVisible();
+}
+
+// What a player reads of the frame under 11 px, and the pairs of controls that share more than a hair of the screen.
+const frameReading = page => page.evaluate(() => {
+  const shown = node => node.checkVisibility({ opacityProperty: true, visibilityProperty: true }) && node.getBoundingClientRect().width > 1;
+  const small = new Set();
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const parent = node.parentElement;
+    if (!parent || !/[\p{L}\p{N}]/u.test(node.textContent) || parent.closest('dialog, script, style, option') || !shown(parent)) continue;
+    const size = Number.parseFloat(getComputedStyle(parent).fontSize);
+    if (size >= 1 && size < 11) small.add(`${node.textContent.trim().slice(0, 24)} (${size} px)`);
+  }
+  const controls = [...document.querySelectorAll('a[href], button, select, [tabindex]:not([tabindex="-1"])')]
+    .filter(node => !node.closest('dialog') && shown(node) && !node.disabled);
+  // What of a control is on the screen: its box cut by every ancestor that scrolls or clips it (the order row
+  // scrolls under its Order button).
+  const seen = node => {
+    const box = node.getBoundingClientRect(), cut = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      if (getComputedStyle(parent).overflow === 'visible') continue;
+      const clip = parent.getBoundingClientRect();
+      cut.left = Math.max(cut.left, clip.left); cut.top = Math.max(cut.top, clip.top);
+      cut.right = Math.min(cut.right, clip.right); cut.bottom = Math.min(cut.bottom, clip.bottom);
+    }
+    return cut;
+  };
+  const overlaps = [];
+  for (const [index, one] of controls.entries()) for (const other of controls.slice(index + 1)) {
+    if (one.contains(other) || other.contains(one) || one.matches('.creature') && other.matches('.creature')) continue;
+    const a = seen(one), b = seen(other);
+    if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 2 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 2)
+      overlaps.push([one, other].map(node => node.id || node.className || node.textContent.trim().slice(0, 16) || node.getAttribute('aria-label')).join(' over ') + JSON.stringify([a, b].map(r => [r.left, r.top, r.right, r.bottom].map(Math.round))));
+  }
+  return { small: [...small], overlaps };
+});
+
+test('the match frame is written at 11 px at least and no two of its controls share a spot', async ({ page }, info) => {
+  test.skip(!['small-phone', 'phone'].includes(info.project.name), 'The frame is read at 320 and 390 px.');
+  for (const height of [568, 844]) {
+    await page.setViewportSize({ width: page.viewportSize().width, height });
+    await signedInSeat(page);
+    await expect.poll(() => frameReading(page), { timeout: 10000 }).toEqual({ small: [], overlaps: [] });
+    // The creature acting opens its spell sheet docked under the field: a caption keeps its name, its health and its
+    // defense, and no other creature's tag shows.
+    await expect(page.locator('#battle')).toHaveAttribute('data-docked', 'true');
+    await expect(page.locator('#actor-layer .creature-name').first()).toBeVisible();
+    await expect(page.locator('#actor-layer .stat-health').first()).toBeVisible();
+    await expect(page.locator('#actor-layer .creature-defense').first()).toBeVisible();
+    for (const hidden of ['.creature-init', '.stat-energy', '#ally-label']) await expect(page.locator(hidden).first()).toBeHidden();
+    await expect(page.locator('#actor-layer .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag:visible')).toHaveCount(0);
+    await fitsViewport(page, '#recap-open, #opponent-open, #order-open, #history-open, #help-open, #settings, .home-menu-toggle, .inbox-button, .account-chip');
+  }
+  // Under 360 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell").
+  const narrow = page.viewportSize().width < 360;
+  await expect(page.locator('#inbox-open')).toBeVisible({ visible: !narrow });
+  await page.locator('#home-menu-toggle').click();
+  await expect(page.locator('#inbox-open-menu')).toBeVisible({ visible: narrow });
+  if (narrow) { await page.locator('#inbox-open-menu').click(); await expect(page.locator('#inbox-dialog')).toBeVisible(); }
 });

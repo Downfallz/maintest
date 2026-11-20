@@ -1,7 +1,7 @@
 import { BattleAudio, soundControl } from './audio';
 import { BattleScene } from './scene';
 import { creaturesOf, isEnemy, labSceneFrame, type Creature, type LabState } from './types';
-import { creatureButton, placeHitTargets } from './targets';
+import { creatureButton, placeHitTargets, speakCreature } from './targets';
 import { bootScene } from './boot';
 import { initialLabState, isLabPlaying, labTransition, createLabPlayback } from '../../table/battle-lab-state.js';
 import { CREATURE_ART } from '../../table/battle-art.js';
@@ -61,7 +61,7 @@ function updateCreature(one: Creature) {
   node.classList.toggle('is-targetable', targetable);
   node.classList.toggle('is-defeated', !one.isAlive);
   node.setAttribute('aria-pressed', String(targetable ? selected : one.id === state.inspected));
-  node.setAttribute('aria-label', `${one.name}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${targetable ? 'Select target.' : 'Inspect creature.'}`);
+  speakCreature(node, `with ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${targetable ? 'Select target.' : 'Inspect creature.'}`);
   node.querySelector('.creature-name')!.textContent = one.name;
   node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP`;
   (node.querySelector('.health-fill') as HTMLElement).style.width = `${100 * one.health / one.maxHealth}%`;

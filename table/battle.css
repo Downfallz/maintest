@@ -1643,7 +1643,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The turn order, interactive: a strip entry lights its creature on the field in ice blue (never the acting gold),
    says its initiative and whether a d20 placed it, and opens a card at the top of the field saying why it holds
    its place. The same blue numbers the tied creatures while the seat orders them. */
-#timeline .timeline-init { margin-left: 6px; color: #b9d9f2; font-weight: 700; }
+#timeline .timeline-init { display: inline-flex; align-items: center; gap: 1px; margin-left: 6px; color: #b9d9f2; font-weight: 700; }
 #timeline .timeline-die { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #2b2619; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
 #timeline li[data-focused="true"] > button { border-radius: var(--radius-soft); background: linear-gradient(180deg, #6fc3ff2e, #6fc3ff10); box-shadow: inset 0 0 0 1.5px #6fc3ffcc, 0 0 14px #6fc3ff40; }
 #timeline li[data-focused="true"] .timeline-name { color: #dff1ff; }
@@ -2013,3 +2013,71 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The journal's mark where the seat left off. */
 .history-left-here { display: flex; align-items: center; gap: 8px; margin: 6px 0; color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 .history-left-here::before, .history-left-here::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
+
+/* UX11, the match's frame (docs/art/journeys/match.md). The dock reads the outcome on the blow's beat, not before
+   it: while the action winds up, its card names who acts and with what, and its numbers wait for the impact. */
+#battle[data-playback="windup"] #reading-detail .reading-group { opacity: 0; }
+#battle[data-playback="impact"] #reading-detail .reading-group { animation: motion-number-fade var(--motion-fast) var(--motion-enter); }
+
+/* The frame's floor: no word around the canvas under 11 px (.6875rem, so a reader's own size applies), at every
+   width. What did not fit at that size gave way instead: the word INIT became the set's initiative mark, and the
+   order of play's side line keeps its tempo and initiative. */
+#battle .hud-top .round > span, #battle .hud-top .round small,
+#battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small,
+#battle #timeline .timeline-name, #battle #timeline .timeline-side, #battle #timeline .timeline-die, #battle #no-timeline,
+#battle .team-label, #battle #history-preview,
+#battle .opponent-vs, #battle .opponent-badge, #battle #round-toast .eyebrow,
+#battle :is(#instruction, #connection, #reading-kind),
+#battle:not([data-reading="true"]) .command-dock :is(.actor-summary h1, #actor-meta),
+#battle .command-dock .eyebrow,
+#battle :is(.creature-init, .creature-defense, .stat, .creature-tag),
+#battle[data-docked="true"] :is(.creature-init, .creature-defense, .stat, .creature-tag),
+#battle[data-combat="targets"] .creature-tag,
+#battle :is(.chip-crit, .target-crit-label, .chip-lasting), #battle .effect-chip,
+#battle .hud-top > .practice-band .eyebrow, .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow {
+  font-size: .6875rem;
+}
+/* "TUTORIAL 1 OF 4" on two lines at 11 px: its column is as wide as its longest word. */
+.battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { max-width: none; width: min-content; letter-spacing: 0; }
+
+/* The round's bar under 360 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
+   drawn on the menu's button, and History leaves it, so the round, the opponent, Help and Settings keep their own
+   place and nothing covers them. */
+@media (max-width: 359px) and (orientation: portrait) {
+  .battle-page[data-home="member"] .home-header .inbox-button { display: none; }
+  .battle-page[data-home="member"] .home-header .home-navigation .menu-inbox:not([hidden]) { display: flex; align-items: center; gap: 8px; }
+  .battle-page[data-home="member"] .home-menu-toggle { position: relative; }
+  .battle-page[data-home="member"] .home-menu-toggle .menu-inbox-badge:not([hidden]) {
+    display: inline-grid; position: absolute; top: 2px; right: 0; min-width: 19px; height: 19px; font-weight: 700; box-shadow: 0 0 0 2px var(--paper);
+  }
+  .battle-page[data-home="member"] #battle .hud-top { padding-right: 96px; }
+  /* History leaves the bar too (the owner's choice): Help's window, the upkeep and the sheets still open it. */
+  .battle-page[data-home="member"] #battle #history-open { display: none; }
+}
+
+/* Docked, a caption keeps the creature's name, its health and its defense: two rows of captions over a sheet at
+   568 px tall have no room for more at 11 px. Initiative is in the order row above, energy in the sheet. */
+#battle[data-docked="true"] :is(.creature-init, .stat-energy) { display: none; }
+/* The folded menu, bell and account stand in the bar's own 44 px, not two pixels into the order row below. */
+@media (max-width: 619px) and (orientation: portrait) {
+  .battle-page[data-home="member"] .home-header { height: 44px; }
+}
+
+/* The order row's side line: the side, its tempo and the initiative mark, at 11 px; under 360 px the side and a die
+   alone, the rest a tap away in `#order-why`. */
+#timeline .timeline-init .cue-icon { width: 10px; height: 10px; }
+@media (max-width: 359px) { #timeline :is(.timeline-tempo, .timeline-init) { display: none; } }
+#battle .creature-init .cue-icon { width: 11px; height: 11px; }
+/* The site menu and the account menu, open, stand above a docked sheet (z-index 12): their foot was under it. */
+.battle-page .home-header:has(#home-menu-toggle[aria-expanded="true"], #account-menu[open]) { z-index: 13; }
+/* A signed-in phone's bar holds the round, the opponent, Help, Settings, the menu and the account: the round's word
+   steps out of sight, the number over the phase, and stays in the button's name ("Round 04 Combat, where you are"). */
+@media (max-width: 419px) and (orientation: portrait) {
+  .battle-page[data-home="member"] #battle .round-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* Docked, only the creature the sheet holds keeps its tag (the opponent's label stays: it names the opponent
+   when the bar folds its chip to the medallion): the others' TEMPO ? and
+   MUTATE are the sheet's tabs, and an ACTING over the row above covered its health at 320 px. */
+#battle[data-docked="true"] .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag { display: none; }
+/* Under 360 px a creature's outcome stays in its own room: above its head it landed on the caption of the row above. */
+@media (max-width: 359px) { #battle .creature > .creature-effect { transform: translateY(-35%); } }

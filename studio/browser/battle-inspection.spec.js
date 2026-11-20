@@ -235,7 +235,7 @@ test('field labels keep defense, initiative and conditions legible beside the st
   const h = await mount(page); h.view.board.allies[0].isStunned = true; await h.publish();
   const actor = page.locator('#actor-layer [data-creature="1"]');
   await expect(actor.locator('.creature-tag')).toHaveText('STUNNED');
-  await expect(actor).toHaveAttribute('aria-label', /3 defense, 8 initiative.*Immune to stun/);
+  await expect(actor).toHaveAccessibleName(/3 defense, 8 initiative.*Immune to stun/);
   if (page.viewportSize().width >= 620) {
     await expect(actor.locator('.creature-defense')).toBeVisible();
     await expect(actor.locator('.creature-defense')).toHaveText('3');
@@ -262,7 +262,8 @@ test('initiative stands under every name on the field, on phones too, below the 
     expect(Math.abs((init.left + init.right) / 2 - (name.left + name.right) / 2)).toBeLessThan(2);
     expect(await node.locator('.creature-name').evaluate(one => one.scrollWidth <= one.clientWidth)).toBe(true);
   }
-  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveText('8 INIT');
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveText('8');
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveAttribute('title', '8 initiative');
   expect(h.errors).toEqual([]);
 });
 

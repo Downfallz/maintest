@@ -1,4 +1,5 @@
 import { battleOrder, createBattleOrderReveal, orderReason } from '../../table/battle-order.js';
+import { iconElement } from './condition-icons';
 
 type Model = ReturnType<typeof battleOrder>;
 type Row = Model['rows'][number];
@@ -55,11 +56,12 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
     return button;
   }
   // A strip entry lights its creature on the field rather than opening its sheet: the card it opens offers the sheet.
+  // Its name is the creature's as shown, then one sentence: the drawn place and line are silent (WCAG 2.5.3).
+  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition, 'highlight on the field'].filter(Boolean).join(', ');
   function stripButton(row: Row) {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.orderCreature = row.id;
     button.disabled = !row.inspectable;
     button.setAttribute('aria-pressed', String(focused === row.id));
-    button.setAttribute('aria-label', ['Highlight ' + row.label, row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition].filter(Boolean).join(' · '));
     button.addEventListener('click', () => setFocus(focused === row.id ? null : row.id));
     return button;
   }
@@ -74,10 +76,13 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       rank.dataset.tempo = row.speed; rank.setAttribute('aria-hidden', 'true');
       const words = text('span', '', 'timeline-words');
       // Initiative on every entry, and a die on those a roll-off placed: the order reads at a glance.
-      const side = text('span', `${row.team === 'Your team' ? 'You' : row.team} · ${row.tempo}`, 'timeline-side');
-      if (Number.isFinite(row.initiative)) side.append(text('span', `⚡${row.initiative}`, 'timeline-init'));
+      // The side, then its tempo and initiative, which leave the line under 360 px (battle.css): `#order-why` has them.
+      const side = text('span', row.team === 'Your team' ? 'You' : row.team, 'timeline-side');
+      side.append(text('span', ` · ${row.tempo}`, 'timeline-tempo'));
+      if (Number.isFinite(row.initiative)) { const init = text('span', String(row.initiative), 'timeline-init'); init.prepend(iconElement('initiative-gain')); side.append(init); }
       if (row.roll) side.append(text('span', 'd20', 'timeline-die'));
-      words.append(text('span', row.label, 'timeline-name'), side);
+      side.setAttribute('aria-hidden', 'true');
+      words.append(text('span', row.label, 'timeline-name'), text('span', spoken(row), 'unseen'), side);
       button.append(rank, words);
       item.append(button); return item;
     }));

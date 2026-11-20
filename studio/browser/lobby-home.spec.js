@@ -434,14 +434,17 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await home(page);
     await page.goto(`/table/${file}.html`);
     await expect(page.locator('#account-name')).toHaveText(player.username);
-    // The bell reads what waits on its own on every page: the turn at Bastien's table and Alex's request.
-    await expect(page.locator('#inbox-badge')).toHaveText('2');
+    // The bell reads what waits on its own on every page: the turn at Bastien's table and Alex's request. Under
+    // 360 px the battle view's bar has no room for it: the menu holds it, its count on the menu's button (UX11).
+    const folded = file === 'battle' && page.viewportSize().width < 360;
+    const badge = page.locator(folded ? '#menu-inbox-badge' : '#inbox-badge');
+    await expect(badge).toHaveText('2');
     // Whole on screen, even where the header sits at the screen's top edge (the battle view on a phone).
-    await expect(page.locator('#inbox-badge')).toBeInViewport({ ratio: 1 });
-    expect(await page.locator('#inbox-badge').evaluate(badge => badge.getBoundingClientRect().top >= 0)).toBe(true);
+    await expect(badge).toBeInViewport({ ratio: 1 });
+    expect(await badge.evaluate(one => one.getBoundingClientRect().top >= 0)).toBe(true);
     await openNavigation(page);
     const nav = page.getByRole('navigation', { name: 'Main navigation' });
-    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Rules', 'Learn to play', 'Join with a code']);
+    await expect(nav.locator(':scope > :visible')).toHaveText(['Lobby', /Friends/, 'Leaderboard', 'Your stats', 'Rules', 'Learn to play', 'Join with a code', ...folded ? [/Notifications/] : []]);
     const sharedStyle = await nav.evaluate(node => {
       const props = ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'padding', 'minHeight'];
       const styleOf = selector => props.map(prop => getComputedStyle(node.querySelector(selector))[prop]);

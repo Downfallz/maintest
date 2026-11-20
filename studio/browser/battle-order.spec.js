@@ -218,7 +218,7 @@ test('a strip entry lights its creature in blue and says why it holds its place,
   const h = await mount(page);
   const entry = page.locator('#timeline [data-order-creature="4"]');
   // Each place says its initiative, and a d20 marks those a roll-off placed.
-  await expect(entry).toContainText('⚡5'); await expect(entry.locator('.timeline-die')).toHaveText('d20');
+  await expect(entry.locator('.timeline-init')).toHaveText('5'); await expect(entry.locator('.timeline-die')).toHaveText('d20');
   await expect(page.locator('#timeline [data-order-creature="6"] .timeline-die')).toHaveCount(0);
 
   await entry.click();
