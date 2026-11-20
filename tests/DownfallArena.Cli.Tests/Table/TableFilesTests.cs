@@ -237,6 +237,26 @@ public sealed class TableFilesTests
     }
 
     /// <summary>
+    /// The battle's windows draw a spell's portrait at 24 px and a mutation's form at 64 px (UX12 P2): both are
+    /// served at that size and twice it, beside the 40 px portrait a card draws.
+    /// </summary>
+    [Theory]
+    [InlineData("spell-strike", 24)]
+    [InlineData("spell-strike", 48)]
+    [InlineData("spell-strike", 40)]
+    [InlineData("spell-strike", 80)]
+    [InlineData("mutation-brute-base", 64)]
+    [InlineData("mutation-brute-base", 128)]
+    public void The_windows_pictures_are_served_at_the_size_they_are_drawn(string picture, int width)
+    {
+        var prefix = $"/page-art/{picture}-{width}.";
+        var route = Files.Routes.SingleOrDefault(route => route.StartsWith(prefix, StringComparison.Ordinal));
+
+        route.ShouldNotBeNull($"{picture} is served at {width} px");
+        Files.Get(route).ContentType.ShouldBe("image/webp");
+    }
+
+    /// <summary>
     /// Every evolution illustration the page can ask for is served as the image it is, and none is left out: the
     /// route table names each file of the folder and of its hybrids (ADR 0151, ADR 0152).
     /// </summary>

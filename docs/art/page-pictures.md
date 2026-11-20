@@ -38,6 +38,10 @@ One entry in `docs/art/page-pictures.json`:
   than the box. For a strip, give the width of one frame.
 - `pages`: each page that draws it, named as in `docs/art/page-budget.json`, and its role there: `largest` (asked for
   first, one or two a page), `first` (on the first screen, not lazy) or `lazy`.
+- `phone` (optional): the widths a page draws it at on the phone, when that page draws it at more than the first
+  width of `drawn`, each listed in `drawn`. The battle draws a spell's portrait at 40 px on a card and at 24 px in
+  the journal's rows: `"drawn": [40, 24]`, `"phone": { "table/battle": [40, 24] }`. A page it does not name draws it
+  at the first width.
 
 Then derive, and commit what it writes:
 
@@ -104,7 +108,8 @@ control that has a name; it is never the only thing that says a fact. A new mean
 
 `docs/art/page-budget.json` gives each page of the declaration two numbers: the bytes of pictures asked for
 before any scroll (`first`), and of all its pictures (`all`). They are counted as a phone takes them: the
-smallest file that fills the width drawn at twice the density. `studio/ux-pictures.test.js` fails when a page
+smallest file that fills the width drawn at twice the density, for each width the page draws it at on the phone
+(`phone`), each file once. `studio/ux-pictures.test.js` fails when a page
 goes over, and when a budget is so loose it holds nothing. Adding a picture to a page raises its number in the
 same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are read by
 `node scripts/ux/journey.mjs --paint`.

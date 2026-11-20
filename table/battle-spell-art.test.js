@@ -18,9 +18,28 @@ test('every portrait a spell or a capstone names is a picture of the kit, and ev
   assert.deepEqual([...named].sort((a, b) => a.localeCompare(b)), [...declared].sort((a, b) => a.localeCompare(b)));
 });
 
-test('every spell portrait is declared for the battle page, the field guide and the statistics at the 40 px a spell card draws it', () => {
+test('every spell portrait is declared for the battle page at the 40 px of a card and the 24 px of a row, and elsewhere at 40', () => {
+  // The battle draws a portrait at 24 px on a short screen and in the journal (docs/art/journeys/windows.md), so
+  // its budget counts both; the field guide and the statistics draw it at 40 only.
   for (const name of declared) {
-    assert.deepEqual(PAGE_ART[name].drawn, [40], name);
+    assert.deepEqual(PAGE_ART[name].drawn, [40, 24], name);
     assert.deepEqual(PAGE_ART[name].pages, { 'table/battle': 'lazy', 'showcase/mutations': 'lazy', 'table/stats': 'lazy' }, name);
+    assert.deepEqual(PAGE_ART[name].phone, { 'table/battle': [40, 24] }, name);
+    assert.deepEqual(PAGE_ART[name].sizes.map(size => size.width), [24, 40, 48, 80], name);
+  }
+});
+
+test('every form a mutation leads to is declared for the battle page at 64 px, lazy, and for the statistics at 144', () => {
+  // The pick and the Mutation Tree draw the form a mutation's `artwork` names (data/presentation/mutation-art.json),
+  // on each mutation and in the detail; a capstone names a portrait and no artwork, and keeps its portrait.
+  const artworks = [...new Set(Object.values(read('mutation-art.json')).map(visual => visual.artwork).filter(Boolean))];
+  assert.equal(artworks.length, 21);
+  for (const artwork of artworks) {
+    const picture = PAGE_ART[`mutation-${artwork}`];
+    assert.ok(picture, `mutation-${artwork} is declared and derived`);
+    assert.deepEqual(picture.drawn, [144, 64], artwork);
+    assert.deepEqual(picture.pages, { 'table/stats': 'lazy', 'table/battle': 'lazy' }, artwork);
+    assert.deepEqual(picture.phone, { 'table/battle': [64] }, artwork);
+    assert.ok([64, 128].every(width => picture.sizes.some(size => size.width === width)), `${artwork} is sent at 64 and 128 px`);
   }
 });

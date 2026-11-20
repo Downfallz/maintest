@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 is built; P2 is next.
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 and P2 are built; P3, P4 and P5 are next.
 
 ## What the owner asked for
 
@@ -80,6 +80,15 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    the forms at 64 px; the files are regenerated; `page-budget.json` holds the number
    question 4 settles. Tests: `studio/ux-pictures.test.js` (every picture has its size, the budget holds) and
    `TableFiles` for the new files.
+
+   *Built (2026-11-20)*: the 47 spell portraits are declared drawn at 40 and 24 px (files of 24, 40, 48 and 80),
+   and the 21 forms at 144 and 64 px (files of 64, 128, 144 and 288), both lazy on "table/battle". A declaration's
+   new `phone` field names the widths a page draws a picture at on the phone, and `budgetOf` counts each file it
+   takes, once ([the pages' pictures](page-pictures.md#declare-a-picture)): the field guide and the statistics still
+   count the 40 and the 144 px alone, and their numbers did not move. The 40, 80, 144 and 288 px files kept their
+   bytes. "table/battle" measures 322,218 B, as P1 did, against a budget of 327,680 B (320 KiB), first bytes 0.
+   With issue #1023, the owner's decision on the board is recorded below, and the brief's Mutation Tree draws the
+   form on each mutation of the board (192,598 B). Nothing draws the new sizes yet: P3, P4 and P5 do.
 3. **P3, the spellbook.** Two spells a row, as the brief settles them, the card's portrait in the browser, and at
    24 px in the docked sheet. AU9 of `docs/tabletop/battle-ux-parity-plan.md` (its full-details mode) is amended
    in the same pull request.
@@ -114,6 +123,10 @@ The answers:
 2. A 24 px portrait beside each spell's name in the docked spellbook, the foot held on screen.
 3. The journal draws the spell's portrait only, sent at 24 px.
 4. The budget rises to what P1 measures; every picture of a window stays lazy.
+
+Settled after P1 was merged (2026-11-20, issue #1023): the Mutation Tree's board draws each mutation's form at
+64 px too, as the pick and the tree's detail do; the 3 capstones keep their portrait at 24 px. The page's total
+does not change: 322,218 B. P5 builds it.
 
 Settled after the P1 brief was first written (2026-11-20): the spellbook shows two spells a row, at every width,
 in place of one card a row with its full text (AU9 of `docs/tabletop/battle-ux-parity-plan.md`). The brief says

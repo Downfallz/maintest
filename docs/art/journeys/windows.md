@@ -39,13 +39,13 @@ What holds for every screen of the journey:
   ([room held while it loads](../ux-craft.md#room-held-while-it-loads)). A picture that fails to load leaves no
   gap: beside a name it is not drawn (`.missing`, as the portraits do today).
 - **The sizes**, as `docs/art/page-pictures.json` declares them for the page "table/battle" (P2): a spell's portrait drawn at
-  40 px (files of 40 and 80) and at 24 px (files of 24 and 48); a mutation's form drawn at 64 px (files of 64 and
-  128). The journal's 22 px becomes 24 px, so it is sent at its own size.
-- **The owner's answer 1, read narrowly**: the form a mutation leads to is drawn on each mutation of the pick and
-  in the Mutation Tree's detail. The tree's board keeps its stage numeral and name, without a form. The plan's
-  table names "each package" of the tree as well; the owner's answer names the pick and the detail, and this brief
-  follows the answer. If the owner meant the board too, the tree's screen takes 192,598 B instead of 5,232
-  (below), and the page's total does not change: the detail can already show any of the 21 forms.
+  40 px (files of 40 and 80) and at 24 px (files of 24 and 48), the two counted (`phone`); a mutation's form drawn
+  at 64 px (files of 64 and 128). The journal's 22 px becomes 24 px, so it is sent at its own size.
+- **The owner's answer 1, and the decision after it** (2026-11-20, issue #1023): the form a mutation leads to is
+  drawn at 64 px on each mutation of the pick, on each mutation of the Mutation Tree's board and in its detail. A
+  capstone keeps its portrait at 24 px. The board's forms make the tree's screen 192,598 B, against 5,232 B for
+  the detail alone (below); the page's total does not change, since the detail could already show any of the 21
+  forms.
 - **The bytes**, measured by the session: every painting encoded with `scripts/ux/encode.py` and the declaration's
   encoding (quality 82, method 6) at the proposed widths, into a folder outside the repository (P2 commits the
   real files), and taken as a phone at density 2 takes them.
@@ -69,10 +69,9 @@ What holds for every screen of the journey:
 
 **Left, for the owner and for P2**, across the journey (each screen's **Left** names its own):
 
-- The board of the Mutation Tree without forms (the owner's answer 1, read narrowly, above).
-- The budget of 320 KiB, against 322,218 B measured.
-- For P2: `scripts/ux/pictures.mjs` (`budgetOf`) counts a picture once, at the first width it is drawn. A spell
-  drawn at 24 and at 40 px would count as 44,882 B instead of 137,818 B. P2 counts each width.
+- Settled by P2: the budget of 320 KiB holds the 322,218 B measured, the files derived; `budgetOf` counts each
+  width a page draws a picture at on the phone (`phone`, [the pages' pictures](../page-pictures.md#declare-a-picture)),
+  so a spell drawn at 24 and at 40 px counts 137,818 B, not 44,882 B.
 - The spellbook in two columns (the owner, 2026-11-20) amends AU9's "full details" mode: its two screens below,
   built by P3.
 - How each window enters, leaves and returns the focus, and the strip `history-window`, are UX12's.
@@ -186,13 +185,15 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
+| The form each mutation of the board leads to, beside its stage numeral and name (21 mutations). | 64 by 64 px | Where does each branch lead? | `table/battle-art/evolutions/<artwork>.webp`, each mutation's `artwork` |
+| A capstone's portrait beside its name on the board (Apex, Archmage, Titan), in place of a form it does not have. | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
 | The form the mutation in the detail leads to, left of its family, stage and name. | 64 by 64 px | What will this mutation make of my creature? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of the mutation open (Brute here) |
 | A capstone's portrait beside its name in the detail, in place of a form it does not have (Apex, Archmage, Titan; not on this screen). | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
 | Pummel's portrait on its card in the detail. | 40 by 40 px | Which spell is this, before its words? | `docs/art/spell-portraits/pummel.webp` |
 | Brace's portrait on its card in the detail. | 40 by 40 px | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
 
-The board's 24 mutations draw no picture (the opening: the owner's answer 1). The two spell portraits are drawn
-today, at the same size.
+The board's 21 forms follow the owner's decision (the opening, issue #1023); its 3 capstones keep the portrait
+they draw today. The two spell portraits are drawn today, at the same size.
 
 ### States
 
@@ -224,9 +225,11 @@ None.
 
 ### Cost
 
-- **Bytes**: 0 before any scroll of the page. Open on Brute after the pick, the window takes 5,232 B: the two
-  spell portraits from their 80 px files; Brute's form is the pick's file, already taken. A capstone's portrait is
-  a 48 px file (the three: 2,966 B); another mutation's form one 128 px file, 6,104 to 11,220 B.
+- **Bytes**: 0 before any scroll of the page. Open on Brute after the pick, the window takes 192,598 B: the 21
+  forms of the board from their 128 px files (184,400 B; Brute's, Warped's and Predator's are the pick's files,
+  already taken), the 3 capstones' portraits from their 48 px files (2,966 B) and the two spell portraits from
+  their 80 px files (5,232 B). The detail alone would take 5,232 B. Every form is lazy: none loads before the
+  window opens.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
 - **Shift**: 0 at 390 and 0.03 at 320 today. The form's room is held: Choose Brute does not move when it arrives.
 
@@ -237,7 +240,8 @@ None.
   reads it at 320.
 - Text under 11 px: 38 elements at 9 px at both widths (the board's stage numerals and OFFER, the detail's
   chips). The floor of 11 px is the match's ([the match's brief](match.md)); fixing it here is UX12's.
-- The board without forms: the owner's choice, in the opening.
+- The board's forms, built by P5: each mutation of the board grows by its form, in columns of `min(94vw, 400px)`;
+  the critique reads it at 320. P5's test shows that no form loads before the window opens.
 
 ## The spellbook (`spell-choice`)
 
