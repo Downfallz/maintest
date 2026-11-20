@@ -8,3 +8,16 @@
 .stats-glance dt { color: var(--muted); }
 .stats-glance dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .ladder td.empty { color: var(--muted); text-align: center; }
+/* UX10 (docs/art/journeys/pages.md): the record drawn, what the player leans on with its painting, one empty state. */
+.record-card { display: grid; gap: 6px; }
+.record-card strong { margin-top: 0; }
+.stats-leaned { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.stats-leaned .leaned h3 { margin: 0 0 10px; color: var(--brand-ember); }
+.leaned-body { display: flex; align-items: center; gap: 14px; }
+.leaned-picture { width: 144px; height: auto; aspect-ratio: 3 / 2; object-fit: contain; flex: none; }
+.leaned-words { display: grid; gap: 4px; margin: 0; }
+.leaned-words strong { font: 400 26px/1.1 var(--font-display); }
+.leaned-words span { color: var(--muted); font-size: 13px; }
+.stats-empty p { margin: 0 0 16px; color: var(--ink); line-height: 1.6; }
+.stats-main > .lobby-section { margin-bottom: 0; }
+.leaned-words span + span { margin-top: -2px; }

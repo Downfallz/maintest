@@ -10,6 +10,7 @@ import { activateSeats, savedSeats } from './session.js';
 import { mountPracticeList } from './lobby-practice.js';
 import { mountTutorials } from './lobby-tutorials.js';
 import { mountFeatured } from './lobby-featured.js';
+import { initialOf } from './friends.js';
 import { motion } from './motion.js';
 
 export function visibleTables(tables, mine, all = false) {
@@ -165,7 +166,7 @@ export function invitedState(invited) {
 
 /**
  * What a "Rematch" link asks of the lobby (ADR 0129, stage 4): the opponent to choose again, as `?rematch=` names
- * it (a friend's account id, `bot`, or `hotseat`), and the format; null when the query asks for none.
+ * it (a friend's account id, `bot`, `hotseat` or `person`), and the format; null when the query asks for none.
  */
 export function rematchRequest(search) {
   const params = new URLSearchParams(search ?? '');
@@ -173,6 +174,8 @@ export function rematchRequest(search) {
   if (!again) return null;
   const format = params.get('format') || null;
   if (again === 'hotseat') return { opponent: again, friend: null, format };
+  // An empty ladder or statistics page opens a ranked table for another player (UX10).
+  if (again === 'person') return { opponent: again, friend: null, format, ranked: true };
   // The same bot level again (ADR 0180), when the link names one.
   if (again === 'bot') return { opponent: again, friend: null, format, level: params.get('level') || null };
   // A rematch of an unranked game (ADR 0155) starts unranked too.
@@ -762,6 +765,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('opponent').querySelector('option[value="friend"]').hidden = mode === 'off';
   }
   let wanted = null;
+  let chosenFriend = null;
   // Solo plays a bot; PvP another player, a friend, or a second player on this device.
   let kind = 'pvp';
   const opponentOf = () => kind === 'solo' ? 'bot' : el('opponent').value;
@@ -788,7 +792,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('create-help').textContent = missing
       ? 'That player is not in your friends yet. Ask them from the Friends panel, then invite them.'
       : value === 'friend' && friends.length === 0 ? 'Ask a player to be your friend first: the Friends panel asks by their player name.' : help[value];
-    el('friend-row').hidden = value !== 'friend';
+    el('friend-row').hidden = value !== 'friend' || Boolean(chosenFriend);
+    if (chosenFriend && value === 'friend') el('create-help').textContent = `${chosenFriend.username} is told on their phone, and you wait at the table. One invitation at a time.`;
     // Only a game between two players can count on the ladder: a bot or a shared device never does.
     el('ranked-row').hidden = !['person', 'friend'].includes(value) || mode === 'off';
     // A ranked game is 3v3 (ADR 0171): its format is fixed while Ranked is on, and free otherwise.
@@ -836,8 +841,25 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     void loadFriends(friend).then(() => {
       if (opening !== revision || signInFirst()) return;
       choose(kind);
+      const chosen = showFriendChosen(friend && !reinvite ? friends.find(one => one.id === friend) : null);
       if (!dialog.open) dialog.showModal();
+      // The friend is chosen: the first control left to set is Ranked.
+      if (chosen) el('ranked').focus();
     });
+  }
+  // Opened on a friend (Invite, Challenge, a Rematch link), the window names them by their initial and name in place of
+  // the tabs and the two selects: the choice is made, and another opponent is a new battle (docs/art/journeys/pages.md).
+  function showFriendChosen(chosen) {
+    chosenFriend = chosen ?? null;
+    el('create-friend').hidden = !chosen;
+    for (const part of [el('create-tabs'), el('opponent'), dialog.querySelector('label[for="opponent"]')]) part.hidden = Boolean(chosen);
+    showOpponent();
+    if (chosen) {
+      el('create-friend-initial').textContent = initialOf(chosen.username);
+      el('create-friend-name').textContent = chosen.username;
+      dialog.setAttribute('aria-describedby', 'create-friend');
+    } else dialog.removeAttribute('aria-describedby');
+    return Boolean(chosen);
   }
   // Sent here by "Rematch" (ADR 0129): the dialog opens on the same opponent once the player is signed in and the
   // tables are listed, and the address is cleaned so a reload does not ask again.

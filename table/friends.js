@@ -4,6 +4,7 @@
 
 import { accountRequest, confirmAction, nameProblem } from './account.js';
 import { accountMoved, backoff, onLobbyChange } from './changes.js';
+import { numberChanged } from './motion.js';
 
 /** The sections of the panel from the host's list: what each shows, and what is said when it is empty. */
 export function friendSections(list) {
@@ -12,9 +13,28 @@ export function friendSections(list) {
   const outgoing = list?.outgoing ?? [];
   return {
     incoming: { items: incoming, title: incoming.length === 1 ? 'One player asked to be your friend' : `${incoming.length} players asked to be your friends`, shown: incoming.length > 0 },
-    friends: { items: friends, title: 'Friends', empty: 'No friends yet. Ask a player by the name on their cards.', shown: true },
+    friends: { items: friends, title: 'Friends', empty: 'No friends yet. Ask a player by their name, or from Recent opponents after a game.', shown: true },
     outgoing: { items: outgoing, title: 'Waiting for an answer', shown: outgoing.length > 0 },
   };
+}
+
+/** A player as the pages draw them: their initial (the account keeps no picture, ADR 0122). */
+export function initialOf(name) {
+  return String(name ?? '').trim().slice(0, 1).toUpperCase() || '?';
+}
+
+/** Ask is the window's one filled action while it holds no friend and no request to answer: it is the way to fill it. */
+export function askFilled(list) {
+  return !(list?.friends?.length) && !(list?.incoming?.length);
+}
+
+/**
+ * The keys of the rows a read holds that the window had not drawn; none on the window's first draw (`drawn` null).
+ * A row is keyed by its section and its player, so a request that becomes a friendship arrives in Friends.
+ */
+export function arrivals(drawn, keys) {
+  if (!drawn) return new Set();
+  return new Set(keys.filter(key => !drawn.has(key)));
 }
 
 /** What asking a name came to, as the panel says it. */
@@ -31,6 +51,10 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   let drawn = '';
   let busy = false;
   let outstanding = false;
+  // The rows already drawn, by id, so only a new one arrives (the kit's `.motion-arrive`); null before the first draw.
+  let shown = null;
+  let arrived = new Set();
+  let outgoingIds = new Set();
   const problem = (text = '') => { el('friend-problem').textContent = text; el('friend-problem').hidden = !text; };
   const note = (text = '') => { el('friend-note').textContent = text; el('friend-note').hidden = !text; };
 
@@ -41,9 +65,10 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     return result;
   }
 
-  function action(label, className, act, confirm = null) {
+  function action(label, className, act, confirm = null, name = null) {
     const button = node('button', label, className);
     button.type = 'button';
+    if (name) button.setAttribute('aria-label', name);
     button.addEventListener('click', async () => {
       if (busy) return;
       busy = true;
@@ -59,9 +84,12 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     return button;
   }
 
-  function row(link, actions) {
+  function row(link, actions, section) {
     const item = node('li', '', 'friend-row');
-    item.append(node('span', link.username, 'friend-name'));
+    if (arrived.has(`${section}:${link.id}`)) item.classList.add('motion-arrive');
+    const initial = node('span', initialOf(link.username), 'account-initial friend-initial');
+    initial.setAttribute('aria-hidden', 'true');
+    item.append(initial, node('span', link.username, 'friend-name'));
     const buttons = node('span', '', 'friend-actions');
     buttons.append(...actions);
     item.append(buttons);
@@ -71,14 +99,17 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
   function removeButton(link) {
     return action('Remove', 'secondary',
       () => request(`/api/friends/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'),
-      () => confirmAction(doc, `Remove ${link.username}?`, 'You will no longer be friends. They will not be notified.', 'Remove friend'));
+      () => confirmAction(doc, `Remove ${link.username}?`, 'You will no longer be friends. They will not be notified.', 'Remove friend'),
+      `Remove ${link.username}`);
   }
 
   function inviteButton(link) {
-    const button = node('button', 'Invite', 'primary');
+    // Quiet on every row: as many gold buttons as friends would be none. The challenge's filled action is the
+    // Create window's.
+    const button = node('button', 'Invite', 'secondary');
     button.type = 'button';
     button.disabled = outstanding;
-    button.title = outstanding ? 'You already have an invitation waiting. Cancel it first, or wait for the answer.' : `Keep a seat for ${link.username}`;
+    button.setAttribute('aria-label', `Invite ${link.username}`);
     button.addEventListener('click', () => onInvite?.(link));
     return button;
   }
@@ -90,7 +121,10 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
     onRequests(account ? (list?.incoming?.length ?? 0) : 0);
     // The lobby's recent opponents say where each friendship stands: they follow every list read here.
     onList(account ? list : null);
+    el('friend-ask-submit').classList.toggle('primary', askFilled(account ? list : null));
+    el('friend-invite-wait').hidden = !(outstanding && list?.friends?.length);
     if (!account || !list) {
+      shown = null;
       el('friend-incoming').hidden = true;
       el('friend-outgoing').hidden = true;
       el('friend-incoming-list').replaceChildren();
@@ -100,20 +134,32 @@ export function mountFriends(doc, { request = accountRequest, nav = globalThis.n
       return;
     }
     const sections = friendSections(list);
+    const keys = ['incoming', 'friends', 'outgoing'].flatMap(section => sections[section].items.map(link => `${section}:${link.id}`));
+    arrived = arrivals(shown, keys);
+    // A request of the player's that became a friendship while the window was open is said once.
+    const befriended = sections.friends.items.find(link => arrived.has(`friends:${link.id}`) && outgoingIds.has(link.id));
+    if (befriended) note(`${befriended.username} is your friend now.`);
+    shown = new Set(keys);
+    outgoingIds = new Set(sections.outgoing.items.map(link => link.id));
     el('friend-incoming-title').textContent = sections.incoming.title;
     el('friend-incoming').hidden = !sections.incoming.shown;
     el('friend-incoming-list').replaceChildren(...sections.incoming.items.map(link => row(link, [
-      action('Accept', 'primary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}/accept`, {})),
-      action('Decline', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE')),
-    ])));
+      action('Accept', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}/accept`, {}), null, `Accept ${link.username}`),
+      action('Decline', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'), null, `Decline ${link.username}`),
+    ], 'incoming')));
     el('friend-list').replaceChildren(...(sections.friends.items.length
-      ? sections.friends.items.map(link => row(link, [...(onInvite ? [inviteButton(link)] : []), removeButton(link)]))
+      ? sections.friends.items.map(link => row(link, [...(onInvite ? [inviteButton(link)] : []), removeButton(link)], 'friends'))
       : [node('li', sections.friends.empty, 'empty-state')]));
-    el('friend-count').textContent = sections.friends.items.length || '';
+    const count = String(sections.friends.items.length || '');
+    if (el('friend-count').textContent !== count) {
+      el('friend-count').textContent = count;
+      // A count that changes while the window is open plays the kit's value that changes; not on the first draw.
+      if (arrived.size) numberChanged(el('friend-count'));
+    }
     el('friend-outgoing').hidden = !sections.outgoing.shown;
     el('friend-outgoing-list').replaceChildren(...sections.outgoing.items.map(link => row(link, [
-      action('Withdraw', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE')),
-    ])));
+      action('Withdraw', 'secondary', () => request(`/api/friends/requests/${encodeURIComponent(link.id)}`, {}, undefined, 'DELETE'), null, `Withdraw request to ${link.username}`),
+    ], 'outgoing')));
   }
 
   async function refresh(quiet = false) {

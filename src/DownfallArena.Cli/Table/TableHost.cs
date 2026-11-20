@@ -15,9 +15,9 @@ using DownfallArena.Application.Work;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Domain.Resources;
-using DownfallArena.Infrastructure.Resources;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Matches;
+using DownfallArena.Infrastructure.Resources;
 using DownfallArena.Infrastructure.Tables;
 using Microsoft.Extensions.DependencyInjection;
 

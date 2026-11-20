@@ -1,4 +1,7 @@
 import { onLobbyChange } from './changes.js';
+import { numberChanged } from './motion.js';
+import { pictureElement } from './picture.js';
+import { recordBar, recordParts } from './leaderboard.js';
 
 // A player's own statistics (ADR 0168): how their ranked 3v3 games went (ADR 0171), and the mutations and spells
 // they played in them. The host computes everything from the results it keeps for the player; this page only draws it.
@@ -19,6 +22,23 @@ export function streakText(streak) {
   const word = { won: ['win', 'wins'], lost: ['loss', 'losses'], drawn: ['draw', 'draws'] }[streak.outcome] ?? ['game', 'games'];
   return streak.length === 1 ? `1 ${word[0]}` : `${streak.length} ${word[1]} in a row`;
 }
+
+/** An average length in rounds: one round, or rounds. */
+export function roundsText(rounds) {
+  if (rounds === null || rounds === undefined) return '–';
+  return rounds === 1 ? '1 round' : `${rounds} rounds`;
+}
+
+/**
+ * What a player leans on: the host's first row of mutations and of spells, which it orders by count, so the page
+ * chooses nothing; and the painting the mutation draws (`artwork`, ADR 0198's `mutation-<artwork>`), or none.
+ */
+export function leanedOn(stats) {
+  const mutation = stats.mutations?.[0] ?? null;
+  return { mutation, picture: mutation?.artwork ? `mutation-${mutation.artwork}` : null, spell: stats.spells?.[0] ?? null };
+}
+
+const times = count => (count === 1 ? 'once' : `${count} times`);
 
 /** What the mutations and spells say about which games they count, when not all of them do. */
 export function teamsNote(stats) {
@@ -53,30 +73,60 @@ function rows(doc, items, cells, empty, width) {
   });
 }
 
+let lastTally = null;
+
 export function drawStats(doc, stats) {
   const el = id => doc.getElementById(id);
-  const card = (label, tally) => {
-    const element = node(doc, 'div', null, 'stats-card');
-    element.append(node(doc, 'small', label), node(doc, 'strong', tallyText(tally)), node(doc, 'span', `${tally.games} game${tally.games === 1 ? '' : 's'} · ${percent(tally.won, tally.games)} won`));
-    return element;
-  };
-  el('record-cards').replaceChildren(card('Ranked 3v3', stats.ranked));
+  const games = stats.ranked.games;
+  // A player with no ranked game sees one empty state and the game that fills it, not four empty containers.
+  el('stats-empty').hidden = games > 0;
+  el('stats-body').hidden = games === 0;
+  el('stats-status').textContent = '';
+  if (!games) { lastTally = null; return; }
+
+  const tally = tallyText(stats.ranked);
+  const card = node(doc, 'div', null, 'stats-card record-card');
+  const parts = recordParts({ wins: stats.ranked.won, losses: stats.ranked.lost, draws: stats.ranked.drawn });
+  card.append(node(doc, 'small', 'Ranked 3v3'), node(doc, 'strong', tally, 'motion-number'));
+  if (parts) card.append(recordBar(doc, parts));
+  card.append(node(doc, 'span', `${games} game${games === 1 ? '' : 's'} · ${percent(stats.ranked.won, games)} won`));
+  el('record-cards').replaceChildren(card);
+  // A record that changes while the page is open plays the kit's value that changes, and is told once; never on load.
+  if (lastTally !== null && lastTally !== tally) {
+    numberChanged(card.querySelector('.motion-number'));
+    el('stats-status').textContent = `Your record is now ${tally}.`;
+  }
+  lastTally = tally;
+
+  const leaned = leanedOn(stats);
+  el('leaned-mutation').hidden = !leaned.mutation;
+  if (leaned.mutation) {
+    const body = [];
+    if (leaned.picture) {
+      try { body.push(pictureElement(doc, leaned.picture, { page: 'table/stats', class: 'leaned-picture' })); } catch { /* a painting this build did not derive: the name says it */ }
+    }
+    const words = node(doc, 'p', null, 'leaned-words');
+    words.append(node(doc, 'strong', leaned.mutation.name), node(doc, 'span', `Acquired ${times(leaned.mutation.bought)}`), node(doc, 'span', `${percent(leaned.mutation.won, leaned.mutation.bought)} won`));
+    body.push(words);
+    el('leaned-mutation-body').replaceChildren(...body);
+  }
+  el('leaned-spell').hidden = !leaned.spell;
+  if (leaned.spell) {
+    const words = node(doc, 'p', null, 'leaned-words');
+    words.append(node(doc, 'strong', leaned.spell.name), node(doc, 'span', `Cast ${times(leaned.spell.casts)} in ${leaned.spell.games} game${leaned.spell.games === 1 ? '' : 's'}`));
+    el('leaned-spell-body').replaceChildren(words);
+  }
 
   const glance = [
     ['Current streak', streakText(stats.streak)],
     ['Best win streak', String(stats.bestWinStreak)],
-    ['Average length', stats.averageRounds === null ? '–' : `${stats.averageRounds} rounds`],
+    ['Average length', roundsText(stats.averageRounds)],
   ];
   el('glance').replaceChildren(...glance.flatMap(([term, value]) => [node(doc, 'dt', term), node(doc, 'dd', value)]));
 
   el('teams-note').textContent = teamsNote(stats);
-  el('mutation-rows').replaceChildren(...rows(doc, stats.mutations, mutation => [mutation.name, String(mutation.bought), percent(mutation.won, mutation.bought)], 'No mutation bought yet.', 3));
+  el('mutation-rows').replaceChildren(...rows(doc, stats.mutations, mutation => [mutation.name, String(mutation.bought), percent(mutation.won, mutation.bought)], 'No mutation acquired yet.', 3));
   el('spell-rows').replaceChildren(...rows(doc, stats.spells, spell => [spell.name, String(spell.casts), String(spell.games), percent(spell.won, spell.games)], 'No spell cast yet.', 4));
-
-  const games = stats.ranked.games;
-  const counted = `${games} ranked game${games === 1 ? '' : 's'} · updates as your games end`;
-  el('stats-status').textContent = games ? counted : 'No ranked game yet. Play a ranked 3v3 game against another player: it counts here as soon as it ends.';
-  el('stats-body').hidden = false;
 }
 
 async function load(doc) {
@@ -90,6 +140,7 @@ async function load(doc) {
     if (response.status === 401) {
       doc.getElementById('stats-status').textContent = 'Sign in on the home page to see your statistics.';
       doc.getElementById('stats-body').hidden = true;
+      doc.getElementById('stats-empty').hidden = true;
       return;
     }
     if (!response.ok) throw new Error(`The host answered ${response.status}. Try again.`);

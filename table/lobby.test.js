@@ -274,3 +274,7 @@ test('a table\'s action is named by its visible words first, then the battle, wh
   assert.equal(actionName('Resume game →', table, ['player1']), 'Resume game: 3v3 battle against Hard (bot), table tb-1');
   assert.equal(actionName('Take a seat →', { ...table, seats: [table.seats[0], { seat: 'player2', kind: 'open', name: null }] }), 'Take a seat: 3v3 battle, table tb-1');
 });
+
+test('an empty ladder or statistics page opens a ranked table for another player', () => {
+  assert.deepEqual(rematchRequest('?rematch=person'), { opponent: 'person', friend: null, format: null, ranked: true });
+});
