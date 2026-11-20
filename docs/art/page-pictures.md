@@ -38,8 +38,8 @@ One entry in `docs/art/page-pictures.json`:
   than the box. For a strip, give the width of one frame.
 - `pages`: each page that draws it, named as in `docs/art/page-budget.json`, and its role there: `largest` (asked for
   first, one or two a page), `first` (on the first screen, not lazy) or `lazy`.
-- `phone` (optional): the widths a page draws it at on the phone, when that page draws it at more than the first
-  width of `drawn`, each listed in `drawn`. The battle draws a spell's portrait at 40 px on a card and at 24 px in
+- `phone` (optional): the widths a page draws it at on the phone, when that page draws it at a width other than the
+  first of `drawn`, or at more than one, each listed in `drawn`. The battle draws a spell's portrait at 40 px on a card and at 24 px in
   the journal's rows: `"drawn": [40, 24]`, `"phone": { "table/battle": [40, 24] }`. A page it does not name draws it
   at the first width.
 

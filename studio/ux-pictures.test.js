@@ -113,7 +113,12 @@ test('the battle page may load the 320 KiB the windows\' brief measured, and non
   assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 327680 });
   const measured = budgetOf(PAGE_ART, 'table/battle', budget.density);
   assert.equal(measured.first, 0);
-  assert.ok(measured.all > 98304, `${measured.all} bytes: the windows' pictures are counted at each width they are drawn`);
+  // Without phone the page would count each portrait at 40 px alone and each form at the statistics' 144: phone
+  // adds the 47 portraits' 48 px files, and counts the 21 forms at their 128 px files instead of the 288.
+  const bare = Object.fromEntries(Object.entries(PAGE_ART).map(([name, { phone, ...entry }]) => [name, entry]));
+  const fileOf = (prefix, width) => Object.entries(PAGE_ART).filter(([name]) => name.startsWith(prefix))
+    .reduce((total, [, entry]) => total + entry.sizes.find(size => size.width === width).bytes, 0);
+  assert.equal(measured.all - budgetOf(bare, 'table/battle', budget.density).all, fileOf('spell-', 48) + fileOf('mutation-', 128) - fileOf('mutation-', 288));
 });
 
 test('a declaration is refused when a role is unknown, a name is no file name, or a strip has one frame', () => {
@@ -124,6 +129,9 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ source: undefined, frames: ['table/battle-art/eclipse-battle.webp'] }), /a strip has at least two frames/);
   assert.match(bad({ drawn: [] }), /the width it is drawn at/);
   assert.match(bad({ phone: { 'table/sign-in': [533, 99] } }), /eclipse-ground: on table\/sign-in it is drawn at 99 px, a width its drawn does not list/);
+  assert.match(bad({ phone: { 'table/sign-in': [] } }), /on table\/sign-in it is drawn at one width or more/);
+  assert.match(bad({ phone: null }), /phone gives each page the widths it draws/);
+  assert.match(bad({ phone: [533] }), /phone gives each page the widths it draws/);
   assert.match(bad({ phone: { 'showcase/home': [533] } }), /eclipse-ground: phone names showcase\/home, a page that does not draw it/);
   assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
   assert.throws(() => webpSize(Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8X'), Buffer.alloc(10)])), /not a WebP file/, 'a header cut short');

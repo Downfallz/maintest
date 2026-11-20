@@ -93,7 +93,9 @@ function declared(picture) {
   if (!(Array.isArray(picture.drawn) && picture.drawn.length && picture.drawn.every(width => Number.isInteger(width) && width > 0)))
     problems.push(`${name}: the width it is drawn at, in whole pixels, the phone's first`);
   for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first or lazy, not ${role}`);
-  for (const [page, widths] of Object.entries(picture.phone ?? {})) {
+  if ('phone' in picture && !(picture.phone && typeof picture.phone === 'object' && !Array.isArray(picture.phone)))
+    problems.push(`${name}: phone gives each page the widths it draws`);
+  else for (const [page, widths] of Object.entries(picture.phone ?? {})) {
     if (!picture.pages?.[page]) problems.push(`${name}: phone names ${page}, a page that does not draw it`);
     else if (!(Array.isArray(widths) && widths.length)) problems.push(`${name}: on ${page} it is drawn at one width or more`);
     else for (const width of widths) if (!picture.drawn?.includes(width)) problems.push(`${name}: on ${page} it is drawn at ${width} px, a width its drawn does not list`);
