@@ -61,6 +61,17 @@ test('a page counts the pictures asked for before any scroll, then all of them',
   assert.deepEqual(budgetOf(art, 'ladder', 2), { first: 0, all: 9, largest: 0 });
 });
 
+test('a page that draws a picture at more than one width on the phone counts each of its files once', () => {
+  const sizes = [{ width: 24, bytes: 2 }, { width: 40, bytes: 3 }, { width: 48, bytes: 5 }, { width: 80, bytes: 8 }];
+  const art = {
+    portrait: { drawn: [40, 24], frames: 1, pages: { battle: 'lazy', guide: 'lazy' }, phone: { battle: [40, 24] }, sizes },
+    twice: { drawn: [40, 44], frames: 1, pages: { battle: 'lazy' }, phone: { battle: [40, 44] }, sizes },
+  };
+  assert.deepEqual(budgetOf({ portrait: art.portrait }, 'battle', 2), { first: 0, all: 13, largest: 0 }, 'the 80 and the 48 px files');
+  assert.deepEqual(budgetOf({ portrait: art.portrait }, 'guide', 2), { first: 0, all: 8, largest: 0 }, 'a page not named draws the first width only');
+  assert.deepEqual(budgetOf({ twice: art.twice }, 'battle', 2), { first: 0, all: 8, largest: 0 }, 'two widths that take one file count it once');
+});
+
 test('the committed pictures are the ones the declaration asks for: every file, its size, its bytes, its painting', () => {
   assert.deepEqual(check({ authored, art: PAGE_ART, read, list: () => readdirSync(new URL('table/page-art', root)) }), []);
 });
@@ -97,6 +108,19 @@ test('every page of the declaration has a budget, and its pictures hold under it
   }
 });
 
+test('the battle page may load the 320 KiB the windows\' brief measured, and none of it before any scroll', () => {
+  // docs/art/journeys/windows.md: 322,218 B with every portrait at 24 and 40 px and every form at 64 px.
+  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 327680 });
+  const measured = budgetOf(PAGE_ART, 'table/battle', budget.density);
+  assert.equal(measured.first, 0);
+  // Without phone the page would count each portrait at 40 px alone and each form at the statistics' 144: phone
+  // adds the 47 portraits' 48 px files, and counts the 21 forms at their 128 px files instead of the 288.
+  const bare = Object.fromEntries(Object.entries(PAGE_ART).map(([name, { phone, ...entry }]) => [name, entry]));
+  const fileOf = (prefix, width) => Object.entries(PAGE_ART).filter(([name]) => name.startsWith(prefix))
+    .reduce((total, [, entry]) => total + entry.sizes.find(size => size.width === width).bytes, 0);
+  assert.equal(measured.all - budgetOf(bare, 'table/battle', budget.density).all, fileOf('spell-', 48) + fileOf('mutation-', 128) - fileOf('mutation-', 288));
+});
+
 test('a declaration is refused when a role is unknown, a name is no file name, or a strip has one frame', () => {
   const list = () => readdirSync(new URL('table/page-art', root));
   const bad = change => check({ authored: { ...authored, pictures: [{ ...authored.pictures[0], ...change }, ...authored.pictures.slice(1)] }, art: PAGE_ART, read, list }).join('\n');
@@ -104,6 +128,11 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ name: 'Eclipse Ground' }), /lower case, digits and hyphens/);
   assert.match(bad({ source: undefined, frames: ['table/battle-art/eclipse-battle.webp'] }), /a strip has at least two frames/);
   assert.match(bad({ drawn: [] }), /the width it is drawn at/);
+  assert.match(bad({ phone: { 'table/sign-in': [533, 99] } }), /eclipse-ground: on table\/sign-in it is drawn at 99 px, a width its drawn does not list/);
+  assert.match(bad({ phone: { 'table/sign-in': [] } }), /on table\/sign-in it is drawn at one width or more/);
+  assert.match(bad({ phone: null }), /phone gives each page the widths it draws/);
+  assert.match(bad({ phone: [533] }), /phone gives each page the widths it draws/);
+  assert.match(bad({ phone: { 'showcase/home': [533] } }), /eclipse-ground: phone names showcase\/home, a page that does not draw it/);
   assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
   assert.throws(() => webpSize(Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8X'), Buffer.alloc(10)])), /not a WebP file/, 'a header cut short');
 });
