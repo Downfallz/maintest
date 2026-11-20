@@ -11,7 +11,8 @@ does today is in `table/` and `showcase/`, and in [the baseline](baseline.md), n
 ## The files
 
 One file a journey, named as `scripts/ux/journeys.mjs` names it: `doors.md`, `lessons.md`, `lobby.md`,
-`pages.md`, `match.md`. The stage that builds a journey writes its file, or the part of it the stage builds.
+`pages.md`, `match.md`, `windows.md`. The stage that builds a journey writes its file, or the part of it the stage
+builds.
 
 | File | What it stages | Built by |
 | --- | --- | --- |
@@ -20,7 +21,8 @@ One file a journey, named as `scripts/ux/journeys.mjs` names it: `doors.md`, `le
 | [lobby.md](lobby.md) | The lobby: the home of a player with nothing, its featured space and one filled action, the menu, the Create window, a turn that waits, the waiting room, a game that waits on someone else, and a turn that arrives. | UX9 |
 | [pages.md](pages.md) | The player's pages: the Friends window empty, with a request sent and with a friend, the Create window opened on a friend, the ladder and the statistics, each before and after a ranked game. | UX10 |
 | [match.md](match.md) | The match's frame: the round's bar, the order of play, the team labels and the captions, the dock, and one exchange followed from the actor to the next decision. The windows are UX12's. | UX11 |
-| [baseline.md](baseline.md) | Not a brief: the five journeys as they stood before any pass, a line of measures a screen. | UX2 |
+| [windows.md](windows.md) | The match's windows, their pictures first: the pick, the Mutation Tree opened from it, the spellbook at its top and at its foot, and the journal. The other windows join it with UX12. | UX12 (P1 of [its pictures' plan](../ux12-pictures-plan.md)) |
+| [baseline.md](baseline.md) | Not a brief: the five journeys as they stood before any pass, and the match's windows before UX12, a line of measures a screen. | UX2 |
 
 ## The format
 
