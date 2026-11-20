@@ -133,12 +133,12 @@ export const PAGE_ART = {
     ],
   },
   'specimen-warped-revenant-brute': {
-    from: '4a65cf54854d737c', frames: 1, drawn: [315,465], pages: {"showcase/home":"lazy"},
+    from: 'd94a6b2e005a6550', frames: 1, drawn: [315,465], pages: {"showcase/home":"lazy"},
     sizes: [
-      { file: 'specimen-warped-revenant-brute-315.d30873b7.webp', width: 315, height: 210, bytes: 52912 },
-      { file: 'specimen-warped-revenant-brute-465.47d0a553.webp', width: 465, height: 310, bytes: 99294 },
-      { file: 'specimen-warped-revenant-brute-630.9a6c9c2d.webp', width: 630, height: 420, bytes: 157342 },
-      { file: 'specimen-warped-revenant-brute-930.252728d8.webp', width: 930, height: 620, bytes: 282728 },
+      { file: 'specimen-warped-revenant-brute-315.ab952dfd.webp', width: 315, height: 210, bytes: 49030 },
+      { file: 'specimen-warped-revenant-brute-465.bb8f8668.webp', width: 465, height: 310, bytes: 91558 },
+      { file: 'specimen-warped-revenant-brute-630.4bdb1ff7.webp', width: 630, height: 420, bytes: 142204 },
+      { file: 'specimen-warped-revenant-brute-930.f20f8a23.webp', width: 930, height: 620, bytes: 248450 },
     ],
   },
   'home-ground-eclipse': {

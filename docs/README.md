@@ -12,6 +12,7 @@
 | [learning/journal.md](learning/journal.md) | One entry per change that moves a number, each a file under [learning/journal/](learning/journal/): how to write one, and the generated list. |
 | [learning/plan.md](learning/plan.md) | Plan (draft): where the learning loop is going, and what has been refuted on the way. |
 | [art/creature-art-direction.md](art/creature-art-direction.md) | Approved creature concepts, spell staging, mutation cues, and the ART-2–6 asset plan. |
+| [art/hybrid-portrait-polish.md](art/hybrid-portrait-polish.md) | Hybrid portrait retouching and AAA finishing prompts, the Revenant + Brute example, and WebP export for battle and showcase. |
 | [art/asset-intake.md](art/asset-intake.md) | ART-2 WebP references, original PNG upload paths, hashes, alpha audit and ART-3 handoff. |
 | [art/runtime-sprites.md](art/runtime-sprites.md) | ART-3 battle sprite selection, anchors, contrast and fallbacks. |
 | [art/branding.md](art/branding.md) | The official UI palette and type (with `branding.css`; regenerate with `node scripts/sync-branding.mjs`), the bone and soot of ADR 0158, and the published design system built from them (`design-system/`). |

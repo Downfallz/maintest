@@ -27,6 +27,9 @@ artwork, and the renaming of each file after what it shows.
 | `warped-transcendent-brute` | Transcendent | a Brute mutation | massive limbs | `warped-transcendent-05` | `1000011948.png` |
 | `warped-transcendent-ultimate` | Transcendent | Ultimate: a sibling line, a Predator and a Brute Stage 2 | tongue, red tissue, golden armoured leg, fire, ice | `warped-revenant-03` | `1000011946.png` |
 
+The current Revenant + Brute replaces the original intake portrait with the corrected four-legged version. The
+[retouching and AAA polish guide](hybrid-portrait-polish.md) records its anatomy, prompts and export steps.
+
 A sibling-line portrait lends the two other Warped lines, as Deathstalker's lends Plague Doctor or Parasite: its
 artwork shows traits of both, and either one held selects it. The Stage 2 that led to the Stage 3 never counts.
 
