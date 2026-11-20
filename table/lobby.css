@@ -189,7 +189,7 @@
 .home-header .account, .home-header #account-menu { flex: 0 1 auto; min-width: 0; }
 .home-header #account-name { min-width: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home-header .account-chip { min-width: 0; font-size: 12px; }
-.nav-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; padding: 0 4px; background: var(--gold); color: var(--accent-ink); font-size: 10px; }
+.nav-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; padding: 0 4px; background: var(--gold); color: var(--accent-ink); font-size: 11px; }
 /* The bell: what waits for the player (their turns, invitations, friend requests), counted on it in every page's
    header and listed in its window, each with its action. Outside the menu, so a phone sees it without opening it. */
 .inbox-button { position: relative; flex: none; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--muted); }
@@ -198,7 +198,7 @@
 .inbox-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .inbox-button:has(.inbox-badge:not([hidden])) { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
 /* Inside the bell's own box: a header at the screen's top edge (the battle view on a phone) never cuts it off. */
-.inbox-badge { position: absolute; top: 0; right: 0; min-width: 17px; height: 17px; font-size: 9px; font-weight: 700; box-shadow: 0 0 0 2px var(--paper); }
+.inbox-badge { position: absolute; top: 0; right: 0; min-width: 19px; height: 19px; font-size: 11px; font-weight: 700; box-shadow: 0 0 0 2px var(--paper); }
 .inbox-list { display: grid; gap: 22px; }
 .inbox-group h3 { margin: 0 0 8px; color: var(--muted); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 .inbox-items { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
@@ -365,7 +365,7 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .account-menu-who strong { display: block; font-size: 15px; overflow-wrap: anywhere; }
 
 /* A game opened unranked (ADR 0155): a quiet tag beside its title, and the switch in the create dialog. */
-.casual-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 600 10px/1.6 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+.casual-tag { display: inline-block; margin-left: 8px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 600 11px/1.6 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
 .ranked-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 14px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .ranked-row[hidden] { display: none; }
 .field-note { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 400; }
@@ -451,6 +451,9 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
   .featured .featured-creature { right: 4%; bottom: 4px; width: 120px; }
   .featured-text { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 8px; padding: 14px 16px 18px; }
   .home-page .featured h2 { font-size: clamp(26px, 8vw, 34px); line-height: 1.12; }
-  .featured-actions { flex-direction: column; margin-top: 6px; }
+  /* Room for the longest state (two lines of title, of status and of detail): the actions stand at its foot, so a
+     status that wraps when a turn arrives takes the room left and moves no button. */
+  .featured-text { min-height: 360px; }
+  .featured-actions { flex-direction: column; margin-top: auto; padding-top: 6px; }
   .featured-actions button { width: 100%; }
 }
