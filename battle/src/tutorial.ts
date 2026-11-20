@@ -201,57 +201,63 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     pointed = next;
   }
 
+  /** The band and the briefing of a tutorial, and what the host says of its progress. */
+  function drawLesson(view: unknown, lesson: NonNullable<ReturnType<typeof tutorialOf>>) {
+    latest = view; void readConcepts();
+    const brief = tutorialBrief(lesson, (view as { practice?: { round?: number } }).practice?.round);
+    text('practice-brief-begin', brief.begin); text('practice-brief-start', brief.start); text('practice-brief-note', brief.note);
+    el('practice-brief-skip').hidden = !brief.skip;
+    // The host says the tutorial is done: the account keeps it, said once for this practice.
+    if (lesson.done && !doneSaid) { doneSaid = true; void say('done'); }
+    if (lesson.done) void readSeries();
+    // Kept until the next practice is opened: a view that is not there yet leaves the band as it reads.
+    document.getElementById('battle')!.dataset.tutorial = String(lesson.order);
+    const band = tutorialBand(lesson);
+    text('practice-eyebrow', band.eyebrow); text('practice-title', band.title); text('practice-detail', band.detail);
+    text('practice-brief-eyebrow', band.eyebrow); text('practice-restart', band.restart);
+    el('practice-band').setAttribute('aria-label', 'Tutorial');
+    toHeader();
+  }
+  /** The coach card's step, its lines and its concept cards, or its end and the lesson that follows. */
+  function drawCard(card: Coach, lesson: ReturnType<typeof tutorialOf>) {
+    text('coach-step', card.eyebrow);
+    el('coach-lines').replaceChildren(...paragraphs(card.lines));
+    el('coach-cards').replaceChildren(...card.cards.map((one: Concept) => {
+      const button = document.createElement('button'); button.type = 'button'; button.dataset.concept = one.id;
+      const mark = document.createElement('span'); mark.setAttribute('aria-hidden', 'true'); mark.textContent = ' ⓘ';
+      button.append(one.title, mark);
+      button.addEventListener('click', () => open([one]));
+      return button;
+    }));
+    el('coach-cards').hidden = card.cards.length === 0;
+    el('coach-end').hidden = !card.done;
+    const next = card.done ? nextLesson(series, lesson) : null;
+    el('coach-next').hidden = !next;
+    if (next) { text('coach-next', next.label); el<HTMLAnchorElement>('coach-next').href = next.link; }
+    // Play again is filled only where no lesson follows: the series is the point (UX8).
+    el('coach-again').classList.toggle('primary', Boolean(card.done && !next));
+  }
+  /** The end arrives: its first way on takes the focus, once it stands where it stays, when nothing else holds it. */
+  function focusEnd() {
+    if (!shown?.done || endFocused || document.querySelector('dialog[open]')) return;
+    endFocused = true;
+    (el('coach-next').hidden ? el('coach-again') : el('coach-next')).focus({ preventScroll: true });
+  }
   /** Draws the band and the coach card for this view; `canAuto` says the field is clear for a card to open by itself. */
   function render(view: unknown, { held, canAuto }: { held: boolean; canAuto: boolean }) {
     const lesson = tutorialOf(view);
-    if (lesson) { latest = view; void readConcepts(); }
-    if (lesson) {
-      const brief = tutorialBrief(lesson, (view as { practice?: { round?: number } }).practice?.round);
-      text('practice-brief-begin', brief.begin); text('practice-brief-start', brief.start); text('practice-brief-note', brief.note);
-      el('practice-brief-skip').hidden = !brief.skip;
-      // The host says the tutorial is done: the account keeps it, said once for this practice.
-      if (lesson.done && !doneSaid) { doneSaid = true; void say('done'); }
-      if (lesson.done) void readSeries();
-      // Kept until the next practice is opened: a view that is not there yet leaves the band as it reads.
-      document.getElementById('battle')!.dataset.tutorial = String(lesson.order);
-      const band = tutorialBand(lesson);
-      text('practice-eyebrow', band.eyebrow); text('practice-title', band.title); text('practice-detail', band.detail);
-      text('practice-brief-eyebrow', band.eyebrow); text('practice-restart', band.restart);
-      el('practice-band').setAttribute('aria-label', 'Tutorial');
-      toHeader();
-    }
+    if (lesson) drawLesson(view, lesson);
     shown = lesson ? coachCard(view, { held, concepts }) : null;
     coach.hidden = !shown;
     coach.dataset.done = String(shown?.done === true);
     const nextKey = shown?.key ?? '';
-    if (shown && nextKey !== key) {
-      text('coach-step', shown.eyebrow);
-      el('coach-lines').replaceChildren(...paragraphs(shown.lines));
-      el('coach-cards').replaceChildren(...shown.cards.map((card: Concept) => {
-        const button = document.createElement('button'); button.type = 'button'; button.dataset.concept = card.id;
-        const mark = document.createElement('span'); mark.setAttribute('aria-hidden', 'true'); mark.textContent = ' ⓘ';
-        button.append(card.title, mark);
-        button.addEventListener('click', () => open([card]));
-        return button;
-      }));
-      el('coach-cards').hidden = shown.cards.length === 0;
-      el('coach-end').hidden = !shown.done;
-      const next = shown.done ? nextLesson(series, lesson) : null;
-      el('coach-next').hidden = !next;
-      if (next) { text('coach-next', next.label); el<HTMLAnchorElement>('coach-next').href = next.link; }
-      // Play again is filled only where no lesson follows: the series is the point (UX8).
-      el('coach-again').classList.toggle('primary', Boolean(shown.done && !next));
-    }
+    if (shown && nextKey !== key) drawCard(shown, lesson);
     if (!shown) turnedAway = null;
     hint();
     key = nextKey;
     place();
     point(shown);
-    // The end arrives: its first way on takes the focus, once it stands where it stays, when nothing else holds it.
-    if (shown?.done && !endFocused && !document.querySelector('dialog[open]')) {
-      endFocused = true;
-      (el('coach-next').hidden ? el('coach-again') : el('coach-next')).focus({ preventScroll: true });
-    }
+    focusEnd();
     // Read only once it has opened: a step whose cards could not open yet still owes them.
     if (shown && owed() && canAuto && open(shown.cards)) opened.add(shown.key);
   }

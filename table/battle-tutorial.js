@@ -60,8 +60,8 @@ export function nextLesson(answer, lesson) {
   const order = lesson?.order ?? 0, of = Math.max(lesson?.of ?? 0, order);
   if (!Number.isInteger(order) || order >= of) return null;
   const listed = (answer?.tutorials ?? []).find(one => one?.order === order + 1 && typeof one.link === 'string' && SAME_SITE.test(one.link));
-  return listed ? { label: `Next: ${listed.title || `tutorial ${order + 1} of ${of}`}`, link: listed.link }
-    : { label: `Next: tutorial ${order + 1} of ${of}`, link: '/#learn-to-play' };
+  const place = `tutorial ${order + 1} of ${of}`;
+  return listed ? { label: `Next: ${listed.title || place}`, link: listed.link } : { label: `Next: ${place}`, link: '/#learn-to-play' };
 }
 
 /**
