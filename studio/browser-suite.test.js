@@ -126,6 +126,10 @@ test('the showcase is deployed for its pages, the catalogue and the rulebook it 
     'table/rules.js',
     'table/battle-art/horizon/breach.webp',
     'table/fonts/OFL.txt',
+    'table/picture.js',
+    'table/page-art.js',
+    'table/page-art/colossus-308.1855df35.webp',
+    'table/motion.js',
     '.github/workflows/showcase.yml',
   ]) {
     assert.equal(plan([path], specs).showcase, true, path);

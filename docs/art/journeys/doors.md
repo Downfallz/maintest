@@ -15,6 +15,10 @@ added docs and prompts. Both contact sheets were read screen by screen, at 390 a
 The paints were not run in this session: every paint below is the one in [the baseline](baseline.md), five runs
 on a slow phone's profile, and is a number of that machine, not of a phone.
 
+The showcase's screens were read again after UX6's build, by the same walk on the UX6 branch over `ef1afb6`, and
+by `node scripts/ux/journey.mjs --paint --out <folder>` on the same machine; their numbers below are that film's.
+The walk gained `showcase-round`, the home scrolled to `#duel` by How to play.
+
 What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
@@ -29,10 +33,12 @@ What holds for every screen of the journey:
 Screens of the walk this brief leaves out, and why:
 
 - `showcase-mutations` and `showcase-rules`: reference pages a visitor opens by choice, not steps on the way to
-  play. The rulebook's words are the rulebook's (`rules/`). UX6 still fixes what their measures show, with no
-  staging: their pictures at the size they are drawn (3 and 2 sent at over twice it), their targets (23 of 58 and
-  17 of 92 under 44 px at 390), and the rulebook's axe findings (12 `link-in-text-block`, a table that scrolls
-  and cannot be focused). A brief of their own can follow if the owner asks.
+  play. The rulebook's words are the rulebook's (`rules/`). UX6 fixes what their measures showed, with no
+  staging. Their pictures are sent at the size they are drawn: none is over twice it now, where 3 and 2 were.
+  Their targets: 23 of 58 and 17 of 92 were under 44 px at 390. UX6's film shows 18 and 11, but it was taken
+  before the last fixes, which gave the guide's path links 44 px. The rulebook's links inside a sentence are now
+  underlined, and its table that scrolls can take the focus; axe still found the 12 `link-in-text-block` and the
+  table on that film. The next walk confirms these. A brief of their own can follow if the owner asks.
 - `first-lesson-brief`: the same window as `lesson-1-brief` of the lessons' journey, which UX8 briefs. What UX7
   owns is the step into it, briefed as the last beat of the name window.
 
@@ -44,35 +50,41 @@ The first door. A visitor who knows nothing arrives from a link or a search, lea
 for the game with Play now. Built by `showcase/page.mjs` from `showcase/copy.mjs`, styled by
 `showcase/showcase.css`.
 
-- **Filled action**: Play now (Jouer), in the hero. The second Play now at the foot of the page becomes a gold
-  outline with the same words: the measure counts two filled actions today, and the plan holds a screen to one.
-  The header's Play now stays an outline. How to play and every link stay quiet.
+- **Filled action**: Play now (Jouer), in the hero. The second Play now at the foot of the page is a gold
+  outline with the same words: the measure counted two filled actions before UX6 and counts one now. The
+  header's Play now stays an outline. How to play and every link stay quiet.
 
 ### Words
 
 - **Order**: the creature and its name, the title (Evolve your creatures), the pitch, Play now; then the round
-  ([A round seen played (new)](#a-round-seen-played-new)), the battlefield, the mutations, the creator's note,
-  the ways to play, and Play now again.
-- **Budget**: 780 words in English, today 741; 880 in French, today 830. The round's pictures add their
-  captions' words, not new sentences: the three moves keep their text. The specimen's line (Brute lineage ·
-  Stage III) is set at 11 px or more, not 8. The language link's visible text starts its accessible name, so
-  axe's `label-content-name-mismatch` goes: `FR` is named "FR, read in French", `EN` "EN, read in English".
+  ([A round seen played](#a-round-seen-played-showcase-round)), the battlefield, the mutations, the creator's
+  note, the ways to play, and Play now again.
+- **Budget**: 780 words in English, 741 shown before and after UX6; 880 in French, 830. The round's pictures add
+  only their `alt`, which the measure does not count: the three moves keep their text. The specimen's line
+  (Brute lineage · Stage III) is set at 11 px, not 8: no word is under 11 px now, where 4 were. The language
+  link's visible text starts its accessible name: `FR` is named "FR, read in French", `EN` "EN, read in
+  English", and axe's `label-content-name-mismatch` is gone.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground behind the hero, as an `<img>`, no longer a CSS background. | 390 by 287 px | Where does this happen? It is the largest paint, so it is asked for first. | `table/battle-art/eclipse-battle.webp` |
-| The Colossus in the hero, still an `<img>` with `fetchpriority="high"`. | 308 by 205 px | What do I play? A creature, at its last stage. | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
-| The three rounds of the battlefield, lazy as today. | 358 by 201 px | Does the ground change? | `table/battle-art/horizon/breach.webp` |
+| The eclipse ground behind the hero, an `<img>` of the picture kit asked for first, no longer a CSS background. Under 600 px it is drawn 533 px wide at any width, centred and cut by the hero; wider, at the full width. | 533 by 300 px | Where does this happen? It is the largest paint, so it is asked for first. | `table/battle-art/eclipse-battle.webp` |
+| The Colossus in the hero, an `<img>` asked for first, carrying the kit's `.motion-breath`. | 308 by 187 px | What do I play? A creature, at its last stage. | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
+| The battlefield's three rounds (the eclipse, the breach, the broken floor with the shattered sky above it), lazy. | 351 by 128 px | Does the ground change? | `table/battle-art/horizon/breach.webp` |
+| The mutations' five specimens (the base creature, then the Warped from its base to the Revenant and its Brute hybrid), lazy. | 315 by 210 px | What does a mutation do to a creature? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
+| The breach behind the ways to play, an `<img>` at the full width, no longer a CSS background, lazy. | 390 by 219 px | Where is the game played? Behind the words, a ground. | `table/battle-art/horizon/breach.webp` |
 
-The sizes come from the script UX5 builds: each picture sent at the size it is drawn, once and twice, where
-today five are sent at more than twice it. The mutations' specimens are not restaged here.
+Each picture is declared in `docs/art/page-pictures.json` and sent at the size it is drawn, once and twice, by
+`table/picture.js`: the measure counts none sent at over twice it, where five were. Wider than 600 px the
+battlefield is drawn up to 1250 px and a specimen 465 px. The rune of the header is a drawing, not counted. The
+three moves of the round are [the round's](#a-round-seen-played-showcase-round).
 
 ### States
 
 - **First paint**: the header, the title, the pitch and Play now, in the HTML; the ground's room held by its
-  `width` and `height`. The text never waits for a picture.
+  `width` and `height`. The text never waits for a picture. At 320 by 568, Play now's whole box is on the first
+  screen: on UX6's film only its top 14 px are, as before UX6 (see **Left**).
 - **Empty**: cannot be: the page is built, not fed by the host.
 - **Loaded**: as the sheet shows, with the round's pictures in the duel's section.
 - **Waiting**: Play now is a link to the game's origin, in the same tab. Between the press and the game's first
@@ -85,11 +97,11 @@ today five are sent at more than twice it. The mutations' specimens are not rest
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
 | The press | A pointer down on Play now or How to play. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
-| The breath | The hero's Colossus in view. | `transform` | [Ambience](../ux-craft.md#ambience), [A picture that moves](../ux-craft.md#a-picture-that-moves) | `--motion-breath`: the kit's `.motion-breath`, a scale of 1.5%, eased in and out |
-| The language | A press on FR or EN: a navigation inside the showcase's one origin. | `opacity` | [A page that changes](../ux-craft.md#a-page-that-changes) | `--motion-normal`, `--motion-standard` |
+| The breath | The hero's Colossus in view. | `transform` | [Ambience](../ux-craft.md#ambience), [A picture that moves](../ux-craft.md#a-picture-that-moves) | `--motion-breath`: the kit's `.motion-breath`, a scale of 1.5% from the creature's feet, eased in and out |
 
-The breath is the one ambience of the screen. It stops out of view, in a hidden tab and under less motion. I chose
-the hero for it, not the round below, because the round's strip is ambience of its own screen.
+The breath is the one ambience of the screen. `table/motion.js`, which the home now loads, plays it only in view,
+in a visible tab, and one ambience at a time: the round's strip below is ambience of its own screen. It moves the
+`scale` property, a transform. The measure counts one thing animating at rest on the home, and it is this.
 
 ### Less motion
 
@@ -97,77 +109,92 @@ the hero for it, not the round below, because the round's strip is ambience of i
 | --- | --- |
 | The press | A change of colour on the control, no scale. |
 | The breath | Nothing: the Colossus is still. |
-| The language | The page changes at once, with no fade. |
 
 ### Accessibility
 
-- **Focus**: the header (the name, its links, the language, Play now), then the hero's Play now and How to play,
-  then each section in reading order. No skip link today; one to the main content is added before the header.
+- **Focus**: the skip link to the main content first (it was already there), then the header (the name, its
+  links, the language, Play now), then the hero's Play now and How to play, then each section in reading order.
 - **Names**: the hero's pictures are decoration and keep an empty `alt`: the title and the specimen's line say
   what is shown. The language link as written under **Words**. Landmarks: the header's `nav`, `main`, the footer.
 - **Announced**: nothing: nothing changes on the page without a navigation.
-- **Targets**: 7 of 29 controls under 44 px at both widths, none under 24. At 320 px the header's Play now
-  wraps onto two lines in a box narrower than its words: it keeps one line, and every control reaches 44 px.
+- **Targets**: none of 29 under 44 px at either width, where 7 were. The header's Play now keeps one line at
+  320 px. axe finds nothing.
 
 ### Cost
 
-- **Bytes**: 744 KB of pictures before any scroll today (the baseline's paint runs). The ground and the Colossus
-  at the size they are drawn; everything below the hero stays lazy. No count is promised: UX5's budget file sets it.
-- **Largest paint**: 4.3 s today, a picture, median of five on the slow profile; aimed at 2.5 s (the plan). The
-  ground becomes an `<img>` in the HTML so the preload scanner finds it.
-- **Shift**: 0.00 today. Every picture keeps its `width` and `height`; the round's frames hold their room by
-  `aspect-ratio` before they load.
+- **Bytes**: 212 KB of pictures before any scroll, 744 KB before UX6 (median of five `--paint` runs, the same
+  machine): the ground and the Colossus at the size they are drawn, everything below the hero lazy. The budget is
+  `docs/art/page-budget.json`'s.
+- **Largest paint**: 1.1 s, 4.3 s before UX6, a picture, median of five on the slow profile; aimed at 2.5 s (the
+  plan). The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
+  Colossus is the largest the measure does not say; both are asked for first.
+- **Shift**: 0.00 before and after. Every picture keeps its `width` and `height`; the round's frames hold their
+  room by `aspect-ratio` before they load.
 
 ### Left
 
 - The foot's Play now as an outline is a choice: it never shares a phone's screen with the hero's, and the owner
   may keep it filled. The measure would then read 2.
-- Whether the ground or the Colossus is the largest paint after the change is to be read on the next `--paint`.
-- The breath is the kit's `.motion-breath`. UX6 places it and loads `table/motion.js` on the showcase, so
-  that the breath plays only in view.
+- The language beat, a fade between the English and the French page ([A page that
+  changes](../ux-craft.md#a-page-that-changes)), waits. UX4 built the transition between two pages and took it
+  out: on the host the browser refused it in seven changes of ten, and `table/motion.test.js` refuses
+  `@view-transition` in every sheet of the kit, the showcase's too. The page changes at once. The stage that
+  finds the cause (the plan, UX4's **Left**) gives the showcase its fade.
+- At 320 by 568 Play now sits 554 px down, below the fold but for its top 14 px; the header's Play now is on the
+  first screen. About 36 px of the hero give way above the kicker: my choice is the room the Colossus takes
+  (`.hero-copy`'s top padding, 195 px at 320, and the Colossus drawn to fit it), not the pitch's words.
 
-## A round seen played (new)
+## A round seen played (`showcase-round`)
 
 ### Job
 
 What the plan asks of UX6: a turn seen played before any account. It sits inside How a round works, below its
-lead: each of the three moves (Mutate, Choose a tempo, Cast) gets a frame of the real battle view above its
-text. The visitor reading the duel's section sees what each sentence looks like. The walk gains a screen scrolled
-to `#duel` when UX6 builds it.
+lead: each of the three moves (Mutate, Choose a tempo, Cast) has a picture of the real battle view above its
+numeral, name and sentence. The visitor reading the duel's section sees what each sentence looks like. The walk's
+`showcase-round` is the home scrolled to `#duel` by How to play; its measures are the whole page's, as the home's.
 
 - **Filled action**: none. The screen explains; Play now is in the hero above and at the foot below. Read the
   rules stays a quiet link.
 
 ### Words
 
-- **Order**: the section's title, its lead, then each move: its frame, its name, its sentence. Read the rules last.
-- **Budget**: 124 words in English, today 88 for the section (103 in French); the three sentences stay as
-  written, and only the frames' `alt` text is new, at most 12 words each.
+- **Order**: the section's title, its lead, then each move: its picture, its numeral, its name, its sentence.
+  Read the rules last.
+- **Budget**: 124 words in English, 88 for the section before UX6 (103 in French); the three sentences stay as
+  written, and only the pictures' `alt` text is new, 13 words at most each. The page's count, 741, does not
+  change: the measure counts the words shown, not an `alt`.
 
-The `alt` of each frame, in the player's words:
+The `alt` of each picture, in the player's words, as `showcase/copy.mjs` writes them:
 
-- Mutate: "The Mutation Tree, a Stage II mutation chosen for a Brute."
-- Choose a tempo: "A creature's tempo chosen: Instinct, to act earlier."
-- Cast: "A spell cast at a wounded enemy, the blow landing."
+- Mutate: "The Mutation Tree in a match: Brute, Warped or Predator for Creature 1."
+- Choose a tempo: "The tempo sheet in a match: Instinct or Precision for Creature 1."
+- Cast: "A Brute leaps at an enemy with Pummel, and the blow lands."
 
-The French page writes its own, in the French terms of `docs/domain/player-terminology.md`.
+Each says what the picture shows, a choice offered and not made, since the screens filmed are the choices open.
+The French page writes its own, in the French terms of `docs/domain/player-terminology.md` (Arbre des mutations).
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| Mutate: the Mutation Tree open over the board, cropped to the tree. | 358 by 201 px | What is a mutation, on the screen? | `scripts/ux/journey.mjs`, the match's `mutation-tree` screen, cropped |
-| Choose a tempo: the tempo sheet with Instinct and Precision. | 358 by 201 px | What does choosing a tempo look like? | `scripts/ux/journey.mjs`, the match's `tempo-sheet` screen, cropped |
-| Cast: a strip of six frames, a spell from its cast to the blow. | 358 by 201 px a frame | What happens when a creature acts? | `scripts/battle/filmstrip.mjs`, one spell, its frames in one file |
+| Mutate: the Mutation Tree over the board, Creature 1's three branches (Brute, Warped, Predator). | 351 by 288 px | What is a mutation, on the screen? | `docs/art/sources/pages/round-mutate.webp`, made by `scripts/ux/round.mjs` from the match's `mutation-tree` screen |
+| Choose a tempo: the tempo sheet, Instinct and Precision for Creature 1. | 351 by 288 px | What does choosing a tempo look like? | `docs/art/sources/pages/round-tempo.webp`, made by `scripts/ux/round.mjs` from the match's `tempo-sheet` screen |
+| Cast: a strip of six frames, a Brute's Pummel from the leap to the blow and back. | 351 by 288 px a frame | What happens when a creature acts? | `docs/art/sources/pages/round-cast-1.webp` to `round-cast-6.webp`, made by `scripts/ux/round.mjs` on the effects bench of `scripts/battle/filmstrip.mjs` |
 
-All three are made by the session from the real battle view, at a fixed seed, so a later pass can make them
-again. They are drawn at 320 px as 288 by 162 px. They go through UX5's sizes like any picture and are lazy.
+`scripts/ux/round.mjs` makes all three again from the real battle view. Mutate and Choose a tempo are the match
+journey's screens, walked on a table of seed 7 at 390 by 844 and density 2, cut to 390 by 320 CSS px. Choose a tempo is
+cut from 300 px down. Mutate opens on the Mutation Tree's top edge, 250 px down, below the row of the
+creatures' chips (a first cut from 225 halved that row). The Cast strip is Pummel on the effects bench, at 0, 720, 840, 960, 1080 and 1200 ms of its
+clock. The three share the shape 39:32, the bench's field of 390 by 320, not the 16:9 first asked: a 16:9 cut
+lost the creatures. They are drawn 351 px wide at 390 and 288 by 236 px at 320, declared in
+`docs/art/page-pictures.json`, and lazy. The strip's file holds its six frames side by side.
 
 ### States
 
-- **First paint**: the section's text; each frame's room held by its `aspect-ratio`, on the panel's colour.
-- **Empty**: cannot be: the frames are files of the showcase.
-- **Loaded**: three frames above three sentences; the strip shows its first frame until it is in view.
+- **First paint**: the section's text; each picture's room held by its `aspect-ratio`, on the panel's colour.
+- **Empty**: cannot be: the pictures are files of the showcase.
+- **Loaded**: three pictures above three sentences, as the sheet shows; the strip shows its first frame until
+  it is in view.
 - **Waiting**: nothing is pressed on this screen.
 - **Error**: a frame that fails to load leaves its held room and its `alt`; the sentence still reads.
 - **Offline**: as the home.
@@ -176,37 +203,42 @@ again. They are drawn at 320 px as 288 by 162 px. They go through UX5's sizes li
 
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
-| The cast | The Cast strip comes into view. It plays once, rests on its last frame, and plays again only when the strip comes back into view. | `transform` | [Show the effect](../ux-craft.md#show-the-effect), [A picture that moves](../ux-craft.md#a-picture-that-moves) | `--motion-strip`: six steps, `steps()` timing |
+| The cast | The Cast strip comes into view. It plays once, rests on its last frame, and plays again only when the strip comes back into view. | `transform` | [Show the effect](../ux-craft.md#show-the-effect), [A picture that moves](../ux-craft.md#a-picture-that-moves) | `--motion-strip` (1.2 s): six steps, `steps(6, jump-none)` |
 
-The strip is ambience: it stops under less motion, out of view and in a hidden tab. It plays once, so WCAG's
-2.2.2 does not ask for a pause; it never repeats faster than three times a second.
+The strip is ambience: `table/motion.js` plays it only in view, in a visible tab, one ambience at a time, and it
+stops under less motion. It moves the `translate` property, a transform, across the file's six frames. It plays
+once, so WCAG's 2.2.2 does not ask for a pause; it never repeats faster than three times a second. The film shows
+nothing animating at rest on this screen: the strip had not come into view.
 
 ### Less motion
 
 | Beat | Form |
 | --- | --- |
-| The cast | The settled frame: the blow landed. The `alt` says it. |
+| The cast | The first frame, still: the kit's rule for a strip under less motion (ADR 0198). The `alt` says the blow. |
 
 ### Accessibility
 
-- **Focus**: nothing new takes the focus; Read the rules stays the section's one link.
-- **Names**: each frame's `alt` as written under **Words**. The strip is one element with one `alt`, not six.
+- **Focus**: nothing new takes the focus; Read the rules stays the section's one link, 44 px tall.
+- **Names**: each picture's `alt` as written under **Words**. The strip is one element with one `alt`, not six.
 - **Announced**: nothing.
-- **Targets**: no new control.
+- **Targets**: no new control; none of the page's 29 under 44 px.
 
 ### Cost
 
-- **Bytes**: three pictures, all below the first screen and lazy. The strip is as many pictures as it has frames,
-  and counts in UX5's budget for the page.
+- **Bytes**: three pictures, all below the first screen and lazy; the strip is one file of six frames, in the
+  page's budget (`docs/art/page-budget.json`, all of the home's pictures).
 - **Largest paint**: not this section's: it is below the first screen.
-- **Shift**: none: room held by `aspect-ratio` before each frame arrives.
+- **Shift**: none: room held by `aspect-ratio` before each picture arrives; the film reads 0.00.
 
 ### Left
 
-- Frames inside the three moves, or a row of four frames for the four phases (Upkeep, Command, Combat,
-  Aftermath)? I chose the three moves: the sentences are already there and the words stay under budget.
-- The match's journey films its screens at a phone's size; whether a crop of 358 by 201 px reads at 320 px is to
-  be seen on UX6's sheet, and a frame may need to be taken from a wider viewport.
+- Pictures inside the three moves, or a row of four for the four phases (Upkeep, Command, Combat, Aftermath)? I
+  chose the three moves: the sentences are already there and the words stay under budget.
+- The pictures' text inside them (a chip, a tab's label) is the battle view's at about 0.9 of its size at 390 and
+  0.74 at 320: it is a picture of the screen, not words to read, and the `alt` carries it.
+- Under less motion the Cast strip rests on its first frame, the Brute before it acts: ADR 0198 sets a strip's
+  still form so. The settled frame, the blow landed, would say more; it amends that ADR for every strip, and is the
+  owner's choice.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

@@ -6,7 +6,11 @@
   "pages": {
     "showcase/home": {
       "first": 180224,
-      "all": 180224
+      "all": 1310720
+    },
+    "showcase/mutations": {
+      "first": 98304,
+      "all": 98304
     },
     "table/sign-in": {
       "first": 131072,

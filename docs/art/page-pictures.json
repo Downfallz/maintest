@@ -19,6 +19,78 @@
       "source": "table/battle-art/evolutions/warped-stage3-revenant.webp",
       "drawn": [107, 550],
       "pages": { "table/sign-in": "first" }
+    },
+    {
+      "name": "round-mutate",
+      "source": "docs/art/sources/pages/round-mutate.webp",
+      "drawn": [351],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "round-tempo",
+      "source": "docs/art/sources/pages/round-tempo.webp",
+      "drawn": [351],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "round-cast",
+      "frames": ["docs/art/sources/pages/round-cast-1.webp", "docs/art/sources/pages/round-cast-2.webp", "docs/art/sources/pages/round-cast-3.webp", "docs/art/sources/pages/round-cast-4.webp", "docs/art/sources/pages/round-cast-5.webp", "docs/art/sources/pages/round-cast-6.webp"],
+      "drawn": [351],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "battlefield-eclipse",
+      "source": "table/battle-art/eclipse-battle.webp",
+      "drawn": [351, 1250],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "battlefield-breach",
+      "source": "table/battle-art/horizon/breach.webp",
+      "drawn": [351, 390, 1250],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "battlefield-broken",
+      "source": "table/battle-art/horizon/broken-floor.webp",
+      "drawn": [351, 1250],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "battlefield-sky",
+      "source": "table/battle-art/horizon/shattered-sky.webp",
+      "drawn": [351, 1250],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "specimen-base-creature",
+      "source": "table/battle-art/evolutions/base-creature.webp",
+      "drawn": [315, 218, 465],
+      "pages": { "showcase/home": "lazy", "showcase/mutations": "first" }
+    },
+    {
+      "name": "specimen-warped-base",
+      "source": "table/battle-art/evolutions/warped-base.webp",
+      "drawn": [315, 465],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "specimen-warped-stage2-necrotic",
+      "source": "table/battle-art/evolutions/warped-stage2-necrotic.webp",
+      "drawn": [315, 465],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "specimen-warped-stage3-revenant",
+      "source": "table/battle-art/evolutions/warped-stage3-revenant.webp",
+      "drawn": [315, 465],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "specimen-warped-revenant-brute",
+      "source": "table/battle-art/evolutions/hybrids/warped-revenant-brute.webp",
+      "drawn": [315, 465],
+      "pages": { "showcase/home": "lazy" }
     }
   ]
 }

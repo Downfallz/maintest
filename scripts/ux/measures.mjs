@@ -86,7 +86,8 @@ export function measureInPage({ floor, target, minimum }) {
       if (/url\("?(?!data:)/.test(image)) backgrounds++;
     }
   }
-  const oversized = images.filter(image => image.naturalWidth > 2 * Math.max(1, image.getBoundingClientRect().width) * devicePixelRatio).length;
+  // A drawing has no pixels to send twice: an SVG is never sent over its size, whatever its own width says.
+  const oversized = images.filter(image => !/\.svg(?:[?#]|$)/.test(image.currentSrc) && image.naturalWidth > 2 * Math.max(1, image.getBoundingClientRect().width) * devicePixelRatio).length;
 
   const shift = globalThis.__journeyShift?.value ?? 0;
   const root = document.documentElement;

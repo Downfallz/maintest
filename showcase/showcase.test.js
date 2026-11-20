@@ -68,7 +68,7 @@ for (const [lang, file, other] of [['en', 'index.html', '/fr/'], ['fr', 'fr/inde
     assert.deepEqual(sections.slice(0, 4), ['title', 'duel-title', 'world-title', 'mutation-title']);
     assert.match(html, /<a class="discover" href="#duel">/);
     for (const href of hrefs.filter(href => href.startsWith('#'))) assert.ok(html.includes(`id="${href.slice(1)}"`), href);
-    for (const [, path] of html.matchAll(/(?:href|src)="(\/(?:assets|fonts)\/[^"]+|\/[^"/]+\.(?:css|js))"/g))
+    for (const [, path] of html.matchAll(/(?:href|src)="(\/(?:assets|fonts|page-art)\/[^"]+|\/[^"/]+\.(?:css|js))"/g))
       assert.ok(statSync(join(root, path)).size > 0, path);
     const panels = [...html.matchAll(/<figure[^>]+id="([^"]+)"[^>]* data-panel>/g)].map(match => match[1]);
     assert.deepEqual(panels, ['round-1', 'round-6', 'round-12', 'specimen-ancestral', 'specimen-warped',
@@ -189,8 +189,9 @@ for (const [lang, documents] of Object.entries(pages)) {
     assert.equal((guide.match(/class="field-art"/g) ?? []).length, 21);
     assert.equal((guide.match(/class="passive-rule"/g) ?? []).length, 3);
     assert.doesNotMatch(guide, /\/hybrids\//);
-    assert.deepEqual(readdirSync(join(root, 'assets/evolutions/hybrids')), ['warped-revenant-brute.webp']);
-    assert.match(read(documents[0]), /src="\/assets\/evolutions\/hybrids\/warped-revenant-brute\.webp"/);
+    // The one hybrid is the observation's, drawn by the picture kit: the field guide's portraits hold none.
+    assert.ok(!existsSync(join(root, 'assets/evolutions/hybrids')));
+    assert.match(read(documents[0]), /src="\/page-art\/specimen-warped-revenant-brute-\d+\.[0-9a-f]{8}\.webp"/);
     assert.match(guide, lang === 'fr' ? /Sur la créature qui lance le sort/ : /On the caster/);
   });
 
@@ -364,4 +365,61 @@ test('the apex ships a strict content policy that every page keeps to', () => {
     const html = read(String(name));
     assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>|\sstyle="|\son[a-z]+="/, String(name));
   }
+});
+
+// UX6 (docs/art/ux-craft-plan.md, docs/art/journeys/doors.md): the first door shows the game played.
+const picturesOf = html => [...html.matchAll(/<img\s[^>]*>/g)].map(([tag]) => tag);
+const attribute = (tag, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+
+for (const [lang, file] of [['en', 'index.html'], ['fr', 'fr/index.html']]) {
+  test(`${lang}: a round is seen played, each move a picture of the real battle view with its name for a screen reader`, () => {
+    const duel = /<section id="duel"[\s\S]*?<\/section>/.exec(read(file))[0];
+    const moves = [...duel.matchAll(/<li>([\s\S]*?)<\/li>/g)].map(([, html]) => html);
+    assert.equal(moves.length, 3);
+    for (const [index, move] of moves.entries()) {
+      assert.match(move, /^<figure class="move-frame">/, 'the picture comes before the move\'s name');
+      const [tag] = picturesOf(move);
+      assert.match(attribute(tag, 'src'), new RegExp(`^/page-art/round-${['mutate', 'tempo', 'cast'][index]}-`));
+      assert.equal(attribute(tag, 'loading'), 'lazy', 'below the first screen, it loads when near');
+    }
+    // The Cast strip is one element with one name; its frames have none.
+    assert.match(moves[2], /<span class="motion-strip" data-frames="6" role="img" aria-label="[^"]{20,}"><img [^>]*alt=""/);
+    for (const move of moves.slice(0, 2)) assert.ok(attribute(picturesOf(move)[0], 'alt').split(' ').length <= 14);
+  });
+
+  test(`${lang}: every picture of the home is the kit's, sent at the size it is drawn, the ground asked for first`, () => {
+    const html = read(file), tags = picturesOf(html);
+    const kit = tags.filter(tag => attribute(tag, 'src').startsWith('/page-art/'));
+    // The brand's rune is a drawing; every painting comes from the kit, with its sizes.
+    assert.deepEqual(tags.filter(tag => !kit.includes(tag)).map(tag => attribute(tag, 'src')), ['/assets/brand-mark.svg', '/assets/brand-mark.svg']);
+    for (const tag of kit) {
+      assert.ok(attribute(tag, 'srcset') && attribute(tag, 'sizes'), tag);
+      for (const [, path] of attribute(tag, 'srcset').matchAll(/(\/page-art\/\S+)/g)) assert.ok(existsSync(join(root, path)), path);
+    }
+    const first = kit.filter(tag => attribute(tag, 'fetchpriority') === 'high').map(tag => attribute(tag, 'src'));
+    assert.equal(first.length, 2);
+    assert.match(first[0], /^\/page-art\/eclipse-ground-/, 'the ground is the largest paint, in the HTML');
+    assert.match(first[1], /^\/page-art\/colossus-/);
+    // No painting waits for the sheet: the stylesheet names none.
+    assert.doesNotMatch(read('showcase.css'), /url\('\/assets\/[^']+\.webp'\)/);
+  });
+
+  test(`${lang}: one filled action, a breathing Colossus, and a language link named by its own letters`, () => {
+    const html = read(file);
+    assert.equal((html.match(/class="gold-button"/g) ?? []).length, 1);
+    assert.match(html, /<img class="picture hero-beast motion-breath"/);
+    assert.match(html, /<script type="module" src="\/motion\.js"><\/script>/);
+    assert.ok(statSync(join(root, 'motion.js')).size > 0);
+    const [, label, letters] = /<a class="language"[^>]* aria-label="([^"]+)"[^>]*>([A-Z]{2})<\/a>/.exec(html);
+    assert.ok(label.startsWith(letters), `${label} starts with ${letters}`);
+  });
+}
+
+test('the showcase sends the kit\'s files only, none twice, and no picture smaller than 11 px of text beside it', () => {
+  const sent = readdirSync(join(root, 'page-art'));
+  assert.ok(sent.length > 0);
+  for (const name of sent) assert.match(name, /^[a-z0-9-]+-\d+\.[0-9a-f]{8}\.webp$/);
+  assert.ok(!existsSync(join(root, 'assets/breach.webp')) && !existsSync(join(root, 'assets/shattered-sky.webp')));
+  const css = read('showcase.css');
+  for (const [, size] of css.matchAll(/\.specimen span \{[^}]*font-size: (\d+)px/g)) assert.ok(Number(size) >= 11, `the specimen's line at ${size} px`);
 });

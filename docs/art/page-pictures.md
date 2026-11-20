@@ -63,7 +63,8 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 - `alt` says what is shown; leave it out for decoration. `sizes` says the width it is drawn at when it is not
   the declaration's first; for a strip it is the width of all its frames. `class` goes on the image.
 - `pictureHtml` and `stripHtml` write the same as text, for a page built before it is served. The showcase's
-  build passes its own folder as `base`, once UX6 has it copy `table/page-art/` there.
+  build copies the files of every picture declared for a `showcase/` page into its own `page-art/`, and its
+  pages pass `SHOWCASE_ART` (`showcase/layout.mjs`) as `base`.
 - The image carries its `width` and `height`, and the class `picture`: never wider than its room, its height
   following. Its room is held before it loads.
 - Never write a derived file's name in a page: it changes when the picture is derived again.
@@ -130,3 +131,10 @@ that holds its place in backticks, and the prompt in a fenced block under the ta
 
 A painting that also joins the battle goes through [the battle's intake](asset-intake.md) instead, under
 `table/battle-art`.
+
+## A picture of the game itself
+
+A page that shows the game played draws the real battle view, not a painting: `scripts/ux/round.mjs` takes the
+showcase's round from the match journey's screens and the effects bench's film, at a fixed seed, into
+`docs/art/sources/pages/`. Those files are a picture's `source` or `frames` like any painting; run the script
+again after the battle view changes, then `pictures.mjs`.

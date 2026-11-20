@@ -1168,6 +1168,20 @@ phone 390 px wide at twice the density takes its pictures, and exits 1 when one 
 pictures the briefs of `docs/art/journeys/` ask of the owner, each with its screen, its size, the painting that
 holds its place and its prompt.
 
+### ux/round.mjs
+
+```bash
+node scripts/ux/round.mjs
+node scripts/ux/round.mjs --out <folder>
+```
+
+Makes the pictures of the round seen played on the showcase (UX6, docs/art/journeys/doors.md) from the real battle
+view, at a phone's size and twice its density: Mutate and Choose a tempo from the match journey's `mutation-tree`
+and `tempo-sheet` screens on a table of seed 7, each cut to 390 by 320 CSS pixels; Cast from the effects bench's
+film of Pummel, six of its frames. It writes them as WebP under `docs/art/sources/pages/` (`--out` elsewhere, to
+look before replacing), the sources `pictures.mjs` then derives. It needs what `journey.mjs` and
+`battle/filmstrip.mjs` need, and `python3` with Pillow; it exits 1 on an argument it does not take.
+
 ### recap-fixture.py
 
 ```bash

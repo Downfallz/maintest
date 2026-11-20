@@ -1,7 +1,8 @@
-import { escape, layout } from './layout.mjs';
+import { escape, layout, SHOWCASE_ART } from './layout.mjs';
 import { cuePath, STROKED } from '../battle/src/cue-art.js';
 import { lore } from './lore.mjs';
 import { stageNumeral } from '../table/terms.js';
+import { pictureHtml } from '../table/picture.js';
 
 const families = ['brute', 'predator', 'warped'];
 const key = id => id.split(':')[1];
@@ -116,7 +117,7 @@ export function guidePage(c, catalogue, app) {
     <div class="contain guide-page">
       <header class="guide-head"><div><p class="kicker">${c.guide}</p><h1>${l.guideTitle}</h1><p class="lead">${l.guideIntro}</p>
         <p class="catalogue-counts">${forms} ${l.formTotal} <span>·</span> ${catalogue.nodes.length - forms} ${l.passiveTotal} <span>·</span> ${countSpells} ${l.spellTotal}</p></div>
-        <img src="/assets/evolutions/base-creature.webp" width="1536" height="1024" alt="${escape(l.altBase)}"></header>
+        ${pictureHtml('specimen-base-creature', { page: 'showcase/mutations', base: SHOWCASE_ART, alt: l.altBase, sizes: '(max-width: 650px) 218px, 435px' })}</header>
       <div class="guide-tools"><nav class="family-jumps" aria-label="${l.familyLabel}">${families.map((family, i) => `<a href="#family-${family}">${l.familyNames[i]}</a>`).join('')}</nav>
         <div class="field-search" data-search hidden><label for="field-query">${l.search}</label><div><input id="field-query" type="search" placeholder="${escape(l.placeholder)}" autocomplete="off"><button type="button" data-clear hidden>${l.clear}</button></div>
         <span data-search-status role="status" class="visually-hidden"></span></div></div>

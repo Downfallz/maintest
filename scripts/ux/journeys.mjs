@@ -32,7 +32,7 @@ async function home(page, origin) {
 const doors = {
   id: 'doors',
   title: 'The two doors',
-  screens: ['showcase-home', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
+  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -44,6 +44,10 @@ const doors = {
     await walk.screen('showcase-home');
     const play = await page.getByRole('link', { name: 'Play now' }).first().getAttribute('href');
     if (new URL(play).origin !== new URL(GAME_ORIGIN).origin) throw new Error(`Play now leads to ${play}, not to the game.`);
+    // How to play: the round seen played, each move a picture of the battle view (UX6).
+    await page.getByRole('link', { name: 'How to play' }).click();
+    await page.locator('#duel .move-frame img').first().waitFor();
+    await walk.screen('showcase-round');
     await page.goto(`${set.showcase}/fr/`);
     await walk.screen('showcase-home-fr');
     await page.goto(`${set.showcase}/mutations/`);

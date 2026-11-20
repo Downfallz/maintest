@@ -61,7 +61,8 @@ async function settle(page) {
 }
 
 async function picture(page, measures, viewport) {
-  if (measures.window || measures.height <= viewport.height) return page.screenshot();
+  // A screen the walk scrolled to (a section of a long page) is pictured as the visitor sees it.
+  if (measures.window || measures.height <= viewport.height || await page.evaluate(() => scrollY > 0)) return page.screenshot();
   return page.screenshot({ fullPage: true, clip: { x: 0, y: 0, width: viewport.width, height: Math.min(measures.height, SCREENS_SHOWN * viewport.height) } });
 }
 
@@ -101,15 +102,15 @@ async function film(page, act, { frames = 12, interval = 40 } = {}) {
  * Walk one journey at one size on a browser. Returns its screens in the order reached, each { name, staged,
  * measures, png }, with `blocked`, the choices it had to make by script; or, with `strip`, the frames of that
  * interaction. It throws when the walk misses a screen it
- * names or reaches one it does not.
+ * names or reaches one it does not. `scale` is the screen's density: 1 for a sheet, 2 for a picture a page shows.
  */
-export async function walkJourney(browser, journey, viewport, { showcase, axe = null, strip = null, frames, interval } = {}) {
+export async function walkJourney(browser, journey, viewport, { showcase, axe = null, strip = null, frames, interval, scale = 1 } = {}) {
   const filmed = strip ? journey.strips?.[strip] : null;
   if (strip && !filmed) throw new Error(`The ${journey.id} journey has no strip named ${strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
   const set = await raiseSet(showcase);
   const contexts = [];
   const person = async () => {
-    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: scale });
     await context.addInitScript(watchShiftInPage);
     // The seat's views as the page reads them, for the walks that play (studio/browser/seat-views.js).
     await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);
