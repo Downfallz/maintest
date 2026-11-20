@@ -31,6 +31,7 @@
     <Content Include="..\..\scenarios\bugs\*.json" Link="scenarios\bugs\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\*.webp" Link="table\battle-art\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\horizon\*.webp" Link="table\battle-art\horizon\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\table\battle-art\spells\*.webp" Link="table\battle-art\spells\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\evolutions\*.webp" Link="table\battle-art\evolutions\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\battle-art\evolutions\hybrids\*.webp" Link="table\battle-art\evolutions\hybrids\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\table\page-art\*.webp" Link="table\page-art\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
