@@ -180,6 +180,7 @@
     ]
   },
   "spell:hateful_sacrifice:v1": {
+    "portrait": "blood-price",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -238,6 +239,7 @@
     ]
   },
   "spell:infectious_blast:v1": {
+    "portrait": "contagion",
     "family": "biological",
     "motif": "spores",
     "delivery": "cast",
@@ -309,6 +311,7 @@
     ]
   },
   "spell:mortal_wound:v1": {
+    "portrait": "eviscerate",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -325,6 +328,7 @@
     ]
   },
   "spell:night_raid:v1": {
+    "portrait": "blood-hunt",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -528,6 +532,7 @@
     ]
   },
   "spell:soul_devourer:v1": {
+    "portrait": "devour",
     "family": "biological",
     "motif": "bite",
     "delivery": "melee",
@@ -624,6 +629,7 @@
     ]
   },
   "spell:tranquilizer_dart:v1": {
+    "portrait": "paralyzing-barb",
     "family": "biological",
     "motif": "quill",
     "delivery": "projectile",

@@ -2,7 +2,8 @@
   "tier:apex:v1": {
     "family": "predator",
     "motif": "precision",
-    "effect": "capstone-apex"
+    "effect": "capstone-apex",
+    "portrait": "apex"
   },
   "tier:archmage:v1": {
     "family": "warped",
