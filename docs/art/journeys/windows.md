@@ -9,7 +9,7 @@ proposal: the owner has not yet seen the journey's sheets.
 
 Written from the walk `node scripts/ux/journey.mjs windows --out <folder>` on `main` at `74506ea` with this branch's
 walk (`scripts/ux/journeys.mjs`, journey `windows`). Both contact sheets were read screen by screen, at 320 by 568
-and 390 by 844, with their measures. The strip `history-window` was not filmed for this brief: how the journal
+and 390 by 844, with their measures. The strip `history-window` is in the walk but was not filmed for this brief: how the journal
 enters and leaves is UX12's, not P1's. At 320 the walk could not press `#history-open` after `spell-choice-foot`
 (the header's bell covers it, as it covers `#settings` in the match journey) and pressed it by script. A screen's
 name is its journey's: the `match` journey films the same Evolution sheet as `mutation-tree`; here it is
@@ -61,19 +61,20 @@ What holds for every screen of the journey:
 - **The page's budget** (the owner's answer 4: it rises to what P1 measures): the page "table/battle" in
   `docs/art/page-budget.json` goes from 98,304 B (96 KiB) in all to **327,680 B (320 KiB)**, first bytes 0. The
   margin over 322,218 B is 5,462 B, less than one more form at 128 px (6,104 B at the least).
-- **If the budget were short, what goes first.** The forms are 184,400 B of the 322,218. Leaving a form off one
-  screen saves nothing while another screen can draw the same file, so the first to go is the form in the Mutation
-  Tree's detail, the pick keeping its own (the pick is where the question "what will my creature become?" is
-  asked); that lowers the page's total only once the pick's forms are drawn smaller too, at a size P2 would measure
-  first. The spell portraits stay: 137,818 B for the three places they answer.
+- **If the budget is short**, the form leaves the Mutation Tree's detail and the pick's forms are drawn smaller.
+  Dropping the detail's form alone saves nothing: the pick draws the same file. P2 measures the smaller size first.
+  The spell portraits stay: 137,818 B for the three places they answer.
+- **The screen's size decides a spell portrait's size**, never the window it is in: 24 px on a screen under 660 px
+  tall (in portrait), 40 px on a taller one, where the card has the room; the journal's rows, 24 px everywhere.
 
 **Left, for the owner and for P2**, across the journey (each screen's **Left** names its own):
 
 - The board of the Mutation Tree without forms (the owner's answer 1, read narrowly, above).
 - The budget of 320 KiB, against 322,218 B measured.
 - For P2: `scripts/ux/pictures.mjs` (`budgetOf`) counts a picture once, at the first width it is drawn. A spell
-  drawn at 24 and at 40 on the battle page is taken at both, so the budget would read 44,882 B for the spells in
-  place of 137,818. `budgetOf` counts each width a picture is drawn at, or the budget holds less than the page takes.
+  drawn at 24 and at 40 px would count as 44,882 B instead of 137,818 B. P2 counts each width.
+- The spellbook in two columns (the owner, 2026-11-20) amends AU9's "full details" mode: its two screens below,
+  built by P3.
 - How each window enters, leaves and returns the focus, and the strip `history-window`, are UX12's.
 
 ## The pick (`mutation-pick`)
@@ -85,19 +86,22 @@ mutate. The player reads what each mutation offered makes of the creature, picks
 answers "what will my creature become?" before the mutation's words.
 
 - **Filled action**: none until a mutation is chosen, then Confirm choice, at the sheet's foot (filled 0 at both
-  widths today: Confirm choice is drawn dim and disabled before a choice). Full mutation tree, Pass remaining
+  widths today: Confirm choice is drawn dim and disabled before a choice). Full mutation tree (today's label), Pass remaining
   picks, Inspect creature, Close and the recipients' tabs are quiet.
 
 ### Words
 
 - **Order**: the sheet's title and the picks remaining; each mutation, its form, then its name and tags; the foot.
   The rule sentence comes last, under the mutations at 390 (it is above them today).
-- **Budget**: 86 words at 390 px (86 today), 53 at 320 by 568 (78 today). Under 660 px tall the sentence "3
-  creatures can mutate, 2 picks left: … Later Mutation phases bring new picks for any of them." (25 words) is hidden
-  from sight and kept as the graph's description; "2 team picks remaining" says the count. A person could disagree:
-  the sentence is the only place the screen says one pick goes to one creature; on a short screen the forms and
-  the names come first. "Mutation tree" becomes **Mutation Tree** in the sheet's title, and "Full mutation tree"
-  becomes **Full Mutation Tree** (`docs/domain/player-terminology.md`). The pictures add no word.
+- **Budget**: 86 words at 390 px (86 today), 53 at 320 by 568 (78 today).
+- **On a short screen**: under 660 px tall the sentence "3 creatures can mutate, 2 picks left: … Later Mutation phases bring new picks for
+  any of them." (25 words) is hidden from sight and kept as the graph's description; "2 team picks remaining" says
+  the count.
+- **A person could disagree**: the sentence is the only place the screen says one pick goes to one creature; on a
+  short screen the forms and the names come first.
+- **The labels**: "Mutation tree" (today's label) becomes **Mutation Tree** in the sheet's title, and "Full mutation tree" (today's
+  label) becomes **Full Mutation Tree** (`docs/domain/player-terminology.md`).
+- **The pictures**: they add no word.
 
 ### Pictures
 
@@ -164,7 +168,7 @@ None.
 
 ### Job
 
-Opened from the pick's Full mutation tree: the whole tree of the creature, a column per family on a phone, with
+Opened from the pick's Full Mutation Tree: the whole tree of the creature, a column per family on a phone, with
 the first offered mutation's detail open as a bottom sheet. The player reads where each branch leads and may choose
 the mutation in hand from its detail. The detail's form answers "what will this mutation make of my creature?".
 
@@ -175,7 +179,7 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 
 - **Order**: the window's title; the creature; the board's family and its stages; the detail: the family and
   stage, the form beside the name, Choose, the spells, Opens.
-- **Budget**: 119 words at both widths (119 today). "Creature 1 · Mutation tree" becomes "Creature 1 · Mutation
+- **Budget**: 119 words at both widths (119 today). "Creature 1 · Mutation tree" (today's label) becomes "Creature 1 · Mutation
   Tree". The pictures add no word.
 
 ### Pictures
@@ -239,40 +243,63 @@ None.
 
 ### Job
 
-The player's creature's place in the order has come: the spellbook is docked under the field. The player reads the
+It is the player's creature's turn in the order: the spellbook is docked under the field. The player reads the
 spells, the offensive first, and taps one to go to its targets. A spell's portrait lets the eye find a spell it
 knows before reading.
 
-- **Filled action**: none: a spell's card is the choice, and leads to its targets; Declare spell, at the foot, is
-  hidden for an action. The × and the tempo and energy chips are quiet.
+- **Filled action**: none: a spell's card is the choice, and leads to its targets; Declare spell, at the foot,
+  shows only when an intent is declared. The × and the tempo and energy chips are quiet.
+- **Two spells a row**: the owner's choice of 2026-11-20, at 320 by 568, at 390 by 844 and on every wider screen, the side
+  panel included: a column is about 140 px wide at 320 and 170 px at 390. Today `battle/src/spellbook.ts` sets the
+  list to full details, which `table/battle.css` turns into one column; that mode goes (**Left**).
+- **A card's face, in its column**: top to bottom,
+  - the portrait and the spell's name, always written whole: a long name wraps to a second line, never cut;
+  - the targeting ("One enemy", "Self");
+  - the cost and crit chips, on their own row under the targeting (beside the name they would leave it about
+    60 px at 320);
+  - the availability ("Available", "New · Available", or why not);
+  - each effect line as its icon and its numbers only (Strike: the Damage icon and 3; Brace: the Defense icon,
+    +1 and 3 rounds as "+1 · 3").
+- **The full text**: it goes to the chosen card. A tap chooses a spell as a draft, as today (no second tap submits,
+  AU9); the targets step then shows the chosen card in full above the foot, where AU10's summary sits: the effect
+  lines in words, the crit note, "at this tempo", the host's text unchanged. Declare spell is the commitment.
+  AU9's "every spell is read in full before it is chosen" becomes **read in full before it is declared**: the
+  choice of a card is undone by going back, which keeps the card the player was on. A person could disagree: a
+  player who compares two spells' effects in words now taps one, reads, goes back and taps the other; the icons
+  and numbers on the faces are what compares them at a glance.
 
 ### Words
 
 - **Order**: the creature and "choose a spell"; its place, its tempo, its energy; each group's title; each spell,
-  its portrait beside its name, its targets, its availability, its effects.
-- **Budget**: 131 words at 390 px (131 today), 117 at 320 (117 today). The pictures add no word. A card's crit
-  note ("Instinct cannot crit. At Precision, …") is the host's catalogue, not the page's: its place is under
-  **Left**.
+  its portrait beside its name, its targeting, its chips, its availability, its effects' icons and numbers.
+- **Budget**: 106 words at 390 px (131 today), 92 at 320 (117 today). What leaves the faces is 25 words: Pummel's
+  crit note (15, "Instinct cannot crit. At Precision, …"), its hint "at this tempo" (3), and the effect lines' words
+  (7: Damage twice, Energy, Defense twice, rounds twice). They are counted on the targets screen, on the chosen
+  card, at most 20 there (Pummel's). The pictures add no word.
+- **The crit note**: the host's catalogue, not the page's; its place is under **Left**.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| Strike's portrait on its card, left of its name and targets. | 40 by 40 px | Which spell is this, at a glance, before its words? | `docs/art/spell-portraits/strike.webp` |
-| Pummel's portrait. | 40 by 40 px | The same, for Pummel. | `docs/art/spell-portraits/pummel.webp` |
-| Focus's portrait. | 40 by 40 px | The same, for Focus. | `docs/art/spell-portraits/focus.webp` |
-| Brace's portrait. | 40 by 40 px | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
+| Strike's portrait on its card, left of its name and targeting. | 40 by 40 px at 390 by 844; 24 by 24 px at 320 by 568 | Which spell is this, at a glance, before its words? | `docs/art/spell-portraits/strike.webp` |
+| Pummel's portrait. | 40 by 40 px at 390 by 844; 24 by 24 px at 320 by 568 | The same, for Pummel. | `docs/art/spell-portraits/pummel.webp` |
+| Focus's portrait. | 40 by 40 px at 390 by 844; 24 by 24 px at 320 by 568 | The same, for Focus. | `docs/art/spell-portraits/focus.webp` |
+| Brace's portrait. | 40 by 40 px at 390 by 844; 24 by 24 px at 320 by 568 | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
 
-At 390 by 844 they are drawn as today. On a screen under 660 px tall, as at 320 by 568, they are drawn at 24 by 24
-beside the name (the next screen).
+The rule of 660 px still holds, and the screen's height alone decides the size (the opening): on a screen 660 px
+tall or more, as at 390 by 844, 40 by 40, left of the name and the targeting, which keeps the name about 100 px of
+a 170 px column; under 660 px tall, as at 320 by 568, 24 by 24 in the card's head before the name (the next
+screen). No third size: 24 and 40 px are the two the plan declares.
 
 ### States
 
 - **First paint**: not reached: the sheet opens on the host's question.
 - **Empty**: not reachable: a creature always knows a spell; one that cannot be cast is shown disabled with its
   availability.
-- **Loaded**: the groups and their cards, as filmed, the portraits drawn.
-- **Waiting**: after a card is tapped, the targets on the field (the match's `targets`).
+- **Loaded**: the groups and their cards, two a row, the portraits drawn; a group with an odd count leaves its
+  last cell empty, the card keeping its column's width.
+- **Waiting**: after a card is tapped, the targets on the field (the match's `targets`), the chosen card in full.
 - **Error**: `#combat-dialog-error` at the foot, the cards unchanged (read in the code, not seen).
 - **Offline**: `#connection` and the field dimmed; a portrait not yet loaded keeps its room empty.
 
@@ -286,37 +313,58 @@ None.
 
 ### Accessibility
 
-- **Focus**: on the first spell that can be cast, as today (`battle/src/spellbook.ts`).
-- **Names**: the portrait's `alt` is empty: the card's button speaks the spell's name. axe finds nothing.
+- **Focus**: on the first spell that can be cast, as today (`battle/src/spellbook.ts`); then the next card in
+  reading order, left then right, row by row.
+- **Names**: each card's button is named by the spell's name first, as written on it, then its cost, targeting,
+  availability and each effect in words (the icon's text alternative), so the words the face leaves are still
+  said. The portrait's `alt` is empty. axe finds nothing today.
 - **Announced**: nothing new.
-- **Targets**: 27 controls at 390 and 25 at 320, none under 44 px.
+- **Targets**: 27 controls at 390 and 25 at 320 today, none under 44 px. A card in a column of 140 px stays
+  44 px tall and wide at the least; the gap between two cards of a row is at least 8 px.
 
 ### Cost
 
-- **Bytes**: 0 before any scroll of the page. Open at 390, the window takes 7,482 B: the four portraits from their
-  80 px files.
+- **Bytes**: unchanged per spell by the columns: 0 before any scroll of the page. Open at 390, the window takes
+  7,482 B: the four portraits from their 80 px files.
 - **Largest paint**: not this screen's: the sheet opens after the page's first paint.
-- **Shift**: 0 at 390 and 0.03 at 320 today; each portrait's room is held.
+- **Shift**: 0 at 390 and 0.03 at 320 today; each portrait's room is held, and a card's height does not change
+  when its cost and availability arrive (AU9: the card does not grow under the pointer).
 
 ### Left
 
+- **The two columns amend AU9**: in `docs/tabletop/battle-ux-parity-plan.md`, its "explicit full-details mode"
+  and "full details exposes … complete card text" become the face in a column and the chosen card in full on the
+  targets step, read before Declare spell. The plan's row for AU9 is amended with this change; P3 builds it.
+- The chosen card in full on the targets step adds up to 20 words to the match's `targets` screen ([the match's
+  brief](match.md)); its budget is that brief's.
 - The crit note on Pummel's card states a rule in the catalogue's words; a link to the rulebook in its place is
   the `rulebook-writer`'s and the host's, not the page's.
-- Text under 11 px: 3 elements at 10 px at both widths (the crit's `d20 6+`, `at this tempo`), for UX12.
+- Text under 11 px: 3 elements at 10 px at both widths (the crit's `d20 6+`, `at this tempo`), for UX12; the hint
+  leaves the face, the chip's `d20 6+` stays.
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 
 ### Job
 
 The same spellbook scrolled to its last spell, on a screen 568 px tall: the place where the docked sheet must keep
-its foot (`#combat-dialog-error`, and Declare spell when an intent is declared) on screen with the pictures in.
+its foot (`#combat-dialog-error`, and Declare spell, which shows only when an intent is declared) on screen with
+the pictures in.
 
 - **Filled action**: none, as on the spellbook; Declare spell, when it shows, is the foot's.
+- **Two a row**: as the spellbook, the 4 spells of the walk are two rows, Strike and Pummel under Offensive, Focus
+  and Brace under Defensive.
+- **What the sheets let me judge**: the foot is pinned outside the cards' scroller (`table/battle.css`), so it
+  stays on screen whatever the cards' height; at 320 by 568 the sheet is 352 px tall (`min(62dvh, 490px)`), and its
+  header and chips take about 130 px of it on the sheet, leaving about 220 px to the cards. A card in full in one
+  column is 110 to 130 px tall today (Strike, Brace on the sheet). **Not measured**: a face's height in a column of
+  140 px, so whether both rows and both group titles fit in 220 px without a scroll. P3's film measures it at 320;
+  if they do not, the second row scrolls under the header, the foot still in view.
 
 ### Words
 
-- **Order**: as the spellbook; the last spell's last effect, then the foot.
-- **Budget**: 117 words at 320 px (117 today), 131 at 390 (131 today). The pictures add no word.
+- **Order**: as the spellbook; the last row's cards, then the foot.
+- **Budget**: 92 words at 320 px (117 today), 106 at 390 (131 today): the spellbook's, the same cards. The
+  pictures add no word.
 
 ### Pictures
 
@@ -324,16 +372,16 @@ its foot (`#combat-dialog-error`, and Declare spell when an intent is declared) 
 | --- | --- | --- | --- |
 | Each spell's portrait beside its name, in the card's head (Focus and Brace in view here). | 24 by 24 px, at 320 by 568 (40 by 40 at 390 by 844) | Which spell is this, where the foot must stay on screen? | `docs/art/spell-portraits/brace.webp`, and `focus.webp`, `strike.webp`, `pummel.webp` |
 
-Under 660 px tall the portrait leaves the card's first column and sits in the head, before the name: the targets
-and availability take the whole width, and no card grows taller than it is today without a picture. The rule is
-the sheet's height, the one the pick already uses for its tabs.
+Under 660 px tall the portrait sits in the card's head, before the name, in a column of about 140 px: the name has
+about 100 px beside it and wraps to a second line rather than being cut; the targeting, the chips, the availability
+and the effects' icons take the column's width under it.
 
 ### States
 
 - **First paint**: not reached.
 - **Empty**: not reachable, as the spellbook.
-- **Loaded**: the last spell whole above the foot, as filmed.
-- **Waiting**: the targets screen, as the spellbook.
+- **Loaded**: the last row whole above the foot.
+- **Waiting**: the targets screen, the chosen card in full, as the spellbook.
 - **Error**: the alert at the foot, in view without scrolling the cards (read in the code, not seen).
 - **Offline**: as the spellbook.
 
@@ -348,22 +396,27 @@ None.
 ### Accessibility
 
 - **Focus**: the card the player was on is kept when the sheet is opened again (`battle/src/spellbook.ts`).
-- **Names**: the portrait's `alt` is empty.
+- **Names**: each card's button speaks the spell's name first, as on the spellbook; the portrait's `alt` is
+  empty.
 - **Announced**: `#combat-dialog-error` is an alert, said without moving the focus.
-- **Targets**: 25 controls at 320, none under 44 px; a card with its 24 px portrait stays 44 px tall at the least.
+- **Targets**: 25 controls at 320 today, none under 44 px; a card with its 24 px portrait, in its column, stays
+  44 px tall and wide at the least.
 
 ### Cost
 
-- **Bytes**: 0 before any scroll of the page. Open at 320 by 568, the window takes 3,502 B: the four portraits from
-  their 48 px files (against 7,482 from the 80 px files at 390).
+- **Bytes**: unchanged per spell by the columns: 0 before any scroll of the page. Open at 320 by 568, the window
+  takes 3,502 B: the four portraits from their 48 px files (against 7,482 from the 80 px files at 390).
 - **Largest paint**: not this screen's.
 - **Shift**: 0.03 at 320 today; the portrait's room in the head is held, so the name does not move when it arrives.
 
 ### Left
 
-- Overlaps 18 at 320 and 5 at 390, against 1 at the spellbook's top: the cards scrolled under the sheet's chips row
-  count as overlapping (at 320 Focus's `Available` line is cut under it). The critique reads whether a card is
-  covered without a way to reach it, at 320 and at 200% text (P3's test).
+- Overlaps 18 at 320 and 5 at 390, against 1 at the spellbook's top, are the walk's own scroll: the cards
+  scrolled under the sheet's chips row count as overlapping (at 320 Focus's `Available` line is cut under it).
+  P3 does not chase them as new. The critique reads whether a card is covered without a way to reach it, at 320
+  and at 200% text (P3's test).
+- Whether the two rows fit above the foot at 320 by 568 without a scroll is not measured (the Job): P3's film says.
+- The two columns amend AU9: the spellbook's **Left**.
 
 ## The journal (`history`)
 
@@ -429,6 +482,6 @@ None.
 
 ### Left
 
-- One element animates at rest at 390 (`animating` 1, 0 at 320): the measure does not name it. It is not the
-  journal's unless the critique finds it is; nothing here is ambience.
+- One element animates at rest at 390 (`animating` 1, 0 at 320): the measure does not name it. The critique names
+  it; until then it is not counted as the journal's.
 - The revealed mutations' chips under 44 px (9 at 390), for UX12.
