@@ -59,6 +59,7 @@
     ]
   },
   "spell:crazed_specter:v1": {
+    "portrait": "death-wail",
     "family": "necromantic",
     "motif": "spirits",
     "delivery": "cast",
@@ -95,6 +96,7 @@
     ]
   },
   "spell:engulfing_flames:v1": {
+    "portrait": "incinerate",
     "family": "elemental",
     "motif": "fire",
     "delivery": "cast",
@@ -223,6 +225,7 @@
     ]
   },
   "spell:ice_spear:v1": {
+    "portrait": "deep-freeze",
     "family": "elemental",
     "motif": "ice",
     "delivery": "cast",
@@ -454,6 +457,7 @@
     ]
   },
   "spell:restorative_burst:v1": {
+    "portrait": "renewal-burst",
     "family": "astral",
     "motif": "vital",
     "delivery": "cast",
@@ -487,6 +491,7 @@
     ]
   },
   "spell:revenant_guards:v1": {
+    "portrait": "wraithguard",
     "family": "necromantic",
     "motif": "spirits",
     "delivery": "cast",
@@ -613,6 +618,7 @@
     ]
   },
   "spell:toxic_waves:v1": {
+    "portrait": "void-pulse",
     "family": "astral",
     "motif": "void",
     "delivery": "cast",

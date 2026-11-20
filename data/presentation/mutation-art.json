@@ -8,7 +8,8 @@
   "tier:archmage:v1": {
     "family": "warped",
     "motif": "circuit",
-    "effect": "capstone-archmage"
+    "effect": "capstone-archmage",
+    "portrait": "archmage"
   },
   "tier:assassin:v1": {
     "family": "predator",
