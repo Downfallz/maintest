@@ -6,12 +6,12 @@ See [ADR 0131](../adr/0131-give-confirmed-arena-spells-a-visual-vocabulary.md) f
 
 ## Portraits
 
-A spell visual may name a `portrait`: a square WebP in `table/battle-art/spells/`. The spell card draws it at 40 px
-beside the spell's name, and the journal at 22 px; a compact card, in a docked sheet, keeps its text only. The
-picture is decorative (`alt=""`): the name beside it is the text. The owner approved the eight 512 px paintings,
-for the starting actions and the Stage I spells; they are kept in `docs/art/spell-portraits/`, outside the image,
-and the table serves each at 80 px, twice the size it is drawn, encoded by `scripts/ux/encode.py` (quality 82,
-method 6). `table/battle-spell-art.test.js` holds the names and the files together, both ways, and that size.
+A spell visual may name a `portrait`. The battle page draws it from the picture kit as `spell-<name>`
+([page-pictures.md](page-pictures.md), ADR 0198): the spell card at 40 px beside the spell's name, the journal at
+22 px; a compact card, in a docked sheet, keeps its text only. The picture is decorative (`alt=""`): the name beside
+it is the text. The owner approved the eight 512 px paintings, for the starting actions and the Stage I spells; they
+are kept in `docs/art/spell-portraits/`, outside the image, as the kit's sources, and the kit derives the sizes sent.
+`table/battle-spell-art.test.js` holds the names and the kit's declarations together, both ways.
 
 ## Coverage
 

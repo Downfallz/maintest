@@ -29,8 +29,8 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
 - `presentation/spell-art.json`: how the battle view draws each spell's confirmed cast (ADR 0131): a family, a motif and
   a delivery keyed by the spell's id. The builder checks them against the spells and the vocabularies and
   publishes them beside the schema as `spell-art.json`, outside the content hash; the host serves them on each
-  card as `visual`. An entry may name a `portrait`: the bare lowercase name (letters, digits, hyphens) of a picture
-  in `table/battle-art/spells/` (`docs/art/spell-vfx.md#portraits`); the builder refuses any other. An entry may
+  card as `visual`. An entry may name a `portrait`: the bare lowercase name (letters, digits, hyphens) of the
+  picture kit's `spell-<name>` (`docs/art/spell-vfx.md#portraits`); the builder refuses any other. An entry may
   carry a `staging` (ADR 0196): the beats the battle's effects kit plays. Each
   beat has a `beat` kind (`motif`, `burst`, `flow`, `trail`, `gather`, `glow`, `flash`, `shake`, `pulse`), the
   millisecond it starts `at`, and named parameters (`on`, `lasts`, `count`, `shape`, `tint`, `blend`,

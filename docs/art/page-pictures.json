@@ -271,6 +271,54 @@
       "source": "table/battle-art/evolutions/warped-stage3-transcendent.webp",
       "drawn": [144],
       "pages": { "table/stats": "lazy" }
+    },
+    {
+      "name": "spell-focus",
+      "source": "docs/art/spell-portraits/focus.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-strike",
+      "source": "docs/art/spell-portraits/strike.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-pummel",
+      "source": "docs/art/spell-portraits/pummel.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-brace",
+      "source": "docs/art/spell-portraits/brace.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-venom-claw",
+      "source": "docs/art/spell-portraits/venom-claw.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-quill",
+      "source": "docs/art/spell-portraits/quill.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-shock",
+      "source": "docs/art/spell-portraits/shock.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
+    },
+    {
+      "name": "spell-revitalize",
+      "source": "docs/art/spell-portraits/revitalize.webp",
+      "drawn": [40],
+      "pages": { "table/battle": "lazy" }
     }
   ]
 }

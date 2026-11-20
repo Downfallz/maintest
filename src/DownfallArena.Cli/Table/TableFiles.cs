@@ -241,15 +241,6 @@ internal sealed partial class TableFiles
             ["/admin-diagnosis.js"] = (Path.Combine(tableDirectory, "admin-diagnosis.js"), JavaScript),
         };
 
-        var spellArt = Path.Combine(tableDirectory, "battle-art", "spells");
-        if (Directory.Exists(spellArt))
-        {
-            foreach (var file in Directory.EnumerateFiles(spellArt, "*.webp"))
-            {
-                _routes[$"/battle-art/spells/{Path.GetFileName(file)}"] = (file, Webp);
-            }
-        }
-
         foreach (var art in HorizonArt)
         {
             _routes[$"/battle-art/horizon/{art}.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", $"{art}.webp"), Webp);

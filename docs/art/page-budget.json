@@ -23,6 +23,10 @@
     "table/stats": {
       "first": 0,
       "all": 638976
+    },
+    "table/battle": {
+      "first": 0,
+      "all": 16384
     }
   }
 }
