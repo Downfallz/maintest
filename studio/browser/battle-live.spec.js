@@ -93,7 +93,8 @@ test('no seat is read before a seat is chosen, and only the chosen one after', a
 });
 
 test('a game the lobby opened names itself in the first frame, until its board arrives (UX9)', async ({ page }) => {
-  await page.addInitScript(() => sessionStorage.setItem('downfall.arena.arrival.v1', JSON.stringify({ table: 'table-a', line: 'Round 4 against Rook' })));
+  // The lobby hands the line over with the seat tokens of the address it opens, and when.
+  await page.addInitScript(() => sessionStorage.setItem('downfall.arena.arrival.v1', JSON.stringify({ table: 'table-a', line: 'Round 4 against Rook', tokens: ['second'], at: Date.now() })));
   const state = await mount(page);
   let release;
   const held = new Promise(resolve => { release = resolve; });

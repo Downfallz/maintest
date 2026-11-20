@@ -224,3 +224,88 @@ test('a lesson\'s action opens it', () => {
   doc.ids['featured-action'].listeners.click();
   assert.deepEqual(went, ['/battle?scenario=t1']);
 });
+
+// What the reviewers found (UX9's review): each failed before its fix.
+function mounted(options = {}) {
+  const doc = page(), listeners = {};
+  const win = { addEventListener: (kind, heard) => { listeners[kind] = heard; } };
+  const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {}, win, ...options });
+  return { doc, featured, listeners };
+}
+
+test('a page brought back from the back-forward cache gives the featured action back, no longer opening', () => {
+  const { doc, featured, listeners } = mounted();
+  featured.setLessons([]); featured.setGames([game('g')]);
+  doc.ids['featured-action'].listeners.click();
+  assert.equal(doc.ids['featured-action'].textContent, 'Opening…');
+
+  listeners.pageshow({ persisted: true });
+  assert.equal(doc.ids['featured-action'].textContent, 'Play your turn →');
+  assert.equal(doc.ids['featured-action'].attributes['aria-busy'], undefined);
+  featured.setGames([game('g', { mine: false })]);
+  assert.equal(doc.ids['featured-action'].textContent, 'Open the game →', 'it follows the host again');
+});
+
+test('an action that could not open its game is given back', () => {
+  const { doc, featured } = mounted({ enter: () => { throw new Error('refused'); } });
+  featured.setLessons([]); featured.setGames([game('g')]);
+  assert.throws(() => doc.ids['featured-action'].listeners.click());
+  assert.equal(doc.ids['featured-action'].textContent, 'Play your turn →');
+});
+
+test('while it opens, the action is named by what it does now', () => {
+  const { doc, featured } = mounted();
+  featured.setLessons([]); featured.setGames([game('g', { round: 3 })]);
+  doc.ids['featured-action'].listeners.click();
+  assert.equal(doc.ids['featured-action'].attributes['aria-label'], 'Opening: round 3 against Rook');
+});
+
+test('a finger lifted keeps the game it pressed until the click is handled, whatever arrived meanwhile', () => {
+  const entered = [];
+  const { doc, featured } = mounted({ enter: entry => entered.push(entry.table.id) });
+  featured.setLessons([]); featured.setGames([game('waits', { mine: false })]);
+  const action = doc.ids['featured-action'];
+  action.listeners.pointerdown();
+  featured.setGames([game('waits', { mine: false }), game('arrived')]);
+  action.listeners.pointerup?.();
+  action.listeners.click();
+  assert.deepEqual(entered, ['waits']);
+});
+
+test('on a host that saves no games, the featured Play a bot is disabled, as New battle is', () => {
+  const { doc, featured } = mounted();
+  featured.setLessons([]); featured.setGames([]);
+  featured.setDisabled(true);
+  assert.equal(doc.ids['featured-action'].disabled, true);
+  featured.setGames([game('g')]);
+  assert.equal(doc.ids['featured-action'].disabled, false, 'a game to resume is not a new table');
+});
+
+test('a turn that brings another game to the featured space is said too', () => {
+  const { doc, featured } = mounted();
+  featured.setLessons([]); featured.setGames([game('waits', { mine: false })]);
+  featured.setGames([game('waits', { mine: false }), game('arrived')]);
+  assert.equal(doc.ids['featured-said'].textContent, 'Your turn');
+});
+
+test('the featured lesson is the one Learn to play marks as next, whatever order the host lists them in', () => {
+  const cards = [lesson(3), { ...lesson(2), next: true }, lesson(1, { done: true })];
+  assert.equal(featuredChoice({ mine: [], lessons: cards }).lesson.id, 't2');
+});
+
+test('a round the host could not read in time keeps the last one known for that table', () => {
+  const { doc, featured } = mounted();
+  featured.setLessons([]); featured.setGames([game('g', { round: 7 })]);
+  const later = game('g'); later.table.round = null;
+  featured.setGames([later]);
+  assert.equal(doc.ids.welcome.textContent, 'Round 7 against Rook');
+  assert.match(doc.ids['featured-art'].children[0].attributes.src, /home-ground-breach-/);
+});
+
+test('a cue left unread goes stale within the minute', () => {
+  const kept = new Map(), session = { getItem: key => kept.get(key) ?? null, setItem: (key, value) => kept.set(key, value), removeItem: key => kept.delete(key) };
+  writeArrival(session, 'g', 'Round 3 against Rook', ['g-token'], 1000);
+  assert.equal(arrivalFor(session, '?player1=g-token', 1000 + 59000), 'Round 3 against Rook');
+  assert.equal(arrivalFor(session, '?player1=g-token', 1000 + 61000), null);
+  assert.equal(readArrival(session, 'g', 1000 + 61000), null);
+});

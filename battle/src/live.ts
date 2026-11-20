@@ -583,7 +583,7 @@ function render() {
   let instruction = '';
   if (view && playbackState.active) instruction = playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.';
   else if (view) instruction = lessonOverText(view) ?? mutation.prompt ?? guide.objective;
-  else if (arriving) instruction = 'Opening the board…';
+  else if (arriving) instruction = 'Opening the game…';
   text('instruction', instruction);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;

@@ -60,9 +60,11 @@ What holds for every screen of the journey:
 - **The press.** The featured action says `Opening…` at once and sets `aria-busy="true"` until the page changes; a
   second press does nothing. The battle's first frame carries the cue: the lobby hands the featured title ("Round 1
   against Rook") to the battle page through the tab's session storage, keyed by the table and the seat tokens, read
-  once. The battle page names the game in its headline (`#actor-name`) and says "Opening the board…" as its
-  instruction (`#instruction`) until the board arrives. Session storage, not the address: a link shared or kept
-  would carry a round that is no longer true.
+  once. The battle page names the game in its headline (`#actor-name`) and says "Opening the game…" as its
+  instruction (`#instruction`) until the board arrives, from the start of the seats' discovery; the frame the
+  page paints before its script runs still says Battle view (under **Left**). The cue is stale after a minute, and
+  a page brought back from the back-forward cache gives the action back. Session storage, not the address: a link
+  shared or kept would carry a round that is no longer true.
 - **One filled action a screen.** Every other action of the home is quiet (an outline): a game card's Resume game,
   the Your turn band's Play next, Learn to play's Play, a recent opponent's Challenge, an invitation's Accept & play,
   ＋ New battle under the featured action. The Your turn band is left out when it would hold only the featured game
@@ -348,7 +350,7 @@ pauses while it is open: the creature is under the backdrop, out of view as ambi
 - **Names**: the window is a `<dialog>` named by its title; the × is named "Close new table".
 - **Announced**: the problem through its alert.
 - **Targets**: 2 of 8 under 44 px on PvP, 1 under 24 (the Ranked box, its row is the target); 1 of 7 on Solo (the ×).
-  The × and the Ranked row reach 44.
+  The × reaches 44; the Ranked box is 24 px, the floor of WCAG 2.5.8, its whole row the target.
 
 ### Cost
 
@@ -418,7 +420,7 @@ lazy, for the home's page as above.
 
 - **First paint**: the featured space's room, as on the home of a player with nothing.
 - **Empty**: cannot be: a turn waits. The group with no game says what fills it: "No games against players in
-  progress. Take an open seat below, or open a table for another player." with Open a table →, or "No games against
+  progress. Take an open seat below, or open a table." with Open a table →, or "No games against
   bots in progress. A bot answers at once, any time." with Play a bot → (the Create window on Solo), each an
   outline.
 - **Loaded**: as filmed: the bot's game featured. In `home-waiting`, the table that waits for a player stays below,
@@ -494,7 +496,7 @@ None of the lobby's: the field and its creatures are the canvas's, the `battle-d
 ### States
 
 - **First paint**: the battle page's. With the cue, its headline names the game the lobby handed it and its
-  instruction says "Opening the board…", until the board arrives; then the room.
+  instruction says "Opening the game…", until the board arrives; then the room.
 - **Empty**: cannot be: the room is the empty seat.
 - **Loaded**: as filmed.
 - **Waiting**: the whole screen is a wait: the host's stream says when the seat is taken and the match begins.

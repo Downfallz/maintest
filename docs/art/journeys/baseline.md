@@ -108,8 +108,8 @@ At 390 by 844:
 
 ## The lobby
 
-`home-turn-arrives`, a turn that arrives on the open home, was added by UX9: its line is UX9's walk of 2026-11-20,
-the first that has the screen, not the baseline's.
+`home-turn-arrives`, a turn that arrives on the open home, was added by UX9: its line comes from UX9's walk of
+2026-11-20, not from the baseline, whose walk had no such screen.
 
 At 320 by 568:
 

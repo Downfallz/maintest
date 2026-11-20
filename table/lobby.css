@@ -60,7 +60,7 @@
 .game-row-who .who.open { color: var(--muted); font-weight: 400; }
 .game-row-who .vs { font: italic 13px var(--font-display); color: var(--muted); }
 .game-row-detail { grid-area: detail; margin: 0; color: var(--muted); font-size: 12px; min-width: 0; }
-.game-row > :is(button, a) { grid-area: action; justify-self: end; min-height: 40px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+.game-row > :is(button, a) { grid-area: action; justify-self: end; min-height: 44px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
 .game-row > a.button-link { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--gold); text-decoration: none; }
 @media (max-width: 760px) {
   .game-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "top action" "who action" "detail action"; gap: 4px 12px; padding: 12px 14px; }

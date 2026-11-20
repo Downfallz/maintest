@@ -436,9 +436,17 @@ hands it over under a fresh token and code, so an invitation already sent for it
 and place availability survive redeployment through the same recorded store as the decision journal, and a
 table that never began is closed after twenty hours nobody asked anything of it (ADR 0115).
 
+The **featured space** opens the home with its one filled action, chosen from what the host says (UX9,
+`lobby-featured.js`, [the lobby's brief](../docs/art/journeys/lobby.md)): a turn of the player's, a person's before
+a bot's; then a game of theirs waiting on someone else; then the next lesson not done, unless it and every lesson
+after it were skipped; then Play a bot, with New battle quiet under it. The game on show stays while it is
+eligible, and whatever arrives while its action has the focus or a finger. Its press says Opening… and hands the
+battle the game's line through the tab's session storage (`arrival.js`, key `downfall.arena.arrival.v1`, read once,
+stale after a minute), which the battle's first frame names until its board arrives.
+
 **Your turn**, above Your games, gathers every game against a player that waits for the player, the one whose time
 to answer runs out soonest first, and **Play next** opens that one; a game against a bot always waits for its player,
-so it is left to its group. The games stay in their groups below too, where the ones waiting for the player come
+so it is left to its group. A lone turn that the featured space already shows has no band. The games stay in their groups below too, where the ones waiting for the player come
 first, in the same order. Every card of one's own says the day its game was created and whether it is ranked: a
 game between players, in 3v3, not opened unranked, each seat held by an account of its own (ADR 0124, 0171). A game
 waiting for the player also says what happened since their last visit (ADR 0194), the same line in the inbox:

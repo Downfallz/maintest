@@ -495,34 +495,45 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    and reach the correct field. Extend the current lobby walk to deliver that turn through the host. Check that
    a repeated update leaves the card settled and that a late picture never moves the button.
 
-   *Built (2026-11-20)*: [the lobby's brief](journeys/lobby.md), written by the designer from the walk. The home's
-   hero became a featured space (`table/lobby-featured.js`) with the home's one filled action, chosen from what the
-   host says: a turn of the player's, a person's before a bot's (a bot always waits, and would hide a player whose
-   time runs); then a game of theirs waiting on someone else; then the next lesson not done, unless it and every
-   lesson after it were skipped; then Play a bot, with New battle quiet under it. A featured game stays while it is
-   eligible, and stays whatever arrives while its action has the focus or a finger. Its words, its status and its
-   button change in place: when its turn arrives, the status plays the kit's number beat and the same button says
-   Play your turn →. The ground follows the round as the battle lays its plates (the eclipse, the breach from round 6,
-   the shattered sky from round 10), alone for a game, since the lobby has no creature's confirmed form; a lesson and
-   Play a bot stand the lesson's creature on the eclipse, and the creature breathes, the screen's one ambience. The
-   grounds and the ancestral creature are declared for the home (`docs/art/page-pictures.json`), the eclipse asked
-   for first once someone can play. The room is held in every state, every line kept and the actions at the foot,
-   and the footer waits for the space: on the slow phone the home's shift went from 0.21 to 0.00. On the press the
-   action says Opening… at once, and the battle's first frame names the game (`table/arrival.js`, read once by
-   `battle/src/live.ts`) until its board arrives. Every other action of the home is an outline: the walk's home
-   screens went from 2 to 4 filled actions to 1. The empty lists say what fills them, with one quiet button that does
-   it. `#lobby-status` is empty at rest. A table's action is named by its visible words first. Nothing the lobby
-   writes is under 11 px. The Create window's Ranked line is 8 words. The walk gained `home-turn-arrives`: Rook takes
-   the walker's open seat while the home is open, and the strip `turn-arrives` films the change. Two clips of about ten
-   seconds at 390 px, full and less motion, show two games, the rest, the turn arriving, the press and the right field.
-   Tests: `table/lobby-featured.test.js`, `lobby-tutorials.test.js`, `lobby.test.js`, five cases in
-   `lobby-home.spec.js`, one in `battle-live.spec.js`.
+   *Built (2026-11-20)*: [the lobby's brief](journeys/lobby.md), written by the designer from the walk and corrected
+   after its critique. The home's hero became a featured space (`table/lobby-featured.js`) that holds the home's one
+   filled action. The host's answer picks it, in this order. First, a turn of the player's, a person's before a bot's:
+   a bot always waits, and would hide a player whose time runs. Second, a game waiting on someone else. Third, the
+   next lesson not done, unless it and every lesson after it were skipped. Last, Play a bot, with New battle quiet
+   under it.
 
-   Left: PAINT_LEFT the brief's **Left** ([the lobby](journeys/lobby.md)): whether a skipped first lesson is featured
-   again, whether an invitation takes the featured space, the plan's ash behind a creature (the breath stands in), the
-   Your turn band that repeats the featured game, the Create window's actions below its first screen at 320 by 568,
-   and the waiting room's frame, UX11's. The walk delivers the turn by a seat taken, not by Rook answering inside a
-   round; the clip and `lobby-home.spec.js` read the second form.
+   The game on show stays while it is eligible, and whatever arrives while its action has the focus or a finger.
+   Its words and its button change in place. When its turn arrives, the eyebrow plays the kit's animation for a
+   value that changes, the button changes to Play your turn →, and a status region says the turn once.
+
+   For a game, the ground alone follows the round, as in the battle (the eclipse, the breach from round 6, the
+   shattered sky from round 10): the lobby has no confirmed creature form. A lesson and Play a bot stand the lesson's
+   creature on the eclipse. The creature breathes, the screen's one ambience, and stops under a window or the menu.
+   The grounds and the ancestral creature are declared for the home (`docs/art/page-pictures.json`); the eclipse
+   loads first once someone can play.
+
+   The space keeps its height in every state: every line stays, and the actions stand at its foot. The footer waits
+   for it. On the slow phone the home's layout shift went from 0.21 to 0.00, and its largest paint is 2.3 s, under
+   the 2.5 s budget. On the press, the action says Opening… at once. The battle's dock then names the game
+   (`table/arrival.js`, read by `battle/src/live.ts`) until its board arrives. A page brought back from the
+   back-forward cache gives the action back.
+
+   The walk's home screens had 2 to 4 filled actions before; each has 1 now. Each empty list says what fills it, and
+   has one quiet button that does it. `#lobby-status` is empty at rest. A table's accessible name starts with its
+   visible words. Nothing the lobby writes is under 11 px, and every control of the home is 44 px. The Create
+   window's Ranked line is 8 words. The walk gained `home-turn-arrives`: Rook takes the walker's open seat while the
+   home is open, and the strip `turn-arrives` films the change. Two clips of about ten seconds at 390 px, one with
+   full motion and one with less, show two games in progress, the home at rest, the turn arriving, the press and
+   the right game's field. Tests: `table/lobby-featured.test.js`, `lobby-tutorials.test.js`, `lobby.test.js`,
+   `motion.test.js`, six cases in `lobby-home.spec.js`, one in `battle-live.spec.js`.
+
+   Left, as the brief's **Left** lists it ([the lobby](journeys/lobby.md)): whether a skipped first lesson is
+   featured again, whether an invitation takes the featured space, the plan's ash behind a creature (the breath
+   stands in), the room left between a game's status and its action on a phone, the Create window's actions below
+   its first screen at 320 by 568, and the waiting room's frame, UX11's. The battle's very first frame, painted
+   before its script runs, still says Battle view for about half a second. The Ranked box is 24 px, its whole row the
+   target. The walk delivers the turn by a seat taken, not by Rook answering inside a round; `lobby-home.spec.js`
+   reads the second form. The design system's page has no card for the featured space yet.
 10. **UX10, the player's pages.** Friends, the leaderboard and the statistics: a player seen as more than an
     initial, a record and a rating drawn and not only written, the mutation and the spell a player leans on shown
     with their paintings, a rank that moves seen moving, and each empty page teaching and linking to the game that

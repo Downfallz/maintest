@@ -1133,7 +1133,14 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   await action.click();
   await page.waitForURL(/\/battle\?player1=waits-token$/);
   expect(await page.evaluate(() => sessionStorage.getItem('pressed'))).toBe('Opening…');
-  expect(await page.evaluate(() => sessionStorage.getItem('downfall.arena.arrival.v1'))).toBe(JSON.stringify({ table: 'waits', line: 'Round 7 against Bastien', tokens: ['waits-token'] }));
+  const cue = JSON.parse(await page.evaluate(() => sessionStorage.getItem('downfall.arena.arrival.v1')));
+  expect({ ...cue, at: typeof cue.at }).toEqual({ table: 'waits', line: 'Round 7 against Bastien', tokens: ['waits-token'], at: 'number' });
+
+  // Back from the battle, the page as the back-forward cache keeps it gives the action back.
+  await page.goBack();
+  await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
+  await expect(page.locator('#featured-action')).toHaveText('Play your turn →');
+  await expect(page.locator('#featured-action')).not.toHaveAttribute('aria-busy', 'true');
   expect(state.errors).toEqual([]);
 });
 

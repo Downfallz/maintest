@@ -567,7 +567,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     const cards = node('div', '', 'lobby-grid');
     cards.append(...(entries.length ? entries.map(entry => card(entry.table, entry)) : [kind === 'bots'
       ? emptyState('No games against bots in progress. A bot answers at once, any time.', 'Play a bot →', playABot)
-      : emptyState('No games against players in progress. Take an open seat below, or open a table for another player.', 'Open a table →', () => openCreate())]));
+      : emptyState('No games against players in progress. Take an open seat below, or open a table.', 'Open a table →', () => openCreate())]));
     root.append(cards);
     if (count.full) root.append(node('p', `That is the most at once: finish one to start another ${kind === 'bots' ? 'against a bot' : 'against a player'}.`, 'mine-limit'));
     return root;
@@ -649,7 +649,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('ongoing-count').textContent = ongoing.players.length + ongoing.bots.length ? `· ${ongoing.players.length + ongoing.bots.length}` : '';
     el('finished-count').textContent = loaded && finishedTotal ? `· ${finishedTotal}` : '';
     el('tables-count').textContent = shownTables ? shownTables.total : '';
-    const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'Your games appear here, on every device you sign in on. The quickest first one is against a bot.';
+    const none = signInFirst() ? 'Sign in to see your games on any device.' : 'Your games appear here, on every device you sign in on. The quickest first one is against a bot.';
     const waiting = signInFirst() ? [] : yourTurn(mine);
     featured?.setGames(signInFirst() ? [] : mine);
     // One turn alone is the featured space's already: the band would repeat it, and push the lists down as it arrives.
@@ -664,6 +664,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     const tablePages = pager(showAll ? 'Pages of the battles underway' : 'Pages of the open seats', shownTables, page => { publicTables.page = page; void loadTables(); });
     el('open-tables').replaceChildren(rows, ...(tablePages ? [tablePages] : []));
     el('new-table').disabled = !listing.recording;
+    featured?.setDisabled(!listing.recording);
     el('lobby-status').textContent = statusText(listing);
     const options = listing.formats;
     if (el('format').options.length === 0) {
@@ -709,6 +710,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     } catch (error) {
       if (reading === revision) {
         el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
+        // A first read that failed still draws the featured space, from nothing, so the home is not a blank panel.
+        if (!listing) featured?.setGames(mine);
         // Tried again, later each time, until it answers: a retry, not a clock.
         failures += 1;
         globalThis.clearTimeout(retry);

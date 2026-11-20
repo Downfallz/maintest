@@ -27,10 +27,13 @@ const creatureOf = picture => !picture || picture === 'lesson-base' ? ANCESTRAL 
 const held = entry => (entry?.seats ?? []).map(seat => seat.seat);
 const capital = text => text && text[0].toUpperCase() + text.slice(1);
 
-/** The lesson to continue: the next one not done, unless it and every lesson after it were skipped. */
+/**
+ * The lesson to continue: the one Learn to play marks as next (the first in the series' order not done), unless it
+ * and every lesson after it were skipped.
+ */
 function nextLesson(lessons) {
   const left = (lessons ?? []).filter(one => !one.done);
-  return left.some(one => !one.skipped) ? left[0] : null;
+  return left.some(one => !one.skipped) ? left.find(one => one.next) ?? left[0] : null;
 }
 
 /**
@@ -96,14 +99,23 @@ export function featuredView(choice, { started = false } = {}) {
  * signed in), `setDisabled` when new tables cannot be made. It waits for both before it chooses, so it does not show
  * a new battle and then a lesson. Its elements are changed in place: the button the player may be about to press is
  * the same button, with the same focus, whatever it now says.
- * @param {{ enter: (entry: object) => void, openCreate: (asked?: object) => void, go: (link: string) => void, session?: Storage | null, ambience?: () => void, changed?: () => void }} actions
+ * @param {{ enter: (entry: object) => void, openCreate: (asked?: object) => void, go: (link: string) => void, session?: Storage | null, ambience?: () => void, changed?: () => void, win?: { addEventListener: Function } }} actions
  */
-export function mountFeatured(doc, { enter, openCreate, go, session = null, ambience = () => {}, changed = () => {} }) {
+export function mountFeatured(doc, { enter, openCreate, go, session = null, ambience = () => {}, changed = () => {}, win = globalThis }) {
   const el = id => doc.getElementById(id);
   const root = el('featured'), action = el('featured-action'), create = el('new-table'), status = el('featured-status');
   root.dataset.featured = 'loading';
   root.setAttribute('aria-busy', 'true');
-  let games = null, lessons = undefined, shown = null, drawnGround = null, drawnCreature = null, choice = null, opening = false, pressed = false;
+  let games = null, lessons = undefined, shown = null, drawnGround = null, drawnCreature = null, choice = null, opening = false, pressed = false, disabled = false;
+  // The last round the host said for each table: one answer that could not read it in time keeps the title and the ground.
+  const rounds = new Map();
+  function remembered(list) {
+    return list.map(entry => {
+      const { id, round } = entry.table;
+      if (Number.isInteger(round)) { rounds.set(id, round); return entry; }
+      return rounds.has(id) && !entry.table.waiting ? { ...entry, table: { ...entry.table, round: rounds.get(id) } } : entry;
+    });
+  }
   const pinned = () => pressed || (doc.activeElement != null && doc.activeElement === action);
 
   function art(view) {
@@ -132,13 +144,18 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     // the region says the turn once (its eyebrow is not in it).
     const eyebrow = el('featured-eyebrow');
     if (shown?.id === view.id && shown.eyebrow !== view.eyebrow) { eyebrow.classList.remove('motion-changed'); eyebrow.getBoundingClientRect(); eyebrow.classList.add('motion-changed'); }
+    // Said once a turn arrives while the home is open, on the game on show or on one that takes its place; not on
+    // the first draw, which the heading and the button already say.
     const said = el('featured-said');
-    if (said && (shown?.id !== view.id || shown.announced !== view.announced)) said.textContent = shown?.id === view.id ? view.announced : '';
+    const arrived = shown && view.kind === 'turn' && (shown.id !== view.id || shown.kind !== 'turn');
+    if (said && (arrived || shown?.id !== view.id || shown?.announced !== view.announced)) said.textContent = arrived ? view.announced : '';
     status.dataset.empty = String(!view.status);
     action.hidden = false;
     action.textContent = view.action;
     action.setAttribute('aria-label', view.label);
     action.removeAttribute('aria-busy');
+    // Play a bot makes a new table: not on a host that saves no games, as New battle is not.
+    action.disabled = disabled && view.kind === 'new';
     art(view);
     const before = shown?.id ?? null;
     shown = view;
@@ -147,19 +164,25 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
   }
 
   action.addEventListener('click', () => {
+    // The finger's game was kept until now: what arrived while it was down is drawn once the press is handled.
+    pressed = false;
     if (!choice || opening) return;
     if (choice.kind === 'lesson') { go(choice.lesson.link); return; }
     if (choice.kind === 'new') { openCreate({ opponent: 'bot' }); return; }
     // The press is answered at once, before the battle's page arrives; the battle's first frame names the game.
     opening = true;
     action.textContent = 'Opening…';
+    action.setAttribute('aria-label', `Opening: ${shown.title[0].toLowerCase()}${shown.title.slice(1)}`);
     action.setAttribute('aria-busy', 'true');
     writeArrival(session, choice.entry.table.id, shown.title, (choice.entry.seats ?? []).map(seat => seat.token));
-    enter(choice.entry);
+    try { enter(choice.entry); } catch (error) { giveBack(); throw error; }
   });
-  for (const [kind, down] of [['pointerdown', true], ['pointerup', false], ['pointercancel', false], ['pointerleave', false]]) {
-    action.addEventListener(kind, () => { pressed = down; if (!down) draw(); });
-  }
+  // The action is given back when the page could not leave, or comes back from the back-forward cache.
+  function giveBack() { opening = false; draw(); }
+  win.addEventListener?.('pageshow', event => { if (event.persisted) giveBack(); });
+  // A finger on the action keeps its game from pointerdown until the click; one that slides off lets it follow.
+  action.addEventListener('pointerdown', () => { pressed = true; });
+  for (const kind of ['pointercancel', 'pointerleave']) action.addEventListener(kind, () => { pressed = false; draw(); });
   action.addEventListener('blur', () => draw());
 
   return {
@@ -171,7 +194,9 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     /** The table on show, or null: the lobby leaves out of its Your turn band a lone turn already featured. */
     shown: () => shown?.id ?? null,
     /** The player's games, as the host lists them. */
-    setGames(next) { games = next ?? []; draw(); },
+    setGames(next) { games = remembered(next ?? []); draw(); },
+    /** Whether new tables can be made here (`recording`): Play a bot is disabled when they cannot. */
+    setDisabled(next) { disabled = Boolean(next); draw(); },
     /** The lessons as Learn to play draws them (lobby-tutorials.js), or null where nobody can take one. */
     setLessons(next) { lessons = next ?? null; draw(); },
     /** Who is signed in changed: what was shown is not theirs. */
