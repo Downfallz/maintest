@@ -111,7 +111,7 @@ function mountSignIn(doc, { request, google, refresh, say }) {
         ux_mode: 'popup',
         cancel_on_tap_outside: true,
       });
-      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'pill', text: 'continue_with', size: 'large' });
+      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large' });
     } catch (error) {
       say('sign-in-problem', error.message);
     }

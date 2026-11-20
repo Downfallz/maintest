@@ -428,8 +428,9 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    the battle view, which names no inviter or seat: UX11's frame. The name window was filmed staged, since a
    developer account names itself. Each refresh of the account now waits for the tutorials' answer before the
    page knows whether it leaves. An inviter's name longer than the title's held four lines still moves the
-   sign-in when it arrives late. The duel picture for the invited friend is still asked of the owner. Google's
-   pill and the other choices wait under the brief's **Left**. The home's shift of 0.21 is UX9's.
+   sign-in when it arrives late. The duel picture for the invited friend is still asked of the owner. The owner
+   settled the rest of the brief's choices on the sheets: Google's button rectangular, the line on the game and
+   "Take this name" as they are. The home's shift of 0.21 is UX9's.
 8. **UX8, the lessons.** The brief window, the coach, the concept cards and the phase tips under a budget of
    words, a hint when a player stalls, the end of a tutorial as a moment, Learn to play with a picture and a
    progress. What `onboarding-plan.md` and `docs/tabletop/tutorial-follow-ups-plan.md` left open is settled here

@@ -376,11 +376,11 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
   used; the friend accepts it from their lobby, signed in.
 - The first paint does not hold the panel's room: a signed-in player would see the sign-in flash before their
   home. Holding it needs the host to say who is signed in with the page itself, which is not this stage's.
-- Google draws a pill (`shape: 'pill'` in `table/account.js`) where the identity's buttons are square. Google's
-  `rectangular` shape is closer; the owner chooses.
+- Settled by the owner on 2026-11-20: Google's button is asked `rectangular` (`table/account.js`), the nearest to
+  the identity's square buttons.
 - The panel's arrival, once the host says signed out, is not one of the kit's five uses: it appears at once in
   its held room. A fade would need the craft book to count a section that arrives among the kit's uses.
-- The line on the game is mine; the owner may prefer the showcase's own kicker, "Turn-based 3v3 combat".
+- Settled by the owner on 2026-11-20: the line on the game stays as written, not the showcase's kicker.
 - The account line reads "on every device" plain and "everywhere" invited, to keep the invited panel under its 45
   words.
 
@@ -469,8 +469,8 @@ into tutorial 1 is UX7's part of the lessons: it ends where `lesson-1-brief` beg
 
 ### Left
 
-- "Take this name" is my choice: it says what the press does on either path, and fits one line at 320 px.
-  The owner may keep a label that names the game.
+- Settled by the owner on 2026-11-20: "Take this name". It says what the press does on either path, and fits
+  one line at 320 px.
 - The line that says where the press leads: on the invited path it is there from the start ("Next: your place as
   Player 2 at bastien's table."); on a plain visit the host names the first lesson only once the account exists,
   so the line appears after the press ("Next: Tutorial 1, Your first combat.") and the window stays open, with

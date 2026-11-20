@@ -18,7 +18,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   await page.addInitScript(() => {
     window.permissionRequests = 0;
     if (window.Notification) Notification.requestPermission = async () => { window.permissionRequests++; return 'denied'; };
-    window.google = { accounts: { id: { initialize(options) { window.googleSignIn = options.callback; }, renderButton(el) {
+    window.google = { accounts: { id: { initialize(options) { window.googleSignIn = options.callback; }, renderButton(el, options) {
+      window.googleButton = options;
       const button = document.createElement('button'); button.textContent = 'Continue with Google'; el.append(button);
     } } } };
   });
@@ -949,6 +950,8 @@ test('the game\'s door shows its paintings as pictures of the kit, the ground as
     expect(Number(await image.getAttribute('height'))).toBeGreaterThan(0);
   }
   await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeInViewport();
+  // Google draws its own button; asked rectangular, it is the nearest to the identity's square buttons.
+  expect(await page.evaluate(() => window.googleButton.shape)).toBe('rectangular');
   await noOverflow(page);
   expect(state.invitationAsks).toBeUndefined();
   expect(state.errors).toEqual([]);
