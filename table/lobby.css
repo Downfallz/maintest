@@ -463,3 +463,15 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
   .featured-actions { flex-direction: column; margin-top: auto; padding-top: 6px; }
   .featured-actions button { width: 100%; }
 }
+/* A player is their initial in the identity's square, beside their name (UX10, docs/art/journeys/pages.md). */
+:is(.friend-row, .create-friend, .ladder .player, .you-who) .account-initial { display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--bone) 26%, var(--line-soft)); color: var(--gold); font-family: var(--font-display); line-height: 1; }
+.friend-row .friend-initial { flex: none; }
+.friend-row .friend-name { flex: 1; min-width: 0; }
+.create-friend { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; }
+.create-friend .account-initial { width: 44px; height: 44px; font-size: 22px; flex: none; }
+.create-friend p { margin: 0; display: grid; gap: 2px; }
+.create-friend strong { font-size: 16px; }
+.create-friend small { color: var(--muted); font-size: 13px; }
+#create-submit { white-space: nowrap; }
+/* Friends grows at its foot when a friend or a request arrives: anchored near the top, nothing above it moves. */
+#friends-dialog { margin-block: min(12vh, 96px) auto; max-height: calc(100dvh - min(12vh, 96px) - 12px); }

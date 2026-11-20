@@ -496,7 +496,9 @@ rounds and whether it is *ranked* (two seats, two different accounts). No name i
 `/leaderboard` is the ladder (ADR 0124), linked from the lobby when players sign in: every account with a ranked
 game, by Glicko-2 rating with its ± and its record, provisional players (± above 110) after the others, and for
 whoever is signed in their place and their record against each bot. `GET /api/leaderboard` answers anybody; the
-ladder is recomputed from the results every half minute at most.
+ladder is recomputed from the results every half minute at most. The page remembers, in this browser and by player name, the
+place and rating it last showed that player, and says by how much they moved since (UX10, docs/art/journeys/pages.md).
+The host keeps no such mark.
 
 ## "Your turn" on a phone
 
@@ -730,7 +732,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 
 | Route | Who | What |
 | --- | --- | --- |
-| `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat&format=...` opens the create dialog on the same opponent. |
+| `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat\|person&format=...` opens the create dialog on the same opponent, or on a ranked table for another player. |
 | `/play` | seat | The game's doorway; `/play?replay=<id>` replays a finished session for the operator. |
 | `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179), a tutorial with its coach and concept cards (ADR 0187). |
 | `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123); with `?bench`, the effects bench. |

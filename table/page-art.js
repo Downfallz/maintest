@@ -211,4 +211,151 @@ export const PAGE_ART = {
       { file: 'lesson-colossus-300.5565ad61.webp', width: 300, height: 200, bytes: 21992 },
     ],
   },
+  'mutation-brute-base': {
+    from: '6ce833a0e684bd75', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-base-144.a92ea267.webp', width: 144, height: 96, bytes: 8750 },
+      { file: 'mutation-brute-base-288.a0398b88.webp', width: 288, height: 192, bytes: 22310 },
+    ],
+  },
+  'mutation-brute-stage2-frenzied': {
+    from: 'b9308db2c3df061f', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-stage2-frenzied-144.221d62df.webp', width: 144, height: 96, bytes: 9874 },
+      { file: 'mutation-brute-stage2-frenzied-288.e737fff5.webp', width: 288, height: 192, bytes: 26814 },
+    ],
+  },
+  'mutation-brute-stage2-ironhide': {
+    from: '4c822b669488337d', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-stage2-ironhide-144.6368e6ac.webp', width: 144, height: 96, bytes: 7352 },
+      { file: 'mutation-brute-stage2-ironhide-288.e2f425f6.webp', width: 288, height: 192, bytes: 18192 },
+    ],
+  },
+  'mutation-brute-stage2-oppressor': {
+    from: '61788e09cdb6feac', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-stage2-oppressor-144.8554f47e.webp', width: 144, height: 96, bytes: 10810 },
+      { file: 'mutation-brute-stage2-oppressor-288.975cb9ea.webp', width: 288, height: 192, bytes: 29974 },
+    ],
+  },
+  'mutation-brute-stage3-colossus': {
+    from: '77ab7010267a4bc9', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-stage3-colossus-144.99188ca8.webp', width: 144, height: 96, bytes: 8286 },
+      { file: 'mutation-brute-stage3-colossus-288.24951fb7.webp', width: 288, height: 192, bytes: 21022 },
+    ],
+  },
+  'mutation-brute-stage3-oppressor': {
+    from: '677e2ab739830380', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-stage3-oppressor-144.00fb3d62.webp', width: 144, height: 96, bytes: 11944 },
+      { file: 'mutation-brute-stage3-oppressor-288.bdc64beb.webp', width: 288, height: 192, bytes: 36268 },
+    ],
+  },
+  'mutation-brute-stage3-ravager': {
+    from: 'bd21a1d596d19047', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-brute-stage3-ravager-144.20b6ad2f.webp', width: 144, height: 96, bytes: 11338 },
+      { file: 'mutation-brute-stage3-ravager-288.13e9559d.webp', width: 288, height: 192, bytes: 31998 },
+    ],
+  },
+  'mutation-predator-base': {
+    from: '2cea23fe18a4eaf1', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-base-144.12105221.webp', width: 144, height: 72, bytes: 8500 },
+      { file: 'mutation-predator-base-288.bb90d269.webp', width: 288, height: 144, bytes: 22408 },
+    ],
+  },
+  'mutation-predator-stage2-blighted': {
+    from: '9689b38e308e2daa', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-stage2-blighted-144.71cd1c7d.webp', width: 144, height: 96, bytes: 9892 },
+      { file: 'mutation-predator-stage2-blighted-288.abfef325.webp', width: 288, height: 192, bytes: 27484 },
+    ],
+  },
+  'mutation-predator-stage2-open-maw': {
+    from: '38552f2f1a4f25ae', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-stage2-open-maw-144.0b35c559.webp', width: 144, height: 81, bytes: 9632 },
+      { file: 'mutation-predator-stage2-open-maw-288.e11c3b0e.webp', width: 288, height: 162, bytes: 27290 },
+    ],
+  },
+  'mutation-predator-stage2-scythe': {
+    from: 'f42290139c74e745', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-stage2-scythe-144.bbbf59d7.webp', width: 144, height: 72, bytes: 7996 },
+      { file: 'mutation-predator-stage2-scythe-288.1a27fa32.webp', width: 288, height: 144, bytes: 20922 },
+    ],
+  },
+  'mutation-predator-stage3-blightweaver': {
+    from: 'fa1d0677454641a0', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-stage3-blightweaver-144.fe5a3709.webp', width: 144, height: 96, bytes: 11716 },
+      { file: 'mutation-predator-stage3-blightweaver-288.416215dc.webp', width: 288, height: 192, bytes: 32956 },
+    ],
+  },
+  'mutation-predator-stage3-deathstalker': {
+    from: '8e4b9bdf9549e662', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-stage3-deathstalker-144.039631f8.webp', width: 144, height: 96, bytes: 10834 },
+      { file: 'mutation-predator-stage3-deathstalker-288.f775e0e3.webp', width: 288, height: 192, bytes: 30148 },
+    ],
+  },
+  'mutation-predator-stage3-soulreaver': {
+    from: 'e813cc95e4348241', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-predator-stage3-soulreaver-144.2f4eb02d.webp', width: 144, height: 96, bytes: 12210 },
+      { file: 'mutation-predator-stage3-soulreaver-288.0ea22301.webp', width: 288, height: 192, bytes: 35528 },
+    ],
+  },
+  'mutation-warped-base': {
+    from: '914caaecb643d2de', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-base-144.9850ff2a.webp', width: 144, height: 96, bytes: 8004 },
+      { file: 'mutation-warped-base-288.efa21119.webp', width: 288, height: 192, bytes: 20484 },
+    ],
+  },
+  'mutation-warped-stage2-ethereal': {
+    from: '94c71e928fd69b79', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-stage2-ethereal-144.dbe01546.webp', width: 144, height: 96, bytes: 12586 },
+      { file: 'mutation-warped-stage2-ethereal-288.a93c6262.webp', width: 288, height: 192, bytes: 36612 },
+    ],
+  },
+  'mutation-warped-stage2-necrotic': {
+    from: '71a07b08e5720046', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-stage2-necrotic-144.71fb7eaa.webp', width: 144, height: 96, bytes: 10620 },
+      { file: 'mutation-warped-stage2-necrotic-288.561892c6.webp', width: 288, height: 192, bytes: 30310 },
+    ],
+  },
+  'mutation-warped-stage2-stormborn': {
+    from: 'f84ffe68de34e01f', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-stage2-stormborn-144.39e3a4c2.webp', width: 144, height: 96, bytes: 12398 },
+      { file: 'mutation-warped-stage2-stormborn-288.1bef02ff.webp', width: 288, height: 192, bytes: 34902 },
+    ],
+  },
+  'mutation-warped-stage3-cataclysm': {
+    from: 'bad1b51a1e877b2a', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-stage3-cataclysm-144.5ed329f1.webp', width: 144, height: 96, bytes: 13504 },
+      { file: 'mutation-warped-stage3-cataclysm-288.1143eba8.webp', width: 288, height: 192, bytes: 40678 },
+    ],
+  },
+  'mutation-warped-stage3-revenant': {
+    from: '147de56f694219f4', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-stage3-revenant-144.bc7a86cf.webp', width: 144, height: 96, bytes: 11856 },
+      { file: 'mutation-warped-stage3-revenant-288.9a6e1ce3.webp', width: 288, height: 192, bytes: 35160 },
+    ],
+  },
+  'mutation-warped-stage3-transcendent': {
+    from: '209e269ec4a3e0e5', frames: 1, drawn: [144], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'mutation-warped-stage3-transcendent-144.fe811072.webp', width: 144, height: 96, bytes: 12360 },
+      { file: 'mutation-warped-stage3-transcendent-288.4b1a7064.webp', width: 288, height: 192, bytes: 35492 },
+    ],
+  },
 };

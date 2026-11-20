@@ -82,10 +82,15 @@ function watchAmbience(win) {
   return watch;
 }
 
+/** This browser's storage, or null when it refuses it: reading `localStorage` itself throws where site data is blocked. */
+export function browserStorage(win = globalThis) {
+  try { return win.localStorage ?? null; } catch { return null; }
+}
+
 /** Mounts the kit on a page. Returns `watch`, to call after adding an ambience to the page. */
 export function mountMotion(win = globalThis) {
   const doc = win.document, root = doc.documentElement, battle = doc.getElementById('battle');
-  const less = () => lessMotion({ saved: savedLess(win.localStorage), game: battle?.dataset.reducedMotion });
+  const less = () => lessMotion({ saved: savedLess(browserStorage(win)), game: battle?.dataset.reducedMotion });
   const apply = () => reach(root, less());
   apply();
   // Another tab changed the settings, or this page's settings panel read or saved them.

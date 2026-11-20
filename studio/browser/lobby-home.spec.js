@@ -241,7 +241,7 @@ test('a player opens friends and notices without crowding the dashboard or askin
   await openPanel(page, /^Friends/);
   await expect(page.getByRole('dialog', { name: 'Friends', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('home-friends.jpg'), fullPage: false, type: 'jpeg', quality: 85, animations: 'disabled' });
-  await page.getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.getByRole('button', { name: 'Accept Alex' }).click();
   await expect(page.locator('#friend-incoming')).toBeHidden();
   await expect(page.locator('#friend-list')).toContainText('Alex');
   await expect(page.locator('#friend-requests-badge')).toBeHidden();
@@ -263,14 +263,30 @@ test('inviting a friend leaves the friends window and selects that friend in the
   const state = await home(page);
   await expect(page.locator('#my-tables .game-card')).toHaveCount(1);
   await openPanel(page, /^Friends/);
-  await page.locator('#friend-list').getByRole('button', { name: 'Invite', exact: true }).click();
+  // A friend is their initial beside their name, and Invite is quiet: the challenge's filled action is the window's.
+  await expect(page.locator('#friend-list .friend-row').first().locator('.account-initial')).toHaveText(friend.username[0]);
+  await expect(page.locator('#friend-list').getByRole('button', { name: `Invite ${friend.username}` })).not.toHaveClass(/primary/);
+  await expect(page.locator('#friend-ask-submit')).not.toHaveClass(/primary/);
+  await page.locator('#friend-list').getByRole('button', { name: `Invite ${friend.username}` }).click();
   await expect(page.locator('#friends-dialog')).toBeHidden();
   await expect(page.locator('#create-dialog')).toBeVisible();
   await expect(page.locator('#opponent')).toHaveValue('friend');
   await expect(page.locator('#friend')).toHaveValue(friend.id);
+  // Opened on a friend, the window names them in place of the tabs and the two selects, and Ranked has the focus.
+  await expect(page.locator('#create-friend')).toBeVisible();
+  await expect(page.locator('#create-friend-name')).toHaveText(friend.username);
+  await expect(page.locator('#create-tabs')).toBeHidden();
+  await expect(page.locator('#opponent')).toBeHidden();
+  await expect(page.locator('#friend-row')).toBeHidden();
+  await expect(page.locator('#ranked')).toBeFocused();
+  await expect(page.locator('#create-dialog')).toHaveAttribute('aria-describedby', 'create-friend');
   await expect(page.locator('dialog[open]')).toHaveCount(1);
   await expect(page.locator('#create-submit')).toBeEnabled();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  // New battle opens the window whole again.
+  await page.locator('#new-table').click();
+  await expect(page.locator('#create-tabs')).toBeVisible();
+  await expect(page.locator('#create-friend')).toBeHidden();
   expect(state.errors).toEqual([]);
 });
 
@@ -378,7 +394,7 @@ test('navigation and dialogs fit narrow, intermediate and short landscape screen
 test('removing a friend requires confirming the named player, and hides an empty count', async ({ page }) => {
   const state = await home(page);
   await openPanel(page, /^Friends/);
-  const remove = page.getByRole('button', { name: 'Remove', exact: true });
+  const remove = page.getByRole('button', { name: 'Remove Bastien' });
   await remove.click();
   await expect(page.locator('#action-title')).toHaveText('Remove Bastien?');
   await page.keyboard.press('Escape');
@@ -452,15 +468,176 @@ test('the signed-in player reads the statistics of their ranked games on a page 
   await expect(page.locator('#record-cards .stats-card')).toHaveCount(1);
   await expect(page.locator('#record-cards .stats-card')).toContainText('Ranked 3v3');
   await expect(page.locator('#record-cards .stats-card')).toContainText('2–1–0');
-  await expect(page.locator('#stats-status')).toHaveText('3 ranked games · updates as your games end');
+  // At rest the status says nothing: the record says it (UX10).
+  await expect(page.locator('#stats-status')).toHaveText('');
   await expect(page.locator('#glance')).toContainText('2 wins in a row');
   await expect(page.locator('#spell-rows')).toContainText('Strike');
-  await expect(page.locator('#mutation-rows')).toContainText('No mutation bought yet.');
+  await expect(page.locator('#mutation-rows')).toContainText('No mutation acquired yet.');
+  // The spell cast most stands large; with no mutation acquired, Most acquired is not drawn.
+  await expect(page.locator('#leaned-spell')).toContainText('Strike');
+  await expect(page.locator('#leaned-spell')).toContainText('Cast 21 times in 3 games');
+  await expect(page.locator('#leaned-mutation')).toBeHidden();
+  await expect(page.locator('#stats-empty')).toBeHidden();
   // Ranked games are all 3v3 (ADR 0171): no table of creatures and no table of formats.
   await expect(page.locator('#creature-rows, #formats')).toHaveCount(0);
   await openNavigation(page);
   await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Your stats' })).toHaveAttribute('aria-current', 'page');
   await page.keyboard.press('Escape');
+  await noOverflow(page);
+});
+
+test('the mutation a player acquires most stands with its painting and its count', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    ranked: { games: 1, won: 0, lost: 1, drawn: 0 }, streak: { outcome: 'lost', length: 1 }, bestWinStreak: 0, averageRounds: 2, withTeams: 1,
+    // A long name beside the painting: the card wraps rather than pushing the page wider at 320 px.
+    mutations: [{ id: 'tier:deathstalker:v1', name: 'Deathstalker', artwork: 'predator-stage3-deathstalker', bought: 2, won: 0 }], spells: [{ id: 'spell:brace:v1', name: 'Brace', casts: 2, games: 1, won: 0 }],
+  } }));
+  await page.goto('/table/stats.html');
+  const card = page.locator('#leaned-mutation');
+  await expect(card).toContainText('Deathstalker');
+  await expect(card).toContainText('Acquired 2 times');
+  await expect(card.locator('img.leaned-picture')).toHaveAttribute('src', /page-art\/mutation-predator-stage3-deathstalker-/);
+  expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await expect(card.locator('img.leaned-picture')).toHaveAttribute('width', /\d+/);
+  await expect(page.locator('#glance')).toContainText('2 rounds');
+  await noOverflow(page);
+});
+
+test('the ladder says where the player stands, and how far they moved since this browser last showed them', async ({ page }) => {
+  await home(page);
+  const ladder = rating => ({ provisionalAbove: 110, players: [
+    { rank: 1, username: 'Rook', rating: 1662, deviation: 290, games: 1, wins: 1, losses: 0, draws: 0, provisional: true, you: false },
+    { rank: 2, username: player.username, rating, deviation: 290, games: 1, wins: 0, losses: 1, draws: 0, provisional: true, you: true },
+  ], you: { username: player.username, standing: { rank: 2, username: player.username, rating, deviation: 290, games: 1, wins: 0, losses: 1, draws: 0, provisional: true, you: true }, bots: [] } });
+  let answer = ladder(1338);
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: answer }));
+  // This browser last showed the player 1400 at the same place.
+  await page.addInitScript(name => localStorage.setItem(`downfall.ladder.seen.v1:${name}`, JSON.stringify({ standing: { rank: 2, rating: 1400, provisional: true } })), player.username);
+  await page.goto('/table/leaderboard.html');
+  const place = page.locator('#you');
+  await expect(place).toContainText('#2 · Provisional');
+  await expect(place).toContainText('1338 ±290');
+  await expect(place).toContainText('Down 62 since you last looked.');
+  await expect(place).toContainText('0 won, 1 lost, 0 drawn in 1 game');
+  await expect(place.getByRole('img', { name: /Your rating 1338 ±290, among 2 players from 1338 to 1662/ })).toBeVisible();
+  // At rest the status says nothing.
+  await expect(page.locator('#ladder-status')).toHaveText('');
+  // What it showed is remembered.
+  await expect.poll(() => page.evaluate(name => JSON.parse(localStorage.getItem(`downfall.ladder.seen.v1:${name}`)).standing.rating, player.username)).toBe(1338);
+  await noOverflow(page);
+});
+
+const ranked = (username, rating, rank = 2) => ({ rank, username, rating, deviation: 290, games: 1, wins: 0, losses: 1, draws: 0, provisional: true, you: true });
+const ladderOf = (username, rating) => ({ provisionalAbove: 110, players: [
+  { rank: 1, username: 'Rook', rating: 1662, deviation: 290, games: 1, wins: 1, losses: 0, draws: 0, provisional: true, you: false }, ranked(username, rating),
+], you: { username, standing: ranked(username, rating), bots: [] } });
+
+test('a long player name wraps in Your place, and the place stays inside the card', async ({ page }) => {
+  await home(page);
+  const long = 'WWWWWWWWWWWWWWWWWWWW';
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: ladderOf(long, 1338) }));
+  await page.goto('/table/leaderboard.html');
+  const card = page.locator('.your-place');
+  await expect(page.locator('.you-place')).toHaveText('#2 · Provisional');
+  const [badge, box] = await Promise.all([page.locator('.you-place').boundingBox(), card.boundingBox()]);
+  expect(badge.x + badge.width).toBeLessThanOrEqual(box.x + box.width);
+  await noOverflow(page);
+});
+
+test('a live read keeps the keyboard on the action it was on', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: [], you: { username: player.username, standing: null, bots: [] } } }));
+  await page.goto('/table/leaderboard.html');
+  const action = page.getByRole('link', { name: 'Open a ranked table →' });
+  await action.focus();
+  // The same answer again, as a stream's word about an unrelated table brings it.
+  await page.evaluate(async name => {
+    const { drawLadder } = await import('/table/leaderboard.js');
+    drawLadder(document, { provisionalAbove: 110, players: [], you: { username: name, standing: null, bots: [] } }, { first: false });
+  }, player.username);
+  await expect(action).toBeFocused();
+});
+
+test('another player signed in while the ladder was open is compared with their own last look, not the first player\'s', async ({ page }) => {
+  await home(page);
+  await page.addInitScript(() => {
+    localStorage.setItem('downfall.ladder.seen.v1:Alice', JSON.stringify({ standing: { rank: 2, rating: 1300, provisional: true } }));
+    localStorage.setItem('downfall.ladder.seen.v1:Bob', JSON.stringify({ standing: { rank: 2, rating: 1550, provisional: true } }));
+  });
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: ladderOf('Alice', 1338) }));
+  await page.goto('/table/leaderboard.html');
+  await expect(page.locator('#you')).toContainText('Up 38 since you last looked.');
+  await page.evaluate(async ladder => {
+    const { drawLadder } = await import('/table/leaderboard.js');
+    drawLadder(document, ladder, { first: false });
+  }, ladderOf('Bob', 1560));
+  await expect(page.locator('#you')).toContainText('Bob');
+  await expect(page.locator('#you')).toContainText('Up 10 since you last looked.');
+  await expect(page.locator('#ladder-status')).toHaveText('');
+});
+
+test('the ladder and the statistics still draw when the browser refuses its storage', async ({ page }) => {
+  const state = await home(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('The operation is insecure.', 'SecurityError'); } });
+  });
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: ladderOf('Rook', 1338).players.slice(0, 1), you: null } }));
+  await page.goto('/table/leaderboard.html');
+  await expect(page.locator('#ladder-rows tr')).toHaveCount(1);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [],
+  } }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#stats-empty')).toBeVisible();
+  expect(state.errors).toEqual([]);
+});
+
+test('the first ranked result that arrives while the statistics are open is announced', async ({ page }) => {
+  await home(page);
+  const empty = { ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [] };
+  await page.route('**/api/stats', route => route.fulfill({ json: empty }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#stats-empty')).toBeVisible();
+  await page.evaluate(async () => {
+    const { drawStats } = await import('/table/stats.js');
+    drawStats(document, { ranked: { games: 1, won: 1, lost: 0, drawn: 0 }, streak: { outcome: 'won', length: 1 }, bestWinStreak: 1, averageRounds: 3, withTeams: 1, mutations: [], spells: [] });
+  });
+  await expect(page.locator('#stats-status')).toHaveText('Your record is now 1–0–0.');
+});
+
+test('a player not on the ladder is told how to get on it, and the action opens a ranked table for another player', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: [], you: { username: player.username, standing: null, bots: [] } } }));
+  await page.goto('/table/leaderboard.html');
+  await expect(page.locator('#you')).toContainText('Not on the ladder yet.');
+  await expect(page.locator('#ladder-empty')).toBeVisible();
+  await expect(page.locator('#ladder-table')).toBeHidden();
+  await expect(page.locator('#players-caption')).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Open a ranked table →' })).toHaveAttribute('href', '/lobby?rematch=person');
+  await noOverflow(page);
+});
+
+test('an empty page\'s action opens the Create window on a ranked table for another player', async ({ page }) => {
+  const state = await home(page, { search: '?rematch=person' });
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(page.locator('#create-pvp')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#opponent')).toHaveValue('person');
+  await expect(page.locator('#ranked')).toBeChecked();
+  await expect(page.locator('#format')).toHaveValue('3v3');
+  await expect(page.locator('#create-friend')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});
+
+test('a player with no ranked game reads one empty state and the action that fills it', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [],
+  } }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#stats-empty')).toBeVisible();
+  await expect(page.locator('#stats-body')).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Open a ranked table →' })).toHaveAttribute('href', '/lobby?rematch=person');
   await noOverflow(page);
 });
 
@@ -636,7 +813,7 @@ test('recent opponents are listed with the record between you: a friend is chall
   expect(state.asked).toEqual({ username: 'Julie' });
   // Accepted from the Friends panel instead, Alex's card follows: Alex can be challenged now.
   await openPanel(page, /^Friends/);
-  await page.locator('#friends-dialog').getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.locator('#friends-dialog').getByRole('button', { name: /^Accept / }).click();
   await page.getByRole('button', { name: 'Close friends' }).click();
   // A friend now, Alex moves forward with the friends: after Bastien, met more recently.
   await expect.poll(names).toEqual(['Bastien', 'Alex', 'Julie']);

@@ -19,30 +19,27 @@
   <header class="masthead lobby-header home-header" data-navigation="leaderboard"></header>
   <main class="lobby-main">
     <section class="lobby-hero" aria-labelledby="ladder-title">
-      <div><p class="eyebrow">Ranked games between two players</p><h2 id="ladder-title">The ladder.</h2><p class="hero-detail">Every finished game between two accounts moves both ratings. Beat a stronger player and you climb further.</p></div>
+      <div><p class="eyebrow">Ranked games between two players</p><h2 id="ladder-title">The ladder.</h2><p class="hero-detail">Every finished ranked game moves both players' ratings.</p></div>
     </section>
     <output id="ladder-status" class="lobby-status muted">Reading the ladder…</output>
     <p id="ladder-problem" class="problem" role="alert" hidden></p>
-    <div class="lobby-layout">
+    <div class="lobby-layout ladder-layout">
+      <aside class="lobby-sidebar" aria-label="Your place">
+        <section class="lobby-panel your-place" aria-labelledby="you-heading"><h2 id="you-heading">Your place</h2><div id="you" class="you"></div></section>
+      </aside>
       <section class="lobby-section" aria-labelledby="players-heading">
-        <div class="section-heading"><h2 id="players-heading">Players <span id="players-count" class="lobby-count"></span></h2><span class="muted">Rating ± how sure it is</span></div>
-        <div class="ladder-scroll">
+        <div class="section-heading"><h2 id="players-heading">Players <span id="players-count" class="lobby-count"></span></h2><span id="players-caption" class="muted">Rating ± how sure it is</span></div>
+        <section id="ladder-table" class="ladder-scroll" aria-labelledby="players-heading">
           <table class="ladder" aria-labelledby="players-heading">
             <thead><tr><th scope="col" class="rank">#</th><th scope="col">Player</th><th scope="col" class="number">Rating</th><th scope="col" class="number">W–L–D</th><th scope="col" class="number games">Games</th></tr></thead>
             <tbody id="ladder-rows"></tbody>
           </table>
-        </div>
-        <p id="ladder-empty" class="empty-state" hidden>No ranked games yet. Open a table for another player from the lobby: every finished ranked game between two accounts counts here.</p>
-      </section>
-      <aside class="lobby-sidebar" aria-label="Your record">
-        <section class="lobby-panel" aria-labelledby="you-heading"><p class="eyebrow">Your record</p><h2 id="you-heading">Where you stand</h2><div id="you"></div></section>
-        <section class="lobby-panel" aria-labelledby="how-heading"><p class="eyebrow">How it counts</p><h2 id="how-heading">Glicko-2</h2>
-          <p class="muted">Everyone starts at 1500 ± 350: a guess. Each ranked game moves your rating by how surprising the result was, and shrinks the ±, how sure the ladder is of it.</p>
-          <h3 class="ladder-subheading">What provisional means</h3>
-          <p class="muted"><strong>Provisional</strong> means your rating is still being found: its ± is above <span id="provisional-above">110</span>. It usually takes 10 to 15 ranked games to settle, fewer against settled players. Until then you are listed after the settled players, whatever your rating, and cannot hold a top place. A long break makes a rating less sure again, a little each day.</p>
-          <p class="muted">Games against a bot, on a shared device, or opened as unranked do not count; your record against each bot is kept apart.</p>
         </section>
-      </aside>
+        <p id="ladder-empty" class="empty-state" hidden>No one is on the ladder yet.</p>
+        <details class="ladder-how"><summary>How the ladder counts</summary>
+          <p class="muted">Each ranked game moves both ratings by how surprising the result was. The ± is how sure the ladder is: above <span id="provisional-above">110</span> a rating is provisional, listed after the settled ones. Games against a bot, on a shared device or unranked do not count.</p>
+        </details>
+      </section>
     </div>
   </main>
   <script type="module" src="leaderboard.js"></script>

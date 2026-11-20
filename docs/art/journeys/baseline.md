@@ -145,6 +145,9 @@ At 390 by 844:
 
 ## The player's pages
 
+`leaderboard-ranked` and `statistics-ranked`, the same pages after one ranked game, were added by UX10. Their lines
+come from UX10's walk of 2026-11-20, taken before UX10 changed the pages. The baseline walk had no such screens.
+
 At 320 by 568:
 
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
@@ -155,6 +158,8 @@ At 320 by 568:
 | friend-invited | 933 px, a window | 96 | 1 | 1 background | 10 px | 3 | 2 of 9 | 1 | 0 | 0 | 0.12 | nothing |
 | leaderboard | 1298 px | 204 | 0 | 5 background | 10 px | 10 | 3 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | statistics | 1230 px | 97 | 0 | 6 background | 10 px | 6 | 3 of 4 | 0 | 0 | 0 | 0.00 | nothing |
+| leaderboard-ranked | 1309 px | 187 | 0 | 5 background | 10 px | 12 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
+| statistics-ranked | 1239 px | 94 | 0 | 6 background | 10 px | 6 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 
 At 390 by 844:
 
@@ -166,6 +171,8 @@ At 390 by 844:
 | friend-invited | 831 px, a window | 96 | 1 | 1 background | 10 px | 3 | 2 of 9 | 1 | 0 | 0 | 0.05 | nothing |
 | leaderboard | 1195 px | 204 | 0 | 5 background | 10 px | 10 | 2 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | statistics | 1211 px | 97 | 0 | 6 background | 10 px | 6 | 2 of 4 | 0 | 0 | 0 | 0.00 | nothing |
+| leaderboard-ranked | 1251 px | 187 | 0 | 5 background | 10 px | 12 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
+| statistics-ranked | 1239 px | 94 | 0 | 6 background | 10 px | 6 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 
 ## The match
 

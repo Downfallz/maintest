@@ -4,6 +4,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Domain.Resources;
+using DownfallArena.Infrastructure.Resources;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
@@ -12,9 +13,11 @@ namespace DownfallArena.Cli.Table;
 /// A signed-in player's own statistics (<c>GET /api/stats</c>), read off the results of their games, which their
 /// partition holds alone (ADR 0168), and only their ranked 3v3 games counted (ADR 0171): how those went, their
 /// streaks, and the mutations and spells they played. Nobody reads another player's. Names come from this host's
-/// catalogue; a mutation or spell it no longer holds is shown by its id.
+/// catalogue; a mutation or spell it no longer holds is shown by its id. A mutation also names the painting it draws
+/// (<c>artwork</c>, from the art published with the catalogue), or null, so the page can show the one a player leans
+/// on without reading a filename.
 /// </summary>
-internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources)
+internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources, MutationArt art)
 {
     public const string Path = "/api/stats";
 
@@ -44,7 +47,7 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
                 stats.BestWinStreak,
                 averageRounds = stats.AverageRounds is { } rounds ? Math.Round(rounds, 1) : (double?)null,
                 stats.WithTeams,
-                mutations = stats.Mutations.Select(mutation => new { id = mutation.Mutation, name = MutationName(mutation.Mutation), mutation.Bought, mutation.Won }),
+                mutations = stats.Mutations.Select(mutation => new { id = mutation.Mutation, name = MutationName(mutation.Mutation), artwork = Artwork(mutation.Mutation), mutation.Bought, mutation.Won }),
                 spells = stats.Spells.Select(spell => new { id = spell.Spell, name = SpellName(spell.Spell), spell.Casts, spell.Games, spell.Won }),
             },
             Web);
@@ -57,6 +60,9 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
 
     private string MutationName(string id) =>
         TierId.TryParse(id, out var parsed) && resources.TryGetTier(parsed, out var tier) ? tier.Name : id;
+
+    private string? Artwork(string id) =>
+        TierId.TryParse(id, out var parsed) ? art.Of(parsed)?.Artwork : null;
 
     private string SpellName(string id) =>
         SpellId.TryParse(id, out var parsed) && resources.TryGetSpell(parsed, out var spell) ? spell.Name : id;

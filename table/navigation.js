@@ -34,13 +34,14 @@ const headerContent = `
 const panels = `<div class="navigation-panels lobby-page home-page">
   <dialog id="friends-dialog" class="home-dialog" aria-labelledby="friends-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Your circle</p><h2 id="friends-dialog-title">Friends</h2></div><button type="button" data-home-close aria-label="Close friends">×</button></div><div class="home-dialog-body"><section id="friends-panel" class="lobby-panel friends-panel" aria-labelledby="friends-heading" hidden>
           <div id="friend-incoming" hidden><h3 id="friend-incoming-title" class="friend-subheading"></h3><ul id="friend-incoming-list" class="friend-list"></ul></div>
-          <h3 id="friends-heading">Your friends <span id="friend-count"></span></h3>
+          <h3 id="friends-heading">Your friends <span id="friend-count" class="motion-number"></span></h3>
           <ul id="friend-list" class="friend-list"></ul>
+          <p id="friend-invite-wait" class="muted" hidden>One invitation at a time: Invite returns once yours is answered.</p>
           <div id="friend-outgoing" hidden><h3 class="friend-subheading">Waiting for an answer</h3><ul id="friend-outgoing-list" class="friend-list"></ul></div>
           <form id="friend-ask"><label for="friend-username">Add a friend by their player name</label><div class="code-row"><input id="friend-username" name="friend-username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" placeholder="bastien" required /><button id="friend-ask-submit" type="submit">Ask →</button></div></form>
           <p id="friend-note" class="muted" role="status" hidden></p>
           <p id="friend-problem" class="problem" role="alert" hidden></p>
-          <p class="muted">A friend can invite you to a table and be told about it on their phone. Declining and removing are silent.</p>
+          <p class="muted">A friend can keep you a seat and is told on their phone. Declining and removing are silent.</p>
         </section></div></dialog>
   <dialog id="inbox-dialog" class="home-dialog" aria-labelledby="inbox-dialog-title"><div class="dialog-heading"><div><p class="eyebrow">Waiting for you</p><h2 id="inbox-dialog-title">Notifications</h2></div><button type="button" data-home-close aria-label="Close notifications">×</button></div><div class="home-dialog-body"><div id="inbox-list" class="inbox-list"></div><p id="inbox-problem" class="problem" role="alert" hidden></p></div></dialog>
   <dialog id="app-settings-dialog" class="home-dialog app-settings-dialog" aria-labelledby="app-settings-title"><div class="dialog-heading"><div><p class="eyebrow">Downfall Instinct</p><h2 id="app-settings-title">Settings</h2></div><button type="button" data-home-close aria-label="Close settings">×</button></div>

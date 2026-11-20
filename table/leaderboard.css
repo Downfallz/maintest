@@ -11,8 +11,7 @@
 .ladder .deviation { color: var(--muted); font-size: 12px; margin-left: 4px; }
 .ladder tr.provisional td { color: var(--muted); }
 .ladder tr.you td { background: color-mix(in srgb, var(--gold) 6.3%, transparent); }
-.ladder tr.you .player::after { content: " (you)"; color: var(--muted); font-weight: 400; font-size: 12px; }
-.ladder .tag { display: inline-block; white-space: nowrap; margin-left: 8px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; border: 1px dashed var(--line); border-radius: var(--radius-sharp); padding: 1px 5px; font-weight: 600; }
+.ladder .tag { display: inline-block; white-space: nowrap; margin-left: 8px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; border: 1px dashed var(--line); border-radius: var(--radius-sharp); padding: 1px 5px; font-weight: 600; }
 .you-rating { font: 400 40px/1 var(--font-display); color: var(--gold); margin: 6px 0; }
 .you-line { color: var(--muted); font-size: 13px; line-height: 1.7; }
 #you .eyebrow { margin-top: 16px; }
@@ -20,5 +19,41 @@
 .bots { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 6px; }
 .bots li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
 .bots li span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-@media (max-width: 700px) { .ladder .games { display: none; } .ladder th, .ladder td { padding: 11px 10px; } .ladder .tag { display: table; margin: 4px 0 0; } }
+@media (max-width: 700px) { .ladder .games { display: none; } .ladder th, .ladder td { padding: 11px 10px; } }
 .ladder-subheading { margin: 18px 0 6px; font-size: 13px; letter-spacing: .04em; color: var(--ink); }
+
+/* UX10 (docs/art/journeys/pages.md): a player is their initial, Your place comes first on a phone, the rating and
+   the record are drawn, and the empty page opens the game that fills it. */
+.lobby-page .eyebrow { font-size: 11px; }
+.ladder .player-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.ladder .player .account-initial { width: 28px; height: 28px; font-size: 14px; flex: none; }
+.you-who .account-initial { width: 36px; height: 36px; font-size: 18px; flex: none; }
+.ladder .you-mark { color: var(--muted); font-weight: 400; font-size: 12px; }
+.ladder .player .tag { margin-left: 0; }
+.ladder-layout .lobby-sidebar { order: 1; }
+@media (max-width: 700px) { .ladder-layout .lobby-sidebar { order: 0; } }
+.your-place h2 { margin-top: 0; }
+.your-place .you { min-height: 132px; display: grid; gap: 10px; align-content: start; }
+.you-who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; }
+.you-who strong { font-size: 16px; min-width: 0; overflow-wrap: anywhere; flex: 1 1 6em; }
+.you-place { margin-left: auto; color: var(--gold); font-size: 13px; font-weight: 650; white-space: nowrap; }
+.your-place .you-rating { margin: 2px 0 0; }
+.you-move { margin: 0; color: var(--ink); font-size: 13px; }
+.rating-band { display: grid; gap: 4px; }
+.rating-track { position: relative; height: 8px; border-radius: var(--radius-sharp); background: color-mix(in srgb, var(--line) 70%, transparent); }
+.rating-span { position: absolute; top: 0; bottom: 0; left: calc(var(--from) * 1%); width: calc((var(--to) - var(--from)) * 1%); background: color-mix(in srgb, var(--gold) 22%, transparent); }
+.rating-tick { position: absolute; top: -2px; bottom: -2px; left: calc(var(--at) * 1%); width: 2px; margin-left: -1px; background: var(--muted); }
+.rating-tick.mine { top: -5px; bottom: -5px; width: 3px; background: var(--gold); }
+.rating-ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.you-record { display: grid; gap: 6px; margin: 0; color: var(--muted); font-size: 13px; }
+.record-bar { display: flex; height: 8px; overflow: hidden; border-radius: var(--radius-sharp); background: color-mix(in srgb, var(--line) 70%, transparent); }
+.record-bar > span { flex: 0 0 calc(var(--share) * 1%); }
+.record-won { background: var(--gold); }
+.record-lost { background: var(--muted); }
+.record-drawn { background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.page-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; font-weight: 650; text-decoration: none; }
+.page-action.button-link { border: 1px solid var(--line); border-radius: var(--radius-sharp); color: var(--gold); }
+.ladder-how { margin-top: 18px; }
+.ladder-how summary { min-height: 44px; padding: 12px 0; box-sizing: border-box; cursor: pointer; color: var(--ink); font-weight: 600; }
+.ladder-how p { margin: 4px 0 0; font-size: 13px; line-height: 1.7; }
+@media (max-width: 360px) { .ladder th, .ladder td { padding: 11px 7px; } .ladder .deviation { display: block; margin-left: 0; } }

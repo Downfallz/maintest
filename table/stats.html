@@ -20,23 +20,31 @@
   <header class="masthead lobby-header home-header" data-navigation="stats"></header>
   <main class="lobby-main">
     <section class="lobby-hero" aria-labelledby="stats-title">
-      <div><p class="eyebrow">Your ranked games</p><h2 id="stats-title">Your statistics.</h2><p class="hero-detail">How your ranked 3v3 games went, and what you played in them. Games against a bot and unranked games do not count here. Only you see this page.</p></div>
+      <div><p class="eyebrow">Your ranked games</p><h2 id="stats-title">Your statistics.</h2><p class="hero-detail">Your ranked 3v3 games against other players. Only you see this page.</p></div>
     </section>
     <output id="stats-status" class="lobby-status muted">Reading your games…</output>
     <p id="stats-problem" class="problem" role="alert" hidden></p>
+    <section id="stats-empty" class="lobby-panel stats-empty" aria-label="No ranked game yet" hidden>
+      <p>No ranked game yet. Your record, the mutation you acquire most and the spell you cast most appear after your first.</p>
+      <a class="primary page-action" href="/lobby?rematch=person">Open a ranked table →</a>
+    </section>
     <div id="stats-body" class="lobby-layout" hidden>
       <div class="stats-main">
         <section class="lobby-section" aria-labelledby="record-heading">
           <div class="section-heading"><h2 id="record-heading">Record</h2><span class="muted">Won–lost–drawn</span></div>
           <div id="record-cards" class="stats-cards"></div>
         </section>
+        <div class="stats-leaned">
+          <section id="leaned-mutation" class="stats-card leaned" aria-labelledby="leaned-mutation-heading"><h3 id="leaned-mutation-heading" class="eyebrow">Most acquired</h3><div id="leaned-mutation-body" class="leaned-body"></div></section>
+          <section id="leaned-spell" class="stats-card leaned" aria-labelledby="leaned-spell-heading"><h3 id="leaned-spell-heading" class="eyebrow">Most cast</h3><div id="leaned-spell-body" class="leaned-body"></div></section>
+        </div>
         <section class="lobby-section" aria-labelledby="mutations-heading">
           <div class="section-heading"><h2 id="mutations-heading">Mutations</h2><span id="teams-note" class="muted"></span></div>
-          <div class="ladder-scroll"><table class="ladder" aria-labelledby="mutations-heading"><thead><tr><th scope="col">Mutation</th><th scope="col" class="number">Bought</th><th scope="col" class="number">Won</th></tr></thead><tbody id="mutation-rows"></tbody></table></div>
+          <section class="ladder-scroll" aria-labelledby="mutations-heading"><table class="ladder" aria-labelledby="mutations-heading"><thead><tr><th scope="col">Mutation</th><th scope="col" class="number">Acquired</th><th scope="col" class="number">Won</th></tr></thead><tbody id="mutation-rows"></tbody></table></section>
         </section>
         <section class="lobby-section" aria-labelledby="spells-heading">
           <div class="section-heading"><h2 id="spells-heading">Spells</h2></div>
-          <div class="ladder-scroll"><table class="ladder" aria-labelledby="spells-heading"><thead><tr><th scope="col">Spell</th><th scope="col" class="number">Casts</th><th scope="col" class="number">Games</th><th scope="col" class="number">Won</th></tr></thead><tbody id="spell-rows"></tbody></table></div>
+          <section class="ladder-scroll" aria-labelledby="spells-heading"><table class="ladder" aria-labelledby="spells-heading"><thead><tr><th scope="col">Spell</th><th scope="col" class="number">Casts</th><th scope="col" class="number">Games</th><th scope="col" class="number">Won</th></tr></thead><tbody id="spell-rows"></tbody></table></section>
         </section>
       </div>
       <aside class="lobby-sidebar" aria-label="At a glance">

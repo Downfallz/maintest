@@ -19,6 +19,10 @@
     "table/home": {
       "first": 81920,
       "all": 229376
+    },
+    "table/stats": {
+      "first": 0,
+      "all": 638976
     }
   }
 }
