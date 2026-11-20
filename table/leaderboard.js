@@ -44,7 +44,8 @@ export function placeMove(remembered, standing) {
   const rank = before.rank !== standing.rank ? `#${before.rank} → #${standing.rank}` : '';
   if (!rating && !rank) return null;
   if (!rating) return { text: `${rank} since you last looked.`, rating, rank };
-  return { text: `${rating > 0 ? 'Up' : 'Down'} ${Math.abs(rating)} since you last looked.${rank ? ` ${rank}.` : ''}`, rating, rank };
+  const place = rank ? ` ${rank}.` : '';
+  return { text: `${rating > 0 ? 'Up' : 'Down'} ${Math.abs(rating)} since you last looked.${place}`, rating, rank };
 }
 
 /** The ladder's ratings as one band, lowest to highest: where each player stands on it, in percent, the player's own marked. */
@@ -128,98 +129,130 @@ let opened = false;
 let drawnStanding;
 let drawnRating = null;
 
-export function drawLadder(doc, ladder, { storage = globalThis.localStorage, first = true } = {}) {
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+function playerRow(doc, player, arrived) {
+  const row = node(doc, 'tr');
+  row.className = [player.provisional ? 'provisional' : '', player.you ? 'you' : '', player.rank <= 3 && !player.provisional ? 'top' : '', arrived ? 'motion-arrive' : ''].filter(Boolean).join(' ');
+  const name = node(doc, 'td', null, 'player');
+  // The cell stays a table cell; the line inside it lays out the initial, the name and the tags.
+  const line = node(doc, 'span', null, 'player-line');
+  name.append(line);
+  line.append(initial(doc, player.username), node(doc, 'span', player.username, 'player-name'));
+  if (player.you) line.append(node(doc, 'span', '(you)', 'you-mark'));
+  if (player.provisional) {
+    const tag = node(doc, 'span', 'provisional', 'tag');
+    tag.title = 'Rating still being found: a few more ranked games settle it';
+    line.append(tag);
+  }
+  const rating = node(doc, 'td', String(player.rating), 'number');
+  rating.append(node(doc, 'span', `±${player.deviation}`, 'deviation'));
+  row.append(node(doc, 'td', String(player.rank), 'rank'), name, rating, node(doc, 'td', recordText(player), 'number'), node(doc, 'td', String(player.games), 'number games'));
+  return row;
+}
+
+function drawPlayers(doc, ladder) {
   const el = id => doc.getElementById(id);
   const arrived = new Set(drawnPlayers ? ladder.players.map(player => player.username).filter(name => !drawnPlayers.has(name)) : []);
   drawnPlayers = new Set(ladder.players.map(player => player.username));
-  const rows = ladder.players.map(player => {
-    const row = node(doc, 'tr');
-    row.className = [player.provisional ? 'provisional' : '', player.you ? 'you' : '', player.rank <= 3 && !player.provisional ? 'top' : '', arrived.has(player.username) ? 'motion-arrive' : ''].filter(Boolean).join(' ');
-    const name = node(doc, 'td', null, 'player');
-    // The cell stays a table cell; the line inside it lays out the initial, the name and the tags.
-    const line = node(doc, 'span', null, 'player-line');
-    name.append(line);
-    line.append(initial(doc, player.username), node(doc, 'span', player.username, 'player-name'));
-    if (player.you) line.append(node(doc, 'span', '(you)', 'you-mark'));
-    if (player.provisional) {
-      const tag = node(doc, 'span', 'provisional', 'tag');
-      tag.title = 'Rating still being found: a few more ranked games settle it';
-      line.append(tag);
-    }
-    const rating = node(doc, 'td', String(player.rating), 'number');
-    rating.append(node(doc, 'span', `±${player.deviation}`, 'deviation'));
-    row.append(node(doc, 'td', String(player.rank), 'rank'), name, rating, node(doc, 'td', recordText(player), 'number'), node(doc, 'td', String(player.games), 'number games'));
-    return row;
-  });
+  const rows = ladder.players.map(player => playerRow(doc, player, arrived.has(player.username)));
   el('ladder-rows').replaceChildren(...rows);
   el('ladder-table').hidden = rows.length === 0;
   el('ladder-empty').hidden = rows.length > 0;
   el('players-caption').hidden = rows.length === 0;
   el('players-count').textContent = ladder.players.length;
   el('provisional-above').textContent = ladder.provisionalAbove;
+}
 
-  const you = [];
+/** The player's rating drawn among the ladder's: a band with a tick a player, theirs marked, and its two ends. */
+function drawnBand(doc, players, standing) {
+  const band = ratingBand(players);
+  if (!band) return null;
+  const drawn = node(doc, 'div', null, 'rating-band');
+  drawn.setAttribute('role', 'img');
+  drawn.setAttribute('aria-label', `Your rating ${standing.rating} ±${standing.deviation}, among ${plural(players.length, 'player')} from ${band.low} to ${band.high}`);
+  const track = node(doc, 'span', null, 'rating-track');
+  if (band.span) {
+    const span = node(doc, 'span', null, 'rating-span');
+    span.style.setProperty('--from', band.span[0]);
+    span.style.setProperty('--to', band.span[1]);
+    track.append(span);
+  }
+  for (const tick of band.ticks) {
+    const mark = node(doc, 'span', null, tick.you ? 'rating-tick mine' : 'rating-tick');
+    mark.style.setProperty('--at', tick.at);
+    track.append(mark);
+  }
+  const ends = node(doc, 'span', null, 'rating-ends');
+  ends.setAttribute('aria-hidden', 'true');
+  ends.append(node(doc, 'span', String(band.low)), node(doc, 'span', String(band.high)));
+  drawn.append(track, ends);
+  return drawn;
+}
+
+/** Your place for a player on the ladder: the rating, how it moved, the rating and the record drawn. */
+function standingParts(doc, ladder, standing, move) {
+  const parts = [node(doc, 'p', ratingText(standing), 'you-rating motion-number')];
+  if (move) parts.push(node(doc, 'p', move.text, 'you-move'));
+  const band = drawnBand(doc, ladder.players, standing);
+  if (band) parts.push(band);
+  const record = node(doc, 'p', null, 'you-record');
+  const shares = recordParts(standing);
+  if (shares) record.append(recordBar(doc, shares));
+  record.append(node(doc, 'span', `${recordWords(standing)} in ${plural(standing.games, 'game')}`));
+  parts.push(record, openRanked(doc, false));
+  return parts;
+}
+
+function botsParts(doc, bots) {
+  if (!bots?.length) return [];
+  const list = node(doc, 'ul', null, 'bots');
+  list.setAttribute('aria-label', 'Against the bots');
+  for (const bot of bots) {
+    const item = node(doc, 'li');
+    item.append(node(doc, 'span', bot.bot), node(doc, 'span', recordText(bot)));
+    list.append(item);
+  }
+  return [node(doc, 'p', 'Against the bots (not ranked)', 'eyebrow'), list];
+}
+
+export function drawLadder(doc, ladder, { storage = globalThis.localStorage, first = true } = {}) {
+  const el = id => doc.getElementById(id);
+  drawPlayers(doc, ladder);
+
   const standing = ladder.you?.standing ?? null;
   if (!opened && ladder.you) { seenAtOpen = remembered(storage, ladder.you.username); opened = true; }
   const key = standing ? `${standing.rank}:${standing.rating}` : null;
   const changed = drawnStanding !== undefined && drawnStanding !== key;
   const before = drawnRating;
   drawnRating = standing ? { rating: standing.rating, rank: standing.rank } : null;
-  let move = null;
-  if (!ladder.you) you.push(node(doc, 'p', youSummary(null).text, 'you-line'));
-  else {
+  drawnStanding = key;
+  const move = standing ? placeMove(seenAtOpen, standing) : null;
+
+  const you = [];
+  if (ladder.you) {
     const head = node(doc, 'p', null, 'you-who');
     head.append(initial(doc, ladder.you.username), node(doc, 'strong', ladder.you.username));
     if (standing) head.append(node(doc, 'span', placeText(standing), 'you-place motion-number'));
     you.push(head);
-    if (!standing) {
-      you.push(node(doc, 'p', 'Not on the ladder yet. Your first ranked game against another player puts you on it.', 'you-line'), openRanked(doc, true));
-    } else {
-      move = placeMove(seenAtOpen, standing);
-      you.push(node(doc, 'p', ratingText(standing), 'you-rating motion-number'));
-      if (move) you.push(node(doc, 'p', move.text, 'you-move'));
-      const band = ratingBand(ladder.players);
-      if (band) {
-        const drawn = node(doc, 'div', null, 'rating-band');
-        drawn.setAttribute('role', 'img');
-        drawn.setAttribute('aria-label', `Your rating ${standing.rating} ±${standing.deviation}, among ${ladder.players.length} player${ladder.players.length === 1 ? '' : 's'} from ${band.low} to ${band.high}`);
-        const track = node(doc, 'span', null, 'rating-track');
-        if (band.span) { const span = node(doc, 'span', null, 'rating-span'); span.style.setProperty('--from', band.span[0]); span.style.setProperty('--to', band.span[1]); track.append(span); }
-        for (const tick of band.ticks) { const mark = node(doc, 'span', null, tick.you ? 'rating-tick mine' : 'rating-tick'); mark.style.setProperty('--at', tick.at); track.append(mark); }
-        const ends = node(doc, 'span', null, 'rating-ends');
-        ends.setAttribute('aria-hidden', 'true');
-        ends.append(node(doc, 'span', String(band.low)), node(doc, 'span', String(band.high)));
-        drawn.append(track, ends);
-        you.push(drawn);
-      }
-      const record = node(doc, 'p', null, 'you-record');
-      const parts = recordParts(standing);
-      if (parts) record.append(recordBar(doc, parts));
-      record.append(node(doc, 'span', `${recordWords(standing)} in ${standing.games} game${standing.games === 1 ? '' : 's'}`));
-      you.push(record, openRanked(doc, false));
-    }
+    if (standing) you.push(...standingParts(doc, ladder, standing, move));
+    else you.push(node(doc, 'p', 'Not on the ladder yet. Your first ranked game against another player puts you on it.', 'you-line'), openRanked(doc, true));
     remember(storage, ladder.you.username, standing);
-  }
-  drawnStanding = key;
-  if (ladder.you?.bots?.length) {
-    const bots = node(doc, 'ul', null, 'bots');
-    bots.setAttribute('aria-label', 'Against the bots');
-    for (const bot of ladder.you.bots) {
-      const item = node(doc, 'li');
-      item.append(node(doc, 'span', bot.bot), node(doc, 'span', recordText(bot)));
-      bots.append(item);
-    }
-    you.push(node(doc, 'p', 'Against the bots (not ranked)', 'eyebrow'), bots);
-  }
+  } else you.push(node(doc, 'p', youSummary(null).text, 'you-line'));
+  you.push(...botsParts(doc, ladder.you?.bots));
   el('you').replaceChildren(...you);
-  // A place that moved since this browser last showed it plays the kit's value that changes, once.
-  // It plays when the page opens on a move, and when a later read changes what the page shows; not on a read that
-  // changes nothing.
+
+  // A place that moved plays the kit's value that changes, once: when the page opens on a move since this browser
+  // last showed it, and when a later read changes what the page shows; not on a read that changes nothing.
   const moved = first ? Boolean(move) : changed;
   if (moved) for (const number of el('you').querySelectorAll('.motion-number')) numberChanged(number);
   // At rest the status says nothing; a change while the page is open is told once.
-  if (!first) el('ladder-status').textContent = changed && standing ? statusText(before, standing) : '';
-  else el('ladder-status').textContent = '';
+  el('ladder-status').textContent = !first && changed && standing ? statusText(before, standing) : '';
+}
+
+/** A scrolling table can be reached by the keyboard, so it can be scrolled without a pointer (WCAG 2.1.1). */
+export function focusableScrolls(doc) {
+  for (const box of doc.querySelectorAll('.ladder-scroll')) box.tabIndex = 0;
 }
 
 let loaded = false;
@@ -244,6 +277,7 @@ async function load(doc) {
 
 // The statistics import the drawn record from here: the ladder reads itself on its own page only.
 if (typeof document !== 'undefined' && document.getElementById('ladder-rows')) {
+  focusableScrolls(document);
   // Read when a game ends or begins somewhere (the lobby's public changes, ADR 0164) and when the stream opens --
   // the page loaded, back in view -- rather than on a clock. A ladder moves only when a ranked game ends.
   onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('lobby'))) void load(document); });

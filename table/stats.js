@@ -1,7 +1,7 @@
 import { onLobbyChange } from './changes.js';
 import { numberChanged } from './motion.js';
 import { pictureElement } from './picture.js';
-import { recordBar, recordParts } from './leaderboard.js';
+import { focusableScrolls, recordBar, recordParts } from './leaderboard.js';
 
 // A player's own statistics (ADR 0168): how their ranked 3v3 games went (ADR 0171), and the mutations and spells
 // they played in them. The host computes everything from the results it keeps for the player; this page only draws it.
@@ -153,6 +153,7 @@ async function load(doc) {
 }
 
 if (typeof document !== 'undefined') {
+  focusableScrolls(document);
   // Read again when the player's own lists change (their lobby stream, ADR 0164), which a game of theirs ending
   // does, and when the stream opens -- the page loaded, back in view -- rather than on a clock.
   onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('account'))) void load(document); });
