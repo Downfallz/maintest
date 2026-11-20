@@ -1,0 +1,1 @@
+- An API class that takes a host service as an optional ctor parameter (`MutationArt? art = null`, StatsApi, UX10) with a test that passes it directly leaves TableHost's wiring untested: drop the argument there and the field is null in production, tests green (#812 shape). Ask for the parameter to be required, or a test over `HostedTables.Services` (UX10 PR).
