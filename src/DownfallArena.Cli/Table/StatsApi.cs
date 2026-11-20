@@ -15,10 +15,13 @@ namespace DownfallArena.Cli.Table;
 /// streaks, and the mutations and spells they played. Nobody reads another player's. Names come from this host's
 /// catalogue; a mutation or spell it no longer holds is shown by its id. A mutation also names the painting it draws
 /// (<c>artwork</c>, from the art published with the catalogue), or null, so the page can show the one a player leans
-/// on without reading a filename.
+/// on without reading a filename; a spell, the portrait the battle draws beside its name (<c>portrait</c>, from the
+/// spell art), or null.
 /// </summary>
-internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources, MutationArt art)
+internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources, MutationArt art, SpellArt? spellArt = null)
 {
+    private readonly SpellArt _spellArt = spellArt ?? SpellArt.None;
+
     public const string Path = "/api/stats";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
@@ -48,7 +51,7 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
                 averageRounds = stats.AverageRounds is { } rounds ? Math.Round(rounds, 1) : (double?)null,
                 stats.WithTeams,
                 mutations = stats.Mutations.Select(mutation => new { id = mutation.Mutation, name = MutationName(mutation.Mutation), artwork = Artwork(mutation.Mutation), mutation.Bought, mutation.Won }),
-                spells = stats.Spells.Select(spell => new { id = spell.Spell, name = SpellName(spell.Spell), spell.Casts, spell.Games, spell.Won }),
+                spells = stats.Spells.Select(spell => new { id = spell.Spell, name = SpellName(spell.Spell), portrait = Portrait(spell.Spell), spell.Casts, spell.Games, spell.Won }),
             },
             Web);
 
@@ -63,6 +66,9 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
 
     private string? Artwork(string id) =>
         TierId.TryParse(id, out var parsed) ? art.Of(parsed)?.Artwork : null;
+
+    private string? Portrait(string id) =>
+        SpellId.TryParse(id, out var parsed) ? _spellArt.Of(parsed)?.Portrait : null;
 
     private string SpellName(string id) =>
         SpellId.TryParse(id, out var parsed) && resources.TryGetSpell(parsed, out var spell) ? spell.Name : id;

@@ -113,6 +113,30 @@ public sealed class StatsApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_spell_names_the_portrait_the_battle_draws_and_one_without_names_null()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("Bastien");
+        var drawn = Resources.Spells.First();
+        await _results.RecordAsync(
+            new MatchResult(Guid.CreateVersion7().ToString(), Start, "3v3", "at-activation", "hash", 10, "player1", [new("player1", mark.Id, null), new("player2", bastien.Id, null)])
+            {
+                Teams = [new PlayedCreature("player1", Resources.Creatures.First().Id.Value, [], Survived: true, new Dictionary<string, int> { [drawn.Id.Value] = 2, ["spell:gone:v1"] = 1 })],
+            },
+            Cancel);
+        var accounts = await AccountsAsync();
+        Directory.CreateDirectory(_root);
+        await File.WriteAllTextAsync(Path.Combine(_root, SpellArt.FileName), $$"""{ "{{drawn.Id.Value}}": { "family": "physical", "motif": "plates", "delivery": "cast", "portrait": "brace" } }""", Cancel);
+        var spellArt = SpellArt.ReadNextTo(Path.Combine(_root, "game.schema.json"));
+
+        var read = Read(await new StatsApi(_results, accounts, Resources, MutationArt.None, spellArt).HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
+
+        var spells = read.GetProperty("spells").EnumerateArray().ToDictionary(one => one.GetProperty("id").GetString()!);
+        spells[drawn.Id.Value].GetProperty("portrait").GetString().ShouldBe("brace");
+        spells["spell:gone:v1"].GetProperty("portrait").ValueKind.ShouldBe(JsonValueKind.Null, "a spell nobody drew names no portrait");
+    }
+
+    [Fact]
     public async Task The_host_builds_its_statistics_on_the_art_its_catalogue_published()
     {
         // The table host asks its services for the art, as TableHost does: one registered by the infrastructure, read

@@ -2,6 +2,7 @@ import { mutationChoices } from '../../table/battle-mutations.js';
 import { cardsById } from '../../table/card.js';
 import { classColour, familyRoot, talentPalette } from '../../table/mat.js';
 import { stageSpoken } from '../../table/terms.js';
+import { spellPortrait } from './spell-portrait';
 import { spellCard } from './spell-card';
 import type { Catalogue, Package } from './planning';
 import { onNextFrame } from './next-frame';
@@ -29,7 +30,12 @@ function sigil(family: string) {
 function preview(face: Face, packages: Pack[], recipient: string, catalogue: Catalogue | null) {
   const section = node('section', '', 'mutation-preview');
   section.style.setProperty('--mutation-colour', face.colour);
-  section.append(node('div', `${recipient} · ${face.name}`, 'preview-name'), node('span', face.initiative == null ? 'Initiative unavailable' : `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`, 'mutation-initiative'));
+  const title = node('div', `${recipient} · ${face.name}`, 'preview-name');
+  const portrait = spellPortrait(face.portrait, 24);
+  if (portrait) title.prepend(portrait);
+  let initiative = 'Initiative unavailable';
+  if (face.initiative != null) initiative = `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`;
+  section.append(title, node('span', initiative, 'mutation-initiative'));
   const cards = cardsById(catalogue);
   for (const spell of face.spells) section.append(spellCard(cards.get(spell.id), spell.id, catalogue?.effects ?? [], { compact: true }));
   for (const passive of face.passives) section.append(node('p', passive, 'mutation-passive'));

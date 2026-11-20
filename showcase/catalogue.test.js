@@ -153,3 +153,15 @@ test('the guide writes every level in Roman numerals', async () => {
   assert.deepEqual([...new Set(numerals)].sort(), ['I', 'II', 'III', 'IV']);
 });
 
+
+test('the guide draws each spell\'s and each capstone\'s portrait from the kit, beside its name', async () => {
+  const catalogue = await loadCatalogue();
+  const html = guidePage(english, catalogue, 'https://play.example/');
+  const named = [...catalogue.baseSpells, ...catalogue.nodes.flatMap(t => t.spells)].map(s => s.portrait)
+    .concat(catalogue.nodes.map(t => t.visual.portrait)).filter(Boolean);
+  assert.ok(named.length > 0);
+  for (const name of new Set(named)) {
+    assert.match(html, new RegExp(`<img class="picture spell-portrait" src="/page-art/spell-${name}-40\\.[0-9a-f]{8}\\.webp"[^>]* alt=""`), name);
+  }
+  assert.match(html, /<p class="passive-rule"><img class="picture spell-portrait" src="\/page-art\/spell-titan-/);
+});

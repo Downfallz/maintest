@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
+import { servePageArt } from './battle-spells-fixture.js';
 import { fitsViewport } from './fit.js';
 import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
@@ -7,7 +8,7 @@ const roster = [1, 2, 3].map(id => ({ id, name: `Creature ${id}`, isAlive: true,
 const roots = ['Brute', 'Predator', 'Warped'];
 const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, visual: { family: name.toLowerCase() }, level: 1, initiativeBonus: i, spells: [`spell${i}`], tags: [['Guard', 'Pressure'], ['Speed', 'Bleed'], ['Magic', 'Control']][i] })).concat([
   { id: 'future', name: 'Ironhide', level: 2, prerequisites: ['root0'], initiativeBonus: 1, spells: [] },
-  { id: 'cap', name: 'Shared capstone', level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
+  { id: 'cap', name: 'Shared capstone', visual: { family: 'brute', portrait: 'titan' }, level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: i === 1 ? '15%' : '0%',
   criticalThreshold: i === 1 ? 18 : null, criticalNote: i === 1 ? 'A natural 18 or more doubles the damage.' : null,
@@ -29,6 +30,7 @@ async function mount(page, { content = catalogue, allies = roster, picks = [], i
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
+  await servePageArt(page);
   await page.route('**/api/**', async route => {
     const url = new URL(route.request().url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
@@ -162,8 +164,12 @@ test('capstones preserve shared passives, no fake tags or spells, and the tree r
   const h = await mount(page, { ids: ['cap'], allies: [{ ...roster[0], acquiredTiers: ['root0', 'future'] }] });
   await expect(page.locator('[data-mutation]')).toHaveCount(1); await page.locator('[data-mutation="cap"]').click();
   await expect(page.locator('.mutation-preview .spell-card')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the team');
+  const portrait = 'img.spell-portrait[src*="/page-art/spell-titan-40."][sizes="24px"]';
+  const loaded = image => image.complete && image.naturalWidth > 0;
+  await expect.poll(() => page.locator('.mutation-preview').locator(portrait).evaluate(loaded)).toBe(true);
   // The full tree reads what is held without offering it; only the offer is chosen, and only from its card.
   await page.locator('#mutation-atlas-open').click(); const tree = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body');
+  await expect.poll(() => detail.locator(portrait).evaluate(loaded)).toBe(true);
   await expect(tree.locator('[data-package="cap"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(tree.locator('[data-package="cap"]')).toHaveAttribute('data-path', 'true');
   await expect(tree.locator('[data-package="root0"]')).toHaveAttribute('data-path', 'true');

@@ -709,7 +709,8 @@ mark and the host's (ADR 0194).
   (ADR 0168) and counting their ranked 3v3 games alone (ADR 0171): the record, streaks, and the mutations and
   spells they played, which each result keeps from the final board and the match's events. Each mutation names
   the painting it draws (`artwork`, from the art published with the catalogue, or null), so the page shows the one
-  the player acquires most.
+  the player acquires most; each spell names its portrait (`portrait`, from the spell art, or null), drawn beside
+  the spell cast most and in each row.
 
 #### Bots' turns, tending, and the hosted shape
 

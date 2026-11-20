@@ -228,6 +228,9 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .spell-head, .spell-stats, .mutation-facts { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; }
 .spell-head { justify-content: space-between; }
 .spell-head strong { color: var(--bone); font: 20px/1.2 var(--font-display); }
+.spell-portrait { width: 40px; height: 40px; margin-inline-end: 10px; vertical-align: middle; object-fit: cover; border-radius: 4px; }
+.passive-rule:has(> .spell-portrait) { display: flex; align-items: center; gap: 10px; }
+.passive-rule > .spell-portrait { flex: none; margin: 0; }
 .spell-stats { gap: 4px; }
 .spell-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid; border-radius: 3px; font: 650 12px/1.4 var(--font-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .spell-chip.cost { color: #8edcf0; border-color: #8edcf055; }

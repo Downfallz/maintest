@@ -57,6 +57,24 @@ public sealed class PackageTagsTests : IDisposable
         var visual = JsonDocument.Parse(Encoding.UTF8.GetString(answer.Body)).RootElement.GetProperty("packages").EnumerateArray().Single().GetProperty("visual");
         visual.GetProperty("family").GetString().ShouldBe("brute");
         visual.GetProperty("motif").ValueKind.ShouldBe(JsonValueKind.Null);
+        visual.GetProperty("portrait").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>The portrait a package's art names rides on the package's visual, as a card's does.</summary>
+    [Fact]
+    public async Task The_catalogue_carries_the_portrait_a_package_s_art_names()
+    {
+        using var hosted = new HostedTables(null, content: content => content.Write("presentation/mutation-art.json", """{ "tier:guard:v1": { "family": "brute", "portrait": "titan" } }"""));
+        using var registry = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        using var place = (await registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, TestContext.Current.CancellationToken);
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
+
+        answer.Status.ShouldBe(200);
+        var visual = JsonDocument.Parse(Encoding.UTF8.GetString(answer.Body)).RootElement.GetProperty("packages").EnumerateArray().Single().GetProperty("visual");
+        visual.GetProperty("portrait").GetString().ShouldBe("titan");
     }
 
     /// <summary>The battle draws a confirmed cast from what the card says (ADR 0131); a card nobody drew says nothing.</summary>

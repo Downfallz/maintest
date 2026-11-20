@@ -21,4 +21,6 @@
 .stats-empty p { margin: 0 0 16px; color: var(--ink); line-height: 1.6; }
 .stats-main > .lobby-section { margin-bottom: 0; }
 .leaned-words span + span { margin-top: -2px; }
+.leaned-portrait { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-soft); flex: none; }
+.row-portrait { width: 24px; height: 24px; object-fit: cover; border-radius: var(--radius-soft); vertical-align: middle; margin-inline-end: 8px; }
 .leaned-spell strong { font: 650 20px/1.2 var(--font-text); }

@@ -10,7 +10,7 @@
     },
     "showcase/mutations": {
       "first": 98304,
-      "all": 98304
+      "all": 172032
     },
     "table/sign-in": {
       "first": 131072,
@@ -22,11 +22,11 @@
     },
     "table/stats": {
       "first": 0,
-      "all": 638976
+      "all": 724992
     },
     "table/battle": {
       "first": 0,
-      "all": 16384
+      "all": 98304
     }
   }
 }

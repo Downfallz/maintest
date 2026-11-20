@@ -1,5 +1,6 @@
 {
   "spell:adrenaline_tonic:v1": {
+    "portrait": "overdrive",
     "family": "biological",
     "motif": "spores",
     "delivery": "cast",
@@ -13,6 +14,7 @@
     ]
   },
   "spell:ambush:v1": {
+    "portrait": "ambush",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -26,6 +28,7 @@
     ]
   },
   "spell:bone_ward:v1": {
+    "portrait": "bonewall",
     "family": "necromantic",
     "motif": "bones",
     "delivery": "cast",
@@ -39,6 +42,7 @@
     ]
   },
   "spell:chain_slash:v1": {
+    "portrait": "dominate",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -55,6 +59,7 @@
     ]
   },
   "spell:crazed_specter:v1": {
+    "portrait": "death-wail",
     "family": "necromantic",
     "motif": "spirits",
     "delivery": "cast",
@@ -72,6 +77,7 @@
     ]
   },
   "spell:crushing_stomp:v1": {
+    "portrait": "crushing-stomp",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -90,6 +96,7 @@
     ]
   },
   "spell:engulfing_flames:v1": {
+    "portrait": "incinerate",
     "family": "elemental",
     "motif": "fire",
     "delivery": "cast",
@@ -106,6 +113,7 @@
     ]
   },
   "spell:enraged_charge:v1": {
+    "portrait": "fury",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -120,6 +128,7 @@
     ]
   },
   "spell:extort:v1": {
+    "portrait": "seize",
     "family": "physical",
     "motif": "bite",
     "delivery": "melee",
@@ -133,6 +142,7 @@
     ]
   },
   "spell:frostbite:v1": {
+    "portrait": "ice-grip",
     "family": "elemental",
     "motif": "ice",
     "delivery": "cast",
@@ -146,6 +156,7 @@
     ]
   },
   "spell:full_plate:v1": {
+    "portrait": "carapace",
     "family": "physical",
     "motif": "plates",
     "delivery": "cast",
@@ -171,6 +182,7 @@
     ]
   },
   "spell:hateful_sacrifice:v1": {
+    "portrait": "blood-price",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -188,6 +200,7 @@
     ]
   },
   "spell:healing_screech:v1": {
+    "portrait": "vital-echo",
     "family": "astral",
     "motif": "vital",
     "delivery": "cast",
@@ -212,6 +225,7 @@
     ]
   },
   "spell:ice_spear:v1": {
+    "portrait": "deep-freeze",
     "family": "elemental",
     "motif": "ice",
     "delivery": "cast",
@@ -228,6 +242,7 @@
     ]
   },
   "spell:infectious_blast:v1": {
+    "portrait": "contagion",
     "family": "biological",
     "motif": "spores",
     "delivery": "cast",
@@ -244,6 +259,7 @@
     ]
   },
   "spell:latch:v1": {
+    "portrait": "latch",
     "family": "biological",
     "motif": "bite",
     "delivery": "melee",
@@ -269,6 +285,7 @@
     ]
   },
   "spell:meteor:v1": {
+    "portrait": "emberstorm",
     "family": "elemental",
     "motif": "fire",
     "delivery": "cast",
@@ -283,6 +300,7 @@
     ]
   },
   "spell:momentum:v1": {
+    "portrait": "pursuit",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -296,6 +314,7 @@
     ]
   },
   "spell:mortal_wound:v1": {
+    "portrait": "eviscerate",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -312,6 +331,7 @@
     ]
   },
   "spell:night_raid:v1": {
+    "portrait": "blood-hunt",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -328,6 +348,7 @@
     ]
   },
   "spell:noxious_cure:v1": {
+    "portrait": "toxic-mend",
     "family": "biological",
     "motif": "spores",
     "delivery": "cast",
@@ -341,6 +362,7 @@
     ]
   },
   "spell:parasite_jab:v1": {
+    "portrait": "bite",
     "family": "biological",
     "motif": "bite",
     "delivery": "melee",
@@ -366,6 +388,7 @@
     ]
   },
   "spell:protective_slam:v1": {
+    "portrait": "crash",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -379,6 +402,7 @@
     ]
   },
   "spell:psycho_rush:v1": {
+    "portrait": "deranged-charge",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -407,6 +431,7 @@
     ]
   },
   "spell:reckless_swing:v1": {
+    "portrait": "wild-swing",
     "family": "physical",
     "motif": "slash",
     "delivery": "melee",
@@ -432,6 +457,7 @@
     ]
   },
   "spell:restorative_burst:v1": {
+    "portrait": "renewal-burst",
     "family": "astral",
     "motif": "vital",
     "delivery": "cast",
@@ -448,6 +474,7 @@
     ]
   },
   "spell:restorative_gush:v1": {
+    "portrait": "vital-surge",
     "family": "physical",
     "motif": "vital",
     "delivery": "cast",
@@ -464,6 +491,7 @@
     ]
   },
   "spell:revenant_guards:v1": {
+    "portrait": "wraithguard",
     "family": "necromantic",
     "motif": "spirits",
     "delivery": "cast",
@@ -480,6 +508,7 @@
     ]
   },
   "spell:shield_bash:v1": {
+    "portrait": "body-slam",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -494,6 +523,7 @@
     ]
   },
   "spell:soothing_chant:v1": {
+    "portrait": "whisper",
     "family": "astral",
     "motif": "vital",
     "delivery": "cast",
@@ -507,6 +537,7 @@
     ]
   },
   "spell:soul_devourer:v1": {
+    "portrait": "devour",
     "family": "biological",
     "motif": "bite",
     "delivery": "melee",
@@ -524,6 +555,7 @@
     ]
   },
   "spell:summon_minions:v1": {
+    "portrait": "infestation",
     "family": "necromantic",
     "motif": "spirits",
     "delivery": "cast",
@@ -549,6 +581,7 @@
     ]
   },
   "spell:thundering_seal:v1": {
+    "portrait": "alpha-roar",
     "family": "physical",
     "motif": "roar",
     "delivery": "cast",
@@ -566,6 +599,7 @@
     ]
   },
   "spell:tornado:v1": {
+    "portrait": "groundbreaker",
     "family": "physical",
     "motif": "wave",
     "delivery": "cast",
@@ -584,6 +618,7 @@
     ]
   },
   "spell:toxic_waves:v1": {
+    "portrait": "void-pulse",
     "family": "astral",
     "motif": "void",
     "delivery": "cast",
@@ -600,6 +635,7 @@
     ]
   },
   "spell:tranquilizer_dart:v1": {
+    "portrait": "paralyzing-barb",
     "family": "biological",
     "motif": "quill",
     "delivery": "projectile",

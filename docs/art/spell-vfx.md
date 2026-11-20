@@ -9,9 +9,13 @@ See [ADR 0131](../adr/0131-give-confirmed-arena-spells-a-visual-vocabulary.md) f
 A spell visual may name a `portrait`. The battle page draws it from the picture kit as `spell-<name>`
 ([page-pictures.md](page-pictures.md), ADR 0198): the spell card at 40 px beside the spell's name, the journal at
 22 px; a compact card, in a docked sheet, keeps its text only. The picture is decorative (`alt=""`): the name beside
-it is the text. The owner approved the eight 512 px paintings, for the starting actions and the Stage I spells; they
+it is the text. A package's visual (`data/presentation/mutation-art.json`) may name one too, from the same set; today
+only the three capstones do. The mutation preview and the Mutation Tree draw it at 24 px beside the package's name.
+The showcase's field guide draws each one at 40 px beside the spell's name, and a capstone's beside its passive.
+The statistics page (`/stats`) draws a spell's at 40 px beside the spell cast most, and at 24 px in each row. The owner approved the 47 paintings,
+512 px each: the starting actions, every spell of Stages I to III, and the Titan, Apex and Archmage passives. They
 are kept in `docs/art/spell-portraits/`, outside the image, as the kit's sources, and the kit derives the sizes sent.
-`table/battle-spell-art.test.js` holds the names and the kit's declarations together, both ways.
+`table/battle-spell-art.test.js` holds the names of both files and the kit's declarations together, both ways.
 
 ## Coverage
 

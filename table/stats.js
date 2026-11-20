@@ -38,6 +38,19 @@ export function leanedOn(stats) {
   return { mutation, picture: mutation?.artwork ? `mutation-${mutation.artwork}` : null, spell: stats.spells?.[0] ?? null };
 }
 
+/** The kit's picture of a spell's portrait (`portrait`, docs/art/spell-vfx.md#portraits), or none. */
+export function spellPicture(spell) {
+  return spell?.portrait ? `spell-${spell.portrait}` : null;
+}
+
+// A spell's portrait at the size it is drawn, decoration beside its name; a picture this build did not derive is
+// left out, and the name says it.
+function portraitOf(doc, spell, drawn, className) {
+  const name = spellPicture(spell);
+  if (!name) return null;
+  try { return pictureElement(doc, name, { page: 'table/stats', class: className, sizes: `${drawn}px` }); } catch { return null; }
+}
+
 const times = count => (count === 1 ? 'once' : `${count} times`);
 
 /** What the mutations and spells say about which games they count, when not all of them do. */
@@ -55,7 +68,7 @@ function node(doc, tag, text, className) {
   return element;
 }
 
-function rows(doc, items, cells, empty, width) {
+function rows(doc, items, cells, empty, width, picture = () => null) {
   if (!items.length) {
     const row = node(doc, 'tr');
     const cell = node(doc, 'td', empty, 'empty');
@@ -68,6 +81,8 @@ function rows(doc, items, cells, empty, width) {
     const [first, ...rest] = cells(item);
     const name = node(doc, 'td', first, 'player');
     name.title = item.id;
+    const drawn = picture(item);
+    if (drawn) name.prepend(drawn);
     row.append(name, ...rest.map(text => node(doc, 'td', text, 'number')));
     return row;
   });
@@ -115,7 +130,7 @@ export function drawStats(doc, stats) {
   if (leaned.spell) {
     const words = node(doc, 'p', null, 'leaned-words leaned-spell');
     words.append(node(doc, 'strong', leaned.spell.name), node(doc, 'span', `Cast ${times(leaned.spell.casts)} in ${leaned.spell.games} game${leaned.spell.games === 1 ? '' : 's'}`));
-    el('leaned-spell-body').replaceChildren(words);
+    el('leaned-spell-body').replaceChildren(...[portraitOf(doc, leaned.spell, 40, 'leaned-portrait'), words].filter(Boolean));
   }
 
   const glance = [
@@ -127,7 +142,8 @@ export function drawStats(doc, stats) {
 
   el('teams-note').textContent = teamsNote(stats);
   el('mutation-rows').replaceChildren(...rows(doc, stats.mutations, mutation => [mutation.name, String(mutation.bought), percent(mutation.won, mutation.bought)], 'No mutation acquired yet.', 3));
-  el('spell-rows').replaceChildren(...rows(doc, stats.spells, spell => [spell.name, String(spell.casts), String(spell.games), percent(spell.won, spell.games)], 'No spell cast yet.', 4));
+  el('spell-rows').replaceChildren(...rows(doc, stats.spells, spell => [spell.name, String(spell.casts), String(spell.games), percent(spell.won, spell.games)], 'No spell cast yet.', 4,
+    spell => portraitOf(doc, spell, 24, 'row-portrait')));
 }
 
 async function load(doc) {

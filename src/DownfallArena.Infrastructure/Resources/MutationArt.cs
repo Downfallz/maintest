@@ -167,7 +167,7 @@ public sealed class MutationArt
             yield return $"{SourceFile}: '{package}' lends the effect '{visual.Effect}'; only a capstone lends an effect.";
         }
 
-        foreach (var id in new[] { visual.Artwork, visual.Effect }.OfType<string>().Where(id => !PageId.IsMatch(id)))
+        foreach (var id in new[] { visual.Artwork, visual.Effect, visual.Portrait }.OfType<string>().Where(id => !PageId.IsMatch(id)))
         {
             yield return $"{SourceFile}: '{package}' names '{id}', which is not a page id: lowercase words joined by hyphens.";
         }
@@ -223,6 +223,8 @@ public sealed class MutationArt
 
         public string? Effect { get; init; }
 
-        public MutationVisual ToVisual() => new(Family, Motif, Artwork, Effect);
+        public string? Portrait { get; init; }
+
+        public MutationVisual ToVisual() => new(Family, Motif, Artwork, Effect, Portrait);
     }
 }
