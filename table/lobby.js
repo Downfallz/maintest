@@ -914,7 +914,7 @@ if (typeof document !== 'undefined') {
     onInvite: lobby.invite,
     onFriends: lobby.friendsChanged,
     onInbox: () => lobby.refresh(),
-    onChange(account, mode) {
+    async onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return true; }
       const playable = Boolean(account) || mode === 'off';
       if (!playable) door.signedOut();
@@ -923,7 +923,7 @@ if (typeof document !== 'undefined') {
       lobby.setAccount(account, mode);
       practiceList.setAccount(account);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
-      return tutorials.setAccount(account);
+      return Boolean(await tutorials.setAccount(account));
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);

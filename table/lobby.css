@@ -136,7 +136,8 @@
 .device-panel p:not(.eyebrow), .device-panel output { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 12px; display: block; }
 .device-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; } .device-actions button { flex: 1; min-height: 44px; }
 .name-title { font: 400 28px var(--font-display); margin: 8px 0 10px; }
-.name-check { margin: 10px 0 0; font-size: 13px; }
+.name-check { display: block; margin: 10px 0 0; font-size: 13px; }
+.name-check[hidden] { display: none; }
 .name-check.good { color: var(--ally); }
 .name-check.bad { color: var(--refused); }
 @media (max-width: 1040px) { .lobby-layout { grid-template-columns: minmax(0, 1fr) 270px; gap: 22px; } .lobby-grid { grid-template-columns: minmax(0, 1fr); } }
@@ -236,7 +237,7 @@
 .sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
 .sign-in-policy:hover { color: var(--gold); }
 .name-check-room { min-height: 30px; }
-.name-next { margin: 4px 0 0; color: var(--bone); font-size: 14px; }
+.name-next { display: block; margin: 4px 0 0; color: var(--bone); font-size: 14px; }
 #name-dialog .dialog-actions button { flex: 1 1 auto; }
 #name-submit { white-space: nowrap; }
 .home-footer a, .account-menu .site-link { color: var(--gold); }

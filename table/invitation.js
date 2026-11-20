@@ -46,7 +46,9 @@ export function inviterOf(table, offered) {
 /** Where the table stands, in a few words: a link should say which game it opens before anybody accepts it. */
 function standing(table, inviter) {
   if (!table) return '';
-  const where = table.waiting ? (inviter ? 'waiting for you' : 'waiting for its players') : table.round ? `round ${table.round}` : 'under way';
+  let where = 'under way';
+  if (table.waiting) where = inviter ? 'waiting for you' : 'waiting for its players';
+  else if (table.round) where = `round ${table.round}`;
   const whose = inviter ? `${inviter}'s ` : '';
   return `${whose}${table.format ?? ''} table, ${where}.`.trim();
 }

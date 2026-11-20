@@ -215,7 +215,7 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       }
     }
     // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so.
-    state.leaving = Boolean(await onChange(state.account, state.mode));
+    state.leaving = Boolean(await Promise.resolve(onChange(state.account, state.mode)));
     return state;
   }
 

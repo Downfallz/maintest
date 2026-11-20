@@ -93,9 +93,9 @@
     <form id="name-form"><p class="eyebrow">Welcome to Downfall Instinct</p><h2 id="name-title" class="name-title">Choose your player name</h2>
       <p class="muted">Other players see it on every table. It can't be changed for now.</p>
       <label for="username">Player name</label><input id="username" name="username" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" required />
-      <div class="name-check-room"><p id="name-check" class="name-check" role="status" hidden></p></div>
+      <div class="name-check-room"><output id="name-check" class="name-check" hidden></output></div>
       <p class="muted">3 to 20 characters: letters, digits, _ and -. Starts with a letter.</p>
-      <p id="name-next" class="name-next" role="status"></p>
+      <output id="name-next" class="name-next"></output>
       <p id="name-problem" class="problem" role="alert" hidden></p>
       <div class="dialog-actions"><button id="name-cancel" type="button" class="secondary">Cancel</button><button id="name-submit" class="primary" type="submit">Take this name →</button></div>
     </form>
