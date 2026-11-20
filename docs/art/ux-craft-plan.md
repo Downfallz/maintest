@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX9 are built; UX10 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX10 are built; UX11 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -548,6 +548,39 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     standing changes and leave the new rank readable. In statistics, pair the most-used mutation or spell with
     its painting and actual count. Review populated and empty accounts side by side. A returning player should
     be able to find their own rank or recognize their build at phone size; fresh accounts get an honest first step.
+
+    *Built (2026-11-20)*: [the player's pages' brief](journeys/pages.md), written by the designer from the walk and
+    corrected after its critique. The walk gained `leaderboard-ranked` and `statistics-ranked`: Walker and Rook play
+    one ranked 3v3 game through its first round from two browsers, and Walker concedes, so each empty page is filmed
+    beside the same page filled. The walk now waits for Friends to be in the menu, which it opened too early at 320 px
+    on `main`, and the strip `friends-window` opens the menu again. A player is their initial in the identity's square
+    in every row of Friends and of the ladder. Invite, Accept and Decline are quiet, each named with the player; Ask → is
+    filled only while the window holds no friend and no request. A row that arrives (a request answered, a friend)
+    takes the kit's `.motion-arrive`, keyed by its section and player, and "Rook is your friend now." is said once.
+    Friends is held near the top, so it grows at its foot: the shift at 320 px went from 0.12 to 0.06. Invite opens the
+    Create window on the friend's initial and name, in place of the tabs and the two selects, with Ranked focused;
+    82 words became 63. The ladder went from 204 words to 55: Your place comes first on a phone, How the ladder counts
+    is a closed disclosure, and the empty ladder's one filled action is Open a ranked table →
+    (`/lobby?rematch=person`, which the lobby learned). Filled, Your place shows the place with Provisional, the
+    rating, how it moved since this browser last showed it ("New on the ladder.", "Down 62 since you last looked."),
+    the rating drawn among the ladder's and the record drawn and named in words. The page remembers by player name,
+    since `GET /api/leaderboard` names no id. On a phone the ± goes under the rating, so the table fits 320 px. The
+    statistics went from 97 words to 45 when empty: one empty state and the same action. Filled, they show the record
+    drawn, Most acquired with its painting and count, and Most cast. "Bought" became "Acquired", and "1 rounds" reads
+    "1 round". `GET /api/stats` names each mutation's painting (`artwork`), as the owner chose. The 21 evolutions
+    the mutations draw are declared for `table/stats` at 144 px, lazy. Every screen has nothing under 11 px, no
+    target under 44 px but the Ranked box UX9 left, nothing axe finds, and a shift under 0.1. Two clips of about ten
+    seconds at 390 px, with full and with less motion, show the ladder entered after the game.
+    Tests: `friends.test.js`, `leaderboard.test.js`, `stats.test.js`, `lobby.test.js`, `StatsApiTests`, and the
+    Friends cases of `lobby-home.spec.js`.
+
+    Left, as the brief's **Left** lists it ([the player's pages](journeys/pages.md)): the initial cannot travel from
+    the row into the Create window (no pattern for it), and at 320 by 568 Create & play → is still below the first
+    screen. A rating remembered lives in one browser. There is no link to the player's row on a long ladder. The
+    budget counts all 21 paintings although the page loads one. The painting fading in is left to the browser.
+    `--paint` was not run on the two pages. How the ladder counts restates ADR 0124 until the rulebook has a ladder
+    section. The walk records that the match's Settings cannot be pressed when Walker concedes, which is UX11's and
+    UX12's.
 11. **UX11, the match's frame.** The round's bar, the order of play, the labels and the dock: the floor of text
     size, the icons, no overlap at 320 and 390 px, the frame answering a blow in step with the canvas, whose turn
     it is and what is waited for. Tests: `studio/browser/battle-density.spec.js` and the battle specs the change

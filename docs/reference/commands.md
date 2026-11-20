@@ -657,7 +657,8 @@ friendship stands (the lobby's Recent opponents: Challenge for a friend, Add fri
 has at most five games in progress against bots and five against players (`Lobby.TooManyGames`, ADR 0147).
 
 The outcome card offers Rematch (`/lobby?rematch=<accountId>|bot|hotseat&format=...` opens the create dialog on
-the same opponent).
+the same opponent). The empty ladder and statistics link `/lobby?rematch=person`, which opens it on a ranked table
+for another player.
 
 #### The bot's level
 
@@ -706,7 +707,9 @@ mark and the host's (ADR 0194).
   and the battle view count down (ADR 0169).
 - `/stats` (`GET /api/stats`) is a signed-in player's own statistics, computed from the results kept by account
   (ADR 0168) and counting their ranked 3v3 games alone (ADR 0171): the record, streaks, and the mutations and
-  spells they played, which each result keeps from the final board and the match's events.
+  spells they played, which each result keeps from the final board and the match's events. Each mutation names
+  the painting it draws (`artwork`, from the art published with the catalogue, or null), so the page shows the one
+  the player acquires most.
 
 #### Bots' turns, tending, and the hosted shape
 

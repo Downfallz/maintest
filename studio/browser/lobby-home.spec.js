@@ -241,7 +241,7 @@ test('a player opens friends and notices without crowding the dashboard or askin
   await openPanel(page, /^Friends/);
   await expect(page.getByRole('dialog', { name: 'Friends', exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath('home-friends.jpg'), fullPage: false, type: 'jpeg', quality: 85, animations: 'disabled' });
-  await page.getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.getByRole('button', { name: 'Accept Alex' }).click();
   await expect(page.locator('#friend-incoming')).toBeHidden();
   await expect(page.locator('#friend-list')).toContainText('Alex');
   await expect(page.locator('#friend-requests-badge')).toBeHidden();
@@ -263,14 +263,30 @@ test('inviting a friend leaves the friends window and selects that friend in the
   const state = await home(page);
   await expect(page.locator('#my-tables .game-card')).toHaveCount(1);
   await openPanel(page, /^Friends/);
-  await page.locator('#friend-list').getByRole('button', { name: 'Invite', exact: true }).click();
+  // A friend is their initial beside their name, and Invite is quiet: the challenge's filled action is the window's.
+  await expect(page.locator('#friend-list .friend-row').first().locator('.account-initial')).toHaveText(friend.username[0]);
+  await expect(page.locator('#friend-list').getByRole('button', { name: `Invite ${friend.username}` })).not.toHaveClass(/primary/);
+  await expect(page.locator('#friend-ask-submit')).not.toHaveClass(/primary/);
+  await page.locator('#friend-list').getByRole('button', { name: `Invite ${friend.username}` }).click();
   await expect(page.locator('#friends-dialog')).toBeHidden();
   await expect(page.locator('#create-dialog')).toBeVisible();
   await expect(page.locator('#opponent')).toHaveValue('friend');
   await expect(page.locator('#friend')).toHaveValue(friend.id);
+  // Opened on a friend, the window names them in place of the tabs and the two selects, and Ranked has the focus.
+  await expect(page.locator('#create-friend')).toBeVisible();
+  await expect(page.locator('#create-friend-name')).toHaveText(friend.username);
+  await expect(page.locator('#create-tabs')).toBeHidden();
+  await expect(page.locator('#opponent')).toBeHidden();
+  await expect(page.locator('#friend-row')).toBeHidden();
+  await expect(page.locator('#ranked')).toBeFocused();
+  await expect(page.locator('#create-dialog')).toHaveAttribute('aria-describedby', 'create-friend');
   await expect(page.locator('dialog[open]')).toHaveCount(1);
   await expect(page.locator('#create-submit')).toBeEnabled();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  // New battle opens the window whole again.
+  await page.locator('#new-table').click();
+  await expect(page.locator('#create-tabs')).toBeVisible();
+  await expect(page.locator('#create-friend')).toBeHidden();
   expect(state.errors).toEqual([]);
 });
 
@@ -378,7 +394,7 @@ test('navigation and dialogs fit narrow, intermediate and short landscape screen
 test('removing a friend requires confirming the named player, and hides an empty count', async ({ page }) => {
   const state = await home(page);
   await openPanel(page, /^Friends/);
-  const remove = page.getByRole('button', { name: 'Remove', exact: true });
+  const remove = page.getByRole('button', { name: 'Remove Bastien' });
   await remove.click();
   await expect(page.locator('#action-title')).toHaveText('Remove Bastien?');
   await page.keyboard.press('Escape');
@@ -636,7 +652,7 @@ test('recent opponents are listed with the record between you: a friend is chall
   expect(state.asked).toEqual({ username: 'Julie' });
   // Accepted from the Friends panel instead, Alex's card follows: Alex can be challenged now.
   await openPanel(page, /^Friends/);
-  await page.locator('#friends-dialog').getByRole('button', { name: 'Accept', exact: true }).click();
+  await page.locator('#friends-dialog').getByRole('button', { name: /^Accept / }).click();
   await page.getByRole('button', { name: 'Close friends' }).click();
   // A friend now, Alex moves forward with the friends: after Bastien, met more recently.
   await expect.poll(names).toEqual(['Bastien', 'Alex', 'Julie']);
