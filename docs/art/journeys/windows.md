@@ -39,10 +39,10 @@ What holds for every screen of the journey:
   ([room held while it loads](../ux-craft.md#room-held-while-it-loads)). A picture that fails to load leaves no
   gap: beside a name it is not drawn (`.missing`, as the portraits do today).
 - **The sizes**, as `docs/art/page-pictures.json` declares them for the page "table/battle" (P2): a spell's portrait drawn at
-  40 px (files of 40 and 80) and at 24 px (files of 24 and 48), the two counted (`phone`); a mutation's form drawn
+  40 px (files of 40 and 80) and at 24 px (files of 24 and 48); the page counts both widths (`phone`); a mutation's form drawn
   at 64 px (files of 64 and 128). The journal's 22 px becomes 24 px, so it is sent at its own size.
 - **The owner's answer 1, and the decision after it** (2026-11-20, issue #1023): the form a mutation leads to is
-  drawn at 64 px on each mutation of the pick, on each mutation of the Mutation Tree's board and in its detail. A
+  drawn at 64 px on each mutation of the pick, on each mutation of the Mutation Tree's board and in the tree's detail. A
   capstone keeps its portrait at 24 px. The board's forms make the tree's screen 192,598 B, against 5,232 B for
   the detail alone (below); the page's total does not change, since the detail could already show any of the 21
   forms.
@@ -67,7 +67,7 @@ What holds for every screen of the journey:
 - **The screen's size decides a spell portrait's size**, never the window it is in: 24 px on a screen under 660 px
   tall (in portrait), 40 px on a taller one, where the card has the room; the journal's rows, 24 px everywhere.
 
-**Left, for the owner and for P2**, across the journey (each screen's **Left** names its own):
+**Left**, across the journey (each screen's **Left** names its own):
 
 - Settled by P2: the budget of 320 KiB holds the 322,218 B measured, the files derived; `budgetOf` counts each
   width a page draws a picture at on the phone (`phone`, [the pages' pictures](../page-pictures.md#declare-a-picture)),
