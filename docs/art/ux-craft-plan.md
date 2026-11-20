@@ -420,18 +420,18 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    *Built (2026-11-20)*: [the lessons' brief](journeys/lessons.md), written by the designer from the walk and
    corrected after its critique. The owner chose four of its proposals: Next is the end card's filled action, Leave
    the tutorial the last result's, the hint starts on a gesture and never on a clock, and the lessons' two windows
-   take the kit's form now. The brief window says its round in five words and its note in twelve: 39 to 42 words
+   take the kit's form now. The brief window says its round in five words and its note in thirteen: 39 to 42 words
    where it was 64 to 67. Eyebrows are 11 px. A concept card says `1 OF 2` and gives its button the focus. The brief
    window and the concept card enter and leave as the kit's window does. The coach fades in. In a sheet, under
    360 px, Restart the round is an icon on the step's row. A docked command sheet that carries the coach scrolls
    as one, its footer held at its foot: at 320 by 568 the walk now presses every tab and every tempo by touch,
-   where it could not reach nine. Under 660 px tall the mutation sheet folds its tabs by design, and the walk taps
+   where it could not reach nine tabs and tempos. Under 660 px tall the mutation sheet folds its tabs by design, and the walk taps
    the creature on the field, as a player does. Closing a step's sheet with nothing sent shows `Next: <the
    command's words>.` until the question changes. The end of a lesson says `TUTORIAL N OF 4 · COMPLETE`, how the
    teams stand from the host's board, and offers the next lesson by its title from `GET /api/tutorials`, or its
    place and Learn to play when the series cannot be read. On a phone the end card is laid over the dock, which
    keeps its size, so the field stays in view. No new round is announced once the lesson is done. Tutorial 4's
-   result says `You finished every tutorial.` and puts Leave the tutorial first. Learn to play shows each
+   result puts Leave the tutorial first, and says `You finished every tutorial.` when the host lists the three others done. Learn to play shows each
    lesson's painting (four of the library, 96 px, lazy, declared for `table/home`), its state as the host says it,
    the progress in words, and one filled Play, on the next lesson not done: the home went from five filled actions
    to one. The six phase tips are 40 words or fewer each. Tests: `battle-tutorial.test.js`,

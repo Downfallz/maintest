@@ -237,6 +237,6 @@ for (const tutorial of series) test(`tutorial ${tutorial.file.tutorial.order}, $
   await page.waitForURL(`${origin}/`);
   const card = page.locator(`#tutorial-cards [data-tutorial="${tutorial.id}"]`);
   await expect(card).toContainText('Done');
-  await expect(card.locator('a')).toHaveText('Play again →');
+  await expect(card.locator('a')).toHaveText('Play again');
   expect(errors).toEqual([]);
 });

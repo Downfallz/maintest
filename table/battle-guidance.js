@@ -77,13 +77,13 @@ const ROUND_RULES = '/rules#the-round';
 // a rule says is the rulebook's, which Help links to.
 const tips = {
   mutation: { title: 'What is a mutation?', rules: '/rules#evolution', lines: [
-    'A mutation gives a creature new spells or a passive, plus initiative.',
-    'Picks are shared across your team, one per creature. Choose a creature on the field, a mutation, then confirm.',
+    'A mutation gives new spells and initiative; a capstone gives a passive instead.',
+    'Your team’s picks go to different creatures. Choose a creature on the field, a mutation, then confirm.',
     'Pass remaining picks gives up all your unused picks.',
   ] },
   tempo: { title: 'Choose how your team acts', rules: '/rules#tempo', lines: [TEMPO_RULE,
     'Open Team tempos, choose a tempo in every creature tab, then Confirm tempos once.',
-    'All tempos reveal together. A tempo chooses no spell.',
+    'All tempos reveal together. Choosing a tempo does not choose a spell.',
   ] },
   ties: { title: 'Order your tied creatures', rules: '/rules#tie-order', lines: [
     'The dice settle places between teams. You decide the order within your own tied groups.',
@@ -92,14 +92,15 @@ const tips = {
   action: { title: 'Choose a spell on your turn', rules: '/rules#your-turn', lines: [
     'Open Choose spell and pick a spell: its legal targets appear on the field.',
     'Select targets, then Confirm cast. No hidden spell declaration is required in this mode.',
+    'A spell with no target still needs Confirm cast.',
   ] },
   intent: { title: 'Declare a hidden spell', rules: null, lines: [
     'Open Choose spell, pick a spell, then Declare. The opponent sees it only when it is revealed.',
-    'You choose targets later, when its spell is revealed; a spell that cannot be paid then may fizzle.',
+    'You choose targets later, when it is revealed. Short of Energy or of a legal target then, it fizzles.',
   ] },
   target: { title: 'Choose targets for the revealed spell', rules: null, lines: [
     'Your spell is already declared. Open Choose targets, select legal creatures on the field, then Confirm cast.',
-    'Tap a selected creature again to deselect it.',
+    'Tap a selected creature again to deselect it. A spell with no target still needs Confirm cast.',
   ] },
 };
 function question(view) {

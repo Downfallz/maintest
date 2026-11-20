@@ -1,4 +1,4 @@
-import { coachCard, coachHint, leavePath, leavingSkips, nextLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
+import { coachCard, coachHint, finishedSeries, leavePath, leavingSkips, nextLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
 import { iconElement } from '../../table/icons.js';
 import { NO_CONCEPTS, RULES_BOOK, loadConcepts } from '../../table/concepts.js';
 
@@ -142,7 +142,10 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   for (const id of ['planning-dialog', 'combat-dialog']) el(id).addEventListener('cancel', turnAway);
   function hint() {
     const sheet = ['combat-dialog', 'planning-dialog'].some(id => el<HTMLDialogElement>(id).open);
-    const command = ['combat-open', 'planning-open'].map(id => el(id)).find(one => !one.hidden);
+    // The control the step points at names the hint; otherwise the command that asks the question.
+    const pointed = shown?.control ? document.getElementById(shown.control) : null;
+    const command = pointed && !pointed.hidden && pointed.getClientRects().length ? pointed
+      : ['combat-open', 'planning-open'].map(id => el(id)).find(one => !one.hidden);
     const words = shown && !shown.done && !sheet && turnedAway !== null && turnedAway === askedNow() ? coachHint(command?.textContent ?? null) : null;
     text('coach-hint', words ?? '');
     el('coach-hint').hidden = !words;
@@ -185,7 +188,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
    */
   const ending = () => {
     const lesson = tutorialOf(latest);
-    return lesson ? { again, done: lesson.done === true, eyebrow: `${tutorialBand(lesson).eyebrow} · COMPLETE`, last: lesson.order >= (lesson.of ?? 0) } : null;
+    return lesson ? { again, done: lesson.done === true, eyebrow: `${tutorialBand(lesson).eyebrow} · COMPLETE`, last: Number.isInteger(lesson.of) && lesson.order >= lesson.of, finished: finishedSeries(series, lesson) } : null;
   };
   // On the smallest phone the band's place in the series takes Restart's place in the header, and the card offers it (#728).
   el('coach-restart').addEventListener('click', () => el('practice-restart').click());
@@ -262,6 +265,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   /** A new practice teaches its steps again. */
   function reset() {
     document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false; endFocused = false; turnedAway = null;
+    // A series not read is asked again at the next practice's end, not kept unread for the life of the page.
+    if (!series) seriesAsked = false;
     if (!concepts.all.length) asked = false;
     toField(); text('practice-restart', 'Restart the round');
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;

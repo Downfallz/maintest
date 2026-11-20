@@ -202,6 +202,14 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#instruction')).toHaveText('Tutorial complete.');
   // No new round is announced for a round the lesson will not play.
   await expect(page.locator('#round-toast')).toBeHidden();
+  // On a phone the end card stands on the dock, which keeps its size, so the field it ends on stays in view.
+  if (await page.evaluate(() => !matchMedia('(min-width: 760px), (orientation: landscape) and (max-height: 520px)').matches)) {
+    await expect(page.locator('#battle .command-dock > #coach')).toHaveCount(1);
+    expect(await page.evaluate(() => {
+      const card = document.getElementById('coach').getBoundingClientRect(), dock = document.querySelector('#battle .command-dock').getBoundingClientRect();
+      return Math.abs(card.bottom - dock.bottom) <= 1;
+    })).toBe(true);
+  } else await expect(page.locator('#battle .command-dock > #coach')).toHaveCount(0);
   // Leaving a finished tutorial is not skipping it, and lets go of its practice: it opens from its cut the next time.
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));
   await page.locator('#coach-leave').click();
@@ -598,9 +606,11 @@ test('a step whose sheet is closed with nothing sent shows a hint naming the con
   expect(state.errors).toEqual([]);
 });
 
+const seriesOf = state => ({ tutorials: [1, 2, 3, 4].map(order => ({ id: order === 4 ? id : `sc-repo-tutorial-${order}`, order, of: 4, title: `Tutorial ${order}`, link: `/battle?scenario=sc-repo-tutorial-${order}`, state: order === 4 ? 'new' : state })) });
+
 test('the last tutorial\'s result ends the series: Leave the tutorial is its filled way on', async ({ page }) => {
   test.setTimeout(120000);
-  const state = await mount(page, { endsMatch: true, order: 4 });
+  const state = await mount(page, { endsMatch: true, order: 4, series: seriesOf('done') });
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await matchResult(page);
@@ -609,7 +619,21 @@ test('the last tutorial\'s result ends the series: Leave the tutorial is its fil
   await expect(page.locator('#match-leave')).toHaveClass(/primary/);
   await expect(page.locator('#match-again')).not.toHaveClass(/primary/);
   await fitsViewport(page, '#match-leave, #match-again, #match-replay');
+  // The match over, the end card is not laid over the dock: the result is the end, and the dock keeps its Match result.
+  await expect(page.locator('#battle .command-dock > #coach')).toHaveCount(0);
   // Leave the tutorial stands first.
   expect(await page.evaluate(() => document.getElementById('match-leave').getBoundingClientRect().top <= document.getElementById('match-again').getBoundingClientRect().top)).toBe(true);
+  expect(state.errors).toEqual([]);
+});
+
+test('the last tutorial played with an earlier one skipped does not say the series is finished', async ({ page }) => {
+  test.setTimeout(120000);
+  const state = await mount(page, { endsMatch: true, order: 4, series: seriesOf('skipped') });
+  await page.locator('#practice-brief-begin').click();
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await matchResult(page);
+  await expect(page.locator('#match-eyebrow')).toHaveText('TUTORIAL 4 OF 4 · COMPLETE');
+  await expect(page.locator('#match-series')).toBeHidden();
+  await expect(page.locator('#match-leave')).toHaveClass(/primary/);
   expect(state.errors).toEqual([]);
 });

@@ -972,8 +972,6 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .mutation-node:not([data-status="available"]) svg { display: none; }
 #mutation-preview-region { flex: none; max-height: min(17dvh,150px); overflow: auto; overscroll-behavior: contain; }
 #planning-dialog[data-kind="Evolution"] #mutation-preview-region { max-height: 28dvh; }
-/* A short portrait keeps the confirmation in reach: the field's creatures switch the recipient there, so the tabs
-   give way, and the preview keeps a smaller share. */
 /* A narrow sheet gives its rule its own row under the heading, beside the tools: in one cell the two ran into each
    other on a 320 px phone (UX8). */
 @media (max-width: 399px) {
@@ -983,6 +981,8 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   #planning-dialog[data-kind="Evolution"] #planning-help { grid-area: 3 / 1 / auto / -1; align-self: start; margin: 0 0 4px; }
   #planning-dialog[data-kind="Evolution"] #planning-creatures { grid-area: 4 / 1 / auto / -1; }
 }
+/* A short portrait keeps the confirmation in reach: the field's creatures switch the recipient there, so the tabs
+   give way, and the preview keeps a smaller share. */
 @media (orientation: portrait) and (max-height: 660px) {
   #planning-dialog[data-kind="Evolution"] #planning-creatures { display: none; }
   #planning-dialog[data-kind="Evolution"] .planning-header { grid-template-rows: minmax(48px,auto); }

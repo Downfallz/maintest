@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { conceptsOf } from './concepts.js';
-import { CONTROLS, assistedQuestion, coachCard, coachHint, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, lessonStep, nextLesson, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
+import { CONTROLS, assistedQuestion, coachCard, coachHint, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, finishedSeries, lessonStep, nextLesson, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const concepts = conceptsOf(JSON.parse(readFileSync(join(root, 'table/rules.json'), 'utf8')));
@@ -166,6 +166,17 @@ test('a tutorial\'s first card says its round in a few words, under the brief\'s
   assert.equal(brief.note, 'Nothing played here counts. Play it again any time from Learn to play.');
   const words = [brief.start, brief.note, brief.begin, brief.skip].join(' ').split(/\s+/).length;
   assert.ok(words <= 22, `${words} words the page writes`);
+  // A round the host does not say is not written as a dash.
+  assert.equal(tutorialBrief(lesson()).start, 'Against a bot.');
+});
+
+test('the series is finished only when the last lesson is done and the host lists every other one done', () => {
+  const others = state => [1, 2, 3].map(order => ({ order, state }));
+  assert.equal(finishedSeries({ tutorials: [...others('done'), { order: 4, state: 'new' }] }, lesson({ order: 4 })), true);
+  assert.equal(finishedSeries({ tutorials: [...others('done').slice(0, 2), { order: 3, state: 'skipped' }, { order: 4 }] }, lesson({ order: 4 })), false);
+  assert.equal(finishedSeries(null, lesson({ order: 4 })), false);
+  assert.equal(finishedSeries({ tutorials: others('done') }, lesson({ order: 3 })), false);
+  assert.equal(finishedSeries({ tutorials: others('done') }, lesson({ order: 4, of: undefined })), false);
 });
 
 test('the end card says how the board stands, read from the host\'s board', () => {
@@ -181,11 +192,14 @@ test('the end card names the next lesson the host lists, and none after the last
   assert.deepEqual(nextLesson(null, lesson()), { label: 'Next: tutorial 2 of 4', link: '/#learn-to-play' });
   assert.deepEqual(nextLesson({ tutorials: [{ order: 2, title: 'X', link: 'https://elsewhere.example/' }] }, lesson()), { label: 'Next: tutorial 2 of 4', link: '/#learn-to-play' });
   assert.equal(nextLesson(series, lesson({ order: 4 })), null);
+  // A link the browser would read as another site is not followed.
+  assert.equal(nextLesson({ tutorials: [{ order: 2, title: 'X', link: '/\\elsewhere.example/' }] }, lesson()).link, '/#learn-to-play');
 });
 
 test('a hint names the control the step asks for, by its own words, and nothing without one', () => {
   assert.equal(coachHint('Choose spell'), 'Next: Choose spell.');
   assert.equal(coachHint('  Choose tempos  '), 'Next: Choose tempos.');
+  assert.equal(coachHint('Mutation tree ↗'), 'Next: Mutation tree.');
   assert.equal(coachHint(''), null);
   assert.equal(coachHint(null), null);
 });

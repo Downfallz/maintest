@@ -116,7 +116,8 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
       const ways = made(doc, 'div', undefined, 'card-ways');
       // The next lesson not done is the section's one filled action; every other card's is an outline.
       const open = made(doc, 'a', card.action, card.next ? 'primary' : 'button-link');
-      open.setAttribute?.('aria-label', `${card.action}: ${card.title}`);
+      // Its place in the series, which the card no longer writes, is in its name for whoever cannot see the order.
+      open.setAttribute?.('aria-label', `${card.action}: ${card.title}, ${card.place.toLowerCase()}`);
       open.href = card.link;
       ways.append(open);
       root.append(ways);

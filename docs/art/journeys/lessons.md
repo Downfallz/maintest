@@ -47,13 +47,14 @@ an example:
 
 ```text
 What is a mutation?
-Choose a creature on the field, then a mutation in the tree, and confirm it.
-Picks are shared by your team, one a creature each Mutation phase.
-Pass remaining picks gives up the ones you leave.
+A mutation gives new spells and initiative; a capstone gives a passive instead.
+Your team’s picks go to different creatures. Choose a creature on the field, a mutation, then confirm.
+Pass remaining picks gives up all your unused picks.
 Read the rules
 ```
 
-That is 37 words where it is 92. The five others are rewritten to the same budget by the copy-editor in the stage,
+That is 37 words where it was 92, in the rulebook's words (`rules/03-the-round.md`): a capstone gives no initiative,
+and a team's picks go to different creatures. The five others are rewritten to the same budget by the copy-editor in the stage,
 in `table/battle-guidance.js`; the critique reads them on the match's `phase-tip`.
 
 ## The brief window (`lesson-1-brief`, `lesson-2-brief`, `lesson-3-brief`, `lesson-4-brief`)
@@ -264,7 +265,8 @@ element itself: the page names a button, it decides no move.
 **The hint.** It is started by the player, never by a clock (the owner's choice): the question's sheet closed with
 nothing sent (its Close, its ×, or Escape), while the view still asks the same question (`waitingAsked`
 unchanged). It stays until the view asks another question or the choice is sent, and
-shows once a step. ADR 0164 and `docs/art/branding.md` say nothing starts on a clock, and the craft book's entry
+shows again each time the person turns away. The words are the pointed control's when the step names one, else
+the question's command, without the glyph some carry (Mutation tree ↗). ADR 0164 and `docs/art/branding.md` say nothing starts on a clock, and the craft book's entry
 says a stall is read from the stream: here the stream says the question is still open, and the press says the
 player turned away from it.
 
@@ -483,7 +485,9 @@ report. It is the end of the series too, and today says nothing of it.
 - **Order**: the place and the end, the title, the outcome, the series done, the two teams, the report, the
   actions.
 - **Budget**: 130 words, 129 since UX8 (122 before; 125 was my sum, short of the eyebrow's own words); the battle
-  report is most of it, and UX12's. The page adds one line, and the eyebrow names the lesson:
+  report is most of it, and UX12's. The page adds one line, and the eyebrow names the lesson. The line shows only
+  when `GET /api/tutorials` lists the three other tutorials done: a player who skipped one is not told the series
+  is finished, and Leave the tutorial stays the filled action either way.
 
 ```text
 TUTORIAL 4 OF 4 · COMPLETE

@@ -45,12 +45,12 @@ export function tutorialBrief(lesson, round) {
   return {
     begin: 'Start',
     skip: lesson?.done ? null : 'Skip the tutorial',
-    start: `Round ${round ?? '—'}, against a bot.`,
+    start: Number.isInteger(round) ? `Round ${round}, against a bot.` : 'Against a bot.',
     note: 'Nothing played here counts. Play it again any time from Learn to play.',
   };
 }
 
-const SAME_SITE = /^\/(?!\/)/;
+const SAME_SITE = /^\/(?![/\\])/;
 
 /**
  * The lesson after this one, as the end card offers it (UX8): its title and link from the series the host lists
@@ -69,8 +69,20 @@ export function nextLesson(answer, lesson) {
  * it, read from the page. The page names a button; it decides no move.
  */
 export function coachHint(label) {
-  const words = typeof label === 'string' ? label.trim() : '';
+  // A control's words without the glyph some carry after them (Mutation tree ↗), which a screen reader would read.
+  const words = typeof label === 'string' ? label.replace(/[↗→↻]/g, '').trim() : '';
   return words ? `Next: ${words}.` : null;
+}
+
+/**
+ * Whether the person has finished the whole series with this lesson (UX8): the last of the series, and every other
+ * one the host lists done. Not read, or one skipped, it is only the last tutorial.
+ */
+export function finishedSeries(answer, lesson) {
+  const order = lesson?.order, of = lesson?.of;
+  if (!Number.isInteger(order) || !Number.isInteger(of) || order < of) return false;
+  const others = (answer?.tutorials ?? []).filter(one => one?.order !== order);
+  return others.length === of - 1 && others.every(one => one?.state === 'done');
 }
 
 const standing = creatures => {

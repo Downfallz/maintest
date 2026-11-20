@@ -10,7 +10,7 @@ test('mutation guidance uses the team offer and explains the actual pass semanti
   const g = battleGuidance(view(), catalogue);
   assert.equal(g.topic, 'mutation'); assert.match(g.objective, /2 team picks left/);
   assert.equal(g.round, 'Round 1 of 17'); assert.equal(g.next, 'Mutation opportunity this round.');
-  for (const word of ['spells or a passive', 'plus initiative', 'shared across your team', 'all your unused picks']) assert.ok(text(g).includes(word));
+  for (const word of ['new spells and initiative', 'a capstone gives a passive instead', 'go to different creatures', 'all your unused picks']) assert.ok(text(g).includes(word));
 });
 test('depleted picks and empty offers never tell the player to buy an unavailable mutation', () => {
   const depleted = battleGuidance(view('Evolution', { options: { evolution: { remainingPicks: 0 } } }), catalogue);
