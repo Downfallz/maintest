@@ -35,7 +35,8 @@ const shows = page => page.evaluate(() => {
   const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
   return {
     step, done: /^TUTORIAL .* COMPLETE$/.test(step), over: shown('match-dialog') || shown('match-open'),
-    cards: shown('concept-dialog'), tip: shown('help-dialog'), reading: battle.dataset.reading === 'true',
+    // A closed card fades out still displayed: open is what says it is there (table/AGENTS.md).
+    cards: document.getElementById('concept-dialog').open, tip: shown('help-dialog'), reading: battle.dataset.reading === 'true',
     sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
     command: shown('planning-open') || shown('combat-open'),
     press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,

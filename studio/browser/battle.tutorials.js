@@ -118,7 +118,8 @@ const shows = page => page.evaluate(() => {
   const step = shown('coach') ? document.getElementById('coach-step')?.textContent.trim() ?? '' : null;
   return {
     step, done: /^TUTORIAL .* COMPLETE$/.test(step),
-    cards: shown('concept-dialog'), reading: battle.dataset.reading === 'true',
+    // A closed card fades out still displayed: open is what says it is there (table/AGENTS.md).
+    cards: document.getElementById('concept-dialog').open, reading: battle.dataset.reading === 'true',
     sheet: shown('planning-dialog') || shown('combat-dialog') || battle.dataset.combat === 'targets',
     command: shown('planning-open') || shown('combat-open'),
     press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,
@@ -165,7 +166,8 @@ async function playLesson(page, tutorial, seat, info) {
     await page.screenshot({ path: info.outputPath(`step-${step[1]}.png`) });
   };
   const readCards = async () => {
-    while (await page.locator('#concept-dialog').isVisible()) {
+    // Open, not visible: a closed card stays displayed while it fades out (UX8), and is not to be pressed again.
+    while (await page.locator('#concept-dialog').evaluate(dialog => dialog.open)) {
       opened.push(await page.locator('#concept-title').textContent());
       await fitsViewport(page, '#concept-next');
       await page.locator('#concept-next').click();
