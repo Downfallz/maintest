@@ -382,7 +382,7 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    Colossus. The Colossus breathes; the home loads `table/motion.js` for it. The battlefield, the five specimens,
    the ways to play's ground (also a background before) and the guide's head are lazy. The build copies the kit's files
    into `page-art/`, and the showcase deploys for them (`studio/browser/plan.js`). On the slow profile the home's
-   largest paint went from 4.3 s to 1.1 s and its pictures before any scroll from 744 KB to 212 KB. One filled
+   largest paint went from 4.3 s to 1.0 s and its pictures before any scroll from 744 KB to 227 KB. One filled
    action, the foot's Play now an outline; the specimen's line at 11 px; the language link named by its letters;
    every control of the home at 44 px, and the guide's path links; at 320 by 568 Play now is whole on the first
    screen. The rulebook's links in a sentence are underlined and its tables reach the keyboard. The walk gained

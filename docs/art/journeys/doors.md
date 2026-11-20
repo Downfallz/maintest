@@ -122,10 +122,10 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
 
 ### Cost
 
-- **Bytes**: 212 KB of pictures before any scroll, 744 KB before UX6 (median of five `--paint` runs, the same
+- **Bytes**: 227 KB of pictures before any scroll, 744 KB before UX6 (median of five `--paint` runs, the same
   machine): the ground and the Colossus at the size they are drawn, everything below the hero lazy. The budget is
   `docs/art/page-budget.json`'s.
-- **Largest paint**: 1.1 s, 4.3 s before UX6, a picture, median of five on the slow profile; aimed at 2.5 s (the
+- **Largest paint**: 1.0 s, 4.3 s before UX6, a picture, median of five on the slow profile; aimed at 2.5 s (the
   plan). The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
   Colossus is the largest the measure does not say; both are asked for first.
 - **Shift**: 0.00 before and after. Every picture keeps its `width` and `height`; the round's frames hold their
