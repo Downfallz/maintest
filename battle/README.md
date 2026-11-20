@@ -639,13 +639,10 @@ Each creature is drawn as the evolution its purchases resolve to
 - **Purchase log** (`table/battle-chronology.js`). It keeps the feed's `PurchasesRevealed` picks in order, so
   every frame, live or replayed, orders what it says the creature owns by when each purchase was made. The
   acquired-tier set's order is never used.
-- **Registry** (`table/battle-evolution-art.js`). Each illustration's file, canvas, silhouette bounds and ground
-  anchor; the approved hybrids, the twelve Predator portraits of `table/battle-predator-hybrid-art.js` and the twelve
-  Warped portraits of `table/battle-warped-hybrid-art.js`, each naming the Stage 3 it varies and the influence it
-  shows (another line's illustrations, a family, or the Ultimate); the
-  capstone effects and their composition order. Which package draws
-  which illustration comes with the catalogue's packages (`visual.artwork`, `visual.effect`), authored in
-  `data/presentation/mutation-art.json`.
+- **Registry** (`table/battle-evolution-art.js`). It records each illustration's file, canvas, silhouette bounds
+  and ground anchor. Brute, Predator and Warped each have twelve hybrid portraits in their
+  `table/battle-*-hybrid-art.js` modules. Each portrait names its Stage 3 and its qualifying influence.
+  The catalogue supplies each package's illustration and effect from `data/presentation/mutation-art.json`.
 - **Scene.**
   - It loads an illustration only when a creature on the field asks for one, and keeps the audited sprite until
     it arrives, or for good if it fails.
@@ -661,7 +658,7 @@ Each creature is drawn as the evolution its purchases resolve to
 rules, hybrids, capstones, replay sequences, missing chronology, the registry and silhouette scaling.
 `battle-evolution.spec.js` covers lazy loading, the fallback for an image that fails, a purchase changing the
 image in place, a Predator hybrid and an Ultimate on the field, a single-influence hybrid and an Ultimate of each
-Warped line on the field, and capstone effects with and without reduced motion.
+Warped line, the three Brute lines and the Ravager Ultimate on the field, and capstone effects with and without reduced motion.
 
 ## AU12: public creature inspection
 
