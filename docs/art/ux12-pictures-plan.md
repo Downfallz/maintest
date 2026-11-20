@@ -68,7 +68,7 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    walk's own tests and `studio/prompts.test.js`.
 
    *Built (2026-11-20)*: the walk's sixth journey, `windows` (`scripts/ux/journeys.mjs`), films `mutation-pick`,
-   `mutation-tree` (the tree opened from the pick, a package's detail open), `spell-choice`, `spell-choice-foot`
+   `mutation-tree` (the tree opened from the pick, a mutation's detail open), `spell-choice`, `spell-choice-foot`
    (the spellbook at its last spell, the plan's docked spellbook at 320 by 568, since the walk films every screen
    at both widths) and `history`, with the strip `history-window`; its lines are in the baseline. The
    `ux-designer` wrote [the brief](journeys/windows.md) from both sheets. The bytes were measured with the kit's
@@ -80,7 +80,8 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    the forms at 64 px; the files are regenerated; `page-budget.json` holds the number
    question 4 settles. Tests: `studio/ux-pictures.test.js` (every picture has its size, the budget holds) and
    `TableFiles` for the new files.
-3. **P3, the spellbook.** The card's portrait in the browser, and at 24 px in the docked sheet.
+3. **P3, the spellbook.** Two spells a row, as the brief settles them, the card's portrait in the browser, and at
+   24 px in the docked sheet.
    Tests: `battle-spellbook.spec.js`, the footer still reachable at 320 by 568, on a short landscape and at 200%
    text; `table/battle-spell-art.test.js`.
 4. **P4, the journal.** The portraits drawn at 24 px from their own files; the acting creature gets no picture. Tests:
@@ -112,3 +113,7 @@ The answers:
 2. A 24 px portrait beside each spell's name in the docked spellbook, the foot held on screen.
 3. The journal draws the spell's portrait only, sent at 24 px.
 4. The budget rises to what P1 measures; every picture of a window stays lazy.
+
+Settled after the P1 brief was first written (2026-11-20): the spellbook shows two spells a row, at every width,
+in place of one card a row with its full text (AU9 of `docs/tabletop/battle-ux-parity-plan.md`). The brief says
+what a card keeps in its column and where the full text goes; P3 builds it.
