@@ -3,12 +3,20 @@
 // `frames` is over 1 for a strip, its frames side by side; `pages` says where it is asked for first.
 export const PAGE_ART = {
   'eclipse-ground': {
-    from: '181281d949add838', frames: 1, drawn: [533,1440], pages: {"showcase/home":"largest","table/sign-in":"largest"},
+    from: '181281d949add838', frames: 1, drawn: [533,1440], pages: {"table/sign-in":"largest"},
     sizes: [
       { file: 'eclipse-ground-533.a75503d4.webp', width: 533, height: 300, bytes: 26452 },
       { file: 'eclipse-ground-1066.59583e77.webp', width: 1066, height: 600, bytes: 86074 },
       { file: 'eclipse-ground-1440.c04a7a1c.webp', width: 1440, height: 810, bytes: 135436 },
       { file: 'eclipse-ground-1672.a0a4d681.webp', width: 1672, height: 941, bytes: 174006 },
+    ],
+  },
+  'showcase-ground': {
+    from: 'b6548dd550e81e05', frames: 1, drawn: [720,1440], pages: {"showcase/home":"largest"},
+    sizes: [
+      { file: 'showcase-ground-720.55ff2b76.webp', width: 720, height: 405, bytes: 43176 },
+      { file: 'showcase-ground-1440.c04a7a1c.webp', width: 1440, height: 810, bytes: 135436 },
+      { file: 'showcase-ground-1672.a0a4d681.webp', width: 1672, height: 941, bytes: 174006 },
     ],
   },
   'colossus': {

@@ -56,7 +56,8 @@ for job in json.load(sys.stdin):
 `;
 
 function cut(jobs) {
-  const run = spawnSync('python3', ['-c', CUT], { input: JSON.stringify(jobs), encoding: 'utf8' });
+  // NOSONAR S4036: python3 is found on the PATH of whoever makes the pictures; nothing a visitor sends reaches this.
+  const run = spawnSync('python3', ['-c', CUT], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR
   if (run.status !== 0) throw new Error(`Pillow could not cut the pictures: ${run.stderr || run.error?.message}`);
 }
 

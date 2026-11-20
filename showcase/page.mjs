@@ -16,7 +16,8 @@ export function specimenPicture(id, pictures = PAGE_ART) {
 
 // The widths each picture is drawn at, as showcase.css lays it out; the declaration's `drawn` holds the same.
 const SIZES = {
-  ground: '(max-width: 600px) 533px, 100vw',
+  // Under 600 px the ground is 68% of the hero's height, its width following: about 710 px on a phone.
+  ground: '(max-width: 600px) 720px, 100vw',
   beast: '(max-width: 600px) 79vw, min(54vw, 850px)',
   field: '(max-width: 850px) 90vw, min(1250px, 88vw)',
   specimen: '(max-width: 650px) 315px, 465px',
@@ -72,7 +73,7 @@ export function page(c, specimen, app) {
   const play = (label, style) => `<a class="${style}" href="${app}">${label} ${arrow}</a>`;
   return layout(c, 'home', app, c.kicker, c.description, `
     <section class="hero" aria-labelledby="title">
-      <div class="hero-ground">${art('eclipse-ground', { sizes: SIZES.ground })}</div>
+      <div class="hero-ground">${art('showcase-ground', { sizes: SIZES.ground })}</div>
       ${art('colossus', { class: 'hero-beast motion-breath', sizes: SIZES.beast })}
       <div class="hero-inner contain"><div class="hero-copy">
         <p class="kicker">${c.kicker}</p>

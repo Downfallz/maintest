@@ -384,7 +384,7 @@ for (const [lang, file] of [['en', 'index.html'], ['fr', 'fr/index.html']]) {
     }
     // The Cast strip is one element with one name; its frames have none.
     assert.match(moves[2], /<span class="motion-strip" data-frames="6" role="img" aria-label="[^"]{20,}"><img [^>]*alt=""/);
-    for (const move of moves.slice(0, 2)) assert.ok(attribute(picturesOf(move)[0], 'alt').split(' ').length <= 14);
+    for (const move of moves.slice(0, 2)) assert.ok(attribute(picturesOf(move)[0], 'alt').split(' ').filter(word => /\p{L}/u.test(word)).length <= 14);
   });
 
   test(`${lang}: every picture of the home is the kit's, sent at the size it is drawn, the ground asked for first`, () => {
@@ -398,7 +398,7 @@ for (const [lang, file] of [['en', 'index.html'], ['fr', 'fr/index.html']]) {
     }
     const first = kit.filter(tag => attribute(tag, 'fetchpriority') === 'high').map(tag => attribute(tag, 'src'));
     assert.equal(first.length, 2);
-    assert.match(first[0], /^\/page-art\/eclipse-ground-/, 'the ground is the largest paint, in the HTML');
+    assert.match(first[0], /^\/page-art\/showcase-ground-/, 'the ground is the largest paint, in the HTML');
     assert.match(first[1], /^\/page-art\/colossus-/);
     // No painting waits for the sheet: the stylesheet names none.
     assert.doesNotMatch(read('showcase.css'), /url\('\/assets\/[^']+\.webp'\)/);

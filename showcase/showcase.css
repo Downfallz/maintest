@@ -126,10 +126,10 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
   .language { font-size: 12px; }
   .hero-inner { min-height: 0; display: block; }
   /* Play now whole on a 320 by 568 screen: the copy starts higher, the Colossus drawn to fit above it. */
-  .hero-copy { width: 100%; padding-block: clamp(160px, 50vw, 330px) 35px; }
+  .hero-copy { width: 100%; padding-block: clamp(150px, 47vw, 330px) 35px; }
   .hero-ground img { inset: 0 auto auto 50%; width: auto; height: 68%; translate: -50% 0; }
   .hero-ground::before { background: linear-gradient(0deg, var(--soot) 27%, transparent 85%); }
-  .hero-beast { width: 79%; height: clamp(140px, 44vw, 280px); right: 4%; top: 12px; bottom: auto; }
+  .hero-beast { width: 79%; height: clamp(132px, 41vw, 280px); right: 4%; top: 12px; bottom: auto; }
   .specimen { top: 16px; bottom: auto; right: auto; left: 0; border: 0; padding: 3px 6px; text-align: left; background: rgb(7 13 16 / .76); }
   .specimen strong { font-size: 15px; } .specimen span { font-size: 11px; }
   h1 { font-size: clamp(57px, 14vw, 82px); line-height: .93; margin-block: 12px 18px; }
@@ -353,6 +353,7 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
   :is(.gold-button, .outline-button):active { scale: .98; }
 }
 /* Ambience, as in identity.css: motion.js, which the home loads, plays one at a time, in view, in a visible tab.
+   The strip's rules are identity.css's, for six frames only (page.mjs refuses another count): change them together.
    The hero's Colossus breathes; the round's Cast strip plays once and rests on its blow. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes motion-breath { 50% { scale: 1.015; } }

@@ -378,9 +378,9 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    390 by 320 at twice the density; Cast is a strip of six frames of Pummel from the effects bench, played once
    in view (`.motion-strip`). `scripts/ux/round.mjs` makes them again into `docs/art/sources/pages/`; they are
    39:32, the bench's field, not the brief's 16:9, which cut the creatures. Every painting of the home is now the
-   kit's `<img>` at the size it is drawn: the ground, a CSS background before, is asked for first with the
-   Colossus, which breathes (`table/motion.js` is loaded by the home); the battlefield, the five specimens and the
-   ways to play's ground (a background before) are lazy; the guide's head too. The build copies the kit's files
+   kit's `<img>` at the size it is drawn. The ground, a CSS background before, is asked for first with the
+   Colossus. The Colossus breathes; the home loads `table/motion.js` for it. The battlefield, the five specimens,
+   the ways to play's ground (also a background before) and the guide's head are lazy. The build copies the kit's files
    into `page-art/`, and the showcase deploys for them (`studio/browser/plan.js`). On the slow profile the home's
    largest paint went from 4.3 s to 1.1 s and its pictures before any scroll from 744 KB to 212 KB. One filled
    action, the foot's Play now an outline; the specimen's line at 11 px; the language link named by its letters;
@@ -390,11 +390,12 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    the script; `showcase/showcase.test.js` the round, the kit's pictures and the one filled action.
 
    Left: the language's fade waits, since `table/motion.test.js` refuses `@view-transition` after UX4. Under less
-   motion the Cast strip shows its first frame, the kit's rule (ADR 0198): the blow landed would say more, and
-   amends that ADR. The field guide's 21 portraits are still sent whole when a form is opened. The rulebook's
+   motion the Cast strip shows its first frame, the kit's rule (ADR 0198). The blow landed would say more, but
+   showing it would amend that ADR. The field guide's 21 portraits are still sent whole when a form is opened. The rulebook's
    links inside a sentence stay under 44 px, which WCAG 2.5.8 exempts and the measure counts. The strip is
    331 KB as a phone takes it, a quarter of the home's pictures. The owner's choices are in the brief's
-   **Left** ([the doors](journeys/doors.md)).
+   **Left** ([the doors](journeys/doors.md)). The measure cannot see a picture sent smaller than it is drawn, since
+   an `<img>` with a `srcset` reports the width its `sizes` names; the review found the ground's so.
 7. **UX7, the game's door.** The sign-in panel stays short, and answers the visitor the showcase never met: who
    invites them, what the game is in one line and one picture, what an account gives. The name window, and the
    step into tutorial 1. `accounts-plan.md` and `home-navigation.md` are brought to agree. Tests:

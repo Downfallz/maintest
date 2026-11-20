@@ -46,8 +46,12 @@ const doors = {
     if (new URL(play).origin !== new URL(GAME_ORIGIN).origin) throw new Error(`Play now leads to ${play}, not to the game.`);
     // How to play: the round seen played, each move a picture of the battle view (UX6).
     await page.getByRole('link', { name: 'How to play' }).click();
-    await page.locator('#duel .move-frame img').first().waitFor();
-    await walk.screen('showcase-round');
+    // The moves' pictures are lazy, so the walk's settling leaves them out: wait until each has arrived.
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll('#duel .move-frame img')];
+      return images.length === 3 && images.every(image => image.complete && image.naturalWidth > 0);
+    });
+    await walk.screen('showcase-round', { asSeen: true });
     await page.goto(`${set.showcase}/fr/`);
     await walk.screen('showcase-home-fr');
     await page.goto(`${set.showcase}/mutations/`);

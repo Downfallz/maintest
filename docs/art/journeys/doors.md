@@ -59,7 +59,7 @@ for the game with Play now. Built by `showcase/page.mjs` from `showcase/copy.mjs
 - **Order**: the creature and its name, the title (Evolve your creatures), the pitch, Play now; then the round
   ([A round seen played](#a-round-seen-played-showcase-round)), the battlefield, the mutations, the creator's
   note, the ways to play, and Play now again.
-- **Budget**: 780 words in English, 741 shown before and after UX6; 880 in French, 830. The round's pictures add
+- **Budget**: 780 words in English (741 shown, before and after UX6); 880 in French (830). The round's pictures add
   only their `alt`, which the measure does not count: the three moves keep their text. The specimen's line
   (Brute lineage · Stage III) is set at 11 px, not 8: no word is under 11 px now, where 4 were. The language
   link's visible text starts its accessible name: `FR` is named "FR, read in French", `EN` "EN, read in
@@ -69,7 +69,7 @@ for the game with Play now. Built by `showcase/page.mjs` from `showcase/copy.mjs
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground behind the hero, an `<img>` of the picture kit asked for first, no longer a CSS background. Under 600 px it is drawn 533 px wide at any width, centred and cut by the hero; wider, at the full width. | 533 by 300 px | Where does this happen? It is the largest paint, so it is asked for first. | `table/battle-art/eclipse-battle.webp` |
+| The eclipse ground behind the hero, an `<img>` of the picture kit asked for first, no longer a CSS background. Under 600 px it is 68% of the hero's height, its width following, about 710 px, centred and cut by the hero; wider, at the full width. It is its own picture, `showcase-ground`: the sign-in panel's ground is drawn smaller. | 720 by 405 px | Where does this happen? It is the largest paint, so it is asked for first. | `table/battle-art/eclipse-battle.webp` |
 | The Colossus in the hero, an `<img>` asked for first, carrying the kit's `.motion-breath`. | 308 by 187 px | What do I play? A creature, at its last stage. | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
 | The battlefield's three rounds (the eclipse, the breach, the broken floor with the shattered sky above it), lazy. | 351 by 128 px | Does the ground change? | `table/battle-art/horizon/breach.webp` |
 | The mutations' five specimens (the base creature, then the Warped from its base to the Revenant and its Brute hybrid), lazy. | 315 by 210 px | What does a mutation do to a creature? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
@@ -160,14 +160,14 @@ numeral, name and sentence. The visitor reading the duel's section sees what eac
 
 - **Order**: the section's title, its lead, then each move: its picture, its numeral, its name, its sentence.
   Read the rules last.
-- **Budget**: 124 words in English, 88 for the section before UX6 (103 in French); the three sentences stay as
-  written, and only the pictures' `alt` text is new, 13 words at most each. The page's count, 741, does not
+- **Budget**: 88 words shown in English, as before UX6 (103 in French); the three sentences stay as
+  written, and only the pictures' `alt` text is new, 14 words at most each, which the budget does not count. The page's count, 741, does not
   change: the measure counts the words shown, not an `alt`.
 
 The `alt` of each picture, in the player's words, as `showcase/copy.mjs` writes them:
 
-- Mutate: "The Mutation Tree in a match: Brute, Warped or Predator for Creature 1."
-- Choose a tempo: "The tempo sheet in a match: Instinct or Precision for Creature 1."
+- Mutate: "The Mutation Tree in a match: the Brute, Warped and Predator branches for Creature 1."
+- Choose a tempo: "Choosing a tempo in a match: Instinct or Precision for Creature 1."
 - Cast: "A Brute leaps at an enemy with Pummel, and the blow lands."
 
 Each says what the picture shows, a choice offered and not made, since the screens filmed are the choices open.
@@ -237,8 +237,8 @@ nothing animating at rest on this screen: the strip had not come into view.
 - The pictures' text inside them (a chip, a tab's label) is the battle view's at about 0.9 of its size at 390 and
   0.74 at 320: it is a picture of the screen, not words to read, and the `alt` carries it.
 - Under less motion the Cast strip rests on its first frame, the Brute before it acts: ADR 0198 sets a strip's
-  still form so. The settled frame, the blow landed, would say more; it amends that ADR for every strip, and is the
-  owner's choice.
+  still form so. The settled frame, the blow landed, would say more, but showing it would amend that ADR for every
+  strip, so it is the owner's choice.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

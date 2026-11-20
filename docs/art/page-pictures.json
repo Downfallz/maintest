@@ -6,7 +6,13 @@
       "name": "eclipse-ground",
       "source": "table/battle-art/eclipse-battle.webp",
       "drawn": [533, 1440],
-      "pages": { "showcase/home": "largest", "table/sign-in": "largest" }
+      "pages": { "table/sign-in": "largest" }
+    },
+    {
+      "name": "showcase-ground",
+      "source": "table/battle-art/eclipse-battle.webp",
+      "drawn": [720, 1440],
+      "pages": { "showcase/home": "largest" }
     },
     {
       "name": "colossus",
