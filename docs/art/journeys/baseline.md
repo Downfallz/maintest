@@ -228,21 +228,17 @@ At 320 by 568:
 | mutation-tree | 568 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 4 | 0 | 0.03 | label-content-name-mismatch (8) |
 | spell-choice | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 1 | 0 | 0.03 | nothing |
 | spell-choice-foot | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 18 | 0 | 0.03 | nothing |
-| history | 534 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 7 of 12 | 0 | 2 | 0 | 0.24 | label-content-name-mismatch (3) |
-
-Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
-
-- after spell-choice-foot: #history-open could not be pressed
+| history | 534 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 7 of 12 | 0 | 2 | 1 | 0.24 | label-content-name-mismatch (3) |
 
 At 390 by 844:
 
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| mutation-pick | 844 px | 86 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 24 | 0 | 1 | 0 | 0.00 | label-content-name-mismatch (3) |
-| mutation-tree | 844 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 2 | 0 | 0.00 | label-content-name-mismatch (8) |
-| spell-choice | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 1 | 0 | 0.00 | nothing |
-| spell-choice-foot | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 5 | 0 | 0.00 | nothing |
-| history | 698 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 9 of 12 | 0 | 2 | 1 | 0.29 | label-content-name-mismatch (6) |
+| mutation-pick | 844 px | 86 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 24 | 0 | 1 | 0 | 0.01 | label-content-name-mismatch (3) |
+| mutation-tree | 844 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 2 | 0 | 0.01 | label-content-name-mismatch (8) |
+| spell-choice | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 1 | 0 | 0.01 | nothing |
+| spell-choice-foot | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 5 | 0 | 0.01 | nothing |
+| history | 698 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 9 of 12 | 0 | 2 | 1 | 0.30 | label-content-name-mismatch (6) |
 
 ## The first paints, on a slow phone
 

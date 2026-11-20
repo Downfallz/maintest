@@ -11,7 +11,8 @@ does today is in `table/` and `showcase/`, and in [the baseline](baseline.md), n
 ## The files
 
 One file a journey, named as `scripts/ux/journeys.mjs` names it: `doors.md`, `lessons.md`, `lobby.md`,
-`pages.md`, `match.md`, `windows.md`. The stage that builds a journey writes its file, or the part of it the stage builds.
+`pages.md`, `match.md`, `windows.md`. The stage that builds a journey writes its file, or the part of it the stage
+builds.
 
 | File | What it stages | Built by |
 | --- | --- | --- |

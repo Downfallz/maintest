@@ -118,7 +118,12 @@ test('the baseline keeps every screen of every journey at both widths', () => {
   const baseline = read('docs/art/journeys/baseline.md');
   for (const journey of JOURNEYS) {
     assert.match(baseline, new RegExp(`^## ${journey.title}$`, 'm'), `the baseline has ${journey.title}`);
-    for (const name of journey.screens) assert.ok(baseline.includes(`| ${name} |`) || baseline.includes(`| ${name} (staged) |`), `the baseline has ${journey.id}'s ${name}`);
+    // Read in the journey's own section: two journeys may name a screen alike (the match's and the windows' mutation-tree).
+    const section = baseline.split(/^## /m).find(part => part.startsWith(`${journey.title}\n`)) ?? '';
+    for (const name of journey.screens) {
+      const rows = section.split('\n').filter(line => line.startsWith(`| ${name} |`) || line.startsWith(`| ${name} (staged) |`));
+      assert.equal(rows.length, 2, `the baseline has ${journey.id}'s ${name} at both widths`);
+    }
   }
   assert.match(read('docs/README.md'), /art\/journeys\/baseline\.md/);
 });

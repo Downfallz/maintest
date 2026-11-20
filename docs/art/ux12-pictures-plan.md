@@ -81,7 +81,8 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    question 4 settles. Tests: `studio/ux-pictures.test.js` (every picture has its size, the budget holds) and
    `TableFiles` for the new files.
 3. **P3, the spellbook.** Two spells a row, as the brief settles them, the card's portrait in the browser, and at
-   24 px in the docked sheet.
+   24 px in the docked sheet. AU9 of `docs/tabletop/battle-ux-parity-plan.md` (its full-details mode) is amended
+   in the same pull request.
    Tests: `battle-spellbook.spec.js`, the footer still reachable at 320 by 568, on a short landscape and at 200%
    text; `table/battle-spell-art.test.js`.
 4. **P4, the journal.** The portraits drawn at 24 px from their own files; the acting creature gets no picture. Tests:

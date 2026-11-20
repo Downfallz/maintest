@@ -9,9 +9,9 @@ proposal: the owner has not yet seen the journey's sheets.
 
 Written from the walk `node scripts/ux/journey.mjs windows --out <folder>` on `main` at `74506ea` with this branch's
 walk (`scripts/ux/journeys.mjs`, journey `windows`). Both contact sheets were read screen by screen, at 320 by 568
-and 390 by 844, with their measures. The strip `history-window` is in the walk but was not filmed for this brief: how the journal
-enters and leaves is UX12's, not P1's. At 320 the walk could not press `#history-open` after `spell-choice-foot`
-(the header's bell covers it, as it covers `#settings` in the match journey) and pressed it by script. A screen's
+and 390 by 844, with their measures. The strip `history-window` films at both widths, and was not read for this
+brief: how the journal enters and leaves is UX12's, not P1's. Under 360 px wide History leaves the bar (the owner's
+choice, `table/battle.css`): at 320 the walk opens the journal from Help's window, as a player does. A screen's
 name is its journey's: the `match` journey films the same Evolution sheet as `mutation-tree`; here it is
 `mutation-pick`, and `mutation-tree` is the Mutation Tree window opened from it.
 
@@ -334,7 +334,7 @@ None.
 
 - **The two columns amend AU9**: in `docs/tabletop/battle-ux-parity-plan.md`, its "explicit full-details mode"
   and "full details exposes … complete card text" become the face in a column and the chosen card in full on the
-  targets step, read before Declare spell. The plan's row for AU9 is amended with this change; P3 builds it.
+  targets step, read before Declare spell. P3 amends AU9's row and paragraph in that plan, and builds it.
 - The chosen card in full on the targets step adds up to 20 words to the match's `targets` screen ([the match's
   brief](match.md)); its budget is that brief's.
 - The crit note on Pummel's card states a rule in the catalogue's words; a link to the rulebook in its place is

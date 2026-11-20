@@ -1,6 +1,7 @@
 // The five journeys of docs/art/ux-craft-plan.md, and the match's windows of its UX12, each walked as a new player
 // would walk it: the screens it names, in order, and how to get from one to the next. A walk presses what a player
-// presses; where it cannot (Google's own button), it says so with a staged screen. `strips` names the interactions `--strip` films.
+// presses; where it cannot (Google's own button), it says so with a staged screen. `strips` names the
+// interactions `--strip` films.
 
 import { GAME_ORIGIN } from '../../table/site-origins.js';
 import { choose, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
@@ -353,6 +354,14 @@ const match = {
   },
 };
 
+// The journal as a player opens it: from the bar, or under 360 px, where History leaves the bar (table/battle.css),
+// from Help's window.
+async function openHistory(page, blocked) {
+  if (await page.locator('#history-open').isVisible()) return choose(page, '#history-open', blocked);
+  await choose(page, '#help-open', blocked);
+  await choose(page, '#help-dialog [data-history-open]', blocked);
+}
+
 // The match's windows whose pictures docs/art/ux12-pictures-plan.md settles: the pick and the Mutation Tree opened
 // from it, the spellbook at its top and at its foot, and the journal once a round is played. UX12 adds the others.
 const windows = {
@@ -361,7 +370,7 @@ const windows = {
   screens: ['mutation-pick', 'mutation-tree', 'spell-choice', 'spell-choice-foot', 'history'],
   strips: {
     // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
-    'history-window': { at: 'history', act: async ({ page }) => { await page.locator('#history-close').click(); await page.locator('#history-open').click(); } },
+    'history-window': { at: 'history', act: async ({ page, blocked }) => { await page.locator('#history-close').click(); await openHistory(page, blocked); } },
   },
   async walk(walk) {
     const { page, set } = walk;
@@ -390,7 +399,7 @@ const windows = {
     await playUntil(page, view => view.board.roundNumber > 1, { look, blocked: walk.blocked });
     // A round played, the journal holds its casts.
     await readUntilAsked(page);
-    await choose(page, '#history-open', walk.blocked);
+    await openHistory(page, walk.blocked);
     await page.locator('#history-dialog[open]').waitFor();
     await walk.screen('history');
   },
