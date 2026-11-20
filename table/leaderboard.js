@@ -68,9 +68,12 @@ export function recordParts({ wins, losses, draws }) {
 }
 
 /** What the status says when the player's rating changes while the page is open. */
-export function statusText(before, rating) {
-  const by = before === null || before === undefined ? 0 : rating - before;
-  return by ? `Your rating is now ${rating}, ${by > 0 ? 'up' : 'down'} ${Math.abs(by)}.` : `Your rating is now ${rating}.`;
+export function statusText(before, standing) {
+  const by = before?.rating === undefined || before?.rating === null ? 0 : standing.rating - before.rating;
+  if (by) return `Your rating is now ${standing.rating}, ${by > 0 ? 'up' : 'down'} ${Math.abs(by)}.`;
+  // Others' games can move the player's place while their rating stays.
+  if (before?.rank && before.rank !== standing.rank) return `Your place is now #${standing.rank}, from #${before.rank}.`;
+  return `Your rating is now ${standing.rating}.`;
 }
 
 /** Where this browser remembers what the ladder last showed a player, by their name (`/api/leaderboard` names no id). */
@@ -133,12 +136,15 @@ export function drawLadder(doc, ladder, { storage = globalThis.localStorage, fir
     const row = node(doc, 'tr');
     row.className = [player.provisional ? 'provisional' : '', player.you ? 'you' : '', player.rank <= 3 && !player.provisional ? 'top' : '', arrived.has(player.username) ? 'motion-arrive' : ''].filter(Boolean).join(' ');
     const name = node(doc, 'td', null, 'player');
-    name.append(initial(doc, player.username), node(doc, 'span', player.username, 'player-name'));
-    if (player.you) name.append(node(doc, 'span', '(you)', 'you-mark'));
+    // The cell stays a table cell; the line inside it lays out the initial, the name and the tags.
+    const line = node(doc, 'span', null, 'player-line');
+    name.append(line);
+    line.append(initial(doc, player.username), node(doc, 'span', player.username, 'player-name'));
+    if (player.you) line.append(node(doc, 'span', '(you)', 'you-mark'));
     if (player.provisional) {
       const tag = node(doc, 'span', 'provisional', 'tag');
       tag.title = 'Rating still being found: a few more ranked games settle it';
-      name.append(tag);
+      line.append(tag);
     }
     const rating = node(doc, 'td', String(player.rating), 'number');
     rating.append(node(doc, 'span', `±${player.deviation}`, 'deviation'));
@@ -158,7 +164,7 @@ export function drawLadder(doc, ladder, { storage = globalThis.localStorage, fir
   const key = standing ? `${standing.rank}:${standing.rating}` : null;
   const changed = drawnStanding !== undefined && drawnStanding !== key;
   const before = drawnRating;
-  drawnRating = standing?.rating ?? null;
+  drawnRating = standing ? { rating: standing.rating, rank: standing.rank } : null;
   let move = null;
   if (!ladder.you) you.push(node(doc, 'p', youSummary(null).text, 'you-line'));
   else {
@@ -212,7 +218,7 @@ export function drawLadder(doc, ladder, { storage = globalThis.localStorage, fir
   const moved = first ? Boolean(move) : changed;
   if (moved) for (const number of el('you').querySelectorAll('.motion-number')) numberChanged(number);
   // At rest the status says nothing; a change while the page is open is told once.
-  if (!first) el('ladder-status').textContent = changed && standing ? statusText(before, standing.rating) : '';
+  if (!first) el('ladder-status').textContent = changed && standing ? statusText(before, standing) : '';
   else el('ladder-status').textContent = '';
 }
 

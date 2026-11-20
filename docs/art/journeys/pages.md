@@ -2,8 +2,7 @@
 
 The brief of a signed-in player's own pages: the Friends window, the Create window it opens on a friend, the ladder
 and the statistics, each seen empty and then filled. UX10 of [the pages' craft plan](../ux-craft-plan.md) builds it,
-with its paragraph "Give each player page a reason to look". A proposal until the owner has seen the journey's
-sheets.
+with its paragraph "Give each player page a reason to look". The owner approves it on the journey's sheets.
 
 Who may play and what a ranked game is are `docs/tabletop/accounts-plan.md`'s; how a rating is computed and when it is
 provisional, ADR 0124's; what the statistics count, ADR 0168's and ADR 0171's; where Friends, the Leaderboard and Your
@@ -13,17 +12,10 @@ opened on a friend. Nothing here changes what is ranked, how a rating moves or w
 the owner settled on 2026-11-20: `GET /api/stats` gives each mutation its `artwork`, the evolution
 `data/presentation/mutation-art.json` names for it, or null for a capstone that draws none.
 
-Written from the walk `node scripts/ux/journey.mjs pages --out <folder>` on `main` at `a98a8fe`. Both contact sheets
-were read screen by screen, at 320 and at 390 px, with their measures; the strip `friends-window` was not filmed for
-this brief, and `--paint` was not run: the baseline measured no paint for the ladder or the statistics. The walk's log
-names a stop at 320 px on `#friends-open`, but both files of measures hold all six screens, and both sheets show
-them. That walk showed a new account only. Each empty page is paired with the same page filled: the stage added two
-screens to the walk, `leaderboard-ranked` and `statistics-ranked`, briefed here before they were filmed, once the
-walker (Walker) and the friend (Rook) have played one ranked 3v3 game through its first round and the walker has
-conceded. The build was filmed by the same walk at `903cb43` (the stage in progress), all eight screens at both
-widths; this brief's numbers were corrected from that film where it proved them wrong. The walker is then on the ladder, provisional after one game, with a record of 0–1–0, mutations acquired
-and spells cast. Since the UX9 pass the Friends window and the Create window already write nothing under 11 px; the
-baseline's 10 px there is from before it.
+Written from the walk `node scripts/ux/journey.mjs pages`, both widths, which filmed a new account only. Each empty
+page is paired here with the same page filled. Two screens were added to the walk for that: `leaderboard-ranked` and
+`statistics-ranked`. Before them, Walker and Rook play one ranked 3v3 game through its first round, and Walker
+concedes. Walker is then on the ladder, provisional after one game, with a record of 0–1–0.
 
 What holds for every screen of the journey:
 
@@ -45,8 +37,9 @@ What holds for every screen of the journey:
   remembers the new. It computes nothing the host does not send: a difference of two numbers it showed.
 - **Each empty page teaches and links.** It says what is empty, what fills it, and has one action that does it:
   **Open a ranked table →**, to `/lobby?rematch=person`, which opens the home's Create window on PvP, Another
-  player, Ranked (`rematchRequest` of `table/lobby.js` learns `person`, as it knows `bot` and `hotseat`). Filled,
-  since it is the only thing a player with nothing can do there. A filled page has no filled action: it is read.
+  player, Ranked (`rematchRequest` of `table/lobby.js` learns `person`, as it knows `bot` and `hotseat`). The
+  action is filled because it is the only thing a player with nothing can do there. A page with something on it has
+  no filled action: it is read.
 - **Readable text.** Nothing under 11 px: the eyebrows of the ladder and the statistics (10 px today, 10 and 6
   words), the ladder's provisional tag (10 px). The Glicko-2 panel goes behind a disclosure: the ladder's 204 words
   are mostly its explanation, which is ADR 0124's.
@@ -71,7 +64,7 @@ window says how a friend is made and asks the first one.
 
 - **Order**: the eyebrow and the title, Your friends, the empty line, the field and Ask →, the line on what a friend
   can do.
-- **Budget**: 47 words, against 46 before: the sketch below is 47 with Ask →, and the build shows it at 47.
+- **Budget**: 47 words, against 46 before.
 
 ```text
 YOUR CIRCLE
@@ -165,7 +158,7 @@ Asked. Rook will see your request.
 
 ### Pictures
 
-None: Rook is his initial in the identity's square, drawn in CSS, not a picture.
+None: Rook is their initial in the identity's square, drawn in CSS, not a picture.
 
 ### States
 
@@ -212,7 +205,7 @@ None: Rook is his initial in the identity's square, drawn in CSS, not a picture.
 
 ### Job
 
-Rook accepted while the window was open: he is a friend, with Invite and Remove. The player sees who their friends
+Rook accepted while the window was open: Rook is a friend, with Invite and Remove. The player sees who their friends
 are and challenges one.
 
 - **Filled action**: none: Invite is quiet on every row, and Ask → is quiet once there is a friend. A gold Invite on
@@ -221,9 +214,9 @@ are and challenges one.
 
 ### Words
 
-- **Order**: Your friends (1), Rook's row with his initial, Invite and Remove, the field and Ask →, the line on what
+- **Order**: Your friends (1), Rook's row with their initial, Invite and Remove, the field and Ask →, the line on what
   a friend can do.
-- **Budget**: 42 words, against 44 before (the build shows 41), with the note "Rook is your friend now." in place of the request's.
+- **Budget**: 42 words, against 44 before, with the note "Rook is your friend now." in place of the request's.
 
 ```text
 Your friends (1)
@@ -326,7 +319,7 @@ selects, and a person could want to change the friend in place.
 
 ### Pictures
 
-None: Rook is his initial in the identity's square, 44 px here, the size of the controls under it.
+None: Rook is their initial in the identity's square, 44 px here, the size of the controls under it.
 
 ### States
 
@@ -426,7 +419,7 @@ None: an empty ladder has nothing to draw, and no painting answers "where do I s
 
 - **First paint**: the hero, Your place's room with "Reading the ladder…", Players' room; no action until the read
   says whether the player is on it.
-- **Empty**: this screen. Signed out: Your place says "Sign in on the home page to have a place here." with no action.
+- **Empty**: this screen. Signed out (no account): Your place says "Sign in on the home page to have a place here." with no action.
 - **Loaded**: the ladder after a ranked game.
 - **Waiting**: none: the action is a link to the home.
 - **Error**: the read failed: `#ladder-problem` says so (alert), Your place keeps its room with no action. A host that
@@ -460,7 +453,7 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
 ### Cost
 
 - **Bytes**: no picture added; the identity's backgrounds as today (5 measured).
-- **Largest paint**: the title, The ladder.; not measured: the stage runs `--paint` on the page. Budget 2.5 s
+- **Largest paint**: the title, The ladder.; not measured: `--paint` was not run on this page (the plan's **Left**). Budget 2.5 s
   (ADR 0197).
 - **Shift**: 0.00 at both widths today. Your place holds its room before the read (two lines and the action's
   height), so the action arriving moves nothing.
@@ -487,7 +480,7 @@ The player finds their place, their rating and how far it moved since they last 
 - **Order**: the hero; Your place: the initial and name, the place and Provisional, the rating, how it moved, the
   rating drawn among the ladder's, the record drawn; Players (2) and its rows, the player's marked; How the ladder
   counts, closed.
-- **Budget**: 75 words; the build shows 74, the record in words ("0 won, 1 lost, 0 drawn in 1 game"). Not filmed before this brief; the empty ladder was 204. In the walk Rook is #1 and Walker #2,
+- **Budget**: 75 words, against 187 before. In the walk Rook is #1 and Walker #2,
   both provisional, 1662 ±290 and 1338 ±290; Walker's line says "New on the ladder.", since the walk opened the empty
   ladder first.
 
@@ -565,7 +558,7 @@ None: a player is their initial (ADR 0122), and the rating and the record are dr
 ### Cost
 
 - **Bytes**: no picture added.
-- **Largest paint**: the title or the rating, not measured: the stage runs `--paint` with the walker on the ladder.
+- **Largest paint**: the title or the rating, not measured: `--paint` was not run on this page (the plan's **Left**).
   Budget 2.5 s.
 - **Shift**: Your place holds the room of its filled form (the rating, the line, the two drawings) before the read,
   so a number arriving moves nothing; the Players rows arrive below the first screen at 320. Budget 0.1.
@@ -591,7 +584,7 @@ fills it.
 ### Words
 
 - **Order**: the eyebrow, Your statistics., one line; the empty state and its action.
-- **Budget**: 45 words, down from 97: the sketch below with the header's name is 45, as the build shows.
+- **Budget**: 45 words, down from 97.
 
 ```text
 YOUR RANKED GAMES
@@ -613,7 +606,7 @@ None: no mutation has been acquired, so there is no painting to show; the empty 
 ### States
 
 - **First paint**: the hero and the room of the empty state, "Reading your games…", no action until the read.
-- **Empty**: this screen. Signed out (401): "Sign in on the home page to see your statistics." and no action.
+- **Empty**: this screen. Signed out (no account): "Sign in on the home page to see your statistics." and no action.
 - **Loaded**: the statistics after a ranked game.
 - **Waiting**: none: the action is a link to the home.
 - **Error**: `#stats-problem` says the read failed (alert); no action. A host that keeps no statistics (404) says so.
@@ -642,7 +635,7 @@ None: no mutation has been acquired, so there is no painting to show; the empty 
 ### Cost
 
 - **Bytes**: no picture.
-- **Largest paint**: the title, not measured: the stage runs `--paint`. Budget 2.5 s.
+- **Largest paint**: the title, not measured: `--paint` was not run on this page (the plan's **Left**). Budget 2.5 s.
 - **Shift**: 0.00 today. The empty state's room is held before the read.
 
 ### Left
@@ -654,7 +647,7 @@ None: no mutation has been acquired, so there is no painting to show; the empty 
 
 ### Job
 
-Walker returns to Your stats after the ranked game he conceded: one game, lost, mutations acquired and spells cast.
+Walker returns to Your stats after the ranked game Walker conceded: one game, lost, mutations acquired and spells cast.
 The player recognises their build: the mutation they acquire most, with its painting, and the spell they cast most.
 
 - **Filled action**: none: the page is read.
@@ -663,7 +656,7 @@ The player recognises their build: the mutation they acquire most, with its pain
 
 - **Order**: the hero; Record drawn and written; Most acquired, its painting, its name and count; Most cast, its name
   and count; the tables Mutations and Spells; Your form.
-- **Budget**: 110 words above the two tables, which grow with what was played; the build shows 87 for the whole page, tables included.
+- **Budget**: 90 words, tables included, against 94 before; the tables grow with what was played.
 
 ```text
 YOUR RANKED GAMES
@@ -692,12 +685,14 @@ Best win streak  0
 Average length   2 rounds
 ```
 
-In the walk the walker acquired Brute twice and cast Brace twice and Strike once: the Mutations table holds one row,
-Spells two. Most acquired and Most cast are the host's first rows of `mutations` and `spells`, which it already orders by count:
-the page chooses nothing. A spell has no painting in the library: its name stands large in the display face, with its
-counts. A capstone whose `artwork` is null shows the same way, without a painting. "Bought" becomes "Acquired" in the
-table's head. Your form says "1 round" for one and "2 rounds" for two, as the walk's game shows (`stats.js` wrote "rounds" after
-any number). A count of one is said "Acquired once" and "Cast once", not "1 times".
+In the walk Walker acquired Brute twice, and cast Brace twice and Strike once: the Mutations table holds one row,
+Spells two. Most acquired and Most cast are the host's first rows of `mutations` and `spells`, which the host orders by
+count, so the page chooses nothing; a tie goes to the first id.
+
+A spell has no painting in the library: the spell's name stands large in the text face, with its casts and games. A
+capstone whose `artwork` is null shows its name and counts without a painting.
+
+"Bought" becomes "Acquired" in the table's head. A count of one reads "1 round", "Acquired once" and "Cast once".
 
 ### Pictures
 

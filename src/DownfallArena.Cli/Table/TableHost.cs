@@ -274,7 +274,7 @@ internal static class TableHost
             ? null
             : new LeaderboardApi(results, accounts, clock, levels.PlayerName);
         // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
-        var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>(), services.GetService<MutationArt>());
+        var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>(), services.GetRequiredService<MutationArt>());
         // The match scenarios (ADR 0179): cut by the operator from the recorded sessions and kept beside them, and
         // practised by signed-in players in this process's memory, over the services built for their content.
         // The repository's own (S7) are read beside them, each played on the content it carries.

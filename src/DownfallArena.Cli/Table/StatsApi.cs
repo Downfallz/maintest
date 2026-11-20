@@ -17,7 +17,7 @@ namespace DownfallArena.Cli.Table;
 /// (<c>artwork</c>, from the art published with the catalogue), or null, so the page can show the one a player leans
 /// on without reading a filename.
 /// </summary>
-internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources, MutationArt? art = null)
+internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGameResources resources, MutationArt art)
 {
     public const string Path = "/api/stats";
 
@@ -62,7 +62,7 @@ internal sealed class StatsApi(IMatchResults results, AccountApi accounts, IGame
         TierId.TryParse(id, out var parsed) && resources.TryGetTier(parsed, out var tier) ? tier.Name : id;
 
     private string? Artwork(string id) =>
-        TierId.TryParse(id, out var parsed) ? art?.Of(parsed)?.Artwork : null;
+        TierId.TryParse(id, out var parsed) ? art.Of(parsed)?.Artwork : null;
 
     private string SpellName(string id) =>
         SpellId.TryParse(id, out var parsed) && resources.TryGetSpell(parsed, out var spell) ? spell.Name : id;

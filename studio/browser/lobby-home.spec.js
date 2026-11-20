@@ -486,6 +486,69 @@ test('the signed-in player reads the statistics of their ranked games on a page 
   await noOverflow(page);
 });
 
+test('the mutation a player acquires most stands with its painting and its count', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    ranked: { games: 1, won: 0, lost: 1, drawn: 0 }, streak: { outcome: 'lost', length: 1 }, bestWinStreak: 0, averageRounds: 2, withTeams: 1,
+    mutations: [{ id: 'tier:brute:v1', name: 'Brute', artwork: 'brute-base', bought: 2, won: 0 }], spells: [{ id: 'spell:brace:v1', name: 'Brace', casts: 2, games: 1, won: 0 }],
+  } }));
+  await page.goto('/table/stats.html');
+  const card = page.locator('#leaned-mutation');
+  await expect(card).toContainText('Brute');
+  await expect(card).toContainText('Acquired 2 times');
+  await expect(card.locator('img.leaned-picture')).toHaveAttribute('src', /page-art\/mutation-brute-base-/);
+  await expect(card.locator('img.leaned-picture')).toHaveAttribute('width', /\d+/);
+  await expect(page.locator('#glance')).toContainText('2 rounds');
+  await noOverflow(page);
+});
+
+test('the ladder says where the player stands, and how far they moved since this browser last showed them', async ({ page }) => {
+  await home(page);
+  const ladder = rating => ({ provisionalAbove: 110, players: [
+    { rank: 1, username: 'Rook', rating: 1662, deviation: 290, games: 1, wins: 1, losses: 0, draws: 0, provisional: true, you: false },
+    { rank: 2, username: player.username, rating, deviation: 290, games: 1, wins: 0, losses: 1, draws: 0, provisional: true, you: true },
+  ], you: { username: player.username, standing: { rank: 2, username: player.username, rating, deviation: 290, games: 1, wins: 0, losses: 1, draws: 0, provisional: true, you: true }, bots: [] } });
+  let answer = ladder(1338);
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: answer }));
+  // This browser last showed the player 1400 at the same place.
+  await page.addInitScript(name => localStorage.setItem(`downfall.ladder.seen.v1:${name}`, JSON.stringify({ standing: { rank: 2, rating: 1400, provisional: true } })), player.username);
+  await page.goto('/table/leaderboard.html');
+  const place = page.locator('#you');
+  await expect(place).toContainText('#2 · Provisional');
+  await expect(place).toContainText('1338 ±290');
+  await expect(place).toContainText('Down 62 since you last looked.');
+  await expect(place).toContainText('0 won, 1 lost, 0 drawn in 1 game');
+  await expect(place.getByRole('img', { name: /Your rating 1338 ±290, among 2 players from 1338 to 1662/ })).toBeVisible();
+  // At rest the status says nothing.
+  await expect(page.locator('#ladder-status')).toHaveText('');
+  // What it showed is remembered.
+  await expect.poll(() => page.evaluate(name => JSON.parse(localStorage.getItem(`downfall.ladder.seen.v1:${name}`)).standing.rating, player.username)).toBe(1338);
+  await noOverflow(page);
+});
+
+test('a player not on the ladder is told how to get on it, and the action opens a ranked table for another player', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: [], you: { username: player.username, standing: null, bots: [] } } }));
+  await page.goto('/table/leaderboard.html');
+  await expect(page.locator('#you')).toContainText('Not on the ladder yet.');
+  await expect(page.locator('#ladder-empty')).toBeVisible();
+  await expect(page.locator('#ladder-table')).toBeHidden();
+  await expect(page.locator('#players-caption')).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Open a ranked table →' })).toHaveAttribute('href', '/lobby?rematch=person');
+  await noOverflow(page);
+});
+
+test('an empty page\'s action opens the Create window on a ranked table for another player', async ({ page }) => {
+  const state = await home(page, { search: '?rematch=person' });
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(page.locator('#create-pvp')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#opponent')).toHaveValue('person');
+  await expect(page.locator('#ranked')).toBeChecked();
+  await expect(page.locator('#format')).toHaveValue('3v3');
+  await expect(page.locator('#create-friend')).toBeHidden();
+  expect(state.errors).toEqual([]);
+});
+
 test('a player with no ranked game reads one empty state and the action that fills it', async ({ page }) => {
   await home(page);
   await page.route('**/api/stats', route => route.fulfill({ json: {

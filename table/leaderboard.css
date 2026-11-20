@@ -25,7 +25,7 @@
 /* UX10 (docs/art/journeys/pages.md): a player is their initial, Your place comes first on a phone, the rating and
    the record are drawn, and the empty page opens the game that fills it. */
 .lobby-page .eyebrow { font-size: 11px; }
-.ladder .player { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.ladder .player-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .ladder .player .account-initial { width: 28px; height: 28px; font-size: 14px; flex: none; }
 .you-who .account-initial { width: 36px; height: 36px; font-size: 18px; flex: none; }
 .ladder .you-mark { color: var(--muted); font-weight: 400; font-size: 12px; }
@@ -49,10 +49,10 @@
 .record-bar { display: flex; height: 8px; overflow: hidden; border-radius: var(--radius-sharp); background: color-mix(in srgb, var(--line) 70%, transparent); }
 .record-bar > span { flex: 0 0 calc(var(--share) * 1%); }
 .record-won { background: var(--gold); }
-.record-lost { background: var(--brand-ember); }
-.record-drawn { background: var(--muted); }
+.record-lost { background: var(--muted); }
+.record-drawn { background: color-mix(in srgb, var(--muted) 45%, transparent); }
 .page-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; font-weight: 650; text-decoration: none; }
-.page-action.button-link { border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--gold); }
+.page-action.button-link { border: 1px solid var(--line); border-radius: var(--radius-sharp); color: var(--gold); }
 .ladder-how { margin-top: 18px; }
 .ladder-how summary { min-height: 44px; padding: 12px 0; box-sizing: border-box; cursor: pointer; color: var(--ink); font-weight: 600; }
 .ladder-how p { margin: 4px 0 0; font-size: 13px; line-height: 1.7; }

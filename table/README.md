@@ -496,9 +496,9 @@ rounds and whether it is *ranked* (two seats, two different accounts). No name i
 `/leaderboard` is the ladder (ADR 0124), linked from the lobby when players sign in: every account with a ranked
 game, by Glicko-2 rating with its ± and its record, provisional players (± above 110) after the others, and for
 whoever is signed in their place and their record against each bot. `GET /api/leaderboard` answers anybody; the
-ladder is recomputed from the results every half minute at most. The page remembers in this browser, by player name, the place
-and rating it last showed a player, and says by how much they moved since (UX10, docs/art/journeys/pages.md); the host
-keeps no such mark.
+ladder is recomputed from the results every half minute at most. The page remembers, in this browser and by player name, the
+place and rating it last showed that player, and says by how much they moved since (UX10, docs/art/journeys/pages.md).
+The host keeps no such mark.
 
 ## "Your turn" on a phone
 

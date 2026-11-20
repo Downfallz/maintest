@@ -21,3 +21,4 @@
 .stats-empty p { margin: 0 0 16px; color: var(--ink); line-height: 1.6; }
 .stats-main > .lobby-section { margin-bottom: 0; }
 .leaned-words span + span { margin-top: -2px; }
+.leaned-spell strong { font: 650 20px/1.2 var(--font-text); }

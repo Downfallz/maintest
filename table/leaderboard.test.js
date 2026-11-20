@@ -46,7 +46,8 @@ test('a record is drawn as three parts as long as the wins, the losses and the d
 
 test('the record names its parts in words, and a rating that moves while the page is open says by how much', () => {
   assert.equal(recordWords({ wins: 0, losses: 1, draws: 0 }), '0 won, 1 lost, 0 drawn');
-  assert.equal(statusText(1400, 1338), 'Your rating is now 1338, down 62.');
-  assert.equal(statusText(1300, 1338), 'Your rating is now 1338, up 38.');
-  assert.equal(statusText(null, 1338), 'Your rating is now 1338.');
+  assert.equal(statusText({ rating: 1400, rank: 2 }, { rating: 1338, rank: 2 }), 'Your rating is now 1338, down 62.');
+  assert.equal(statusText({ rating: 1300, rank: 2 }, { rating: 1338, rank: 2 }), 'Your rating is now 1338, up 38.');
+  assert.equal(statusText({ rating: 1338, rank: 3 }, { rating: 1338, rank: 2 }), 'Your place is now #2, from #3.', 'others\' games moved the place alone');
+  assert.equal(statusText(null, { rating: 1338, rank: 2 }), 'Your rating is now 1338.');
 });

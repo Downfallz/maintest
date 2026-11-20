@@ -73,7 +73,7 @@ public sealed class StatsApiTests : IDisposable
             new MatchResult(Guid.CreateVersion7().ToString(), Start.AddHours(1), "3v3", "at-activation", "hash", 10, "player2", [new("player1", mark.Id, null), new("player2", null, "greedy")]),
             Cancel);
         var accounts = await AccountsAsync();
-        var stats = new StatsApi(_results, accounts, Resources);
+        var stats = new StatsApi(_results, accounts, Resources, MutationArt.None);
 
         var read = Read(await stats.HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
 
@@ -113,9 +113,31 @@ public sealed class StatsApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_host_builds_its_statistics_on_the_art_its_catalogue_published()
+    {
+        // The table host asks its services for the art, as TableHost does: one registered by the infrastructure, read
+        // next to the schema. The fixture's package draws a family and no painting.
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("Bastien");
+        await _results.RecordAsync(
+            new MatchResult(Guid.CreateVersion7().ToString(), Start, "3v3", "at-activation", "hash", 10, "player1", [new("player1", mark.Id, null), new("player2", bastien.Id, null)])
+            {
+                Teams = [new PlayedCreature("player1", Resources.Creatures.First().Id.Value, ["tier:guard:v1"], Survived: true, new Dictionary<string, int>())],
+            },
+            Cancel);
+        var art = _hosted.Services.GetRequiredService<MutationArt>();
+        art.Of(TierId.Parse("tier:guard:v1")).ShouldNotBeNull("the host's catalogue published its art");
+        var accounts = await AccountsAsync();
+
+        var read = Read(await new StatsApi(_results, accounts, Resources, art).HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
+
+        read.GetProperty("mutations").EnumerateArray().ShouldHaveSingleItem().GetProperty("artwork").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task Nobody_signed_in_is_asked_to_sign_in()
     {
-        var stats = new StatsApi(_results, await AccountsAsync(), Resources);
+        var stats = new StatsApi(_results, await AccountsAsync(), Resources, MutationArt.None);
 
         var refused = await stats.HandleAsync("GET", new AccountRequest(null, Secure: false));
 
@@ -128,7 +150,7 @@ public sealed class StatsApiTests : IDisposable
     {
         await PlayerAsync("MarkF");
         var accounts = await AccountsAsync();
-        var stats = new StatsApi(_results, accounts, Resources);
+        var stats = new StatsApi(_results, accounts, Resources, MutationArt.None);
 
         var read = Read(await stats.HandleAsync("GET", new AccountRequest(await SessionOfAsync(accounts, "MarkF"), Secure: false)));
 

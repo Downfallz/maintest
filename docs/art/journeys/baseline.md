@@ -145,8 +145,8 @@ At 390 by 844:
 
 ## The player's pages
 
-`leaderboard-ranked` and `statistics-ranked`, the same pages after one ranked game, were added by UX10: their lines
-come from UX10's walk of 2026-11-20 before its pages changed, not from the baseline, whose walk had no such screen.
+`leaderboard-ranked` and `statistics-ranked`, the same pages after one ranked game, were added by UX10. Their lines
+come from UX10's walk of 2026-11-20, taken before UX10 changed the pages. The baseline walk had no such screens.
 
 At 320 by 568:
 

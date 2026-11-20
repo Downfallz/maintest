@@ -112,7 +112,7 @@ export function drawStats(doc, stats) {
   }
   el('leaned-spell').hidden = !leaned.spell;
   if (leaned.spell) {
-    const words = node(doc, 'p', null, 'leaned-words');
+    const words = node(doc, 'p', null, 'leaned-words leaned-spell');
     words.append(node(doc, 'strong', leaned.spell.name), node(doc, 'span', `Cast ${times(leaned.spell.casts)} in ${leaned.spell.games} game${leaned.spell.games === 1 ? '' : 's'}`));
     el('leaned-spell-body').replaceChildren(words);
   }
