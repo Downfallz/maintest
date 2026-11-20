@@ -159,6 +159,7 @@
     ]
   },
   "spell:guard:v1": {
+    "portrait": "brace",
     "family": "physical",
     "motif": "plates",
     "delivery": "cast",
@@ -201,6 +202,7 @@
     ]
   },
   "spell:heavy_strike:v1": {
+    "portrait": "strike",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -255,6 +257,7 @@
     ]
   },
   "spell:lightning_bolt:v1": {
+    "portrait": "shock",
     "family": "elemental",
     "motif": "arc",
     "delivery": "cast",
@@ -351,6 +354,7 @@
     ]
   },
   "spell:poison_slash:v1": {
+    "portrait": "venom-claw",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -391,6 +395,7 @@
     ]
   },
   "spell:pummel:v1": {
+    "portrait": "pummel",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -415,6 +420,7 @@
     ]
   },
   "spell:rejuvenate:v1": {
+    "portrait": "revitalize",
     "family": "astral",
     "motif": "vital",
     "delivery": "cast",
@@ -531,6 +537,7 @@
     ]
   },
   "spell:throwing_star:v1": {
+    "portrait": "quill",
     "family": "biological",
     "motif": "quill",
     "delivery": "projectile",
@@ -610,6 +617,7 @@
     ]
   },
   "spell:wait:v1": {
+    "portrait": "focus",
     "family": "neutral",
     "motif": "focus",
     "delivery": "cast",

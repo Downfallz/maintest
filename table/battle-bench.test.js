@@ -148,7 +148,8 @@ test('a frame carries the chosen look to the chosen creatures while it plays, an
   assert.equal(benchFrame({ entry: pummel, actor: 'a1', targets: ['b2'], stage: 'resolved' }).cue, undefined);
   for (const stage of ['windup', 'impact']) {
     const { cue } = benchFrame({ entry: pummel, actor: 'a1', targets: ['b2', 'b3'], stage });
-    assert.deepEqual(cue.visual, art['spell:pummel:v1']);
+    const { family, motif, delivery, staging } = art['spell:pummel:v1'];
+    assert.deepEqual(cue.visual, { family, motif, delivery, staging });
     assert.deepEqual(cue.recipients, ['b2', 'b3']);
     assert.deepEqual(cue.contact, ['b2', 'b3']);
     assert.deepEqual(cue.struck, ['b2', 'b3']);

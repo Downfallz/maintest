@@ -10,7 +10,7 @@ namespace DownfallArena.Infrastructure.Tests.Resources;
 /// </summary>
 public sealed class SpellArtTests
 {
-    private const string Guard = """{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast" } }""";
+    private const string Guard = """{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "portrait": "brace" } }""";
 
     [Fact]
     public void Art_is_published_beside_the_schema_and_read_back_by_spell()
@@ -23,7 +23,7 @@ public sealed class SpellArtTests
         SpellArt.Publish(content.Path, output, schema);
         var read = SpellArt.ReadNextTo(Path.Combine(output, "game.schema.json"));
 
-        read.Of(SpellId.Parse("spell:guard:v1")).ShouldBe(new Application.Catalogue.SpellVisual("physical", "plates", "cast"));
+        read.Of(SpellId.Parse("spell:guard:v1")).ShouldBe(new Application.Catalogue.SpellVisual("physical", "plates", "cast", Portrait: "brace"));
         read.Of(SpellId.Parse("spell:strike:v1")).ShouldBeNull();
     }
 

@@ -1127,6 +1127,13 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .spell-card-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .spell-card { margin: 8px 0; padding: 10px 12px; border: 1px solid #3f554d; border-radius: var(--radius-soft); background: #172a30; }
 .spell-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.spell-portrait { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-soft); }
+.spell-card:has(> .spell-portrait) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; }
+.spell-card > .spell-portrait { grid-column: 1; grid-row: 1 / span 2; }
+.spell-card:has(> .spell-portrait) > :is(.spell-card-head, .spell-card-target) { grid-column: 2; }
+.spell-card:has(> .spell-portrait) > :not(.spell-portrait, .spell-card-head, .spell-card-target) { grid-column: 1 / -1; }
+#history-dialog .spell-portrait { width: 22px; height: 22px; vertical-align: middle; align-self: center; }
+.history-entry strong > .spell-portrait { margin-inline-end: 6px; }
 .spell-card-name { font: 16px/1.2 var(--font-display); color: #f0e4c9; overflow-wrap: anywhere; }
 .spell-card-chips { display: inline-flex; flex: none; gap: 5px; }
 .spell-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px 1px 5px; border: 1px solid; border-radius: var(--radius-sharp); font: 800 11px/1.5 system-ui, sans-serif; white-space: nowrap; }

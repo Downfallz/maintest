@@ -33,7 +33,7 @@ async function mount(page, feed = [entry(10)]) {
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== 'GET') state.writes.push(url.pathname);
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'a', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2 }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2, visual: { portrait: 'strike' } }], packages: [{ id: 'root', name: 'Warden', level: 1, spells: ['strike'] }] } });
     if (url.pathname === '/api/seat/player1') {
       state.reads.push(url.search);
       if (!url.search && state.historyFeed) {
@@ -89,6 +89,7 @@ test('History opens on a summary of each round, and All events holds the full re
   await expect(page.locator('#history-list')).toBeHidden(); await expect(page.locator('#history-filters')).toBeHidden();
   const card = page.locator('.summary-round'); await expect(card).toHaveCount(1); await expect(card.locator('h3')).toHaveText('Round 2');
   const casts = card.locator('.summary-casts > li'); await expect(casts).toHaveCount(2);
+  await expect(casts.first().locator('.spell-portrait')).toHaveJSProperty('naturalWidth', 512);
   await expect(casts.nth(0)).toHaveAttribute('data-side', 'Opponent'); await expect(casts.nth(0)).toContainText('Creature 4');
   await expect(casts.nth(0).locator('.summary-status')).toHaveText('Crit'); await expect(casts.nth(0)).toContainText('Damage 7');
   await expect(casts.nth(1)).toHaveAttribute('data-side', 'Your team'); await expect(casts.nth(1).locator('.summary-status')).toHaveCount(0);

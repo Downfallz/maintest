@@ -735,6 +735,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/`, `/lobby` | anyone | The player lobby (ADR 0115); `/lobby?token=...` redirects to admin; `/lobby?rematch=<accountId>\|bot\|hotseat\|person&format=...` opens the create dialog on the same opponent, or on a ranked table for another player. |
 | `/play` | seat | The game's doorway; `/play?replay=<id>` replays a finished session for the operator. |
 | `/battle` | seat | The battle view; `/battle?replay=<table>&seat=<seat>` a finished game's recap (ADR 0156); `/battle?scenario=<id>` a scenario's practice (ADR 0179), a tutorial with its coach and concept cards (ADR 0187). |
+| `/battle-art/spells/*.webp` | anyone | Spell illustrations used by the battle cards and journal. |
 | `/battle-lab` | anyone | The visual study on fictional frames (ADR 0123); with `?bench`, the effects bench. |
 | `/admin?token=<operator token>` | operator | The admin panel (ADR 0081). |
 | `/pilot?token=<pilot token>` | pilot | The operator's own page for the seats of a console table. |

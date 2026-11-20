@@ -176,6 +176,11 @@ public sealed class SpellArt
             yield return $"{SourceFile}: '{spell}' is no spell this content authors.";
         }
 
+        if (visual.Portrait is { } portrait && (portrait.Length == 0 || portrait.Any(c => !char.IsAsciiLetterLower(c) && !char.IsAsciiDigit(c) && c != '-')))
+        {
+            yield return $"{SourceFile}: '{spell}' needs a lowercase portrait asset name.";
+        }
+
         if (!Families.Contains(visual.Family, StringComparer.Ordinal))
         {
             yield return $"{SourceFile}: '{spell}' is of the family '{visual.Family}', which is none of {string.Join(", ", Families)}.";
@@ -319,7 +324,9 @@ public sealed class SpellArt
 
         public List<AuthoredBeat?>? Staging { get; init; }
 
-        public SpellVisual ToVisual() => new(Family, Motif, Delivery, Staging?.OfType<AuthoredBeat>().Select(beat => beat.ToBeat()).ToList());
+        public string? Portrait { get; init; }
+
+        public SpellVisual ToVisual() => new(Family, Motif, Delivery, Staging?.OfType<AuthoredBeat>().Select(beat => beat.ToBeat()).ToList(), Portrait);
     }
 
     /// <summary>

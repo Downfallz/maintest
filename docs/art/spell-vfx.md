@@ -4,6 +4,8 @@ Implemented on top of the merged ART-3 (#439). ART-4 now integrates `main`, incl
 history console (#440); opening that console settles VFX through the existing playback cancellation path.
 See [ADR 0131](../adr/0131-give-confirmed-arena-spells-a-visual-vocabulary.md) for the presentation boundary.
 
+The optional `portrait` on a spell visual names its square WebP in `table/battle-art/spells/`. The battle cards and journal use it as decorative art beside the spell name.
+
 ## Coverage
 
 All 42 family spells and the two base actions have an entry in `data/presentation/spell-art.json`, which the
