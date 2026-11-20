@@ -33,7 +33,9 @@ function preview(face: Face, packages: Pack[], recipient: string, catalogue: Cat
   const title = node('div', `${recipient} · ${face.name}`, 'preview-name');
   const portrait = spellPortrait(face.portrait, 24);
   if (portrait) title.prepend(portrait);
-  section.append(title, node('span', face.initiative == null ? 'Initiative unavailable' : `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`, 'mutation-initiative'));
+  let initiative = 'Initiative unavailable';
+  if (face.initiative != null) initiative = `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`;
+  section.append(title, node('span', initiative, 'mutation-initiative'));
   const cards = cardsById(catalogue);
   for (const spell of face.spells) section.append(spellCard(cards.get(spell.id), spell.id, catalogue?.effects ?? [], { compact: true }));
   for (const passive of face.passives) section.append(node('p', passive, 'mutation-passive'));
