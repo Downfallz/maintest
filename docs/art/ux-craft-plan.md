@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX10 are built; UX11 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX11 are built; UX12 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -605,6 +605,43 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     then the next actor or waiting state takes focus visually. Use the battle's existing playback timing,
     including at a slower speed. Record one exchange with sound off. Pause at contact and at the next decision:
     the affected creature, confirmed outcome and next actor must agree across the canvas and the frame.
+
+    *Built (2026-11-20)*: [the match's brief](journeys/match.md), written by the designer from the walk and
+    corrected after its critique. It briefs the frame around five screens: the order revealed, an action read,
+    choosing a spell, choosing targets and a second round. The windows are UX12's.
+
+    The floor: every word the frame writes is 11 px (`.6875rem`) at least, at every width. That covers the round's
+    bar, the order row, the team labels, the creatures' captions, the dock and the opponent's chip. On the walk's
+    frame screens, words under 11 px went from 60–70 a screen to none; what is left is inside the sheets. The word
+    INIT became the cue set's initiative mark, at 11 px. Docked, a caption keeps its name, its health and its defense,
+    and only the creature the sheet holds keeps its tag.
+
+    The bar under 360 px, signed in, as the owner chose on 2026-11-20: the bell joins the site menu as its
+    Notifications entry, its count drawn on the menu's button (`docs/tabletop/home-navigation.md`, "The bell"). History
+    leaves the bar, and Help's window gained a History button. Under 420 px the word Round is out of sight and stays
+    in the button's name. The folded header is 44 px tall, and the menu, open, stands above a docked sheet.
+    Settings is pressable at 320 and 390 px; nothing in the frame overlaps.
+
+    The exchange: while an action winds up, the dock's card names who acts and with what, and its outcome waits. On
+    the impact, the chips show, the target's health changes as the kit's number that changes, and the
+    announcement says it. The strip `exchange` films it (`--frames 24 --interval 120`).
+
+    Names: a creature, an order entry, the round, History and the dock's card are named by their visible words first,
+    then one unseen sentence. axe's `label-content-name-mismatch` went from 8–12 a frame screen to none.
+
+    Icons from `table/icons.js`: Settings, Order, Inspect, Last result, Close and the reaction. The creatures' buttons
+    are placed by a translation: the round's end shift went from 0.47 to 0.23 at 320 and from 0.44 to 0.30 at 390.
+    Tests: the frame's floor and overlaps, signed in, at 320 and 390 px (`battle-density.spec.js`), and the battle
+    specs this change touches, updated for the names (`battle-inspection`, `battle-targets`, `battle-upkeep`,
+    `battle-order`, `lobby-home`).
+
+    Left, as the brief's **Left** lists it ([the match](journeys/match.md)):
+    - The round's end still shifts the frame, above the 0.1 aimed for.
+    - The word Friend for the ♥.
+    - The NEW ROUND toast under 620 px, and the team labels at 568 tall.
+    - The History and › icons.
+    - The sheets' own text under 11 px (UX12).
+    - The sound-off clip at natural speed: the strips are filmed on a held clock.
 12. **UX12, the match's windows.** The 18 windows as one family: how each enters, leaves and returns the focus,
     the spellbook and the mutation tree on a phone, the result of a match as a moment. Tests: each window's
     contract (the focus goes in, stays in, comes back; Escape closes); the battle specs.

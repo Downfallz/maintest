@@ -2051,7 +2051,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
     display: inline-grid; position: absolute; top: 2px; right: 0; min-width: 19px; height: 19px; font-weight: 700; box-shadow: 0 0 0 2px var(--paper);
   }
   .battle-page[data-home="member"] #battle .hud-top { padding-right: 96px; }
-  /* History leaves the bar too (the owner's choice): Help, the upkeep, the sheets and Where you are still open it. */
+  /* History leaves the bar too (the owner's choice): Help's window, the upkeep and the sheets still open it. */
   .battle-page[data-home="member"] #battle #history-open { display: none; }
 }
 
@@ -2076,3 +2076,9 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 @media (max-width: 419px) and (orientation: portrait) {
   .battle-page[data-home="member"] #battle .round-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
+/* Docked, both team labels step aside, and only the creature the sheet holds keeps its tag: the others' TEMPO ? and
+   MUTATE are the sheet's tabs, and an ACTING over the row above covered its health at 320 px. */
+#battle[data-docked="true"] .team-label { display: none; }
+#battle[data-docked="true"] .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag { display: none; }
+/* Under 360 px a creature's outcome stays in its own room: above its head it landed on the caption of the row above. */
+@media (max-width: 359px) { #battle .creature > .creature-effect { transform: translateY(-35%); } }

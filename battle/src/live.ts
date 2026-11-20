@@ -707,7 +707,11 @@ function statChips(stats: HTMLElement, health: number, maxHealth: number, energy
     span.append(iconElement(icon), document.createTextNode(value), unseen(unit)); return span;
   };
   const healthChip = chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP');
-  if (struck) healthChip.classList.add('motion-number', 'motion-changed');
+  if (struck) {
+    healthChip.classList.add('motion-number', 'motion-changed');
+    // Once: a caption shown again (a sheet closed) would otherwise play the change a second time.
+    healthChip.addEventListener('animationend', () => healthChip.classList.remove('motion-changed'), { once: true });
+  }
   stats.replaceChildren(healthChip, unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
 }
 
