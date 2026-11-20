@@ -55,15 +55,14 @@ export const ROUND = {
     const { page, set, blocked } = walk;
     await account(walk, page, WALKER);
     await takeSeat(page, set.invitation);
-    // The questions are answered one after the other, on purpose: each waits for the host to answer the last.
+    // The questions come one at a time: each is answered once the host has answered the last, then the next is read.
     const until = async kind => {
-      for (;;) { // NOSONAR S9382: a game's questions come one at a time
-        await readUntilAsked(page);
-        const view = await asked(page);
-        if (view.over) throw new Error(`The game ended before it asked for ${kind}.`);
-        if (view.waitingFor === kind) return view;
-        await answer(page, view, { blocked });
-      }
+      await readUntilAsked(page);
+      const view = await asked(page);
+      if (view.over) throw new Error(`The game ended before it asked for ${kind}.`);
+      if (view.waitingFor === kind) return view;
+      await answer(page, view, { blocked });
+      return until(kind);
     };
     let view = await until('Evolution');
     const offered = view.options.evolution.creatures.find(one => one.creature === FOLLOWED.creature);
@@ -84,10 +83,11 @@ export const ROUND = {
     await walk.screen('mutations-revealed', { asSeen: true });
     await openPlanning(page);
     const tabs = await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab));
-    for (const tab of tabs) { // NOSONAR S9382: one tab, then its tempo, as a player presses them
-      await choose(page, `[data-tempo-tab="${tab}"]`, blocked);
-      await choose(page, `[data-speed="${Number(tab) === FOLLOWED.creature ? FOLLOWED.speed : 'Standard'}"]`, blocked);
-    }
+    // One tab, then its tempo, a creature after the other, as a player presses them.
+    const tempo = tab => Number(tab) === FOLLOWED.creature ? FOLLOWED.speed : 'Standard';
+    await tabs.reduce((pressed, tab) => pressed
+      .then(() => choose(page, `[data-tempo-tab="${tab}"]`, blocked))
+      .then(() => choose(page, `[data-speed="${tempo(tab)}"]`, blocked)), Promise.resolve());
     await confirm(page, '#planning-confirm');
     await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 });
     await waitAnswered(view, () => latest(page), { timeout: 15000 });
