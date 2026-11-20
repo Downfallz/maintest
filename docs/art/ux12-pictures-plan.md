@@ -75,7 +75,7 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    encoder at the proposed sizes, outside the repository: 322,218 B for the page in all, so the brief proposes
    320 KiB for "table/battle", first bytes 0; the forms go first if it is short. Left to P2: `budgetOf` counts a
    picture once at its first width, so a spell drawn at 24 and 40 must be counted at both. Left to the owner: the
-   brief reads answer 1 as the pick and the tree's detail, and leaves the tree's board without forms.
+   brief reads answer 1 as the pick and the tree's detail, and leaves the tree's board without forms. Settled since: the board draws them too (issue #1023, below).
 2. **P2, the sizes.** `page-pictures.json` declares the spell portraits at 24 and 40 px for `table/battle`, and
    the forms at 64 px; the files are regenerated; `page-budget.json` holds the number
    question 4 settles. Tests: `studio/ux-pictures.test.js` (every picture has its size, the budget holds) and

@@ -185,7 +185,7 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The form each mutation of the board leads to, beside its stage numeral and name (21 mutations). | 64 by 64 px | Where does each branch lead? | `table/battle-art/evolutions/<artwork>.webp`, each mutation's `artwork` |
+| The form each mutation of the board leads to, beside its stage numeral and name (21 mutations). | 64 by 64 px | Where does each branch lead? | `table/battle-art/evolutions/brute-base.webp` for Brute, and each mutation's own `artwork` |
 | A capstone's portrait beside its name on the board (Apex, Archmage, Titan), in place of a form it does not have. | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
 | The form the mutation in the detail leads to, left of its family, stage and name. | 64 by 64 px | What will this mutation make of my creature? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of the mutation open (Brute here) |
 | A capstone's portrait beside its name in the detail, in place of a form it does not have (Apex, Archmage, Titan; not on this screen). | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
