@@ -37,17 +37,17 @@ export const PAGE_ART = {
     ],
   },
   'round-mutate': {
-    from: '50204e1e51ca70b5', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
+    from: '6aa9a4c5da41b535', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
     sizes: [
-      { file: 'round-mutate-351.da705716.webp', width: 351, height: 288, bytes: 12276 },
-      { file: 'round-mutate-702.554c2eae.webp', width: 702, height: 576, bytes: 36132 },
+      { file: 'round-mutate-351.fd0525db.webp', width: 351, height: 288, bytes: 14300 },
+      { file: 'round-mutate-702.517c9e7e.webp', width: 702, height: 576, bytes: 42118 },
     ],
   },
   'round-tempo': {
-    from: '23ced012081f7c8f', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
+    from: 'be84140130aa7d4f', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
     sizes: [
-      { file: 'round-tempo-351.68d530c5.webp', width: 351, height: 288, bytes: 15354 },
-      { file: 'round-tempo-702.a65ce414.webp', width: 702, height: 576, bytes: 47230 },
+      { file: 'round-tempo-351.8e45264e.webp', width: 351, height: 288, bytes: 15492 },
+      { file: 'round-tempo-702.0ba73a1d.webp', width: 702, height: 576, bytes: 44264 },
     ],
   },
   'round-cast': {

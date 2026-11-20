@@ -20,9 +20,9 @@ export const english = {
   ],
   // What each move's picture shows, for a screen reader: the real battle view (scripts/ux/round.mjs).
   movePictures: [
-    'The Mutation Tree in a match: the Brute, Warped and Predator branches for Creature 1.',
-    'Choosing a tempo in a match: Instinct or Precision for Creature 1.',
-    'A Brute leaps at an enemy with Pummel, and the blow lands.',
+    'Creature 1 has become a Brute, with Pummel and Brace.',
+    'The Brute plays Instinct: in the revealed order, it acts first.',
+    'The Brute leaps at an enemy with Pummel, and the blow lands.',
   ],
   worldTitle: 'The battlefield is breaking apart',
   worldLead: 'The planet’s corruption had already reshaped its wildlife long before this duel. As the duel goes on, more of the battlefield gives way.',
@@ -73,9 +73,9 @@ export const french = {
     ['Lancer un sort', 'Quand vient son tour, choisis le sort et ses cibles. Tu peux voir comment s’est déroulé le dernier coup avant de te décider.'],
   ],
   movePictures: [
-    'L’Arbre des mutations en partie : les branches Brute, Altéré et Prédateur pour la Créature 1.',
-    'Le choix du tempo en partie : Instinct ou Précision pour la Créature 1.',
-    'Une Brute bondit sur un ennemi avec Marteler, et le coup porte.',
+    'La Créature 1 est devenue une Brute, avec Marteler et Encaisser.',
+    'La Brute joue Instinct : dans l’ordre révélé, elle agit en premier.',
+    'La Brute bondit sur un ennemi avec Marteler, et le coup porte.',
   ],
   worldTitle: 'Le champ de bataille s’effondre',
   worldLead: 'Bien avant le duel, la corruption de la planète avait déjà transformé sa faune. Au fil du duel, le champ de bataille s’effondre un peu plus.',

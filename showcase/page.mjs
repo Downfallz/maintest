@@ -25,13 +25,15 @@ const SIZES = {
   // A strip's file holds its six frames side by side: it is drawn six times as wide.
   strip: '(max-width: 600px) 540vw, (max-width: 1420px) 156vw, 2208px',
 };
-// The round's three moves, each a picture of the real battle view (scripts/ux/round.mjs); Cast is a strip.
+// The round's three moves, one Brute followed through them, each a picture of the real battle view
+// (scripts/ux/round.mjs); Cast is a strip.
 const MOVES = ['round-mutate', 'round-tempo', 'round-cast'];
 
 function movePicture(name, alt) {
   if (PAGE_ART[name].frames === 1) return `<figure class="move-frame">${art(name, { alt, sizes: SIZES.move })}</figure>`;
   if (PAGE_ART[name].frames !== 6) throw new Error(`${name}: the strip's sizes are written for six frames`);
-  return `<figure class="move-frame">${stripHtml(name, { page: HOME, base: SHOWCASE_ART, alt, sizes: SIZES.strip })}</figure>`;
+  // Under less motion the strip rests on the blow's contact, its fourth frame, so it still shows what its name says.
+  return `<figure class="move-frame">${stripHtml(name, { page: HOME, base: SHOWCASE_ART, alt, sizes: SIZES.strip, still: 4 })}</figure>`;
 }
 
 const rounds = [1, 6, 12];

@@ -2,21 +2,24 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { CAST, FRAME, PHONE, SCALE, SCREENS, SOURCES, boxOf, castFrame, parseArguments } from '../scripts/ux/round.mjs';
-import { JOURNEYS } from '../scripts/ux/journeys.mjs';
+import { CAST, FOLLOWED, FRAME, PHONE, ROUND, SCALE, SCREENS, SOURCES, boxOf, castFrame, parseArguments } from '../scripts/ux/round.mjs';
 
 const declaration = JSON.parse(readFileSync(new URL('../docs/art/page-pictures.json', import.meta.url), 'utf8'));
 const declared = name => declaration.pictures.find(picture => picture.name === name);
 
-test('each move is a screen the match journey walks, cut to one shape inside the phone', () => {
-  const match = JOURNEYS.find(journey => journey.id === 'match');
+test('each move is a screen the round\'s walk pictures, cut to one shape inside the phone', () => {
   for (const { name, screen, top } of SCREENS) {
-    assert.ok(match.screens.includes(screen), screen);
+    assert.ok(ROUND.screens.includes(screen), screen);
     assert.equal(declared(name).source, `${SOURCES}/${name}.webp`);
     const [left, upper, right, lower] = boxOf(top);
     assert.deepEqual([left, right - left, lower - upper], [0, FRAME.width * SCALE, FRAME.height * SCALE]);
     assert.ok(lower <= PHONE.height * SCALE);
   }
+});
+
+test('the round follows a Brute on Instinct, the creature the Cast strip films', () => {
+  assert.deepEqual(FOLLOWED, { creature: 1, mutation: 'tier:brute:v1', speed: 'Quick' });
+  assert.equal(CAST.spell, 'spell:pummel:v1', 'Pummel is the Brute\'s first spell');
 });
 
 test('a part that would leave the phone is refused', () => {

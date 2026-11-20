@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // The round seen played on the showcase (docs/art/ux-craft-plan.md, UX6; docs/art/journeys/doors.md): three
-// moves, each a picture of the real battle view. Mutate and Choose a tempo are the match journey's
-// `mutation-tree` and `tempo-sheet` screens, walked on a table of seed 7 at a phone's size and twice its density,
-// then cut to the part that shows the move. Cast is the effects bench's film of one spell, a few of its frames
+// moves, each a picture of the real battle view, following one creature through its round. A round of a table of
+// seed 7 is walked at a phone's size and twice its density: Creature 1 mutates into a Brute, takes Instinct, and
+// acts first. Mutate is the board once the mutations are revealed, Choose a tempo the revealed order, each cut to
+// the part that shows Creature 1. Cast is the effects bench's film of the Brute's Pummel, a few of its frames
 // kept as a strip. They are written under docs/art/sources/pages/ as the pictures' sources; then
 // `node scripts/ux/pictures.mjs` derives them at the size the showcase draws them.
 //
@@ -18,8 +19,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { filmFrames, openBench, playwright, serveTable } from '../battle/filmstrip.mjs';
+import { waitAnswered } from '../../studio/browser/battle-step.js';
 import { walkJourney } from './journey.mjs';
-import { JOURNEYS } from './journeys.mjs';
+import { account, WALKER } from './journeys.mjs';
+import { answer, asked, choose, confirm, latest, openPlanning, playUntil, readUntilAsked, takeSeat } from './play.mjs';
 import { buildShowcase, root } from './set.mjs';
 
 /** A phone's screen, and the density the pictures are taken at: the showcase sends them at twice the width drawn. */
@@ -32,9 +35,71 @@ export const SCALE = 2;
  */
 export const FRAME = { width: 390, height: 320 };
 export const SCREENS = [
-  { name: 'round-mutate', screen: 'mutation-tree', top: 250 },
-  { name: 'round-tempo', screen: 'tempo-sheet', top: 300 },
+  { name: 'round-mutate', screen: 'mutations-revealed', top: 375 },
+  { name: 'round-tempo', screen: 'order-revealed', top: 412 },
 ];
+
+/** The creature the round follows, the mutation it takes and the tempo it plays. */
+export const FOLLOWED = { creature: 1, mutation: 'tier:brute:v1', speed: 'Quick' };
+
+/**
+ * One round as a newcomer would play it, following FOLLOWED: its mutation picked and the other picks passed, its
+ * tempo Instinct and the others Precision, every other question answered with the host's first choice. The walk
+ * pictures the board once the mutations are revealed, and the order once it is revealed.
+ */
+export const ROUND = {
+  id: 'round',
+  title: 'The round on the showcase',
+  screens: SCREENS.map(one => one.screen),
+  async walk(walk) {
+    const { page, set, blocked } = walk;
+    await account(walk, page, WALKER);
+    await takeSeat(page, set.invitation);
+    const until = async kind => {
+      for (;;) {
+        await readUntilAsked(page);
+        const view = await asked(page);
+        if (view.over) throw new Error(`The game ended before it asked for ${kind}.`);
+        if (view.waitingFor === kind) return view;
+        await answer(page, view, { blocked });
+      }
+    };
+    let view = await until('Evolution');
+    const offered = view.options.evolution.creatures.find(one => one.creature === FOLLOWED.creature);
+    if (!offered?.availableTiers.includes(FOLLOWED.mutation)) throw new Error(`Creature ${FOLLOWED.creature} is not offered ${FOLLOWED.mutation}.`);
+    await openPlanning(page);
+    await choose(page, `#planning-creatures [data-creature="${FOLLOWED.creature}"]`, blocked);
+    await choose(page, `[data-mutation="${FOLLOWED.mutation}"]`, blocked);
+    await confirm(page, '#planning-confirm');
+    await waitAnswered(view, () => latest(page), { timeout: 15000 });
+    // The picks left are given up: the round follows one creature.
+    if ((await latest(page))?.waitingFor === 'Evolution') {
+      await openPlanning(page);
+      await page.locator('#planning-pass').click();
+      await confirm(page, '#planning-confirm');
+    }
+    view = await until('Speed');
+    await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {});
+    await walk.screen('mutations-revealed', { asSeen: true });
+    await openPlanning(page);
+    const tabs = await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab));
+    for (const tab of tabs) {
+      await choose(page, `[data-tempo-tab="${tab}"]`, blocked);
+      await choose(page, `[data-speed="${Number(tab) === FOLLOWED.creature ? FOLLOWED.speed : 'Standard'}"]`, blocked);
+    }
+    await confirm(page, '#planning-confirm');
+    await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 });
+    await waitAnswered(view, () => latest(page), { timeout: 15000 });
+    // The order is revealed once both teams' ties are settled: pictured before its Continue is pressed.
+    const look = async () => {
+      if (walk.seen('order-revealed') || !await page.locator('#order-continue').isVisible()) return;
+      await page.waitForTimeout(1500);
+      await walk.screen('order-revealed', { asSeen: true });
+    };
+    await playUntil(page, next => next.waitingFor === 'Action', { look, blocked });
+    if (!walk.seen('order-revealed')) throw new Error('The order was never revealed.');
+  },
+};
 
 /** The spell the Cast strip films, and the milliseconds of the bench's clock its frames are taken at, the clock stepped by `interval`. */
 export const CAST = { spell: 'spell:pummel:v1', damage: 8, interval: 120, frames: [0, 720, 840, 960, 1080, 1200] };
@@ -85,8 +150,7 @@ async function main(argv) {
   const jobs = [];
   try {
     const showcase = await buildShowcase(join(work, 'dist'));
-    const match = JOURNEYS.find(journey => journey.id === 'match');
-    const screens = await walkJourney(browser, match, PHONE, { showcase, scale: SCALE });
+    const screens = await walkJourney(browser, ROUND, PHONE, { showcase, scale: SCALE });
     for (const { name, screen, top } of SCREENS) {
       const shot = screens.find(one => one.name === screen);
       const png = join(work, `${name}.png`);

@@ -373,10 +373,12 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    `showcase/showcase.test.js`, the journey's measures, the largest paint. A change here publishes the apex
    (`showcase/README.md`).
 
-   *Built (2026-11-20)*: the duel's three moves each show the real battle view above their sentence. Mutate and
-   Choose a tempo are the match journey's `mutation-tree` and `tempo-sheet` screens on a table of seed 7, cut to
-   390 by 320 at twice the density; Cast is a strip of six frames of Pummel from the effects bench, played once
-   in view (`.motion-strip`). `scripts/ux/round.mjs` makes them again into `docs/art/sources/pages/`; they are
+   *Built (2026-11-20)*: the duel's three moves each show the real battle view above their sentence, following
+   one Brute through its round, as the owner asked on the pull request. On a table of seed 7, Creature 1 takes the
+   Brute mutation and Instinct: Mutate is its team once the mutations are revealed, Choose a tempo the revealed
+   order where it acts first, each cut to 390 by 320 at twice the density; Cast is a strip of six frames of its
+   Pummel from the effects bench, played once in view (`.motion-strip`), resting on the blow's contact under less
+   motion ([ADR 0199](../adr/0199-let-a-strip-of-frames-rest-on-the-frame-that-says-what-it-shows.md)). `scripts/ux/round.mjs` makes them again into `docs/art/sources/pages/`; they are
    39:32, the bench's field, not the brief's 16:9, which cut the creatures. Every painting of the home is now the
    kit's `<img>` at the size it is drawn. The ground, a CSS background before, is asked for first with the
    Colossus. The Colossus breathes; the home loads `table/motion.js` for it. The battlefield, the five specimens,
@@ -389,9 +391,7 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    `showcase-round`, and the measure no longer counts an SVG as sent oversized. `studio/ux-round.test.js` holds
    the script; `showcase/showcase.test.js` the round, the kit's pictures and the one filled action.
 
-   Left: the language's fade waits, since `table/motion.test.js` refuses `@view-transition` after UX4. Under less
-   motion the Cast strip shows its first frame, the kit's rule (ADR 0198). The blow landed would say more, but
-   showing it would amend that ADR. The field guide's 21 portraits are still sent whole when a form is opened. The rulebook's
+   Left: the language's fade waits, since `table/motion.test.js` refuses `@view-transition` after UX4. The field guide's 21 portraits are still sent whole when a form is opened. The rulebook's
    links inside a sentence stay under 44 px, which WCAG 2.5.8 exempts and the measure counts. The strip is
    331 KB as a phone takes it, a quarter of the home's pictures. The owner's choices are in the brief's
    **Left** ([the doors](journeys/doors.md)). The measure cannot see a picture sent smaller than it is drawn, since

@@ -78,7 +78,9 @@ Then a strip, where code cannot give the move: 2 to 12 frames, declared with `fr
 over `--motion-strip`. It is ambience: `table/motion.js` plays one ambience at a time on a screen, in view, in
 a visible tab. It plays
 once and rests on its last frame; out of view it returns to its first, and plays again when it comes back.
-Under less motion it is its first frame. The strip has one name for a screen reader, its `alt`; its frames
+Under less motion it is its first frame, or the frame the page names with `still`, the one that says what the
+strip shows ([ADR 0199](../adr/0199-let-a-strip-of-frames-rest-on-the-frame-that-says-what-it-shows.md)): the
+showcase's Cast rests on the blow's contact. The strip has one name for a screen reader, its `alt`; its frames
 have none. A page that adds one after it opened calls `watch()` of `mountMotion()`.
 
 A strip counts in the budget as all its frames.

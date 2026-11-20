@@ -383,7 +383,7 @@ for (const [lang, file] of [['en', 'index.html'], ['fr', 'fr/index.html']]) {
       assert.equal(attribute(tag, 'loading'), 'lazy', 'below the first screen, it loads when near');
     }
     // The Cast strip is one element with one name; its frames have none.
-    assert.match(moves[2], /<span class="motion-strip" data-frames="6" role="img" aria-label="[^"]{20,}"><img [^>]*alt=""/);
+    assert.match(moves[2], /<span class="motion-strip" data-frames="6" data-still="4" role="img" aria-label="[^"]{20,}"><img [^>]*alt=""/);
     for (const move of moves.slice(0, 2)) assert.ok(attribute(picturesOf(move)[0], 'alt').split(' ').filter(word => /\p{L}/u.test(word)).length <= 14);
   });
 

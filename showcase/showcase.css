@@ -363,6 +363,12 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .motion-strip { display: block; overflow: hidden; }
 .motion-strip > img { display: block; width: calc(var(--frames) * 100%); max-width: none; height: auto; }
 .motion-strip[data-frames="6"] { --frames: 6; }
+/* Under less motion the strip rests on the frame it names (ADR 0199), as in identity.css. */
+.motion-strip[data-still="4"] { --still: 3; }
+@media (prefers-reduced-motion: reduce) {
+  .motion-strip[data-still] > img { margin-left: calc(var(--still) * -100%); }
+}
+:root[data-motion="less"] .motion-strip[data-still] > img { margin-left: calc(var(--still) * -100%); }
 @media (prefers-reduced-motion: no-preference) {
   @keyframes motion-strip { to { translate: calc(-100% * (var(--frames) - 1) / var(--frames)) 0; } }
   :root:not([data-motion="less"]) .motion-strip[data-ambient="playing"] > img { animation: motion-strip var(--motion-strip) steps(var(--frames), jump-none) forwards; }

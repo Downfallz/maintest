@@ -66,6 +66,18 @@ test('a strip is one element with one name, its frames in one file as wide as al
   assert.throws(() => stripHtml('beast', { page: 'home', art: ART }), /not a strip/);
 });
 
+test('a strip names the frame it rests on under less motion, the first unless told (ADR 0199)', () => {
+  assert.match(stripHtml('cast', { page: 'home', art: ART, still: 4 }), /^<span class="motion-strip" data-frames="6" data-still="4" aria-hidden="true">/);
+  assert.doesNotMatch(stripHtml('cast', { page: 'home', art: ART, still: 1 }), /data-still/, 'the first frame is the default and is not written');
+  assert.equal(stripElement(fakeDocument(), 'cast', { page: 'home', art: ART, still: 6 }).attributes['data-still'], '6');
+  for (const still of [0, 7, 2.5]) assert.throws(() => stripHtml('cast', { page: 'home', art: ART, still }), /rests on a frame from 1 to 6/);
+  const sheet = readFileSync(new URL('identity.css', import.meta.url), 'utf8');
+  for (let frame = 2; frame <= STRIP_FRAMES; frame++) assert.ok(sheet.includes(`.motion-strip[data-still="${frame}"] { --still: ${frame - 1}; }`), `frame ${frame}`);
+  // Under the system's wish and under the account's: a still pose, set outside full motion.
+  assert.match(sheet, /@media \(prefers-reduced-motion: reduce\) \{\s*\.motion-strip\[data-still\] > img \{ margin-left: calc\(var\(--still\) \* -100%\); \}/);
+  assert.match(sheet, /:root\[data-motion="less"\] \.motion-strip\[data-still\] > img \{ margin-left: calc\(var\(--still\) \* -100%\); \}/);
+});
+
 test('the sheet steps a strip of every count the form allows, and nothing in the form needs an inline style', () => {
   const sheet = read('table/identity.css');
   for (let frames = 2; frames <= STRIP_FRAMES; frames++) assert.ok(sheet.includes(`.motion-strip[data-frames="${frames}"] { --frames: ${frames}; }`), `${frames} frames`);

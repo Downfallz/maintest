@@ -5,7 +5,7 @@
 import { GAME_ORIGIN } from '../../table/site-origins.js';
 import { choose, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
 
-const WALKER = 'Walker', FRIEND = 'Rook';
+export const WALKER = 'Walker', FRIEND = 'Rook';
 const FIRST_LESSON = 'sc-repo-tutorial-your-first-combat';
 
 // The developer form stands in for Google's button: the one step of the doors a walk cannot press.
@@ -15,7 +15,7 @@ async function signIn(page) {
 }
 
 // An account that exists before the walk begins, signed in on `page`'s browser: the walk is of what follows.
-async function account(walk, page, username, { skipLessons = true } = {}) {
+export async function account(walk, page, username, { skipLessons = true } = {}) {
   const headers = { Origin: walk.set.game };
   const made = await page.request.post(`${walk.set.game}/api/account/dev`, { data: { username }, headers });
   if (!made.ok()) throw new Error(`The host refused the account ${username}: ${made.status()}`);

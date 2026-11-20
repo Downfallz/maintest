@@ -166,9 +166,9 @@ numeral, name and sentence. The visitor reading the duel's section sees what eac
 
 The `alt` of each picture, in the player's words, as `showcase/copy.mjs` writes them:
 
-- Mutate: "The Mutation Tree in a match: the Brute, Warped and Predator branches for Creature 1."
-- Choose a tempo: "Choosing a tempo in a match: Instinct or Precision for Creature 1."
-- Cast: "A Brute leaps at an enemy with Pummel, and the blow lands."
+- Mutate: "Creature 1 has become a Brute, with Pummel and Brace."
+- Choose a tempo: "The Brute plays Instinct: in the revealed order, it acts first."
+- Cast: "The Brute leaps at an enemy with Pummel, and the blow lands."
 
 Each says what the picture shows, a choice offered and not made, since the screens filmed are the choices open.
 The French page writes its own, in the French terms of `docs/domain/player-terminology.md` (Arbre des mutations).
@@ -177,14 +177,15 @@ The French page writes its own, in the French terms of `docs/domain/player-termi
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| Mutate: the Mutation Tree over the board, Creature 1's three branches (Brute, Warped, Predator). | 351 by 288 px | What is a mutation, on the screen? | `docs/art/sources/pages/round-mutate.webp`, made by `scripts/ux/round.mjs` from the match's `mutation-tree` screen |
-| Choose a tempo: the tempo sheet, Instinct and Precision for Creature 1. | 351 by 288 px | What does choosing a tempo look like? | `docs/art/sources/pages/round-tempo.webp`, made by `scripts/ux/round.mjs` from the match's `tempo-sheet` screen |
-| Cast: a strip of six frames, a Brute's Pummel from the leap to the blow and back. | 351 by 288 px a frame | What happens when a creature acts? | `docs/art/sources/pages/round-cast-1.webp` to `round-cast-6.webp`, made by `scripts/ux/round.mjs` on the effects bench of `scripts/battle/filmstrip.mjs` |
+| Mutate: the player's team once the mutations are revealed, Creature 1 in its Brute form under its label (Brute, Stage I, + Pummel + Brace). | 351 by 288 px | Which creature did I evolve, and into what? | `docs/art/sources/pages/round-mutate.webp`, made by `scripts/ux/round.mjs` from its walk's `mutations-revealed` screen |
+| Choose a tempo: the revealed order, the Brute on Instinct first (1 Instinct, acting), its team on Precision after it. | 351 by 288 px | Which tempo did I choose for it, and what did it buy? | `docs/art/sources/pages/round-tempo.webp`, made by `scripts/ux/round.mjs` from its walk's `order-revealed` screen |
+| Cast: a strip of six frames, the Brute's Pummel from the leap to the blow and back. | 351 by 288 px a frame | What happens when a creature acts? | `docs/art/sources/pages/round-cast-1.webp` to `round-cast-6.webp`, made by `scripts/ux/round.mjs` on the effects bench of `scripts/battle/filmstrip.mjs` |
 
-`scripts/ux/round.mjs` makes all three again from the real battle view. Mutate and Choose a tempo are the match
-journey's screens, walked on a table of seed 7 at 390 by 844 and density 2, cut to 390 by 320 CSS px. Choose a tempo is
-cut from 300 px down. Mutate opens on the Mutation Tree's top edge, 250 px down, below the row of the
-creatures' chips (a first cut from 225 halved that row). The Cast strip is Pummel on the effects bench, at 0, 720, 840, 960, 1080 and 1200 ms of its
+`scripts/ux/round.mjs` makes all three again from the real battle view, following one creature, as the owner
+asked on the pull request: a round of a table of seed 7, walked at 390 by 844 and density 2, where Creature 1
+takes the Brute mutation (the other picks passed) and Instinct (its team Precision). Mutate is the board once the
+mutations are revealed, cut from 375 px down; Choose a tempo is the revealed order, cut from 412 px down, each
+390 by 320 CSS px. The first cuts showed the Mutation Tree and the tempo sheet with nothing chosen. The Cast strip is Pummel on the effects bench, at 0, 720, 840, 960, 1080 and 1200 ms of its
 clock. The three share the shape 39:32, the bench's field of 390 by 320, not the 16:9 first asked: a 16:9 cut
 lost the creatures. They are drawn 351 px wide at 390 and 288 by 236 px at 320, declared in
 `docs/art/page-pictures.json`, and lazy. The strip's file holds its six frames side by side.
@@ -214,7 +215,7 @@ nothing animating at rest on this screen: the strip had not come into view.
 
 | Beat | Form |
 | --- | --- |
-| The cast | The first frame, still: the kit's rule for a strip under less motion (ADR 0198). The `alt` says the blow. |
+| The cast | The fourth frame, still: the blow's contact, which the strip names as its still (ADR 0199). |
 
 ### Accessibility
 
@@ -236,9 +237,6 @@ nothing animating at rest on this screen: the strip had not come into view.
   chose the three moves: the sentences are already there and the words stay under budget.
 - The pictures' text inside them (a chip, a tab's label) is the battle view's at about 0.9 of its size at 390 and
   0.74 at 320: it is a picture of the screen, not words to read, and the `alt` carries it.
-- Under less motion the Cast strip rests on its first frame, the Brute before it acts: ADR 0198 sets a strip's
-  still form so. The settled frame, the blow landed, would say more, but showing it would amend that ADR for every
-  strip, so it is the owner's choice.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

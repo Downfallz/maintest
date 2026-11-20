@@ -268,6 +268,23 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .motion-strip[data-frames="10"] { --frames: 10; }
 .motion-strip[data-frames="11"] { --frames: 11; }
 .motion-strip[data-frames="12"] { --frames: 12; }
+/* Under less motion a strip rests on the frame it names (`data-still`, ADR 0199): a still pose, not a move, so it is
+   set by a margin and holds under the system's wish and the account's alike. */
+.motion-strip[data-still="2"] { --still: 1; }
+.motion-strip[data-still="3"] { --still: 2; }
+.motion-strip[data-still="4"] { --still: 3; }
+.motion-strip[data-still="5"] { --still: 4; }
+.motion-strip[data-still="6"] { --still: 5; }
+.motion-strip[data-still="7"] { --still: 6; }
+.motion-strip[data-still="8"] { --still: 7; }
+.motion-strip[data-still="9"] { --still: 8; }
+.motion-strip[data-still="10"] { --still: 9; }
+.motion-strip[data-still="11"] { --still: 10; }
+.motion-strip[data-still="12"] { --still: 11; }
+@media (prefers-reduced-motion: reduce) {
+  .motion-strip[data-still] > img { margin-left: calc(var(--still) * -100%); }
+}
+:root[data-motion="less"] .motion-strip[data-still] > img { margin-left: calc(var(--still) * -100%); }
 @media (prefers-reduced-motion: no-preference) {
   @keyframes motion-strip { to { translate: calc(-100% * (var(--frames) - 1) / var(--frames)) 0; } }
   :root:not([data-motion="less"]) .motion-strip[data-ambient="playing"] > img { animation: motion-strip var(--motion-strip) steps(var(--frames), jump-none) forwards; }
