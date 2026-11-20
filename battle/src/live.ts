@@ -578,7 +578,7 @@ function render() {
     $('playback-next').hidden = true; $('playback-skip').hidden = true;
     text('reading-kind', awaiting.eyebrow); text('reading-title', awaiting.title);
     readingDetail({ detail: awaiting.detail }); $('reading-detail').hidden = false;
-    $('reading-open').setAttribute('aria-label', `${awaiting.title}. ${awaiting.detail}`);
+    text('reading-what', '');
   }
   text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
