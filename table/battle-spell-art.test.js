@@ -18,9 +18,9 @@ test('every portrait a spell or a capstone names is a picture of the kit, and ev
   assert.deepEqual([...named].sort((a, b) => a.localeCompare(b)), [...declared].sort((a, b) => a.localeCompare(b)));
 });
 
-test('every spell portrait is declared for the battle page at the 40 px the spell card draws it', () => {
+test('every spell portrait is declared for the battle page, the field guide and the statistics at the 40 px a spell card draws it', () => {
   for (const name of declared) {
     assert.deepEqual(PAGE_ART[name].drawn, [40], name);
-    assert.deepEqual(PAGE_ART[name].pages, { 'table/battle': 'lazy' }, name);
+    assert.deepEqual(PAGE_ART[name].pages, { 'table/battle': 'lazy', 'showcase/mutations': 'lazy', 'table/stats': 'lazy' }, name);
   }
 });

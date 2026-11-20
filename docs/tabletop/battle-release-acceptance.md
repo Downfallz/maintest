@@ -33,7 +33,7 @@ browser's text-only zoom or assistive technology.
 | Resource | Measured bytes on main `53af584a` | Enforced limit |
 | --- | ---: | ---: |
 | Art a visit loads (background and four creature bodies) | 1,528,370 | 2,097,152 |
-| Live JavaScript | 1,556,221 | 1,769,472 (raised twice from 1,638,400, below) |
+| Live JavaScript | 1,556,221 | 1,835,008 (raised three times from 1,638,400, below) |
 | Live JavaScript, gzip estimate | 430,283 | 524,288 |
 
 The retired three-form sheet (`creatures.webp`, 487,084 bytes) is still served but no longer loaded, so the
@@ -49,6 +49,12 @@ gzip limit (524,288) is unchanged.
 **Raised to 1,769,472 bytes (1,728 KiB), 2026-11-17.** Main measured 1,697,712 bytes, 6,224 under the limit. The
 recap's sheet (docs/tabletop/async-recap-plan.md, R3) and the recap model it draws brought it to 1,711,206 bytes
 (483,705 gzip). The raw limit rises by 64 KiB again; the gzip limit (524,288) is unchanged.
+
+**Raised to 1,835,008 bytes (1,792 KiB), 2026-11-20.** Main measured 1,764,648 bytes, 4,824 under the limit, once
+the spell portraits of #1004 brought the picture kit's module (`table/page-art.js`, ADR 0198) into the bundle. The
+portraits of every spell and three capstones (#1005 to #1010) add 39 entries to that module and brought the bundle
+to 1,774,322 bytes (503,442 gzip). The module lists every page's pictures, not only the battle's: a module of the
+battle's own would take most of it back out. The raw limit rises by 64 KiB; the gzip limit (524,288) is unchanged.
 The download budget does not bound GPU memory. No remote fonts or audio downloads are needed.
 
 | Surface | Current coverage | Release limitation |

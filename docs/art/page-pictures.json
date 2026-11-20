@@ -276,283 +276,283 @@
       "name": "spell-focus",
       "source": "docs/art/spell-portraits/focus.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-strike",
       "source": "docs/art/spell-portraits/strike.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-pummel",
       "source": "docs/art/spell-portraits/pummel.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-brace",
       "source": "docs/art/spell-portraits/brace.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-venom-claw",
       "source": "docs/art/spell-portraits/venom-claw.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-quill",
       "source": "docs/art/spell-portraits/quill.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-shock",
       "source": "docs/art/spell-portraits/shock.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-revitalize",
       "source": "docs/art/spell-portraits/revitalize.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-overdrive",
       "source": "docs/art/spell-portraits/overdrive.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-ambush",
       "source": "docs/art/spell-portraits/ambush.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-bonewall",
       "source": "docs/art/spell-portraits/bonewall.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-dominate",
       "source": "docs/art/spell-portraits/dominate.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-death-wail",
       "source": "docs/art/spell-portraits/death-wail.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-crushing-stomp",
       "source": "docs/art/spell-portraits/crushing-stomp.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-incinerate",
       "source": "docs/art/spell-portraits/incinerate.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-fury",
       "source": "docs/art/spell-portraits/fury.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-seize",
       "source": "docs/art/spell-portraits/seize.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-ice-grip",
       "source": "docs/art/spell-portraits/ice-grip.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-carapace",
       "source": "docs/art/spell-portraits/carapace.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-blood-price",
       "source": "docs/art/spell-portraits/blood-price.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-vital-echo",
       "source": "docs/art/spell-portraits/vital-echo.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-deep-freeze",
       "source": "docs/art/spell-portraits/deep-freeze.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-contagion",
       "source": "docs/art/spell-portraits/contagion.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-latch",
       "source": "docs/art/spell-portraits/latch.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-emberstorm",
       "source": "docs/art/spell-portraits/emberstorm.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-pursuit",
       "source": "docs/art/spell-portraits/pursuit.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-eviscerate",
       "source": "docs/art/spell-portraits/eviscerate.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-blood-hunt",
       "source": "docs/art/spell-portraits/blood-hunt.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-toxic-mend",
       "source": "docs/art/spell-portraits/toxic-mend.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-bite",
       "source": "docs/art/spell-portraits/bite.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-crash",
       "source": "docs/art/spell-portraits/crash.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-deranged-charge",
       "source": "docs/art/spell-portraits/deranged-charge.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-wild-swing",
       "source": "docs/art/spell-portraits/wild-swing.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-renewal-burst",
       "source": "docs/art/spell-portraits/renewal-burst.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-vital-surge",
       "source": "docs/art/spell-portraits/vital-surge.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-wraithguard",
       "source": "docs/art/spell-portraits/wraithguard.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-body-slam",
       "source": "docs/art/spell-portraits/body-slam.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-whisper",
       "source": "docs/art/spell-portraits/whisper.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-devour",
       "source": "docs/art/spell-portraits/devour.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-infestation",
       "source": "docs/art/spell-portraits/infestation.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-alpha-roar",
       "source": "docs/art/spell-portraits/alpha-roar.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-groundbreaker",
       "source": "docs/art/spell-portraits/groundbreaker.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-void-pulse",
       "source": "docs/art/spell-portraits/void-pulse.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-paralyzing-barb",
       "source": "docs/art/spell-portraits/paralyzing-barb.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-apex",
       "source": "docs/art/spell-portraits/apex.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-archmage",
       "source": "docs/art/spell-portraits/archmage.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     },
     {
       "name": "spell-titan",
       "source": "docs/art/spell-portraits/titan.webp",
       "drawn": [40],
-      "pages": { "table/battle": "lazy" }
+      "pages": { "table/battle": "lazy", "showcase/mutations": "lazy", "table/stats": "lazy" }
     }
   ]
 }

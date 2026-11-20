@@ -164,7 +164,7 @@ test('capstones preserve shared passives, no fake tags or spells, and the tree r
   const h = await mount(page, { ids: ['cap'], allies: [{ ...roster[0], acquiredTiers: ['root0', 'future'] }] });
   await expect(page.locator('[data-mutation]')).toHaveCount(1); await page.locator('[data-mutation="cap"]').click();
   await expect(page.locator('.mutation-preview .spell-card')).toHaveCount(0); await expect(page.locator('.mutation-preview')).toContainText('For every creature of the team');
-  const portrait = 'img.spell-portrait[src*="/page-art/spell-titan-40."]';
+  const portrait = 'img.spell-portrait[src*="/page-art/spell-titan-40."][sizes="24px"]';
   const loaded = image => image.complete && image.naturalWidth > 0;
   await expect.poll(() => page.locator('.mutation-preview').locator(portrait).evaluate(loaded)).toBe(true);
   // The full tree reads what is held without offering it; only the offer is chosen, and only from its card.

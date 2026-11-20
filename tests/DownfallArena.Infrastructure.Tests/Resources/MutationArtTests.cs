@@ -140,4 +140,20 @@ public sealed class MutationArtTests
         refused.Problems.ShouldContain(problem => problem.Contains("lends the effect 'glow'; only a capstone", StringComparison.Ordinal));
         refused.Problems.ShouldContain(problem => problem.Contains("names 'tier:ironbound:v1', which is not a page id", StringComparison.Ordinal));
     }
+
+    /// <summary>A portrait names the picture kit's file, never a content id or a capitalised word.</summary>
+    [Theory]
+    [InlineData("Titan")]
+    [InlineData("tier:titan:v1")]
+    [InlineData("titan.webp")]
+    public void A_portrait_that_is_not_a_page_id_is_refused(string portrait)
+    {
+        using var content = Content().WithFile("presentation/mutation-art.json",
+            $$"""{ "tier:bulwark:v1": { "family": "brute", "motif": "reinforcement", "portrait": "{{portrait}}" } }""");
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        var refused = Should.Throw<InvalidGameContentException>(() => MutationArt.Publish(content.Path, Path.Combine(content.Path, "dst"), schema));
+
+        refused.Problems.ShouldHaveSingleItem().ShouldContain($"names '{portrait}', which is not a page id");
+    }
 }

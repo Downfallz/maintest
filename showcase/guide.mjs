@@ -51,12 +51,18 @@ function targetText(s, lang) {
   return s.target === 'Self' || s.count === 1 ? one : several(s.count);
 }
 
+// A spell's or a capstone's portrait, as the battle draws it beside the name (docs/art/spell-vfx.md#portraits): the
+// kit's picture, declared for this page, and decoration, since the name beside it is the text.
+const portrait = name => name
+  ? pictureHtml(`spell-${name}`, { page: 'showcase/mutations', base: SHOWCASE_ART, class: 'spell-portrait', sizes: '40px' })
+  : '';
+
 function spell(s, lang) {
   const l = lore[lang];
   const effects = list => list.map(e => `<li>${icon(effectIcons[e.kind])}<span>${escape(describeEffect(e, lang))}</span></li>`).join('');
   const critical = lang === 'fr' ? 'Critique en Précision' : 'Precision crit chance';
   return `<li id="spell-${key(s.id)}" data-spell-name="${escape(name(s, lang))}">
-    <div class="spell-head"><strong>${escape(name(s, lang))}</strong>
+    <div class="spell-head"><strong>${portrait(s.portrait)}${escape(name(s, lang))}</strong>
       <div class="spell-stats"><span class="spell-chip cost">${icon('energy-gain')}${s.cost} ${l.energy}</span>
       ${s.critical > 0 ? `<span class="spell-chip crit" title="${critical}"><span aria-hidden="true">✦</span>${Math.round(s.critical * 100)}% <span aria-hidden="true">crit.</span><span class="visually-hidden"> ${critical}</span></span>` : ''}</div></div>
     <p class="spell-target">${targetText(s, lang)}</p><ul class="spell-effects">${effects(s.effects)}</ul>
@@ -90,7 +96,7 @@ function entry(t, lang, byId) {
       ${t.visual.artwork ? `<div class="field-art"><img src="/assets/evolutions/${t.visual.artwork}.webp" alt="" width="450" height="300" loading="lazy" decoding="async"></div>` : ''}
       <div><div class="mutation-facts"><p class="requirement">${need}</p>
         ${initiativeChip(t.initiative)}</div><p class="anatomy">${escape(t.notes[lang])}</p>
-      ${t.passive ? `<p class="passive-rule">${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
+      ${t.passive ? `<p class="passive-rule">${portrait(t.visual.portrait)}${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
     </div></details>`;
 }
 

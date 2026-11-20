@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { PAGE_ART } from './page-art.js';
-import { leanedOn, percent, roundsText, streakText, tallyText, teamsNote } from './stats.js';
+import { leanedOn, percent, spellPicture, roundsText, streakText, tallyText, teamsNote } from './stats.js';
 
 test('a tally reads won, lost and drawn, and a share is a whole percent or a dash', () => {
   assert.equal(tallyText({ won: 7, lost: 2, drawn: 1 }), '7–2–1');
@@ -52,4 +52,10 @@ test('every painting a mutation draws is a picture the statistics may show', () 
     assert.ok(picture, `mutation-${artwork} is declared and derived`);
     assert.ok(picture.pages['table/stats'], `mutation-${artwork} is declared for table/stats`);
   }
+});
+
+test('a spell names the kit\'s picture of its portrait, and one without a portrait names none', () => {
+  assert.equal(spellPicture({ id: 'spell:guard:v1', portrait: 'brace' }), 'spell-brace');
+  assert.equal(spellPicture({ id: 'spell:gone:v1', portrait: null }), null);
+  assert.equal(spellPicture(null), null);
 });

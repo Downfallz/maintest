@@ -31,7 +31,7 @@ function preview(face: Face, packages: Pack[], recipient: string, catalogue: Cat
   const section = node('section', '', 'mutation-preview');
   section.style.setProperty('--mutation-colour', face.colour);
   const title = node('div', `${recipient} · ${face.name}`, 'preview-name');
-  const portrait = spellPortrait(face.portrait);
+  const portrait = spellPortrait(face.portrait, 24);
   if (portrait) title.prepend(portrait);
   section.append(title, node('span', face.initiative == null ? 'Initiative unavailable' : `${face.initiative >= 0 ? '+' : ''}${face.initiative} initiative`, 'mutation-initiative'));
   const cards = cardsById(catalogue);

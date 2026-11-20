@@ -359,329 +359,329 @@ export const PAGE_ART = {
     ],
   },
   'spell-focus': {
-    from: '74ad4b0fdf0ae9e3', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '74ad4b0fdf0ae9e3', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-focus-40.231f3c6f.webp', width: 40, height: 40, bytes: 692 },
       { file: 'spell-focus-80.4e24b38d.webp', width: 80, height: 80, bytes: 1630 },
     ],
   },
   'spell-strike': {
-    from: '77d9c94f80556bca', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '77d9c94f80556bca', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-strike-40.6ed3ddbe.webp', width: 40, height: 40, bytes: 634 },
       { file: 'spell-strike-80.ea56b99f.webp', width: 80, height: 80, bytes: 1598 },
     ],
   },
   'spell-pummel': {
-    from: 'dc026ee3016a0444', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'dc026ee3016a0444', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-pummel-40.62c88d85.webp', width: 40, height: 40, bytes: 828 },
       { file: 'spell-pummel-80.5dad7bb4.webp', width: 80, height: 80, bytes: 2264 },
     ],
   },
   'spell-brace': {
-    from: '5ce85e06a6bdf5ad', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '5ce85e06a6bdf5ad', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-brace-40.e9daa6a4.webp', width: 40, height: 40, bytes: 760 },
       { file: 'spell-brace-80.9091221e.webp', width: 80, height: 80, bytes: 1990 },
     ],
   },
   'spell-venom-claw': {
-    from: '47a38807960b3735', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '47a38807960b3735', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-venom-claw-40.e143e1e2.webp', width: 40, height: 40, bytes: 604 },
       { file: 'spell-venom-claw-80.2e83b08f.webp', width: 80, height: 80, bytes: 1666 },
     ],
   },
   'spell-quill': {
-    from: 'e719b06b964d00d7', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'e719b06b964d00d7', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-quill-40.849cd9b5.webp', width: 40, height: 40, bytes: 442 },
       { file: 'spell-quill-80.b090171b.webp', width: 80, height: 80, bytes: 1136 },
     ],
   },
   'spell-shock': {
-    from: '9633dc3c28119b13', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '9633dc3c28119b13', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-shock-40.1c18cd5e.webp', width: 40, height: 40, bytes: 660 },
       { file: 'spell-shock-80.5ddbde2e.webp', width: 80, height: 80, bytes: 1860 },
     ],
   },
   'spell-revitalize': {
-    from: 'de4642d964caed92', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'de4642d964caed92', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-revitalize-40.2640e239.webp', width: 40, height: 40, bytes: 706 },
       { file: 'spell-revitalize-80.862ce59f.webp', width: 80, height: 80, bytes: 1828 },
     ],
   },
   'spell-overdrive': {
-    from: '4dc6e69359a57f81', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '4dc6e69359a57f81', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-overdrive-40.bd52c3d9.webp', width: 40, height: 40, bytes: 632 },
       { file: 'spell-overdrive-80.d78b3e02.webp', width: 80, height: 80, bytes: 1522 },
     ],
   },
   'spell-ambush': {
-    from: '42446caebae39341', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '42446caebae39341', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-ambush-40.56c6829e.webp', width: 40, height: 40, bytes: 700 },
       { file: 'spell-ambush-80.9325a840.webp', width: 80, height: 80, bytes: 1734 },
     ],
   },
   'spell-bonewall': {
-    from: '95fecd38e9048cc6', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '95fecd38e9048cc6', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-bonewall-40.1499a070.webp', width: 40, height: 40, bytes: 786 },
       { file: 'spell-bonewall-80.e0c924da.webp', width: 80, height: 80, bytes: 2152 },
     ],
   },
   'spell-dominate': {
-    from: '470d4324bc539e92', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '470d4324bc539e92', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-dominate-40.d4f1f1ac.webp', width: 40, height: 40, bytes: 1014 },
       { file: 'spell-dominate-80.c3c73a85.webp', width: 80, height: 80, bytes: 2590 },
     ],
   },
   'spell-death-wail': {
-    from: '95d8607505226f86', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '95d8607505226f86', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-death-wail-40.d53ce6d4.webp', width: 40, height: 40, bytes: 836 },
       { file: 'spell-death-wail-80.e3783e86.webp', width: 80, height: 80, bytes: 2116 },
     ],
   },
   'spell-crushing-stomp': {
-    from: '5a7775bafaccc5c6', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '5a7775bafaccc5c6', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-crushing-stomp-40.26d6a5cc.webp', width: 40, height: 40, bytes: 856 },
       { file: 'spell-crushing-stomp-80.3a170fe4.webp', width: 80, height: 80, bytes: 2156 },
     ],
   },
   'spell-incinerate': {
-    from: '9d43fa77ec9ef49b', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '9d43fa77ec9ef49b', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-incinerate-40.f34f0125.webp', width: 40, height: 40, bytes: 804 },
       { file: 'spell-incinerate-80.7ea5b226.webp', width: 80, height: 80, bytes: 2034 },
     ],
   },
   'spell-fury': {
-    from: 'b9a21751f31635c9', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'b9a21751f31635c9', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-fury-40.2f128637.webp', width: 40, height: 40, bytes: 830 },
       { file: 'spell-fury-80.3ac62a35.webp', width: 80, height: 80, bytes: 2238 },
     ],
   },
   'spell-seize': {
-    from: '9728b03feb00bd6f', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '9728b03feb00bd6f', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-seize-40.53f5e5a6.webp', width: 40, height: 40, bytes: 778 },
       { file: 'spell-seize-80.9dbda313.webp', width: 80, height: 80, bytes: 1972 },
     ],
   },
   'spell-ice-grip': {
-    from: '9bc71e4619056fdd', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '9bc71e4619056fdd', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-ice-grip-40.2e0ed5f0.webp', width: 40, height: 40, bytes: 774 },
       { file: 'spell-ice-grip-80.08110f69.webp', width: 80, height: 80, bytes: 2136 },
     ],
   },
   'spell-carapace': {
-    from: 'ddd66a3ca6b14391', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'ddd66a3ca6b14391', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-carapace-40.31a12fb4.webp', width: 40, height: 40, bytes: 642 },
       { file: 'spell-carapace-80.99fca76e.webp', width: 80, height: 80, bytes: 1828 },
     ],
   },
   'spell-blood-price': {
-    from: 'f61b348b28a17cc7', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'f61b348b28a17cc7', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-blood-price-40.c7f451ac.webp', width: 40, height: 40, bytes: 758 },
       { file: 'spell-blood-price-80.9224ca5c.webp', width: 80, height: 80, bytes: 1844 },
     ],
   },
   'spell-vital-echo': {
-    from: '9c7043c29a87eb65', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '9c7043c29a87eb65', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-vital-echo-40.b2965e9c.webp', width: 40, height: 40, bytes: 712 },
       { file: 'spell-vital-echo-80.c87d1ba2.webp', width: 80, height: 80, bytes: 1808 },
     ],
   },
   'spell-deep-freeze': {
-    from: '04cd8378850c812c', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '04cd8378850c812c', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-deep-freeze-40.15cb79d3.webp', width: 40, height: 40, bytes: 1032 },
       { file: 'spell-deep-freeze-80.86b81cfa.webp', width: 80, height: 80, bytes: 2700 },
     ],
   },
   'spell-contagion': {
-    from: 'c43ffdcce529c1f8', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'c43ffdcce529c1f8', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-contagion-40.cd8172df.webp', width: 40, height: 40, bytes: 858 },
       { file: 'spell-contagion-80.cd470f1b.webp', width: 80, height: 80, bytes: 2132 },
     ],
   },
   'spell-latch': {
-    from: '7538e855629bce90', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '7538e855629bce90', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-latch-40.832329e1.webp', width: 40, height: 40, bytes: 850 },
       { file: 'spell-latch-80.de43197d.webp', width: 80, height: 80, bytes: 2102 },
     ],
   },
   'spell-emberstorm': {
-    from: 'baf69f21b9da1090', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'baf69f21b9da1090', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-emberstorm-40.62d15432.webp', width: 40, height: 40, bytes: 780 },
       { file: 'spell-emberstorm-80.36344e5e.webp', width: 80, height: 80, bytes: 2068 },
     ],
   },
   'spell-pursuit': {
-    from: '4a81b16b4ebc2650', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '4a81b16b4ebc2650', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-pursuit-40.e7d95896.webp', width: 40, height: 40, bytes: 572 },
       { file: 'spell-pursuit-80.19e14f7b.webp', width: 80, height: 80, bytes: 1488 },
     ],
   },
   'spell-eviscerate': {
-    from: 'c075964da761d3ea', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'c075964da761d3ea', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-eviscerate-40.36ee419c.webp', width: 40, height: 40, bytes: 694 },
       { file: 'spell-eviscerate-80.a0bc7b84.webp', width: 80, height: 80, bytes: 1744 },
     ],
   },
   'spell-blood-hunt': {
-    from: 'e2e37d8c52d53a9e', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'e2e37d8c52d53a9e', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-blood-hunt-40.021ed92b.webp', width: 40, height: 40, bytes: 616 },
       { file: 'spell-blood-hunt-80.f1802aaa.webp', width: 80, height: 80, bytes: 1422 },
     ],
   },
   'spell-toxic-mend': {
-    from: 'fc42096a0d5351c8', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'fc42096a0d5351c8', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-toxic-mend-40.ef49c6b7.webp', width: 40, height: 40, bytes: 668 },
       { file: 'spell-toxic-mend-80.1b6bb967.webp', width: 80, height: 80, bytes: 1762 },
     ],
   },
   'spell-bite': {
-    from: '8a9c379594c1b72b', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '8a9c379594c1b72b', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-bite-40.660aa199.webp', width: 40, height: 40, bytes: 772 },
       { file: 'spell-bite-80.cd5c9a0b.webp', width: 80, height: 80, bytes: 2008 },
     ],
   },
   'spell-crash': {
-    from: '2a370fdfd26efd7f', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '2a370fdfd26efd7f', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-crash-40.cb2742c8.webp', width: 40, height: 40, bytes: 862 },
       { file: 'spell-crash-80.e14a430c.webp', width: 80, height: 80, bytes: 2364 },
     ],
   },
   'spell-deranged-charge': {
-    from: 'fbda5237461cb163', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'fbda5237461cb163', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-deranged-charge-40.23309011.webp', width: 40, height: 40, bytes: 938 },
       { file: 'spell-deranged-charge-80.740111c6.webp', width: 80, height: 80, bytes: 2516 },
     ],
   },
   'spell-wild-swing': {
-    from: '0fe2f04a7bd27549', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '0fe2f04a7bd27549', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-wild-swing-40.30854b5a.webp', width: 40, height: 40, bytes: 836 },
       { file: 'spell-wild-swing-80.6ff3053a.webp', width: 80, height: 80, bytes: 2104 },
     ],
   },
   'spell-renewal-burst': {
-    from: '6dc0066165bac4ed', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '6dc0066165bac4ed', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-renewal-burst-40.2ca313d8.webp', width: 40, height: 40, bytes: 784 },
       { file: 'spell-renewal-burst-80.b7062f08.webp', width: 80, height: 80, bytes: 1878 },
     ],
   },
   'spell-vital-surge': {
-    from: '4a0f5233b1e5bc4f', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '4a0f5233b1e5bc4f', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-vital-surge-40.e93ccdfb.webp', width: 40, height: 40, bytes: 800 },
       { file: 'spell-vital-surge-80.a7707222.webp', width: 80, height: 80, bytes: 2046 },
     ],
   },
   'spell-wraithguard': {
-    from: 'abf02b8fc9f22368', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'abf02b8fc9f22368', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-wraithguard-40.2a093ee1.webp', width: 40, height: 40, bytes: 904 },
       { file: 'spell-wraithguard-80.9e3b7c89.webp', width: 80, height: 80, bytes: 2396 },
     ],
   },
   'spell-body-slam': {
-    from: '402999b893227e70', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '402999b893227e70', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-body-slam-40.1703527f.webp', width: 40, height: 40, bytes: 772 },
       { file: 'spell-body-slam-80.97bc432c.webp', width: 80, height: 80, bytes: 2136 },
     ],
   },
   'spell-whisper': {
-    from: 'b1f2a88b18b05c96', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'b1f2a88b18b05c96', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-whisper-40.6ed573cb.webp', width: 40, height: 40, bytes: 490 },
       { file: 'spell-whisper-80.2e749656.webp', width: 80, height: 80, bytes: 1162 },
     ],
   },
   'spell-devour': {
-    from: 'c0742533f6462a3b', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'c0742533f6462a3b', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-devour-40.99bb44e2.webp', width: 40, height: 40, bytes: 876 },
       { file: 'spell-devour-80.e8aad752.webp', width: 80, height: 80, bytes: 2258 },
     ],
   },
   'spell-infestation': {
-    from: '2fe62d0af8e5eb5e', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '2fe62d0af8e5eb5e', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-infestation-40.27672172.webp', width: 40, height: 40, bytes: 698 },
       { file: 'spell-infestation-80.f406dca8.webp', width: 80, height: 80, bytes: 1864 },
     ],
   },
   'spell-alpha-roar': {
-    from: '195089a7d2516f88', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '195089a7d2516f88', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-alpha-roar-40.cb2cdf3c.webp', width: 40, height: 40, bytes: 918 },
       { file: 'spell-alpha-roar-80.5c5dfb88.webp', width: 80, height: 80, bytes: 2370 },
     ],
   },
   'spell-groundbreaker': {
-    from: 'e579abbc8a1b55fc', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'e579abbc8a1b55fc', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-groundbreaker-40.3e9eea81.webp', width: 40, height: 40, bytes: 928 },
       { file: 'spell-groundbreaker-80.df53deab.webp', width: 80, height: 80, bytes: 2368 },
     ],
   },
   'spell-void-pulse': {
-    from: 'a7dff5d590357c44', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'a7dff5d590357c44', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-void-pulse-40.f502345b.webp', width: 40, height: 40, bytes: 920 },
       { file: 'spell-void-pulse-80.3179118b.webp', width: 80, height: 80, bytes: 2392 },
     ],
   },
   'spell-paralyzing-barb': {
-    from: 'd54f0e8d0496aa12', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'd54f0e8d0496aa12', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-paralyzing-barb-40.196f4c09.webp', width: 40, height: 40, bytes: 654 },
       { file: 'spell-paralyzing-barb-80.fd566093.webp', width: 80, height: 80, bytes: 1578 },
     ],
   },
   'spell-apex': {
-    from: 'c0f404580246a84a', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'c0f404580246a84a', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-apex-40.fe46ea77.webp', width: 40, height: 40, bytes: 798 },
       { file: 'spell-apex-80.4756d55f.webp', width: 80, height: 80, bytes: 2074 },
     ],
   },
   'spell-archmage': {
-    from: 'fe93b0be39923364', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: 'fe93b0be39923364', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-archmage-40.6f9e9d11.webp', width: 40, height: 40, bytes: 798 },
       { file: 'spell-archmage-80.e066d324.webp', width: 80, height: 80, bytes: 2002 },
     ],
   },
   'spell-titan': {
-    from: '7ed83a5ef1a757a8', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    from: '7ed83a5ef1a757a8', frames: 1, drawn: [40], pages: {"table/battle":"lazy","showcase/mutations":"lazy","table/stats":"lazy"},
     sizes: [
       { file: 'spell-titan-40.d25a8e3e.webp', width: 40, height: 40, bytes: 770 },
       { file: 'spell-titan-80.6aa410bf.webp', width: 80, height: 80, bytes: 1900 },

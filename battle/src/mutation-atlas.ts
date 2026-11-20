@@ -187,7 +187,7 @@ export function atlasControls(onVisibility: () => void) {
     detail.style.setProperty('--mutation-colour', colour);
     const head = node('header', '', 'atlas-card-head');
     const title = node('h3', pack.name, 'atlas-card-name');
-    const portrait = spellPortrait(pack.visual?.portrait);
+    const portrait = spellPortrait(pack.visual?.portrait, 24);
     if (portrait) title.prepend(portrait);
     head.append(node('p', `${familyRoot(pack, byId).name} · ${stageLabel(pack.level)}`, 'atlas-card-family'), title);
     const chips = node('div', '', 'atlas-card-chips');

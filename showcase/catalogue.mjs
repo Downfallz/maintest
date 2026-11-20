@@ -26,14 +26,16 @@ export async function loadCatalogue(data = content) {
     const files = await readdir(join(data, directory), { recursive: true });
     return Promise.all(files.filter(file => file.endsWith('.json')).sort().map(file => read(join(directory, file))));
   };
-  const [tiers, spells, artwork, creature, aliases] = await Promise.all([
-    entries('Tiers'), entries('Spells'), read('presentation/mutation-art.json'), read('Creatures/main.v1.json'), read('aliases.json'),
+  const [tiers, spells, artwork, spellArt, creature, aliases] = await Promise.all([
+    entries('Tiers'), entries('Spells'), read('presentation/mutation-art.json'), read('presentation/spell-art.json'),
+    read('Creatures/main.v1.json'), read('aliases.json'),
   ]);
   const available = new Map(spells.filter(s => s.enabled !== false).map(s => [s.id, s]));
   const spell = reference => {
     const id = /:v\d+$/.test(reference) ? reference : aliases[reference] ?? reference, s = available.get(id);
     if (!s) throw new Error(`Missing playable spell ${id}`);
-    return { id: s.id, name: s.name, fr: spellNamesFr[shortId(s.id)] ?? s.name,
+    // The portrait the battle draws beside the spell's name (docs/art/spell-vfx.md#portraits), when it has one.
+    return { id: s.id, name: s.name, fr: spellNamesFr[shortId(s.id)] ?? s.name, portrait: spellArt[s.id]?.portrait ?? null,
       cost: s.energyCost, critical: s.criticalChance, target: s.targeting.origin, count: s.targeting.maxTargets, effects: s.effects, casterEffects: s.casterEffects ?? [] };
   };
   const enabled = tiers.filter(t => t.enabled !== false);
