@@ -376,26 +376,78 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    invites them, what the game is in one line and one picture, what an account gives. The name window, and the
    step into tutorial 1. `accounts-plan.md` and `home-navigation.md` are brought to agree. Tests:
    `studio/browser/lobby-home.spec.js`, the journey's measures, the largest paint.
+
+   **From the door into play.** Give the first phone screen a recognizable subject from the door's brief and
+   keep sign-in within thumb reach. A friend following an invitation sees what they are joining, using only
+   details available to that visitor. Carry one cue through naming and into the destination: the inviter and
+   seat on the invited path, or the lesson and its creature on the tutorial path. Record both arrivals, including
+   a slow response. The player can identify where they landed with the sound off, even across an immediate page cut.
 8. **UX8, the lessons.** The brief window, the coach, the concept cards and the phase tips under a budget of
    words, a hint when a player stalls, the end of a tutorial as a moment, Learn to play with a picture and a
    progress. What `onboarding-plan.md` and `docs/tabletop/tutorial-follow-ups-plan.md` left open is settled here
    or handed back. Tests: `studio/browser/battle-tutorial.spec.js`, the journey's measures.
+
+   **Teach on the field.** For the first action, frame the acting creature, let the player choose, then show
+   the target's response before drawing attention to the next decision. Anchor the coach to the relevant
+   control and move it out of the way once the choice is made. Close a lesson on its actual result and show
+   which lesson is available next. Record one uninterrupted choice, impact and return to control. At 320 px,
+   reach the second creature and its tempo by touch in the lessons that use them.
 9. **UX9, the lobby.** One action that follows the player's state (a turn that waits, a lesson to continue, a new
    battle), a game's card with its creatures and its standing, empty lists that teach and link, room held for
    what arrives, a turn that arrives seen arriving, the waiting room, the Create window. Tests:
    `lobby-home.spec.js`, the journey's measures, the layout's shift.
+
+   **Make the lobby feel like the place a player returns to.** Above the fold, compose one featured match from
+   a battlefield painting, one of the player's creatures in its current form, and the action they came to take.
+   Put the action within reach at 320 and 390 px. Use the match's round to select the existing battlefield art.
+   Where the lobby lacks a creature's confirmed form, use the round's ground alone until a seat-visible summary
+   supplies it. Art and other matches can load after the action. Keep all resumable games within reach below it.
+
+   | When the player opens the lobby | What they see and can do |
+   | --- | --- |
+   | New account | Ancestral creature and the first lesson. Returning learners can continue where they left off. |
+   | A turn is ready | The featured match names the opponent and round, shows whose turn it is, and opens that match in one tap. Keep the same match featured while it remains eligible if several turns are ready. |
+   | Waiting for an opponent | Show which game is waiting. When its turn arrives, change its status and action together. Keep the focused control and its target stable under the player's finger. |
+   | Returning player with no active match or lesson | Put starting a match in the featured space. Finished games stay available below. |
+
+   Give the scene one quiet movement, such as ash passing behind a still creature. Keep a recognizable silhouette
+   at rest. On Resume, acknowledge the tap immediately and carry the opponent and round into the first match
+   frame; ordinary navigation works across browsers. **Owner review:** record about ten seconds at phone size,
+   with two active matches: enter, rest for three seconds, receive a turn from the other seat, tap Resume,
+   and reach the correct field. Extend the current lobby walk to deliver that turn through the host. Check that
+   a repeated update leaves the card settled and that a late picture never moves the button.
 10. **UX10, the player's pages.** Friends, the leaderboard and the statistics: a player seen as more than an
     initial, a record and a rating drawn and not only written, the mutation and the spell a player leans on shown
     with their paintings, a rank that moves seen moving, and each empty page teaching and linking to the game that
     fills it. Tests: `studio/browser/lobby-home.spec.js` for Friends, the pages' own tests
     (`table/leaderboard.test.js`, `table/stats.test.js`, `table/friends.test.js`), the journey's measures.
+
+    **Give each player page a reason to look.** On Friends, carry the friend's name and portrait or initials
+    from their row into the challenge window. On the leaderboard, keep the player's row identifiable as their
+    standing changes and leave the new rank readable. In statistics, pair the most-used mutation or spell with
+    its painting and actual count. Review populated and empty accounts side by side. A returning player should
+    be able to find their own rank or recognize their build at phone size; fresh accounts get an honest first step.
 11. **UX11, the match's frame.** The round's bar, the order of play, the labels and the dock: the floor of text
     size, the icons, no overlap at 320 and 390 px, the frame answering a blow in step with the canvas, whose turn
     it is and what is waited for. Tests: `studio/browser/battle-density.spec.js` and the battle specs the change
     touches; the journey's measures.
+
+    **Make one exchange readable across field and frame.** Follow one creature through a resolved action:
+    the initiative marker identifies the actor, the blow lands, the target's health changes on that beat,
+    then the next actor or waiting state takes focus visually. Use the battle's existing playback timing,
+    including at a slower speed. Record one exchange with sound off. Pause at contact and at the next decision:
+    the affected creature, confirmed outcome and next actor must agree across the canvas and the frame.
 12. **UX12, the match's windows.** The 18 windows as one family: how each enters, leaves and returns the focus,
     the spellbook and the mutation tree on a phone, the result of a match as a moment. Tests: each window's
     contract (the focus goes in, stays in, comes back; Escape closes); the battle specs.
+
+    **Follow a mutation back onto the field.** Record a pick that changes form and grants a spell. On
+    confirmation, close the tree, return attention to that creature in its new form, and identify the spell
+    where the player can use or inspect it. Read both from the confirmed pick. A cancelled pick returns focus
+    to its opener; repeated snapshots cannot replay the reveal. Keep the next legal input available as soon as
+    the host allows it. For a match result, carry the final exchange into the verdict and the next action.
+    Review a win and a loss. Both the verdict and the action must read with the illustrations hidden.
+
 13. **UX13, accessibility.** The checks the gate runs: axe on every screen and state of the five journeys (a
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
     one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
@@ -411,6 +463,12 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 
 UX6 to UX12 and UX15 each end with the owner approving the journey's sheets before the pull request is reported
 ready.
+
+**Evidence across UX7–UX12.** With each stage's existing journey sheets, include a short real-time phone-width
+clip of its described interaction. UX10 can film one populated page and use the sheets for the other states.
+Watch once muted, then check the same interaction with reduced motion: the settled image, wording and focus
+still identify the subject, outcome and next action. Use the existing 320/390 px walks, motion tokens,
+responsive paintings and page budgets. Allow one ambient effect at most. Stop it off screen, in a hidden tab and under reduced motion. Review timing at natural speed and retain the physical-phone check at UX14.
 
 ## Questions the owner settled (2026-11-19)
 
