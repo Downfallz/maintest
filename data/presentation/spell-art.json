@@ -1,5 +1,6 @@
 {
   "spell:adrenaline_tonic:v1": {
+    "portrait": "overdrive",
     "family": "biological",
     "motif": "spores",
     "delivery": "cast",
@@ -13,6 +14,7 @@
     ]
   },
   "spell:ambush:v1": {
+    "portrait": "ambush",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -247,6 +249,7 @@
     ]
   },
   "spell:latch:v1": {
+    "portrait": "latch",
     "family": "biological",
     "motif": "bite",
     "delivery": "melee",
@@ -286,6 +289,7 @@
     ]
   },
   "spell:momentum:v1": {
+    "portrait": "pursuit",
     "family": "biological",
     "motif": "slash",
     "delivery": "melee",
@@ -331,6 +335,7 @@
     ]
   },
   "spell:noxious_cure:v1": {
+    "portrait": "toxic-mend",
     "family": "biological",
     "motif": "spores",
     "delivery": "cast",
@@ -344,6 +349,7 @@
     ]
   },
   "spell:parasite_jab:v1": {
+    "portrait": "bite",
     "family": "biological",
     "motif": "bite",
     "delivery": "melee",

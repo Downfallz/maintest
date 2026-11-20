@@ -192,6 +192,12 @@ public sealed class TableFilesTests
     /// <summary>The scene's art is bytes, served as the image it is rather than decoded as text.</summary>
     [Theory]
     [InlineData("eclipse-battle")]
+    [InlineData("spells/pursuit")]
+    [InlineData("spells/ambush")]
+    [InlineData("spells/bite")]
+    [InlineData("spells/latch")]
+    [InlineData("spells/toxic-mend")]
+    [InlineData("spells/overdrive")]
     [InlineData("spells/fury")]
     [InlineData("spells/wild-swing")]
     [InlineData("spells/carapace")]
