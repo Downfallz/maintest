@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
 
 const player = { id: 'acct_aaaaaaaaaaaaaaaa', username: 'MarcF' };
 const friend = { id: 'acct_bbbbbbbbbbbbbbbb', username: 'Bastien' };
@@ -318,7 +319,7 @@ test('local hosts still resume games and reconnect automatically without a refre
   await expect(page.locator('#lobby-status')).toContainText('Reconnecting automatically');
   state.offline = false;
   await page.evaluate(() => dispatchEvent(new Event('online')));
-  await expect(page.locator('#lobby-status')).toHaveText('1 table ongoing · updates automatically');
+  await expect(page.locator('#lobby-status')).toHaveText('');
   await page.getByRole('button', { name: 'New battle' }).click();
   await expect(page.locator('#create-dialog')).toBeVisible();
   await expect(page.locator('#opponent option[value="friend"]')).toBeHidden();
@@ -496,7 +497,9 @@ test('every game against a player waiting for the player is gathered under Your 
   await expect(page.locator('.mine-group.players .game-meta .game-ranked.ranked')).toHaveCount(2);
   // Still in their own groups too: the band is the way through them, not their only place.
   await expect(page.locator('.mine-group .game-card')).toHaveCount(4);
-  await expect(page.locator('#my-games-section')).toBeInViewport({ ratio: 0.1 });
+  // The most pressing of them is the featured space's on the first screen (UX9); the band follows it.
+  await expect(page.locator('#featured-action')).toHaveAttribute('aria-label', 'Play your turn: round 3 against Bastien');
+  await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-your-turn.png') });
 
   // The battle view itself is not served here: where the tap goes is what is checked.
@@ -761,9 +764,8 @@ test('find an opponent pages the tables eight at a time, one row each, open seat
   const list = page.locator('#open-tables'), rows = list.locator('.game-row');
   await expect(rows).toHaveCount(8);
   await expect(page.locator('#tables-count')).toHaveText('10');
-  await expect(page.locator('#lobby-status')).toHaveText('11 tables ongoing · updates automatically');
   await expect(rows.first()).toContainText('Rival0');
-  await expect(rows.first().getByRole('button', { name: 'Join 3v3 table open-0' })).toBeVisible();
+  await expect(rows.first().getByRole('button', { name: 'Take a seat: 3v3 battle, table open-0' })).toBeVisible();
   // One row each: the list grows by short lines, never by cards.
   for (const box of await rows.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))) expect(box).toBeLessThan(page.viewportSize().width < 760 ? 120 : 80);
   await noOverflow(page);
@@ -878,10 +880,12 @@ test('a skipped tutorial never opens by itself again: it waits under Learn to pl
   expect(new URL(page.url()).pathname).toBe('/table/lobby.html');
   const cards = section.locator('.game-card');
   await expect(cards.nth(0).locator('h3')).toHaveText('Your first combat');
-  // UX8: the state as the host says it, the next lesson's Play filled, its painting, and the progress in words.
+  // UX8: the state as the host says it, its painting, and the progress in words. Every card's Play is an outline (UX9):
+  // the next lesson is filled once, in the featured space, when it is what the player came for.
   await expect(cards.nth(0).locator('.status-tag')).toHaveText('Skipped');
   await expect(cards.nth(0).locator('a')).toHaveText('Play');
-  await expect(cards.nth(0).locator('a')).toHaveClass(/primary/);
+  await expect(cards.nth(0).locator('a')).not.toHaveClass(/primary/);
+  await expect(cards.nth(0)).toHaveAttribute('data-next', 'true');
   await expect(cards.nth(0).locator('img.tutorial-picture')).toHaveAttribute('alt', '');
   await expect(cards.nth(1).locator('.status-tag')).toHaveText('Done');
   await expect(cards.nth(1).locator('a')).not.toHaveClass(/primary/);
@@ -1042,10 +1046,120 @@ test('a new account named on a plain visit is told the first lesson in the windo
 
 test('a signed-in player\'s home loads none of the door\'s paintings', async ({ page }) => {
   const asked = [];
-  page.on('request', request => { if (request.url().includes('/page-art/')) asked.push(request.url()); });
+  // The door's two paintings: the home's featured space draws its own (UX9).
+  page.on('request', request => { if (/\/page-art\/(eclipse-ground|revenant)-/.test(request.url())) asked.push(request.url()); });
   const state = await home(page);
 
   await expect(page.locator('#sign-in-art img')).toHaveCount(0);
   expect(asked).toEqual([]);
+  expect(state.errors).toEqual([]);
+});
+
+// The home's featured space (UX9, docs/art/journeys/lobby.md): one game, lesson or new battle, with the home's one
+// filled action, following what the host says of the player's games and lessons.
+const filledOnTheHome = page => page.locator('#home-games :is(button, a).primary:visible');
+
+test('a new account is featured its first lesson on the ancestral creature, the home\'s one filled action, within reach at 320 px', async ({ page }, info) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const state = await home(page, { games: [], tutorials: series('skipped', 'new') });
+  const featured = page.locator('#featured');
+
+  await expect(featured).toHaveAttribute('data-featured', 'lesson');
+  await expect(page.locator('#featured-eyebrow')).toHaveText('Tutorial 1 of 4');
+  await expect(page.locator('#welcome')).toHaveText('Your first combat');
+  await expect(page.locator('#featured-action')).toHaveText('Play →');
+  await expect(featured.locator('img.featured-ground')).toHaveAttribute('fetchpriority', 'high');
+  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/home-ancestral-/);
+  await expect(filledOnTheHome(page)).toHaveCount(1);
+  await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
+  await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: info.outputPath('lobby-featured-lesson-320.png') });
+  await noOverflow(page);
+
+  await page.locator('#featured-action').click();
+  await expect(page).toHaveTitle('Tutorial');
+  expect(state.errors).toEqual([]);
+});
+
+test('with nothing to resume or learn, the featured action plays a bot, and an empty list teaches and links', async ({ page }) => {
+  await home(page, { games: [], tutorials: series('done', 'done') });
+
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'new');
+  await expect(page.locator('#featured-action')).toHaveText('Play a bot →');
+  await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
+  await expect(filledOnTheHome(page)).toHaveCount(1);
+  await page.locator('#featured-action').click();
+  await expect(page.locator('#create-dialog')).toHaveJSProperty('open', true);
+  await expect(page.locator('#create-solo')).toHaveAttribute('aria-selected', 'true');
+  await page.locator('#create-cancel').click();
+  // An empty list teaches and links.
+  await expect(page.locator('#my-tables .empty-state')).toContainText('against a bot');
+  await page.locator('#my-tables .empty-state button').click();
+  await expect(page.locator('#create-dialog')).toHaveJSProperty('open', true);
+});
+
+test('a game waiting on the other player is featured, and when its turn arrives its status and action change together, under the same focus', async ({ page }, info) => {
+  const theirs = { table: { ...battle, id: 'waits', round: 7, seats: [{ ...battle.seats[0], turn: false }, { ...battle.seats[1], turn: true }] }, seats: [{ seat: 'player1', token: 'waits-token' }] };
+  const state = await home(page, { games: [theirs], tutorials: series('done', 'new') });
+  const action = page.locator('#featured-action');
+
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'waiting');
+  await expect(page.locator('#welcome')).toHaveText('Round 7 against Bastien');
+  await expect(page.locator('#featured-status')).toHaveText("Bastien's turn");
+  await expect(action).toHaveText('Open the game →');
+  // Round 7 is played on the breach, as the battle lays its plates.
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /home-ground-breach-/);
+  await action.focus();
+  const before = await action.boundingBox();
+
+  // Bastien answers: the host says so, and the home reads its games again.
+  theirs.table.seats = [{ ...battle.seats[0], turn: true }, { ...battle.seats[1], turn: false }];
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'turn');
+  await expect(page.locator('#featured-status')).toHaveText('Your turn');
+  await expect(action).toHaveText('Play your turn →');
+  await expect(action).toBeFocused();
+  expect(await action.boundingBox()).toEqual(before);
+  await expect(filledOnTheHome(page)).toHaveCount(1);
+  await page.screenshot({ path: info.outputPath('lobby-featured-turn.png') });
+
+  // The press is answered at once, and the battle's first frame is handed the game's line.
+  await page.route('**/battle?**', route => route.fulfill({ contentType: 'text/html', body: '<title>Battle</title>' }));
+  // What the button says once its press is handled, kept across the page change in the tab's storage.
+  await page.evaluate(() => window.addEventListener('click', () => sessionStorage.setItem('pressed', document.getElementById('featured-action').textContent)));
+  await action.click();
+  await page.waitForURL(/\/battle\?player1=waits-token$/);
+  expect(await page.evaluate(() => sessionStorage.getItem('pressed'))).toBe('Opening…');
+  expect(await page.evaluate(() => sessionStorage.getItem('downfall.arena.arrival.v1'))).toBe(JSON.stringify({ table: 'waits', line: 'Round 7 against Bastien' }));
+  expect(state.errors).toEqual([]);
+});
+
+test('a featured game stays featured while several turns are the player\'s, and a late picture never moves its button', async ({ page }) => {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  // The static server serves the kit's files under /table/: each is answered from the folder, the ground held back.
+  await page.route('**/page-art/*', async route => {
+    const name = new URL(route.request().url()).pathname.split('/').pop();
+    if (name.startsWith('home-ground-')) await held;
+    await route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
+  });
+  const game = (id, round) => ({ table: { ...battle, id, round }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+  const games = [game('first', 2), game('second', 3)];
+  const state = await home(page, { games, tutorials: series('done', 'new') });
+  const action = page.locator('#featured-action');
+  await expect(action).toHaveText('Play your turn →');
+  const before = await action.boundingBox();
+
+  release();
+  await expect.poll(() => page.locator('#featured img.featured-ground').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  expect(await action.boundingBox()).toEqual(before);
+  // The host lists them the other way round: the one on show stays.
+  await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 2 against Bastien');
+  games.reverse();
+  const reads = state.mineReads;
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect.poll(() => state.mineReads).toBeGreaterThan(reads);
+  await expect(page.locator('#your-turn .game-row').first()).toContainText('Round 3');
+  await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 2 against Bastien');
   expect(state.errors).toEqual([]);
 });

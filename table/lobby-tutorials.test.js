@@ -26,8 +26,8 @@ const texts = node => [node.textContent, ...node.children.flatMap(texts)].filter
 
 test('a tutorial is a card with its painting, its title, its goal, its state and its link', () => {
   assert.deepEqual(tutorialCards({ tutorials: [first, second] }), [
-    { id: first.id, title: 'Your first combat', place: 'Tutorial 1 of 4', goal: 'Hit the wounded enemy.', done: false, next: true, tag: 'New', action: 'Play', link: first.link, picture: 'lesson-base' },
-    { id: second.id, title: 'Who acts first', place: 'Tutorial 2 of 4', goal: '', done: true, next: false, tag: 'Done', action: 'Play again', link: second.link, picture: 'lesson-brute' },
+    { id: first.id, title: 'Your first combat', place: 'Tutorial 1 of 4', goal: 'Hit the wounded enemy.', done: false, skipped: false, next: true, tag: 'New', action: 'Play', link: first.link, picture: 'lesson-base' },
+    { id: second.id, title: 'Who acts first', place: 'Tutorial 2 of 4', goal: '', done: true, skipped: false, next: false, tag: 'Done', action: 'Play again', link: second.link, picture: 'lesson-brute' },
   ]);
 });
 
@@ -110,10 +110,12 @@ test('an account that skipped it finds the series under Learn to play, each to p
   assert.equal(picture.attributes.alt, '');
   assert.equal(picture.attributes.loading, 'lazy');
   assert.match(picture.attributes.src, /^\/page-art\/lesson-base-/);
-  // The next one not done is filled; the others are outlines.
+  // Every card's action is an outline (UX9): the next one not done is marked, and filled once, in the featured space.
   const action = node => node.children.find(child => child.className?.includes('card-ways')).children[0];
-  assert.match(action(one).className, /primary/);
+  assert.doesNotMatch(action(one).className, /primary/);
   assert.doesNotMatch(action(two).className, /primary/);
+  assert.equal(one.dataset.next, 'true');
+  assert.equal(two.dataset.next, undefined);
   assert.equal(doc.ids['tutorial-progress'].textContent, '1 of 2 done');
 });
 
@@ -162,4 +164,14 @@ test('Learn to play stands in the main menu beside Rules, for a signed-in accoun
   assert.match(bar, /<a id="rules-link" href="\/rules">Rules<\/a>\s*<a id="learn-link" href="\/#learn-to-play" hidden>Learn to play<\/a>/);
   assert.doesNotMatch(accountMenu, /Learn to play/);
   assert.match(source, /el\('learn-link'\)\.hidden = !account;/);
+});
+
+test('the lobby is told the cards each read draws, and nothing for nobody signed in, so its featured space can offer the next', async () => {
+  const doc = page(), told = [];
+  const tutorials = mountTutorials(doc, { request: answering({ opens: null, tutorials: [first, second] }), session: memory(), go() {}, hash: () => '', listed: cards => told.push(cards?.map(card => card.id) ?? null) });
+
+  await tutorials.setAccount({ id: 'acct_1' });
+  await tutorials.setAccount(null);
+
+  assert.deepEqual(told, [[first.id, second.id], null]);
 });

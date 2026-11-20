@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn } from './lobby.js';
+import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -266,4 +266,11 @@ test('a game the operator voided says Voided and why instead of its result', () 
   assert.equal(summary.tag, 'Voided');
   assert.equal(summary.tone, 'voided');
   assert.equal(summary.voided, 'A player won through a bug.');
+});
+
+test('a table\'s action is named by its visible words first, then the battle, whom it is against and the table (UX9)', () => {
+  const table = { id: 'tb-1', format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'Walker' }, { seat: 'player2', kind: 'bot', name: 'Hard' }] };
+
+  assert.equal(actionName('Resume game →', table, ['player1']), 'Resume game: 3v3 battle against Hard (bot), table tb-1');
+  assert.equal(actionName('Take a seat →', { ...table, seats: [table.seats[0], { seat: 'player2', kind: 'open', name: null }] }), 'Take a seat: 3v3 battle, table tb-1');
 });

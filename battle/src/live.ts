@@ -45,6 +45,7 @@ import { holdsTheNextRound, lessonOverText, tutorialOf, withoutAssisted } from '
 import { tutorialControls } from './tutorial.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
+import { readArrival } from '../../table/arrival.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel, tempoLabel } from '../../table/terms.js';
 import { catchPageErrors, createPageErrors, mountFeedback } from '../../table/feedback-sheet.js';
@@ -134,6 +135,8 @@ const visible = () => ready && !rendererFailed && !document.hidden && !recapPend
 let tabStorage: Storage | null = null;
 try { tabStorage = sessionStorage; } catch { /* The receipt still works without storage. */ }
 const upkeep = createBattleUpkeep(tabStorage);
+// The game the lobby's featured space opened, by its line ("Round 3 against Rook"), shown until its board arrives (UX9).
+let arriving: string | null = null;
 const history = createBattleHistory({ load: () => connection.history(), onChange: () => render() });
 const orderReveal = createBattleOrderReveal();
 const growth = createBattleGrowth();
@@ -579,6 +582,7 @@ function render() {
   let instruction = '';
   if (view && playbackState.active) instruction = playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.';
   else if (view) instruction = lessonOverText(view) ?? mutation.prompt ?? guide.objective;
+  else if (arriving) instruction = `${arriving} · opening the board…`;
   text('instruction', instruction);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
@@ -814,6 +818,7 @@ function choose(choice: Choice) {
   $('loading').hidden = true;
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
+  arriving = readArrival(tabStorage, choice.table.id);
   resetRecap(); seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
   opponent = { seat: opponentOf(choice.table, choice.seat), ladder: null, friends: null }; drawOpponent(); void loadOpponent();
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);

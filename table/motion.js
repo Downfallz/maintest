@@ -87,4 +87,8 @@ export function mountMotion(win = globalThis) {
   return { watch: watchAmbience(win) };
 }
 
-if (globalThis.document?.documentElement) mountMotion();
+/**
+ * The kit on this page, mounted once whichever loads it first, the page's `<script>` or a module that imports it:
+ * a page that adds an ambience after the first paint (the home's featured space) calls `watch()` on it.
+ */
+export const motion = globalThis.document?.documentElement ? mountMotion() : null;

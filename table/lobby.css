@@ -35,7 +35,7 @@
 .versus .who.open { color: var(--muted); font-weight: 400; border: 1px dashed var(--line); border-radius: var(--radius-sharp); padding: 2px 8px; }
 .versus .side.you .who::after { content: " (you)"; color: var(--muted); font-weight: 400; font-size: 12px; }
 .versus .vs { font: italic 14px var(--font-display); color: var(--muted); }
-.bot-tag { font-size: 9px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 1px 4px; }
+.bot-tag { font-size: 11px; font-weight: 650; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius-sharp); padding: 1px 4px; }
 .game-card button { width: 100%; text-align: center; margin-top: auto; }
 .game-card .status-tag.invited { color: var(--gold); border-color: var(--gold); }
 .game-card.invitation { border-top: 2px solid var(--gold); }
@@ -319,7 +319,7 @@
   .home-dialog .friend-subheading { font-size: 11px; line-height: 1.6; margin: 0 0 6px; }
 .home-dialog .friend-row { flex-wrap: wrap; }
   .home-dialog .friend-actions { margin-left: auto; }
-  .home-footer { margin-top: 16px; font-size: 10px; }
+  .home-footer { margin-top: 16px; font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { .home-page { scroll-behavior: auto; } }
 
@@ -411,3 +411,46 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
 .feedback-dialog .dialog-actions button { min-height: 44px; }
 .feedback-dialog #feedback-note { margin: 14px 0 0; font-size: 13px; }
 .feedback-sent { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.6; }
+
+/* The featured space (UX9, docs/art/journeys/lobby.md): the game, the lesson or the new battle the player came for,
+   on its ground, with the one filled action of the home. Its room is held from the first paint: a band of fixed
+   height for the painting, the words under it, the actions last. A picture that arrives late fills the band and
+   moves nothing. The paintings are the kit's <img> (lobby-featured.js), two classes each to size them past `.picture`. */
+.home-page .featured { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px); align-items: stretch; gap: 0;
+  margin: 28px 0 30px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); overflow: hidden; }
+.featured-art { position: relative; grid-column: 2; grid-row: 1; min-height: 340px; overflow: hidden; background: var(--soot); }
+.featured-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--panel), transparent 34%); pointer-events: none; }
+.featured .featured-ground { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 40%; }
+.featured .featured-creature { position: absolute; right: 6%; bottom: 8%; width: 150px; height: auto; filter: drop-shadow(0 10px 8px #000a); }
+.featured-text { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; min-width: 0; padding: 32px; }
+.home-page .featured h2 { margin: 0; overflow-wrap: anywhere; }
+.featured .eyebrow { margin: 0; font-size: 11px; }
+.featured .hero-detail { margin: 0; }
+.featured-status { align-self: flex-start; margin: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius-sharp); color: var(--muted); font-size: 13px; font-weight: 650; }
+.featured[data-featured="turn"] .featured-status { color: var(--gold); border-color: var(--gold); }
+.featured-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.featured-actions button { min-height: 48px; }
+/* Wide enough for its longest words, so the button under the player's finger keeps its size as its words change. */
+.featured-actions #featured-action { min-width: 13em; }
+.featured-actions button[aria-busy="true"] { cursor: progress; }
+/* Every state keeps the same room: two lines of title and of detail, the status's line, two actions. An empty line
+   is unseen, never taken out, so nothing under the featured space moves as it fills, or as a turn arrives. Until the
+   host has said what to feature, the words and the actions wait in their room. */
+.featured :is(#welcome, #featured-detail) { min-height: 2lh; }
+.featured-status[data-empty="true"] { visibility: hidden; }
+.featured[data-featured="loading"] :is(.featured-actions, #featured-detail, #featured-eyebrow, #welcome) { visibility: hidden; }
+/* The footer waits for the featured space too: the lists under it fill with it, and a footer in view would jump. */
+.home-page:has(.featured[data-featured="loading"]) .home-footer { visibility: hidden; }
+/* An empty list teaches and links: its sentence, then one quiet button that fills it. */
+.empty-state p { margin: 0; }
+.empty-state button { margin-top: 14px; min-height: 44px; }
+@media (max-width: 760px) {
+  .home-page .featured { grid-template-columns: minmax(0, 1fr); margin: 16px 0 24px; }
+  .featured-art { grid-column: 1; min-height: 0; height: 150px; }
+  .featured-art::after { background: linear-gradient(180deg, transparent 55%, var(--panel)); }
+  .featured .featured-creature { right: 4%; bottom: 4px; width: 120px; }
+  .featured-text { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 8px; padding: 14px 16px 18px; }
+  .home-page .featured h2 { font-size: clamp(26px, 8vw, 34px); line-height: 1.12; }
+  .featured-actions { flex-direction: column; margin-top: 6px; }
+  .featured-actions button { width: 100%; }
+}
