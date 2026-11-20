@@ -70,7 +70,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     if (sheet === combat && coach.previousElementSibling?.id !== 'combat-heading') el('combat-heading').after(coach);
     else if (sheet === planning && coach.parentElement !== planning) planning.prepend(coach);
     // The lesson done, on a phone, its end card takes the dock's place, so the field it ends on stays in view (UX8).
-    const dock = !sheet && shown?.done && !beside.matches ? document.querySelector<HTMLElement>('#battle .command-dock') : null;
+    const dock = !sheet && shown?.done && !beside.matches && !(latest as { over?: boolean } | null)?.over ? document.querySelector<HTMLElement>('#battle .command-dock') : null;
     if (dock && coach.parentElement !== dock) dock.prepend(coach);
     else if (!sheet && !dock && coach.parentElement !== home.parent) home.parent.insertBefore(coach, home.before);
     coach.classList.toggle('in-sheet', Boolean(sheet));

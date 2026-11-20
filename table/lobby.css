@@ -103,6 +103,8 @@
 .game-card.tutorial-card .card-ways a { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; text-decoration: none; }
 .game-card.tutorial-card .card-ways a.button-link { border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--gold); }
 .tutorial-progress { color: var(--muted); font-size: 13px; }
+/* Under 360 px the state stands under the title, which keeps its width beside the painting. */
+@media (max-width: 359px) { .game-card.tutorial-card .game-card-top { flex-direction: column; align-items: flex-start; gap: 4px; } }
 .game-card.opponent button { width: 100%; min-height: 40px; margin-top: auto; }
 :is(.game-card, .game-row) .status-tag.outcome.lost { color: var(--bad); border-color: var(--bad); }
 /* A game the operator voided (ADR 0176) counts nowhere: its tag is quiet, neither a win nor a loss. */

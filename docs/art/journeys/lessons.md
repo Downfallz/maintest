@@ -37,7 +37,7 @@ What holds for every screen of the journey:
   concept card are 10 px today and become 11. The field's labels at 7 to 9 px are UX11's.
 - The evidence of the stage, as the plan asks of UX7 to UX12: with the sheets, a short real-time clip at 390 by 844
   of lesson 1's first step, from the coach's arrival through the Cast, the blow and the next step, watched once
-  muted, then the same with less motion. The stage adds the strip `first-cast` to the walk for it.
+  muted, then the same with less motion. The walk has no strip for it yet (see **Left** of the step).
 
 The phase tips are not on this walk: in a tutorial they are silent, and the match's walk films the first one
 (`phase-tip` of the match journey, 152 words in a window). UX8 puts them under a budget all the same, since they
@@ -70,16 +70,18 @@ three are opened from Learn to play. The same `#practice-brief` serves a plain p
 
 - **Order**: the place in the series, the title, the goal, where it starts and what it does not touch, Start,
   Skip the tutorial.
-- **Budget**: 40 words, today 64 to 67. The goal is the scenario's (`goal`), and stays. The page's own lines go
-  from 41 words to 14: "You play player 1 from the top of round 2, against a bot." becomes the round alone,
-  and the note keeps what a newcomer needs to know before pressing Start. Leave is in the band on every step, so
-  the brief no longer says it.
+- **Budget**: 42 words, 39 to 42 since UX8 (64 to 67 before). The goal is the scenario's (`goal`), and stays. The
+  page's own lines go from 41 words to 18: "You play player 1 from the top of round 2, against a bot." becomes the round
+  alone, and the note keeps what a newcomer needs to know before pressing Start. Leave is in the band on every
+  step, so the brief no longer says it. The note says "Play it again", the words of the Play again button, over a
+  shorter "replay it": two words more, my choice after the build.
 
 ```text
 TUTORIAL 1 OF 4
 Your first combat
 Cast a spell with each of your creatures: hit the wounded enemy.
-Round 2, against a bot. Nothing here counts; replay it from Learn to play.
+Round 2, against a bot.
+Nothing played here counts. Play it again any time from Learn to play.
 [Start]
 [Skip the tutorial]
 ```
@@ -141,8 +143,7 @@ The strip `brief-begins` films the press on Start and the window leaving.
 
 - "Round 2, against a bot" leaves out "You play player 1", which a newcomer cannot act on. The owner may keep it.
 - The brief window and the concept card are two of the battle page's 18 windows, which UX12 stages as one family.
-  This brief gives the lessons' two the kit's form now; if the owner prefers to wait for UX12, they keep opening
-  at once and the two rows of a window drop from Motion.
+  The owner chose the kit's form for the lessons' two now (UX8); UX12 takes them into the family as they are.
 
 ## The concept card (`lesson-1-concept-card`, `lesson-2-concept-card`, `lesson-3-concept-card`, `lesson-4-concept-card`)
 
@@ -254,14 +255,15 @@ One enemy is wounded. Strike it.
 Next: Choose spell.                                  (the hint, only after a stall)
 ```
 
-Restart the round becomes the `reset` icon of `table/icons.js` beside the ⓘ, named "Restart the round": its row
-of 44 px goes, which a 568 px screen needs. The hint is `Next:` then the words on the control the step points at
+In a sheet under 360 px wide, Restart the round becomes the `reset` icon of `table/icons.js` on the step's row,
+named "Restart the round": its row of 44 px goes, which a 568 px screen needs. Wider, it stays the band's ↺ beside
+the tutorial's place, as the 390 px sheet shows. The hint is `Next:` then the words on the control the step points at
 or, when it points at a creature, the control of the question asked (Choose spell, Choose tempos), read from the
 element itself: the page names a button, it decides no move.
 
-**The hint.** It is started by the player, never by a clock: the question's sheet closed with nothing sent (its
-Close, its ×, or Escape), or a tap on the field that selects nothing, while the view still asks the same
-question (`waitingAsked` unchanged). It stays until the view asks another question or the choice is sent, and
+**The hint.** It is started by the player, never by a clock (the owner's choice): the question's sheet closed with
+nothing sent (its Close, its ×, or Escape), while the view still asks the same question (`waitingAsked`
+unchanged). It stays until the view asks another question or the choice is sent, and
 shows once a step. ADR 0164 and `docs/art/branding.md` say nothing starts on a clock, and the craft book's entry
 says a stall is read from the stream: here the stream says the question is still open, and the press says the
 player turned away from it.
@@ -292,22 +294,20 @@ ring, not a painting ([Do, do not read](../ux-craft.md#do-do-not-read)).
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
 | The coach arrives | The view asks a step's question and the playback has settled. | `transform`, `opacity` | [Do, do not read](../ux-craft.md#do-do-not-read), [One decision first, and the why](../ux-craft.md#one-decision-first-and-the-why) | `--motion-normal`, `--motion-enter` |
-| The ring | The same arrival: the ring of the creature or control pointed at shows once, then stays still. | `opacity` | [Do, do not read](../ux-craft.md#do-do-not-read) | `--motion-slow`, `--motion-standard` |
 | The coach steps aside | A spell chosen and its targets being chosen, or the choice sent. | `opacity` | [Do, do not read](../ux-craft.md#do-do-not-read) | `--motion-fast`, `--motion-exit` |
-| The hint | The question's sheet closed with nothing sent, or a tap that selects nothing, while the same question is asked. | `opacity` | [A hint at the moment of need](../ux-craft.md#a-hint-at-the-moment-of-need) | `--motion-normal`, `--motion-enter` |
+| The hint | The question's sheet closed with nothing sent, while the same question is asked. | `opacity` | [A hint at the moment of need](../ux-craft.md#a-hint-at-the-moment-of-need) | `--motion-normal`, `--motion-enter` |
 | The press | A pointer down on an ⓘ, Restart the round, or the sheet's controls. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
-The ring is a pseudo-element over the pointed control whose `opacity` rises once; it does not loop, so it is no
-ambience and the screen has none. The order the clip and the strip `first-cast` must show: the coach and the
-ring, the choice, the coach aside, the blow (the canvas's, at `table/battle-timing.js`'s pace), then the next
-step. The measure reads nothing animating at rest on these screens, and must still.
+The ring of what the step points at shows at once and stays still, as before UX8; it does not loop, so it is no
+ambience and the screen has none. The order the clip must show: the coach and the ring, the choice, the coach
+aside, the blow (the canvas's, at `table/battle-timing.js`'s pace), then the next step. The measure reads nothing
+animating at rest on these screens, and must still.
 
 ### Less motion
 
 | Beat | Form |
 | --- | --- |
 | The coach arrives | A fade, no rise. |
-| The ring | The ring, steady, at once. |
 | The coach steps aside | The same fade. |
 | The hint | A fade without travel. |
 | The press | A change of colour, no scale. |
@@ -327,7 +327,9 @@ step. The measure reads nothing animating at rest on these screens, and must sti
   Restart, and its lines under; the sheet's body scrolls between its tabs and its footer, which never cover a
   choice (`scroll-padding` the footer's height); the mutation sheet's head wraps instead of overlapping its
   buttons. `battle-tutorial.spec.js` presses each creature's tab and each tempo by touch at 320 by 568, without
-  force, in lessons 2, 3 and 4, and the walk's list of what it could not press is empty. The 1 to 4 overlaps
+  force, in lessons 2, 3 and 4, and the walk's list of what it could not press is empty (it is since UX8). Under
+  660 px tall the mutation sheet folds its tabs away by design (`table/battle.css`): there the creature is chosen
+  on the field, as the walk does. The 1 to 4 overlaps
   (Leave and Settings) and axe's `label-content-name-mismatch` are the round's bar, UX11's.
 
 ### Cost
@@ -350,6 +352,17 @@ step. The measure reads nothing animating at rest on these screens, and must sti
   it, and the craft book's entry and the ADR would change first. The craft book's entry says "What 'stalled'
   means is the host's to say": it gains, in its own change, the reading above (the question still open, and a
   press that turned away from it).
+- The ring's one-time fade and the strip `first-cast` were left out of UX8 on purpose: the ring shows at once, and
+  the beat from the coach to the blow is read on the clip alone. A strip, if the owner wants one, is added to
+  `scripts/ux/journeys.mjs` in its own change.
+- The coach steps aside at once, not in a fade: a card that fades out stays displayed, and could take a tap, for
+  the length of the fade (`battle-tutorial.spec.js` holds that a hidden card is not displayed). The fade waits for
+  UX12, which stages how the match's parts leave.
+- The film's shift on `lesson-2-complete` and `lesson-3-complete` stays past 0.1: 0.32 and 0.42 at 320, 0.41 and
+  0.38 at 390. It is summed over the whole lesson, the round's sheets and playback included, and the end card no
+  longer adds to it (it is laid over the dock). What moves is the match's frame's, UX11's.
+- A tap on the field that selects nothing does not start the hint: the canvas's taps are the battle-designer's, and
+  the closed sheet is the gesture the page reads on its own.
 - On the field the coach covers the player's own team at 390 px (the sheet of `lesson-1-complete` shows it). Its
   place on the half away from what it points at is my choice; the owner may prefer it always above the dock.
 
@@ -362,26 +375,27 @@ did, in a line the journal confirms, and the lesson that comes next. Today the f
 for a round that will not be played, the coach's card covers the player's team, and the dock says "Tutorial
 complete" a second time.
 
-- **Filled action**: Next: Who acts first (the next lesson's title, from `GET /api/tutorials`). It leaves this
-  lesson as Leave does, then opens the next. Play again becomes an outline; Leave the tutorial a quiet link.
+- **Filled action**: Next: Who acts first (the next lesson's title, from `GET /api/tutorials`), the owner's choice.
+  It leaves this lesson as Leave does, then opens the next. Play again becomes an outline; Leave the tutorial a
+  quiet link.
 
 ### Words
 
 - **Order**: the place and the end, the title, what the player did, the next lesson, then the three actions.
-- **Budget**: 95 words on the screen, today 90 to 97 (the field's labels most of them); the end card 30 words at
-  most, today 22 in the card and 8 in the dock.
+- **Budget**: 95 words on the screen, 83 to 90 since UX8 (90 to 97 before; the field's labels most of them); the
+  end card 30 words at most, 29 since UX8.
 
 ```text
 TUTORIAL 1 OF 4 · COMPLETE
-Your first combat
-You cast 3 spells. Creature 4 is down to 4 Health.
-[Next: Who acts first]  [Play again]  Leave the tutorial
+You finished Your first combat.
+Your team: 3 of 3 standing. Opponent: 3 of 3.
+[Next: Who acts first]
+[Play again]  Leave the tutorial
 ```
 
-The line of what the player did is read, never computed: the spells cast by the player's team in the lesson's
-round, from the journal's summary (`historySummary` of `table/battle-history.js`), and the creature the lesson's
-last step pointed at, as the board gives its Health, or "Creature 4 is defeated." when the journal says so. A
-lesson whose steps point at no creature says the spells and the creatures defeated. The dock says "Tutorial
+The line of how it stands is read, never computed: the creatures standing on each side, as the host's board in the
+view gives them (`isAlive`). It is the same line for every lesson, so no lesson needs a step that points at a
+creature. On a phone the card stands in the dock in place of what the dock says; wider, the dock says "Tutorial
 complete." and nothing more.
 
 The next lesson's title is not in the view: `practice.tutorial` holds `order`, `of` and this lesson's `title`.
@@ -401,7 +415,8 @@ done.
   to settle.
 - **Empty**: a round with no spell of the player's in the journal: the line says the round ended, and the next
   lesson stays.
-- **Loaded**: the card, as under **Words**, over the field.
+- **Loaded**: the card, as under **Words**: in the dock on a phone, in place of its content, so that it covers none
+  of the player's team; over the field, wider. Its three actions are on the first screen at 320 by 568.
 - **Waiting**: after Next or Leave, until the host has let go of the practice (at most 1.5 s): the pressed control
   is disabled. Play again restarts from the cut at once, as today. Read, not seen.
 - **Error**: `/api/tutorials` not read: "Next: tutorial 2 of 4", to Learn to play. A done the host could not be
@@ -438,13 +453,15 @@ stage finds and stops it.
 
 - **Bytes**: none added; one request, `/api/tutorials`, of a few hundred bytes.
 - **Largest paint**: not measured on the battle page.
-- **Shift**: 0.41 and 0.38 at 390 on lessons 2 and 3, 0.13 and 0.24 at 320: past the 0.25 that is poor. The card
-  stands over the field, not in the flow, and the dock keeps its height when its line shortens. Aimed under 0.1.
+- **Shift**: before UX8, 0.41 and 0.38 at 390 on lessons 2 and 3, 0.13 and 0.24 at 320: past the 0.25 that is
+  poor. Since UX8, 0.05, 0.32 and 0.44 at 320 on lessons 1, 2 and 3, and 0.03, 0.41 and 0.38 at 390. The card in the
+  dock takes the room the dock holds; the field is not resized when it comes. Aimed under 0.1.
 
 ### Left
 
-- Next as the filled action, over Play again, is my choice: the series is the point, and Play again stays one tap
-  away. The owner may keep Play again filled.
+- Next as the filled action, over Play again, was my proposal; the owner settled it.
+- The line says how the teams stand, not the spells cast and the Health of the creature struck, as first proposed:
+  the board gives it whole for every lesson, where the journal's summary needed a step that names a creature.
 - A next lesson the account has already finished is still named next: the series' order, not the account's
   progress. The owner may prefer the first one not done.
 - The view could carry the next lesson's title and link (`practice.tutorial.next`): a host change, `host-reviewer`'s,
@@ -458,21 +475,21 @@ Tutorial 4 plays to the end of a match, and the match result is the tutorial's e
 (`docs/tabletop/tutorial-follow-ups-plan.md`, T1): Victory or Defeat as the host says, the teams, the battle
 report. It is the end of the series too, and today says nothing of it.
 
-- **Filled action**: Leave the tutorial, which leads to the lobby where New battle waits. Play again becomes an
-  outline; Replay the match an outline; Report or suggest stays quiet.
+- **Filled action**: Leave the tutorial, first, which leads to the lobby where New battle waits (the owner's
+  choice). Play again becomes an outline; Replay the match an outline; Report or suggest stays quiet.
 
 ### Words
 
 - **Order**: the place and the end, the title, the outcome, the series done, the two teams, the report, the
   actions.
-- **Budget**: 125 words, today 122; the battle report is most of it, and UX12's. The page adds one line, and the
-  eyebrow names the lesson:
+- **Budget**: 130 words, 129 since UX8 (122 before; 125 was my sum, short of the eyebrow's own words); the battle
+  report is most of it, and UX12's. The page adds one line, and the eyebrow names the lesson:
 
 ```text
 TUTORIAL 4 OF 4 · COMPLETE
 Victory
 You win · the last team standing.
-You finished the four tutorials.
+You finished every tutorial.
 [Your team 2/3 standing]  [Opponent 0/3 standing]
 Battle report …
 [Leave the tutorial]  [Play again]  [Replay the match]
@@ -534,8 +551,8 @@ The window's entry is the match's windows' family, which UX12 stages; it opens a
 
 ### Left
 
-- Leave the tutorial filled, over Play again, is my choice: the series is done and the lobby is where a real match
-  starts. No route opens the Create window from an address; one would be a change to the lobby (UX9).
+- Leave the tutorial filled, over Play again, was my proposal; the owner settled it. The series is done and the
+  lobby is where a real match starts. No route opens the Create window from an address; one would be a change to the lobby (UX9).
 - The portrait sent oversized, and the window's entry: UX12.
 
 ## Learn to play (`home-after-the-lessons`)
@@ -558,7 +575,7 @@ and is not briefed here. The walk films it after the four lessons, every one don
   each card's "Tutorial 1 of 4" goes, since the progress and the order say it.
 
 ```text
-Learn to play                                   4 of 4 done  ◆◆◆◆
+Learn to play                                   4 of 4 done
 [picture] Your first combat                     Done
           Cast a spell with each of your creatures: hit the wounded enemy.
           [Play again]
@@ -566,8 +583,8 @@ Learn to play                                   4 of 4 done  ◆◆◆◆
 ```
 
 The state follows the host's three (`new`, `skipped`, `done`): New, Skipped, Done. A skipped tutorial reads New
-today. The progress counts the ones the host says done; each mark is a cut-corner diamond, filled or outlined,
-with the count in words beside it, so no fact is carried by colour alone.
+today. The progress counts the ones the host says done, in words, so no fact is carried by colour alone; the diamonds
+first proposed were not built, the words carry it.
 
 ### Pictures
 
@@ -613,8 +630,7 @@ No ambience in the section: the home's one, if UX9 places it, is elsewhere.
 ### Accessibility
 
 - **Focus**: the section's heading in the order of the home, then each card's action, in the series' order.
-- **Names**: the pictures are decoration, `alt=""`: the title says the lesson. The progress reads "4 of 4 tutorials
-  done"; its marks are hidden. The section is named by its heading (it is today).
+- **Names**: the pictures are decoration, `alt=""`: the title says the lesson. The progress reads "4 of 4 done". The section is named by its heading (it is today).
 - **Announced**: nothing: the section arrives with the home.
 - **Targets**: the section's actions are 44 px today; the home's 4 and 5 under 44 px at 390 and 320 (the footer's
   links, the tabs) are UX9's.

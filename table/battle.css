@@ -974,6 +974,15 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 #planning-dialog[data-kind="Evolution"] #mutation-preview-region { max-height: 28dvh; }
 /* A short portrait keeps the confirmation in reach: the field's creatures switch the recipient there, so the tabs
    give way, and the preview keeps a smaller share. */
+/* A narrow sheet gives its rule its own row under the heading, beside the tools: in one cell the two ran into each
+   other on a 320 px phone (UX8). */
+@media (max-width: 399px) {
+  #planning-dialog[data-kind="Evolution"] .planning-header { grid-template-rows: auto auto auto auto; row-gap: 4px; }
+  #planning-dialog[data-kind="Evolution"] #planning-heading { grid-area: 1 / 1 / auto / -1; align-self: center; margin: 4px 0 0; }
+  #planning-dialog[data-kind="Evolution"] .planning-tools { grid-area: 2 / 1 / auto / -1; justify-self: start; }
+  #planning-dialog[data-kind="Evolution"] #planning-help { grid-area: 3 / 1 / auto / -1; align-self: start; margin: 0 0 4px; }
+  #planning-dialog[data-kind="Evolution"] #planning-creatures { grid-area: 4 / 1 / auto / -1; }
+}
 @media (orientation: portrait) and (max-height: 660px) {
   #planning-dialog[data-kind="Evolution"] #planning-creatures { display: none; }
   #planning-dialog[data-kind="Evolution"] .planning-header { grid-template-rows: minmax(48px,auto); }
@@ -1805,6 +1814,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The hint (UX8): what to press next, once the person closed the question's sheet with nothing sent. */
 .coach-hint { margin: 0; color: var(--gold); font-size: 13px; line-height: 1.35; }
 .coach-hint[hidden] { display: none; }
+.coach-hint:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter); }
+@starting-style { .coach-hint:not([hidden]) { opacity: 0; } }
 #coach-restart .icon { margin-right: 6px; }
 /* The lesson's end and the last tutorial's result say where the series stands (UX8). */
 .match-series { margin: 4px 0 0; color: var(--gold); font-size: 13px; line-height: 1.4; }
@@ -1834,13 +1845,18 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .coach.in-sheet .coach-lines { order: 2; flex: 1 0 100%; }
 .coach.in-sheet .coach-end { order: 3; flex: 1 0 100%; }
 .coach.in-sheet .coach-hint { order: 2; flex: 1 0 100%; }
-/* A lesson's end on a phone stands in the dock, in place of what the dock says, not over the player's team (UX8). */
-.coach.in-dock { position: static; grid-column: 1 / -1; width: auto; max-width: none; margin: 0; box-shadow: none; }
-#battle .command-dock:has(> .coach.in-dock:not([hidden])) > :not(.coach) { display: none; }
+/* A lesson's end on a phone stands on the dock, in place of what the dock says, not over the player's team (UX8). The
+   dock keeps its size, its own content hidden, so the field does not move: the card is laid over it from its foot, and
+   rises over the field's lower edge only as far as its three actions need. */
+#battle .command-dock:has(> .coach.in-dock:not([hidden])) { position: relative; }
+#battle .command-dock:has(> .coach.in-dock:not([hidden])) > :not(.coach) { visibility: hidden; }
+/* The dock's resting rule lifts every child of it (position: relative) with a selector of six states; the card is the
+   one child laid over the rest, and says so outright. */
+.coach.in-dock { position: absolute !important; left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; margin: 0; }
+.coach.in-dock .coach-end { column-gap: 8px; row-gap: 6px; }
 /* A docked command sheet that carries the card scrolls as one between its edges, the card, the tabs and the choices
    together, and never lets its footer cover a choice (UX8): on a 320 by 568 phone the card, the tabs and the Confirm
-   row left the tempos, or a second creature's tab, out of reach. It also takes the mutation's height. */
-body:has(#planning-dialog[open] > .coach.in-sheet) { --mutation-height: min(74dvh,660px); }
+   row left the tempos, or a second creature's tab, out of reach. It keeps its height, so the field keeps its row of names. */
 #planning-dialog[open]:has(> .coach.in-sheet) { overflow-y: auto; overscroll-behavior: contain; scroll-padding-block: 8px 64px; }
 #planning-dialog[open]:has(> .coach.in-sheet) > :is(.coach, .planning-header) { flex: none; }
 #planning-dialog[open]:has(> .coach.in-sheet) #planning-choices { flex: none; overflow: visible; }
