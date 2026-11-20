@@ -64,11 +64,10 @@ What holds for every screen of the journey:
   and its defense when above zero; initiative is in the order row above, and energy is the sheet's (the creature in
   hand's, in its head) and the inspection's. The tag shows on the creature in hand alone (`CHOOSING TEMPO`,
   `MUTATION TREE`, `ACTING`); the others' `TEMPO ?` and `◇ MUTATE` go, since the sheet's tabs say Not chosen (today
-  they stay, at both widths). Docked, the tag sits under the name, inside its caption, not above it: at 320 the
-  upper caption's health is right above the lower name, and `ACTING` over Creature 2 covers Creature 5's `30/30`
-  (`spell-choice`). The two team labels are hidden docked: `YOUR TEAM` is; `OPPONENT · MEDIUM` still shows at 390
-  (`mutation-tree`, `spell-choice`, `second-round`). The opponent's row is always the upper one, and the order row
-  names each side. Built: name, health and defense docked; no caption crosses the screen's edge at 320.
+  they stay, at both widths). Built that way: docked, only the creature the sheet holds keeps its tag, which
+  also takes `ACTING` off Creature 5's `30/30` at 320 (`spell-choice`). `YOUR TEAM` is hidden docked;
+  `OPPONENT · …` stays, since it names the opponent when the bar folds its chip to the medallion
+  (`battle-live.spec.js`). Built: name, health and defense docked; no caption crosses the screen's edge at 320.
 - **Team labels.** `OPPONENT · MEDIUM` and `YOUR TEAM` at 11 px whenever the field is not docked (built at 390 by
   844; at 568 tall they stay hidden, under **Left**). A team is never told by colour alone: the label, the row and
   the order row's words say it.
