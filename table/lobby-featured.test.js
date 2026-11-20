@@ -190,6 +190,17 @@ test('the ground is drawn again only when it changes, so a repeated update leave
   assert.notEqual(doc.ids['featured-art'].children, drawn);
 });
 
+test('once someone can play, the eclipse is asked for before the lists are read, and kept when the choice stands on it', () => {
+  const doc = page();
+  const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {} });
+  featured.playable();
+  const drawn = doc.ids['featured-art'].children;
+  assert.match(drawn[0].attributes.src, /home-ground-eclipse-/);
+  assert.equal(doc.ids.featured.dataset.featured, 'loading');
+  featured.setGames([game('g', { round: 2 })]); featured.setLessons([]);
+  assert.equal(doc.ids['featured-art'].children, drawn, 'the same ground, not drawn again');
+});
+
 test('a lesson\'s action opens it', () => {
   const doc = page(), went = [];
   const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: link => went.push(link), session: null, ambience: () => {} });

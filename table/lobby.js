@@ -958,6 +958,7 @@ if (typeof document !== 'undefined') {
       const playable = Boolean(account) || mode === 'off';
       if (!playable) door.signedOut();
       document.getElementById('home-games').hidden = !playable;
+      if (playable) featured.playable();
       lobby.setAccount(account, mode);
       practiceList.setAccount(account);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.

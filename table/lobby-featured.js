@@ -156,6 +156,11 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
   action.addEventListener('blur', () => draw());
 
   return {
+    /**
+     * Someone can play here: the eclipse is asked for now, before the lists are read, since most states stand on it
+     * (the largest paint of the home). A guest's door never loads it. A later round's ground replaces it.
+     */
+    playable() { if (drawnGround === null && root.dataset.featured === 'loading') art({ ground: groundOf(1), creature: null }); },
     /** The player's games, as the host lists them. */
     setGames(next) { games = next ?? []; draw(); },
     /** The lessons as Learn to play draws them (lobby-tutorials.js), or null where nobody can take one. */

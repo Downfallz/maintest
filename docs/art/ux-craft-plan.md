@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX8 are built; UX9 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX9 are built; UX10 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -494,6 +494,35 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    with two active matches: enter, rest for three seconds, receive a turn from the other seat, tap Resume,
    and reach the correct field. Extend the current lobby walk to deliver that turn through the host. Check that
    a repeated update leaves the card settled and that a late picture never moves the button.
+
+   *Built (2026-11-20)*: [the lobby's brief](journeys/lobby.md), written by the designer from the walk. The home's
+   hero became a featured space (`table/lobby-featured.js`) with the home's one filled action, chosen from what the
+   host says: a turn of the player's, a person's before a bot's (a bot always waits, and would hide a player whose
+   time runs); then a game of theirs waiting on someone else; then the next lesson not done, unless it and every
+   lesson after it were skipped; then Play a bot, with New battle quiet under it. A featured game stays while it is
+   eligible, and stays whatever arrives while its action has the focus or a finger. Its words, its status and its
+   button change in place: when its turn arrives, the status plays the kit's number beat and the same button says
+   Play your turn →. The ground follows the round as the battle lays its plates (the eclipse, the breach from round 6,
+   the shattered sky from round 10), alone for a game, since the lobby has no creature's confirmed form; a lesson and
+   Play a bot stand the lesson's creature on the eclipse, and the creature breathes, the screen's one ambience. The
+   grounds and the ancestral creature are declared for the home (`docs/art/page-pictures.json`), the eclipse asked
+   for first once someone can play. The room is held in every state, every line kept and the actions at the foot,
+   and the footer waits for the space: on the slow phone the home's shift went from 0.21 to 0.00. On the press the
+   action says Opening… at once, and the battle's first frame names the game (`table/arrival.js`, read once by
+   `battle/src/live.ts`) until its board arrives. Every other action of the home is an outline: the walk's home
+   screens went from 2 to 4 filled actions to 1. The empty lists say what fills them, with one quiet button that does
+   it. `#lobby-status` is empty at rest. A table's action is named by its visible words first. Nothing the lobby
+   writes is under 11 px. The Create window's Ranked line is 8 words. The walk gained `home-turn-arrives`: Rook takes
+   the walker's open seat while the home is open, and the strip `turn-arrives` films the change. Two clips of about ten
+   seconds at 390 px, full and less motion, show two games, the rest, the turn arriving, the press and the right field.
+   Tests: `table/lobby-featured.test.js`, `lobby-tutorials.test.js`, `lobby.test.js`, five cases in
+   `lobby-home.spec.js`, one in `battle-live.spec.js`.
+
+   Left: PAINT_LEFT the brief's **Left** ([the lobby](journeys/lobby.md)): whether a skipped first lesson is featured
+   again, whether an invitation takes the featured space, the plan's ash behind a creature (the breath stands in), the
+   Your turn band that repeats the featured game, the Create window's actions below its first screen at 320 by 568,
+   and the waiting room's frame, UX11's. The walk delivers the turn by a seat taken, not by Rook answering inside a
+   round; the clip and `lobby-home.spec.js` read the second form.
 10. **UX10, the player's pages.** Friends, the leaderboard and the statistics: a player seen as more than an
     initial, a record and a rating drawn and not only written, the mutation and the spell a player leans on shown
     with their paintings, a rank that moves seen moving, and each empty page teaching and linking to the game that

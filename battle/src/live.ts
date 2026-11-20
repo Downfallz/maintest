@@ -336,7 +336,8 @@ function tagOf(one: Creature) {
 
 // The dock's heading: the match's end, the creature whose slot it is, or where the round stands.
 function headline(board: { turn: { slot: { creature: unknown } } | null; phase: string }) {
-  if (!view) return 'Battle view';
+  // The game the lobby opened names itself until its board arrives (UX9).
+  if (!view) return arriving ?? 'Battle view';
   if (view.over) return 'Match complete';
   if (board.turn) return name(board.turn.slot.creature);
   return phaseLabel(board.phase) || 'Waiting room';
@@ -819,6 +820,7 @@ function choose(choice: Choice) {
   $('seat-choices').replaceChildren(); $('retry').hidden = true;
   text('perspective', seatName(choice.seat).toUpperCase());
   arriving = readArrival(tabStorage, choice.table.id);
+  if (arriving) render();
   resetRecap(); seenGame = `${choice.table.id}:${choice.seat}`; seenKept = null;
   opponent = { seat: opponentOf(choice.table, choice.seat), ladder: null, friends: null }; drawOpponent(); void loadOpponent();
   upkeep.reset(`${choice.table.id}:${choice.seat}`); history.reset(); orderReveal.reset(); growth.reset(); playback.reset(); combat.reset(choice.seat); planning.reset(choice.seat); match.reset(choice.seat);
