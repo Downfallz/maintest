@@ -25,7 +25,7 @@ const ANCESTRAL = 'home-ancestral';
 const creatureOf = picture => !picture || picture === 'lesson-base' ? ANCESTRAL : picture;
 
 const held = entry => (entry?.seats ?? []).map(seat => seat.seat);
-const capital = text => text && text[0].toUpperCase() + text.slice(1);
+const capital = text => (text ? text[0].toUpperCase() + text.slice(1) : '');
 
 /**
  * The lesson to continue: the one Learn to play marks as next (the first in the series' order not done), unless it
@@ -69,26 +69,45 @@ export function arrivalLine(table, seats) {
   return Number.isInteger(table.round) && !table.waiting ? `Round ${table.round} against ${who}` : `${table.format} battle against ${who}`;
 }
 
+/** The eyebrow of a game: whose turn it is, or what the table waits for. */
+function eyebrowOf(mine, turn, table) {
+  if (mine) return 'Your turn';
+  if (turn) return 'Their turn';
+  return table.waiting ? 'Your table' : 'In play';
+}
+
+/**
+ * The status of a game: what follows its eyebrow (the eyebrow says Your turn), whom a table not yet begun waits for
+ * (anyone, or the friend its seat is kept for, as its card says), or that its round is being played.
+ */
+function statusOf(entry, turn) {
+  if (turn) return capital(turn.text.startsWith('Your turn') ? turn.text.slice('Your turn'.length).replace(/^ · /, '') : turn.text);
+  const invited = invitedState(entry.invited)?.tag;
+  if (invited) return invited;
+  return entry.table.waiting || entry.table.openSeats > 0 ? tableState(entry.table) : 'The round is being played';
+}
+
+const labelOf = (action, what) => `${action.replace(' →', '')}: ${what}`;
+
+function gameView(choice) {
+  const { table } = choice.entry, seats = held(choice.entry), mine = choice.kind === 'turn';
+  const title = arrivalLine(table, seats), turn = turnOf(table, seats), status = statusOf(choice.entry, turn);
+  const action = mine ? 'Play your turn →' : 'Open the game →';
+  return { kind: choice.kind, id: table.id, announced: mine ? ['Your turn', status].filter(Boolean).join(' · ') : '', eyebrow: eyebrowOf(mine, turn, table), title, status,
+    detail: capital(sinceVisitLine(choice.entry.recap) ?? ''), action, label: labelOf(action, `${title[0].toLowerCase()}${title.slice(1)}`),
+    ground: groundOf(table.round), creature: null, link: null };
+}
+
+function lessonView({ lesson }, started) {
+  const action = started || lesson.done ? 'Continue →' : 'Play →';
+  return { kind: 'lesson', id: lesson.id, eyebrow: lesson.place, title: lesson.title, status: '', detail: lesson.goal ?? '', action,
+    label: labelOf(action, `${lesson.title}, ${lesson.place.toLowerCase()}`), ground: groundOf(1), creature: creatureOf(lesson.picture), link: lesson.link };
+}
+
 /** What the featured space says and shows for a choice. `started` is whether the account has done a lesson yet. */
 export function featuredView(choice, { started = false } = {}) {
-  if (choice.kind === 'turn' || choice.kind === 'waiting') {
-    const { table } = choice.entry, seats = held(choice.entry), mine = choice.kind === 'turn';
-    const title = arrivalLine(table, seats);
-    const turn = turnOf(table, seats);
-    // A table not yet begun says whom it waits for, as its card does: anyone, or the friend its seat is kept for.
-    // The eyebrow says Your turn: the status says what follows it, each number kept on one line with its unit.
-    const status = (turn ? capital(turn.text.replace(/^Your turn(?: · )?/, '')) : null) ?? invitedState(choice.entry.invited)?.tag ?? (table.waiting || table.openSeats > 0 ? tableState(table) : 'The round is being played');
-    const action = mine ? 'Play your turn →' : 'Open the game →';
-    const since = sinceVisitLine(choice.entry.recap);
-    return { kind: choice.kind, id: table.id, announced: mine ? ['Your turn', status].filter(Boolean).join(' · ') : '', eyebrow: mine ? 'Your turn' : turn ? 'Their turn' : table.waiting ? 'Your table' : 'In play', title, status,
-      detail: since ? since[0].toUpperCase() + since.slice(1) : '', action, label: `${action.replace(' →', '')}: ${title[0].toLowerCase()}${title.slice(1)}`,
-      ground: groundOf(table.round), creature: null, link: null };
-  }
-  if (choice.kind === 'lesson') {
-    const { lesson } = choice, action = started || lesson.done ? 'Continue →' : 'Play →';
-    return { kind: 'lesson', id: lesson.id, eyebrow: lesson.place, title: lesson.title, status: '', detail: lesson.goal ?? '', action,
-      label: `${action.replace(' →', '')}: ${lesson.title}, ${lesson.place.toLowerCase()}`, ground: groundOf(1), creature: creatureOf(lesson.picture), link: lesson.link };
-  }
+  if (choice.kind === 'turn' || choice.kind === 'waiting') return gameView(choice);
+  if (choice.kind === 'lesson') return lessonView(choice, started);
   // A match started the quickest way, a bot answering at once; New battle, just under it, opens every other way.
   return { kind: 'new', id: null, eyebrow: 'A new battle', title: 'Your next battle.', status: '', detail: 'A bot answers at once. Or challenge a friend, or take an open seat.',
     action: 'Play a bot →', label: 'Play a bot', ground: groundOf(1), creature: ANCESTRAL, link: null };
@@ -103,10 +122,11 @@ export function featuredView(choice, { started = false } = {}) {
  */
 export function mountFeatured(doc, { enter, openCreate, go, session = null, ambience = () => {}, changed = () => {}, win = globalThis }) {
   const el = id => doc.getElementById(id);
-  const root = el('featured'), action = el('featured-action'), create = el('new-table'), status = el('featured-status');
+  const root = el('featured'), action = el('featured-action'), status = el('featured-status');
   root.dataset.featured = 'loading';
   root.setAttribute('aria-busy', 'true');
-  let games = null, lessons = undefined, shown = null, drawnGround = null, drawnCreature = null, choice = null, opening = false, pressed = false, disabled = false;
+  // `lessons` is null where nobody can take one; `lessonsRead` says whether the host has answered yet.
+  let games = null, lessons = null, lessonsRead = false, shown = null, drawnGround = null, drawnCreature = null, choice = null, opening = false, pressed = false, disabled = false;
   // The last round the host said for each table: one answer that could not read it in time keeps the title and the ground.
   const rounds = new Map();
   function remembered(list) {
@@ -130,7 +150,7 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
   }
 
   function draw() {
-    if (games === null || lessons === undefined || opening) return;
+    if (games === null || !lessonsRead || opening) return;
     choice = featuredChoice({ mine: games, lessons: lessons ?? [], previous: shown?.id ?? null, pinned: pinned() });
     const view = featuredView(choice, { started: (lessons ?? []).some(one => one.done) });
     root.dataset.featured = view.kind;
@@ -138,7 +158,8 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     el('featured-eyebrow').textContent = view.eyebrow;
     el('welcome').textContent = view.title;
     el('featured-detail').textContent = view.detail;
-    const shownStatus = view.status.replace(/(\d+) (d|h|min)\b/g, '$1\u00a0$2');
+    // Each number kept on one line with its unit.
+    const shownStatus = view.status.replace(/(\d) /g, '$1\u00a0');
     if (status.textContent !== shownStatus) status.textContent = shownStatus;
     // A turn that arrives on the game on show: the eyebrow's words play the kit's beat for a value that changes, and
     // the region says the turn once (its eyebrow is not in it).
@@ -198,8 +219,8 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     /** Whether new tables can be made here (`recording`): Play a bot is disabled when they cannot. */
     setDisabled(next) { disabled = Boolean(next); draw(); },
     /** The lessons as Learn to play draws them (lobby-tutorials.js), or null where nobody can take one. */
-    setLessons(next) { lessons = next ?? null; draw(); },
+    setLessons(next) { lessons = next ?? null; lessonsRead = true; draw(); },
     /** Who is signed in changed: what was shown is not theirs. */
-    reset() { games = null; lessons = undefined; shown = null; opening = false; root.dataset.featured = 'loading'; root.setAttribute('aria-busy', 'true'); },
+    reset() { games = null; lessons = null; lessonsRead = false; shown = null; opening = false; root.dataset.featured = 'loading'; root.setAttribute('aria-busy', 'true'); },
   };
 }

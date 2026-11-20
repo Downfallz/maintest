@@ -34,11 +34,11 @@ export function wantsLessMotion(win = globalThis) {
 }
 
 /**
- * The one ambience a screen plays: the first in the page's order that is in view, none in a hidden tab, and none
- * while a window or a menu covers the page (`covered`), since it would move behind them.
+ * The one ambience a screen plays: the first in the page's order that is in view, and none while the page is
+ * `unseen`: a hidden tab, or a window or a menu that covers it, since it would move behind them.
  */
-export function ambienceToPlay(elements, inView, hidden, covered = false) {
-  return hidden || covered ? null : elements.find(element => inView.has(element)) ?? null;
+export function ambienceToPlay(elements, inView, unseen) {
+  return unseen ? null : elements.find(element => inView.has(element)) ?? null;
 }
 
 /** What covers a page: an open window, or the home's menu (navigation.js). */
@@ -61,7 +61,7 @@ function watchAmbience(win) {
   const doc = win.document, inView = new Set();
   const elements = () => [...doc.querySelectorAll(AMBIENCE)];
   function play() {
-    const playing = ambienceToPlay(elements(), inView, doc.hidden, Boolean(doc.querySelector(COVERS)));
+    const playing = ambienceToPlay(elements(), inView, doc.hidden || Boolean(doc.querySelector(COVERS)));
     for (const element of elements()) {
       if (element === playing) element.dataset.ambient = 'playing'; else delete element.dataset.ambient;
     }

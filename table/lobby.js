@@ -144,7 +144,7 @@ export function ongoingLimit(count, limit) {
 export function actionName(words, table, held = []) {
   const others = versus(table).filter(side => !held.includes(side.seat) && side.kind !== 'open').map(side => side.kind === 'bot' ? `${side.name} (bot)` : side.name).filter(Boolean);
   const against = held.length && others.length ? ` against ${others.join(' and ')}` : '';
-  return `${words.replace(/\s*→$/, '')}: ${table.format} battle${against}, table ${table.id}`;
+  return `${words.endsWith(' →') ? words.slice(0, -2) : words}: ${table.format} battle${against}, table ${table.id}`;
 }
 
 function cardAction(table, entry) {

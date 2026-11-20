@@ -20,8 +20,8 @@ export function writeArrival(session, table, line, tokens = [], now = Date.now()
 export function arrivalFor(session, search, now = Date.now()) {
   try {
     const kept = JSON.parse(session?.getItem(ARRIVAL_KEY) ?? 'null');
-    const tokens = [...new URLSearchParams(search ?? '').values()];
-    return fresh(kept, now) && typeof kept.line === 'string' && kept.line && (kept.tokens ?? []).some(token => tokens.includes(token)) ? kept.line : null;
+    const tokens = new Set(new URLSearchParams(search ?? '').values());
+    return fresh(kept, now) && typeof kept.line === 'string' && kept.line && (kept.tokens ?? []).some(token => tokens.has(token)) ? kept.line : null;
   } catch { return null; }
 }
 

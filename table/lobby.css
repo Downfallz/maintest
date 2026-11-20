@@ -429,8 +429,9 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
 .featured[data-featured="turn"] .featured-status { color: var(--gold); border-color: var(--gold); }
 .featured-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .featured-actions button { min-height: 48px; }
-/* Wide enough for its longest words, so the button under the player's finger keeps its size as its words change. */
-.featured-actions #featured-action { min-width: 13em; }
+/* One width for all its words, so the button under the player's finger keeps its size as its words change, whatever
+   the system's face (a phone's is the whole row's). */
+@media (min-width: 761px) { .featured-actions #featured-action { width: 16em; } }
 .featured-actions button[aria-busy="true"] { cursor: progress; }
 /* Every state keeps the same room: two lines of title and of detail, the status's line, two actions. An empty line
    is unseen, never taken out, so nothing under the featured space moves as it fills, or as a turn arrives. Until the
@@ -455,11 +456,10 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
   .featured-art { grid-column: 1; min-height: 0; height: 150px; }
   .featured-art::after { background: linear-gradient(180deg, transparent 55%, var(--panel)); }
   .featured .featured-creature { right: 4%; bottom: 4px; width: 120px; }
-  .featured-text { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 8px; padding: 14px 16px 18px; }
-  .home-page .featured h2 { font-size: clamp(26px, 8vw, 34px); line-height: 1.12; }
   /* Room for the longest state (two lines of title, of status and of detail): the actions stand at its foot, so a
      status that wraps when a turn arrives takes the room left and moves no button. */
-  .featured-text { min-height: 360px; }
+  .featured-text { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 8px; min-height: 360px; padding: 14px 16px 18px; }
+  .home-page .featured h2 { font-size: clamp(26px, 8vw, 34px); line-height: 1.12; }
   .featured-actions { flex-direction: column; margin-top: auto; padding-top: 6px; }
   .featured-actions button { width: 100%; }
 }
