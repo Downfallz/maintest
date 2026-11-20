@@ -1,0 +1,191 @@
+#!/usr/bin/env node
+// The round seen played on the showcase (docs/art/ux-craft-plan.md, UX6; docs/art/journeys/doors.md): three
+// moves, each a picture of the real battle view, following one creature through its round. A round of a table of
+// seed 7 is walked at a phone's size and twice its density: Creature 1 mutates into a Brute, takes Instinct, and
+// acts first. Mutate is the board once the mutations are revealed, Choose a tempo the revealed order, each cut to
+// the part that shows Creature 1. Cast is the effects bench's film of the Brute's Pummel, a few of its frames
+// kept as a strip. They are written under docs/art/sources/pages/ as the pictures' sources; then
+// `node scripts/ux/pictures.mjs` derives them at the size the showcase draws them.
+//
+//   node scripts/ux/round.mjs                 # docs/art/sources/pages/round-*.webp
+//   node scripts/ux/round.mjs --out <folder>  # somewhere else, to look before replacing
+//
+// It needs what the journey needs (the engine built, the content consolidated, the battle bundle and the
+// browser suite's Playwright) and python3 with Pillow.
+
+import { spawnSync } from 'node:child_process';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { filmFrames, openBench, playwright, serveTable } from '../battle/filmstrip.mjs';
+import { waitAnswered } from '../../studio/browser/battle-step.js';
+import { walkJourney } from './journey.mjs';
+import { account, WALKER } from './journeys.mjs';
+import { answer, asked, choose, confirm, latest, openPlanning, playUntil, readUntilAsked, takeSeat } from './play.mjs';
+import { buildShowcase, root } from './set.mjs';
+
+/** A phone's screen, and the density the pictures are taken at: the showcase sends them at twice the width drawn. */
+export const PHONE = { width: 390, height: 844 };
+export const SCALE = 2;
+
+/**
+ * The part of each screen a move shows, in CSS pixels of the phone's screen: the whole width, and the height of
+ * the battle's field on the bench (390 by 320), so the three pictures share one shape.
+ */
+export const FRAME = { width: 390, height: 320 };
+export const SCREENS = [
+  { name: 'round-mutate', screen: 'mutations-revealed', top: 375 },
+  { name: 'round-tempo', screen: 'order-revealed', top: 412 },
+];
+
+/** The creature the round follows, the mutation it takes and the tempo it plays. */
+export const FOLLOWED = { creature: 1, mutation: 'tier:brute:v1', speed: 'Quick' };
+
+/**
+ * One round as a newcomer would play it, following FOLLOWED: its mutation picked and the other picks passed, its
+ * tempo Instinct and the others Precision, every other question answered with the host's first choice. The walk
+ * pictures the board once the mutations are revealed, and the order once it is revealed.
+ */
+export const ROUND = {
+  id: 'round',
+  title: 'The round on the showcase',
+  screens: SCREENS.map(one => one.screen),
+  async walk(walk) {
+    const { page, set, blocked } = walk;
+    await account(walk, page, WALKER);
+    await takeSeat(page, set.invitation);
+    // The questions come one at a time: each is answered once the host has answered the last, then the next is read.
+    const until = async kind => {
+      await readUntilAsked(page);
+      const view = await asked(page);
+      if (view.over) throw new Error(`The game ended before it asked for ${kind}.`);
+      if (view.waitingFor === kind) return view;
+      await answer(page, view, { blocked });
+      return until(kind);
+    };
+    let view = await until('Evolution');
+    const offered = view.options.evolution.creatures.find(one => one.creature === FOLLOWED.creature);
+    if (!offered?.availableTiers.includes(FOLLOWED.mutation)) throw new Error(`Creature ${FOLLOWED.creature} is not offered ${FOLLOWED.mutation}.`);
+    await openPlanning(page);
+    await choose(page, `#planning-creatures [data-creature="${FOLLOWED.creature}"]`, blocked);
+    await choose(page, `[data-mutation="${FOLLOWED.mutation}"]`, blocked);
+    await confirm(page, '#planning-confirm');
+    await waitAnswered(view, () => latest(page), { timeout: 15000 });
+    // The picks left are given up: the round follows one creature.
+    if ((await latest(page))?.waitingFor === 'Evolution') {
+      await openPlanning(page);
+      await page.locator('#planning-pass').click();
+      await confirm(page, '#planning-confirm');
+    }
+    view = await until('Speed');
+    await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 }).catch(() => {});
+    await walk.screen('mutations-revealed', { asSeen: true });
+    await openPlanning(page);
+    const tabs = await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab));
+    // One tab, then its tempo, a creature after the other, as a player presses them.
+    const tempo = tab => Number(tab) === FOLLOWED.creature ? FOLLOWED.speed : 'Standard';
+    await tabs.reduce((pressed, tab) => pressed
+      .then(() => choose(page, `[data-tempo-tab="${tab}"]`, blocked))
+      .then(() => choose(page, `[data-speed="${tempo(tab)}"]`, blocked)), Promise.resolve());
+    await confirm(page, '#planning-confirm');
+    await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 });
+    await waitAnswered(view, () => latest(page), { timeout: 15000 });
+    // The order is revealed once both teams' ties are settled: pictured before its Continue is pressed.
+    const look = async () => {
+      if (walk.seen('order-revealed') || !await page.locator('#order-continue').isVisible()) return;
+      await page.waitForTimeout(1500);
+      await walk.screen('order-revealed', { asSeen: true });
+    };
+    await playUntil(page, next => next.waitingFor === 'Action', { look, blocked });
+    if (!walk.seen('order-revealed')) throw new Error('The order was never revealed.');
+  },
+};
+
+/** The spell the Cast strip films, and the milliseconds of the bench's clock its frames are taken at, the clock stepped by `interval`. */
+export const CAST = { spell: 'spell:pummel:v1', damage: 8, interval: 120, frames: [0, 720, 840, 960, 1080, 1200] };
+
+export const SOURCES = 'docs/art/sources/pages';
+
+/** Where each frame of the strip is written: the declaration lists them in order. */
+export const castFrame = index => `round-cast-${index + 1}`;
+
+// Pillow cuts and writes: one job a picture, the part of the PNG kept and the WebP written, near lossless, since
+// pictures.mjs encodes again from it.
+const CUT = `
+import json, sys
+from PIL import Image
+for job in json.load(sys.stdin):
+    with Image.open(job["png"]) as shot:
+        part = shot.convert("RGB").crop(tuple(job["box"])) if job.get("box") else shot.convert("RGB")
+    part.save(job["out"], "WEBP", quality=94, method=6)
+`;
+
+function cut(jobs) {
+  // NOSONAR S4036: python3 is found on the PATH of whoever makes the pictures; nothing a visitor sends reaches this.
+  const run = spawnSync('python3', ['-c', CUT], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR
+  if (run.status !== 0) throw new Error(`Pillow could not cut the pictures: ${run.stderr || run.error?.message}`);
+}
+
+/** The box of a screen's picture that a move keeps, in the screenshot's own pixels. */
+export function boxOf(top, { frame = FRAME, scale = SCALE, phone = PHONE } = {}) {
+  if (top < 0 || top + frame.height > phone.height) throw new Error(`A part from ${top} px does not fit the phone's ${phone.height} px.`);
+  return [0, top * scale, frame.width * scale, (top + frame.height) * scale];
+}
+
+export function parseArguments(argv) {
+  const options = { out: SOURCES };
+  for (let index = 0; index < argv.length; index++) {
+    if (argv[index] === '--out' && index + 1 < argv.length) options.out = argv[++index];
+    else throw new Error(`Usage: node scripts/ux/round.mjs [--out <folder>]; ${argv[index]} is not understood.`);
+  }
+  return options;
+}
+
+async function main(argv) {
+  const { out } = parseArguments(argv);
+  const folder = resolve(root, out), work = await mkdtemp(join(tmpdir(), 'ux-round-'));
+  await mkdir(folder, { recursive: true });
+  const { chromium } = playwright();
+  const browser = await chromium.launch({ executablePath: process.env.STUDIO_CHROMIUM || undefined });
+  const jobs = [];
+  try {
+    const showcase = await buildShowcase(join(work, 'dist'));
+    const screens = await walkJourney(browser, ROUND, PHONE, { showcase, scale: SCALE });
+    for (const { name, screen, top } of SCREENS) {
+      const shot = screens.find(one => one.name === screen);
+      jobs.push({ png: join(work, `${name}.png`), bytes: shot.png, box: boxOf(top), out: join(folder, `${name}.webp`) });
+    }
+    const table = await serveTable();
+    const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: SCALE, isMobile: true, hasTouch: true });
+    try {
+      const page = await context.newPage();
+      await openBench(page, table.base);
+      const last = CAST.frames.at(-1), { interval } = CAST;
+      const shots = await filmFrames(page, { spell: CAST.spell, damage: CAST.damage, frames: last / interval + 1, interval });
+      for (const [index, ms] of CAST.frames.entries()) {
+        const shot = shots.find(one => one.ms === ms);
+        if (!shot) throw new Error(`The bench filmed no frame at ${ms} ms.`);
+        jobs.push({ png: join(work, `${castFrame(index)}.png`), bytes: shot.png, out: join(folder, `${castFrame(index)}.webp`) });
+      }
+    } finally {
+      await context.close();
+      await table.close();
+    }
+    await Promise.all(jobs.map(job => writeFile(job.png, job.bytes)));
+    cut(jobs.map(job => ({ ...job, bytes: undefined })));
+    for (const job of jobs) console.log(job.out);
+  } finally {
+    await browser.close();
+    await rm(work, { recursive: true, force: true });
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    await main(process.argv.slice(2));
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+}

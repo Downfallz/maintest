@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX5 are built; UX6 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX6 are built; UX7 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -372,6 +372,30 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    drawn, the hero's as an `<img>` asked for first. The kit's motion on its parts. Tests:
    `showcase/showcase.test.js`, the journey's measures, the largest paint. A change here publishes the apex
    (`showcase/README.md`).
+
+   *Built (2026-11-20)*: the duel's three moves each show the real battle view above their sentence, following
+   one Brute through its round, as the owner asked on the pull request. On a table of seed 7, Creature 1 takes the
+   Brute mutation and Instinct: Mutate is its team once the mutations are revealed, Choose a tempo the revealed
+   order where it acts first, each cut to 390 by 320 at twice the density; Cast is a strip of six frames of its
+   Pummel from the effects bench, played once in view (`.motion-strip`), resting on the blow's contact under less
+   motion ([ADR 0199](../adr/0199-let-a-strip-of-frames-rest-on-the-frame-that-says-what-it-shows.md)). `scripts/ux/round.mjs` makes them again into `docs/art/sources/pages/`; they are
+   39:32, the bench's field, not the brief's 16:9, which cut the creatures. Every painting of the home is now the
+   kit's `<img>` at the size it is drawn. The ground, a CSS background before, is asked for first with the
+   Colossus. The Colossus breathes; the home loads `table/motion.js` for it. The battlefield, the five specimens,
+   the ways to play's ground (also a background before) and the guide's head are lazy. The build copies the kit's files
+   into `page-art/`, and the showcase deploys for them (`studio/browser/plan.js`). On the slow profile the home's
+   largest paint went from 4.3 s to 1.0 s and its pictures before any scroll from 744 KB to 227 KB. One filled
+   action, the foot's Play now an outline; the specimen's line at 11 px; the language link named by its letters;
+   every control of the home at 44 px, and the guide's path links; at 320 by 568 Play now is whole on the first
+   screen. The rulebook's links in a sentence are underlined and its tables reach the keyboard. The walk gained
+   `showcase-round`, and the measure no longer counts an SVG as sent oversized. `studio/ux-round.test.js` holds
+   the script; `showcase/showcase.test.js` the round, the kit's pictures and the one filled action.
+
+   Left: the language's fade waits, since `table/motion.test.js` refuses `@view-transition` after UX4. The field guide's 21 portraits are still sent whole when a form is opened. The rulebook's
+   links inside a sentence stay under 44 px, which WCAG 2.5.8 exempts and the measure counts. The strip is
+   331 KB as a phone takes it, a quarter of the home's pictures. The owner's choices are in the brief's
+   **Left** ([the doors](journeys/doors.md)). The measure cannot see a picture sent smaller than it is drawn, since
+   an `<img>` with a `srcset` reports the width its `sizes` names; the review found the ground's so.
 7. **UX7, the game's door.** The sign-in panel stays short, and answers the visitor the showcase never met: who
    invites them, what the game is in one line and one picture, what an account gives. The name window, and the
    step into tutorial 1. `accounts-plan.md` and `home-navigation.md` are brought to agree. Tests:

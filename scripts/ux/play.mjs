@@ -18,7 +18,7 @@ export const lessons = readdirSync(folder).filter(name => name.endsWith('.json')
 /** The seat's view as the page last read it (studio/browser/seat-views.js, installed by the walk). */
 export const latest = page => page.evaluate(() => globalThis.seatViews?.latest ?? null);
 
-async function confirm(page, selector) {
+export async function confirm(page, selector) {
   const written = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
   await page.locator(selector).click();
   const status = (await written).status();
@@ -75,7 +75,7 @@ async function openSheet(page, dialog, command, shown = () => page.locator(dialo
     else await page.waitForTimeout(100);
   }
 }
-const openPlanning = page => openSheet(page, '#planning-dialog', '#planning-open');
+export const openPlanning = page => openSheet(page, '#planning-dialog', '#planning-open');
 const openSpells = page => openSheet(page, '#combat-dialog', '#combat-open',
   async () => await page.locator('#combat-dialog').isVisible() || await page.locator('#battle').getAttribute('data-combat') === 'targets');
 
@@ -147,7 +147,7 @@ export async function answer(page, view, { next = nothingRecorded, look = async 
 }
 
 // The seat's view once it asks the person something the page can answer.
-async function asked(page, kinds = null) {
+export async function asked(page, kinds = null) {
   const end = Date.now() + 20000;
   for (;;) {
     const view = await latest(page);

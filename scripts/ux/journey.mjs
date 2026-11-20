@@ -60,8 +60,9 @@ async function settle(page) {
   return JSON.parse(last);
 }
 
-async function picture(page, measures, viewport) {
-  if (measures.window || measures.height <= viewport.height) return page.screenshot();
+async function picture(page, measures, viewport, asSeen = false) {
+  // A screen the walk names `asSeen` (a section of a long page it scrolled to) is pictured as the visitor sees it.
+  if (measures.window || measures.height <= viewport.height || asSeen) return page.screenshot();
   return page.screenshot({ fullPage: true, clip: { x: 0, y: 0, width: viewport.width, height: Math.min(measures.height, SCREENS_SHOWN * viewport.height) } });
 }
 
@@ -101,15 +102,15 @@ async function film(page, act, { frames = 12, interval = 40 } = {}) {
  * Walk one journey at one size on a browser. Returns its screens in the order reached, each { name, staged,
  * measures, png }, with `blocked`, the choices it had to make by script; or, with `strip`, the frames of that
  * interaction. It throws when the walk misses a screen it
- * names or reaches one it does not.
+ * names or reaches one it does not. `scale` is the screen's density: 1 for a sheet, 2 for a picture a page shows.
  */
-export async function walkJourney(browser, journey, viewport, { showcase, axe = null, strip = null, frames, interval } = {}) {
+export async function walkJourney(browser, journey, viewport, { showcase, axe = null, strip = null, frames, interval, scale = 1 } = {}) {
   const filmed = strip ? journey.strips?.[strip] : null;
   if (strip && !filmed) throw new Error(`The ${journey.id} journey has no strip named ${strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
   const set = await raiseSet(showcase);
   const contexts = [];
   const person = async () => {
-    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: scale });
     await context.addInitScript(watchShiftInPage);
     // The seat's views as the page reads them, for the walks that play (studio/browser/seat-views.js).
     await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);
@@ -127,8 +128,9 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
       seen: name => screens.some(screen => screen.name === name),
       // A choice the page left out of a player's reach: said once, with the screen it follows.
       blocked: async what => { const line = `after ${screens.at(-1)?.name ?? 'the start'}: ${what} could not be pressed`; if (!blocks.includes(line)) blocks.push(line); },
-      // The screen a player is on now: settled, measured, pictured. `staged` says the walk opened it itself.
-      async screen(name, { staged = false, on = page } = {}) {
+      // The screen a player is on now: settled, measured, pictured. `staged` says the walk opened it itself;
+      // `asSeen` pictures the viewport where the page is scrolled, not the page from its top.
+      async screen(name, { staged = false, on = page, asSeen = false } = {}) {
         if (!journey.screens.includes(name)) throw new Error(`The ${journey.id} journey reached "${name}", which it does not name.`);
         if (walk.seen(name)) throw new Error(`The ${journey.id} journey reached "${name}" twice.`);
         const measures = await settle(on);
@@ -140,7 +142,7 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
           await on.evaluate(axe);
           measures.axe = await on.evaluate(axeInPage, AXE_TAGS);
         }
-        screens.push({ name, staged, measures, png: await picture(on, measures, viewport) });
+        screens.push({ name, staged, measures, png: await picture(on, measures, viewport, asSeen) });
       },
     };
     try { await journey.walk(walk); } catch (error) {

@@ -15,11 +15,15 @@ axe cannot read the text set over a picture or inside the canvas.
 
 ## The two doors
 
+`showcase-round`, the round seen played, was added by UX6: its line is UX6's walk of 2026-11-20, the first that
+has the screen, not the baseline's.
+
 At 320 by 568:
 
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | showcase-home | 6745 px | 741 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
+| showcase-round | 7541 px | 741 | 1 | 10 img, 5 background | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-home-fr | 7307 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-mutations | 4025 px | 262 | 0 | 3 img; 3 sent over twice their size | 11 px | 0 | 23 of 58 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-rules | 32495 px | 5895 | 0 | 2 img; 2 sent over twice their size | 10 px | 20 | 15 of 92 | 9 | 0 | 0 | 0.00 | label-content-name-mismatch (1), link-in-text-block (12), scrollable-region-focusable (2) |
@@ -34,6 +38,7 @@ At 390 by 844:
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | showcase-home | 6305 px | 741 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
+| showcase-round | 7218 px | 741 | 1 | 10 img, 5 background | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-home-fr | 6754 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-mutations | 3922 px | 262 | 0 | 3 img; 3 sent over twice their size | 11 px | 0 | 23 of 58 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-rules | 27854 px | 5895 | 0 | 2 img; 2 sent over twice their size | 10 px | 20 | 17 of 92 | 11 | 0 | 0 | 0.00 | label-content-name-mismatch (1), link-in-text-block (12), scrollable-region-focusable (1) |

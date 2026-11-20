@@ -5,7 +5,7 @@
 import { GAME_ORIGIN } from '../../table/site-origins.js';
 import { choose, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
 
-const WALKER = 'Walker', FRIEND = 'Rook';
+export const WALKER = 'Walker', FRIEND = 'Rook';
 const FIRST_LESSON = 'sc-repo-tutorial-your-first-combat';
 
 // The developer form stands in for Google's button: the one step of the doors a walk cannot press.
@@ -15,7 +15,7 @@ async function signIn(page) {
 }
 
 // An account that exists before the walk begins, signed in on `page`'s browser: the walk is of what follows.
-async function account(walk, page, username, { skipLessons = true } = {}) {
+export async function account(walk, page, username, { skipLessons = true } = {}) {
   const headers = { Origin: walk.set.game };
   const made = await page.request.post(`${walk.set.game}/api/account/dev`, { data: { username }, headers });
   if (!made.ok()) throw new Error(`The host refused the account ${username}: ${made.status()}`);
@@ -32,7 +32,7 @@ async function home(page, origin) {
 const doors = {
   id: 'doors',
   title: 'The two doors',
-  screens: ['showcase-home', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
+  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -44,6 +44,14 @@ const doors = {
     await walk.screen('showcase-home');
     const play = await page.getByRole('link', { name: 'Play now' }).first().getAttribute('href');
     if (new URL(play).origin !== new URL(GAME_ORIGIN).origin) throw new Error(`Play now leads to ${play}, not to the game.`);
+    // How to play: the round seen played, each move a picture of the battle view (UX6).
+    await page.getByRole('link', { name: 'How to play' }).click();
+    // The moves' pictures are lazy, so the walk's settling leaves them out: wait until each has arrived.
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll('#duel .move-frame img')];
+      return images.length === 3 && images.every(image => image.complete && image.naturalWidth > 0);
+    });
+    await walk.screen('showcase-round', { asSeen: true });
     await page.goto(`${set.showcase}/fr/`);
     await walk.screen('showcase-home-fr');
     await page.goto(`${set.showcase}/mutations/`);

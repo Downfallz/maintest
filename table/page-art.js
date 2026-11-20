@@ -3,12 +3,20 @@
 // `frames` is over 1 for a strip, its frames side by side; `pages` says where it is asked for first.
 export const PAGE_ART = {
   'eclipse-ground': {
-    from: '181281d949add838', frames: 1, drawn: [533,1440], pages: {"showcase/home":"largest","table/sign-in":"largest"},
+    from: '181281d949add838', frames: 1, drawn: [533,1440], pages: {"table/sign-in":"largest"},
     sizes: [
       { file: 'eclipse-ground-533.a75503d4.webp', width: 533, height: 300, bytes: 26452 },
       { file: 'eclipse-ground-1066.59583e77.webp', width: 1066, height: 600, bytes: 86074 },
       { file: 'eclipse-ground-1440.c04a7a1c.webp', width: 1440, height: 810, bytes: 135436 },
       { file: 'eclipse-ground-1672.a0a4d681.webp', width: 1672, height: 941, bytes: 174006 },
+    ],
+  },
+  'showcase-ground': {
+    from: 'b6548dd550e81e05', frames: 1, drawn: [720,1440], pages: {"showcase/home":"largest"},
+    sizes: [
+      { file: 'showcase-ground-720.55ff2b76.webp', width: 720, height: 405, bytes: 43176 },
+      { file: 'showcase-ground-1440.c04a7a1c.webp', width: 1440, height: 810, bytes: 135436 },
+      { file: 'showcase-ground-1672.a0a4d681.webp', width: 1672, height: 941, bytes: 174006 },
     ],
   },
   'colossus': {
@@ -26,6 +34,111 @@ export const PAGE_ART = {
       { file: 'revenant-214.d66187a8.webp', width: 214, height: 143, bytes: 22344 },
       { file: 'revenant-550.3171d3f6.webp', width: 550, height: 367, bytes: 96968 },
       { file: 'revenant-1100.4e5df9ed.webp', width: 1100, height: 733, bytes: 298776 },
+    ],
+  },
+  'round-mutate': {
+    from: '6aa9a4c5da41b535', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'round-mutate-351.fd0525db.webp', width: 351, height: 288, bytes: 14300 },
+      { file: 'round-mutate-702.517c9e7e.webp', width: 702, height: 576, bytes: 42118 },
+    ],
+  },
+  'round-tempo': {
+    from: 'be84140130aa7d4f', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'round-tempo-351.8e45264e.webp', width: 351, height: 288, bytes: 15492 },
+      { file: 'round-tempo-702.0ba73a1d.webp', width: 702, height: 576, bytes: 44264 },
+    ],
+  },
+  'round-cast': {
+    from: '3db2798f71b77389', frames: 6, drawn: [351], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'round-cast-2106.f7eea48c.webp', width: 2106, height: 288, bytes: 101190 },
+      { file: 'round-cast-4212.89266f70.webp', width: 4212, height: 576, bytes: 331484 },
+    ],
+  },
+  'battlefield-eclipse': {
+    from: 'a2ef07e324ce5e89', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'battlefield-eclipse-351.4271a1a7.webp', width: 351, height: 198, bytes: 13142 },
+      { file: 'battlefield-eclipse-702.a64d1cc6.webp', width: 702, height: 395, bytes: 42438 },
+      { file: 'battlefield-eclipse-1250.b9006bf1.webp', width: 1250, height: 703, bytes: 109050 },
+      { file: 'battlefield-eclipse-1672.a0a4d681.webp', width: 1672, height: 941, bytes: 174006 },
+    ],
+  },
+  'battlefield-breach': {
+    from: 'a89ac3d4912a0ad8', frames: 1, drawn: [351,390,1250], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'battlefield-breach-351.d8fab4dc.webp', width: 351, height: 198, bytes: 11412 },
+      { file: 'battlefield-breach-390.9109b627.webp', width: 390, height: 219, bytes: 13642 },
+      { file: 'battlefield-breach-702.d3af80ae.webp', width: 702, height: 395, bytes: 37738 },
+      { file: 'battlefield-breach-780.a5bf1677.webp', width: 780, height: 439, bytes: 45978 },
+      { file: 'battlefield-breach-1250.83584fbd.webp', width: 1250, height: 703, bytes: 99516 },
+      { file: 'battlefield-breach-1672.58f273bb.webp', width: 1672, height: 941, bytes: 162042 },
+    ],
+  },
+  'battlefield-broken': {
+    from: '67ad7781b70951f2', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'battlefield-broken-351.96523379.webp', width: 351, height: 114, bytes: 8758 },
+      { file: 'battlefield-broken-702.535f6148.webp', width: 702, height: 228, bytes: 31030 },
+      { file: 'battlefield-broken-1250.94a1968a.webp', width: 1250, height: 405, bytes: 80266 },
+      { file: 'battlefield-broken-1672.662c639f.webp', width: 1672, height: 542, bytes: 126384 },
+    ],
+  },
+  'battlefield-sky': {
+    from: 'd31783f31db8f625', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'battlefield-sky-351.beaf4f34.webp', width: 351, height: 101, bytes: 8730 },
+      { file: 'battlefield-sky-702.c38c3fc5.webp', width: 702, height: 202, bytes: 27088 },
+      { file: 'battlefield-sky-1250.cf48bb4b.webp', width: 1250, height: 359, bytes: 65856 },
+      { file: 'battlefield-sky-1672.832dacbe.webp', width: 1672, height: 480, bytes: 102514 },
+    ],
+  },
+  'specimen-base-creature': {
+    from: '33d515757e28352f', frames: 1, drawn: [315,218,465], pages: {"showcase/home":"lazy","showcase/mutations":"first"},
+    sizes: [
+      { file: 'specimen-base-creature-218.3755b35b.webp', width: 218, height: 145, bytes: 15964 },
+      { file: 'specimen-base-creature-315.addf469a.webp', width: 315, height: 210, bytes: 26628 },
+      { file: 'specimen-base-creature-465.055fd174.webp', width: 465, height: 310, bytes: 46900 },
+      { file: 'specimen-base-creature-630.8f6ca0e7.webp', width: 630, height: 420, bytes: 74230 },
+      { file: 'specimen-base-creature-930.9c3e2a1b.webp', width: 930, height: 620, bytes: 142702 },
+    ],
+  },
+  'specimen-warped-base': {
+    from: 'fa2ea3c12d2814c8', frames: 1, drawn: [315,465], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'specimen-warped-base-315.512a29e0.webp', width: 315, height: 210, bytes: 22972 },
+      { file: 'specimen-warped-base-465.0cedbd97.webp', width: 465, height: 310, bytes: 40018 },
+      { file: 'specimen-warped-base-630.a61d27a5.webp', width: 630, height: 420, bytes: 61934 },
+      { file: 'specimen-warped-base-930.50b189e6.webp', width: 930, height: 620, bytes: 112088 },
+    ],
+  },
+  'specimen-warped-stage2-necrotic': {
+    from: 'bf01f6dc2ed4036d', frames: 1, drawn: [315,465], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'specimen-warped-stage2-necrotic-315.f5785f03.webp', width: 315, height: 210, bytes: 34576 },
+      { file: 'specimen-warped-stage2-necrotic-465.b6ddab42.webp', width: 465, height: 310, bytes: 63504 },
+      { file: 'specimen-warped-stage2-necrotic-630.c17f7063.webp', width: 630, height: 420, bytes: 102430 },
+      { file: 'specimen-warped-stage2-necrotic-930.d0f7562c.webp', width: 930, height: 620, bytes: 195162 },
+    ],
+  },
+  'specimen-warped-stage3-revenant': {
+    from: 'eea6724a4cd048f0', frames: 1, drawn: [315,465], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'specimen-warped-stage3-revenant-315.c5b08ead.webp', width: 315, height: 210, bytes: 40162 },
+      { file: 'specimen-warped-stage3-revenant-465.e28bf9c9.webp', width: 465, height: 310, bytes: 73900 },
+      { file: 'specimen-warped-stage3-revenant-630.7c647e1c.webp', width: 630, height: 420, bytes: 119510 },
+      { file: 'specimen-warped-stage3-revenant-930.c6bf6cb5.webp', width: 930, height: 620, bytes: 224018 },
+    ],
+  },
+  'specimen-warped-revenant-brute': {
+    from: '4a65cf54854d737c', frames: 1, drawn: [315,465], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'specimen-warped-revenant-brute-315.d30873b7.webp', width: 315, height: 210, bytes: 52912 },
+      { file: 'specimen-warped-revenant-brute-465.47d0a553.webp', width: 465, height: 310, bytes: 99294 },
+      { file: 'specimen-warped-revenant-brute-630.9a6c9c2d.webp', width: 630, height: 420, bytes: 157342 },
+      { file: 'specimen-warped-revenant-brute-930.252728d8.webp', width: 930, height: 620, bytes: 282728 },
     ],
   },
 };

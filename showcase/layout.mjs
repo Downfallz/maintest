@@ -1,5 +1,7 @@
 import { SITE_ORIGIN } from '../table/site-origins.js';
 
+/** Where the build copies the picture kit's files (table/page-art/, ADR 0198). */
+export const SHOWCASE_ART = '/page-art/';
 export const arrow = '<span class="arrow" aria-hidden="true"></span>';
 export const copyrightLine = '© 2026';
 const rune = '<img class="rune" src="/assets/brand-mark.svg" alt="" width="25" height="38">';

@@ -8,13 +8,14 @@ import { english, french } from './copy.mjs';
 import { CONCEPT_CARD_SOURCE, publishedShowcaseCss } from './concept-card.mjs';
 import { copyrightPage } from './copyright.mjs';
 import { guidePage } from './guide.mjs';
-import { routes } from './layout.mjs';
+import { routes, SHOWCASE_ART } from './layout.mjs';
 import { specimenPath } from './lore.mjs';
 import { observe } from './observation.mjs';
 import { page } from './page.mjs';
 import { privacyPage } from './privacy.mjs';
 import { rulesPage } from './rules.mjs';
 import { GAME_ORIGIN } from '../table/site-origins.js';
+import { PAGE_ART } from '../table/page-art.js';
 
 const source = new URL('../', import.meta.url);
 // The folder to write, `showcase/dist` by default; the tests name a temporary one so the working tree stays as it is.
@@ -31,9 +32,9 @@ const catalogue = await loadCatalogue();
 const books = Object.fromEntries(await Promise.all([['en', 'rules.json'], ['fr', 'rules.fr.json']].map(async ([lang, file]) =>
   [lang, JSON.parse(await readFile(new URL(`table/${file}`, source), 'utf8'))])));
 const { specimen } = observe(catalogue, specimenPath);
-// Publish only the ordinary forms and this observation's artwork. The remaining hybrids are discovered in play.
-const portraits = new Set([...specimen.map(art => art.file),
-  ...catalogue.nodes.filter(t => t.visual.artwork).map(t => EVOLUTION_REGISTRY.art(t.visual.artwork).file)]);
+// Publish only the ordinary forms, for the field guide. This observation's artwork, its one hybrid included, is the
+// kit's (page.mjs): the remaining hybrids are discovered in play.
+const portraits = new Set(catalogue.nodes.filter(t => t.visual.artwork).map(t => EVOLUTION_REGISTRY.art(t.visual.artwork).file));
 const stage = await mkdtemp(destination + '-');
 try {
   const assets = [
@@ -41,8 +42,12 @@ try {
     ...['gallery.js', 'guide.js', '404.html', '_headers'].map(file => [`showcase/${file}`, file]),
     ...['brand-mark.svg', 'icon.svg'].map(file => [`table/${file}`, `assets/${file}`]),
     ...['marcellus-latin-400.woff2', 'OFL.txt'].map(file => [`table/fonts/${file}`, `fonts/${file}`]),
+    ['table/motion.js', 'motion.js'],
+    // The picture the site is shared with (og:image): never drawn on a page, so not one of the kit's.
     ['table/battle-art/eclipse-battle.webp', 'assets/eclipse-battle.webp'],
-    ...['breach', 'broken-floor', 'shattered-sky'].map(id => [`table/battle-art/horizon/${id}.webp`, `assets/${id}.webp`]),
+    // The kit's pictures the showcase's pages draw, at the sizes they are sent (ADR 0198, docs/art/page-pictures.md).
+    ...Object.values(PAGE_ART).filter(entry => Object.keys(entry.pages).some(name => name.startsWith('showcase/')))
+      .flatMap(entry => entry.sizes.map(size => [`table/page-art/${size.file}`, `${SHOWCASE_ART.slice(1)}${size.file}`])),
     ...[...portraits].map(file => [`table/battle-art/${file}`, `assets/${file}`]),
   ];
   const documents = [english, french].flatMap(c => {

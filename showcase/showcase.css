@@ -1,6 +1,9 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--soot); color: var(--ink); font: 16px/1.65 var(--font-text); }
 h1, h2, h3, p, figure, ol { margin: 0; }
+/* The picture kit's painting (picture.js, ADR 0198), as in identity.css: never wider than its room. First, so a
+   picture's own rule (the hero's Colossus, a ground that covers its box) sets its size over it. */
+.picture { max-width: 100%; height: auto; }
 a { color: inherit; text-decoration: none; }
 a:hover { color: var(--accent-strong); }
 :focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 4px; }
@@ -13,18 +16,22 @@ a:hover { color: var(--accent-strong); }
 .mast { position: relative; z-index: 2; background: var(--soot); border-bottom: 1px solid var(--line-soft); }
 .mast .contain, .foot { display: flex; align-items: center; gap: clamp(14px, 2vw, 30px); }
 .mast .contain { height: 74px; }
-.wordmark { display: inline-flex; align-items: center; gap: 12px; font: 400 clamp(16px, 1.65vw, 24px)/1.05 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--bone); }
+.wordmark { display: inline-flex; align-items: center; min-height: 44px; gap: 12px; font: 400 clamp(16px, 1.65vw, 24px)/1.05 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--bone); }
 .rune { width: 25px; height: 38px; object-fit: contain; }
 .mast nav { display: flex; gap: clamp(12px, 1.6vw, 26px); margin-left: auto; white-space: nowrap; }
 .mast nav a, .language, .nav-play, .discover, .foot-links a { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; }
 .mast nav a, .language, .foot-links a { color: var(--muted); }
 .mast a:hover, .foot a:hover { color: var(--accent-strong); }
-.language { justify-content: center; min-width: 44px; }
+.language, .foot-links a { justify-content: center; min-width: 44px; }
 .arrow { width: .65em; height: .65em; display: inline-block; position: relative; border: solid currentColor; border-width: 1.5px 1.5px 0 0; }
 .arrow::before { content: ''; position: absolute; top: -1px; right: 0; width: 125%; border-top: 1.5px solid currentColor; transform-origin: right; transform: rotate(-45deg); }
 .nav-play { padding: 0 18px; border: 1px solid var(--gold); gap: 12px; color: var(--gold); }
 .hero { isolation: isolate; position: relative; overflow: hidden; background: var(--soot); border-bottom: 1px solid var(--line); }
-.hero-ground { position: absolute; inset: 0; z-index: -2; background: linear-gradient(90deg, rgb(7 13 16 / .94) 2%, rgb(7 13 16 / .64) 35%, transparent 72%), linear-gradient(0deg, var(--soot), transparent 31%), url('/assets/eclipse-battle.webp') center 35% / cover; }
+/* The ground is an <img> of the kit, the page's largest paint, so the browser finds it in the HTML and asks for it
+   first; the shade over it and the grain are layers above it. */
+.hero-ground { position: absolute; inset: 0; z-index: -2; isolation: isolate; overflow: hidden; }
+.hero-ground img { position: absolute; inset: 0; z-index: -1; width: 100%; max-width: none; height: 100%; object-fit: cover; object-position: center 35%; }
+.hero-ground::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgb(7 13 16 / .94) 2%, rgb(7 13 16 / .64) 35%, transparent 72%), linear-gradient(0deg, var(--soot), transparent 31%); }
 .hero-ground::after { content: ''; position: absolute; inset: 0; background: var(--tex-grain); opacity: .3; }
 .hero-inner { min-height: clamp(550px, 43vw, 680px); position: relative; display: flex; align-items: center; }
 .hero-copy { padding-block: 58px 72px; width: 45%; }
@@ -42,10 +49,10 @@ h1 em { color: var(--gold); font-style: normal; }
 .gold-button:hover { color: var(--accent-ink); background: var(--accent-strong); }
 .gold-button:focus-visible { outline-color: var(--accent-ink); outline-offset: -5px; }
 .discover { gap: 12px; color: var(--ink); }
-.hero-beast { position: absolute; z-index: -1; right: max(3%, calc((100vw - 1440px) / 2)); bottom: 10%; width: min(54%, 850px); height: 80%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 18px 9px rgb(0 0 0 / .75)); }
+.hero-beast { position: absolute; z-index: -1; right: max(3%, calc((100vw - 1440px) / 2)); bottom: 10%; width: min(54%, 850px); max-width: none; height: 80%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 18px 9px rgb(0 0 0 / .75)); }
 .specimen { position: absolute; right: 0; bottom: 21px; display: grid; gap: 2px; text-align: right; padding-right: 12px; border-right: 2px solid var(--brand-ember); text-shadow: 0 1px 6px var(--soot); }
 .specimen strong { font-size: 22px; line-height: 1.1; }
-.specimen span { font-size: 9px; color: var(--bone); }
+.specimen span { font-size: 11px; color: var(--bone); }
 h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.045em; margin-top: 12px; color: var(--bone); }
 .section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
 .section-head .lead { max-width: 40ch; }
@@ -58,15 +65,20 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .moves li { border-top: 1px solid var(--line); padding-top: 16px; }
 .moves li > span { color: var(--brand-ember); font: 13px var(--font-display); }
 .moves h3 { margin-block: 9px; font-size: 29px; line-height: 1.1; }
+/* Each move's picture of the real battle view, above its name; its room is held before it loads. */
+.move-frame { margin-bottom: 16px; aspect-ratio: 39 / 32; overflow: hidden; background: var(--panel); border: 1px solid var(--line-soft); }
+.move-frame > img { display: block; width: 100%; }
 .moment { margin-top: 16px; background: var(--paper); border: 1px solid var(--line-soft); }
 .landscape { position: relative; overflow: hidden; aspect-ratio: 2.75; }
-.landscape img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center 32%; }
+.landscape img { width: 100%; max-width: none; height: 100%; display: block; object-fit: cover; object-position: center 32%; }
 .landscape.shattered { aspect-ratio: 2.75; container-type: inline-size; }
 .shattered img { position: absolute; height: auto; bottom: calc(50% - 33.70cqw); }
 .shattered img.sky { bottom: auto; top: calc(50% - 22.58cqw); }
 .moment figcaption { display: flex; gap: 18px; padding: 14px 20px; color: var(--muted); }
 .moment strong { flex: none; color: var(--gold); }
-.play-modes { border-block: 1px solid var(--line-soft); background: linear-gradient(100deg, var(--soot), rgb(7 13 16 / .88) 56%, rgb(7 13 16 / .46)), url('/assets/breach.webp') center 56% / cover; }
+.play-modes { position: relative; isolation: isolate; overflow: hidden; border-block: 1px solid var(--line-soft); background: var(--soot); }
+.play-modes::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, var(--soot), rgb(7 13 16 / .88) 56%, rgb(7 13 16 / .46)); }
+.modes-ground { position: absolute; inset: 0; z-index: -2; width: 100%; max-width: none; height: 100%; object-fit: cover; object-position: center 56%; }
 .mode-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2vw, 30px); padding: 0; margin: clamp(22px, 3vw, 40px) 0 0; list-style: none; }
 .mode-list li { padding: clamp(16px, 2.2vw, 30px); background: var(--paper-glass); border-top: 2px solid var(--brand-line); }
 .mode-list li:nth-child(2) { border-color: var(--brand-ember); }
@@ -110,14 +122,16 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
   .mast .contain { height: 62px; gap: 8px; }
   .wordmark { gap: 6px; font-size: 15px; }
   .wordmark .rune { width: 18px; height: 29px; }
-  .nav-play { gap: 6px; padding-inline: 9px; font-size: 12px; }
-  .language { min-width: 36px; font-size: 12px; }
+  .nav-play { gap: 6px; padding-inline: 9px; font-size: 12px; white-space: nowrap; flex: none; }
+  .language { font-size: 12px; }
   .hero-inner { min-height: 0; display: block; }
-  .hero-copy { width: 100%; padding-block: clamp(195px, 57vw, 330px) 35px; }
-  .hero-ground { background: linear-gradient(0deg, var(--soot) 27%, transparent 85%), url('/assets/eclipse-battle.webp') center top / auto 68% no-repeat; }
-  .hero-beast { width: 79%; height: clamp(168px, 48vw, 280px); right: 4%; top: 12px; bottom: auto; }
+  /* Play now whole on a 320 by 568 screen: the copy starts higher, the Colossus drawn to fit above it. */
+  .hero-copy { width: 100%; padding-block: clamp(150px, 47vw, 330px) 35px; }
+  .hero-ground img { inset: 0 auto auto 50%; width: auto; height: 68%; translate: -50% 0; }
+  .hero-ground::before { background: linear-gradient(0deg, var(--soot) 27%, transparent 85%); }
+  .hero-beast { width: 79%; height: clamp(132px, 41vw, 280px); right: 4%; top: 12px; bottom: auto; }
   .specimen { top: 16px; bottom: auto; right: auto; left: 0; border: 0; padding: 3px 6px; text-align: left; background: rgb(7 13 16 / .76); }
-  .specimen strong { font-size: 15px; } .specimen span { font-size: 8px; }
+  .specimen strong { font-size: 15px; } .specimen span { font-size: 11px; }
   h1 { font-size: clamp(57px, 14vw, 82px); line-height: .93; margin-block: 12px 18px; }
   html:lang(fr) .hero h1 { font-size: clamp(44px, 12.6vw, 70px); }
   .pitch, .lead { font-size: 15px; }
@@ -129,6 +143,8 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
   .moves li { display: grid; grid-template-columns: 26px 1fr; gap: 5px; }
   .moves li > span { align-self: center; }
   .moves h3 { margin: 0; } .moves p { grid-column: 2; }
+  .moves .move-frame { grid-column: 1 / -1; margin-bottom: 8px; }
+  .modes-ground { height: auto; inset: 0 0 auto; }
   .landscape, .landscape.shattered { aspect-ratio: 1672 / 941; }
   .shattered img { bottom: 0; } .shattered img.sky { top: 0; }
   .moment figcaption { display: grid; gap: 3px; padding: 12px; font-size: 14px; }
@@ -159,7 +175,7 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .guide-invite p { color: var(--muted); margin-top: 8px; }
 .outline-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 14px; flex: none; min-height: 48px; padding: 8px 18px; color: var(--gold); border: 1px solid var(--gold); }
 .outline-button:hover { background: var(--accent-wash); }
-.editorial-link { display: inline-block; color: var(--gold); text-decoration: underline; text-underline-offset: .26em; margin-top: 18px; }
+.editorial-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold); text-decoration: underline; text-underline-offset: .26em; margin-top: 18px; }
 .guide-page, .policy { padding-block: clamp(30px, 5vw, 75px); }
 .guide-head { display: grid; grid-template-columns: 1.3fr 1fr; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); padding-bottom: 30px; }
 .guide-head h1, .policy h1 { font-size: clamp(48px, 6.5vw, 104px); line-height: 1.01; margin: 13px 0 19px; }
@@ -190,7 +206,7 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .family-record h2 { font-size: clamp(38px, 4vw, 60px); }
 .path-map { display: grid; font-size: 14px; }
 .path-map div { display: flex; gap: 10px; align-items: center; }
-.path-map a { padding-block: 4px; }
+.path-map a { display: inline-flex; align-items: center; min-height: 44px; }
 .path-map span { color: var(--muted); }
 .form-entry { border-top: 1px solid var(--line-soft); scroll-margin-top: 14px; }
 .form-entry:last-child { border-bottom: 1px solid var(--line-soft); }
@@ -298,6 +314,8 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .rules-book :is(ul, ol) { margin: 0 0 14px; padding-left: 22px; }
 .rules-book li + li { margin-top: 6px; }
 .rules-book a, .rules-contents > p a { color: var(--gold); }
+/* A link inside a sentence is told by its underline, not its colour alone (WCAG 1.4.1). */
+.rules-book p a, .rules-book li a { text-decoration: underline; text-underline-offset: .2em; }
 .rules-part { margin-bottom: 36px; scroll-margin-top: 16px; }
 .rules-section { margin-top: 26px; scroll-margin-top: 16px; }
 .rules-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -333,5 +351,26 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 @media (prefers-reduced-motion: no-preference) {
   .gold-button, .outline-button { transition: scale var(--motion-fast) var(--motion-standard); }
   :is(.gold-button, .outline-button):active { scale: .98; }
+}
+/* Ambience, as in identity.css: motion.js, which the home loads, plays one at a time, in view, in a visible tab.
+   The strip's rules are identity.css's, for six frames only (page.mjs refuses another count): change them together.
+   The hero's Colossus breathes; the round's Cast strip plays once and rests on its blow. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes motion-breath { 50% { scale: 1.015; } }
+  :root:not([data-motion="less"]) .motion-breath { transform-origin: 50% 100%; animation: motion-breath var(--motion-breath) ease-in-out infinite paused; }
+  :root:not([data-motion="less"]) .motion-breath[data-ambient="playing"] { animation-play-state: running; }
+}
+.motion-strip { display: block; overflow: hidden; }
+.motion-strip > img { display: block; width: calc(var(--frames) * 100%); max-width: none; height: auto; }
+.motion-strip[data-frames="6"] { --frames: 6; }
+/* Under less motion the strip rests on the frame it names (ADR 0199), as in identity.css. */
+.motion-strip[data-still="4"] { --still: 3; }
+@media (prefers-reduced-motion: reduce) {
+  .motion-strip[data-still] > img { margin-left: calc(var(--still) * -100%); }
+}
+:root[data-motion="less"] .motion-strip[data-still] > img { margin-left: calc(var(--still) * -100%); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes motion-strip { to { translate: calc(-100% * (var(--frames) - 1) / var(--frames)) 0; } }
+  :root:not([data-motion="less"]) .motion-strip[data-ambient="playing"] > img { animation: motion-strip var(--motion-strip) steps(var(--frames), jump-none) forwards; }
 }
 /* END MOTION KIT */

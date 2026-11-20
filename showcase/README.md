@@ -62,7 +62,8 @@ The one-time setup (the API token, the account variable, the custom domain) is i
 
 What the build reads, and so what calls for a deployment: `showcase/**`, `data/{Creatures,Spells,Tiers,presentation}/**`,
 `docs/art/branding.css`, `table/rules.json`, `table/rules.fr.json`, `table/rules.js`, `battle/src/cue-art.js`,
-`table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg` and `table/brand-mark.svg`. A build that starts to read another path adds it to
+`table/battle-*art.js`, `table/battle-evolution.js`, `table/battle-art/**`, `table/fonts/**`, `table/icon.svg`, `table/brand-mark.svg`,
+and the picture kit the pages draw with: `table/picture.js`, `table/page-art.js`, `table/page-art/**` and `table/motion.js`. A build that starts to read another path adds it to
 `plan.js` and its test. With Azure Static Web Apps, upload the same contents of `showcase/dist` as a prebuilt static site.
 
 [Direct Upload with CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/) ·

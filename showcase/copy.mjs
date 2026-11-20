@@ -1,5 +1,5 @@
 export const english = {
-  lang: 'en', other: 'Français', switchLabel: 'Read in French',
+  lang: 'en', other: 'Français', switchLabel: 'FR, read in French',
   description: 'Downfall Instinct is a turn-based 3v3 game. Evolve your creatures during the duel, combine mutation branches and choose which spells to use against the other team.',
   skip: 'Skip to content', nav: 'Main navigation', game: 'The duel', world: 'The world', mutations: 'Mutations', guide: 'Field guide', privacy: 'Privacy policy',
   play: 'Play now', kicker: 'Turn-based 3v3 combat', title: ['Evolve your', 'creatures.'],
@@ -17,6 +17,12 @@ export const english = {
     ['Mutate', 'On mutation rounds, choose which creatures evolve. Each mutation adds new abilities.'],
     ['Choose a tempo', 'For each creature, pick Instinct to act earlier or Precision for a chance at a critical hit.'],
     ['Cast', 'When its turn comes, choose a spell and its targets. You can see how the last move played out before you commit.'],
+  ],
+  // What each move's picture shows, for a screen reader: the real battle view (scripts/ux/round.mjs).
+  movePictures: [
+    'Creature 1 has become a Brute, with Pummel and Brace.',
+    'The Brute plays Instinct: in the revealed order, it acts first.',
+    'The Brute leaps at an enemy with Pummel, and the blow lands.',
   ],
   worldTitle: 'The battlefield is breaking apart',
   worldLead: 'The planet’s corruption had already reshaped its wildlife long before this duel. As the duel goes on, more of the battlefield gives way.',
@@ -47,7 +53,7 @@ export const english = {
 };
 
 export const french = {
-  lang: 'fr', other: 'English', switchLabel: 'Read in English',
+  lang: 'fr', other: 'English', switchLabel: 'EN, read in English',
   description: 'Downfall Instinct est un jeu tactique au tour par tour en 3 contre 3. Fais évoluer tes créatures en plein duel, combine les branches de mutations et choisis les sorts de ton équipe.',
   skip: 'Aller au contenu', nav: 'Navigation principale', game: 'Le duel', world: 'Le monde', mutations: 'Mutations', guide: 'Guide de terrain', privacy: 'Politique de confidentialité',
   play: 'Jouer', kicker: '3 contre 3 au tour par tour', title: ['Fais évoluer', 'tes créatures.'],
@@ -65,6 +71,11 @@ export const french = {
     ['Muter', 'Les rounds de mutation te permettent de choisir quelles créatures évoluent. Chaque mutation leur donne de nouvelles capacités.'],
     ['Choisir un tempo', 'Pour chaque créature, choisis Instinct pour agir plus tôt ou Précision pour avoir une chance de porter un coup critique.'],
     ['Lancer un sort', 'Quand vient son tour, choisis le sort et ses cibles. Tu peux voir comment s’est déroulé le dernier coup avant de te décider.'],
+  ],
+  movePictures: [
+    'La Créature 1 est devenue une Brute, avec Marteler et Encaisser.',
+    'La Brute joue Instinct : dans l’ordre révélé, elle agit en premier.',
+    'La Brute bondit sur un ennemi avec Marteler, et le coup porte.',
   ],
   worldTitle: 'Le champ de bataille s’effondre',
   worldLead: 'Bien avant le duel, la corruption de la planète avait déjà transformé sa faune. Au fil du duel, le champ de bataille s’effondre un peu plus.',

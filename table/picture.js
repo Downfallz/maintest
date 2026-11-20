@@ -68,22 +68,29 @@ function stripOf(name, { page, art = PAGE_ART }) {
   return entry;
 }
 
-/** What the strip's frame carries: its count, and its name for a screen reader, one for the whole strip. */
-const frameAttributes = (frames, alt) => ({ class: 'motion-strip', 'data-frames': frames, ...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': 'true' }) });
+/**
+ * What the strip's frame carries: its count, the frame it rests on under less motion when that is not the first
+ * (ADR 0199), and its name for a screen reader, one for the whole strip.
+ */
+function frameAttributes(frames, alt, still) {
+  if (still !== undefined && !(Number.isInteger(still) && still >= 1 && still <= frames)) throw new Error(`A strip of ${frames} frames rests on a frame from 1 to ${frames}, not ${still}`);
+  return { class: 'motion-strip', 'data-frames': frames, ...(still > 1 ? { 'data-still': still } : {}), ...(alt ? { role: 'img', 'aria-label': alt } : { 'aria-hidden': 'true' }) };
+}
 
 /**
  * A strip of frames as text: one file, its frames side by side, stepped across its frame by the motion kit while
- * it is the screen's ambience. Under less motion, and before it is in view, it is its first frame.
+ * it is the screen's ambience. Before it is in view it is its first frame; under less motion it is `still`, the
+ * frame that says what the strip shows (the first by default).
  */
 export function stripHtml(name, options = {}) {
   const entry = stripOf(name, options);
-  return `<span ${written(frameAttributes(entry.frames, options.alt))}>${pictureHtml(name, { ...options, alt: '' })}</span>`;
+  return `<span ${written(frameAttributes(entry.frames, options.alt, options.still))}>${pictureHtml(name, { ...options, alt: '' })}</span>`;
 }
 
 /** A strip of frames as an element. Call `watch()` of motion.js once it is on the page. */
 export function stripElement(doc, name, options = {}) {
   const entry = stripOf(name, options), frame = doc.createElement('span');
-  for (const [attribute, value] of Object.entries(frameAttributes(entry.frames, options.alt))) frame.setAttribute(attribute, String(value));
+  for (const [attribute, value] of Object.entries(frameAttributes(entry.frames, options.alt, options.still))) frame.setAttribute(attribute, String(value));
   frame.append(pictureElement(doc, name, { ...options, alt: '' }));
   return frame;
 }

@@ -221,5 +221,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0196](0196-stage-a-spell-in-beats-an-effects-kit-plays.md) | Stage a spell in beats an effects kit plays | Accepted |
 | [0197](0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md) | Hold the pages to WCAG 2.2 AA, a vocabulary of motion and a budget | Accepted |
 | [0198](0198-send-a-pages-pictures-at-the-size-they-are-drawn-and-draw-one-icon-set.md) | Send a page's pictures at the size they are drawn, and draw one icon set | Accepted |
+| [0199](0199-let-a-strip-of-frames-rest-on-the-frame-that-says-what-it-shows.md) | Let a strip of frames rest on the frame that says what it shows | Accepted |
 
 <!-- index:end -->
