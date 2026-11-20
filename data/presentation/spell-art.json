@@ -106,6 +106,7 @@
     ]
   },
   "spell:enraged_charge:v1": {
+    "portrait": "fury",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -120,6 +121,7 @@
     ]
   },
   "spell:extort:v1": {
+    "portrait": "seize",
     "family": "physical",
     "motif": "bite",
     "delivery": "melee",
@@ -146,6 +148,7 @@
     ]
   },
   "spell:full_plate:v1": {
+    "portrait": "carapace",
     "family": "physical",
     "motif": "plates",
     "delivery": "cast",
@@ -366,6 +369,7 @@
     ]
   },
   "spell:protective_slam:v1": {
+    "portrait": "crash",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -407,6 +411,7 @@
     ]
   },
   "spell:reckless_swing:v1": {
+    "portrait": "wild-swing",
     "family": "physical",
     "motif": "slash",
     "delivery": "melee",
@@ -480,6 +485,7 @@
     ]
   },
   "spell:shield_bash:v1": {
+    "portrait": "body-slam",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
