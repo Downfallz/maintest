@@ -973,8 +973,9 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 #mutation-preview-region { flex: none; max-height: min(17dvh,150px); overflow: auto; overscroll-behavior: contain; }
 #planning-dialog[data-kind="Evolution"] #mutation-preview-region { max-height: 28dvh; }
 /* A narrow sheet gives its rule its own row under the heading, beside the tools: in one cell the two ran into each
-   other on a 320 px phone (UX8). */
-@media (max-width: 399px) {
+   other on a 320 px phone (UX8). From 360 px the heading fits beside the tools, and the extra rows would push the
+   sheet's Confirm row off a short phone's screen (the iOS release profile at 390 px). */
+@media (max-width: 359px) {
   #planning-dialog[data-kind="Evolution"] .planning-header { grid-template-rows: auto auto auto auto; row-gap: 4px; }
   #planning-dialog[data-kind="Evolution"] #planning-heading { grid-area: 1 / 1 / auto / -1; align-self: center; margin: 4px 0 0; }
   #planning-dialog[data-kind="Evolution"] .planning-tools { grid-area: 2 / 1 / auto / -1; justify-self: start; }
