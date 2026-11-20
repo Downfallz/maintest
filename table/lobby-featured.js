@@ -43,12 +43,13 @@ function nextLesson(lessons) {
  */
 export function featuredChoice({ mine = [], lessons = [], previous = null, pinned = false }) {
   const ongoing = mine.filter(entry => !entry.table.over);
-  // A person's turn before a bot's: a bot always waits for its player, and would hide a person whose time runs.
-  const waiting = waitingGames(ongoing), turns = [...waiting.filter(entry => gameKind(entry.table) === 'players'), ...waiting.filter(entry => gameKind(entry.table) === 'bots')];
-  const others = ongoing.filter(entry => !turns.includes(entry));
+  const turns = waitingGames(ongoing), others = ongoing.filter(entry => !turns.includes(entry));
   const kept = ongoing.find(entry => entry.table.id === previous);
   if (kept && pinned) return { kind: turns.includes(kept) ? 'turn' : 'waiting', entry: kept };
-  for (const [kind, list] of [['turn', turns], ['waiting', others]]) {
+  // A person's turn, then a bot's (a bot always waits for its player, and would hide a person whose time runs), then
+  // a game waiting on someone else: the game on show stays only within the first group that has one.
+  const groups = [['turn', turns.filter(entry => gameKind(entry.table) === 'players')], ['turn', turns.filter(entry => gameKind(entry.table) === 'bots')], ['waiting', others]];
+  for (const [kind, list] of groups) {
     if (list.length) return { kind, entry: list.find(entry => entry.table.id === previous) ?? list[0] };
   }
   const lesson = nextLesson(lessons);
@@ -126,7 +127,7 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
   root.dataset.featured = 'loading';
   root.setAttribute('aria-busy', 'true');
   // `lessons` is null where nobody can take one; `lessonsRead` says whether the host has answered yet.
-  let games = null, lessons = null, lessonsRead = false, shown = null, drawnGround = null, drawnCreature = null, choice = null, opening = false, pressed = false, disabled = false;
+  let games = null, lessons = null, lessonsRead = false, shown = null, drawnGround = null, drawnCreature = null, choice = null, opening = false, pressed = false, disabled = true, gesture = null;
   // The last round the host said for each table: one answer that could not read it in time keeps the title and the ground.
   const rounds = new Map();
   function remembered(list) {
@@ -150,7 +151,8 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
   }
 
   function draw() {
-    if (games === null || !lessonsRead || opening) return;
+    // Under a finger the space holds still; what arrived is drawn once the press is handled or the finger leaves.
+    if (games === null || !lessonsRead || opening || pressed) return;
     choice = featuredChoice({ mine: games, lessons: lessons ?? [], previous: shown?.id ?? null, pinned: pinned() });
     const view = featuredView(choice, { started: (lessons ?? []).some(one => one.done) });
     root.dataset.featured = view.kind;
@@ -184,26 +186,40 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     if (before !== view.id) changed();
   }
 
+  /**
+   * What a press opens: what the action showed when the finger came down (or when a key pressed it), if that is
+   * still there. A lesson still listed, a game not over (as the host now describes it), a new battle the host
+   * allows. Otherwise the press opens nothing, and the space shows what is there now.
+   */
+  function stillThere(pressedOn) {
+    if (pressedOn?.kind === 'lesson') return (lessons ?? []).some(one => one.link === pressedOn.lesson.link) ? pressedOn : null;
+    if (pressedOn?.kind === 'new') return disabled ? null : pressedOn;
+    const entry = (games ?? []).find(one => one.table.id === pressedOn?.entry.table.id && !one.table.over);
+    return entry ? { ...pressedOn, entry } : null;
+  }
   action.addEventListener('click', () => {
-    // The finger's game was kept until now: what arrived while it was down is drawn once the press is handled.
-    pressed = false;
-    if (!choice || opening) return;
-    if (choice.kind === 'lesson') { go(choice.lesson.link); return; }
-    if (choice.kind === 'new') { openCreate({ opponent: 'bot' }); return; }
+    const pressedOn = gesture ?? choice;
+    gesture = null; pressed = false;
+    if (!pressedOn || opening) return;
+    const target = stillThere(pressedOn);
+    if (!target) { draw(); return; }
+    if (target.kind === 'lesson') { go(target.lesson.link); draw(); return; }
+    if (target.kind === 'new') { openCreate({ opponent: 'bot' }); draw(); return; }
     // The press is answered at once, before the battle's page arrives; the battle's first frame names the game.
+    const title = arrivalLine(target.entry.table, held(target.entry));
     opening = true;
     action.textContent = 'Opening…';
-    action.setAttribute('aria-label', `Opening: ${shown.title[0].toLowerCase()}${shown.title.slice(1)}`);
+    action.setAttribute('aria-label', `Opening: ${title[0].toLowerCase()}${title.slice(1)}`);
     action.setAttribute('aria-busy', 'true');
-    writeArrival(session, choice.entry.table.id, shown.title, (choice.entry.seats ?? []).map(seat => seat.token));
-    try { enter(choice.entry); } catch (error) { giveBack(); throw error; }
+    writeArrival(session, target.entry.table.id, title, (target.entry.seats ?? []).map(seat => seat.token));
+    try { enter(target.entry); } catch (error) { giveBack(); throw error; }
   });
   // The action is given back when the page could not leave, or comes back from the back-forward cache.
   function giveBack() { opening = false; draw(); }
   win.addEventListener?.('pageshow', event => { if (event.persisted) giveBack(); });
-  // A finger on the action keeps its game from pointerdown until the click; one that slides off lets it follow.
-  action.addEventListener('pointerdown', () => { pressed = true; });
-  for (const kind of ['pointercancel', 'pointerleave']) action.addEventListener(kind, () => { pressed = false; draw(); });
+  // A finger on the action keeps what it pressed from pointerdown until the click; one that slides off lets it follow.
+  action.addEventListener('pointerdown', () => { pressed = true; gesture = choice; });
+  for (const kind of ['pointercancel', 'pointerleave']) action.addEventListener(kind, () => { pressed = false; gesture = null; draw(); });
   action.addEventListener('blur', () => draw());
 
   return {

@@ -186,7 +186,7 @@ test('with nothing to resume or learn, the featured action plays a bot, and New 
   const doc = page(), asked = [];
   const featured = mountFeatured(doc, { enter: () => {}, openCreate: one => asked.push(one), go: () => {}, session: null, ambience: () => {} });
 
-  featured.setGames([]); featured.setLessons([]);
+  featured.setGames([]); featured.setLessons([]); featured.setDisabled(false);
   assert.equal(doc.ids.featured.dataset.featured, 'new');
   assert.equal(doc.ids['featured-action'].textContent, 'Play a bot →');
   assert.equal(doc.ids['featured-status'].dataset.empty, 'true', 'its line kept, unseen');
@@ -308,4 +308,49 @@ test('a cue left unread goes stale within the minute', () => {
   assert.equal(arrivalFor(session, '?player1=g-token', 1000 + 59000), 'Round 3 against Rook');
   assert.equal(arrivalFor(session, '?player1=g-token', 1000 + 61000), null);
   assert.equal(readArrival(session, 'g', 1000 + 61000), null);
+});
+
+// The owner's review of PR #982: a press opens what it was pressed on, a person's turn outranks a bot's kept one,
+// and creation waits for the host. Each failed before its fix.
+test('a press opens what it was pressed on: a lesson pressed stays the lesson when a turn arrives before the click', () => {
+  const went = [], entered = [];
+  const { doc, featured } = mounted({ go: link => went.push(link), enter: entry => entered.push(entry.table.id) });
+  featured.setLessons(series('new', 'new')); featured.setGames([]);
+  const action = doc.ids['featured-action'];
+  action.listeners.pointerdown();
+  featured.setGames([game('ready')]);
+  action.listeners.click();
+  assert.deepEqual(went, ['/battle?scenario=t1']);
+  assert.deepEqual(entered, []);
+  assert.equal(action.textContent, 'Play your turn →', 'then the space follows the turn');
+});
+
+test('a press on a game that ended before the click opens nothing, and the space shows what is now there', () => {
+  const entered = [];
+  const { doc, featured } = mounted({ enter: entry => entered.push(entry.table.id) });
+  featured.setLessons([]); featured.setGames([game('a')]);
+  const action = doc.ids['featured-action'];
+  action.listeners.pointerdown();
+  featured.setGames([game('a', { over: true }), game('b')]);
+  action.listeners.click();
+  assert.deepEqual(entered, []);
+  assert.equal(action.attributes['aria-label'], 'Play your turn: round 1 against Rook');
+  assert.equal(featured.shown(), 'b');
+});
+
+test('a person\'s turn that arrives outranks the bot\'s turn on show', () => {
+  const { featured } = mounted();
+  featured.setLessons([]);
+  featured.setGames([game('bot', { against: bot }), game('friend', { mine: false })]);
+  assert.equal(featured.shown(), 'bot');
+  featured.setGames([game('bot', { against: bot }), game('friend')]);
+  assert.equal(featured.shown(), 'friend');
+});
+
+test('creation waits for the host: Play a bot is disabled until it says whether games are saved', () => {
+  const { doc, featured } = mounted();
+  featured.setLessons([]); featured.setGames([]);
+  assert.equal(doc.ids['featured-action'].disabled, true, 'before the host answers');
+  featured.setDisabled(false);
+  assert.equal(doc.ids['featured-action'].disabled, false);
 });

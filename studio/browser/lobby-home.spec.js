@@ -10,8 +10,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null } = {}) {
-  const state = { holdInvitation, account, mode, meDown, offline: false, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false } = {}) {
+  const state = { holdInvitation, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -1175,4 +1175,19 @@ test('a featured game stays featured while several turns are the player\'s, and 
   await expect(page.locator('#your-turn .game-row').first()).toContainText('Round 8');
   await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 7 against Bastien');
   expect(state.errors).toEqual([]);
+});
+
+test('creation waits for the host: a first read that failed leaves Play a bot and New battle disabled until a read succeeds', async ({ page }) => {
+  const state = await home(page, { games: [], tutorials: series('done', 'done'), lobbyDown: true });
+
+  await expect(page.locator('#lobby-status')).toContainText('Reconnecting automatically');
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'new');
+  await expect(page.locator('#featured-action')).toBeDisabled();
+  await expect(page.locator('#new-table')).toBeDisabled();
+  state.offline = false;
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.locator('#featured-action')).toBeEnabled();
+  await expect(page.locator('#new-table')).toBeEnabled();
+  await page.locator('#featured-action').click();
+  await expect(page.locator('#create-dialog')).toHaveJSProperty('open', true);
 });

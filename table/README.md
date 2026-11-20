@@ -440,7 +440,8 @@ The **featured space** opens the home with its one filled action, chosen from wh
 `lobby-featured.js`, [the lobby's brief](../docs/art/journeys/lobby.md)): a turn of the player's, a person's before
 a bot's; then a game of theirs waiting on someone else; then the next lesson not done, unless it and every lesson
 after it were skipped; then Play a bot, with New battle quiet under it. The game on show stays while it is
-eligible, and whatever arrives while its action has the focus or a finger. Its press says Opening… and hands the
+eligible within its group, and while its action has the focus; under a finger the space holds still, and a press
+opens what the finger came down on if it is still there. Its press says Opening… and hands the
 battle the game's line through the tab's session storage (`arrival.js`, key `downfall.arena.arrival.v1`, read once,
 stale after a minute), which the battle's first frame names until its board arrives.
 

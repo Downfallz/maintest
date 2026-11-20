@@ -538,52 +538,53 @@ The 3 animations the measures find at rest are the three dots: ambience, the scr
   link to pass on, as far as the film shows. Whether it should is `docs/tabletop/battle-ux-parity-plan.md`'s and
   UX11's.
 
-## A game that waits on someone else (`home-game-ended`)
+## A game that ended, a bot's turn on show (`home-game-ended`)
 
 ### Job
 
-The home once the game against the bot was conceded: Your games shows Finished, and the table opened for a player
-still waits for its second seat. The featured space shows that table (rank 2).
+The home once the first game against the bot was conceded and a second one opened and left on its first question:
+Your games shows Finished, the second bot's game is the player's turn, and the table opened for a player waits for
+its seat below. The featured space shows the bot's turn (rank 1); the table that waits is rank 2, in its group.
 
-- **Filled action**: Open the game →, on the featured table. The finished game's View game → is an outline, as are
-  New battle and Learn to play's Play.
+- **Filled action**: Play your turn →, on the bot's game. ＋ New battle is quiet under it; the finished game's View
+  game →, the waiting table's Resume game → and Learn to play's Play are outlines.
 
 ### Words
 
-- **Order**: the featured space: its ground, `YOUR TABLE`, the title, what it waits for, Open the game →, ＋ New
-  battle; then Your games on Finished, Learn to play, Find an opponent.
-- **Budget**: 165 words, 169 before, 161 built.
+- **Order**: the featured space: its ground, `YOUR TURN`, the title, the since line, Play your turn →, ＋ New battle;
+  then Your games on Finished, Learn to play, Find an opponent.
+- **Budget**: 165 words, 169 before, 163 built.
 
 ```text
 [the eclipse ground]
-YOUR TABLE
-Your 3v3 table
-Waiting for a player
-[Open the game →]
+YOUR TURN
+Round 1 against Hard (bot)
+Last move just now
+[Play your turn →]
 [＋ New battle]
 ```
 
-A table not yet begun has no round and no opponent: its title is "Your 3v3 table", its status `tableState`'s
-("Waiting for a player"), or the seat kept for a friend ("Waiting for Rook…", `invitedState`). A game begun says
-`THEIR TURN`, "Round 3 against Rook" and "Rook's turn · 1 d left", as `turnOf` says it; `IN PLAY` while a round
-resolves and nobody is asked. The empty finished list keeps its line:
-"No finished games against players yet."
+The status says nothing: a lone "Your turn" is the eyebrow's. A table not yet begun, featured when nothing ranks
+above it, says `YOUR TABLE`, "Your 3v3 table" and `tableState`'s "Waiting for a player" (or `invitedState`'s
+"Waiting for Rook…") with Open the game →; a game begun and not the player's turn says `THEIR TURN`, "Round 3
+against Rook", "Rook's turn · 1 d left"; `IN PLAY` while a round resolves and nobody is asked. The empty finished
+list keeps its line: "No finished games against players yet."
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground: the table has not begun, so it stands at its first round. | 390 by 150 px | Where will this game be played? | `table/battle-art/eclipse-battle.webp` |
-
-A begun game takes its round's ground, as on a turn that waits.
+| The eclipse ground: the bot's game is in round 1. | 390 by 150 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
 
 ### States
 
 - **First paint**: the featured space's room.
-- **Empty**: Finished with no game of a kind says so in a line, as today: finishing a game is what fills it.
+- **Empty**: Finished with no game of a kind says so in a line: finishing a game is what fills it.
 - **Loaded**: as filmed.
-- **Waiting**: after Open the game →: `Opening…`, `aria-busy`, the cue handed on.
-- **Error**: as on a turn that waits. Read, not seen.
+- **Waiting**: after Play your turn →: `Opening…`, `aria-busy`, the cue handed on. The press opens the game the finger
+  came down on; one that ended before the click opens nothing, and the space shows what is there now.
+- **Error**: as on a turn that waits; Play a bot and New battle stay disabled after a failed first read, and until
+  the host says games are saved. Read, not seen.
 - **Offline**: as on a turn that waits. Read, not seen.
 
 ### Motion
@@ -591,7 +592,7 @@ A begun game takes its round's ground, as on a turn that waits.
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
 | The picture arrives | The ground has loaded, after the first read placed it. | `opacity` | [Room held while it loads](../ux-craft.md#room-held-while-it-loads) | `--motion-normal`, `--motion-enter` |
-| The press | A pointer down on Open the game → or any other action. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+| The press | A pointer down on Play your turn → or any other action. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
 ### Less motion
 
@@ -606,7 +607,7 @@ A begun game takes its round's ground, as on a turn that waits.
 - **Names**: the featured space named by its title; the ground `alt=""`; the result tags say Victory or Defeat in
   words, never by colour alone.
 - **Announced**: nothing on load.
-- **Targets**: 2 of 18 under 44 px at 320 and 1 at 390, built (2 of 16 and 1 before); lifted to 44.
+- **Targets**: none of 18 under 44 px at either width, built (2 of 16 and 1 before).
 
 ### Cost
 
@@ -622,28 +623,28 @@ A begun game takes its round's ground, as on a turn that waits.
 
 ### Job
 
-The home is open and its featured game waits on someone else; the other seat acts through the host, the stream
-says the player's lists changed, and the read says the turn is the player's. The featured game's status and action
-change together, in place. The walk films it as the stage extended it: after `home-game-ended`, Rook takes the open
-seat of the walker's table from another browser, the match begins, and both players are asked to choose (the strip
-`turn-arrives`). A game against a person in progress, with Rook's answer as the arrival, is the same screen with
-other words, and is the owner's clip.
+The home is open; the other seat acts through the host, the stream says the player's lists changed, and the read
+says a turn is the player's. The walk films it after `home-game-ended`, two games in progress: the bot's turn is on
+show when Rook takes the open seat of the walker's table from another browser, the match begins, and both players
+are asked to choose (the strip `turn-arrives`). A person's turn outranks a bot's, so Rook's game takes the featured
+space, and its press opens Rook's game (the walk asserts it). Had the featured game been the one waiting on Rook,
+its status and action would change together, in place: the second form under **Words**.
 
-- **Filled action**: Play your turn →, which said Open the game → before the turn arrived. The same button, the same
-  game: only its words change.
+- **Filled action**: Play your turn →, now on Rook's game. Nothing replaces the featured game while a finger is on
+  its action; the change waits for the lift.
 
 ### Words
 
 - **Order**: as on a turn that waits.
-- **Budget**: 170 words, `home-game-ended`'s 165 with the turn's words; not filmed before this brief.
+- **Budget**: 170 words, 167 built.
 
-As the walk films it, the seat taken:
+As the walk films it, the seat taken while the bot's turn is on show:
 
 ```text
-YOUR TABLE                   →   YOUR TURN
-Your 3v3 table               →   Round 1 against Rook
-Waiting for a player         →   Both players choose · 2 d 23 h left
-[Open the game →]            →   [Play your turn →]
+YOUR TURN                    →   YOUR TURN
+Round 1 against Hard (bot)   →   Round 1 against Rook
+Last move just now           →   Both players choose · 2 d 23 h left
+[Play your turn →]           →   [Play your turn →]
 ```
 
 A game in progress, Rook's answer arriving:
@@ -656,8 +657,8 @@ Rook's turn · 1 d left       →   2 d left
 [Open the game →]            →   [Play your turn →]
 ```
 
-The featured status, a `role="status"` region, says once "Your turn · both players choose · 2 d 23 h left". The title changes with the status when the seat
-is taken, since the table now has a round and an opponent; it is the same game, so it stays featured.
+The featured status, a `role="status"` region, says once "Your turn · both players choose · 2 d 23 h left". In the walk the featured game itself changes, a bot's
+for a person's: the title and the status take their new words in place, the button unmoved.
 
 ### Pictures
 
@@ -687,7 +688,8 @@ the old, the button unmoved.
 | The since line arrives | The same read: the line since the last visit is added under the turn line, in room held for it. | `opacity` | [Your move first](../ux-craft.md#your-move-first) | `--motion-normal`, `--motion-enter` |
 | The press | A pointer down on Play your turn →. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
-The scale plays on the eyebrow's two words, not on the status line: on the strip at 390 the line scaled by the
+In the walk the eyebrow already says `YOUR TURN`, so only the status fades (and the title takes its words); the
+number beat plays where the eyebrow changes. The scale plays on the eyebrow's two words, not on the status line: on the strip at 390 the line scaled by the
 number beat reaches the card's inner edges (40 ms), and at 320, two lines across the card, it would pass them. The
 action's words change with the status, in the same frame, and the button keeps its place and size (it spans
 the space's width). A read that says the same again plays nothing. If the focus or a finger is on the action, the
@@ -721,9 +723,5 @@ words still change, since it opens the same game; a different game never takes i
 
 - The since line's room held when it is empty costs a line of height on a game that waits; the owner may prefer the
   line to arrive and push, below the action.
-- The walk reaches the arrival with one game in progress (the bot's was conceded); the plan's clip asks for two,
-  and the clip films two (Ongoing · 2).
-  A second game, against a person and not the player's turn, would show the featured game held while another
-  changes below it.
-- The walk's arrival is a seat taken, not an answer within a round: the second form above is read in the code and
-  in the clip, not on the sheet.
+- The walk's arrival is a seat taken, with two games in progress (the bot's on show), not an answer within a round:
+  the second form above (one game's status changing in place) is read in the code, not on the sheet.
