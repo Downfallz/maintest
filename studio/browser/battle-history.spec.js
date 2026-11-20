@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openSpells } from './battle-spells-fixture.js';
+import { openSpells, servePageArt } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
@@ -29,6 +29,7 @@ async function mount(page, feed = [entry(10)]) {
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
+  await servePageArt(page);
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url());
     if (request.method() !== 'GET') state.writes.push(url.pathname);
@@ -89,7 +90,8 @@ test('History opens on a summary of each round, and All events holds the full re
   await expect(page.locator('#history-list')).toBeHidden(); await expect(page.locator('#history-filters')).toBeHidden();
   const card = page.locator('.summary-round'); await expect(card).toHaveCount(1); await expect(card.locator('h3')).toHaveText('Round 2');
   const casts = card.locator('.summary-casts > li'); await expect(casts).toHaveCount(2);
-  await expect(casts.first().locator('.spell-portrait')).toHaveJSProperty('naturalWidth', 512);
+  await expect(casts.first().locator('.spell-portrait')).toHaveAttribute('src', /\/page-art\/spell-[a-z-]+-40\.[0-9a-f]+\.webp$/);
+  await expect.poll(() => casts.first().locator('.spell-portrait').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
   await expect(casts.nth(0)).toHaveAttribute('data-side', 'Opponent'); await expect(casts.nth(0)).toContainText('Creature 4');
   await expect(casts.nth(0).locator('.summary-status')).toHaveText('Crit'); await expect(casts.nth(0)).toContainText('Damage 7');
   await expect(casts.nth(1)).toHaveAttribute('data-side', 'Your team'); await expect(casts.nth(1).locator('.summary-status')).toHaveCount(0);
