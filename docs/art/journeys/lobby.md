@@ -19,6 +19,11 @@ run for this brief: the paints are the baseline's (home-new: largest paint 1.9 s
 home's shift 0.21 on the slow phone once the footer waits with the panel). On the fast walk every screen's shift is
 0.00. At 320 by 568 the walk could not press the match's Settings after `home-waiting`: that is the match's, UX11's.
 
+Read again against the built journey's film (its sheets, measures, the strip `turn-arrives`, `--paint`, and two
+real-time clips at 390 by 844, with full and with less motion), and brought in line where the build chose otherwise
+on purpose: the new battle's action, the room held, the Your turn band, the cue, the sizes the grounds are drawn at.
+The numbers of each **Cost** are the built film's where it measured them.
+
 What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one filled action, the cut corner. No shade and no face
@@ -28,30 +33,41 @@ What holds for every screen of the journey:
   are what `GET /api/lobby/mine` and `GET /api/tutorials` say. The page reads them when the lobby's stream says they
   changed (`table/changes.js`), on the page's return to view, and back online; never on a clock (ADR 0164). The one
   timer left (the countdown of a time to answer, ADR 0169) redraws words and moves nothing: it never replays a beat.
-- **The featured space.** The hero ("Your next battle.") becomes one featured space at the top of the home, under
-  the greeting, with one filled action. It follows the player's state, in this order:
+- **The featured space.** The hero becomes one featured space at the top of the home: its picture, an eyebrow that
+  says what it holds (`TUTORIAL 1 OF 4`, `YOUR TURN`, `THEIR TURN`, `YOUR TABLE` for a table not begun, `IN PLAY`
+  while a round resolves, `A NEW BATTLE`), a title, a detail or a status, and the same two actions in every state:
+  the filled one, and ＋ New battle quiet under it, so the row of actions never changes its shape. It follows the
+  player's state, in this order:
   1. a game whose turn is the player's, a game against a person before a game against a bot, then the order of
      `waitingGames` (the time to answer that runs out soonest first);
   2. a game of theirs that waits on someone else: the other player's turn, or a seat not yet taken;
   3. a lesson to continue: the next lesson not done, unless it and every lesson after it were skipped;
-  4. a new battle.
+  4. a new battle: "Your next battle.", "A bot answers at once. Or challenge a friend, or take an open seat.", and
+     **Play a bot →** filled, which opens the Create window on Solo (the quickest first game).
 
   A featured game stays featured while it is eligible at its rank. Nothing replaces it while its action has the
   focus or a finger is on it (from `pointerdown` until `pointerup` or `pointercancel`): the change waits for the blur
   or the lift, as a change heard during the Create window waits for it to close today. Its elements are updated in
   place, never drawn again, so the focus and the target stay. Which game is featured, and why, is never computed
   beyond what `turnOf` in `table/players.js` and the host's lists already say.
-- **Room held.** The featured space has its height from the first paint, before the host answers; its picture holds
-  its room by its `width` and `height`, and a picture that arrives late never moves the button. The footer waits
-  until the lists' first read is in. Budget: shift under 0.1 on the slow phone, against 0.21 today (UX7's note).
+- **Room held.** Every line of the featured space keeps its room in every state: the title and the detail two
+  lines at least, the status line kept unseen when it is empty, the two actions. On a phone the text block is
+  360 px tall at least, with the actions at its foot, so a status that wraps when a turn arrives moves nothing.
+  Until the first read the words and actions are there but unseen, and the space is `aria-busy`. The eclipse ground
+  is asked for as soon as the host says someone can play, the creature only once the choice is known; a picture
+  that arrives late never moves the button. The footer waits until the lists' first read is in. Budget: shift under
+  0.1 on the slow phone (0.00 built, 0.21 before).
 - **The press.** The featured action says `Opening…` at once and sets `aria-busy="true"` until the page changes; a
-  second press does nothing. The battle's first frame carries the cue: the lobby hands the featured title ("Round 3
-  against Rook") to the battle page through the tab's session storage, keyed by the table, and the battle page shows
-  it in its instruction line (`#instruction`, "Loading the match…" today) until the board arrives, then forgets it.
-  Session storage, not the address: a link shared or kept would carry a round that is no longer true.
+  second press does nothing. The battle's first frame carries the cue: the lobby hands the featured title ("Round 1
+  against Rook") to the battle page through the tab's session storage, keyed by the table and the seat tokens, read
+  once. The battle page names the game in its headline (`#actor-name`) and says "Opening the board…" as its
+  instruction (`#instruction`) until the board arrives. Session storage, not the address: a link shared or kept
+  would carry a round that is no longer true.
 - **One filled action a screen.** Every other action of the home is quiet (an outline): a game card's Resume game,
   the Your turn band's Play next, Learn to play's Play, a recent opponent's Challenge, an invitation's Accept & play,
-  New battle when it is not the featured action. My choice for Accept & play: quiet, since the invitation section
+  ＋ New battle under the featured action. The Your turn band is left out when it would hold only the featured game
+  (it repeated it, and its arrival shifted the lists by 0.19 at 320); it shows from two turns, or one not featured.
+  My choice for Accept & play: quiet, since the invitation section
   sits directly under the featured space, first in the order of focus after it, and the bell counts it; whether an
   invitation should itself take the featured space is under **Left**.
 - **Readable text.** Nothing under 11 px that the lobby writes: the eyebrows (10 px), the status tags (10 px in
@@ -60,11 +76,13 @@ What holds for every screen of the journey:
   navigation's, measured with the home all the same: they reach 11 px too.
 - **Names.** An action's accessible name begins with its visible words (axe's `label-content-name-mismatch` on
   `home-your-turn` and `home-waiting`: "Resume game →" is named "Resume 3v3 table <id>"). It becomes "Resume game: 3v3
-  battle against Hard", and the featured action is named by its words and described by the featured title.
-- **The status region.** `#lobby-status` stops saying the host's count of tables ("1 table ongoing · updates
+  battle against Hard (bot), table <id>", and the featured action is named by its words and described by the
+  featured title.
+- **The status regions.** `#lobby-status` stops saying the host's count of tables ("1 table ongoing · updates
   automatically", which reads as the player's own on an empty home, and is said again on every change). It is
-  empty at rest, says "Connection interrupted. Reconnecting automatically…" while the reads fail, and says once
-  "Your turn: round 3 against Rook." when a turn arrives on the featured game.
+  empty at rest and says "Connection interrupted. Reconnecting automatically…" while the reads fail. The featured
+  status (`#featured-status`) is itself a `role="status"` region: it says "Your turn…" once when a turn arrives on
+  the featured game.
 - **Words.** The words of `docs/domain/player-terminology.md`. Round and Match are still undecided there and keep
   their current words; the lobby says battle and game, as it does today. No rule is restated: Ranked keeps its one
   line, the rest is the rulebook's.
@@ -84,66 +102,70 @@ The walk's `home-menu` is briefed lightly: the menu is the navigation's, and the
 The home a new player reaches after leaving tutorial 1 from its brief: signed in, no game, the four lessons listed,
 the first skipped. The featured space offers the lesson to continue (rank 3), with the creature a team starts from.
 
-- **Filled action**: Play →, on the featured lesson (tutorial 1 here). Learn to play's Play on the same lesson
-  becomes an outline; New battle is an outline in the empty Your games.
+- **Filled action**: Play →, on the featured lesson (tutorial 1 here). ＋ New battle is the quiet action under it;
+  Learn to play's Play on the same lesson and the empty lists' Play a bot → and Open a table → are outlines.
 
 ### Words
 
-- **Order**: the greeting; the featured space: its picture, `TUTORIAL 1 OF 4`, the lesson's title, its goal, Play →;
+- **Order**: the featured space: its picture, `TUTORIAL 1 OF 4`, the lesson's title, its goal, Play →, ＋ New battle;
   then Your games and its empty state, Learn to play, Find an opponent, the footer.
-- **Budget**: 150 words on the home, 152 today at both widths; at most 35 above the fold at 320 by 568 (the header,
-  the greeting and the featured space). The hero's 19 words and the status line's 5 go; the featured lesson is 19.
+- **Budget**: 158 words on the home, 152 before the build and 158 built; at most 35 above the fold at 320 by 568
+  (the header and the featured space). The hero's 19 words and the status line's 5 went; the featured lesson is 21.
+  The budget was 150; the built empty line of Your games is longer than the brief's and better (it says the games
+  follow the player and where the quickest first one is), so the budget follows the film.
   The eyebrow and the title are the host's (`place` and `title` of `tutorialCards`); the goal is the scenario's.
 
 ```text
-WELCOME BACK, WALKER · BETA
 [the eclipse ground, the base creature standing on it]
 TUTORIAL 1 OF 4
 Your first combat
 Cast a spell with each of your creatures: hit the wounded enemy.
 [Play →]
+[＋ New battle]
 
 Your games
-No games yet. A battle you start or join waits here.
-[＋ New battle]
+Your games appear here, on every device you sign in on. The quickest first one is against a bot.
+[Play a bot →]
 …
 Find an opponent
-No open seats right now. Open a table and another player can join it.
-[Open a table]
+No open seats right now. Open a table and another player can take its seat.
+[Open a table →]
 ```
 
 The action says `Continue →` once one lesson of the series is done (the series continues), and `Play →` before:
 the host keeps no place inside a lesson, so "Continue" can only mean the series. Today's Your games empty line
 ("Create a table, take an open seat or enter an invitation code", 15 words) names three ways and offers none; Find
 an opponent's (16) points at two. Each now says what fills the list and offers one quiet button that does it. Open a
-table opens the Create window on PvP.
+table → opens the Create window on PvP, Play a bot → on Solo.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground, the field a game starts on, cropped wide behind the lesson. | 358 by 179 px | Where will I play? | `table/battle-art/eclipse-battle.webp` |
-| The base creature, the form a lesson's team starts from, standing on the ground (tutorial 1). | 150 by 100 px | Who do I play? | `table/battle-art/evolutions/base-creature.webp` |
-| A Brute, in place of the base creature when tutorial 2 is the next lesson. | 150 by 100 px | Which lesson is this, before reading? | `table/battle-art/evolutions/brute-base.webp` |
-| Ironhide, when tutorial 3 is next. | 150 by 100 px | What will I grow into? | `table/battle-art/evolutions/brute-stage2-ironhide.webp` |
-| The Colossus, when tutorial 4 is next. | 150 by 100 px | How far does the series go? | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
+| The eclipse ground, the field a game starts on, a band across the card. | 390 by 150 px | Where will I play? | `table/battle-art/eclipse-battle.webp` |
+| The base creature, the form a lesson's team starts from, standing on the ground (tutorial 1). | 120 by 80 px | Who do I play? | `table/battle-art/evolutions/base-creature.webp` |
+| A Brute, in place of the base creature when tutorial 2 is the next lesson. | 120 by 80 px | Which lesson is this, before reading? | `table/battle-art/evolutions/brute-base.webp` |
+| Ironhide, when tutorial 3 is next. | 120 by 80 px | What will I grow into? | `table/battle-art/evolutions/brute-stage2-ironhide.webp` |
+| The Colossus, when tutorial 4 is next. | 120 by 80 px | How far does the series go? | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
 
-At 320 px the ground is drawn at 288 by 144 px and the creature at 120 by 80. Each is declared for the home's page (table/home) in
-`docs/art/page-pictures.json` and derived by `scripts/ux/pictures.mjs` at these sizes and twice them; the creatures
-are the ones Learn to play already shows at 96 px. The ground is the featured space's largest picture; one creature
-loads with it. Learn to play's four paintings stay lazy, below the first screen.
+The ground is declared drawn at 390 (the card's width on a phone) and 640 (a wide screen); the creature is 120 px
+wide on a phone and 150 on a wide screen. Each is declared for the home's page (table/home) in
+`docs/art/page-pictures.json` and derived by `scripts/ux/pictures.mjs` at these sizes and twice them. The ground is
+the featured space's largest picture; one creature loads with it. Learn to play's four paintings stay lazy, below
+the first screen.
 
 ### States
 
-- **First paint**: the greeting and the featured space's room, slate with the cut corner, `aria-busy="true"`, no
-  picture, no action: before the first read nothing says which action is the player's, and a wrong one that changes
-  under a finger is worse than none. The lists say "Finding your games…" as today; the footer waits.
+- **First paint**: the header alone, until the host says who is signed in (the sign-in panel or the home; UX7 left
+  this). Then the featured space's room, slate with the cut corner, `aria-busy="true"`, its words and actions there
+  but unseen, the eclipse ground asked for: before the first read nothing says which action is the player's, and a
+  wrong one that changes under a finger is worse than none. The lists say "Finding your games…"; the footer waits.
 - **Empty**: this screen is the home's empty state. Rank 4, a player with no game and no lesson to continue, shows
-  the same ground and the base creature with `＋ New battle` filled; the walk films it nowhere in this journey, and
-  the lessons' `home-after-the-lessons` shows it (four lessons done, no game).
+  the ground and the base creature, "Your next battle." and Play a bot → filled; the walk films it nowhere in this
+  journey, and the lessons' `home-after-the-lessons` shows it (four lessons done, no game).
 - **Loaded**: the featured lesson as under **Words**, the picture faded in once it has arrived.
 - **Waiting**: after Play →: `Opening…`, `aria-busy`, until the battle page replaces the home.
-- **Error**: `/api/tutorials` not read: no lesson can be featured, so rank 4 holds the space (New battle). The
+- **Error**: `/api/tutorials` not read: no lesson can be featured, so rank 4 holds the space (Play a bot →). The
   lists' read failed: the space keeps its room and says "Your games could not be read yet."; the status region says
   it reconnects; no action until a read answers, since New battle needs the host's formats. Read, not seen.
 - **Offline**: the stream closes; back online the lists are read at once. A navigation offline lands on the service
@@ -157,7 +179,8 @@ loads with it. Learn to play's four paintings stay lazy, below the first screen.
 | The breath | The featured creature is in view, in a visible tab (`.motion-breath`, ambience). | `transform` | [Ambience](../ux-craft.md#ambience), [A menu that is a place](../ux-craft.md#a-menu-that-is-a-place) | `--motion-breath` |
 | The press | A pointer down on Play → or any other action. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
-The breath is the screen's one ambience: it stops out of view, in a hidden tab and under less motion. Learn to play's
+The breath is the screen's one ambience: it stops out of view, in a hidden tab, under less motion, and while a
+window or the menu covers the creature. Learn to play's
 cards arrive as UX8 staged them.
 
 ### Less motion
@@ -176,16 +199,17 @@ cards arrive as UX8 staged them.
   `alt=""`: the title says the lesson. The action is named "Play →" and described by "Tutorial 1 of 4, Your first
   combat".
 - **Announced**: nothing on arrival: the featured space is the page as it loads.
-- **Targets**: 1 of 15 under 44 px at 320, none at 390; the build finds it and lifts it to 44. The new buttons are 44.
+- **Targets**: 1 of 18 under 44 px at 320 built (1 of 15 before), none at 390: the build finds it and lifts it to 44.
+  The new buttons are 44.
 
 ### Cost
 
-- **Bytes**: the ground and one creature, before any scroll; the home's page has a first budget of 0 today, which the
-  stage sets with `scripts/ux/pictures.mjs --budget` in `docs/art/page-budget.json`. Not promised here.
-- **Largest paint**: the ground, placed after the first read. 1.9 s today (the baseline); aimed under 2.5 s on the
-  slow phone, read with `--paint`.
+- **Bytes**: the ground and one creature, before any scroll: 44 KB of pictures on the slow phone's profile, built
+  (`--paint`); the budget is the stage's, in `docs/art/page-budget.json`.
+- **Largest paint**: the ground, asked for once the host says someone can play: 2.28 s median built (2.26 to
+  2.80 s), 2.58 s when it was drawn after the lists, 1.9 s before (a page with no picture). Budget 2.5 s.
 - **Shift**: the featured space's room, the picture's `width` and `height`, the footer held until the first read.
-  0.21 today on the slow phone; aimed under 0.1.
+  0.00 on the slow phone built, against 0.21; budget 0.1.
 
 ### Left
 
@@ -195,8 +219,10 @@ cards arrive as UX8 staged them.
 - "Continue →" meaning the series continues is mine; the host keeps no place inside a lesson.
 - The plan's "ash passing behind a still creature" is not in the kit: the breath stands in for it. A strip of ash
   would be a picture asked of the owner, and is not asked until the owner says so.
-- The home's sections gain the featured space above New battle: `home-navigation.md`'s "Signed in" line names a
-  greeting, New battle, invitations, Your games and Find an opponent, and is amended in the same change.
+- The greeting ("Welcome back, Walker") is gone: the featured space's eyebrow takes its place, and the account
+  button carries the name. `home-navigation.md`'s "Signed in" line was amended with the build.
+- The featured block is 360 px tall at least on a phone: on a game, about 90 px of slate stands between the status
+  and the action, the price of a turn that arrives moving nothing. The owner may prefer a tighter card that moves.
 
 ## The menu (`home-menu`)
 
@@ -212,7 +238,7 @@ are UX10's.
 ### Words
 
 - **Order**: the entries, in `home-navigation.md`'s order, the current one first.
-- **Budget**: 163 words with the home behind, 165 today: the menu's 13 and the home's 150.
+- **Budget**: 171 words with the home behind, 165 before and 171 built: the menu's 13 and the home's 158.
 
 ### Pictures
 
@@ -248,8 +274,7 @@ covers it (out of view).
   focus stays on the button.
 - **Names**: the button says whether the menu is open (`aria-expanded`); the menu is a navigation landmark.
 - **Announced**: nothing.
-- **Targets**: 1 of 22 under 44 px at 320, none at 390: the home's own one. The 3 overlaps are the menu laid over the
-  home, by design.
+- **Targets**: 1 of 25 under 44 px at 320, none at 390: the home's own one. No overlap built (3 before).
 
 ### Cost
 
@@ -305,7 +330,8 @@ None: a form. A picture would push Create & play → further below the first scr
 | The window leaves | Cancel, the ×, Escape. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-fast`, `--motion-exit` |
 | The press | A pointer down on a tab, Cancel or Create & play →. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
-The kit's form already, from `table/identity.css`; the strip `create-window` films it.
+The kit's form already, from `table/identity.css`; the strip `create-window` films it. The home's breath behind the window
+pauses while it is open: the creature is under the backdrop, out of view as ambience counts it.
 
 ### Less motion
 
@@ -332,7 +358,7 @@ The kit's form already, from `table/identity.css`; the strip `create-window` fil
 
 ### Left
 
-- At 320 by 568, on PvP, the window is 827 px tall and Create & play → is below its first screen: the player scrolls
+- At 320 by 568, on PvP, the window is 791 px tall (827 before) and Create & play → is below its first screen: the player scrolls
   inside the window to reach it. Holding Cancel and Create & play → at the window's foot is beyond this stage's build;
   asked for UX9's next round or UX12's family of windows.
 - `Creating…` on the press, as `Opening…`, is beyond the build.
@@ -347,51 +373,54 @@ The home of a player one of whose games is theirs to play: here a game against a
 question, and in `home-waiting` a table opened for a player besides it. The featured space shows that game (rank 1)
 and opens it in one tap.
 
-- **Filled action**: Play your turn →, on the featured game. The game's card below says Resume game →, an outline;
-  so are the other card's, Learn to play's Play and New battle (at the head of Your games).
+- **Filled action**: Play your turn →, on the featured game. ＋ New battle is quiet under it. The game's card below
+  says Resume game →, an outline; so are the other card's, the empty group's and Learn to play's Play.
 
 ### Words
 
-- **Order**: the greeting; the featured space: its ground, the title (who it is against and the round), whose turn
-  as `turnOf` says it, the line since the last visit, Play your turn →; then Your games, New battle, the groups and
-  their cards, Learn to play, Find an opponent.
-- **Budget**: 175 words on `home-your-turn`, 174 today; 180 on `home-waiting`, 185 today; at most 35 above the fold
-  at 320 by 568. A card whose tag says Your turn writes its round alone on its turn line ("Round 1", where it says
-  "Your turn · Round 1" under the tag today).
+- **Order**: the featured space: its ground, `YOUR TURN`, the title (who it is against and the round), the rest of
+  the turn as `turnOf` says it, the line since the last visit, Play your turn →, ＋ New battle; then Your games, the
+  groups and their cards, Learn to play, Find an opponent.
+- **Budget**: 181 words on `home-your-turn` (174 before, 185 built); 180 on `home-waiting` (185 before, 181 built); at
+  most 35 above the fold at 320 by 568. The 4 words over are "Your turn" said twice more: the featured status
+  repeats its eyebrow, and a card whose tag says Your turn writes "Your turn · Round 1" under it, where its round
+  alone ("Round 1") says what the tag does not.
 
 ```text
-WELCOME BACK, WALKER · BETA
 [the round's ground]
-Round 1 against a Hard bot
-Your turn
+YOUR TURN
+Round 1 against Hard (bot)
 Last move just now
 [Play your turn →]
+[＋ New battle]
 ```
 
-Against a person, the title names them: "Round 3 against Rook"; against a bot, the bot's name from its seat, "against
-a Hard bot", or "against a bot" when the seat has none. The turn line is `turnOf`'s text, with the time left to
-answer when the host gives one ("Your turn · 2 d left"). The since line is `sinceVisitLine`'s, on the player's turn
-only, with its first letter raised as the card does.
+Against a person, the title names them: "Round 3 against Rook"; against a bot, the bot's name from its seat and
+"(bot)". The status is `turnOf`'s text less the words the eyebrow already says: nothing for a lone "Your turn",
+"Both players choose · 2 d 23 h left" for "Your turn · both players choose · 2 d 23 h left". What the status region
+announces keeps "Your turn". A number stays with its unit on one line ("2 d", "23 h"). The since line is
+`sinceVisitLine`'s, on the player's turn only, with its first letter raised as the card does.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground, for a game in rounds 1 to 5. | 358 by 179 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
-| The breach, for a game in rounds 6 to 9. | 358 by 179 px | How far along is this game? | `table/battle-art/horizon/breach.webp` |
-| The shattered sky, for a game in round 10 and after. | 358 by 179 px | How far along is this game? | `table/battle-art/horizon/shattered-sky.webp` |
+| The eclipse ground, for a game in rounds 1 to 5. | 390 by 150 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
+| The breach, for a game in rounds 6 to 9. | 390 by 150 px | How far along is this game? | `table/battle-art/horizon/breach.webp` |
+| The shattered sky, for a game in round 10 and after. | 390 by 150 px | How far along is this game? | `table/battle-art/horizon/shattered-sky.webp` |
 
 One loads, chosen by the round the host gives (`table.round`), following the plates `battle/src/battle-horizon.ts`
 lays: the field the player will land on. No creature: the lobby lacks a creature's confirmed form, and the ground
-alone stands until a summary the seat may see supplies it. At 320 px each is drawn at 288 by 144. Declared for
-the home's page as above.
+alone stands until a summary the seat may see supplies it. Declared drawn at 390 and 640, the breach and the sky
+lazy, for the home's page as above.
 
 ### States
 
 - **First paint**: the featured space's room, as on the home of a player with nothing.
-- **Empty**: cannot be: a turn waits. The group with no game says what fills it: "None in progress. Open a table and
-  another player can join it." with Open a table, or for bots "None in progress. A bot is always ready to play."
-  with Play a bot (the Create window on Solo), each an outline.
+- **Empty**: cannot be: a turn waits. The group with no game says what fills it: "No games against players in
+  progress. Take an open seat below, or open a table for another player." with Open a table →, or "No games against
+  bots in progress. A bot answers at once, any time." with Play a bot → (the Create window on Solo), each an
+  outline.
 - **Loaded**: as filmed: the bot's game featured. In `home-waiting`, the table that waits for a player stays below,
   in Against players, with its Resume game → quiet.
 - **Waiting**: after Play your turn →: `Opening…`, `aria-busy`, and the cue handed to the battle page.
@@ -419,17 +448,18 @@ zoom (my choice: see **Left**).
 ### Accessibility
 
 - **Focus**: not moved on load; the featured action first after the header.
-- **Names**: the featured space is a `<section>` named by its title ("Round 1 against a Hard bot"); its ground is
+- **Names**: the featured space is a `<section>` named by its title ("Round 1 against Hard (bot)"); its ground is
   decoration, `alt=""`. The action is "Play your turn →", described by the title and the turn line. The cards'
   actions begin with their visible words (axe's 1 and 2 `label-content-name-mismatch` today).
 - **Announced**: nothing on load.
-- **Targets**: 1 of 16 and 1 of 17 under 44 px at 320, none at 390; lifted to 44.
+- **Targets**: 1 of 19 under 44 px at 320 on both, built (1 of 16 and 1 of 17 before), none at 390; lifted to 44.
+  axe finds nothing built.
 
 ### Cost
 
 - **Bytes**: one ground before any scroll; Learn to play's paintings stay lazy.
-- **Largest paint**: the ground, after the first read; aimed under 2.5 s on the slow phone.
-- **Shift**: room held as on the home of a player with nothing; aimed under 0.1.
+- **Largest paint**: the ground; `--paint` loads `home-new` only, whose 2.28 s this screen shares the cause of.
+- **Shift**: room held as on the home of a player with nothing; 0.00 at both widths on the walk.
 
 ### Left
 
@@ -439,7 +469,8 @@ zoom (my choice: see **Left**).
 - A featured game against a bot is rank 1 for as long as it is open: a player who keeps one never sees a lesson or
   New battle featured. The owner may prefer a lesson before a bot's game.
 - No ambience on a featured game is mine; the plan asks for one quiet movement, which the lesson and New battle keep.
-- The Your turn band repeats the featured game when it holds only that one; hiding it then is beyond the build.
+- The Your turn band is left out when it holds only the featured game (built); a band of two still repeats the
+  featured one in its list, which is the way through them.
 
 ## The waiting room (`waiting-room`)
 
@@ -462,8 +493,8 @@ None of the lobby's: the field and its creatures are the canvas's, the `battle-d
 
 ### States
 
-- **First paint**: the battle page's: "Loading the match…", then the room. With the cue, the instruction line says the
-  featured title the lobby handed it until the board arrives.
+- **First paint**: the battle page's. With the cue, its headline names the game the lobby handed it and its
+  instruction says "Opening the board…", until the board arrives; then the room.
 - **Empty**: cannot be: the room is the empty seat.
 - **Loaded**: as filmed.
 - **Waiting**: the whole screen is a wait: the host's stream says when the seat is taken and the match begins.
@@ -517,28 +548,30 @@ still waits for its second seat. The featured space shows that table (rank 2).
 
 ### Words
 
-- **Order**: the greeting; the featured space: its ground, the title, whose turn or what it waits for, Open the game →;
-  then Your games on Finished, Learn to play, Find an opponent.
-- **Budget**: 165 words, 169 today.
+- **Order**: the featured space: its ground, `YOUR TABLE`, the title, what it waits for, Open the game →, ＋ New
+  battle; then Your games on Finished, Learn to play, Find an opponent.
+- **Budget**: 165 words, 169 before, 161 built.
 
 ```text
-WELCOME BACK, WALKER · BETA
 [the eclipse ground]
+YOUR TABLE
 Your 3v3 table
 Waiting for a player
 [Open the game →]
+[＋ New battle]
 ```
 
 A table not yet begun has no round and no opponent: its title is "Your 3v3 table", its status `tableState`'s
 ("Waiting for a player"), or the seat kept for a friend ("Waiting for Rook…", `invitedState`). A game begun says
-"Round 3 against Rook" and "Rook's turn · 1 d left", as `turnOf` says it. The empty finished list keeps its line:
+`THEIR TURN`, "Round 3 against Rook" and "Rook's turn · 1 d left", as `turnOf` says it; `IN PLAY` while a round
+resolves and nobody is asked. The empty finished list keeps its line:
 "No finished games against players yet."
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground: the table has not begun, so it stands at its first round. | 358 by 179 px | Where will this game be played? | `table/battle-art/eclipse-battle.webp` |
+| The eclipse ground: the table has not begun, so it stands at its first round. | 390 by 150 px | Where will this game be played? | `table/battle-art/eclipse-battle.webp` |
 
 A begun game takes its round's ground, as on a turn that waits.
 
@@ -571,13 +604,13 @@ A begun game takes its round's ground, as on a turn that waits.
 - **Names**: the featured space named by its title; the ground `alt=""`; the result tags say Victory or Defeat in
   words, never by colour alone.
 - **Announced**: nothing on load.
-- **Targets**: 2 of 16 under 44 px at 320, 1 at 390; lifted to 44.
+- **Targets**: 2 of 18 under 44 px at 320 and 1 at 390, built (2 of 16 and 1 before); lifted to 44.
 
 ### Cost
 
 - **Bytes**: one ground before any scroll.
-- **Largest paint**: the ground; aimed under 2.5 s.
-- **Shift**: as on the home of a player with nothing; aimed under 0.1.
+- **Largest paint**: the ground, as on the home of a player with nothing.
+- **Shift**: 0.00 at both widths on the walk.
 
 ### Left
 
@@ -605,28 +638,30 @@ other words, and is the owner's clip.
 As the walk films it, the seat taken:
 
 ```text
+YOUR TABLE                   →   YOUR TURN
 Your 3v3 table               →   Round 1 against Rook
-Waiting for a player         →   Your turn · both players choose · 3 d left
+Waiting for a player         →   Both players choose · 2 d 23 h left
 [Open the game →]            →   [Play your turn →]
 ```
 
 A game in progress, Rook's answer arriving:
 
 ```text
+THEIR TURN                   →   YOUR TURN
 Round 3 against Rook
-Rook's turn · 1 d left       →   Your turn · 2 d left
+Rook's turn · 1 d left       →   2 d left
                                  1 cast since your last visit · last move just now
 [Open the game →]            →   [Play your turn →]
 ```
 
-The status region says once: "Your turn: round 1 against Rook." The title changes with the status when the seat
+The featured status, a `role="status"` region, says once "Your turn · both players choose · 2 d 23 h left". The title changes with the status when the seat
 is taken, since the table now has a round and an opponent; it is the same game, so it stays featured.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The round's ground, unchanged as the turn arrives (the eclipse ground in rounds 1 to 5). | 358 by 179 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
+| The round's ground, unchanged as the turn arrives (the eclipse ground in rounds 1 to 5). | 390 by 150 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
 
 The round changes only when combat resolves; when it crosses into a ground of its own, the new ground fades in over
 the old, the button unmoved.
@@ -645,11 +680,14 @@ the old, the button unmoved.
 
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
-| The turn arrives | The read after the stream's word says the turn is the player's: the turn line takes its new words (`.motion-number`, `numberChanged` of `table/motion.js`). | `transform`, `opacity` | [Your move first](../ux-craft.md#your-move-first), [A purpose for each](../ux-craft.md#a-purpose-for-each) | `--motion-slow`, `--motion-enter` |
+| The turn arrives | The read after the stream's word says the turn is the player's: the eyebrow takes its new words, `YOUR TURN` (`.motion-number`, `numberChanged` of `table/motion.js`). | `transform`, `opacity` | [Your move first](../ux-craft.md#your-move-first), [A purpose for each](../ux-craft.md#a-purpose-for-each) | `--motion-slow`, `--motion-enter` |
+| The status changes | The same read: the status line takes its new words in its held room. | `opacity` | [Your move first](../ux-craft.md#your-move-first) | `--motion-normal`, `--motion-enter` |
 | The since line arrives | The same read: the line since the last visit is added under the turn line, in room held for it. | `opacity` | [Your move first](../ux-craft.md#your-move-first) | `--motion-normal`, `--motion-enter` |
 | The press | A pointer down on Play your turn →. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
-The action's words change with the turn line, in the same frame, and the button keeps its place and size (it spans
+The scale plays on the eyebrow's two words, not on the status line: on the strip at 390 the line scaled by the
+number beat reaches the card's inner edges (40 ms), and at 320, two lines across the card, it would pass them. The
+action's words change with the status, in the same frame, and the button keeps its place and size (it spans
 the space's width). A read that says the same again plays nothing. If the focus or a finger is on the action, the
 words still change, since it opens the same game; a different game never takes its place then.
 
@@ -658,6 +696,7 @@ words still change, since it opens the same game; a different game never takes i
 | Beat | Form |
 | --- | --- |
 | The turn arrives | A fade, no scale. |
+| The status changes | The same fade. |
 | The since line arrives | The same fade. |
 | The press | A change of colour, no scale. |
 
@@ -665,21 +704,23 @@ words still change, since it opens the same game; a different game never takes i
 
 - **Focus**: stays where it was; the action keeps it if it had it.
 - **Names**: the action's name becomes "Play your turn →", described by the title and the new turn line.
-- **Announced**: "Your turn: round 3 against Rook." once, through `#lobby-status`, `role="status"`.
+- **Announced**: the new status once, through `#featured-status`, `role="status"`; it keeps "Your turn" in what it
+  announces when the line shows the rest.
 - **Targets**: the featured action, 44 px; the rest as on a turn that waits.
 
 ### Cost
 
 - **Bytes**: nothing new: the ground is already there.
 - **Largest paint**: the home's.
-- **Shift**: none: the since line's room is held under the turn line whenever a game is featured, so its arrival
-  moves nothing.
+- **Shift**: 0.00 at both widths: the status wraps inside its held room and the since line's room is held, so the
+  arrival moves nothing (the strip: no line below the featured space moves across its 440 ms).
 
 ### Left
 
 - The since line's room held when it is empty costs a line of height on a game that waits; the owner may prefer the
   line to arrive and push, below the action.
-- The walk reaches the arrival with one game in progress (the bot's was conceded); the plan's clip asks for two.
+- The walk reaches the arrival with one game in progress (the bot's was conceded); the plan's clip asks for two,
+  and the clip films two (Ongoing · 2).
   A second game, against a person and not the player's turn, would show the featured game held while another
   changes below it.
 - The walk's arrival is a seat taken, not an answer within a round: the second form above is read in the code and

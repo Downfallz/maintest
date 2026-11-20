@@ -4,9 +4,21 @@
 
 export const ARRIVAL_KEY = 'downfall.arena.arrival.v1';
 
-/** Hands the battle the line of the table it is about to open. */
-export function writeArrival(session, table, line) {
-  try { session?.setItem(ARRIVAL_KEY, JSON.stringify({ table, line })); } catch { /* The battle opens without its cue. */ }
+/** Hands the battle the line of the table it is about to open, and the seat tokens its address carries. */
+export function writeArrival(session, table, line, tokens = []) {
+  try { session?.setItem(ARRIVAL_KEY, JSON.stringify({ table, line, tokens })); } catch { /* The battle opens without its cue. */ }
+}
+
+/**
+ * The line for the address being opened, before the battle knows its table: kept when a seat token of the address
+ * is one the lobby handed over. Not spent: `readArrival` spends it once the table is known.
+ */
+export function arrivalFor(session, search) {
+  try {
+    const kept = JSON.parse(session?.getItem(ARRIVAL_KEY) ?? 'null');
+    const tokens = [...new URLSearchParams(search ?? '').values()];
+    return kept && typeof kept.line === 'string' && kept.line && (kept.tokens ?? []).some(token => tokens.includes(token)) ? kept.line : null;
+  } catch { return null; }
 }
 
 /** The line handed over for this table, read once; null for another table, none, or a storage that refuses. */

@@ -178,6 +178,7 @@ test('one ambience plays a screen: the first in view, and none in a hidden tab',
   assert.equal(ambienceToPlay([a, b, c], new Set([b, c]), false), b);
   assert.equal(ambienceToPlay([a, b, c], new Set(), false), null);
   assert.equal(ambienceToPlay([a, b, c], new Set([a]), true), null);
+  assert.equal(ambienceToPlay([a, b, c], new Set([a]), false, true), null, 'none behind a window or the menu');
 });
 
 test('a number that changes plays its beat again each time', () => {

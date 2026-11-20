@@ -214,7 +214,6 @@
 /* The narrowest phones fit the brand, the menu, the bell and the account in one row by giving up some air. */
 @media (max-width: 360px) {
   header.home-header { gap: 4px; }
-  .inbox-button { width: 40px; height: 40px; }
 }
 @media (max-width: 520px) {
   .inbox-item { flex-direction: column; align-items: stretch; }
@@ -371,7 +370,7 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .field-note { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 400; }
 .ranked-row > span { display: flex; flex-direction: column; gap: 3px; font-weight: 650; }
 .ranked-row small { color: var(--muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
-.ranked-row input { width: 22px; height: 22px; flex: none; accent-color: var(--gold); }
+.ranked-row input { width: 24px; height: 24px; flex: none; accent-color: var(--gold); }
 
 /* The create dialog's two kinds of game: Solo against a bot, PvP against a player. Two tabs over the same form. */
 .create-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 14px; }
@@ -424,7 +423,7 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
 .featured .featured-creature { position: absolute; right: 6%; bottom: 8%; width: 150px; height: auto; filter: drop-shadow(0 10px 8px #000a); }
 .featured-text { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; min-width: 0; padding: 32px; }
 .home-page .featured h2 { margin: 0; overflow-wrap: anywhere; }
-.featured .eyebrow { margin: 0; font-size: 11px; }
+.featured .eyebrow { align-self: flex-start; margin: 0; font-size: 11px; }
 .featured .hero-detail { margin: 0; }
 .featured-status { align-self: flex-start; margin: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius-sharp); color: var(--muted); font-size: 13px; font-weight: 650; }
 .featured[data-featured="turn"] .featured-status { color: var(--gold); border-color: var(--gold); }
@@ -438,9 +437,16 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
    host has said what to feature, the words and the actions wait in their room. */
 .featured :is(#welcome, #featured-detail) { min-height: 2lh; }
 .featured-status[data-empty="true"] { visibility: hidden; }
+/* An empty status keeps its one line, so nothing around it moves. */
+.featured-status:empty::before { content: "\00a0"; }
+/* What the region says when a turn arrives: heard, not seen, since the eyebrow and the status show it. */
+.featured-said { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .featured[data-featured="loading"] :is(.featured-actions, #featured-detail, #featured-eyebrow, #welcome) { visibility: hidden; }
 /* The footer waits for the featured space too: the lists under it fill with it, and a footer in view would jump. */
 .home-page:has(.featured[data-featured="loading"]) .home-footer { visibility: hidden; }
+/* A window's eyebrow and its close button follow the floor of text and of targets (UX9). */
+.lobby-page dialog .eyebrow { font-size: 11px; }
+.lobby-page .dialog-heading button[aria-label] { min-width: 44px; min-height: 44px; }
 /* An empty list teaches and links: its sentence, then one quiet button that fills it. */
 .empty-state p { margin: 0; }
 .empty-state button { margin-top: 14px; min-height: 44px; }

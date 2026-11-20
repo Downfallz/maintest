@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { arrivalLine, featuredChoice, featuredView, groundOf, mountFeatured } from './lobby-featured.js';
-import { ARRIVAL_KEY, readArrival, writeArrival } from './arrival.js';
+import { ARRIVAL_KEY, arrivalFor, readArrival, writeArrival } from './arrival.js';
 
 const me = { seat: 'player1', kind: 'person', name: 'Walker' };
 const rook = { seat: 'player2', kind: 'person', name: 'Rook' };
@@ -75,13 +75,23 @@ test('a game\'s featured view names the round and whom it is against, whose turn
 
   assert.equal(view.title, 'Round 7 against Rook');
   assert.equal(view.eyebrow, 'Your turn');
-  assert.equal(view.status, 'Your turn');
+  assert.equal(view.status, '', 'the eyebrow says it');
+  assert.equal(view.announced, 'Your turn');
   assert.equal(view.detail, '2 casts since your last visit');
   assert.equal(view.action, 'Play your turn →');
   assert.equal(view.label, 'Play your turn: round 7 against Rook');
   assert.equal(view.ground, 'home-ground-breach');
   assert.equal(view.creature, null);
   assert.equal(view.id, 'g');
+});
+
+test('a turn with more to say keeps it in the status, each number on one line with its unit', () => {
+  const doc = page();
+  const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {} });
+  const both = game('g', { answerBy: new Date(Date.now() + 71 * 3600000 + 600000).toISOString() });
+  both.table.seats[1].turn = true;
+  featured.setLessons([]); featured.setGames([both]);
+  assert.equal(doc.ids['featured-status'].textContent, 'Both players choose · 2\u00a0d 23\u00a0h left');
 });
 
 test('a game waiting on someone else says whom, and opens the game', () => {
@@ -120,8 +130,10 @@ test('the arrival line is the featured game\'s, and the battle reads it once for
   const entry = game('g', { round: 3 });
   assert.equal(arrivalLine(entry.table, ['player1']), 'Round 3 against Rook');
 
-  writeArrival(session, 'g', arrivalLine(entry.table, ['player1']));
+  writeArrival(session, 'g', arrivalLine(entry.table, ['player1']), ['g-token']);
   assert.ok(kept.has(ARRIVAL_KEY));
+  assert.equal(arrivalFor(session, '?player1=g-token'), 'Round 3 against Rook', 'known by the address before the table is');
+  assert.equal(arrivalFor(session, '?player1=other'), null);
   assert.equal(readArrival(session, 'other'), null, 'another table is not this one');
   assert.equal(readArrival(session, 'g'), 'Round 3 against Rook');
   assert.equal(readArrival(session, 'g'), null, 'read once');
@@ -136,7 +148,7 @@ function page() {
     setAttribute(name, value) { this.attributes[name] = String(value); }, removeAttribute(name) { delete this.attributes[name]; }, getAttribute(name) { return this.attributes[name] ?? null; },
     append(...more) { this.children.push(...more); }, replaceChildren(...more) { this.children = more; },
     addEventListener(kind, heard) { this.listeners[kind] = heard; }, getBoundingClientRect() { return {}; } });
-  const ids = Object.fromEntries(['featured', 'featured-art', 'featured-eyebrow', 'welcome', 'featured-status', 'featured-detail', 'featured-action', 'new-table'].map(id => [id, made('div')]));
+  const ids = Object.fromEntries(['featured', 'featured-art', 'featured-eyebrow', 'welcome', 'featured-status', 'featured-said', 'featured-detail', 'featured-action', 'new-table'].map(id => [id, made('div')]));
   const doc = { ids, getElementById: id => ids[id] ?? null, createElement: made, activeElement: null };
   return doc;
 }
@@ -157,14 +169,17 @@ test('the featured space waits for both the games and the lessons, then fills in
   assert.equal(featured.shown(), 'g');
   assert.equal(doc.ids['featured-action'], button);
   assert.equal(button.textContent, 'Play your turn →');
-  assert.equal(doc.ids['featured-status'].textContent, 'Your turn');
-  assert.ok(doc.ids['featured-status'].classList.contains('motion-changed'), 'the status plays the number\'s beat');
+  assert.equal(doc.ids['featured-status'].textContent, '');
+  assert.equal(doc.ids['featured-eyebrow'].textContent, 'Your turn');
+  assert.ok(doc.ids['featured-eyebrow'].classList.contains('motion-changed'), 'the eyebrow plays the number\'s beat');
+  assert.equal(doc.ids['featured-said'].textContent, 'Your turn', 'said once');
 
   button.listeners.click();
   assert.deepEqual(entered, ['g']);
   assert.equal(button.textContent, 'Opening…');
   assert.equal(button.attributes['aria-busy'], 'true');
-  assert.equal(readArrival(session, 'g'), 'Round 1 against Rook', 'the battle\'s first frame is handed the game\'s line');
+  assert.equal(arrivalFor(session, '?player1=g-token'), 'Round 1 against Rook', 'the battle\'s first frame is handed the game\'s line');
+  assert.equal(readArrival(session, 'g'), 'Round 1 against Rook');
 });
 
 test('with nothing to resume or learn, the featured action plays a bot, and New battle is the quiet one under it', () => {

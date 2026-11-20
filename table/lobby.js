@@ -416,7 +416,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     });
     line.setAttribute('aria-label', sides.map(side => side.name).join(' versus '));
     root.append(top, line);
-    if (turn) root.append(node('p', turn.mine ? `${turn.text} · ${tableState(table)}` : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
+    // Under its Your turn tag, the line says what follows it: the round, and the time left.
+    if (turn) root.append(node('p', turn.mine ? [turn.text.replace(/^Your turn(?: · )?/, ''), tableState(table)].filter(Boolean).join(' · ').replace(/^./, first => first.toUpperCase()) : turn.text, `game-turn${turn.mine ? ' mine' : ''}`));
     // What happened since this player's last visit, on their own turn (async recap plan, R4).
     const since = turn?.mine ? sinceVisitLine(entry?.recap) : null;
     if (since) root.append(node('p', since[0].toUpperCase() + since.slice(1), 'game-since'));

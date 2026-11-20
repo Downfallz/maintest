@@ -45,7 +45,7 @@ import { holdsTheNextRound, lessonOverText, tutorialOf, withoutAssisted } from '
 import { tutorialControls } from './tutorial.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
-import { readArrival } from '../../table/arrival.js';
+import { arrivalFor, readArrival } from '../../table/arrival.js';
 import { seatLabel } from '../../table/invitation.js';
 import { phaseLabel, stepLabel, tempoLabel } from '../../table/terms.js';
 import { catchPageErrors, createPageErrors, mountFeedback } from '../../table/feedback-sheet.js';
@@ -583,7 +583,7 @@ function render() {
   let instruction = '';
   if (view && playbackState.active) instruction = playbackState.asks ? 'Read the result, then choose OK. Your next choice follows.' : 'Results are playing. Your next choice follows; Skip all shows the current board.';
   else if (view) instruction = lessonOverText(view) ?? mutation.prompt ?? guide.objective;
-  else if (arriving) instruction = `${arriving} · opening the board…`;
+  else if (arriving) instruction = 'Opening the board…';
   text('instruction', instruction);
   $('instruction').hidden = Boolean(action.error || planning.model().error || replay.error);
   if (view && ready && !rendererFailed) $('loading').hidden = true;
@@ -844,6 +844,8 @@ async function discover(autoResume = true) {
   $('retry').hidden = true; $('seat-choices').replaceChildren();
   text('perspective', 'YOUR TEAM'); text('connection', 'Connecting…');
   text('load-title', 'Opening your battle'); text('load-detail', 'Verifying the seats saved in this browser…');
+  // The game the lobby opened is named from the first frame, while its seats are verified (UX9).
+  arriving = arrivalFor(tabStorage, location.search); render();
   text('access-link', 'Lobby'); $<HTMLAnchorElement>('access-link').href = '/';
   // A match scenario's practice (ADR 0179): the account's practice of it, resumed, or one started from its cut.
   const scenario = practiceOf(location.search);

@@ -25,6 +25,7 @@ const ANCESTRAL = 'home-ancestral';
 const creatureOf = picture => !picture || picture === 'lesson-base' ? ANCESTRAL : picture;
 
 const held = entry => (entry?.seats ?? []).map(seat => seat.seat);
+const capital = text => text && text[0].toUpperCase() + text.slice(1);
 
 /** The lesson to continue: the next one not done, unless it and every lesson after it were skipped. */
 function nextLesson(lessons) {
@@ -72,10 +73,11 @@ export function featuredView(choice, { started = false } = {}) {
     const title = arrivalLine(table, seats);
     const turn = turnOf(table, seats);
     // A table not yet begun says whom it waits for, as its card does: anyone, or the friend its seat is kept for.
-    const status = turn?.text ?? invitedState(choice.entry.invited)?.tag ?? (table.waiting || table.openSeats > 0 ? tableState(table) : 'The round is being played');
+    // The eyebrow says Your turn: the status says what follows it, each number kept on one line with its unit.
+    const status = (turn ? capital(turn.text.replace(/^Your turn(?: · )?/, '')) : null) ?? invitedState(choice.entry.invited)?.tag ?? (table.waiting || table.openSeats > 0 ? tableState(table) : 'The round is being played');
     const action = mine ? 'Play your turn →' : 'Open the game →';
     const since = sinceVisitLine(choice.entry.recap);
-    return { kind: choice.kind, id: table.id, eyebrow: mine ? 'Your turn' : turn ? 'Their turn' : table.waiting ? 'Your table' : 'In play', title, status,
+    return { kind: choice.kind, id: table.id, announced: mine ? ['Your turn', status].filter(Boolean).join(' · ') : '', eyebrow: mine ? 'Your turn' : turn ? 'Their turn' : table.waiting ? 'Your table' : 'In play', title, status,
       detail: since ? since[0].toUpperCase() + since.slice(1) : '', action, label: `${action.replace(' →', '')}: ${title[0].toLowerCase()}${title.slice(1)}`,
       ground: groundOf(table.round), creature: null, link: null };
   }
@@ -124,12 +126,14 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     el('featured-eyebrow').textContent = view.eyebrow;
     el('welcome').textContent = view.title;
     el('featured-detail').textContent = view.detail;
-    // The status of the same game that changed (its turn arrived) plays the kit's beat for a value that changes.
-    if (status.textContent !== view.status) {
-      status.textContent = view.status;
-      if (shown?.id === view.id && view.status) { status.classList.remove('motion-changed'); status.getBoundingClientRect(); status.classList.add('motion-changed'); }
-    }
-    // Every line keeps its room in every state (lobby.css): an empty one is unseen, never taken out.
+    const shownStatus = view.status.replace(/(\d+) (d|h|min)\b/g, '$1\u00a0$2');
+    if (status.textContent !== shownStatus) status.textContent = shownStatus;
+    // A turn that arrives on the game on show: the eyebrow's words play the kit's beat for a value that changes, and
+    // the region says the turn once (its eyebrow is not in it).
+    const eyebrow = el('featured-eyebrow');
+    if (shown?.id === view.id && shown.eyebrow !== view.eyebrow) { eyebrow.classList.remove('motion-changed'); eyebrow.getBoundingClientRect(); eyebrow.classList.add('motion-changed'); }
+    const said = el('featured-said');
+    if (said && (shown?.id !== view.id || shown.announced !== view.announced)) said.textContent = shown?.id === view.id ? view.announced : '';
     status.dataset.empty = String(!view.status);
     action.hidden = false;
     action.textContent = view.action;
@@ -150,7 +154,7 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     opening = true;
     action.textContent = 'Opening…';
     action.setAttribute('aria-busy', 'true');
-    writeArrival(session, choice.entry.table.id, shown.title);
+    writeArrival(session, choice.entry.table.id, shown.title, (choice.entry.seats ?? []).map(seat => seat.token));
     enter(choice.entry);
   });
   for (const [kind, down] of [['pointerdown', true], ['pointerup', false], ['pointercancel', false], ['pointerleave', false]]) {

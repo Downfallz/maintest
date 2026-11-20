@@ -790,12 +790,14 @@ test('a game between two players counts its time to answer down on the card, wit
   const answerBy = new Date(now.getTime() + 62.5 * 60000).toISOString();
   const state = await home(page, { games: [{ ...held, table: { ...battle, answerBy } }] });
   const card = page.locator('.mine-group.players .game-card');
-  await expect(card).toContainText('Your turn · 1 h left');
+  // Under the card's Your turn tag, the line says what follows it (UX9).
+  await expect(card.locator('.status-tag.your-turn')).toHaveText('Your turn');
+  await expect(card.locator('.game-turn')).toHaveText('1 h left · Round 3');
   const reads = state.mineReads;
 
   await page.clock.fastForward('03:00');
 
-  await expect(card).toContainText(/Your turn · 5\d min left/);
+  await expect(card.locator('.game-turn')).toHaveText(/^5\d min left · Round 3$/);
   expect(state.mineReads).toBe(reads);
   expect(state.errors).toEqual([]);
 });
@@ -1116,7 +1118,8 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   theirs.table.seats = [{ ...battle.seats[0], turn: true }, { ...battle.seats[1], turn: false }];
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'turn');
-  await expect(page.locator('#featured-status')).toHaveText('Your turn');
+  await expect(page.locator('#featured-eyebrow')).toHaveText('Your turn');
+  await expect(page.locator('#featured-said')).toHaveText('Your turn');
   await expect(action).toHaveText('Play your turn →');
   await expect(action).toBeFocused();
   expect(await action.boundingBox()).toEqual(before);
@@ -1130,7 +1133,7 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   await action.click();
   await page.waitForURL(/\/battle\?player1=waits-token$/);
   expect(await page.evaluate(() => sessionStorage.getItem('pressed'))).toBe('Opening…');
-  expect(await page.evaluate(() => sessionStorage.getItem('downfall.arena.arrival.v1'))).toBe(JSON.stringify({ table: 'waits', line: 'Round 7 against Bastien' }));
+  expect(await page.evaluate(() => sessionStorage.getItem('downfall.arena.arrival.v1'))).toBe(JSON.stringify({ table: 'waits', line: 'Round 7 against Bastien', tokens: ['waits-token'] }));
   expect(state.errors).toEqual([]);
 });
 
@@ -1140,26 +1143,29 @@ test('a featured game stays featured while several turns are the player\'s, and 
   // The static server serves the kit's files under /table/: each is answered from the folder, the ground held back.
   await page.route('**/page-art/*', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
-    if (name.startsWith('home-ground-')) await held;
+    // The breach, a later round's ground, drawn once the lists are read: the eclipse before it is not held, or the
+    // page would never finish loading.
+    if (name.startsWith('home-ground-breach-')) await held;
     await route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
   });
   const game = (id, round) => ({ table: { ...battle, id, round }, seats: [{ seat: 'player1', token: `${id}-token` }] });
-  const games = [game('first', 2), game('second', 3)];
+  const games = [game('first', 7), game('second', 8)];
   const state = await home(page, { games, tutorials: series('done', 'new') });
   const action = page.locator('#featured-action');
   await expect(action).toHaveText('Play your turn →');
   const before = await action.boundingBox();
 
   release();
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /home-ground-breach-/);
   await expect.poll(() => page.locator('#featured img.featured-ground').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
   expect(await action.boundingBox()).toEqual(before);
   // The host lists them the other way round: the one on show stays.
-  await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 2 against Bastien');
+  await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 7 against Bastien');
   games.reverse();
   const reads = state.mineReads;
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await expect.poll(() => state.mineReads).toBeGreaterThan(reads);
-  await expect(page.locator('#your-turn .game-row').first()).toContainText('Round 3');
-  await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 2 against Bastien');
+  await expect(page.locator('#your-turn .game-row').first()).toContainText('Round 8');
+  await expect(action).toHaveAttribute('aria-label', 'Play your turn: round 7 against Bastien');
   expect(state.errors).toEqual([]);
 });
