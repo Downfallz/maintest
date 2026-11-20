@@ -154,6 +154,7 @@ test('the featured space waits for both the games and the lessons, then fills in
   assert.equal(button.textContent, 'Open the game →');
 
   featured.setGames([game('g')]);
+  assert.equal(featured.shown(), 'g');
   assert.equal(doc.ids['featured-action'], button);
   assert.equal(button.textContent, 'Play your turn →');
   assert.equal(doc.ids['featured-status'].textContent, 'Your turn');

@@ -94,9 +94,9 @@ export function featuredView(choice, { started = false } = {}) {
  * signed in), `setDisabled` when new tables cannot be made. It waits for both before it chooses, so it does not show
  * a new battle and then a lesson. Its elements are changed in place: the button the player may be about to press is
  * the same button, with the same focus, whatever it now says.
- * @param {{ enter: (entry: object) => void, openCreate: (asked?: object) => void, go: (link: string) => void, session?: Storage | null, ambience?: () => void }} actions
+ * @param {{ enter: (entry: object) => void, openCreate: (asked?: object) => void, go: (link: string) => void, session?: Storage | null, ambience?: () => void, changed?: () => void }} actions
  */
-export function mountFeatured(doc, { enter, openCreate, go, session = null, ambience = () => {} }) {
+export function mountFeatured(doc, { enter, openCreate, go, session = null, ambience = () => {}, changed = () => {} }) {
   const el = id => doc.getElementById(id);
   const root = el('featured'), action = el('featured-action'), create = el('new-table'), status = el('featured-status');
   root.dataset.featured = 'loading';
@@ -136,7 +136,10 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     action.setAttribute('aria-label', view.label);
     action.removeAttribute('aria-busy');
     art(view);
+    const before = shown?.id ?? null;
     shown = view;
+    // Told after the fact, so the lists under it can follow which table is on show.
+    if (before !== view.id) changed();
   }
 
   action.addEventListener('click', () => {
@@ -161,6 +164,8 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
      * (the largest paint of the home). A guest's door never loads it. A later round's ground replaces it.
      */
     playable() { if (drawnGround === null && root.dataset.featured === 'loading') art({ ground: groundOf(1), creature: null }); },
+    /** The table on show, or null: the lobby leaves out of its Your turn band a lone turn already featured. */
+    shown: () => shown?.id ?? null,
     /** The player's games, as the host lists them. */
     setGames(next) { games = next ?? []; draw(); },
     /** The lessons as Learn to play draws them (lobby-tutorials.js), or null where nobody can take one. */

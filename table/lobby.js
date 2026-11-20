@@ -629,7 +629,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     void loadOpponents();
   }
   function render() {
-    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables, minute]);
+    const key = JSON.stringify([listing, mine, invitations, showAll, account, mode, mineTab, finished, limit, opponents, publicTables, minute, featured?.shown() ?? null]);
     if (key === drawn) return;
     drawn = key;
     // A host without accounts cannot tell whose seats this browser holds: its own open tables are left out here.
@@ -651,8 +651,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     const none = signInFirst() ? 'Sign in to see your games, on this device and every other one you sign in on.' : 'Your games appear here, on every device you sign in on. The quickest first one is against a bot.';
     const waiting = signInFirst() ? [] : yourTurn(mine);
     featured?.setGames(signInFirst() ? [] : mine);
-    el('your-turn').replaceChildren(...(waiting.length ? [yourTurnBand(waiting)] : []));
-    el('your-turn').hidden = waiting.length === 0;
+    // One turn alone is the featured space's already: the band would repeat it, and push the lists down as it arrives.
+    const band = waiting.length > 1 || (waiting.length === 1 && featured?.shown() !== waiting[0].table.id);
+    el('your-turn').replaceChildren(...(band ? [yourTurnBand(waiting)] : []));
+    el('your-turn').hidden = !band;
     if (signInFirst() || (!mine.length && !finishedTotal && mineTab === 'ongoing')) el('my-tables').replaceChildren(emptyState(none, 'Play a bot →', playABot));
     else el('my-tables').replaceChildren(...KINDS.map(([kind, label]) => mineTab === 'ongoing' ? ongoingGroup(kind, label, ongoing[kind]) : finishedGroup(kind, label)));
     const rows = node('div', '', 'game-rows');
@@ -895,6 +897,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   return {
     /** Opens a game of the player's, as its card's Resume does. */
     enter,
+    /** Draws the lists again: the featured space chose another table, which the Your turn band leaves out or not. */
+    redraw: () => { if (listing) render(); },
     /** Opens the create dialog, as New battle does. */
     create: asked => openCreate(asked),
     stop: () => { unlisten(); globalThis.clearTimeout(retry); doc.removeEventListener('visibilitychange', resume); globalThis.removeEventListener?.('online', resume); },
@@ -943,7 +947,7 @@ if (typeof document !== 'undefined') {
   // The featured space opens a game through the lobby, which mounts after it: each press reaches it then.
   let lobby = null;
   const featured = mountFeatured(document, { enter: entry => lobby.enter(entry), openCreate: asked => lobby.create(asked), go: link => globalThis.location.assign(link),
-    session, ambience: () => motion?.watch() });
+    session, ambience: () => motion?.watch(), changed: () => lobby?.redraw() });
   lobby = mountLobby(document, globalThis.location, storage, { featured });
   const practiceList = mountPracticeList(document);
   const door = mountDoor(document);
