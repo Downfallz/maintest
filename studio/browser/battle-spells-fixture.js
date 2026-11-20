@@ -1,4 +1,13 @@
 import { expect } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+
+// The picture kit's files are asked for at /page-art/, which the static server serves under /table/ only: each is
+// answered from the folder, as lobby-home.spec.js does, so a spell's portrait loads beside the battle's mocked host.
+export async function servePageArt(page) {
+  await page.route('**/page-art/*', route => route.fulfill({
+    path: fileURLToPath(new URL(`../../table/page-art/${new URL(route.request().url()).pathname.split('/').pop()}`, import.meta.url)),
+    contentType: 'image/webp' }));
+}
 
 // The player's spell choice opens by itself on their turn, docked beside the field (ADR 0149): its targets for a
 // Target question, its spells otherwise. A test that needs it waits for that, and opens it from the dock only when

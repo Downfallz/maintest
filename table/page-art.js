@@ -358,4 +358,60 @@ export const PAGE_ART = {
       { file: 'mutation-warped-stage3-transcendent-288.4b1a7064.webp', width: 288, height: 192, bytes: 35492 },
     ],
   },
+  'spell-focus': {
+    from: '74ad4b0fdf0ae9e3', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-focus-40.231f3c6f.webp', width: 40, height: 40, bytes: 692 },
+      { file: 'spell-focus-80.4e24b38d.webp', width: 80, height: 80, bytes: 1630 },
+    ],
+  },
+  'spell-strike': {
+    from: '77d9c94f80556bca', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-strike-40.6ed3ddbe.webp', width: 40, height: 40, bytes: 634 },
+      { file: 'spell-strike-80.ea56b99f.webp', width: 80, height: 80, bytes: 1598 },
+    ],
+  },
+  'spell-pummel': {
+    from: 'dc026ee3016a0444', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-pummel-40.62c88d85.webp', width: 40, height: 40, bytes: 828 },
+      { file: 'spell-pummel-80.5dad7bb4.webp', width: 80, height: 80, bytes: 2264 },
+    ],
+  },
+  'spell-brace': {
+    from: '5ce85e06a6bdf5ad', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-brace-40.e9daa6a4.webp', width: 40, height: 40, bytes: 760 },
+      { file: 'spell-brace-80.9091221e.webp', width: 80, height: 80, bytes: 1990 },
+    ],
+  },
+  'spell-venom-claw': {
+    from: '47a38807960b3735', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-venom-claw-40.e143e1e2.webp', width: 40, height: 40, bytes: 604 },
+      { file: 'spell-venom-claw-80.2e83b08f.webp', width: 80, height: 80, bytes: 1666 },
+    ],
+  },
+  'spell-quill': {
+    from: 'e719b06b964d00d7', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-quill-40.849cd9b5.webp', width: 40, height: 40, bytes: 442 },
+      { file: 'spell-quill-80.b090171b.webp', width: 80, height: 80, bytes: 1136 },
+    ],
+  },
+  'spell-shock': {
+    from: '9633dc3c28119b13', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-shock-40.1c18cd5e.webp', width: 40, height: 40, bytes: 660 },
+      { file: 'spell-shock-80.5ddbde2e.webp', width: 80, height: 80, bytes: 1860 },
+    ],
+  },
+  'spell-revitalize': {
+    from: 'de4642d964caed92', frames: 1, drawn: [40], pages: {"table/battle":"lazy"},
+    sizes: [
+      { file: 'spell-revitalize-40.2640e239.webp', width: 40, height: 40, bytes: 706 },
+      { file: 'spell-revitalize-80.862ce59f.webp', width: 80, height: 80, bytes: 1828 },
+    ],
+  },
 };

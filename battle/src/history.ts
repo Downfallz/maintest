@@ -1,3 +1,4 @@
+import { spellPortrait } from './spell-portrait';
 import { createBattleHistory, historyEntry, historySummary, KIND_LABELS } from '../../table/battle-history.js';
 
 type Model = ReturnType<ReturnType<typeof createBattleHistory>['model']>;
@@ -76,7 +77,10 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
   // A row with nothing under its title is a marker (a round or a phase beginning): it is read in place rather
   // than offering a disclosure that opens on nothing.
   function entryNode(row: Row) {
-    const heading = [textNode('span', `Round ${row.round || '—'} · ${row.category}`, 'history-meta'), textNode('strong', row.title)];
+    const title = textNode('strong', row.title);
+    const portrait = spellPortrait(row.portrait, 22);
+    if (portrait) title.prepend(portrait);
+    const heading = [textNode('span', `Round ${row.round || '—'} · ${row.category}`, 'history-meta'), title];
     const node = document.createElement(row.details.length ? 'details' : 'div');
     node.className = row.details.length ? 'history-entry' : 'history-entry history-marker';
     node.dataset.sequence = String(row.sequence);
@@ -179,6 +183,8 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
         // A cast opens its own record: the full facts and the battlefield before and after it.
         const line = textNode('button', '', 'summary-cast') as HTMLButtonElement; line.type = 'button'; line.dataset.sequence = String(cast.sequence);
         line.setAttribute('aria-label', `${cast.caster} cast ${cast.spell}${SHORT_STATUS[cast.status] ? `, ${cast.status.toLowerCase()}` : ''}. Inspect event`);
+        const portrait = spellPortrait(cast.portrait, 22);
+        if (portrait) line.append(portrait);
         line.append(textNode('span', cast.caster, 'summary-who'), textNode('span', cast.spell, 'summary-what'),
           ...(SHORT_STATUS[cast.status] ? [textNode('span', SHORT_STATUS[cast.status], 'summary-status')] : []));
         line.addEventListener('click', () => {

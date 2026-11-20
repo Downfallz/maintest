@@ -55,7 +55,7 @@ function combatRow(entry, board, catalogue) {
   const status = action.status === 'Resolved' && resolution.isCritical === false ? 'No critical' : action.status;
   const targets = action.targets.map(target => who(target.id, board)).join(', ');
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
-  return { actor: String(action.actor.id), spell: action.spell, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
+  return { actor: String(action.actor.id), spell: action.spell, portrait: cards.get(resolution.action?.spell)?.visual?.portrait, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
     summary: `${action.spell} · ${status}${targets ? ` → ${targets}` : ''}`,
     sections: [
       { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
@@ -97,7 +97,7 @@ function eventRow(entry, board, catalogue) {
     }
     case 'ActionRevealed': {
       const action = event.action ?? {}, targets = (action.targets ?? []).map(id => who(id, board)).join(', ');
-      return { title: `${who(action.actor, board)} · reveals ${spellName(action.spell, catalogue)}`, category: 'Combat',
+      return { portrait: catalogue?.cards?.find(card => card.id === action.spell)?.visual?.portrait, title: `${who(action.actor, board)} · reveals ${spellName(action.spell, catalogue)}`, category: 'Combat',
         details: [line(targets ? `Targets: ${targets}` : 'No targets'), line('Its result follows as its own entry.')] };
     }
     case 'TimelineBuilt': return { title: 'Tempos revealed · initial turn order', category: 'Command', details: orderRows(event.timeline, board) };
@@ -303,7 +303,7 @@ export function historySummary(rows) {
       // The row keeps the caster and the spell apart: a label can hold ' · ' itself, so the title is never split.
       const caster = row.participants.find(one => one.id === String(row.actor));
       round.casts.push({ sequence: row.sequence, caster: caster?.label ?? bare(row.title), side: sideOf(row, row.actor),
-        spell: row.spell, status: row.status ?? 'Resolved', effects });
+        spell: row.spell, portrait: row.portrait, status: row.status ?? 'Resolved', effects });
       for (const item of row.sections.find(section => section.title === 'Recorded changes')?.items ?? []) {
         const defeated = /^(.*) · Defeated$/.exec(item.text);
         if (defeated) round.defeated.push({ creature: bare(defeated[1]), side: defeated[1].includes('(Your team)') ? 'Your team' : defeated[1].includes('(Opponent)') ? 'Opponent' : 'Unknown team' });

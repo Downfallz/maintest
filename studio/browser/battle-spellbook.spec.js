@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openSpells } from './battle-spells-fixture.js';
+import { openSpells, servePageArt } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { decided } from './decision.js';
@@ -15,7 +15,7 @@ async function mount(page, kind = 'Intent') {
     options: { intent: { creatures: [{ creature: 1, castableSpells: ids.filter(id => !['spell-1', 'spell-2'].includes(id)), unaffordableSpells: ['spell-2'] }] },
       action: { actor: 1, spells: ids.filter(id => id !== 'spell-1').map(spell => ({ spell, legalTargets: legal })) } },
     guidance: [{ spell: 'spell-1', unavailableReason: 'Cannot use while stunned' }, { spell: 'spell-2', energyAfterCost: -4, chosenSpeed: 'Standard', standardCriticalChance: .35 }] } };
-  const cards = ids.slice(0, -1).map((id, index) => ({ id, name: index === 0 ? 'Focus' : `The exceptionally long ${['bone strike', 'protective ward', 'ritual of recovery'][index % 3]} ${index}`,
+  const cards = ids.slice(0, -1).map((id, index) => ({ id, visual: index === 0 ? { portrait: 'focus' } : null, name: index === 0 ? 'Focus' : `The exceptionally long ${['bone strike', 'protective ward', 'ritual of recovery'][index % 3]} ${index}`,
     type: ['Offensive', 'Defensive', 'Passive'][index % 3], creatureClass: ['Brawler', 'Scoundrel', 'Sorcerer'][index % 3],
     cost: index === 0 ? 0 : index === 2 ? 7 : 2, critical: index % 2 ? '20%' : '0%', criticalThreshold: index % 2 ? 17 : null, targeting: 'One creature in the host offer',
     effects: ['A detailed effect that remains readable in the full reference.'], casterEffects: ['A separate effect on the caster.'], criticalNote: 'Critical note from the served catalogue.' }));
@@ -31,6 +31,7 @@ async function mount(page, kind = 'Intent') {
       window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
+  await servePageArt(page);
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'spellbook', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
@@ -66,6 +67,10 @@ test('the spellbook groups the served types and shows truthful stats and full de
   await expect(page.locator('#combat-actor .actor-chip')).toHaveText(['1 in turn order', '✦ Precision', '3 energy']);
   await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('20%');
   await expect(spell(page, 'spell-3').locator('.spell-critical')).toHaveText('Precision only · d20 17+ · catalogue');
+  await expect(spell(page, 'spell-0').locator('.spell-portrait')).toHaveAttribute('src', /\/page-art\/spell-[a-z-]+-40\.[0-9a-f]+\.webp$/);
+  await expect.poll(() => spell(page, 'spell-0').locator('.spell-portrait').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(spell(page, 'unknown-spell').locator('img')).toHaveCount(0);
+  await expect(spell(page, 'spell-3').locator('img')).toHaveCount(0);
   await expect(spell(page, 'spell-0')).toContainText('0 energy');
   await expect(spell(page, 'spell-0').locator('.spell-critical')).toBeEmpty(); await expect(spell(page, 'spell-0').locator('.spell-chip-crit')).toHaveCount(0);
   await expect(spell(page, 'spell-2').locator('.spell-chip-crit')).toContainText('35%'); await expect(spell(page, 'spell-2').locator('.spell-critical')).toHaveText('at this tempo');

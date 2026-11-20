@@ -10,7 +10,7 @@ namespace DownfallArena.Infrastructure.Tests.Resources;
 /// </summary>
 public sealed class SpellArtTests
 {
-    private const string Guard = """{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast" } }""";
+    private const string Guard = """{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "portrait": "brace" } }""";
 
     [Fact]
     public void Art_is_published_beside_the_schema_and_read_back_by_spell()
@@ -23,7 +23,7 @@ public sealed class SpellArtTests
         SpellArt.Publish(content.Path, output, schema);
         var read = SpellArt.ReadNextTo(Path.Combine(output, "game.schema.json"));
 
-        read.Of(SpellId.Parse("spell:guard:v1")).ShouldBe(new Application.Catalogue.SpellVisual("physical", "plates", "cast"));
+        read.Of(SpellId.Parse("spell:guard:v1")).ShouldBe(new Application.Catalogue.SpellVisual("physical", "plates", "cast", Portrait: "brace"));
         read.Of(SpellId.Parse("spell:strike:v1")).ShouldBeNull();
     }
 
@@ -62,6 +62,24 @@ public sealed class SpellArtTests
         refused.Problems.ShouldContain(problem => problem.Contains("'holy'", StringComparison.Ordinal));
         refused.Problems.ShouldContain(problem => problem.Contains("'halo'", StringComparison.Ordinal));
         refused.Problems.ShouldContain(problem => problem.Contains("'thrown'", StringComparison.Ordinal));
+    }
+
+    /// <summary>A portrait names a file the host serves from one folder: anything but a bare lowercase name is refused.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("Brace")]
+    [InlineData("../brace")]
+    [InlineData("brace.webp")]
+    [InlineData("venom claw")]
+    public void A_portrait_that_is_not_a_bare_lowercase_name_is_refused(string portrait)
+    {
+        using var content = new ContentDirectory().WithValidContent()
+            .WithFile("presentation/spell-art.json", $$"""{ "spell:guard:v1": { "family": "physical", "motif": "plates", "delivery": "cast", "portrait": "{{portrait}}" } }""");
+        var schema = GameSchemaBuilder.Build(content.Path);
+
+        var refused = Should.Throw<InvalidGameContentException>(() => SpellArt.Publish(content.Path, Path.Combine(content.Path, "dst"), schema));
+
+        refused.Problems.ShouldHaveSingleItem().ShouldContain("'spell:guard:v1' needs a lowercase portrait asset name");
     }
 
     /// <summary>A word left out is refused by name, not read as an empty family nobody notices.</summary>
