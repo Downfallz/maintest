@@ -66,8 +66,9 @@ test('the spellbook groups the served types and shows truthful stats and full de
   await expect(page.locator('#combat-actor .actor-chip')).toHaveText(['1 in turn order', '✦ Precision', '3 energy']);
   await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('20%');
   await expect(spell(page, 'spell-3').locator('.spell-critical')).toHaveText('Precision only · d20 17+ · catalogue');
-  await expect(spell(page, 'spell-0').locator('.spell-portrait')).toHaveJSProperty('naturalWidth', 512);
+  await expect(spell(page, 'spell-0').locator('.spell-portrait')).toHaveJSProperty('naturalWidth', 80);
   await expect(spell(page, 'unknown-spell').locator('img')).toHaveCount(0);
+  await expect(spell(page, 'spell-3').locator('img')).toHaveCount(0);
   await expect(spell(page, 'spell-0')).toContainText('0 energy');
   await expect(spell(page, 'spell-0').locator('.spell-critical')).toBeEmpty(); await expect(spell(page, 'spell-0').locator('.spell-chip-crit')).toHaveCount(0);
   await expect(spell(page, 'spell-2').locator('.spell-chip-crit')).toContainText('35%'); await expect(spell(page, 'spell-2').locator('.spell-critical')).toHaveText('at this tempo');

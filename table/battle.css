@@ -1128,6 +1128,8 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .spell-card { margin: 8px 0; padding: 10px 12px; border: 1px solid #3f554d; border-radius: var(--radius-soft); background: #172a30; }
 .spell-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .spell-portrait { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-soft); }
+.spell-portrait.missing { visibility: hidden; }
+/* After .combat-spell > .spell-card, of the same weight: moved above it, a card would lose its portrait column. */
 .spell-card:has(> .spell-portrait) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 8px; }
 .spell-card > .spell-portrait { grid-column: 1; grid-row: 1 / span 2; }
 .spell-card:has(> .spell-portrait) > :is(.spell-card-head, .spell-card-target) { grid-column: 2; }

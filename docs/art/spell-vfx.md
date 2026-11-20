@@ -4,13 +4,21 @@ Implemented on top of the merged ART-3 (#439). ART-4 now integrates `main`, incl
 history console (#440); opening that console settles VFX through the existing playback cancellation path.
 See [ADR 0131](../adr/0131-give-confirmed-arena-spells-a-visual-vocabulary.md) for the presentation boundary.
 
-The optional `portrait` on a spell visual names its square WebP in `table/battle-art/spells/`. The battle cards and journal use it as decorative art beside the spell name.
+## Portraits
+
+A spell visual may name a `portrait`: a square WebP in `table/battle-art/spells/`. The spell card draws it at 40 px
+beside the spell's name, and the journal at 22 px; a compact card, in a docked sheet, keeps its text only. The
+picture is decorative (`alt=""`): the name beside it is the text. The owner approved the eight 512 px paintings,
+for the starting actions and the Stage I spells; they are kept in `docs/art/spell-portraits/`, outside the image,
+and the table serves each at 80 px, twice the size it is drawn, encoded by `scripts/ux/encode.py` (quality 82,
+method 6). `table/battle-spell-art.test.js` holds the names and the files together, both ways, and that size.
 
 ## Coverage
 
 All 42 family spells and the two base actions have an entry in `data/presentation/spell-art.json`, which the
 builder checks and publishes beside the schema and the host serves on each card as `visual`; the page names
-no spell. These are shared vector motifs, not new textures or full skeletal animations.
+no spell. The effects are shared vector motifs, not new textures or full skeletal animations; only the
+portraits above are paintings.
 
 | Vocabulary | Shape and delivery | Examples |
 | --- | --- | --- |

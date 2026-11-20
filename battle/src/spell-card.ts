@@ -41,7 +41,8 @@ export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [
     if (chance.hint && !inline) chip.append(make('small', chance.hint));
     chips.append(chip);
   }
-  const portrait = spellPortrait(card?.visual?.portrait);
+  // A compact card sits in a docked sheet whose foot must stay on a 320 by 568 screen: it keeps its text only.
+  const portrait = compact ? null : spellPortrait(card?.visual?.portrait);
   if (portrait) article.append(portrait);
   head.append(chips); article.append(head);
   if (!card) { article.append(make('p', 'Spell details unavailable.', 'spell-card-line')); return article; }

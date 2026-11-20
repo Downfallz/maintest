@@ -334,3 +334,12 @@ test('the summary names the spell apart from a caster whose label carries its id
   const [round] = historySummary([historyEntry(theirs, board, catalogue)]);
   assert.deepEqual(round.casts.map(one => [one.caster, one.side, one.spell]), [['Other · 2', 'Opponent', 'Strike']]);
 });
+test('a cast and a reveal carry the portrait their card names, into the round summary, and nothing for a card without one', () => {
+  const pictured = { ...catalogue, cards: [{ id: 'hit', name: 'Strike', visual: { portrait: 'strike' } }] };
+  const resolved = historyEntry(cast(1), board, pictured);
+  assert.equal(resolved.portrait, 'strike');
+  assert.equal(historyEntry(entry(2, 'ActionRevealed', { action: { actor: 2, spell: 'hit', targets: [1] } }), board, pictured).portrait, 'strike');
+  assert.equal(historySummary([resolved])[0].casts[0].portrait, 'strike');
+  assert.equal(historyEntry(cast(1), board, catalogue).portrait, undefined);
+  assert.equal(historyEntry(entry(2, 'ActionRevealed', { action: { actor: 2, spell: 'hit', targets: [1] } }), board, catalogue).portrait, undefined);
+});
