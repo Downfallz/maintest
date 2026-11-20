@@ -109,7 +109,8 @@
   "tier:titan:v1": {
     "family": "brute",
     "motif": "reinforcement",
-    "effect": "capstone-titan"
+    "effect": "capstone-titan",
+    "portrait": "titan"
   },
   "tier:warmonger:v1": {
     "family": "brute",

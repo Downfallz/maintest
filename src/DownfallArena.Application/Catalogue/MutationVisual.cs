@@ -10,4 +10,5 @@ namespace DownfallArena.Application.Catalogue;
 /// <param name="Artwork">The evolution illustration it draws when it is the one a creature shows (ADR 0151), by
 /// the id the page's registry knows it by; none for a capstone, which never changes the image.</param>
 /// <param name="Effect">The effect a capstone lends the creature, by the id the page knows it by (ADR 0151).</param>
-public sealed record MutationVisual(string Family, string? Motif, string? Artwork = null, string? Effect = null);
+/// <param name="Portrait">Optional icon shown on the mutation card.</param>
+public sealed record MutationVisual(string Family, string? Motif, string? Artwork = null, string? Effect = null, string? Portrait = null);

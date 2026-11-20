@@ -1133,6 +1133,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .spell-card:has(> .spell-portrait) > :is(.spell-card-head, .spell-card-target) { grid-column: 2; }
 .spell-card:has(> .spell-portrait) > :not(.spell-portrait, .spell-card-head, .spell-card-target) { grid-column: 1 / -1; }
 #history-dialog .spell-portrait { width: 22px; height: 22px; vertical-align: middle; align-self: center; }
+.preview-name > .spell-portrait, .atlas-card-name > .spell-portrait { vertical-align: middle; margin-inline-end: 8px; }
 .history-entry strong > .spell-portrait { margin-inline-end: 6px; }
 .spell-card-name { font: 16px/1.2 var(--font-display); color: #f0e4c9; overflow-wrap: anywhere; }
 .spell-card-chips { display: inline-flex; flex: none; gap: 5px; }

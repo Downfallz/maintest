@@ -8,7 +8,7 @@ import { untapped, orderOf } from '../../table/ties.js';
 import type { SpellCatalogue } from './combat';
 
 export interface Package { id: string; name: string; level: number; initiativeBonus: number; spells: string[];
-  prerequisites?: string[]; anyOf?: string[]; passiveLines?: string[]; tags?: string[]; visual?: { family: string; motif?: string | null } | null }
+  prerequisites?: string[]; anyOf?: string[]; passiveLines?: string[]; tags?: string[]; visual?: { family: string; motif?: string | null; portrait?: string | null } | null }
 export interface Catalogue extends SpellCatalogue { packages?: Package[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
 type Controller = ReturnType<typeof createBattlePlanning>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;

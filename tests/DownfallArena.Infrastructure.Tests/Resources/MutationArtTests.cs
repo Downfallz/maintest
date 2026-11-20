@@ -113,7 +113,7 @@ public sealed class MutationArtTests
     public void The_illustration_and_the_capstone_effect_are_published_with_the_art()
     {
         using var content = Content().WithFile("presentation/mutation-art.json",
-            """{ "tier:ironbound:v1": { "family": "brute", "motif": "plates", "artwork": "brute-stage2-ironhide" }, "tier:bulwark:v1": { "family": "brute", "motif": "reinforcement", "effect": "capstone-bulwark" } }""");
+            """{ "tier:ironbound:v1": { "family": "brute", "motif": "plates", "artwork": "brute-stage2-ironhide" }, "tier:bulwark:v1": { "family": "brute", "motif": "reinforcement", "effect": "capstone-bulwark", "portrait": "bulwark" } }""");
         var output = Path.Combine(content.Path, "dst");
         var schema = GameSchemaBuilder.Build(content.Path);
 
@@ -122,7 +122,7 @@ public sealed class MutationArtTests
         var read = MutationArt.ReadNextTo(Path.Combine(output, "game.schema.json"));
 
         read.Of(TierId.Parse("tier:ironbound:v1")).ShouldBe(new Application.Catalogue.MutationVisual("brute", "plates", "brute-stage2-ironhide"));
-        read.Of(TierId.Parse("tier:bulwark:v1")).ShouldBe(new Application.Catalogue.MutationVisual("brute", "reinforcement", null, "capstone-bulwark"));
+        read.Of(TierId.Parse("tier:bulwark:v1")).ShouldBe(new Application.Catalogue.MutationVisual("brute", "reinforcement", null, "capstone-bulwark", "bulwark"));
     }
 
     /// <summary>A capstone never changes the image, only a capstone lends an effect, and both name the page's ids.</summary>

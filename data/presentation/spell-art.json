@@ -42,6 +42,7 @@
     ]
   },
   "spell:chain_slash:v1": {
+    "portrait": "dominate",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -75,6 +76,7 @@
     ]
   },
   "spell:crushing_stomp:v1": {
+    "portrait": "crushing-stomp",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -393,6 +395,7 @@
     ]
   },
   "spell:psycho_rush:v1": {
+    "portrait": "deranged-charge",
     "family": "physical",
     "motif": "impact",
     "delivery": "melee",
@@ -463,6 +466,7 @@
     ]
   },
   "spell:restorative_gush:v1": {
+    "portrait": "vital-surge",
     "family": "physical",
     "motif": "vital",
     "delivery": "cast",
@@ -567,6 +571,7 @@
     ]
   },
   "spell:thundering_seal:v1": {
+    "portrait": "alpha-roar",
     "family": "physical",
     "motif": "roar",
     "delivery": "cast",
@@ -584,6 +589,7 @@
     ]
   },
   "spell:tornado:v1": {
+    "portrait": "groundbreaker",
     "family": "physical",
     "motif": "wave",
     "delivery": "cast",

@@ -3,6 +3,7 @@ import { classColour, familyRoot, requirementLine, stageRows, talentPalette } fr
 import { stageLabel, stageNumeral, stageSpoken } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { onNextFrame } from './next-frame';
+import { spellPortrait } from './spell-portrait';
 import { spellCard } from './spell-card';
 import type { Catalogue, Package } from './planning';
 
@@ -185,7 +186,10 @@ export function atlasControls(onVisibility: () => void) {
     const colour = classColour(familyRoot(pack, byId).id, talentPalette(catalogue, cardsById(catalogue)));
     detail.style.setProperty('--mutation-colour', colour);
     const head = node('header', '', 'atlas-card-head');
-    head.append(node('p', `${familyRoot(pack, byId).name} · ${stageLabel(pack.level)}`, 'atlas-card-family'), node('h3', pack.name, 'atlas-card-name'));
+    const title = node('h3', pack.name, 'atlas-card-name');
+    const portrait = spellPortrait(pack.visual?.portrait);
+    if (portrait) title.prepend(portrait);
+    head.append(node('p', `${familyRoot(pack, byId).name} · ${stageLabel(pack.level)}`, 'atlas-card-family'), title);
     const chips = node('div', '', 'atlas-card-chips');
     chips.append(node('span', STATUS[pack.status] ?? pack.status, `atlas-chip atlas-chip-status`));
     if (Number.isInteger(pack.initiativeBonus) && pack.initiativeBonus !== 0) {
