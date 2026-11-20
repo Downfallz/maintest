@@ -16,8 +16,7 @@
 .leaned-body { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .leaned-picture { width: 144px; height: auto; aspect-ratio: 3 / 2; object-fit: contain; flex: none; }
 .leaned-words { display: grid; gap: 4px; margin: 0; flex: 1 1 9em; min-width: 0; }
-.leaned-words strong { overflow-wrap: anywhere; }
-.leaned-words strong { font: 400 26px/1.1 var(--font-display); }
+.leaned-words strong { font: 400 26px/1.1 var(--font-display); overflow-wrap: anywhere; }
 .leaned-words span { color: var(--muted); font-size: 13px; }
 .stats-empty p { margin: 0 0 16px; color: var(--ink); line-height: 1.6; }
 .stats-main > .lobby-section { margin-bottom: 0; }
