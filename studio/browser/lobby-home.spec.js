@@ -468,15 +468,33 @@ test('the signed-in player reads the statistics of their ranked games on a page 
   await expect(page.locator('#record-cards .stats-card')).toHaveCount(1);
   await expect(page.locator('#record-cards .stats-card')).toContainText('Ranked 3v3');
   await expect(page.locator('#record-cards .stats-card')).toContainText('2–1–0');
-  await expect(page.locator('#stats-status')).toHaveText('3 ranked games · updates as your games end');
+  // At rest the status says nothing: the record says it (UX10).
+  await expect(page.locator('#stats-status')).toHaveText('');
   await expect(page.locator('#glance')).toContainText('2 wins in a row');
   await expect(page.locator('#spell-rows')).toContainText('Strike');
-  await expect(page.locator('#mutation-rows')).toContainText('No mutation bought yet.');
+  await expect(page.locator('#mutation-rows')).toContainText('No mutation acquired yet.');
+  // The spell cast most stands large; with no mutation acquired, Most acquired is not drawn.
+  await expect(page.locator('#leaned-spell')).toContainText('Strike');
+  await expect(page.locator('#leaned-spell')).toContainText('Cast 21 times in 3 games');
+  await expect(page.locator('#leaned-mutation')).toBeHidden();
+  await expect(page.locator('#stats-empty')).toBeHidden();
   // Ranked games are all 3v3 (ADR 0171): no table of creatures and no table of formats.
   await expect(page.locator('#creature-rows, #formats')).toHaveCount(0);
   await openNavigation(page);
   await expect(page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Your stats' })).toHaveAttribute('aria-current', 'page');
   await page.keyboard.press('Escape');
+  await noOverflow(page);
+});
+
+test('a player with no ranked game reads one empty state and the action that fills it', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [],
+  } }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#stats-empty')).toBeVisible();
+  await expect(page.locator('#stats-body')).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Open a ranked table →' })).toHaveAttribute('href', '/lobby?rematch=person');
   await noOverflow(page);
 });
 
