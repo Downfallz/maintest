@@ -1643,7 +1643,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The turn order, interactive: a strip entry lights its creature on the field in ice blue (never the acting gold),
    says its initiative and whether a d20 placed it, and opens a card at the top of the field saying why it holds
    its place. The same blue numbers the tied creatures while the seat orders them. */
-#timeline .timeline-init { margin-left: 6px; color: #b9d9f2; font-weight: 700; }
+#timeline .timeline-init { display: inline-flex; align-items: center; gap: 1px; margin-left: 6px; color: #b9d9f2; font-weight: 700; }
 #timeline .timeline-die { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #2b2619; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
 #timeline li[data-focused="true"] > button { border-radius: var(--radius-soft); background: linear-gradient(180deg, #6fc3ff2e, #6fc3ff10); box-shadow: inset 0 0 0 1.5px #6fc3ffcc, 0 0 14px #6fc3ff40; }
 #timeline li[data-focused="true"] .timeline-name { color: #dff1ff; }
@@ -2065,7 +2065,6 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 
 /* The order row's side line: the side, its tempo and the initiative mark, at 11 px; under 360 px the side and a die
    alone, the rest a tap away in `#order-why`. */
-#timeline .timeline-init { display: inline-flex; align-items: center; gap: 1px; }
 #timeline .timeline-init .cue-icon { width: 10px; height: 10px; }
 @media (max-width: 359px) { #timeline :is(.timeline-tempo, .timeline-init) { display: none; } }
 #battle .creature-init .cue-icon { width: 11px; height: 11px; }

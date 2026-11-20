@@ -541,7 +541,10 @@ function render() {
     // The status tag stands above the whole caption, however many badge rows a narrow figure wraps it into.
     node.style.setProperty('--caption-height', `${node.querySelector<HTMLElement>('.caption')!.offsetHeight}px`);
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    speakCreature(node, `${one.enemy ? 'of the opponent' : 'of your team'}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
+    let pressAction = 'Inspect creature.';
+    if (offered) pressAction = 'Choose mutation for this creature.';
+    else if (targeting) pressAction = 'Target selection.';
+    speakCreature(node, `${one.enemy ? 'of the opponent' : 'of your team'}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), pressAction].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));
