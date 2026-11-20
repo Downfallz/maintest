@@ -653,6 +653,9 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     the host allows it. For a match result, carry the final exchange into the verdict and the next action.
     Review a win and a loss. Both the verdict and the action must read with the illustrations hidden.
 
+    The pictures of the spellbook, the journal and the Mutation Tree are planned apart, in
+    [their own plan](ux12-pictures-plan.md); the brief it writes, `journeys/windows.md`, is the one UX12 extends.
+
 13. **UX13, accessibility.** The checks the gate runs: axe on every screen and state of the five journeys (a
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
     one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
