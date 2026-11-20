@@ -490,13 +490,15 @@ test('the mutation a player acquires most stands with its painting and its count
   await home(page);
   await page.route('**/api/stats', route => route.fulfill({ json: {
     ranked: { games: 1, won: 0, lost: 1, drawn: 0 }, streak: { outcome: 'lost', length: 1 }, bestWinStreak: 0, averageRounds: 2, withTeams: 1,
-    mutations: [{ id: 'tier:brute:v1', name: 'Brute', artwork: 'brute-base', bought: 2, won: 0 }], spells: [{ id: 'spell:brace:v1', name: 'Brace', casts: 2, games: 1, won: 0 }],
+    // A long name beside the painting: the card wraps rather than pushing the page wider at 320 px.
+    mutations: [{ id: 'tier:deathstalker:v1', name: 'Deathstalker', artwork: 'predator-stage3-deathstalker', bought: 2, won: 0 }], spells: [{ id: 'spell:brace:v1', name: 'Brace', casts: 2, games: 1, won: 0 }],
   } }));
   await page.goto('/table/stats.html');
   const card = page.locator('#leaned-mutation');
-  await expect(card).toContainText('Brute');
+  await expect(card).toContainText('Deathstalker');
   await expect(card).toContainText('Acquired 2 times');
-  await expect(card.locator('img.leaned-picture')).toHaveAttribute('src', /page-art\/mutation-brute-base-/);
+  await expect(card.locator('img.leaned-picture')).toHaveAttribute('src', /page-art\/mutation-predator-stage3-deathstalker-/);
+  expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await expect(card.locator('img.leaned-picture')).toHaveAttribute('width', /\d+/);
   await expect(page.locator('#glance')).toContainText('2 rounds');
   await noOverflow(page);

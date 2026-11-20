@@ -13,9 +13,10 @@
 .record-card strong { margin-top: 0; }
 .stats-leaned { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .stats-leaned .leaned h3 { margin: 0 0 10px; color: var(--brand-ember); }
-.leaned-body { display: flex; align-items: center; gap: 14px; }
+.leaned-body { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .leaned-picture { width: 144px; height: auto; aspect-ratio: 3 / 2; object-fit: contain; flex: none; }
-.leaned-words { display: grid; gap: 4px; margin: 0; }
+.leaned-words { display: grid; gap: 4px; margin: 0; flex: 1 1 9em; min-width: 0; }
+.leaned-words strong { overflow-wrap: anywhere; }
 .leaned-words strong { font: 400 26px/1.1 var(--font-display); }
 .leaned-words span { color: var(--muted); font-size: 13px; }
 .stats-empty p { margin: 0 0 16px; color: var(--ink); line-height: 1.6; }
