@@ -528,6 +528,84 @@ test('the ladder says where the player stands, and how far they moved since this
   await noOverflow(page);
 });
 
+const ranked = (username, rating, rank = 2) => ({ rank, username, rating, deviation: 290, games: 1, wins: 0, losses: 1, draws: 0, provisional: true, you: true });
+const ladderOf = (username, rating) => ({ provisionalAbove: 110, players: [
+  { rank: 1, username: 'Rook', rating: 1662, deviation: 290, games: 1, wins: 1, losses: 0, draws: 0, provisional: true, you: false }, ranked(username, rating),
+], you: { username, standing: ranked(username, rating), bots: [] } });
+
+test('a long player name wraps in Your place, and the place stays inside the card', async ({ page }) => {
+  await home(page);
+  const long = 'WWWWWWWWWWWWWWWWWWWW';
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: ladderOf(long, 1338) }));
+  await page.goto('/table/leaderboard.html');
+  const card = page.locator('.your-place');
+  await expect(page.locator('.you-place')).toHaveText('#2 · Provisional');
+  const [badge, box] = await Promise.all([page.locator('.you-place').boundingBox(), card.boundingBox()]);
+  expect(badge.x + badge.width).toBeLessThanOrEqual(box.x + box.width);
+  await noOverflow(page);
+});
+
+test('a live read keeps the keyboard on the action it was on', async ({ page }) => {
+  await home(page);
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: [], you: { username: player.username, standing: null, bots: [] } } }));
+  await page.goto('/table/leaderboard.html');
+  const action = page.getByRole('link', { name: 'Open a ranked table →' });
+  await action.focus();
+  // The same answer again, as a stream's word about an unrelated table brings it.
+  await page.evaluate(async name => {
+    const { drawLadder } = await import('/table/leaderboard.js');
+    drawLadder(document, { provisionalAbove: 110, players: [], you: { username: name, standing: null, bots: [] } }, { first: false });
+  }, player.username);
+  await expect(action).toBeFocused();
+});
+
+test('another player signed in while the ladder was open is compared with their own last look, not the first player\'s', async ({ page }) => {
+  await home(page);
+  await page.addInitScript(() => {
+    localStorage.setItem('downfall.ladder.seen.v1:Alice', JSON.stringify({ standing: { rank: 2, rating: 1300, provisional: true } }));
+    localStorage.setItem('downfall.ladder.seen.v1:Bob', JSON.stringify({ standing: { rank: 2, rating: 1550, provisional: true } }));
+  });
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: ladderOf('Alice', 1338) }));
+  await page.goto('/table/leaderboard.html');
+  await expect(page.locator('#you')).toContainText('Up 38 since you last looked.');
+  await page.evaluate(async ladder => {
+    const { drawLadder } = await import('/table/leaderboard.js');
+    drawLadder(document, ladder, { first: false });
+  }, ladderOf('Bob', 1560));
+  await expect(page.locator('#you')).toContainText('Bob');
+  await expect(page.locator('#you')).toContainText('Up 10 since you last looked.');
+  await expect(page.locator('#ladder-status')).toHaveText('');
+});
+
+test('the ladder and the statistics still draw when the browser refuses its storage', async ({ page }) => {
+  const state = await home(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('The operation is insecure.', 'SecurityError'); } });
+  });
+  await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: ladderOf('Rook', 1338).players.slice(0, 1), you: null } }));
+  await page.goto('/table/leaderboard.html');
+  await expect(page.locator('#ladder-rows tr')).toHaveCount(1);
+  await page.route('**/api/stats', route => route.fulfill({ json: {
+    ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [],
+  } }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#stats-empty')).toBeVisible();
+  expect(state.errors).toEqual([]);
+});
+
+test('the first ranked result that arrives while the statistics are open is announced', async ({ page }) => {
+  await home(page);
+  const empty = { ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [] };
+  await page.route('**/api/stats', route => route.fulfill({ json: empty }));
+  await page.goto('/table/stats.html');
+  await expect(page.locator('#stats-empty')).toBeVisible();
+  await page.evaluate(async () => {
+    const { drawStats } = await import('/table/stats.js');
+    drawStats(document, { ranked: { games: 1, won: 1, lost: 0, drawn: 0 }, streak: { outcome: 'won', length: 1 }, bestWinStreak: 1, averageRounds: 3, withTeams: 1, mutations: [], spells: [] });
+  });
+  await expect(page.locator('#stats-status')).toHaveText('Your record is now 1–0–0.');
+});
+
 test('a player not on the ladder is told how to get on it, and the action opens a ranked table for another player', async ({ page }) => {
   await home(page);
   await page.route('**/api/leaderboard', route => route.fulfill({ json: { provisionalAbove: 110, players: [], you: { username: player.username, standing: null, bots: [] } } }));

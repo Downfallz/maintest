@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { SETTINGS_KEY, ambienceToPlay, lessMotion, wantsLessMotion, mountMotion, numberChanged, reach, savedLess } from './motion.js';
+import { SETTINGS_KEY, ambienceToPlay, lessMotion, wantsLessMotion, mountMotion, numberChanged, reach, savedLess, browserStorage } from './motion.js';
 import { mountGameSettings, saveLocalSettings } from './game-preferences.js';
 
 const root = new URL('../', import.meta.url);
@@ -283,4 +283,12 @@ test('a script asks the kit whether to move: the system\'s wish or the account\'
   for (const name of readdirSync(new URL('table/', root)).filter(name => name.endsWith('.js') && !name.endsWith('.test.js') && name !== 'motion.js')) {
     assert.doesNotMatch(read(`table/${name}`), /prefers-reduced-motion/, `table/${name} reads the system's preference alone: ask wantsLessMotion() of motion.js`);
   }
+});
+
+test('a browser that denies its storage is read as one that kept nothing', () => {
+  const denied = {};
+  Object.defineProperty(denied, 'localStorage', { get() { throw new Error('SecurityError'); } });
+  assert.equal(browserStorage(denied), null);
+  const kept = { localStorage: { getItem: () => null } };
+  assert.equal(browserStorage(kept), kept.localStorage);
 });

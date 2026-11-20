@@ -82,7 +82,8 @@ export function drawStats(doc, stats) {
   el('stats-empty').hidden = games > 0;
   el('stats-body').hidden = games === 0;
   el('stats-status').textContent = '';
-  if (!games) { lastTally = null; return; }
+  // A loaded empty record is a tally too: the first ranked result arriving live is then announced like the next ones.
+  if (!games) { lastTally = tallyText(stats.ranked); return; }
 
   const tally = tallyText(stats.ranked);
   const card = node(doc, 'div', null, 'stats-card record-card');

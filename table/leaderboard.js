@@ -1,5 +1,5 @@
 import { onLobbyChange } from './changes.js';
-import { numberChanged } from './motion.js';
+import { browserStorage, numberChanged } from './motion.js';
 
 // The ladder (ADR 0124): who ranks where among the players with an account, and, for whoever is signed in,
 // their own place and their record against each bot. The host computes everything; this page only draws it.
@@ -125,7 +125,7 @@ let drawnPlayers = null;
 // What this browser remembered when the page opened: the move is said against it for the page's whole life, since
 // the stream's first word reads the ladder again at once. `drawnStanding` is what the last draw showed.
 let seenAtOpen;
-let opened = false;
+let openedFor = null;
 let drawnStanding;
 let drawnRating = null;
 
@@ -216,12 +216,19 @@ function botsParts(doc, bots) {
   return [node(doc, 'p', 'Against the bots (not ranked)', 'eyebrow'), list];
 }
 
-export function drawLadder(doc, ladder, { storage = globalThis.localStorage, first = true } = {}) {
+export function drawLadder(doc, ladder, { storage = browserStorage(), first = true } = {}) {
   const el = id => doc.getElementById(id);
   drawPlayers(doc, ladder);
 
   const standing = ladder.you?.standing ?? null;
-  if (!opened && ladder.you) { seenAtOpen = remembered(storage, ladder.you.username); opened = true; }
+  // Another player signed in (in another tab), or nobody: what this page showed was someone else's, and is forgotten.
+  const who = ladder.you?.username ?? null;
+  if (who !== openedFor) {
+    openedFor = who;
+    seenAtOpen = who ? remembered(storage, who) : undefined;
+    drawnStanding = undefined;
+    drawnRating = null;
+  }
   const key = standing ? `${standing.rank}:${standing.rating}` : null;
   const changed = drawnStanding !== undefined && drawnStanding !== key;
   const before = drawnRating;
@@ -240,7 +247,10 @@ export function drawLadder(doc, ladder, { storage = globalThis.localStorage, fir
     remember(storage, ladder.you.username, standing);
   } else you.push(node(doc, 'p', youSummary(null).text, 'you-line'));
   you.push(...botsParts(doc, ladder.you?.bots));
+  // A live read redraws Your place: the action the keyboard was on keeps the focus in its new form.
+  const focused = el('you').contains(doc.activeElement) && doc.activeElement.classList?.contains('page-action');
   el('you').replaceChildren(...you);
+  if (focused) el('you').querySelector('.page-action')?.focus();
 
   // A place that moved plays the kit's value that changes, once: when the page opens on a move since this browser
   // last showed it, and when a later read changes what the page shows; not on a read that changes nothing.
