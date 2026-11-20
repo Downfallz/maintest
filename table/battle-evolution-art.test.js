@@ -61,7 +61,7 @@ test('a hybrid is one registered entry, found by the two illustrations it combin
   assert.equal(registry.art('transcendent-necrotic').hybrid, 'warped-stage2-necrotic');
   assert.equal(registry.hybrid('warped-stage2-necrotic', 'warped-stage3-transcendent'), null);
   assert.equal(registry.art('warped-stage3-transcendent').stage, 3);
-  assert.equal(EVOLUTION_REGISTRY.hybrid('brute-stage3-colossus', 'warped-stage2-necrotic', 'warped'), null);
+  assert.equal(registry.hybrid('brute-stage3-colossus', 'warped-stage2-necrotic', 'warped'), null);
 });
 test('every capstone lends one registered effect, and effects compose in their fixed layer order', () => {
   const capstones = tiers.filter(tier => tier.level >= 4);

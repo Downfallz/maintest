@@ -111,6 +111,24 @@ test('each Warped Stage 3 shows the hybrid or Ultimate its other mutations call 
   expect([...new Set(h.requests)].sort((a, b) => a.localeCompare(b))).toEqual(Object.values(expected).map(id => `${id}.webp`).sort((a, b) => a.localeCompare(b)));
   await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false'); expect(h.errors).toEqual([]);
 });
+test('the field draws Brute hybrids from its purchases and only loads the portraits in play', async ({ page }) => {
+  const cases = [
+    ['brute-oppressor-sibling', ['brute', 'marauder', 'warmonger', 'ironbound']],
+    ['brute-colossus-warped', ['brute', 'ironbound', 'dreadnought', 'occultist']],
+    ['brute-ravager-predator', ['brute', 'berserker', 'ravager', 'prowler']],
+    ['brute-ravager-ultimate', ['brute', 'berserker', 'ravager', 'marauder', 'occultist', 'shaman', 'prowler', 'parasite']],
+  ];
+  const purchases = cases.flatMap(([, tiers], index) => tiers.map(tier => [index + 1, tier]));
+  const h = await mount(page, { purchases });
+  await page.clock.runFor(100);
+  for (const [index, [artwork]] of cases.entries()) {
+    await expect(figure(page, index + 1)).toHaveAttribute('data-artwork-shown', artwork);
+  }
+  expect([...new Set(h.requests)].sort()).toEqual(cases.map(([id]) => `${id}.webp`).sort());
+  await expect(page.locator('#battle')).toHaveAttribute('data-asset-fallback', 'false');
+  expect(h.errors).toEqual([]);
+});
+
 test('an illustration that cannot load leaves the audited sprite of its form, and the battle carries on', async ({ page }) => {
   const h = await mount(page, { purchases: [[1, 'brute'], [1, 'ironbound']], missing: ['brute-stage2-ironhide'] });
   await expect(figure(page, 1)).toHaveAttribute('data-artwork', 'brute-stage2-ironhide');

@@ -139,10 +139,26 @@ test('a package with no drawn family, or a catalogue that serves none, leaves th
   assert.equal(resolveEvolution({ id: '1', acquiredTiers: [T('brute')] }, new Map(), null).artworkId, 'base-creature');
   assert.equal(resolveEvolution(null, packages, null).artworkId, 'base-creature');
 });
-test('the default registry draws hybrids for the Predator and Warped Stage 3s only: a Brute Stage 3 shows its own image', () => {
-  assert.equal(EVOLUTION_REGISTRY.hybrid('brute-stage3-ravager', 'predator-stage2-open-maw', 'predator'), null);
-  assert.equal(resolve(['brute', 'berserker', 'ravager', 'prowler', 'parasite', 'occultist', 'necromancer']).artworkId, 'brute-stage3-ravager');
-});
+for (const [form, leading, stage3, siblings] of [
+  ['oppressor', 'marauder', 'warmonger', ['berserker', 'ironbound']],
+  ['colossus', 'ironbound', 'dreadnought', ['marauder', 'berserker']],
+  ['ravager', 'berserker', 'ravager', ['marauder', 'ironbound']],
+]) {
+  test(`the four Brute hybrids of ${form} follow the purchased mutations`, () => {
+    const path = ['brute', leading, stage3];
+    assert.equal(resolve(path).artworkId, `brute-stage3-${form}`);
+    for (const [variant, additions] of [
+      ['warped', ['occultist']], ['predator', ['prowler']],
+      ['warped', ['occultist', 'necromancer']], ['predator', ['prowler', 'parasite']],
+      ...siblings.map(sibling => ['sibling', [sibling]]),
+      ['sibling', [siblings[0], 'prowler', 'parasite', 'occultist']],
+      ['ultimate', [siblings[1], 'prowler', 'parasite', 'occultist', 'necromancer']],
+    ]) {
+      const shown = resolve([...path, ...additions]);
+      assert.equal(shown.artworkFile, `evolutions/hybrids/brute-${form}-${variant}.webp`, additions.join(' '));
+    }
+  });
+}
 
 // The approved Predator hybrids (ADR 0152, docs/art/predator-hybrid-aaa-intake.md), each reached by a real path: the
 // Stage 1 and the Stage 2 that lead to the Stage 3, then the mutations that lend their traits.

@@ -16,6 +16,8 @@ Which package draws which illustration is authored beside the content, in `data/
 `table/battle-evolution-art.js` records its canvas, its silhouette bounds (alpha >= 128, measured from the file)
 and its ground anchor (the bottom centre of those bounds), so every stage is drawn to the same box.
 
+The [Brute hybrid intake](brute-hybrid-aaa-intake.md) lists the twelve portraits for Tyrant, Colossus and Ravager.
+
 ## Adding visual hybridizations
 
 - The dominant shape remains the Stage 3 tier's standalone image.
