@@ -55,8 +55,9 @@ export const ROUND = {
     const { page, set, blocked } = walk;
     await account(walk, page, WALKER);
     await takeSeat(page, set.invitation);
+    // The questions are answered one after the other, on purpose: each waits for the host to answer the last.
     const until = async kind => {
-      for (;;) {
+      for (;;) { // NOSONAR S9382: a game's questions come one at a time
         await readUntilAsked(page);
         const view = await asked(page);
         if (view.over) throw new Error(`The game ended before it asked for ${kind}.`);
@@ -83,7 +84,7 @@ export const ROUND = {
     await walk.screen('mutations-revealed', { asSeen: true });
     await openPlanning(page);
     const tabs = await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab));
-    for (const tab of tabs) {
+    for (const tab of tabs) { // NOSONAR S9382: one tab, then its tempo, as a player presses them
       await choose(page, `[data-tempo-tab="${tab}"]`, blocked);
       await choose(page, `[data-speed="${Number(tab) === FOLLOWED.creature ? FOLLOWED.speed : 'Standard'}"]`, blocked);
     }
@@ -153,9 +154,7 @@ async function main(argv) {
     const screens = await walkJourney(browser, ROUND, PHONE, { showcase, scale: SCALE });
     for (const { name, screen, top } of SCREENS) {
       const shot = screens.find(one => one.name === screen);
-      const png = join(work, `${name}.png`);
-      await writeFile(png, shot.png);
-      jobs.push({ png, box: boxOf(top), out: join(folder, `${name}.webp`) });
+      jobs.push({ png: join(work, `${name}.png`), bytes: shot.png, box: boxOf(top), out: join(folder, `${name}.webp`) });
     }
     const table = await serveTable();
     const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: SCALE, isMobile: true, hasTouch: true });
@@ -167,15 +166,14 @@ async function main(argv) {
       for (const [index, ms] of CAST.frames.entries()) {
         const shot = shots.find(one => one.ms === ms);
         if (!shot) throw new Error(`The bench filmed no frame at ${ms} ms.`);
-        const png = join(work, `${castFrame(index)}.png`);
-        await writeFile(png, shot.png);
-        jobs.push({ png, out: join(folder, `${castFrame(index)}.webp`) });
+        jobs.push({ png: join(work, `${castFrame(index)}.png`), bytes: shot.png, out: join(folder, `${castFrame(index)}.webp`) });
       }
     } finally {
       await context.close();
       await table.close();
     }
-    cut(jobs);
+    await Promise.all(jobs.map(job => writeFile(job.png, job.bytes)));
+    cut(jobs.map(job => ({ ...job, bytes: undefined })));
     for (const job of jobs) console.log(job.out);
   } finally {
     await browser.close();

@@ -8,7 +8,7 @@ import { english, french } from './copy.mjs';
 import { CONCEPT_CARD_SOURCE, publishedShowcaseCss } from './concept-card.mjs';
 import { copyrightPage } from './copyright.mjs';
 import { guidePage } from './guide.mjs';
-import { routes } from './layout.mjs';
+import { routes, SHOWCASE_ART } from './layout.mjs';
 import { specimenPath } from './lore.mjs';
 import { observe } from './observation.mjs';
 import { page } from './page.mjs';
@@ -16,7 +16,6 @@ import { privacyPage } from './privacy.mjs';
 import { rulesPage } from './rules.mjs';
 import { GAME_ORIGIN } from '../table/site-origins.js';
 import { PAGE_ART } from '../table/page-art.js';
-import { SHOWCASE_ART } from './layout.mjs';
 
 const source = new URL('../', import.meta.url);
 // The folder to write, `showcase/dist` by default; the tests name a temporary one so the working tree stays as it is.

@@ -26,9 +26,11 @@ function block(entry) {
     const tag = entry.ordered ? 'ol' : 'ul';
     return `<${tag}>${entry.items.map(item => `<li>${inline(item)}</li>`).join('')}</${tag}>`;
   }
+  const head = entry.header.map(cell => '<th scope="col">' + inline(cell) + '</th>').join('');
+  const body = entry.rows.map(row => '<tr>' + row.map(cell => '<td>' + inline(cell) + '</td>').join('') + '</tr>').join('');
   // A table wider than a phone scrolls; a keyboard reaches it to scroll it too.
-  return `<div class="rules-table" tabindex="0"><table><thead><tr>${entry.header.map(cell => `<th scope="col">${inline(cell)}</th>`).join('')}</tr></thead>
-    <tbody>${entry.rows.map(row => `<tr>${row.map(cell => `<td>${inline(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  return `<div class="rules-table" tabindex="0"><table><thead><tr>${head}</tr></thead>
+    <tbody>${body}</tbody></table></div>`;
 }
 
 // A concept card, as the battle and the table's page draw it: its title, its lines and its example, in the classes of
