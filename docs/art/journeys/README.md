@@ -19,6 +19,7 @@ One file a journey, named as `scripts/ux/journeys.mjs` names it: `doors.md`, `le
 | [lessons.md](lessons.md) | The lessons: the four tutorials' brief window, concept cards, the step on the field with its coach and hint, a lesson's end, tutorial 4's result, and Learn to play on the home. | UX8 |
 | [lobby.md](lobby.md) | The lobby: the home of a player with nothing, its featured space and one filled action, the menu, the Create window, a turn that waits, the waiting room, a game that waits on someone else, and a turn that arrives. | UX9 |
 | [pages.md](pages.md) | The player's pages: the Friends window empty, with a request sent and with a friend, the Create window opened on a friend, the ladder and the statistics, each before and after a ranked game. | UX10 |
+| [match.md](match.md) | The match's frame: the round's bar, the order of play, the team labels and the captions, the dock, and one exchange followed from the actor to the next decision. The windows are UX12's. | UX11 |
 | [baseline.md](baseline.md) | Not a brief: the five journeys as they stood before any pass, a line of measures a screen. | UX2 |
 
 ## The format

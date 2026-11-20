@@ -27,7 +27,7 @@ import { BattleAudio, soundControl } from './audio';
 import { mutationScene } from './mutation-scene';
 import { BattleScene } from './scene';
 import type { SceneFrame } from './types';
-import { creatureButton, placeHitTargets } from './targets';
+import { creatureButton, placeHitTargets, speakCreature } from './targets';
 import { bootScene } from './boot';
 import { combatControls } from './combat';
 import { createBattleCombat } from '../../table/battle-combat.js';
@@ -414,7 +414,7 @@ function render() {
   text('reading-kind', reading ? `${({ incoming: "Opponent's action", own: 'Your cast', summary: 'Round summary' } as Record<string, string>)[reading.kind]}${more}` : '');
   text('reading-title', reading?.title ?? ''); readingDetail(reading);
   $('reading-detail').hidden = !reading?.detail;
-  $('reading-open').setAttribute('aria-label', `Result details: ${playbackState.summary}`);
+  text('reading-what', ', result details');
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   resultCard(playbackState.result as ResultCard | null);
@@ -520,7 +520,10 @@ function render() {
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
     // Initiative, defense when it is above zero, and one icon per kind of condition, on every screen: the numbers
     // and the engine's words stay in each badge's title, in the spoken label and in the inspection.
-    node.querySelector('.creature-init')!.textContent = `${one.currentInitiative ?? '—'} INIT`;
+    // Initiative is the cue set's mark and the number: the word INIT did not fit beside health at 11 px (UX11).
+    const init = node.querySelector<HTMLElement>('.creature-init')!, initiative = String(one.currentInitiative ?? '—');
+    init.title = `${initiative} initiative`;
+    if (init.dataset.value !== initiative) { init.dataset.value = initiative; init.replaceChildren(iconElement('initiative-gain'), document.createTextNode(initiative)); }
     const defense = node.querySelector<HTMLElement>('.creature-defense')!;
     const defended = Number.isFinite(one.totalDefense) && one.totalDefense > 0;
     defense.hidden = !defended; defense.title = defended ? `${one.totalDefense} defense` : '';
@@ -538,7 +541,7 @@ function render() {
     // The status tag stands above the whole caption, however many badge rows a narrow figure wraps it into.
     node.style.setProperty('--caption-height', `${node.querySelector<HTMLElement>('.caption')!.offsetHeight}px`);
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    node.setAttribute('aria-label', `${one.enemy ? 'Opponent' : 'Your team'}: ${one.label}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
+    speakCreature(node, `, ${one.enemy ? 'opponent' : 'your team'}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), offered ? 'Choose mutation for this creature.' : targeting ? 'Target selection.' : 'Inspect creature.'].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));
@@ -555,7 +558,7 @@ function render() {
     $('playback-next').hidden = true; $('playback-skip').hidden = true;
     text('reading-kind', 'Turn order'); text('reading-title', `Round ${order.round ?? '—'}`);
     readingDetail({ detail: [...order.summary, order.hasRolls ? 'Ties broken by d20' : ''].filter(Boolean).join(' · ') });
-    $('reading-detail').hidden = false; $('reading-open').setAttribute('aria-label', 'Turn order details');
+    $('reading-detail').hidden = false; text('reading-what', ', turn order details');
     if (!orderShown && !document.querySelector('dialog:modal')) $('order-continue').focus({ preventScroll: true });
   }
   orderShown = orderReading;
@@ -695,13 +698,17 @@ function render() {
 function statChips(stats: HTMLElement, health: number, maxHealth: number, energy: number) {
   const key = `${health}/${maxHealth}/${energy}`;
   if (stats.dataset.value === key) return;
-  stats.dataset.value = key;
+  // Health answers the blow on the frame that carries it (the playback's impact): the kit's number that changes.
+  const struck = stats.dataset.health !== undefined && stats.dataset.health !== String(health);
+  stats.dataset.value = key; stats.dataset.health = String(health);
   const unseen = (value: string) => { const span = document.createElement('span'); span.className = 'unseen'; span.textContent = value; return span; };
   const chip = (kind: string, icon: string, value: string, unit: string) => {
     const span = document.createElement('span'); span.className = `stat stat-${kind}`;
     span.append(iconElement(icon), document.createTextNode(value), unseen(unit)); return span;
   };
-  stats.replaceChildren(chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP'), unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
+  const healthChip = chip('health', 'health-gain', `${health}/${maxHealth}`, ' HP');
+  if (struck) healthChip.classList.add('motion-number', 'motion-changed');
+  stats.replaceChildren(healthChip, unseen(' · '), chip('energy', 'energy-gain', String(energy), ' EN'));
 }
 
 // An action's outcomes read as chips beside the creature each landed on; its words stay for screen readers.
@@ -730,7 +737,7 @@ function readingDetail(reading: { detail: string; groups?: { target: string; chi
 function effectChips(node: HTMLElement, chips: EffectChip[]) {
   // Above the creature's head, where the hit area begins: never over its body, which the caption already shares.
   let holder = node.querySelector<HTMLElement>('.creature-effect');
-  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; node.prepend(holder); }
+  if (!holder) { holder = document.createElement('span'); holder.className = 'creature-effect'; holder.setAttribute('aria-hidden', 'true'); node.prepend(holder); }
   const key = JSON.stringify(chips);
   holder.hidden = chips.length === 0;
   if (holder.dataset.chips === key) return;

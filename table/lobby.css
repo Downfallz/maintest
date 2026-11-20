@@ -475,3 +475,6 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
 #create-submit { white-space: nowrap; }
 /* Friends grows at its foot when a friend or a request arrives: anchored near the top, nothing above it moves. */
 #friends-dialog { margin-block: min(12vh, 96px) auto; max-height: calc(100dvh - min(12vh, 96px) - 12px); }
+/* The bell's place in the menu, for a bar with no room for it (the battle view under 360 px, battle.css): hidden
+   on every other page and width, where the bell stands beside the account. */
+.home-header .home-navigation .menu-inbox, .home-header .menu-inbox-badge { display: none; }

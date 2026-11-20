@@ -89,9 +89,11 @@ its window, each with the action it calls for:
 | A friend request | **Accept**, **Decline** (silent, as in Friends) |
 | An invitation of theirs a friend declined | **Open the lobby →**, where Invite another, Open and Close are |
 
-The bell sits outside the menu, so a phone sees its count without opening anything. The badge counts up to nine,
-then says 9+; its accessible name says how much waits. Where the platform offers one, an installed app shows the
-same count on its icon (`navigator.setAppBadge`). Every action is the route the lobby or the Friends panel already
+The bell sits outside the menu, so a phone sees its count without opening anything. One place has no room for it:
+the battle view's bar under 360 px, signed in (UX11, `docs/art/journeys/match.md`). There the bell joins the menu,
+as its Notifications entry, and its count is drawn on the menu's button, still seen without opening anything.
+The badge counts up to nine, then says 9+; its accessible name says how much waits. Where the platform offers one,
+an installed app shows the same count on its icon (`navigator.setAppBadge`). Every action is the route the lobby or the Friends panel already
 uses; a request answered here is read again by the Friends panel, and the lobby reads its lists again. The bell
 reads `GET /api/lobby/mine` and `GET /api/friends` when it is opened, when who is signed in changes, and, while the
 page is in view, when the lobby's stream opens or says the player's own lists changed (ADR 0164). On the lobby,

@@ -262,7 +262,8 @@ test('initiative stands under every name on the field, on phones too, below the 
     expect(Math.abs((init.left + init.right) / 2 - (name.left + name.right) / 2)).toBeLessThan(2);
     expect(await node.locator('.creature-name').evaluate(one => one.scrollWidth <= one.clientWidth)).toBe(true);
   }
-  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveText('8 INIT');
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveText('8');
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-init')).toHaveAttribute('title', '8 initiative');
   expect(h.errors).toEqual([]);
 });
 

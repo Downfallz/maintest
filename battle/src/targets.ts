@@ -4,7 +4,10 @@ import type { Placement } from './types';
 // stands. Both the laboratory and the live preview draw them, so the two cannot drift apart in what a tap lands on.
 
 // Static structure only; every authored text is assigned through textContent by the caller.
-const TEMPLATE = '<span class="creature-tag"></span><span class="creature-result"></span><span class="caption"><span class="creature-name"></span><span class="creature-badges"><span class="creature-init"></span><span class="creature-defense" hidden></span><span class="creature-conditions"></span></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats"></span></span>';
+// A screen reader hears the name a player sees, then one sentence (`speakCreature`): the drawn badges are silent,
+// so the button's name is made of its own words and never differs from them (WCAG 2.5.3, axe's
+// label-content-name-mismatch).
+const TEMPLATE = '<span class="creature-tag" aria-hidden="true"></span><span class="creature-result" aria-hidden="true"></span><span class="caption"><span class="creature-name"></span><span class="unseen creature-spoken"></span><span class="creature-badges" aria-hidden="true"><span class="creature-init"></span><span class="creature-defense" hidden></span><span class="creature-conditions"></span></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats" aria-hidden="true"></span></span>';
 
 export function creatureButton(id: string) {
   const node = document.createElement('button');
@@ -15,14 +18,22 @@ export function creatureButton(id: string) {
   return node;
 }
 
+/** What a screen reader hears after the creature's name: its side, its numbers and what a press does. */
+export function speakCreature(node: HTMLElement, sentence: string) {
+  const spoken = node.querySelector<HTMLElement>('.creature-spoken')!;
+  if (spoken.textContent !== sentence) spoken.textContent = sentence;
+}
+
 // Buttons in the board's order, which is the layout's order too; the caption hangs below the feet, as far as the
 // layout lifted the figure above it (42px at least).
 export function placeHitTargets(buttons: HTMLButtonElement[], positions: Placement[]) {
   for (const [index, node] of buttons.entries()) {
     const position = positions[index];
     if (!position) continue;
-    node.style.left = `${position.x - position.hitWidth / 2}px`;
-    node.style.top = `${Math.max(0, position.y - position.size)}px`;
+    // Placed by a translation, not by left and top: a button that follows its figure when a sheet docks or closes
+    // moves with the canvas, and is no layout shift of the page (UX11, docs/art/journeys/match.md).
+    node.style.left = '0'; node.style.top = '0';
+    node.style.transform = `translate(${position.x - position.hitWidth / 2}px, ${Math.max(0, position.y - position.size)}px)`;
     node.style.width = `${position.hitWidth}px`;
     node.style.height = `${Math.max(44, position.size + (position.caption ?? 42))}px`;
     node.style.zIndex = String(Math.round(position.y));

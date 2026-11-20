@@ -138,6 +138,12 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     badge.textContent = badgeText(items.length);
     badge.hidden = items.length === 0;
     bell.setAttribute('aria-label', bellLabel(items.length));
+    // Where the bar has no room for the bell (the battle view under 360 px, battle.css), the menu holds it: the
+    // same count on the menu's button, and an entry that opens the same window (home-navigation.md, "The bell").
+    const entry = el('inbox-open-menu'), count = el('inbox-menu-count'), toggle = el('menu-inbox-badge');
+    entry.hidden = !account;
+    for (const one of [count, toggle]) { one.textContent = badgeText(items.length); one.hidden = items.length === 0; }
+    entry.setAttribute('aria-label', bellLabel(items.length));
     appBadge(items.length);
     const groups = GROUPS.map(group => ({ label: group.label, list: items.filter(item => item.kind === group.kind) })).filter(group => group.list.length);
     el('inbox-list').replaceChildren(...(groups.length ? groups.map(({ label, list }) => {
@@ -176,7 +182,7 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     }
   }
   const retry = backoff(() => void refresh(true), { schedule: (run, delay) => win.setTimeout(run, delay), cancel: id => win.clearTimeout(id) });
-  el('inbox-open').addEventListener('click', () => { problem(); void refresh(true); });
+  for (const opener of [el('inbox-open'), el('inbox-open-menu')]) opener.addEventListener('click', () => { problem(); void refresh(true); });
   // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing,
   // listened to while somebody is signed in: a page nobody signed in to has no bell to keep current.
   let unlisten = null;
