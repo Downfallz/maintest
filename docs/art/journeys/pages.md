@@ -127,8 +127,8 @@ their initial once there is one.
 
 ### Left
 
-- Ask → filled only while the window holds no friend and no request is mine: once a friend is there the window has
-  no filled action. A person could want Invite filled instead; with three friends that is three gold buttons.
+- Settled by the owner on 2026-11-20 on the sheets: Ask → is filled only while the window holds no friend and no request; once a friend is there the window
+  has no filled action.
 
 ## The Friends window, a request sent (`friends-asked`)
 
@@ -279,8 +279,7 @@ None: each friend is their initial in the identity's square.
 
 ### Left
 
-- No filled action on the window once a friend is there: my choice (above). The owner may want the first friend's
-  Invite filled.
+- Settled by the owner on 2026-11-20 on the sheets: no filled action on the window once a friend is there; Invite stays quiet.
 - The friend's row says nothing of whether they are playing now: the host does not send it, and this brief adds no
   route.
 
@@ -315,7 +314,8 @@ Opened on a friend (from Invite, from a recent opponent's Challenge, or from a R
 window replaces the PvP and Solo tabs, Who are you playing? and Which friend? with the friend's line: the choice is
 made, and the line is drawn from the list `loadFriends` reads, by the friend's id, so it is the same on every page.
 To play someone else, the player cancels and opens New battle. My choice: it shortens the window by the tabs and two
-selects, and a person could want to change the friend in place.
+selects. Settled by the owner on 2026-11-20: another opponent is a new battle, with no way to change the friend in
+place.
 
 ### Pictures
 
@@ -462,9 +462,8 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
 
 - How the ladder counts restates ADR 0124 in 45 words: the rulebook has no section on the ladder. When the
   `rulebook-writer` adds one, the disclosure becomes a link to it.
-- The action is filled on an empty page, my choice: it is the only thing a player with nothing can do here.
-- Open a ranked table → opens the window on an open seat for another player; a player with a friend might rather
-  invite them. The window lets them choose A friend.
+- Settled by the owner on 2026-11-20 on the sheets: the action is filled on an empty page, and it opens an open seat for another player, not a
+  friend's invitation; the window lets a player choose A friend.
 
 ## The ladder after a ranked game (`leaderboard-ranked`)
 
@@ -569,8 +568,7 @@ None: a player is their initial (ADR 0122), and the rating and the record are dr
   no "last seen" rating, and this brief asks for none.
 - A long ladder on a phone: Your place says the place, but no link scrolls to the player's row. A "See your row"
   link is left until a ladder is long enough to need it.
-- The drawn rating with two players is two ticks at its ends: honest, and thin. The owner may prefer the rating
-  written alone until the ladder has more players.
+- Settled by the owner on 2026-11-20 on the sheets: the rating stays drawn, even as two ticks on a ladder of two.
 
 ## The statistics before a ranked game (`statistics`)
 
@@ -640,8 +638,7 @@ None: no mutation has been acquired, so there is no painting to show; the empty 
 
 ### Left
 
-- The page hides four empty containers behind one empty state, my choice: the craft book's empty state is one
-  sentence and one way in, and a player with nothing learns nothing from 0–0–0.
+- Settled by the owner on 2026-11-20 on the sheets: one empty state in place of four empty containers.
 
 ## The statistics after a ranked game (`statistics-ranked`)
 
@@ -741,8 +738,8 @@ name rather than across the card, keeps Record and Most acquired together on the
 
 - **Bytes**: one evolution, lazily, at 144 px wide and twice that at a phone's density; its bytes are what
   `node scripts/ux/pictures.mjs --budget` measures once derived, and the page's budget is set from it.
-- **Largest paint**: the title at 320, perhaps the painting at 390 if it is inside the first screen: not measured;
-  the stage runs `--paint` with the walker's games. Budget 2.5 s.
+- **Largest paint**: the title at 320, perhaps the painting at 390 if it is inside the first screen: not measured:
+  `--paint` was not run on this page (the plan's **Left**). Budget 2.5 s.
 - **Shift**: the painting's `width` and `height`; Record, Most acquired and Most cast hold their rooms. Budget 0.1.
 
 ### Left
@@ -751,5 +748,5 @@ name rather than across the card, keeps Record and Most acquired together on the
   evolution and load one. The page's budget of all its pictures reads as the library's, not a visit's, until the kit
   can say "one of these".
 - A mutation's painting is its evolution: a mutation that shares an evolution with another shows the same painting.
-- Brute is the family's base form, so the walk's painting is the plainest of the evolutions; a player further in
-  shows a stage II or III form. The walk may play longer before conceding if the owner wants that seen.
+- Settled by the owner on 2026-11-20 on the sheets: the walk's painting stays Brute, the family's base form; the browser suite holds a longer
+  name (Deathstalker) and its painting.

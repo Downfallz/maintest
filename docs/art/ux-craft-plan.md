@@ -582,6 +582,10 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     the game. Tests: `friends.test.js`, `leaderboard.test.js`, `stats.test.js`, `lobby.test.js`, `StatsApiTests`, and
     the Friends, ladder and statistics cases of `lobby-home.spec.js`.
 
+    The owner approved the sheets on 2026-11-20 and kept each choice as built: no filled action in Friends once a
+    friend is there, the Create window fixed on its friend, the rating drawn on a short ladder, the empty pages'
+    open seat, and Brute's painting in the walk.
+
     Left, as the brief's **Left** lists it ([the player's pages](journeys/pages.md)):
 
     - The initial cannot travel from the row into the Create window: the book has no pattern for it.
