@@ -1228,7 +1228,9 @@ test('on a wide screen the duel sits beside the words and fills the panel to its
       expect((drawn.width / drawn.height) / (1672 / 941), `both teams at ${width}`).toBeGreaterThanOrEqual(0.75);
     } else {
       expect(drawn.height, `above the words at ${width}, never taller than half the screen`).toBeLessThanOrEqual(400 + 1);
-      expect(drawn.y + drawn.height, `above the words at ${width}`).toBeLessThanOrEqual(heading.y);
+      // A box of 16:9 has a fractional height, rounded unlike the heading's line box: CI's runner lands the two on
+      // one pixel (539 against 538 on small-phone at 760 px), the masked, faded edge of the painting. One pixel, as above.
+      expect(drawn.y + drawn.height, `above the words at ${width}`).toBeLessThanOrEqual(heading.y + 1);
     }
     await expect(page.getByRole('button', { name: 'Continue with Google' }), `at ${width}`).toBeInViewport();
     await noOverflow(page);
