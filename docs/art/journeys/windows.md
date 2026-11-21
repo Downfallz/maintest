@@ -340,8 +340,13 @@ None.
   Strike and Focus are in view (overlaps 1 at 390, 0 at 320). Worth an issue for UX12: a short screen does not see
   what the creature could cast while it chooses a tempo.
 - Pummel's crit chip here keeps its hint written ("Precision · current"), where the spellbook's grey chip at
+<<<<<<< HEAD
   Instinct writes the chance alone: two forms of one fact on two sheets. Settled by the owner (2026-11-21): both
   stay as they are. The reference has room for its hint; a chip in a column of the spellbook does not.
+=======
+  Instinct writes the chance alone: two forms of one fact on two sheets. Whether the reference takes the
+  spellbook's grey chip is a choice for the owner, not P7's.
+>>>>>>> origin/main
 
 ## The spellbook (`spell-choice`)
 
@@ -631,9 +636,16 @@ None.
   ("Opponent ·", its tempo and initiative gone, whole on `main`), and at 320 the second slot shows "Crea" and its
   portrait. The strip scrolls sideways, and the cut words are in the entry's name and the order window: accepted
   as the price of the picture, unless the owner prefers the side's tempo kept over the portrait.
+<<<<<<< HEAD
 - **Settled by the owner (2026-11-21)**: the revealed spell's name is not written in the strip, only spoken and in
   the order window. The strip is the rule's one named exception: it has no room for a name at 320, and the fact is
   one tap away.
+=======
+- **A choice for the owner**: the revealed spell's name is not written in the strip, only spoken and in the order
+  window. Either the brief's rule takes a named exception for the strip (my choice: the strip has no room for a
+  name at 320, and the fact is one tap away), or the name is written under the creature's, at the cost of the
+  side's words or the strip's height.
+>>>>>>> origin/main
 - The shift at 320 (0.05) is summed over the walk; whether a reveal's widening moves the strip under the player's
   finger is read on a strip of the order, not on this sheet.
 
