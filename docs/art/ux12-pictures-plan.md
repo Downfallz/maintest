@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P5 are built; P6 is next, then P7 and P8 (asked 2026-11-21).
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P8 are built; P6, P7 and P8 share one pull request, which waits for the owner's approval of the sheets.
 
 ## What the owner asked for
 
@@ -138,6 +138,19 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
 6. **P6, the sheets.** The walk filmed again at 320 and 390 px, the measures against the brief, the
    `ux-designer`'s reading, and the sheets shown to the owner, who approves them before the last pull request is
    reported ready. A short clip at 390 by 844 of one pick, as the craft plan asks of UX7 to UX12.
+
+   *Built (2026-11-21)*: the walk's `windows` journey films seven screens, adding `tempo-reference` (the Tempo sheet
+   at its spell reference, the reference brought just under the pinned head) and `order-revealed` (a later turn, the
+   strip read from its start). The team's first creature plays at Instinct, so `spell-choice` shows P8's chip
+   (`scripts/ux/play.mjs`: a walk may choose a tempo per tab). The two new screens have their lines in the
+   baseline. Both widths were filmed on `main` and on the branch with the same walk. The `ux-designer` wrote the two
+   screens and P8's chip into [the brief](journeys/windows.md), then read the two films. It asked for one change: a shift of
+   0.09 at 390 after the Tempo sheet. The walk, made to name each shift's elements, found the field's captions moving as
+   the docked sheet closes. `main` shows the same on one walk in two, so it stays under the brief's **Left** as UX12's.
+   The clip of one pick at 390 by 844 was recorded with `UX_JOURNEY_VIDEO` (`docs/reference/commands.md`), new here,
+   and cut with `ffmpeg`. Sheets, clip and choices are on the owner's page. Left: the strip's spell name is not
+   written in it (an exception the owner settles), the Tempo reference has almost no room at 320, and the field
+   moves when the Tempo sheet closes.
 
 7. **P7, the Tempo's spells and the order bar.** A spell's portrait at 24 px in the Tempo sheet's spell reference
    (`battle/src/tempo.ts`, today `compact` cards without one) and beside a revealed spell in the activation order at

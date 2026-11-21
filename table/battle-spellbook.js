@@ -22,8 +22,9 @@ function critical(card, guide) {
   if (guide?.chosenSpeed === 'Quick') {
     const value = guide.standardCriticalChance;
     if (Number.isFinite(value)) return value > 0 ? { value: chance(value), hint: 'at Precision', idle: true } : null;
+    // No die is rolled for a chance that does not hold this turn: the chip keeps no face.
     const own = catalogued('at Precision · catalogue');
-    return own ? { ...own, idle: true } : null;
+    return own ? { value: own.value, hint: own.hint, idle: true } : null;
   }
   const value = guide?.standardCriticalChance;
   if (Number.isFinite(value)) return value > 0 ? { value: chance(value), hint: 'at this tempo' } : null;

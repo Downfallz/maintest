@@ -19,7 +19,8 @@ P6 walked the journey again on its branch, with P7 and P8 built (on `55731bb`), 
 screen with their measures. The walk now films seven screens: `mutation-pick`, `mutation-tree`, `tempo-reference`,
 `spell-choice`, `spell-choice-foot`, `order-revealed`, `history`. The team's first creature plays at Instinct, so
 `spell-choice` and `spell-choice-foot` are filmed at Instinct; the Precision state of the crit chip is read on
-`order-revealed`, where Creature 2's spellbook is docked at Precision.
+`order-revealed`, where Creature 2's spellbook is docked at Precision. P6's critique read this walk on the branch
+against the same walk on `main` (P1 to P5 built), at 320 then 390. "P6's walk" below is the branch's film.
 
 The pictures counted on each screen (the same walk, read in the page, alike at both widths): the spellbook holds 4
 spells (Strike, Pummel, Focus, Brace) and 4 portraits, 2 in view at its top at 390 and 4 at its foot; the pick 3
@@ -271,8 +272,11 @@ portrait at 24 px beside its name: it answers "which of my spells is this?" whil
 - **Order**: the creature and its energy; Instinct and Precision, each with its line; the reference's note ("Its
   spells · crit chances at Precision, current values"); each card: its portrait beside its name, its cost and crit
   chips, its targeting, its effects; the foot.
-- **Budget**: 109 words at 390 px (109 today), 107 at 320 (107 today). The portraits add no word; the name stays
-  written beside each one.
+- **Budget**: 109 words at 390 px (109 today), 107 at 320 (107 today), the same as on `main`: the portraits add no
+  word; the name stays written beside each one.
+- **Small text**: the smallest 9.17 px at both widths, 26 words under 11 px: the tempos' lines ("Acts before
+  Precision · cannot crit") and the crit chips' hints ("Precision · current"). The same on `main`; the floor of
+  11 px is the match's ([the match's brief](match.md)) and UX12's (**Left**).
 
 ### Pictures
 
@@ -292,7 +296,8 @@ fails to load is hidden and leaves no gap; the name stays written.
 
 - **First paint**: not reached: the sheet opens on the host's question, after the page.
 - **Empty**: "No known spells recorded." in place of the cards, and no portrait (read in the code, not seen).
-- **Loaded**: the pinned creature and tempos, the note, the four cards with their portraits, as filmed. On the
+- **Loaded**: the pinned creature and tempos, the note, the four cards with their portraits; filmed at 390 with
+  Strike and Focus in view, their portraits drawn, and at 320 with the note alone above the foot. On the
   creature the host is waiting on, the cost and crit chips are the host's current values ("Precision · current");
   on another, the catalogue's ("Precision · catalogue").
 - **Waiting**: after a tempo is drafted, its tab wears it and Confirm tempos counts it; the reference is unchanged.
@@ -312,9 +317,9 @@ None.
 - **Focus**: as today, on the creature's tab (`role="tab"`, the arrows move between creatures); then the two
   tempos, the reference (a section named "Spell reference"), the foot.
 - **Names**: each portrait's `alt` is empty: the card's name is written beside it. axe finds nothing at either
-  width.
+  width on P6's walk.
 - **Announced**: nothing new: a picture that arrives says nothing.
-- **Targets**: 21 controls at 390 and 19 at 320, none under 44 px.
+- **Targets**: 21 controls at 390 and 19 at 320 on P6's walk, none under 44 px, as on `main`.
 
 ### Cost
 
@@ -322,20 +327,18 @@ None.
   their 48 px files, the same files as the spellbook's at 320 by 568. The page's total does not move: P2 counted the
   24 and 48 px files (322,218 B against 327,680 B).
 - **Largest paint**: not this screen's: the sheet opens after the page's first paint, and its pictures are lazy.
-- **Shift**: 0 at 390 and 0.02 at 320 on P6's walk. Each portrait's room is held by its `width` and `height`, so a
-  card's name does not move when it arrives.
+- **Shift**: 0.01 at 390 and 0.03 at 320 on P6's walk, summed over the walk, as on `main`. Each portrait's room is
+  held by its `width` and `height`, so a card's name does not move when it arrives.
 
 ### Left
 
-- Measured on P6's walk: 568 px tall at 320, 107 words, 4 img, the smallest text 9.17 px, 26 words under 11 px,
-  0 of 19 targets under 44 px, axe nothing; at 390, 109 words, 0 of 21 under 44. The 26 words under 11 px are the
-  tempos' lines ("Acts before Precision · cannot crit") and the crit chips' hints ("Precision · current"); they are
-  there on `main` too (the match journey's `tempo-sheet` measured 8 px and 57 words under 11 px). The floor of
-  11 px is the match's ([the match's brief](match.md)); fixing it is UX12's, not P7's.
-- On the sheets, scrolled to the reference's start, its first card runs under the pinned creature and tempos: at
-  320 only Strike's "Damage 3" shows, and no portrait is in view; at 390 Focus and Pummel are (overlaps 3 at 320,
-  4 at 390). A player scrolls on by hand, so it is the walk's view more than a fault; a top margin on the
-  reference equal to the pinned head's height would let its first card land in view. The critique reads it again.
+- The 26 words under 11 px (the **Words**) are there on `main` too: the match journey's `tempo-sheet` measured
+  8 px and 57 words under 11 px. Fixing them is UX12's, not P7's.
+- At 320 by 568 the reference is out of sight: the walk brings it just under the pinned head, but the team's tabs,
+  the creature, its two tempos and the foot fill the docked sheet, and only the note's first line shows; no card and
+  no portrait is in view. The same on `main`, before any portrait: the sheet's height at 320, not P7's. At 390
+  Strike and Focus are in view (overlaps 1 at 390, 0 at 320). Worth an issue for UX12: a short screen does not see
+  what the creature could cast while it chooses a tempo.
 - Pummel's crit chip here keeps its hint written ("Precision · current"), where the spellbook's grey chip at
   Instinct writes the chance alone: two forms of one fact on two sheets. Whether the reference takes the
   spellbook's grey chip is a choice for the owner, not P7's.
@@ -379,8 +382,9 @@ knows before reading.
 
 - **Order**: the creature and "choose a spell"; its place, its tempo, its energy; each group's title; each spell,
   its portrait beside its name, its targeting, its chips, its availability, its effects' icons and numbers.
-- **Budget**: 106 words at 390 px (108 today, at Instinct, on P6's walk; 131 before P3), 92 at 320 (94 today;
-  117 before P3). What leaves the faces is 25 words: Pummel's
+- **Budget**: 108 words at 390 px (108 today, at Instinct), 94 at 320 (94 today). The film proves P1's 106 and 92
+  wrong for this walk: on `main`, at Instinct, the same screen is 107 and 93 words; P8's grey chip adds its chance
+  ("75%", 1 word), which the owner asked for. 131 and 117 before P3. What leaves the faces is 25 words: Pummel's
   crit note (15, "Instinct cannot crit. At Precision, …"), its hint "at this tempo" (3), and the effect lines' words
   (7: Damage twice, Energy, Defense twice, rounds twice). They are counted on the targets screen, on the chosen
   card, at most 20 there (Pummel's). The pictures add no word.
@@ -440,9 +444,10 @@ None.
 - **Bytes**: unchanged per spell by the columns: 0 before any scroll of the page. Open at 390, the window takes
   7,482 B: the four portraits from their 80 px files.
 - **Largest paint**: not this screen's: the sheet opens after the page's first paint.
-- **Shift**: 0 at 390 and 0.02 at 320 on P6's walk (0.03 before); each portrait's room is held, and a card's height
-  does not change when its cost and availability arrive, nor when its crit chip turns from grey to gold (AU9: the
-  card does not grow under the pointer).
+- **Shift**: 0.10 at 390 and 0.03 at 320 on P6's walk, summed over the walk; 0.01 and 0.03 on `main`. The 0.09 more
+  at 390 arrives between `tempo-reference` and this screen, from the field (**Left**), not from this sheet. Each portrait's room
+  is held, and a card's height does not change when its cost and availability arrive, nor when its crit chip turns
+  from grey to gold (AU9: the card does not grow under the pointer).
 
 ### Left
 
@@ -456,8 +461,11 @@ None.
   the `rulebook-writer`'s and the host's, not the page's.
 - Text under 11 px: none on P6's walk, the smallest 11 px at both widths (3 elements at 10 px before P3, the crit's
   `d20 6+` and `at this tempo`).
-- Words: 108 at 390 and 94 at 320 on P6's walk, 2 over the budget at both widths. The measure does not say which
-  2; the critique names them, and the budget holds until it does.
+- **The field's shift after the Tempo sheet (UX12's)**: P6's critique asked what moved the 0.09 at 390 between
+  `tempo-reference` and `spell-choice`. The walk, made to name each shift's elements, found the field's five creature
+  captions moving down 120 px as the docked Tempo sheet closes and the field grows. Not a portrait, not the chip.
+  `main` walked the same way shows the same 0.09 on one walk and none on the next: it counts only when the host's
+  answer lands more than 0.5 s after the confirming tap. Holding the field still while a sheet closes is UX12's.
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 
@@ -480,7 +488,7 @@ the pictures in.
 ### Words
 
 - **Order**: as the spellbook; the last row's cards, then the foot.
-- **Budget**: 92 words at 320 px (117 today), 106 at 390 (131 today): the spellbook's, the same cards. The
+- **Budget**: 94 words at 320 px (94 today), 108 at 390 (108 today): the spellbook's, the same cards. The
   pictures add no word.
 
 ### Pictures
@@ -516,7 +524,7 @@ None.
 - **Names**: each card's button speaks the spell's name first, as on the spellbook; the portrait's `alt` is
   empty.
 - **Announced**: `#combat-dialog-error` is an alert, said without moving the focus.
-- **Targets**: 25 controls at 320 today, none under 44 px; a card with its 24 px portrait, in its column, stays
+- **Targets**: 25 controls at 320 on P6's walk, none under 44 px; a card with its 24 px portrait, in its column, stays
   44 px tall and wide at the least.
 
 ### Cost
@@ -524,17 +532,16 @@ None.
 - **Bytes**: unchanged per spell by the columns: 0 before any scroll of the page. Open at 320 by 568, the window
   takes 3,502 B: the four portraits from their 48 px files (against 7,482 from the 80 px files at 390).
 - **Largest paint**: not this screen's.
-- **Shift**: 0.03 at 320 today; the portrait's room in the head is held, so the name does not move when it arrives.
+- **Shift**: 0.03 at 320 and 0.10 at 390 on P6's walk, summed over the walk (the spellbook's **Left**); the portrait's room in the head is held, so the name does not move when it arrives.
 
 ### Left
 
-- Overlaps 18 at 320 and 5 at 390, against 1 at the spellbook's top, are the walk's own scroll: the cards
-  scrolled under the sheet's chips row count as overlapping (at 320 Focus's `Available` line is cut under it).
-  P3 does not chase them as new. The critique reads whether a card is covered without a way to reach it, at 320
-  and at 200% text (P3's test).
-- Measured by P3 at 320 by 568 (`battle-spellbook.spec.js`, a desktop browser at that size): the first row is in
-  view, the second row scrolls under the header, and the foot stays in view and 44 px tall. The
-  film of P6 reads it again with the walk's own spells.
+- Overlaps 1 at 320 and 0 at 390 on P6's walk (18 and 5 on P1's, before the columns): at 320 the first row's last
+  line (Strike's and Pummel's numbers) runs under the sheet's chips row, the walk's own scroll, and is reached by
+  scrolling back.
+- Read on P6's film at 320 by 568, as P3 measured it (`battle-spellbook.spec.js`): the second row (Focus, Brace)
+  whole in view under the header, and no foot drawn, since nothing is declared. Declare spell and the alert in
+  the foot are read in the code, not seen.
 - The two columns amend AU9: the spellbook's **Left**.
 
 ## The order of play, spells face up (`order-revealed`)
@@ -555,7 +562,8 @@ both teams) shows the spell's portrait at 24 px after its place badge, a tick on
 - **Order**: Order; each slot from the first: its place badge (a tick once played), the revealed spell's portrait,
   the creature's name, its side (with its tempo and initiative at 390; under 360 px they leave the line); then the
   field, then the spellbook.
-- **Budget**: 105 words at 390 px (105 today), 91 at 320 (91 today). The portraits add no word.
+- **Budget**: 105 words at 390 px (105 today), 91 at 320 (91 today), as on `main`: the portraits add no word. The
+  smallest text 11 px at both widths, none under.
 - **The spell's name**: it is in the entry's accessible name ("…, revealed Strike, highlight on the field") and in
   the order window's card ("Revealed · Strike"), not written in the strip itself.
 
@@ -563,7 +571,7 @@ both teams) shows the spell's portrait at 24 px after its place badge, a tick on
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The revealed spell's portrait on each slot already played, after its tick, of either team (Creature 1's and Creature 5's in view at 320 and at 390). | 24 by 24 px, at both widths | What did that creature cast? | `docs/art/spell-portraits/strike.webp` for Strike, and each revealed spell's own `portrait`, as `data/presentation/spell-art.json` names it |
+| The revealed spell's portrait on each slot already played, after its tick, of either team (filmed: Creature 1's Brace and Creature 5's Strike, at both widths). | 24 by 24 px, at both widths | What did that creature cast? | `docs/art/spell-portraits/brace.webp` and `docs/art/spell-portraits/strike.webp`, each revealed spell's own `portrait`, as `data/presentation/spell-art.json` names it |
 
 The spell is the host's: `board.revealedActions`, the actions already played, which `presentation.js` passes on.
 No private intent is ever shown: a slot not yet played, the player's own included, has no portrait, whatever the
@@ -600,25 +608,29 @@ None.
 
 - **Focus**: unchanged: Order, then each slot's entry in the order of play, then the field and the spellbook.
 - **Names**: the portrait's `alt` is empty; the entry's name carries the spell: "Creature 1, of your team, position
-  1, …, revealed Strike, highlight on the field" (its form, read in the code: the sheet cannot say it). axe finds nothing
-  at either width.
+  1, …, revealed Brace, highlight on the field" (its form, read in the code: the sheet cannot say it). axe finds
+  nothing at either width on P6's walk.
 - **Announced**: nothing new: a newly revealed order is read on the field and in the dock's card, as today; a
   picture says nothing.
-- **Targets**: 27 controls at 390 and 25 at 320, none under 44 px.
+- **Targets**: 27 controls at 390 and 25 at 320 on P6's walk, none under 44 px, as on `main`.
 
 ### Cost
 
-- **Bytes**: 0 before any scroll of the page. Each revealed spell's portrait comes from its 48 px file (568 to
+- **Bytes**: 0 before any scroll of the page. The screen draws 8 pictures (4 on `main`): the strip's revealed
+  spells and the spellbook's 4. Each revealed spell's portrait comes from its 48 px file (568 to
   1,254 B each, P1's measure), once per distinct spell, and is shared with the spellbook's and the journal's. The
   page's total does not move: P2 counted the 24 and 48 px files (322,218 B against 327,680 B).
 - **Largest paint**: not this screen's: the strip fills after the page's first paint.
-- **Shift**: 0.01 at 390 and 0.05 at 320 on P6's walk, summed over the walk. A slot's entry widens by the portrait
+- **Shift**: 0.10 at 390 and 0.06 at 320 on P6's walk, summed over the walk (0.02 and 0.06 on `main`): the 0.09
+  more at 390 is the field's, after the Tempo sheet (the spellbook's **Left**), none on this screen. A slot's entry widens by the portrait
   when the host reveals its spell, an arrival, not a load: the picture's own room is held.
 
 ### Left
 
-- Measured on P6's walk: 568 px tall at 320, 91 words, 8 img (the spellbook's 4 among them), the smallest text
-  11 px, 0 words under 11 px, 0 of 25 targets under 44 px, axe nothing; at 390, 105 words, 0 of 27 under 44.
+- The portrait widens each played slot by its 24 px: at 390 the second slot's side is now cut at the strip's edge
+  ("Opponent ·", its tempo and initiative gone, whole on `main`), and at 320 the second slot shows "Crea" and its
+  portrait. The strip scrolls sideways, and the cut words are in the entry's name and the order window: accepted
+  as the price of the picture, unless the owner prefers the side's tempo kept over the portrait.
 - **A choice for the owner**: the revealed spell's name is not written in the strip, only spoken and in the order
   window. Either the brief's rule takes a named exception for the strip (my choice: the strip has no room for a
   name at 320, and the fact is one tap away), or the name is written under the creature's, at the cost of the
@@ -685,7 +697,8 @@ None.
 - **Bytes**: 0 before any scroll of the page. Open, the window takes 3,528 B: the 4 distinct portraits from their
   48 px files, against 7,712 B today from the 80 px files.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
-- **Shift**: 0.29 at 390 and 0.24 at 320, summed over the walk: the round's end moving the frame (the match's
+- **Shift**: 0.39 at 390 and 0.25 at 320 on P6's walk (0.30 and 0.25 on `main`), summed over the walk; the 0.09
+  more at 390 is the field's, after the Tempo sheet (the spellbook's **Left**). The rest is the round's end moving the frame (the match's
   brief), not the journal's rows. Each portrait's room is held.
 
 ### Left
