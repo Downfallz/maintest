@@ -84,3 +84,17 @@ test('the pick and the Mutation Tree draw a form only at 64 px, from a mutation 
   const css = readFileSync(new URL('./battle.css', import.meta.url), 'utf8');
   assert.match(css, /\.mutation-form \{ width: 64px; height: auto; aspect-ratio: 3 \/ 2;/);
 });
+
+test('the Tempo sheet and the order of play draw a portrait only at 24 px, a width the battle page declares', () => {
+  // UX12 P7: the files are P2's 24 and 48 px, so the page's total does not move. A call without a width would take the
+  // card's 40 px.
+  const order = readFileSync(new URL('../battle/src/order.ts', import.meta.url), 'utf8');
+  assert.deepEqual([...order.matchAll(/spellPortrait\([^,]+,\s*(\d+)\)/g)].map(match => Number(match[1])), [24]);
+  assert.equal([...order.matchAll(/spellPortrait\(/g)].length, 1);
+  const tempo = readFileSync(new URL('../battle/src/tempo.ts', import.meta.url), 'utf8');
+  assert.deepEqual([...tempo.matchAll(/portraitSizes: '(\d+)px'/g)].map(match => Number(match[1])), [24]);
+  for (const name of declared) assert.ok(PAGE_ART[name].phone['table/battle'].includes(24), name);
+  const css = readFileSync(new URL('./battle.css', import.meta.url), 'utf8');
+  assert.match(css, /\.tempo-spells \.spell-card > \.spell-portrait \{ width: 24px; height: 24px;/);
+  assert.match(css, /#timeline li > button > \.spell-portrait \{ flex: none; width: 24px; height: 24px; \}/);
+});

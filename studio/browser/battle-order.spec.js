@@ -3,6 +3,7 @@ import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 import { decided } from './decision.js';
+import { servePageArt } from './battle-spells-fixture.js';
 test.beforeEach(returningBattlePlayer);
 const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: 4, totalDefense: 2,
   isAlive: true, conditions: [], knownSpells: [], acquiredTiers: [] });
@@ -13,7 +14,7 @@ const rollOffs = [{ creature: 1, rolls: [11, 18] }, { creature: 4, rolls: [11, 8
 const board = { slot: 'Player1', roundNumber: 2, phase: 'Combat', subPhase: 'Activation', activationCursor: 1,
   allies: roster.slice(0, 3), enemies: roster.slice(3), timeline, rollOffs };
 const reveal = (sequence, kind = 'TimelineBuilt', slots = timeline) => ({ sequence, event: { kind, roundId: 2, timeline: { slots, rollOffs } } });
-async function mount(page, overrides = {}) {
+async function mount(page, overrides = {}, { cards = [], art = true } = {}) {
   const state = { errors: [], writes: [], shown: [], status: 200,
     view: { board, feed: [reveal(10)], feedNext: 11, options: {}, ...overrides } };
   page.on('pageerror', error => state.errors.push(error.message));
@@ -25,10 +26,11 @@ async function mount(page, overrides = {}) {
       window.notifyOrder = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
     } }), { headers: { 'Content-Type': 'text/event-stream' } })) : original(url, options);
   });
+  if (art) await servePageArt(page); else await page.route('**/page-art/*', route => route.fulfill({ status: 404, body: '' }));
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'order', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [], packages: [], rules: { combatDeclaration: 'AtActivation' } } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards, packages: [], rules: { combatDeclaration: 'AtActivation' } } });
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
       if (url.searchParams.has('shown')) state.shown.push(Number(url.searchParams.get('shown')));
@@ -298,4 +300,38 @@ test('ordering ties lights the tied creatures on the field with their places, an
   await page.locator('#planning-confirm').click();
   await expect.poll(() => h.state.writes).toEqual([{ kind: 'TieOrder', order: [2, 1], asked: 20 }]);
   expect(h.state.errors).toEqual([]);
+});
+// UX12 P7: the spell each creature has turned face up this round, beside it in the strip, for both teams.
+const spells = [{ id: 'spell:focus:v1', name: 'Focus', visual: { portrait: 'focus' } }, { id: 'spell:strike:v1', name: 'Strike', visual: { portrait: 'strike' } }];
+const played = { ...board, activationCursor: 2, revealedActions: [{ actor: 1, spell: 'spell:focus:v1', targets: [] }, { actor: 4, spell: 'spell:strike:v1', targets: [1] }] };
+const entry = (page, id) => page.locator(`#timeline [data-order-creature="${id}"]`);
+test('at 320 px a revealed spell wears its portrait at 24 px beside its creature, the player\'s own and the opponent\'s', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Own viewport');
+  await page.setViewportSize({ width: 320, height: 568 });
+  const h = await mount(page, { board: played, feed: [] }, { cards: spells });
+  for (const [id, name, file] of [[1, 'Focus', 'focus'], [4, 'Strike', 'strike']]) {
+    const portrait = entry(page, id).locator('.spell-portrait');
+    await expect.poll(() => portrait.evaluate(image => image.getBoundingClientRect().width)).toBe(24);
+    await expect.poll(() => portrait.evaluate(image => image.currentSrc)).toMatch(new RegExp(`spell-${file}-24\\.[0-9a-f]+\\.webp$`));
+    await expect(portrait).toHaveAttribute('alt', '');
+    await expect(entry(page, id).locator('.timeline-name')).toHaveText(`Creature ${id}`);
+    await expect(entry(page, id)).toHaveAccessibleName(new RegExp(`^Creature ${id}.*revealed ${name}, highlight on the field$`));
+  }
+  // A creature yet to act has turned nothing face up.
+  await expect(entry(page, 2).locator('.spell-portrait')).toHaveCount(0);
+  await page.locator('#order-open').click();
+  await expect(page.locator('#order-list .order-row').first()).toContainText('Revealed · Focus');
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await page.screenshot({ path: info.outputPath('ux12-p7-order-320.png') });
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+test('a revealed spell whose portrait fails to load leaves no gap beside its creature', async ({ page }) => {
+  const h = await mount(page, { board: played, feed: [] }, { cards: spells, art: false });
+  const portrait = entry(page, 1).locator('.spell-portrait');
+  await expect(portrait).toHaveClass(/missing/); await expect(portrait).toBeHidden();
+  const [rank, words] = await Promise.all([entry(page, 1).locator('.timeline-rank').boundingBox(), entry(page, 1).locator('.timeline-words').boundingBox()]);
+  expect(words.x - (rank.x + rank.width)).toBeLessThan(12);
+  await expect(entry(page, 1).locator('.timeline-name')).toHaveText('Creature 1');
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });

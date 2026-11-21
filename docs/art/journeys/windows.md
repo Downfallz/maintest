@@ -1,7 +1,7 @@
 # The match's windows
 
 The brief of the match's windows, the pictures first. Stage P1 of [the pictures of the windows](../ux12-pictures-plan.md)
-writes its five screens; the rest of UX12 of [the pages' craft plan](../ux-craft-plan.md) (how each window
+wrote its first five screens, and P6 adds two (`tempo-reference` and `order-revealed`, the screens of P7); the rest of UX12 of [the pages' craft plan](../ux-craft-plan.md) (how each window
 enters, leaves and gives the focus back, a mutation followed back onto the field, the result as a moment) adds its
 screens to this file later. What a phase asks and in what order is `docs/tabletop/battle-ux-parity-plan.md`'s; the
 frame around a docked sheet is [the match's brief](match.md); inside the canvas is the battle craft's. Still a
@@ -15,12 +15,19 @@ choice, `table/battle.css`): at 320 the walk opens the journal from Help's windo
 name is its journey's: the `match` journey films the same Evolution sheet as `mutation-tree`; here it is
 `mutation-pick`, and `mutation-tree` is the Mutation Tree window opened from it.
 
+P6 walked the journey again on its branch, with P7 and P8 built (on `55731bb`), and read both sheets screen by
+screen with their measures. The walk now films seven screens: `mutation-pick`, `mutation-tree`, `tempo-reference`,
+`spell-choice`, `spell-choice-foot`, `order-revealed`, `history`. The team's first creature plays at Instinct, so
+`spell-choice` and `spell-choice-foot` are filmed at Instinct; the Precision state of the crit chip is read on
+`order-revealed`, where Creature 2's spellbook is docked at Precision.
+
 The pictures counted on each screen (the same walk, read in the page, alike at both widths): the spellbook holds 4
 spells (Strike, Pummel, Focus, Brace) and 4 portraits, 2 in view at its top at 390 and 4 at its foot; the pick 3
 mutations (Brute, Warped, Predator) and no spell portrait on its compact cards; the Mutation Tree 24 mutations on
 its board (21 with an `artwork`, the 3 capstones Apex, Archmage and Titan with a `portrait` only) and, in Brute's
 detail, 2 spell portraits (Pummel, Brace); the journal 18 portraits drawn, 4 distinct spells (Strike, Shock, Brace,
-Pummel), 3 in view.
+Pummel), 3 in view; the Tempo sheet's spell reference 4 portraits (Strike, Pummel, Focus, Brace); the order at the
+field's foot a portrait on each slot already played, of both teams (8 img on that screen, with the spellbook's 4).
 
 What holds for every screen of the journey:
 
@@ -245,6 +252,94 @@ None.
   name, in columns of `min(94vw, 400px)`; three mutations of a stage still share one line at 320. P5's test shows
   that no form of the board loads before the window opens. The critique (P6) reads it at 320.
 
+## The Tempo sheet's spell reference (`tempo-reference`)
+
+### Job
+
+The Tempo phase of a round: the Tempo sheet (`battle/src/tempo.ts`) is docked under the field on Creature 1, its
+two tempos pinned at the top, and the walk scrolls it to its spell reference. The player reads what the creature
+could cast before choosing Instinct or Precision. Each reference card (a `compact` spell card) draws the spell's
+portrait at 24 px beside its name: it answers "which of my spells is this?" while the player weighs a tempo.
+
+- **Filled action**: none on this screen: Confirm tempos · 0/3, at the sheet's foot, is drawn dim and disabled
+  until each creature has a tempo (filled 0 at both widths), then it is the filled action. Instinct and Precision
+  are the choice; Close is quiet. The reference cards are read, not pressed: they do not answer the spell choice
+  (`data-reference-spell`, not `data-spell`).
+
+### Words
+
+- **Order**: the creature and its energy; Instinct and Precision, each with its line; the reference's note ("Its
+  spells · crit chances at Precision, current values"); each card: its portrait beside its name, its cost and crit
+  chips, its targeting, its effects; the foot.
+- **Budget**: 109 words at 390 px (109 today), 107 at 320 (107 today). The portraits add no word; the name stays
+  written beside each one.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| Strike's portrait beside its name on its reference card. | 24 by 24 px, at both widths | Which of my spells is this, while I choose a tempo? | `docs/art/spell-portraits/strike.webp` |
+| Pummel's portrait on its card. | 24 by 24 px | The same, for Pummel. | `docs/art/spell-portraits/pummel.webp` |
+| Focus's portrait on its card. | 24 by 24 px | The same, for Focus. | `docs/art/spell-portraits/focus.webp` |
+| Brace's portrait on its card. | 24 by 24 px | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
+
+The size is 24 px whatever the screen's height (the spellbook's rule of 660 px is not this sheet's): the reference
+is a list read under a pinned head, and its cards stay compact. Sent from P2's 24 and 48 px files. A `compact` card
+draws a portrait only when its screen names the width, so the pick's spells keep their text alone. A portrait that
+fails to load is hidden and leaves no gap; the name stays written.
+
+### States
+
+- **First paint**: not reached: the sheet opens on the host's question, after the page.
+- **Empty**: "No known spells recorded." in place of the cards, and no portrait (read in the code, not seen).
+- **Loaded**: the pinned creature and tempos, the note, the four cards with their portraits, as filmed. On the
+  creature the host is waiting on, the cost and crit chips are the host's current values ("Precision · current");
+  on another, the catalogue's ("Precision · catalogue").
+- **Waiting**: after a tempo is drafted, its tab wears it and Confirm tempos counts it; the reference is unchanged.
+- **Error**: the sheet's alert, the cards unchanged (read in the code, not seen).
+- **Offline**: `#connection` and the field dimmed, as today; a portrait not yet loaded keeps its 24 px room empty.
+
+### Motion
+
+None: a portrait appears in its held room when it arrives; nothing fades. How the sheet docks is UX12's.
+
+### Less motion
+
+None.
+
+### Accessibility
+
+- **Focus**: as today, on the creature's tab (`role="tab"`, the arrows move between creatures); then the two
+  tempos, the reference (a section named "Spell reference"), the foot.
+- **Names**: each portrait's `alt` is empty: the card's name is written beside it. axe finds nothing at either
+  width.
+- **Announced**: nothing new: a picture that arrives says nothing.
+- **Targets**: 21 controls at 390 and 19 at 320, none under 44 px.
+
+### Cost
+
+- **Bytes**: 0 before any scroll of the page. Open, the sheet takes 3,502 B at both widths: the four portraits from
+  their 48 px files, the same files as the spellbook's at 320 by 568. The page's total does not move: P2 counted the
+  24 and 48 px files (322,218 B against 327,680 B).
+- **Largest paint**: not this screen's: the sheet opens after the page's first paint, and its pictures are lazy.
+- **Shift**: 0 at 390 and 0.02 at 320 on P6's walk. Each portrait's room is held by its `width` and `height`, so a
+  card's name does not move when it arrives.
+
+### Left
+
+- Measured on P6's walk: 568 px tall at 320, 107 words, 4 img, the smallest text 9.17 px, 26 words under 11 px,
+  0 of 19 targets under 44 px, axe nothing; at 390, 109 words, 0 of 21 under 44. The 26 words under 11 px are the
+  tempos' lines ("Acts before Precision · cannot crit") and the crit chips' hints ("Precision · current"); they are
+  there on `main` too (the match journey's `tempo-sheet` measured 8 px and 57 words under 11 px). The floor of
+  11 px is the match's ([the match's brief](match.md)); fixing it is UX12's, not P7's.
+- On the sheets, scrolled to the reference's start, its first card runs under the pinned creature and tempos: at
+  320 only Strike's "Damage 3" shows, and no portrait is in view; at 390 Focus and Pummel are (overlaps 3 at 320,
+  4 at 390). A player scrolls on by hand, so it is the walk's view more than a fault; a top margin on the
+  reference equal to the pinned head's height would let its first card land in view. The critique reads it again.
+- Pummel's crit chip here keeps its hint written ("Precision · current"), where the spellbook's grey chip at
+  Instinct writes the chance alone: two forms of one fact on two sheets. Whether the reference takes the
+  spellbook's grey chip is a choice for the owner, not P7's.
+
 ## The spellbook (`spell-choice`)
 
 ### Job
@@ -263,6 +358,12 @@ knows before reading.
   - the targeting ("One enemy", "Self");
   - the cost and crit chips, on their own row under the targeting (beside the name they would leave it about
     60 px at 320);
+  - **the crit chip at each tempo** (P8): at Precision it is gold, with the chance the host gives this turn. At
+    Instinct it stays, grey (`#aebbb4`, its border `#aebbb466`) instead of gold, showing the chance at Precision:
+    the host's `guide.standardCriticalChance`, else the card's own; the page computes none. Its title says "Crit
+    chance at Precision · Instinct cannot crit". A chance of zero at Precision shows no chip, at either tempo. The
+    grey says "not this turn" without a word more; a person could disagree and want the chip gone at Instinct, as
+    before P8, but then a player choosing a tempo for a spell could not see what Precision would give it;
   - the availability ("Available", "New · Available", or why not);
   - each effect line as its icon and its numbers only (Strike: the Damage icon and 3; Brace: the Defense icon,
     +1 and 3 rounds as "+1 · 3").
@@ -278,11 +379,14 @@ knows before reading.
 
 - **Order**: the creature and "choose a spell"; its place, its tempo, its energy; each group's title; each spell,
   its portrait beside its name, its targeting, its chips, its availability, its effects' icons and numbers.
-- **Budget**: 106 words at 390 px (131 today), 92 at 320 (117 today). What leaves the faces is 25 words: Pummel's
+- **Budget**: 106 words at 390 px (108 today, at Instinct, on P6's walk; 131 before P3), 92 at 320 (94 today;
+  117 before P3). What leaves the faces is 25 words: Pummel's
   crit note (15, "Instinct cannot crit. At Precision, …"), its hint "at this tempo" (3), and the effect lines' words
   (7: Damage twice, Energy, Defense twice, rounds twice). They are counted on the targets screen, on the chosen
   card, at most 20 there (Pummel's). The pictures add no word.
 - **The crit note**: the host's catalogue, not the page's; its place is under **Left**.
+- **The crit chip at Instinct**: its chance alone is written ("75%"); "at Precision" is spoken and in its title,
+  not shown, so the chip adds no word to the face.
 
 ### Pictures
 
@@ -304,7 +408,8 @@ screen). No third size: 24 and 40 px are the two the plan declares.
 - **Empty**: not reachable: a creature always knows a spell; one that cannot be cast is shown disabled with its
   availability.
 - **Loaded**: the groups and their cards, two a row, the portraits drawn; a group with an odd count leaves its
-  last cell empty, the card keeping its column's width.
+  last cell empty, the card keeping its column's width. At Instinct, as filmed, Pummel's crit chip is grey with
+  75%; at Precision (seen on `order-revealed`, Creature 2's spellbook) it is gold.
 - **Waiting**: after a card is tapped, the targets on the field (the match's `targets`), the chosen card in full.
 - **Error**: `#combat-dialog-error` at the foot, the cards unchanged (read in the code, not seen).
 - **Offline**: `#connection` and the field dimmed; a portrait not yet loaded keeps its room empty.
@@ -323,9 +428,11 @@ None.
   reading order, left then right, row by row.
 - **Names**: each card's button is named by the spell's name first, as written on it, then its cost, targeting,
   availability and each effect in words (the icon's text alternative), so the words the face leaves are still
-  said. The portrait's `alt` is empty. axe finds nothing today.
+  said. The portrait's `alt` is empty. At Instinct the crit chip is heard "75% crit at Precision"; at Precision,
+  "75% crit". The grey is never the only sign: the words say which tempo the chance holds for. axe finds nothing
+  at either width on P6's walk.
 - **Announced**: nothing new.
-- **Targets**: 27 controls at 390 and 25 at 320 today, none under 44 px. A card in a column of 140 px stays
+- **Targets**: 27 controls at 390 and 25 at 320 on P6's walk, none under 44 px. A card in a column of 140 px stays
   44 px tall and wide at the least; the gap between two cards of a row is at least 8 px.
 
 ### Cost
@@ -333,8 +440,9 @@ None.
 - **Bytes**: unchanged per spell by the columns: 0 before any scroll of the page. Open at 390, the window takes
   7,482 B: the four portraits from their 80 px files.
 - **Largest paint**: not this screen's: the sheet opens after the page's first paint.
-- **Shift**: 0 at 390 and 0.03 at 320 today; each portrait's room is held, and a card's height does not change
-  when its cost and availability arrive (AU9: the card does not grow under the pointer).
+- **Shift**: 0 at 390 and 0.02 at 320 on P6's walk (0.03 before); each portrait's room is held, and a card's height
+  does not change when its cost and availability arrive, nor when its crit chip turns from grey to gold (AU9: the
+  card does not grow under the pointer).
 
 ### Left
 
@@ -346,8 +454,10 @@ None.
   brief](match.md)); its budget is that brief's.
 - The crit note on Pummel's card states a rule in the catalogue's words; a link to the rulebook in its place is
   the `rulebook-writer`'s and the host's, not the page's.
-- Text under 11 px: 3 elements at 10 px at both widths (the crit's `d20 6+`, `at this tempo`), for UX12; the hint
-  leaves the face, the chip's `d20 6+` stays.
+- Text under 11 px: none on P6's walk, the smallest 11 px at both widths (3 elements at 10 px before P3, the crit's
+  `d20 6+` and `at this tempo`).
+- Words: 108 at 390 and 94 at 320 on P6's walk, 2 over the budget at both widths. The measure does not say which
+  2; the critique names them, and the budget holds until it does.
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 
@@ -426,6 +536,95 @@ None.
   view, the second row scrolls under the header, and the foot stays in view and 44 px tall. The
   film of P6 reads it again with the walk's own spells.
 - The two columns amend AU9: the spellbook's **Left**.
+
+## The order of play, spells face up (`order-revealed`)
+
+### Job
+
+A later turn of the round: the order of play is the strip at the field's foot (`#timeline`,
+`battle/src/order.ts`), under the header, scrolled to its start; Creature 2's spellbook is docked under the field,
+at Precision. A slot whose action the host has revealed (`board.revealedActions`: the slots already played, of
+both teams) shows the spell's portrait at 24 px after its place badge, a tick once played. The picture answers
+"what did that creature just cast?" at a glance, before the player chooses.
+
+- **Filled action**: none: the strip is read. A slot's entry lights its creature on the field; Order opens the
+  order window; both are quiet. The spellbook docked below is the spellbook's screen, its cards the choice.
+
+### Words
+
+- **Order**: Order; each slot from the first: its place badge (a tick once played), the revealed spell's portrait,
+  the creature's name, its side (with its tempo and initiative at 390; under 360 px they leave the line); then the
+  field, then the spellbook.
+- **Budget**: 105 words at 390 px (105 today), 91 at 320 (91 today). The portraits add no word.
+- **The spell's name**: it is in the entry's accessible name ("…, revealed Strike, highlight on the field") and in
+  the order window's card ("Revealed · Strike"), not written in the strip itself.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The revealed spell's portrait on each slot already played, after its tick, of either team (Creature 1's and Creature 5's in view at 320 and at 390). | 24 by 24 px, at both widths | What did that creature cast? | `docs/art/spell-portraits/strike.webp` for Strike, and each revealed spell's own `portrait`, as `data/presentation/spell-art.json` names it |
+
+The spell is the host's: `board.revealedActions`, the actions already played, which `presentation.js` passes on.
+No private intent is ever shown: a slot not yet played, the player's own included, has no portrait, whatever the
+player has drafted. A portrait that fails to load is hidden and leaves no gap.
+
+**Does it hold "a picture never carries a fact alone"?** Not to the letter. With the pictures hidden, the strip no
+longer shows which spell a slot cast: the fact is spoken (the entry's name) and one tap away (Order, "Revealed ·
+Strike"), and the field and the journal show the cast too, but it is not written beside the picture. I would accept
+it as the rule's one exception, named, since the strip has no room for a name at 320 and the fact is not lost to
+anyone; the choice is the owner's (**Left**).
+
+### States
+
+- **First paint**: not reached: the strip fills after the page, on the host's order.
+- **Empty**: before the order is set, "Set once both teams have picked their tempos" in place of the strip, and no
+  portrait (seen on `tempo-reference`).
+- **Loaded**: the slots in order, a tick and a portrait on each slot played, as filmed.
+- **Waiting**: a slot not yet played shows its place badge and no portrait; its portrait comes when the host's
+  stream reveals its action, never on a clock.
+- **Error**: no state of its own: a portrait that fails to load is hidden, the entry keeps its name and its spoken
+  spell.
+- **Offline**: `#connection` and the field dimmed; the strip keeps what it holds, and reveals nothing new.
+
+### Motion
+
+None: a portrait appears with its slot's reveal, in a room held by its `width` and `height`. How a newly revealed
+order is read on the field is the battle craft's.
+
+### Less motion
+
+None.
+
+### Accessibility
+
+- **Focus**: unchanged: Order, then each slot's entry in the order of play, then the field and the spellbook.
+- **Names**: the portrait's `alt` is empty; the entry's name carries the spell: "Creature 1, of your team, position
+  1, …, revealed Strike, highlight on the field" (its form, read in the code: the sheet cannot say it). axe finds nothing
+  at either width.
+- **Announced**: nothing new: a newly revealed order is read on the field and in the dock's card, as today; a
+  picture says nothing.
+- **Targets**: 27 controls at 390 and 25 at 320, none under 44 px.
+
+### Cost
+
+- **Bytes**: 0 before any scroll of the page. Each revealed spell's portrait comes from its 48 px file (568 to
+  1,254 B each, P1's measure), once per distinct spell, and is shared with the spellbook's and the journal's. The
+  page's total does not move: P2 counted the 24 and 48 px files (322,218 B against 327,680 B).
+- **Largest paint**: not this screen's: the strip fills after the page's first paint.
+- **Shift**: 0.01 at 390 and 0.05 at 320 on P6's walk, summed over the walk. A slot's entry widens by the portrait
+  when the host reveals its spell, an arrival, not a load: the picture's own room is held.
+
+### Left
+
+- Measured on P6's walk: 568 px tall at 320, 91 words, 8 img (the spellbook's 4 among them), the smallest text
+  11 px, 0 words under 11 px, 0 of 25 targets under 44 px, axe nothing; at 390, 105 words, 0 of 27 under 44.
+- **A choice for the owner**: the revealed spell's name is not written in the strip, only spoken and in the order
+  window. Either the brief's rule takes a named exception for the strip (my choice: the strip has no room for a
+  name at 320, and the fact is one tap away), or the name is written under the creature's, at the cost of the
+  side's words or the strip's height.
+- The shift at 320 (0.05) is summed over the walk; whether a reveal's widening moves the strip under the player's
+  finger is read on a strip of the order, not on this sheet.
 
 ## The journal (`history`)
 

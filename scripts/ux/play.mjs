@@ -117,10 +117,12 @@ async function answerEvolution(page, view, next, blocked) {
   await confirm(page, '#planning-confirm');
 }
 
-async function answerSpeed(page, next, blocked) {
-  for (const tab of await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab))) {
+// `tempo(index)` is a walk's own choice for the team's creature at that tab, when no answer is recorded.
+async function answerSpeed(page, next, blocked, tempo = () => null) {
+  const tabs = await page.locator('[data-tempo-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tempoTab));
+  for (const [index, tab] of tabs.entries()) {
     await choose(page, `[data-tempo-tab="${tab}"]`, blocked);
-    await choose(page, `[data-speed="${next('Speed', Number(tab))?.speed ?? 'Standard'}"]`, blocked);
+    await choose(page, `[data-speed="${next('Speed', Number(tab))?.speed ?? tempo(index) ?? 'Standard'}"]`, blocked);
   }
   // One confirmation sends every creature's tempo: the sheet closes once all are sent.
   await confirm(page, '#planning-confirm');
@@ -139,11 +141,11 @@ async function answerAction(page, view, next, look, blocked) {
 }
 
 /** Answer what the seat is asked, its sheet open first. `look` is called once the sheet is open, and once targets are asked. */
-export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {} } = {}) {
+export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {}, tempo } = {}) {
   if (view.waitingFor === 'Action') await openSpells(page); else await openPlanning(page);
   await look();
   if (view.waitingFor === 'Evolution') await answerEvolution(page, view, next, blocked);
-  else if (view.waitingFor === 'Speed') await answerSpeed(page, next, blocked);
+  else if (view.waitingFor === 'Speed') await answerSpeed(page, next, blocked, tempo);
   else if (view.waitingFor === 'TieOrder') { await page.locator('#planning-keep').click(); await confirm(page, '#planning-confirm'); }
   else await answerAction(page, view, next, look, blocked);
   await waitAnswered(view, () => latest(page), { timeout: 15000 });
@@ -178,13 +180,13 @@ export async function playLesson(page, lesson, { look = async () => {}, step = a
 }
 
 /** Play a game's questions until `until(view)` holds for the seat's view at a question. */
-export async function playUntil(page, until, { look = async () => {}, blocked = async () => {} } = {}) {
+export async function playUntil(page, until, { look = async () => {}, blocked = async () => {}, tempo } = {}) {
   for (let turn = 0; turn < 60; turn++) {
     const now = await readUntilAsked(page, { look });
     if (now.over) return;
     const view = await asked(page);
     if (view.over || until(view)) return;
-    await answer(page, view, { look, blocked });
+    await answer(page, view, { look, blocked, tempo });
   }
   throw new Error('The game did not get there in sixty questions.');
 }

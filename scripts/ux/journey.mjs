@@ -110,7 +110,9 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
   const set = await raiseSet(showcase);
   const contexts = [];
   const person = async () => {
-    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: scale });
+    // UX_JOURNEY_VIDEO=<folder> records each person's walk in real time, a clip of a stage's interaction (UX7-UX12).
+    const video = process.env.UX_JOURNEY_VIDEO ? { recordVideo: { dir: join(process.env.UX_JOURNEY_VIDEO, String(viewport.width)), size: viewport } } : {};
+    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: scale, ...video });
     await context.addInitScript(watchShiftInPage);
     // The seat's views as the page reads them, for the walks that play (studio/browser/seat-views.js).
     await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);

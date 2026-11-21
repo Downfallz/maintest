@@ -551,7 +551,7 @@ function render() {
   // Before both players are seated there is no phase yet: the header says the table is waiting.
   text('round-phase', view?.waiting && !view.over ? 'WAITING' : phaseLabel(board.phase).toUpperCase());
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
-  const order = battleOrder(view?.waiting && !view.over ? null : board);
+  const order = battleOrder(view?.waiting && !view.over ? null : board, catalogue);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false, view?.waiting && !view.over ? null : board);
   const orderReading = orderUI.isReading() && !replay.active;
   $('battle').dataset.orderReading = String(orderReading);

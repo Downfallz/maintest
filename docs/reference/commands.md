@@ -1143,6 +1143,11 @@ axe finds failing. Two walks of one journey give the same lines (`studio/browser
 moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. The walk
 fails when it misses a screen its journey names, or when the page throws.
 
+`UX_JOURNEY_VIDEO=<folder>` also records each person's walk as a WebM file under `<folder>/320` and
+`<folder>/390`, at the screen's size: the source of a stage's clip (UX7 to UX12), cut with `ffmpeg`. The walk is
+scripted, so the clip shows its pace, not a person's. `UX_JOURNEY_DEBUG=<file.png>` pictures the page where a walk
+stopped.
+
 `--strip <interaction>` films one interaction across time instead: the walk stops at the strip's screen, stops
 the animations and holds the timers, makes the interaction and steps the page (`--frames`, 12 by default,
 `--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. `--paint` loads the showcase's home,

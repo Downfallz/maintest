@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { decided, drawnFor } from './decision.js';
+import { servePageArt } from './battle-spells-fixture.js';
 test.beforeEach(returningBattlePlayer);
 const creature = id => ({ id, name: `Creature ${id}`, health: 20, maxHealth: 20, energy: id + 2, isAlive: true, conditions: [], knownSpells: ['strike'] });
-async function mount(page, ids = [1, 2, 3]) {
+async function mount(page, ids = [1, 2, 3], { visual = null, art = true } = {}) {
   const state = { errors: [], writes: [], drawn: [], shown: [], refuse: null, lost: false, hold: null,
     view: { waitingFor: 'Speed', waitingAsked: 11, waitingCreature: ids[0], feed: [], feedNext: 0,
       board: { slot: 'Player1', phase: 'Planning', subPhase: 'Speed', roundNumber: 1, allies: ids.map(creature), enemies: [4, 5, 6].map(creature), timeline: [], speedChoices: [] },
@@ -17,10 +18,11 @@ async function mount(page, ids = [1, 2, 3]) {
   };
   page.on('pageerror', error => state.errors.push(error.message));
   await page.addInitScript(() => localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat' })));
+  if (art) await servePageArt(page); else await page.route('**/page-art/*', route => route.fulfill({ status: 404, body: '' }));
   await page.route('**/api/**', async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'tempo', format: `${ids.length}v${ids.length}` }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', cost: 2, critical: '10%', targeting: 'One enemy', effects: ['Recorded spell effect'] }] } });
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'strike', name: 'Strike', visual, cost: 2, critical: '10%', targeting: 'One enemy', effects: ['Recorded spell effect'] }] } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) {
       const command = decided(request); state.writes.push(command); state.drawn.push(drawnFor(request));
@@ -171,5 +173,30 @@ test('the team\'s tempos leave Help and History to the field\'s header', async (
   const h = await mount(page);
   for (const node of await page.locator('#planning-dialog .history-reference').all()) await expect(node).toBeHidden();
   await expect(page.locator('#help-open')).toBeVisible(); await expect(page.locator('#history-open')).toBeVisible();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('at 320 px a reference spell wears its portrait at 24 px beside its name, sent from its own files', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Own viewport');
+  // UX12 P7. Set before the page loads: a browser keeps a larger file it already holds when the screen shrinks.
+  await page.setViewportSize({ width: 320, height: 568 }); const h = await mount(page, [1, 2, 3], { visual: { portrait: 'focus' } });
+  const strike = page.locator('.tempo-reference [data-reference-spell="strike"]'), portrait = strike.locator('.spell-portrait');
+  await expect.poll(() => portrait.evaluate(image => image.getBoundingClientRect().width)).toBe(24);
+  await expect.poll(() => portrait.evaluate(image => image.currentSrc)).toMatch(/spell-focus-24\.[0-9a-f]+\.webp$/);
+  await expect(portrait).toHaveAttribute('alt', ''); await expect(strike.locator('.spell-card-name')).toHaveText('Strike');
+  const [image, name] = await Promise.all([portrait.boundingBox(), strike.locator('.spell-card-name').boundingBox()]);
+  expect(image.x + image.width).toBeLessThanOrEqual(name.x);
+  await fitsViewport(page, '#planning-confirm');
+  await page.screenshot({ path: info.outputPath('ux12-p7-tempo-320.png') });
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('a reference spell whose portrait fails to load leaves no gap before its name', async ({ page }) => {
+  const h = await mount(page, [1, 2, 3], { visual: { portrait: 'focus' }, art: false });
+  const strike = page.locator('.tempo-reference [data-reference-spell="strike"]');
+  await strike.scrollIntoViewIfNeeded();
+  await expect(strike.locator('.spell-portrait')).toHaveClass(/missing/);
+  await expect(strike.locator('.spell-portrait')).toBeHidden();
+  const [card, name] = await Promise.all([strike.boundingBox(), strike.locator('.spell-card-name').boundingBox()]);
+  expect(name.x - card.x).toBeLessThan(16);
+  await expect(strike.locator('.spell-card-name')).toHaveText('Strike');
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

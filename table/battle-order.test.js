@@ -177,3 +177,21 @@ test('while ties are ordered, the field marks each tied creature with its place,
     3: { badge: '?', state: 'pending' }, 6: { badge: '?', state: 'pending' }, 5: { badge: '4', state: 'opponent' },
   });
 });
+
+// UX12 P7: a revealed spell beside its creature in the strip, from the host's public reveals alone.
+const catalogue = { cards: [{ id: 'spell:strike:v1', name: 'Strike', visual: { portrait: 'strike' } }, { id: 'spell:ward:v1', name: 'Ward' }] };
+const revealed = [{ actor: 2, spell: 'spell:strike:v1', targets: [4] }, { actor: 4, spell: 'spell:ward:v1', targets: [] }];
+test('a slot whose action the host revealed names its spell and the portrait the catalogue gives it, for both teams', () => {
+  const rows = battleOrder(livePresentation(view({ board: { ...board, revealedActions: revealed } })), catalogue).rows;
+  assert.deepEqual(rows[0].spell, { id: 'spell:strike:v1', name: 'Strike', portrait: 'strike' });
+  assert.deepEqual(rows[1].spell, { id: 'spell:ward:v1', name: 'Ward', portrait: null });
+  assert.equal(rows[2].spell, null);
+});
+test('a revealed spell the catalogue does not hold keeps its id as its name and draws no portrait', () => {
+  const rows = battleOrder(livePresentation(view({ board: { ...board, revealedActions: revealed } }))).rows;
+  assert.deepEqual(rows[0].spell, { id: 'spell:strike:v1', name: 'spell:strike:v1', portrait: null });
+});
+test('a slot never shows a private intent, even this seat\'s own', () => {
+  const rows = battleOrder(livePresentation(view({ board: { ...board, intents: [{ actor: 1, spell: 'spell:strike:v1' }] } })), catalogue).rows;
+  assert.ok(rows.every(row => row.spell === null));
+});

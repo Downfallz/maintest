@@ -144,10 +144,29 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    the field's foot (`#timeline`, `battle/src/order.ts`), the player's own and the opponent's. The bytes measured
    first: the files are P2's 24 and 48 px, so the page's total should not move. Tests: `battle-tempo.spec.js` and
    `battle-order.spec.js`, at 320 px, each name kept, a missing portrait leaving no gap; `table/battle-spell-art.test.js`.
+
+   *Built (2026-11-21)*: each card of the Tempo sheet's spell reference draws its spell's portrait at 24 px beside
+   its name (`battle/src/tempo.ts`; a `compact` card draws one only when its screen names the width, so the pick's
+   spells keep their text alone). Each slot of the order at the field's foot whose action the host revealed shows
+   that spell's portrait at 24 px after its place badge, for both teams (`battle/src/order.ts`). The spell is read
+   from `board.revealedActions`, which `presentation.js` now passes on: the slots already played, never a private
+   intent. Its name is in the entry's spoken name ("revealed Strike") and in the order window's card
+   ("Revealed · Strike"), not in the strip. A portrait that fails to load is hidden and leaves no gap. The bytes did
+   not move: the 24 and 48 px files are P2's, already counted (322,218 B). Tests: `battle-order.test.js` (the
+   revealed spell, both teams, never an intent), `battle-tempo.spec.js` and `battle-order.spec.js` (24 px at 320,
+   the 24 px file, the name kept, a failed portrait with no gap), `table/battle-spell-art.test.js` (both screens draw
+   at 24 px only).
 8. **P8, the crit chance under Instinct.** The spellbook's crit chip stays on a card at Instinct, in grey instead of
    gold, with the chance it would have at Precision, and says so to a screen reader ("at Precision"). The chance is
    the host's (`guide.standardCriticalChance`, the Precision chance, or the card's own), never computed by the page. Tests:
    `battle-spellbook.spec.js` at both tempos; the brief's spellbook screen updated.
+
+   *Built (2026-11-21)*: at Instinct the spellbook's crit chip stays, grey, with the host's chance at Precision
+   (`guide.standardCriticalChance`, else the card's own), in `table/battle-spellbook.js`. A screen reader hears
+   "75% crit at Precision", and the chip's title says Instinct cannot crit (`battle/src/spell-card.ts`). A chance of
+   zero at Precision shows no chip. The chosen card above the foot reads "Crit 75% · at Precision". At Precision the
+   chip stays gold. Tests: `battle-spellbook.test.js` (the four cases), `battle-spellbook.spec.js` at both tempos
+   (the class, the spoken words, the colour), and [the brief's spellbook](journeys/windows.md#the-spellbook-spell-choice).
 
 P3, P4 and P5 each touch one window and can merge in any order once P2 is in. None needs an ADR: ADR 0197 and
 ADR 0198 already hold the rules.

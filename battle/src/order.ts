@@ -1,5 +1,6 @@
 import { battleOrder, createBattleOrderReveal, orderReason } from '../../table/battle-order.js';
 import { iconElement } from './condition-icons';
+import { spellPortrait } from './spell-portrait';
 
 type Model = ReturnType<typeof battleOrder>;
 type Row = Model['rows'][number];
@@ -57,7 +58,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   }
   // A strip entry lights its creature on the field rather than opening its sheet: the card it opens offers the sheet.
   // Its name is the creature's as shown, then one sentence: the drawn place and line are silent (WCAG 2.5.3).
-  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition, 'highlight on the field'].filter(Boolean).join(', ');
+  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition, row.spell ? `revealed ${row.spell.name}` : '', 'highlight on the field'].filter(Boolean).join(', ');
   function stripButton(row: Row) {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.orderCreature = row.id;
     button.disabled = !row.inspectable;
@@ -83,7 +84,10 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       if (row.roll) side.append(text('span', 'd20', 'timeline-die'));
       side.setAttribute('aria-hidden', 'true');
       words.append(text('span', row.label, 'timeline-name'), text('span', spoken(row), 'unseen'), side);
-      button.append(rank, words);
+      // A spell the host has turned face up, beside its creature, at 24 px (UX12 P7). Its name is in the entry's
+      // spoken name and in the order's card; a portrait that fails to load leaves no gap.
+      const portrait = spellPortrait(row.spell?.portrait, 24);
+      button.append(...[rank, portrait, words].filter((one): one is HTMLElement => one !== null));
       item.append(button); return item;
     }));
     el('timeline').hidden = model.rows.length === 0; el('no-timeline').hidden = model.rows.length > 0;
@@ -111,7 +115,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       const state = text('span', row.state, 'order-state'); state.dataset.value = row.state;
       heading.append(position, button, state);
       const facts = text('p', '', 'order-facts');
-      facts.append(...[[row.team, 'order-team'], [initiative(row), 'order-initiative'], [row.condition, 'order-condition']]
+      facts.append(...[[row.team, 'order-team'], [initiative(row), 'order-initiative'], [row.condition, 'order-condition'], [row.spell ? `Revealed · ${row.spell.name}` : '', 'order-spell']]
         .filter(([value]) => value).map(([value, className]) => text('span', value as string, `order-fact ${className}`)));
       const card = text('div', '', 'order-card');
       card.append(heading, facts, text('p', row.roll || 'No d20 roll recorded', row.roll ? 'order-roll' : 'order-roll order-roll-none'));

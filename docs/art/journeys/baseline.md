@@ -218,7 +218,7 @@ At 390 by 844:
 
 ## The match's windows
 
-Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20.
+Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk.
 
 At 320 by 568:
 
@@ -226,8 +226,10 @@ At 320 by 568:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | mutation-pick | 568 px | 78 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 19 | 0 | 1 | 0 | 0.03 | label-content-name-mismatch (3) |
 | mutation-tree | 568 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 4 | 0 | 0.03 | label-content-name-mismatch (8) |
+| tempo-reference | 568 px | 107 | 0 | 4 img, 4 background, the canvas | 9.16667 px | 26 | 0 of 19 | 0 | 3 | 0 | 0.02 | nothing |
 | spell-choice | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 1 | 0 | 0.03 | nothing |
 | spell-choice-foot | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 18 | 0 | 0.03 | nothing |
+| order-revealed | 568 px | 91 | 0 | 8 img, 2 background, the canvas | 11 px | 0 | 0 of 25 | 0 | 0 | 0 | 0.05 | nothing |
 | history | 534 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 7 of 12 | 0 | 2 | 1 | 0.24 | label-content-name-mismatch (3) |
 
 At 390 by 844:
@@ -236,8 +238,10 @@ At 390 by 844:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | mutation-pick | 844 px | 86 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 24 | 0 | 1 | 0 | 0.01 | label-content-name-mismatch (3) |
 | mutation-tree | 844 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 2 | 0 | 0.01 | label-content-name-mismatch (8) |
+| tempo-reference | 844 px | 109 | 0 | 4 img, 4 background, the canvas | 9.16667 px | 26 | 0 of 21 | 0 | 4 | 0 | 0.00 | nothing |
 | spell-choice | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 1 | 0 | 0.01 | nothing |
 | spell-choice-foot | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 5 | 0 | 0.01 | nothing |
+| order-revealed | 844 px | 105 | 0 | 8 img, 2 background, the canvas | 11 px | 0 | 0 of 27 | 0 | 0 | 0 | 0.01 | nothing |
 | history | 698 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 9 of 12 | 0 | 2 | 1 | 0.30 | label-content-name-mismatch (6) |
 
 ## The first paints, on a slow phone

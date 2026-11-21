@@ -34,7 +34,7 @@ function spellReference(selected: { knownSpells?: string[] } | undefined, view: 
   const cards = cardsById(catalogue), grid = node('div', '', 'tempo-spells');
   for (const id of selected?.knownSpells ?? []) {
     const card = cards.get(id), guide = focus === view.waitingCreature ? view.guidance?.find((one: { spell: string }) => one.spell === id) : null;
-    const face = spellCard(card, id, catalogue?.effects ?? [], { compact: true, cost: Number.isInteger(guide?.cost) ? guide.cost : undefined, crit: criticalChip(card, guide) });
+    const face = spellCard(card, id, catalogue?.effects ?? [], { compact: true, portraitSizes: '24px', cost: Number.isInteger(guide?.cost) ? guide.cost : undefined, crit: criticalChip(card, guide) });
     // The spell choice answers [data-spell]; a reference card must not.
     delete face.dataset.spell; face.dataset.referenceSpell = id;
     grid.append(face);

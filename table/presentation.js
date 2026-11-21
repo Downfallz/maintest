@@ -52,6 +52,8 @@ export function boardPresentation(board) {
     subPhase: board?.subPhase,
     cursor,
     timeline,
+    // The actions the host has turned face up this round (the slots already played): public, both teams'.
+    revealedActions: board?.revealedActions ?? [],
     turn: activeTurn(board, cursor),
   };
 }

@@ -13,14 +13,25 @@ function conditionOf(creature) {
   return creature?.isStunned ? 'Stunned' : '';
 }
 
-export function battleOrder(board) {
+// The spell a slot's creature has turned face up this round, from the host's public reveals, never a private intent
+// (UX12 P7): its name and the portrait the catalogue names for it, drawn beside the creature in the strip.
+function revealedSpell(board, id, cards) {
+  const action = (board?.revealedActions ?? []).find(one => String(one?.actor) === id);
+  if (!action?.spell) return null;
+  const card = cards.get(action.spell);
+  return { id: action.spell, name: card?.name ?? action.spell, portrait: card?.visual?.portrait ?? null };
+}
+
+/** @param {{ cards?: { id: string, name?: string, visual?: { portrait?: string | null } | null }[] } | null} [catalogue] */
+export function battleOrder(board, catalogue = null) {
+  const cards = new Map((catalogue?.cards ?? []).map(card => [card.id, card]));
   const finished = ['Cleanup', 'Finalization'].includes(board?.subPhase) || board?.phase === 'EndOfRound';
   const rows = (board?.timeline ?? []).map((slot, index) => {
     const creature = board.creatures?.find(one => one.id === String(slot.creature));
     return { id: String(slot.creature), position: index + 1, label: creature?.label ?? `Creature ${slot.creature}`,
       team: teamOf(slot), speed: slot.speed, tempo: tempoLabel(slot.speed), initiative: slot.initiative,
       roll: slot.roll || '', rolls: slot.rolls ?? [], state: stateOf(index, board, finished), condition: conditionOf(creature),
-      inspectable: Boolean(creature) };
+      inspectable: Boolean(creature), spell: revealedSpell(board, String(slot.creature), cards) };
   });
   const summary = team => {
     const counts = new Map();
