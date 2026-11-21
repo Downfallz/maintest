@@ -57,6 +57,13 @@ const portrait = name => name
   ? pictureHtml(`spell-${name}`, { page: 'showcase/mutations', base: SHOWCASE_ART, class: 'spell-portrait', sizes: '40px' })
   : '';
 
+// The scenes (docs/art/scene-paintings-plan.md, S4): each family opens on the one that shows what it is, and three
+// forms carry theirs under their picture, inside the closed entry, so it loads only when the entry opens.
+const familyScenes = { brute: 'brute-moult', predator: 'predator-and-deathstalker', warped: 'warped-listening' };
+const formScenes = { ironbound: 'ironhide-scar', blightweaver: 'blightweaver-pressure-sac', parasite: 'parasite-under-slate' };
+const scene = (picture, kind, alt, sizes) =>
+  pictureHtml(picture, { page: 'showcase/mutations', base: SHOWCASE_ART, class: `${kind}-scene`, alt, sizes });
+
 function spell(s, lang) {
   const l = lore[lang];
   const effects = list => list.map(e => `<li>${icon(effectIcons[e.kind])}<span>${escape(describeEffect(e, lang))}</span></li>`).join('');
@@ -84,6 +91,12 @@ function initiativeChip(initiative) {
   return `<span class="spell-chip initiative">${icon(gain ? 'initiative-gain' : 'initiative-loss')}${gain ? '+' : ''}${initiative} initiative</span>`;
 }
 
+// A form's picture, and its scene under it in the same column when it has one.
+function figure(art, form, l) {
+  const picture = formScenes[form];
+  return picture ? `<div class="field-figure">${art}${scene(picture, 'form', l.scenes[form], '(min-width: 1421px) 421px, (min-width: 651px) 30vw, calc(90vw - 28px)')}</div>` : art;
+}
+
 function entry(t, lang, byId) {
   const l = lore[lang], n = escape(name(t, lang)), id = 'form-' + key(t.id);
   const parentLinks = ids => ids.map(id => `<a href="#form-${key(id)}">${escape(name(byId.get(id), lang))}</a>`).join(' · ');
@@ -93,7 +106,7 @@ function entry(t, lang, byId) {
   return `<details class="form-entry" id="${id}" data-form="${n}">
     <summary><span class="roman">${stageNumeral(t.level)}</span><strong>${n}</strong><span class="form-teaser">${t.passive ? l.passive : t.spells.map(s => escape(name(s, lang))).join(' · ')}</span></summary>
     <div class="field-entry ${t.passive ? 'passive-entry' : ''}">
-      ${t.visual.artwork ? `<div class="field-art"><img src="/assets/evolutions/${t.visual.artwork}.webp" alt="" width="450" height="300" loading="lazy" decoding="async"></div>` : ''}
+      ${t.visual.artwork ? figure(`<div class="field-art"><img src="/assets/evolutions/${t.visual.artwork}.webp" alt="" width="450" height="300" loading="lazy" decoding="async"></div>`, key(t.id), l) : ''}
       <div><div class="mutation-facts"><p class="requirement">${need}</p>
         ${initiativeChip(t.initiative)}</div><p class="anatomy">${escape(t.notes[lang])}</p>
       ${t.passive ? `<p class="passive-rule">${portrait(t.visual.portrait)}${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
@@ -108,6 +121,7 @@ function familySection(family, lang, byId, i) {
   const pairs = nodes.filter(t => t.level === 2).map(t => [t, nodes.find(child => child.level === 3 && child.prerequisites.includes(t.id))]);
   const link = t => `<a href="#form-${key(t.id)}">${escape(name(t, lang))}</a>`;
   return `<section class="family-record" id="family-${family}" aria-labelledby="title-${family}">
+    ${scene(familyScenes[family], 'family', l.scenes[family], '(min-width: 1421px) 1250px, (min-width: 851px) 88vw, 90vw')}
     <header><div><p class="kicker">${l.route}</p><h2 id="title-${family}">${l.familyNames[i]}</h2></div>
       <nav class="path-map" aria-label="${l.route} · ${l.familyNames[i]}">${pairs.map(([middle, last]) => `<div>${link(middle)} <span aria-hidden="true">→</span> ${link(last)}</div>`).join('')}</nav></header>
     ${[root, ...pairs.flat(), cap].map(t => entry(t, lang, byId)).join('')}

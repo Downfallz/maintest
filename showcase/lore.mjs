@@ -25,6 +25,15 @@ export const lore = {
     search: 'Find a mutation or spell', placeholder: 'Try Bonewall or Predator', results: 'Search results', none: 'No matching mutation or spell.', clear: 'Clear search',
     indexTitle: 'Follow a family', energy: 'energy', caster: 'On the caster', target: 'On the target',
     passiveTitle: 'Stage IV', returnHome: 'Back to the world', altBase: 'A lean, four-legged creature with a hooked ivory mask and a row of dorsal spines.',
+    // The scenes of the field guide (docs/art/scene-paintings-plan.md, S4): a family's head, then a form's.
+    scenes: {
+      brute: 'A Brute’s shed shell on the ground, beside the print of what walked away.',
+      predator: 'A Predator and a Deathstalker drink at one pool among ruins.',
+      warped: 'A Warped leans over dark water, a claw lowered toward a ripple.',
+      ironbound: 'The Ironhide’s plates up close, a scar crossing them above its eye.',
+      blightweaver: 'The Blightweaver’s swollen sac venting gas, its eye in the smoke.',
+      parasite: 'A Parasite waits under a slab of slate, one claw in the light.',
+    },
   },
   fr: {
     title: 'Un ancêtre, trois branches',
@@ -49,5 +58,13 @@ export const lore = {
     search: 'Trouver une mutation ou un sort', placeholder: 'Essaie « Mur d’os » ou « Prédateur »', results: 'Résultats de recherche', none: 'Aucune mutation ni aucun sort correspondant.', clear: 'Effacer la recherche',
     indexTitle: 'Suivre une famille', energy: 'énergie', caster: 'Sur la créature qui lance le sort', target: 'Sur la cible',
     passiveTitle: 'Stade IV', returnHome: 'Retour au monde', altBase: 'Une créature efflanquée à quatre pattes, au masque d’ivoire crochu et à la crête dorsale épineuse.',
+    scenes: {
+      brute: 'La carapace muée d’une Brute, à côté de l’empreinte de ce qui s’en est allé.',
+      predator: 'Un Prédateur et un Écorcheur boivent au même bassin, parmi les ruines.',
+      warped: 'Un Altéré se penche sur l’eau noire, une griffe tendue vers une ride.',
+      ironbound: 'Les plaques du Blindé de près, une cicatrice les traverse au-dessus de l’œil.',
+      blightweaver: 'La poche gonflée du Fléau crache son gaz, son œil dans la fumée.',
+      parasite: 'Un Parasite guette sous une dalle d’ardoise, une griffe dans la lumière.',
+    },
   },
 };

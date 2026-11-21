@@ -13,6 +13,60 @@ export const PAGE_ART = {
       { file: 'eclipse-ground-1672.a0a4d681.webp', width: 1672, height: 941, bytes: 174006 },
     ],
   },
+  'brute-moult': {
+    from: '064e8da2d516cc2e', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"},
+    sizes: [
+      { file: 'brute-moult-351.6f8d3803.webp', width: 351, height: 117, bytes: 5594 },
+      { file: 'brute-moult-702.3c962d65.webp', width: 702, height: 234, bytes: 18096 },
+      { file: 'brute-moult-1250.0605382f.webp', width: 1250, height: 417, bytes: 49256 },
+      { file: 'brute-moult-1536.b492f0b8.webp', width: 1536, height: 512, bytes: 71762 },
+    ],
+  },
+  'predator-and-deathstalker': {
+    from: '3f73818d49b7676d', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"}, focus: '50% 55%',
+    sizes: [
+      { file: 'predator-and-deathstalker-351.c641fd0e.webp', width: 351, height: 197, bytes: 19394 },
+      { file: 'predator-and-deathstalker-702.cc754b16.webp', width: 702, height: 395, bytes: 64978 },
+      { file: 'predator-and-deathstalker-1250.3b035ad3.webp', width: 1250, height: 703, bytes: 158418 },
+      { file: 'predator-and-deathstalker-1536.a7311680.webp', width: 1536, height: 864, bytes: 208348 },
+    ],
+  },
+  'warped-listening': {
+    from: 'a905ad6d4315f7c3', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"}, focus: '50% 40%',
+    sizes: [
+      { file: 'warped-listening-351.26058703.webp', width: 351, height: 197, bytes: 7086 },
+      { file: 'warped-listening-702.82c3d3ff.webp', width: 702, height: 395, bytes: 21104 },
+      { file: 'warped-listening-1250.f589c2db.webp', width: 1250, height: 703, bytes: 49654 },
+      { file: 'warped-listening-1536.4cbd321c.webp', width: 1536, height: 864, bytes: 66628 },
+    ],
+  },
+  'ironhide-scar': {
+    from: '27128c24d80cbfbb', frames: 1, drawn: [323,421], pages: {"showcase/mutations":"lazy"},
+    sizes: [
+      { file: 'ironhide-scar-323.acb28cf1.webp', width: 323, height: 108, bytes: 4760 },
+      { file: 'ironhide-scar-421.9208ad44.webp', width: 421, height: 140, bytes: 7016 },
+      { file: 'ironhide-scar-646.bab90441.webp', width: 646, height: 215, bytes: 13736 },
+      { file: 'ironhide-scar-842.2025ca64.webp', width: 842, height: 281, bytes: 20714 },
+    ],
+  },
+  'blightweaver-pressure-sac': {
+    from: 'b4a0d68b6a844b39', frames: 1, drawn: [323,421], pages: {"showcase/mutations":"lazy"},
+    sizes: [
+      { file: 'blightweaver-pressure-sac-323.a9ce9e0d.webp', width: 323, height: 108, bytes: 8150 },
+      { file: 'blightweaver-pressure-sac-421.d43a5b40.webp', width: 421, height: 140, bytes: 12472 },
+      { file: 'blightweaver-pressure-sac-646.2c7ea8f0.webp', width: 646, height: 215, bytes: 24212 },
+      { file: 'blightweaver-pressure-sac-842.9de45f01.webp', width: 842, height: 281, bytes: 36282 },
+    ],
+  },
+  'parasite-under-slate': {
+    from: '48c75b649f7b2eba', frames: 1, drawn: [323,421], pages: {"showcase/mutations":"lazy"},
+    sizes: [
+      { file: 'parasite-under-slate-323.25241b41.webp', width: 323, height: 182, bytes: 5982 },
+      { file: 'parasite-under-slate-421.1c85a415.webp', width: 421, height: 237, bytes: 9272 },
+      { file: 'parasite-under-slate-646.63d28048.webp', width: 646, height: 363, bytes: 18850 },
+      { file: 'parasite-under-slate-842.c0f6884e.webp', width: 842, height: 474, bytes: 29760 },
+    ],
+  },
   'showcase-ground': {
     from: 'b6548dd550e81e05', frames: 1, drawn: [720,1440], pages: {"showcase/home":"largest"},
     sizes: [
