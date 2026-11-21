@@ -2,7 +2,7 @@ import { mutationChoices } from '../../table/battle-mutations.js';
 import { cardsById } from '../../table/card.js';
 import { classColour, familyRoot, talentPalette } from '../../table/mat.js';
 import { stageSpoken } from '../../table/terms.js';
-import { spellPortrait } from './spell-portrait';
+import { mutationForm, spellPortrait } from './spell-portrait';
 import { spellCard } from './spell-card';
 import type { Catalogue, Package } from './planning';
 import { onNextFrame } from './next-frame';
@@ -69,7 +69,9 @@ export function mutationTree(model: Model, catalogue: Catalogue | null, choose: 
     const colour = face?.colour ?? classColour(family?.id ?? id, palette);
     tile.style.setProperty('--mutation-colour', colour); tile.dataset.status = face ? 'available' : pack!.status;
     const label = node(face ? 'button' : 'div', '', 'mutation-select');
-    label.append(sigil(family?.visual?.family ?? family?.name?.toLowerCase() ?? ''), node('strong', face?.name ?? pack!.name, 'mutation-name'));
+    // An offer shows the form it leads to in place of its family's sigil: the colour and the name say the family.
+    const form = face ? mutationForm(face.artwork) : null;
+    label.append(form ?? sigil(family?.visual?.family ?? family?.name?.toLowerCase() ?? ''), node('strong', face?.name ?? pack!.name, 'mutation-name'));
     if (face) {
       const button = label as HTMLButtonElement; button.type = 'button'; button.dataset.mutation = id;
       button.setAttribute('aria-label', `${face.name} · ${face.family} · ${stageSpoken(face.stage)}`);

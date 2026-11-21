@@ -21,7 +21,7 @@ export function mutationChoices(view, catalogue, selectedId) {
     if (!pack) return { id, name: id, family: 'Mutation', colour: '#aabdb1', stage: null, initiative: null,
       tags: [], spells: [], passives: [], requirement: '', missing: true };
     const root = familyRoot(pack, byId);
-    return { id, name: pack.name, portrait: pack.visual?.portrait, family: root.name, colour: classColour(root.id, palette), stage: pack.level,
+    return { id, name: pack.name, portrait: pack.visual?.portrait, artwork: pack.visual?.artwork, family: root.name, colour: classColour(root.id, palette), stage: pack.level,
       initiative: Number.isInteger(pack.initiativeBonus) ? pack.initiativeBonus : null, tags: tagsOf(pack),
       spells: (pack.spells ?? []).map(spell => {
         const card = cards.get(spell);

@@ -1138,6 +1138,17 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   .combat-spell .spell-card.brief:has(> .spell-portrait) > .spell-card-target { grid-column: 1 / -1; }
 }
 #history-dialog .spell-portrait { width: 24px; height: 24px; vertical-align: middle; align-self: center; }
+/* A mutation's form (UX12 P5), drawn 64 px wide in its painting's 3:2: its room is held before it loads, and one that fails is not drawn. */
+.mutation-form { width: 64px; height: auto; aspect-ratio: 3 / 2; flex: none; object-fit: cover; border-radius: var(--radius-soft); }
+.mutation-form.missing { display: none; }
+.atlas-node:has(> .mutation-form) { display: inline-grid; grid-template-columns: auto minmax(0, 1fr); justify-items: start; align-items: center; column-gap: 4px; row-gap: 4px; }
+.atlas-node > .mutation-form { grid-column: 1 / -1; justify-self: center; }
+.atlas-node:has(> .mutation-form) > .atlas-node-flag { grid-column: 1 / -1; justify-self: center; }
+.atlas-node > .spell-portrait { width: 24px; height: 24px; flex: none; }
+.atlas-node > .spell-portrait.missing { display: none; }
+.atlas-card-head:has(> .mutation-form) { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; align-items: start; }
+.atlas-card-head > .mutation-form { grid-row: 1 / span 2; }
+.atlas-card-head:has(> .mutation-form) > :not(.mutation-form, .atlas-card-family, .atlas-card-name) { grid-column: 1 / -1; }
 .preview-name > .spell-portrait, .atlas-card-name > .spell-portrait { width: 24px; height: 24px; vertical-align: middle; margin-inline-end: 8px; }
 /* Beside a title nothing reflows: a picture that failed to load leaves no gap before the name. */
 :is(.preview-name, .atlas-card-name) > .spell-portrait.missing { display: none; }

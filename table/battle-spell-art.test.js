@@ -64,3 +64,23 @@ test('the journal draws a portrait only at 24 px, a width the battle page declar
   const css = readFileSync(new URL('./battle.css', import.meta.url), 'utf8');
   assert.match(css, /#history-dialog \.spell-portrait \{ width: 24px; height: 24px;/);
 });
+
+test('the pick and the Mutation Tree draw a form only at 64 px, from a mutation the catalogue names, declared for the battle page', () => {
+  // A mutation's form is its `artwork` (data/presentation/mutation-art.json), drawn as `mutation-<artwork>` (UX12 P5).
+  // A name the kit does not hold draws nothing, silently: every artwork is held, for the battle page, at 64 px.
+  const artworks = Object.values(read('mutation-art.json')).map(visual => visual.artwork).filter(Boolean);
+  assert.ok(artworks.length > 0);
+  for (const artwork of artworks) assert.ok(PAGE_ART[`mutation-${artwork}`]?.phone['table/battle'].includes(64), artwork);
+  const portrait = readFileSync(new URL('../battle/src/spell-portrait.ts', import.meta.url), 'utf8');
+  assert.match(portrait, /export function mutationForm\(artwork\?: string \| null, drawn = 64\)/);
+  for (const file of ['mutation-tree.ts', 'mutation-atlas.ts']) {
+    const source = readFileSync(new URL(`../battle/src/${file}`, import.meta.url), 'utf8');
+    // Every call takes the default width: one that names another would scale a 64 px file.
+    const calls = [...source.matchAll(/mutationForm\(([^()]*(?:\([^()]*\))?[^()]*)\)/g)];
+    assert.ok(calls.length > 0, file);
+    assert.equal([...source.matchAll(/mutationForm\(/g)].length, calls.length, file);
+    for (const call of calls) assert.doesNotMatch(call[1], /,/, file);
+  }
+  const css = readFileSync(new URL('./battle.css', import.meta.url), 'utf8');
+  assert.match(css, /\.mutation-form \{ width: 64px; height: auto; aspect-ratio: 3 \/ 2;/);
+});

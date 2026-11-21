@@ -3,7 +3,7 @@ import { classColour, familyRoot, requirementLine, stageRows, talentPalette } fr
 import { stageLabel, stageNumeral, stageSpoken } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { onNextFrame } from './next-frame';
-import { spellPortrait } from './spell-portrait';
+import { mutationForm, spellPortrait } from './spell-portrait';
 import { spellCard } from './spell-card';
 import type { Catalogue, Package } from './planning';
 
@@ -133,6 +133,9 @@ export function atlasControls(onVisibility: () => void) {
           if (lit.has(pack.id)) tile.dataset.path = 'true';
           tile.setAttribute('aria-label', `${pack.name} · ${stageSpoken(pack.level)} · ${STATUS[pack.status] ?? pack.status}`);
           // The badge shows the Stage as the progress line does, in Roman numerals; the label speaks its number (#769, #878).
+          // Each mutation shows the form it leads to (64 px); a capstone, which names none, its portrait (24 px).
+          const picture = mutationForm(pack.visual?.artwork) ?? spellPortrait(pack.visual?.portrait, 24);
+          if (picture) tile.append(picture);
           tile.append(node('span', stageNumeral(pack.level), 'atlas-node-stage'), node('span', pack.name, 'atlas-node-name'));
           if (pack.status === 'available') tile.append(node('span', 'Offer', 'atlas-node-flag'));
           if (pack.status === 'picked') tile.append(node('span', 'Picked', 'atlas-node-flag'));
@@ -189,6 +192,9 @@ export function atlasControls(onVisibility: () => void) {
     const title = node('h3', pack.name, 'atlas-card-name');
     const portrait = spellPortrait(pack.visual?.portrait, 24);
     if (portrait) title.prepend(portrait);
+    // The form stands left of the family, the stage and the name, which are about its height together.
+    const form = mutationForm(pack.visual?.artwork);
+    if (form) head.append(form);
     head.append(node('p', `${familyRoot(pack, byId).name} · ${stageLabel(pack.level)}`, 'atlas-card-family'), title);
     const chips = node('div', '', 'atlas-card-chips');
     chips.append(node('span', STATUS[pack.status] ?? pack.status, `atlas-chip atlas-chip-status`));
