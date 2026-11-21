@@ -56,6 +56,7 @@ const SHOWCASE_FILES = new Set([
   'table/brand-mark.svg',
   // The picture kit (ADR 0198): the form, the derived module and its files, and the motion module the home loads.
   'table/picture.js',
+  'table/picture-focus.js',
   'table/page-art.js',
   'table/motion.js',
   '.github/workflows/showcase.yml',

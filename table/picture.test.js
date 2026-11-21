@@ -57,7 +57,8 @@ test('a painting cut by its box keeps its subject in view: its focus is where th
   const image = pictureElement(fakeDocument(), 'scene', { page: 'home', art: ART, focus: '75% 25%' });
   assert.equal(image.attributes['data-focus-x'], '75');
   assert.equal(image.attributes['data-focus-y'], '25');
-  for (const focus of ['30%', '30% 60', '33% 60%', '-5% 50%', '105% 50%', 'left top', 30]) assert.throws(() => focusAttributes(focus), /a focus is two percentages/, String(focus));
+  for (const focus of ['05% 50%', '50% 005%', null, '30%', '30% 60', '33% 60%', '-5% 50%', '105% 50%', 'left top', 30]) assert.throws(() => focusAttributes(focus), /a focus is two percentages/, String(focus));
+  assert.throws(() => pictureHtml('scene', { page: 'home', art: ART, focus: null }), /a focus is two percentages/, 'a null focus is refused, not the declaration\'s');
   assert.throws(() => stripHtml('cast', { page: 'home', art: ART, focus: '50% 50%' }), /a strip is never cut/);
 });
 

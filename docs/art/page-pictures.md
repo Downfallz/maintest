@@ -14,6 +14,7 @@ kit of [the pages' craft plan](ux-craft-plan.md), UX5). The patterns and their s
 | `table/page-art/` | Each picture at the sizes it is sent, as WebP, named by its own bytes. | `scripts/ux/pictures.mjs` |
 | `table/page-art.js` | The module the pages and the showcase's build read: each file, its width, its height, its bytes. | `scripts/ux/pictures.mjs` |
 | `table/picture.js` | The form: the `<img>`, and the strip. | A session |
+| `table/picture-focus.js` | Where a cut picture centres: the check of a `focus`, which imports nothing, so the script runs on a broken `page-art.js`. | A session |
 | `table/icons.js` | The icon set. | A session |
 | `docs/art/page-budget.json` | The bytes of pictures a page may load, and ADR 0197's times. | A session |
 

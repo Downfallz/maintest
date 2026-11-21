@@ -15,7 +15,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { focusAttributes } from '../../table/picture.js';
+import { focusAttributes } from '../../table/picture-focus.js';
 
 const ROOT = new URL('../../', import.meta.url);
 export const DECLARATION = 'docs/art/page-pictures.json', BUDGET = 'docs/art/page-budget.json';

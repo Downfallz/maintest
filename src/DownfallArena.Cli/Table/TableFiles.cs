@@ -81,6 +81,7 @@ internal sealed partial class TableFiles
             ["/motion.js"] = (Path.Combine(tableDirectory, "motion.js"), JavaScript),
             // The picture kit (ADR 0198): the form, the sizes a script derived, and the icon set.
             ["/picture.js"] = (Path.Combine(tableDirectory, "picture.js"), JavaScript),
+            ["/picture-focus.js"] = (Path.Combine(tableDirectory, "picture-focus.js"), JavaScript),
             ["/page-art.js"] = (Path.Combine(tableDirectory, "page-art.js"), JavaScript),
             ["/icons.js"] = (Path.Combine(tableDirectory, "icons.js"), JavaScript),
             ["/friends.js"] = (Path.Combine(tableDirectory, "friends.js"), JavaScript),

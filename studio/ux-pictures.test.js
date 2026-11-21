@@ -144,7 +144,7 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ phone: [533] }), /phone gives each page the widths it draws/);
   assert.match(bad({ phone: { 'showcase/home': [533] } }), /eclipse-ground: phone names showcase\/home, a page that does not draw it/);
   assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
-  assert.match(bad({ focus: '33% 60%' }), /eclipse-ground: a focus is two percentages/);
+  for (const focus of ['33% 60%', null, {}, []]) assert.match(bad({ focus }), /eclipse-ground: a focus is two percentages/, JSON.stringify(focus));
   assert.match(bad({ source: undefined, frames: ['a.webp', 'b.webp'], focus: '50% 50%' }), /eclipse-ground: a strip is never cut, and takes no focus/);
   assert.throws(() => webpSize(Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8X'), Buffer.alloc(10)])), /not a WebP file/, 'a header cut short');
 });

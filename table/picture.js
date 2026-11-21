@@ -3,27 +3,15 @@
 // into page-art.js; a page names a picture and where it is, and this writes the element. The showcase's build
 // writes the same form as text, with its own folder as `base`.
 import { PAGE_ART } from './page-art.js';
+import { focusAttributes } from './picture-focus.js';
+
+export { FOCUS_STEP, focusAttributes } from './picture-focus.js';
 
 /** Where the host serves the derived files. */
 export const PAGE_ART_BASE = '/page-art/';
 
 /** The most frames a strip may hold: identity.css declares one rule a count. */
 export const STRIP_FRAMES = 12;
-
-/** A focus is placed in steps of this many percent: identity.css declares one rule a step, on each axis. */
-export const FOCUS_STEP = 5;
-
-/**
- * Where a painting cut by its box centres the cut (`"30% 60%"`: across, then down): two attributes that
- * identity.css turns into the image's `object-position`, since the showcase's policy refuses a style attribute.
- * Nothing is cropped: the file is the same, only where CSS cuts it moves.
- */
-export function focusAttributes(focus) {
-  const parts = /^(\d{1,3})% (\d{1,3})%$/.exec(typeof focus === 'string' ? focus : '');
-  const [x, y] = parts ? [Number(parts[1]), Number(parts[2])] : [];
-  if (!parts || ![x, y].every(at => at <= 100 && at % FOCUS_STEP === 0)) throw new Error(`a focus is two percentages from 0 to 100 in steps of ${FOCUS_STEP}, across then down ("30% 60%"), not ${focus}`);
-  return { 'data-focus-x': String(x), 'data-focus-y': String(y) };
-}
 
 const escaped = text => String(text).replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
 
@@ -57,7 +45,7 @@ export function pictureAttributes(name, { page, alt = '', sizes, focus, base = P
   if (role === 'largest') attributes.fetchpriority = 'high';
   else attributes.decoding = 'async';
   if (role === 'lazy') attributes.loading = 'lazy';
-  const cut = focus ?? entry.focus;
+  const cut = focus === undefined ? entry.focus : focus;
   return cut === undefined ? attributes : { ...attributes, ...focusAttributes(cut) };
 }
 
