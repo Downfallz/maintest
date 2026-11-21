@@ -151,6 +151,9 @@ for (const [lang, documents] of Object.entries(pages)) {
       assert.ok(html.includes(`href="${rightsRoute}"`), file);
       const rulesRoute = '/' + documents[4].replace('index.html', '');
       assert.ok(html.includes(`href="${rulesRoute}"`), file);
+      // A page with a route claims its address and is never hidden from search (S5 added a page without one).
+      assert.match(html, /<link rel="canonical" href="[^"]+">/, file);
+      assert.doesNotMatch(html, /name="robots"/, file);
       const otherFile = pages[lang === 'en' ? 'fr' : 'en'][index];
       assert.equal(/<a class="language"[^>]* href="([^"]+)"/.exec(html)?.[1], '/' + otherFile.replace('index.html', ''));
       for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
@@ -472,4 +475,79 @@ test('the field guide\'s scenes are in English and French, never the same words'
   assert.equal(en.length, 6);
   assert.equal(fr.length, 6);
   for (const [i, alt] of en.entries()) assert.notEqual(alt, fr[i]);
+});
+
+// The scene paintings' plan, S5: the broken charge above the ways to play, the Predator at rest under the creator's
+// coffee, each a lazy plate with its words in its language; the claw on the arch on the 404, one in each language.
+const altOf = tag => attribute(tag, 'alt') ?? '';
+const sceneTag = (html, scene) => picturesOf(html).find(tag => new RegExp(`src="/page-art/${scene}-\\d+\\.[0-9a-f]{8}\\.webp"`).test(tag));
+for (const [lang, file, coffee] of [['en', 'index.html', /morning coffee/], ['fr', 'fr/index.html', /mon café/]]) {
+  test(`${lang}: the home draws the charge above the ways to play and the Predator at rest under the coffee`, () => {
+    const html = read(file);
+    const modes = html.match(/<section id="modes"[\s\S]*?<\/section>/)[0];
+    const charge = sceneTag(modes, 'elemental-charge');
+    assert.ok(charge, 'the charge is in who you play');
+    assert.match(charge, /class="picture modes-scene"/);
+    assert.ok(modes.indexOf('id="modes-title"') < modes.indexOf(charge) && modes.indexOf(charge) < modes.indexOf('class="mode-list"'),
+      'under the title, above the three ways to play');
+    // A 3:1 band from 700 px: the cut keeps the flame between the two creatures.
+    assert.match(charge, /data-focus-x="50" data-focus-y="45"/);
+    const story = html.match(/<section id="story"[\s\S]*?<\/section>/)[0];
+    const rest = sceneTag(story, 'predator-at-rest');
+    assert.ok(rest, 'the Predator at rest is in the creator\'s note');
+    assert.match(rest, /class="picture story-scene"/);
+    const paragraphs = [...story.matchAll(/<p>([^<]*)<\/p>/g)];
+    const last = paragraphs.find(([, text]) => coffee.test(text));
+    assert.ok(last, 'the coffee paragraph');
+    assert.ok(story.indexOf(last[0]) + last[0].length <= story.indexOf(rest), 'under the paragraph it answers');
+    assert.ok(story.indexOf(rest) < story.indexOf('class="tabletop-note"'), 'before the board game\'s note');
+    for (const tag of [charge, rest]) {
+      assert.equal(attribute(tag, 'loading'), 'lazy');
+      assert.notEqual(attribute(tag, 'fetchpriority'), 'high');
+      assert.ok(altOf(tag).split(' ').length >= 6, `${tag} says what it shows`);
+    }
+  });
+}
+
+test('the home\'s two scenes speak English and French, never the same words', () => {
+  for (const scene of ['elemental-charge', 'predator-at-rest']) {
+    const en = altOf(sceneTag(read('index.html'), scene)), fr = altOf(sceneTag(read('fr/index.html'), scene));
+    assert.ok(en && fr);
+    assert.notEqual(en, fr, scene);
+  }
+});
+
+for (const [lang, file, home, title] of [['en', '404.html', '/', 'Page not found.'], ['fr', 'fr/404.html', '/fr/', 'Page introuvable.']]) {
+  test(`${lang}: the 404 shows the claw on the arch, in its language, and leads home`, () => {
+    const html = read(file);
+    assert.match(html, new RegExp(`<html lang="${lang}">`));
+    assert.ok(html.includes(`<h1 id="lost-title">${title}</h1>`));
+    // The site's header and footer, but no address claimed: a 404 has none of its own.
+    assert.match(html, /<header class="mast">/);
+    assert.doesNotMatch(html, /rel="canonical"|rel="alternate"/);
+    assert.match(html, /<meta name="robots" content="noindex">/);
+    assert.equal((html.match(/class="gold-button"/g) ?? []).length, 1, 'one filled action');
+    assert.match(html, new RegExp(`<a class="gold-button" href="${home.replaceAll('/', '\\/')}">`));
+    const claw = sceneTag(html, 'latch-under-the-arch');
+    assert.ok(claw, 'the claw');
+    assert.match(claw, /class="picture lost-scene"/);
+    assert.ok(altOf(claw).split(' ').length >= 6);
+    // The page's one picture, on its first screen: asked for at once, not lazy.
+    assert.notEqual(attribute(claw, 'loading'), 'lazy');
+    for (const [, path] of attribute(claw, 'srcset').matchAll(/(\/page-art\/\S+)/g)) assert.ok(existsSync(join(root, path)), path);
+    // Every path is absolute and found, its fragment too: a 404 is served at any depth.
+    for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
+      if (!href.startsWith('/')) continue;
+      const [path, fragment] = href.split('#');
+      const dest = path.endsWith('/') ? path + 'index.html' : path;
+      assert.ok(statSync(join(root, dest)).size > 0, href);
+      if (fragment) assert.ok(read(dest).includes(`id="${fragment}"`), href);
+    }
+    // Its tab is named as the other pages are, without the title's full stop.
+    assert.match(html, new RegExp(`<title>${title.slice(0, -1)} — Downfall Instinct</title>`));
+  });
+}
+
+test('the two 404s name the claw in their own words', () => {
+  assert.notEqual(altOf(sceneTag(read('404.html'), 'latch-under-the-arch')), altOf(sceneTag(read('fr/404.html'), 'latch-under-the-arch')));
 });

@@ -47,7 +47,7 @@ async function invitationFrom(walk, name) {
 const doors = {
   id: 'doors',
   title: 'The two doors',
-  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
+  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -73,6 +73,11 @@ const doors = {
     await walk.screen('showcase-mutations');
     await page.goto(`${set.showcase}/rules/`);
     await walk.screen('showcase-rules');
+    // A path that does not exist: the static server answers 404 with nothing, so the walk opens the page itself.
+    await page.goto(`${set.showcase}/404.html`);
+    await walk.screen('showcase-404');
+    await page.goto(`${set.showcase}/fr/404.html`);
+    await walk.screen('showcase-404-fr');
     // Play now opens the game's origin in the same tab: here, the host of the set.
     await page.goto(`${set.game}${new URL(play).pathname}`);
     await page.locator('#sign-in-panel').waitFor();
