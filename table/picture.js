@@ -108,7 +108,7 @@ export function stripElement(doc, name, options = {}) {
  * page sheet only places them.
  */
 export const SCENE_FORMS = ['head', 'ground', 'plate'];
-const SIDES = ['start', 'end'];
+const SIDES = new Set(['start', 'end']);
 
 /**
  * Less data, as the browser asks for it (`Save-Data`): a ground goes, its card keeps its slate. Read where the
@@ -120,7 +120,7 @@ function sceneOf(name, { form, side, alt, page, art = PAGE_ART, saveData = savin
   if (!SCENE_FORMS.includes(form)) throw new Error(`${name}: a scene is a head, a ground or a plate, not ${form}`);
   if (entryOf(name, page, art).frames > 1) throw new Error(`${name}: a strip is never a scene`);
   if (side !== undefined && form !== 'head') throw new Error(`${name}: only a head has a side`);
-  if (form === 'head' && !SIDES.includes(side ?? 'start')) throw new Error(`${name}: a head's words sit on its start or its end, not ${side}`);
+  if (form === 'head' && !SIDES.has(side ?? 'start')) throw new Error(`${name}: a head's words sit on its start or its end, not ${side}`);
   // Its words say what the screen is; the painting behind them says nothing of its own.
   if (alt && form !== 'plate') throw new Error(`${name}: a head's or a ground's painting is a decoration, and takes no alt`);
   if (!alt && form === 'plate') throw new Error(`${name}: a plate's painting says what it shows: it needs an alt`);

@@ -48,57 +48,60 @@ export function contrastMeasure(ratios) {
   return { texts: ratios.length, lowest: Math.floor(lowest * 100) / 100, under: ratios.filter(ratio => ratio < CONTRAST).length };
 }
 
-/**
- * Runs in the page: the boxes of text on a painting in view, in CSS pixels, each cut to its scene and to the
- * screen, with its text's colour as sRGB bytes and an alpha. A ground not drawn under less data has no painting,
- * and is the card's own slate. A scene out of view is left out before its painting is waited for: a lazy image
- * out of view never decodes.
- */
-export async function sceneTextInPage() {
-  const scope = [...document.querySelectorAll('dialog:modal')].at(-1) ?? document.body;
-  const width = document.documentElement.clientWidth, height = document.documentElement.clientHeight;
-  const cut = (rect, room) => {
-    const left = Math.max(room.left, rect.left), top = Math.max(room.top, rect.top);
-    return { left, top, width: Math.min(room.right, rect.right) - left, height: Math.min(room.bottom, rect.bottom) - top };
-  };
-  const screen = { left: 0, top: 0, right: width, bottom: height };
-  const scenes = [...scope.querySelectorAll('.scene-head, .scene-ground:not([data-saved])')].filter(scene => {
-    const box = cut(scene.getBoundingClientRect(), screen);
-    return box.width > 1 && box.height > 1;
-  });
-  const waited = image => Promise.race([image.decode().catch(() => {}), new Promise(done => setTimeout(done, 3000))]);
-  await Promise.all(scenes.flatMap(scene => [...scene.querySelectorAll(':scope > img')]).map(waited));
-  // The browser's own reading of a colour, whatever its syntax (a color-mix() serializes as color(srgb ...)).
+/** The part of a rectangle inside a room, both { left, top, right, bottom } or a DOMRect; its width may be under 0. */
+export function cutBox(rect, room) {
+  const left = Math.max(room.left, rect.left), top = Math.max(room.top, rect.top);
+  return { left, top, width: Math.min(room.right, rect.right) - left, height: Math.min(room.bottom, rect.bottom) - top };
+}
+
+/** Runs in the page: a colour as the browser reads it, whatever its syntax, as sRGB bytes and an alpha from 0 to 1. */
+export function colourBytesInPage(colour) {
   const pen = new OffscreenCanvas(1, 1).getContext('2d', { willReadFrequently: true });
-  const bytes = colour => {
-    pen.clearRect(0, 0, 1, 1);
-    pen.fillStyle = colour;
-    pen.fillRect(0, 0, 1, 1);
-    const [r, g, b, a] = pen.getImageData(0, 0, 1, 1).data;
-    return [r, g, b, a / 255];
-  };
+  pen.fillStyle = colour;
+  pen.fillRect(0, 0, 1, 1);
+  const [r, g, b, a] = pen.getImageData(0, 0, 1, 1).data;
+  return [r, g, b, a / 255];
+}
+
+/**
+ * Runs in the page: the boxes of the shown text in one scene's words, cut to the scene's room. Overflow does not
+ * clip a range's rectangles: the part outside its scene is not on the painting.
+ */
+export function wordBoxesInPage(words, inside, { cutBox, colourBytesInPage }) {
   const boxes = [];
-  for (const scene of scenes) {
-    const room = cut(scene.getBoundingClientRect(), screen);
-    const inside = { left: room.left, top: room.top, right: room.left + room.width, bottom: room.top + room.height };
-    for (const words of scene.querySelectorAll(':scope > .scene-words')) {
-      const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        const parent = node.parentElement;
-        if (!node.textContent.trim() || !parent.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
-        const colour = bytes(getComputedStyle(parent).color);
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        // Overflow does not clip a range's rectangles: the part outside its scene is not on the painting.
-        for (const rect of range.getClientRects()) {
-          const box = cut(rect, inside);
-          if (box.width > 1 && box.height > 1) boxes.push({ ...box, colour });
-        }
-      }
-    }
+  const walker = document.createTreeWalker(words, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.textContent.trim() || !node.parentElement.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+    const colour = colourBytesInPage(getComputedStyle(node.parentElement).color);
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    boxes.push(...[...range.getClientRects()].map(rect => ({ ...cutBox(rect, inside), colour })).filter(box => box.width > 1 && box.height > 1));
   }
   return boxes;
 }
+
+/**
+ * Runs in the page, given this module's helpers: the boxes of text on a painting in view, in CSS pixels, each cut
+ * to its scene and to the screen, with its text's colour. A ground not drawn under less data has no painting, and
+ * is the card's own slate. A scene out of view is left out before its painting is waited for: a lazy image out of
+ * view never decodes.
+ */
+export async function sceneTextInPage(kit) {
+  const scope = [...document.querySelectorAll('dialog:modal')].at(-1) ?? document.body;
+  const screen = { left: 0, top: 0, right: document.documentElement.clientWidth, bottom: document.documentElement.clientHeight };
+  const rooms = [...scope.querySelectorAll('.scene-head, .scene-ground:not([data-saved])')]
+    .map(scene => ({ scene, room: kit.cutBox(scene.getBoundingClientRect(), screen) }))
+    .filter(({ room }) => room.width > 1 && room.height > 1);
+  const waited = image => Promise.race([image.decode().catch(() => {}), new Promise(done => setTimeout(done, 3000))]);
+  await Promise.all(rooms.flatMap(({ scene }) => [...scene.querySelectorAll(':scope > img')]).map(waited));
+  return rooms.flatMap(({ scene, room }) => {
+    const inside = { left: room.left, top: room.top, right: room.left + room.width, bottom: room.top + room.height };
+    return [...scene.querySelectorAll(':scope > .scene-words')].flatMap(words => kit.wordBoxesInPage(words, inside, kit));
+  });
+}
+
+/** The expression that runs sceneTextInPage in a page with its helpers: page.evaluate sends one function's text. */
+export const SCENE_TEXT = `(${sceneTextInPage})({ cutBox: ${cutBox}, colourBytesInPage: ${colourBytesInPage}, wordBoxesInPage: ${wordBoxesInPage} })`;
 
 const HIDDEN = 'ux-contrast-hidden';
 
@@ -113,7 +116,7 @@ export function hideSceneWordsInPage({ hide, id }) {
 
 /** Runs in the page: the pixels of each box of a screenshot (base64 PNG), at the screen's density. */
 export async function boxPixelsInPage({ png, boxes }) {
-  const bytes = Uint8Array.from(atob(png), char => char.charCodeAt(0));
+  const bytes = Uint8Array.from(atob(png), char => char.codePointAt(0));
   const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }));
   const canvas = new OffscreenCanvas(bitmap.width, bitmap.height), pen = canvas.getContext('2d', { willReadFrequently: true });
   pen.drawImage(bitmap, 0, 0);
@@ -127,7 +130,7 @@ export async function boxPixelsInPage({ png, boxes }) {
 
 /** The contrast of a screen's words on its paintings, or null when it lays none. `page` is a Playwright page. */
 export async function measureContrast(page) {
-  const boxes = await page.evaluate(sceneTextInPage);
+  const boxes = await page.evaluate(SCENE_TEXT);
   if (!boxes.length) return null;
   await page.evaluate(hideSceneWordsInPage, { hide: true, id: HIDDEN });
   let png;

@@ -3,7 +3,7 @@
 // arithmetic; studio/browser/picture-kit.spec.js holds the reading in a browser.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTRAST, contrastRatio, lowestContrast, luminance, contrastMeasure } from '../scripts/ux/contrast.mjs';
+import { CONTRAST, SCENE_TEXT, contrastRatio, contrastMeasure, cutBox, lowestContrast, luminance } from '../scripts/ux/contrast.mjs';
 
 test('luminance and ratio are WCAG 2\'s: black on white is 21:1, a colour on itself 1:1', () => {
   assert.equal(luminance([0, 0, 0]), 0);
@@ -41,4 +41,10 @@ test('a text not quite opaque is blended over the pixel under it before it is re
   const half = lowestContrast([0, 0, 0, 0.5], white);
   assert.ok(half > 1 && half < 5, String(half));
   assert.equal(lowestContrast([0, 0, 0], white), 21, 'opaque when the alpha is left out');
+});
+
+test('a box is cut to its room, and what runs in the page carries the helpers it calls', () => {
+  assert.deepEqual(cutBox({ left: -10, top: 5, right: 50, bottom: 30 }, { left: 0, top: 10, right: 40, bottom: 100 }), { left: 0, top: 10, width: 40, height: 20 });
+  assert.ok(cutBox({ left: 0, top: 200, right: 10, bottom: 210 }, { left: 0, top: 0, right: 40, bottom: 100 }).height < 0, 'a box out of its room has no height');
+  for (const helper of ['cutBox', 'colourBytesInPage', 'wordBoxesInPage']) assert.match(SCENE_TEXT, new RegExp(`${helper}: function ${helper}\\(`), helper);
 });
