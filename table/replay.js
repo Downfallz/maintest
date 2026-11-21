@@ -11,6 +11,14 @@ export function playbackBoard(replay, board) {
   const before = { upkeep: 'Upkeep', purchases: 'Evolution' }[action.interlude];
   // Its Cleanup comes after every slot of the round: the cursor is past the last one.
   const cleanup = action.interlude === 'aftermath';
+  const cursor = cleanup ? (action.frame.timeline ?? []).length : slotOf(action, earlier.length - 1);
+  // Only the slots up to this one had been turned over when it resolved (ADR 0083). A live cast is played alone, so
+  // the round's earlier reveals come from the latest board when it is on that round: the slots before this one.
+  const played = earlier.map(item => item.action).filter(Boolean);
+  const turned = !before && board.roundNumber === round ? (board.revealedActions ?? []).filter(one => {
+    const slot = (action.frame.timeline ?? []).findIndex(item => item.creature === one?.actor);
+    return slot >= 0 && slot < cursor && !played.some(item => item.actor === one.actor);
+  }) : [];
   return {
     ...board,
     roundNumber: round,
@@ -20,9 +28,8 @@ export function playbackBoard(replay, board) {
     timeline: action.frame.timeline, rollOffs: action.frame.rollOffs,
     // The slot the action was played from: a creature that fizzled unasked is still a slot, so the action's
     // index among the round's resolutions is only a fallback.
-    activationCursor: cleanup ? (action.frame.timeline ?? []).length : slotOf(action, earlier.length - 1),
-    // Only the slots up to this one had been turned over when it resolved (ADR 0083).
-    revealedActions: earlier.map(item => item.action).filter(Boolean),
+    activationCursor: cursor,
+    revealedActions: [...turned, ...played],
     intents: [], speedChoices: [], evolutionChoices: [], outcome: null,
   };
 }
