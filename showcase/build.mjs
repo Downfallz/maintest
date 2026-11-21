@@ -4,6 +4,7 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
 import { loadCatalogue } from './catalogue.mjs';
+import { notFoundPage } from './not-found.mjs';
 import { english, french } from './copy.mjs';
 import { CONCEPT_CARD_SOURCE, publishedShowcaseCss } from './concept-card.mjs';
 import { copyrightPage } from './copyright.mjs';
@@ -39,7 +40,7 @@ const stage = await mkdtemp(destination + '-');
 try {
   const assets = [
     ['docs/art/branding.css', 'branding.css'],
-    ...['gallery.js', 'guide.js', '404.html', '_headers'].map(file => [`showcase/${file}`, file]),
+    ...['gallery.js', 'guide.js', '_headers'].map(file => [`showcase/${file}`, file]),
     ...['brand-mark.svg', 'icon.svg'].map(file => [`table/${file}`, `assets/${file}`]),
     ...['marcellus-latin-400.woff2', 'OFL.txt'].map(file => [`table/fonts/${file}`, `fonts/${file}`]),
     ['table/motion.js', 'motion.js'],
@@ -54,7 +55,8 @@ try {
     const path = routes[c.lang];
     return [[path.home, page(c, specimen, application.href)], [path.guide, guidePage(c, catalogue, application.href)],
       [path.rules, rulesPage(c, books[c.lang], application.href)], [path.privacy, privacyPage(c, application.href)], [path.copyright, copyrightPage(c, application.href)]]
-      .map(([route, html]) => [route.slice(1) + 'index.html', html]);
+      .map(([route, html]) => [route.slice(1) + 'index.html', html])
+      .concat([[path.home.slice(1) + '404.html', notFoundPage(c, application.href)]]);
   });
   // The site's own sheet, with the concept card's rule copied from the table's, so the card looks as it does in the game.
   documents.push(['showcase.css', publishedShowcaseCss(await readFile(new URL('showcase/showcase.css', source), 'utf8'),

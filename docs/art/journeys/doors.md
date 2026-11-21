@@ -19,6 +19,14 @@ The showcase's screens were read again after UX6's build, by the same walk on th
 by `node scripts/ux/journey.mjs --paint --out <folder>` on the same machine; their numbers below are that film's.
 The walk gained `showcase-round`, the home scrolled to `#duel` by How to play.
 
+The scene paintings' S5 ([its plan](../scene-paintings-plan.md#stages)) was briefed on `c649804` from the same
+walk, `node scripts/ux/journey.mjs doors --out <folder>`, and `node scripts/ux/journey.mjs --paint --out <folder>`:
+both sheets read at 390 and 320 px with their measures. The walk films the top of each page, so the home's two
+scenes (the creator's note and who you play, the last two sections of a page 7,218 px tall at 390) are not on its sheet: they were read in
+`showcase/page.mjs`, `showcase/showcase.css` and the register ([scenes/README.md](../sources/pages/scenes/README.md)),
+not seen drawn, and the critique reads them on full-page shots, as S4's did. The 404 is a new screen, which S5
+adds to the walk: no film of it was read.
+
 What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
@@ -63,7 +71,19 @@ for the game with Play now. Built by `showcase/page.mjs` from `showcase/copy.mjs
   only their `alt`, which the measure does not count: the three moves keep their text. The specimen's line
   (Brute lineage · Stage III) is set at 11 px, not 8: no word is under 11 px now, where 4 were. The language
   link's visible text starts its accessible name: `FR` is named "FR, read in French", `EN` "EN, read in
-  English", and axe's `label-content-name-mismatch` is gone.
+  English", and axe's `label-content-name-mismatch` is gone. S5 changes no word shown: its two scenes add only
+  their `alt`, and the counts stay 741 and 830.
+
+The `alt` of S5's two scenes, written in `showcase/copy.mjs` beside the words of their section, in the form names
+of `docs/domain/player-terminology.md` and of the renaming it points to (Cataclysme, Colosse, Prédateur). A spell
+keeps its English name in French, as the French rulebook writes it (Incinerate).
+
+| Scene | English | French |
+| --- | --- | --- |
+| The broken charge | The Cataclysm breathes Incinerate into the Colossus’s shoulder, ice and lightning breaking around them under the eclipse. | Le Cataclysme souffle Incinerate sur l’épaule du Colosse, tandis que la glace et la foudre éclatent autour d’eux sous l’éclipse. |
+| The Predator at rest | A Predator lies at rest in a dark hall, embers still glowing in its shoulder. | Un Prédateur se repose dans une salle sombre, des braises encore luisantes dans l’épaule. |
+
+No text is laid on either: each is a plate, its section's words above and below it.
 
 ### Pictures
 
@@ -74,11 +94,23 @@ for the game with Play now. Built by `showcase/page.mjs` from `showcase/copy.mjs
 | The battlefield's three rounds (the eclipse, the breach, the broken floor with the shattered sky above it), lazy. | 351 by 128 px | Does the ground change? | `table/battle-art/horizon/breach.webp` |
 | The mutations' five specimens (the base creature, then the Warped from its base to the Revenant and its Brute hybrid), lazy. | 315 by 210 px | What does a mutation do to a creature? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
 | The breach behind the ways to play, an `<img>` at the full width, no longer a CSS background, lazy. | 390 by 219 px | Where is the game played? Behind the words, a ground. | `table/battle-art/horizon/breach.webp` |
+| The Predator at rest (S5), a plate in the creator's note: under the paragraph of the morning coffee, before A board game someday?, whole (16:9) and no wider than the paragraphs' 65ch, 640 px. Lazy. | 351 by 197 px | What is a duel that waits for me? | `docs/art/sources/pages/scenes/predator-at-rest.webp` |
+| The broken charge (S5), a plate across the column in who you play: under the title Who will you play?, above the three ways to play. Whole on a phone (16:9); from 700 px a 3:1 band, cover cutting top and bottom at the focus 50% 45%, on the flame between the two creatures. Lazy. | 351 by 197 px | What does a duel look like late, at the last stage? | `docs/art/sources/pages/scenes/elemental-charge.webp` |
 
 Each picture is declared in `docs/art/page-pictures.json` and sent at the size it is drawn, once and twice, by
 `table/picture.js`: the measure counts none sent at over twice it, where five were. Wider than 600 px the
 battlefield is drawn up to 1250 px and a specimen 465 px. The rune of the header is a drawing, not counted. The
 three moves of the round are [the round's](#a-round-seen-played-showcase-round).
+
+S5's two scenes, in the order a visitor scrolls to them. At 320 each is 288 by 162 px. The Predator at rest sits
+in the story's left column (single under 850 px; about 645 px wide at 1280, so the plate reaches its 640 px
+there), declared `drawn: [351, 640]`. The charge follows the column (`.contain`, 90% of the screen under 850 px),
+a band of 3:1 from 700 px up to the column's 1250 px, declared `drawn: [351, 1250]` with its `focus`;
+`showcase/showcase.css` copies the focus rule for 45% down, as S4 copied 40% and 55% (S3's **Left**). I chose the
+Predator under its paragraph and not beside the note: the story's right column is the commitments, and the plate
+then answers the one sentence it illustrates. I chose the charge between the title and the list, as the plan
+says, and not behind the list: a plate, not a ground, so the three ways to play keep their slate and need no
+contrast measured. The 3:1 band from 700 px keeps the three ways to play on a laptop's screen with their title.
 
 ### States
 
@@ -86,10 +118,14 @@ three moves of the round are [the round's](#a-round-seen-played-showcase-round).
   `width` and `height`. The text never waits for a picture. At 320 by 568, Play now's whole box is on the first
   screen: on UX6's film only its top 14 px are, as before UX6 (see **Left**).
 - **Empty**: cannot be: the page is built, not fed by the host.
-- **Loaded**: as the sheet shows, with the round's pictures in the duel's section.
+- **Loaded**: as the sheet shows, with the round's pictures in the duel's section. Further down, the Predator at
+  rest under the coffee paragraph and the broken charge between Who will you play? and the three ways to play,
+  each asked for as it nears the screen; until then its room is held by its `width` and `height` on `--paper`.
 - **Waiting**: Play now is a link to the game's origin, in the same tab. Between the press and the game's first
   paint the press's answer is the only sign; the browser shows its own progress.
-- **Error**: a path that does not exist is the showcase's own 404 page (`showcase/404.html`).
+- **Error**: a path that does not exist is the showcase's 404 in its language, built by S5
+  ([The showcase's 404](#the-showcases-404-showcase-404-showcase-404-fr)). A scene that fails to load leaves
+  its room, its colour and its `alt`; the paragraph and the ways to play still read.
 - **Offline**: the showcase has no service worker; the browser shows its own page. Not changed here.
 
 ### Motion
@@ -116,20 +152,29 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
   links, the language, Play now), then the hero's Play now and How to play, then each section in reading order.
 - **Names**: the hero's pictures are decoration and keep an empty `alt`: the title and the specimen's line say
   what is shown. The language link as written under **Words**. Landmarks: the header's `nav`, `main`, the footer.
+  S5's two scenes are not decoration: each carries its `alt` as written under **Words**, in the page's language,
+  read after the paragraph or the title it follows. Neither takes the focus.
 - **Announced**: nothing: nothing changes on the page without a navigation.
 - **Targets**: none of 29 under 44 px at either width, where 7 were. The header's Play now keeps one line at
-  320 px. axe finds nothing.
+  320 px. axe finds nothing. S5 adds no control: the same after.
 
 ### Cost
 
 - **Bytes**: 227 KB of pictures before any scroll, 744 KB before UX6 (median of five `--paint` runs, the same
   machine): the ground and the Colossus at the size they are drawn, everything below the hero lazy. The budget is
   `docs/art/page-budget.json`'s.
+  S5 adds nothing before a scroll: both scenes are lazy, at the foot of the page. Its `all` counts, at twice the
+  density on a phone, 1,251,602 B on `c649804` and 1,350,752 B with the two scenes (the charge's 702 px file is
+  78,956 B, the Predator at rest's 20,194 B; together about the 100 KB the plan allowed). That is over the 1,280 KiB it allowed, so S5
+  raises the `all` of showcase/home to 1,344 KiB (1,376,256 B) with that reason; its `first` (224 KiB) holds. The
+  paint runs on `c649804` read 234,129 B of pictures before any scroll; S5's read the same, 234,129 B.
 - **Largest paint**: 1.0 s, 4.3 s before UX6, a picture, median of five on the slow profile; aimed at 2.5 s (the
-  plan). The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
+  plan). On `c649804`, 1,036 ms; S5's film reads 1,048 ms, within the runs' spread. The plan's test holds: no
+  scene is on the first screen. The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
   Colossus is the largest the measure does not say; both are asked for first.
 - **Shift**: 0.00 before and after. Every picture keeps its `width` and `height`; the round's frames hold their
-  room by `aspect-ratio` before they load.
+  room by `aspect-ratio` before they load. S5's two scenes keep their `width` and `height`; from 700 px the charge's
+  band keeps `aspect-ratio: 3`. The page grows by 436 px at 390 (7,218 to 7,654) and 365 px at 320 (7,541 to 7,906), S5's film: two plates and their margins.
 
 ### Left
 
@@ -143,6 +188,14 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
 - At 320 by 568 Play now sits 554 px down, below the fold but for its top 14 px; the header's Play now is on the
   first screen. About 36 px of the hero give way above the kicker: my choice is the room the Colossus takes
   (`.hero-copy`'s top padding, 195 px at 320, and the Colossus drawn to fit it), not the pitch's words.
+- Who you play keeps the breach as its ground (`.modes-ground`). Under 600 px it is a band of 219 px at the
+  section's top, and the charge's plate starts near its foot; wider, the plate lies on the dimmed breach. Two
+  paintings in one section is a choice the owner may refuse: the charge could replace the breach as the section's
+  ground, but words on a painting wait for S6's scrim and contrast measure. The critique looks at the seam at
+  390 and at 1280 px.
+- The walk films the top of the home, so neither scene is on its sheet. The critique reads full-page shots at 320,
+  390 and 1280 px in both languages; the walk may gain a screen scrolled to `#modes`, in a change of its own.
+- The charge drawn at 1250 px weighs 185,362 B, sent to a wide screen only; the budget counts the phone's.
 
 ## A round seen played (`showcase-round`)
 
@@ -358,6 +411,132 @@ None.
 - The scene's `alt` is read before the family's title, because the scene comes first. A reader may prefer it after
   the header. The brief keeps it first: it opens the section as the plan's head does, and the title stays the
   section's name.
+
+## The showcase's 404 (`showcase-404`, `showcase-404-fr`)
+
+Briefed for [the scene paintings' S5](../scene-paintings-plan.md#stages), on `c649804`. S5 adds it to the walk, as
+`showcase-404` and `showcase-404-fr` in the doors' journey (`scripts/ux/journeys.mjs`), and to
+[the baseline](baseline.md); no film of it was read for this brief. The French page shares this brief, as the home's
+does. Read in the static page of `c649804` (showcase/404.html, which S5 replaces), `showcase/build.mjs` and
+`showcase/layout.mjs`, not seen.
+
+### Job
+
+A visitor followed a dead link to the showcase: an old address, a typo, a page that moved. They learn nothing is
+here and go back to the site. Cloudflare Pages serves the nearest `404.html` up the path, so `showcase/build.mjs`
+writes two from one module: `404.html` in English and `fr/404.html` in French, each with its own words, its own
+`alt` and its way home (`/`, `/fr/`). Today it is one static page in English, with no picture, no header and no
+footer; a derived picture's file name carries its hash, so the page with the claw cannot be written by hand.
+
+- **Filled action**: Back to the game site → (Retour au site du jeu →), gold, as today. The header's Play now
+  stays an outline; the language link and the footer's links stay quiet. The measure should read 1.
+
+### Words
+
+- **Order**: the header (the name, the language, Play now), the kicker, the title, the claw, the button; the footer
+  last.
+- **Budget**: 45 words in English, 50 in French, header and footer included as the measure counts them at 390
+  and 320 px (the header's section links are hidden under 920 px), with room for the footer to grow. Before S5, 11 in English, counted on the file. S5's
+  film reads 34 in each language, at both widths. The words of the page itself:
+
+English:
+
+```text
+Error 404
+Page not found.
+[Back to the game site →]
+```
+
+French:
+
+```text
+Erreur 404
+Page introuvable.
+[Retour au site du jeu →]
+```
+
+The kicker "Downfall Instinct · 404" becomes "Error 404": the header's name now says Downfall Instinct. No line
+under the title: the claw answers the question, and the button is the way out. The `alt` of the claw:
+
+| Scene | English | French |
+| --- | --- | --- |
+| The claw on the arch | Three claws grip a crumbling stone arch from above, an eye watching behind them. | Trois griffes agrippent d’en haut une arche de pierre qui s’effrite, tandis qu’un œil guette derrière elles. |
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The claw on the arch, a plate between the title and the button, whole (16:9), no wider than 640 px, asked for first. | 351 by 197 px | Nothing here, or something holding on above? | `docs/art/sources/pages/scenes/latch-under-the-arch.webp` |
+
+At 320 it is 288 by 162 px; from about 730 px it stays 640 by 360, the column's left edge, as the title.
+Declared for the new budget page showcase/404, `drawn: [351, 640]`, role `largest`: not lazy,
+`fetchpriority="high"`. The plan's rule makes every scene lazy outside a door's first screen; the 404 is not a door,
+and the claw is its one picture on its first screen. A lazy claw would be asked for after the layout, later than
+the preload scanner would ask. The rule is amended under **Left**.
+
+I chose the claw under the title and not above it: the words lead, the page reads with the picture hidden, and the
+claw sits between "Page not found." and the way out, where it answers the question.
+
+### States
+
+- **First paint**: the header, the kicker, the title and the button, in the HTML; the claw's room held by its
+  `width` and `height` on `--paper`. At 320 by 568 the button's whole box is on the first screen: the header
+  62 px, the section's padding, the kicker, the title on one line, the claw 162 px, then the button. The title is
+  drawn at the size of the home's section titles (`h2`, 37 px on a phone), not the hero's 57 px: "introuvable."
+  must hold on one line in 288 px, and the button must stay in view.
+- **Empty**: cannot be: the page is built, and the host sends it for any missing path.
+- **Loaded**: the title, the claw, the button, in the page's language.
+- **Waiting**: the button and every link are links; the browser shows its own progress.
+- **Error**: the claw that fails to load leaves its room, its colour and its `alt`; the title and the button
+  still read.
+- **Offline**: the showcase has no service worker; the browser shows its own page. Not changed here.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The press | A pointer down on Back to the game site or the header's Play now. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+No ambience: the claw is still, and the page does not load `motion.js`. The press is the kit's, already in
+`showcase/showcase.css`.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The press | A change of colour on the control, no scale. |
+
+### Accessibility
+
+- **Focus**: the skip link to the main content, then the header (the name, the language, Play now), then Back to
+  the game site, then the footer's links.
+- **Names**: `<html lang="en">` and `lang="fr"`. The claw carries its `alt` as written under **Words**, in the
+  page's language. The language link goes to the other language's home, since a 404 has no twin; it keeps the
+  layout's name ("FR, read in French"). Landmarks: the header's `nav`, `main`, the footer, as every page of the
+  showcase. No `canonical` and no `alternate` link: a 404 has no address of its own to claim.
+- **Announced**: nothing: nothing changes without a navigation.
+- **Targets**: the button is 50 px tall; the header's and the footer's controls are the home's, none of 29 under
+  44 px there. The 404 should read none under 44 px and axe nothing, at both widths.
+
+### Cost
+
+- **Bytes**: the claw alone, 27,382 B on a phone at twice the density (its 702 px file; 68,804 B at 1280 px on a
+  wide screen). A new budget, showcase/404 in `docs/art/page-budget.json`: `first` and `all` 32 KiB (32,768 B).
+- **Largest paint**: the claw, asked for first; aimed at 2.5 s, the budget's. Not measured: the paint runs walk
+  the showcase's home, the panel and the lobby, not the 404.
+- **Shift**: none: the claw keeps its `width` and `height`; the font is preloaded by the layout, as on every page.
+
+### Left
+
+- The plan's rule "every scene is lazy, outside a door's first screen" is amended in
+  [the scene paintings' plan](../scene-paintings-plan.md): a page's one picture, on its first screen, is asked for
+  first. The 404 is the only such page today.
+- The header and the footer are the layout's (`showcase/layout.mjs`), which today's 404 lacks: a lost visitor
+  keeps the site's whole way around (the field guide, the rules, Play now). The layout writes a page's
+  `canonical` and `alternate` from its route; the 404 has none, so the build passes it without them. The owner
+  may prefer the bare page of today, with the claw and the button alone.
+- The button's words stay "Back to the game site", today's. "Back to the home page" says more plainly where it
+  goes; the owner chooses.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

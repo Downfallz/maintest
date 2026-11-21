@@ -67,6 +67,31 @@ export const PAGE_ART = {
       { file: 'parasite-under-slate-842.c0f6884e.webp', width: 842, height: 474, bytes: 29760 },
     ],
   },
+  'elemental-charge': {
+    from: '8b39d243c0426801', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"}, focus: '50% 45%',
+    sizes: [
+      { file: 'elemental-charge-351.93b574a1.webp', width: 351, height: 197, bytes: 24506 },
+      { file: 'elemental-charge-702.a5e70cfc.webp', width: 702, height: 395, bytes: 78956 },
+      { file: 'elemental-charge-1250.681d4ddc.webp', width: 1250, height: 703, bytes: 185362 },
+      { file: 'elemental-charge-1536.b0201d5a.webp', width: 1536, height: 864, bytes: 233066 },
+    ],
+  },
+  'predator-at-rest': {
+    from: '27f10c8f9c5ff2b0', frames: 1, drawn: [351,640], pages: {"showcase/home":"lazy"},
+    sizes: [
+      { file: 'predator-at-rest-351.ac7fe3f2.webp', width: 351, height: 197, bytes: 6606 },
+      { file: 'predator-at-rest-702.43329d14.webp', width: 702, height: 395, bytes: 20194 },
+      { file: 'predator-at-rest-1280.28addeed.webp', width: 1280, height: 720, bytes: 48202 },
+    ],
+  },
+  'latch-under-the-arch': {
+    from: '4d6da917fbb83d77', frames: 1, drawn: [351,640], pages: {"showcase/404":"largest"},
+    sizes: [
+      { file: 'latch-under-the-arch-351.28db5282.webp', width: 351, height: 197, bytes: 8908 },
+      { file: 'latch-under-the-arch-702.558e2d67.webp', width: 702, height: 395, bytes: 27382 },
+      { file: 'latch-under-the-arch-1280.ed263c9a.webp', width: 1280, height: 720, bytes: 68804 },
+    ],
+  },
   'showcase-ground': {
     from: 'b6548dd550e81e05', frames: 1, drawn: [720,1440], pages: {"showcase/home":"largest"},
     sizes: [
