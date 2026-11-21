@@ -1213,6 +1213,37 @@ test('the panel an invitation opens shows the duel whole on a phone, in place of
   }
 });
 
+test('on a wide screen the duel sits beside the words and fills the panel to its right edge', async ({ page }) => {
+  for (const width of [760, 1041, 1280, 1600]) {
+    await page.setViewportSize({ width, height: 800 });
+    await home(page, { account: null, mode: 'google', invited: rooks, search: invitedSearch });
+    await expect(page.getByRole('heading', { name: 'Rook invited you to a 3v3 battle.' })).toBeVisible();
+    const [panel, drawn, heading] = await Promise.all(['#sign-in-panel', '#sign-in-art img.sign-in-duel', '#sign-in-heading'].map(one => page.locator(one).boundingBox()));
+    expect(Math.abs(drawn.x + drawn.width - (panel.x + panel.width)), `right edge at ${width}`).toBeLessThanOrEqual(2);
+    if (width > 1040) {
+      expect(drawn.x, `beside the words at ${width}`).toBeGreaterThan(heading.x);
+      expect(Math.abs(drawn.height - panel.height), `the panel's height at ${width}`).toBeLessThanOrEqual(2);
+    } else {
+      expect(Math.abs(drawn.height - drawn.width * 941 / 1672), `whole above the words at ${width}`).toBeLessThanOrEqual(2);
+      expect(drawn.y + drawn.height, `above the words at ${width}`).toBeLessThanOrEqual(heading.y);
+    }
+    await noOverflow(page);
+  }
+});
+
+test('a late answer that the link is the visitor\'s own seat turns the panel plain, and its pictures with it', async ({ page }) => {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  await home(page, { account: null, mode: 'google', search: invitedSearch });
+  await page.route('**/api/lobby/invitations', async route => { await held; await route.fulfill({ json: { invitations: [{ token: 'inv', kind: 'seat', seat: 'player2', table: rooks }] } }); });
+  await page.reload();
+  await expect(page.locator('#sign-in-art img.sign-in-duel')).toHaveCount(1);
+  release();
+  await expect(page.locator('#sign-in-panel')).toHaveAttribute('data-door', 'plain');
+  await expect(page.locator('#sign-in-art img.sign-in-creature')).toHaveCount(1);
+  await expect(page.locator('#sign-in-art img.sign-in-duel')).toHaveCount(0);
+});
+
 test('a link the host answers as the visitor\'s own seat turns the panel plain, with its ground and its Revenant', async ({ page }) => {
   const state = await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch });
   await page.route('**/api/lobby/invitations', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ invitations: [{ token: 'inv', kind: 'seat', seat: 'player2', table: rooks }] }) }));
@@ -1261,7 +1292,7 @@ test('a new account named on a plain visit is told the first lesson in the windo
 test('a signed-in player\'s home loads none of the door\'s paintings', async ({ page }) => {
   const asked = [];
   // The door's two paintings: the home's featured space draws its own (UX9).
-  page.on('request', request => { if (/\/page-art\/(eclipse-ground|revenant)-/.test(request.url())) asked.push(request.url()); });
+  page.on('request', request => { if (/\/page-art\/(eclipse-ground|revenant|duel)-/.test(request.url())) asked.push(request.url()); });
   const state = await home(page);
 
   await expect(page.locator('#sign-in-art img')).toHaveCount(0);

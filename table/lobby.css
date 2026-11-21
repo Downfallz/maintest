@@ -238,7 +238,9 @@
 /* The duel, for an invited friend, shows both teams: beside the words on a wide screen, its own left edge fading into
    them; above the words, whole, up to 1040 px. */
 .sign-in-panel[data-door="invited"]::before { content: none; }
-.sign-in-panel .sign-in-duel { left: calc(min(60%, 560px) - 96px); width: auto; right: 0; mask-image: linear-gradient(90deg, transparent, #000 160px); }
+/* An <img> is not stretched between left and right: its width is given, and cover cuts it. */
+.sign-in-panel .sign-in-duel { left: calc(min(60%, 560px) - 96px); width: calc(100% - min(60%, 560px) + 96px); mask-image: linear-gradient(90deg, transparent, #000 160px); }
+/* 1040 px is also the step of the duel's `sizes` in door.js. */
 @media (max-width: 1040px) {
   .sign-in-panel[data-door="invited"] { flex-direction: column; align-items: stretch; }
   .sign-in-panel .sign-in-ground.sign-in-duel { position: relative; inset: auto; width: 100%; height: auto; aspect-ratio: 16 / 9; mask-image: linear-gradient(180deg, #000 60%, transparent); }
@@ -313,13 +315,13 @@
   .sign-in-panel { min-height: 0; margin-block: 20px; }
   .sign-in-content { width: 100%; padding: 26px 16px 28px; }
   .sign-in-content h2 { max-width: calc(100% - 112px); font-size: clamp(30px, 9vw, 38px); }
-  /* The invited title waits for the host to name who invites: its room is held for the longer words. */
-  .sign-in-panel[data-door="invited"] .sign-in-content h2 { min-height: 4lh; font-size: 26px; }
+  /* The invited title waits for the host to name who invites: its room is held for the longer words, three lines
+     at the panel's full width, under the duel. */
+  .sign-in-panel[data-door="invited"] .sign-in-content h2 { max-width: 100%; min-height: 3lh; font-size: 26px; }
   .sign-in-content :is(.sign-in-game, .muted) { max-width: 100%; }
   .sign-in-panel::before { background: linear-gradient(180deg, color-mix(in srgb, var(--soot) 45%, transparent), var(--soot) 72%); }
   .sign-in-panel .sign-in-ground { height: 300px; }
   .sign-in-panel .sign-in-creature { top: 8px; right: 0; bottom: auto; width: 107px; max-height: 86px; }
-  .sign-in-panel[data-door="invited"] .sign-in-content h2 { max-width: 100%; min-height: 3lh; }
   .sign-in-actions { margin-top: 22px; }
   .home-page .lobby-hero { padding: 28px 0 22px; }
   .home-page .hero-detail { font-size: 14px; }

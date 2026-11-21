@@ -181,15 +181,16 @@ result in `battle/src` with UX12.
    twice the density. Tests: `studio/ux-pictures.test.js`, `table/door.test.js`, the door's cases in
    `lobby-home.spec.js`, the measures.
 
-   *Built (2026-11-21)*: `duel` is declared for `table/sign-in`, drawn 358 px on a phone and 980 px wide, asked for
-   first; its budget rose from 128 to 192 KiB (it counts the duel with the ground and the Revenant, though a visit
-   loads one or the other). `doorPictures` in `table/door.js` draws it on every panel an invitation opens, a spent
-   link included, and the ground and the Revenant again when the host answers the link as the visitor's own seat.
-   Up to 1040 px the duel is drawn whole above the words; wider, it sits beside them, its left edge fading under
-   a mask, and the cover cuts a little of the right team. The brief's row names the file. Seen on the walk's
-   sheets at 390 and 320 px and on the real host at 800 to 1280 px; the measures of `invitation-sign-in` hold
-   (no target under 44 px, no overlap, no shift, axe clean), its height 830 px at 320. Left: the browser suite's
-   mock server does not serve `page-art/`, so its specs check the picture's box and not its pixels.
+   *Built (2026-11-21)*: `duel` is declared for `table/sign-in`, drawn 358 px on a phone and 980 px wide, and
+   requested first. Its budget rose from 128 to 192 KiB. The budget counts the duel, the ground and the Revenant
+   together, though a visit loads only one of the two sets. `doorPictures` in `table/door.js` draws the duel on
+   every panel an invitation opens, a spent link included, and the ground and the Revenant again when the host
+   answers the link as the visitor's own seat. Up to 1040 px the duel is drawn whole above the words. Wider, it
+   sits beside them and its left edge fades into them; cover cuts a fifth of its width at 1280 px, a little of
+   each team, and more toward 1041 px. The brief's row names the file. Seen on the walk's sheets at 390 and 320 px
+   and on the real host from 800 to 1600 px. The measures of `invitation-sign-in` hold (no target under 44 px, no
+   overlap, no shift, axe clean); the page is 830 px high at 320 px. Left: the browser suite's mock server does
+   not serve `page-art/`, so its specs check the picture's box, not its pixels.
 3. **S3, the focus point.** An optional `focus` in a declaration (`"focus": "30% 60%"`), written by
    `pictureElement` and `pictureHtml` as the image's `object-position`. ADR 0198's "nothing is cropped" holds: no
    file changes, only where CSS cuts; [page-pictures.md](page-pictures.md) gains the line. Tests:
