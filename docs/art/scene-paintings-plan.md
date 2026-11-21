@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S3 are built; S4 is next.
+questions at the end). S1 to S4 are built; S5 is next.
 
 ## What the owner asked for
 
@@ -211,6 +211,16 @@ result in `battle/src` with UX12.
    (`journeys/doors.md`), the three family heads and the three entries draw their scenes, `showcase/mutations`
    raises its `all` budget. Tests: `showcase/showcase.test.js`, the budget, the journey's measures at 320 and
    390.
+
+   *Built (2026-11-21)*: the brief of the field guide (`showcase-mutations`) is in `journeys/doors.md`. Each family's
+   section opens on its scene, across the column: whole on a phone (344 by 194 px at 390 for a 16:9), a 3:1 band from
+   700 px, where cover cuts the Predator's pool at `50% 55%` and the Warped at `50% 40%`. Ironhide, Blightweaver and
+   Parasite carry theirs whole under their form's picture, inside the closed entry, so it loads only when the entry
+   opens. All six are lazy, with an `alt` in English and French (`showcase/lore.mjs`); no word shown changes.
+   `showcase/mutations`'s `all` rose from 168 to 320 KiB (322,590 bytes measured, the plan's 160 KB more); its `first`
+   holds. The walk's measures at 320 and 390: three pictures more on the page, none oversized, the targets, the words
+   and axe as before. `showcase/showcase.css` copies the three focus steps it draws. Left: the walk films the top
+   of the page, so the scenes are read on full-page shots of the family heads and the opened entries, not on its sheet.
 5. **S5, the showcase home and its 404.** The broken charge in who you play, the Predator at rest by the
    creator's note, the claw on the 404, through the same pass. Tests: `showcase/showcase.test.js`, the budget,
    the home's largest paint unchanged.

@@ -221,6 +221,17 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .field-entry { display: grid; grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr); align-items: center; gap: clamp(12px, 3vw, 46px); padding: 12px clamp(14px, 3vw, 40px) 26px; }
 .field-art { aspect-ratio: 1.5; }
 .field-art img { max-height: 245px; }
+/* The scenes (docs/art/scene-paintings-plan.md, S4). A family's opens its section across the column: whole on a
+   phone, a 3:1 band from 700 px, where cover cuts a 16:9 at its focus. A form's sits whole under its picture. */
+.family-scene { display: block; width: 100%; margin-bottom: 14px; background: var(--paper); }
+.field-figure { display: grid; gap: 12px; }
+.form-scene { display: block; width: 100%; background: var(--paper); }
+@media (min-width: 700px) { .family-scene { aspect-ratio: 3; object-fit: cover; } }
+/* The focus of the scenes the showcase cuts, copied from identity.css: only the steps it draws. */
+:where(.picture[data-focus-x], .picture[data-focus-y]) { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
+.picture[data-focus-x="50"] { --focus-x: 50%; }
+.picture[data-focus-y="40"] { --focus-y: 40%; }
+.picture[data-focus-y="55"] { --focus-y: 55%; }
 .anatomy { margin: 8px 0; max-width: 62ch; }
 /* The guide uses the same stat marks and palette as the battle cards and history. */
 .spell-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 10px; }

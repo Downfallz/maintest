@@ -430,3 +430,43 @@ test('the showcase sends the kit\'s files only, none twice, and no picture small
   const css = read('showcase.css');
   for (const [, size] of css.matchAll(/\.specimen span \{[^}]*font-size: (\d+)px/g)) assert.ok(Number(size) >= 11, `the specimen's line at ${size} px`);
 });
+
+// The scene paintings' plan, S4: each family opens on the scene that shows what it is, and three forms carry
+// theirs under their picture, inside the closed entry, so it loads only when opened.
+for (const [lang, file] of [['en', 'mutations/index.html'], ['fr', 'fr/mutations/index.html']]) {
+  test(`${lang}: the field guide draws its six scenes, lazy, each named in its language`, () => {
+    const html = read(file);
+    const sceneOf = (section, scene) => {
+      const at = html.indexOf(`id="${section}"`);
+      assert.ok(at > 0, section);
+      const image = new RegExp(`<img class="picture (?:family-scene|form-scene)"[^>]*src="/page-art/${scene}-\\d+\\.[0-9a-f]{8}\\.webp"[^>]*>`).exec(html.slice(at));
+      assert.ok(image, `${scene} in ${section}`);
+      assert.ok(image.index < html.slice(at).indexOf('</details>') || section.startsWith('family-'), `${scene} inside its entry`);
+      return image[0];
+    };
+    const heads = { 'family-brute': 'brute-moult', 'family-predator': 'predator-and-deathstalker', 'family-warped': 'warped-listening' };
+    const forms = { 'form-ironbound': 'ironhide-scar', 'form-blightweaver': 'blightweaver-pressure-sac', 'form-parasite': 'parasite-under-slate' };
+    const alts = new Set();
+    for (const [section, scene] of Object.entries({ ...heads, ...forms })) {
+      const image = sceneOf(section, scene);
+      assert.match(image, /loading="lazy"/, `${scene} is lazy`);
+      const [, alt] = /alt="([^"]*)"/.exec(image);
+      assert.ok(alt.split(' ').length >= 5, `${scene} says what it shows`);
+      alts.add(alt);
+    }
+    assert.equal(alts.size, 6, 'six alts, none shared');
+    // The head comes before the family's title, so the picture opens the section.
+    for (const section of Object.keys(heads)) {
+      const part = html.slice(html.indexOf(`id="${section}"`));
+      assert.ok(part.indexOf('family-scene') < part.indexOf('<h2'), `${section}: the scene opens it`);
+    }
+  });
+}
+
+test('the field guide\'s scenes are in English and French, never the same words', () => {
+  const alts = file => [...read(file).matchAll(/class="picture (?:family|form)-scene"[^>]*alt="([^"]*)"/g)].map(m => m[1]);
+  const en = alts('mutations/index.html'), fr = alts('fr/mutations/index.html');
+  assert.equal(en.length, 6);
+  assert.equal(fr.length, 6);
+  for (const [i, alt] of en.entries()) assert.notEqual(alt, fr[i]);
+});
