@@ -29,6 +29,22 @@ const maker = (inline: boolean): Make => (block, text = '', cls = '') => {
   return el;
 };
 
+// The crit chance a chip shows: the one the screen gives, else the catalogue's own with its d20 face.
+function chanceOf(card: Card | undefined, crit: CritChip | undefined): CritChip {
+  if (crit !== undefined) return crit;
+  return Number.parseFloat(card?.critical ?? '') > 0 ? { value: card!.critical!, hint: card?.criticalThreshold ? `d20 ${card.criticalThreshold}+` : '' } : null;
+}
+
+// The crit chip. At Instinct (`idle`) it is grey and says the chance is Precision's (UX12 P8).
+function critChip(make: Make, card: Card | undefined, chance: NonNullable<CritChip>, inline: boolean, brief: boolean) {
+  const chip = make('span', '', `spell-chip spell-chip-crit${chance.idle ? ' is-idle' : ''}`);
+  chip.title = chance.idle ? 'Crit chance at Precision · Instinct cannot crit' : card?.criticalNote || 'Crit chance';
+  chip.append(make('span', '✦', 'spell-crit-mark'), document.createTextNode(chance.value), make('span', chance.idle ? ' crit at Precision' : ' crit', 'spell-card-sr'));
+  if (chance.hint && !inline) chip.append(make('small', chance.hint));
+  else if (brief && chance.face) chip.append(make('small', chance.face));
+  return chip;
+}
+
 // The cost and crit chips: what the host says this cast costs and its chance now, over the catalogue's own.
 function chipsOf(make: Make, card: Card | undefined, { inline = false, brief = false, cost, crit }: SpellCardOptions) {
   const chips = make('span', '', 'spell-card-chips');
@@ -38,16 +54,8 @@ function chipsOf(make: Make, card: Card | undefined, { inline = false, brief = f
     chip.append(iconElement('energy-gain'), make('span', String(price), 'spell-cost-value'), make('span', ' energy', 'spell-card-sr'));
     chips.append(chip);
   }
-  const chance = crit !== undefined ? crit
-    : Number.parseFloat(card?.critical ?? '') > 0 ? { value: card!.critical!, hint: card?.criticalThreshold ? `d20 ${card.criticalThreshold}+` : '' } : null;
-  if (chance) {
-    const chip = make('span', '', `spell-chip spell-chip-crit${chance.idle ? ' is-idle' : ''}`);
-    chip.title = chance.idle ? 'Crit chance at Precision · Instinct cannot crit' : card?.criticalNote || 'Crit chance';
-    chip.append(make('span', '✦', 'spell-crit-mark'), document.createTextNode(chance.value), make('span', chance.idle ? ' crit at Precision' : ' crit', 'spell-card-sr'));
-    if (chance.hint && !inline) chip.append(make('small', chance.hint));
-    else if (brief && chance.face) chip.append(make('small', chance.face));
-    chips.append(chip);
-  }
+  const chance = chanceOf(card, crit);
+  if (chance) chips.append(critChip(make, card, chance, inline, brief));
   return { chips, chance };
 }
 
