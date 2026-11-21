@@ -54,8 +54,21 @@ test('the current guide\'s critical chance replaces the catalogue\'s, for the ch
   const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Standard', quickCriticalChance: 0, standardCriticalChance: .5 }] } });
   assert.deepEqual(row('costly', m).crit, { value: '50%', hint: 'at this tempo' });
 });
-test('a current critical chance of zero hides the badge, even when the catalogue has one', () => {
+test('at Instinct the chip stays, idle, with the host\'s chance at Precision', () => {
+  // UX12 P8: Instinct never crits, so the chip shows what the spell would have at Precision, never a computed one.
   const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Quick', quickCriticalChance: 0, standardCriticalChance: .5 }] } });
+  assert.deepEqual(row('costly', m).crit, { value: '50%', hint: 'at Precision', idle: true });
+});
+test('at Instinct a spell whose chance at Precision is zero shows no chip', () => {
+  const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Quick', quickCriticalChance: 0, standardCriticalChance: 0 }] } });
+  assert.equal(row('costly', m).crit, null);
+});
+test('at Instinct without the host\'s chance at Precision the card\'s own is shown, idle, with no die face', () => {
+  const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Quick', quickCriticalChance: 0 }] } });
+  assert.deepEqual(row('costly', m).crit, { value: '20%', hint: 'at Precision · catalogue', idle: true });
+});
+test('a current critical chance of zero at Precision hides the badge, even when the catalogue has one', () => {
+  const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Standard', quickCriticalChance: 0, standardCriticalChance: 0 }] } });
   assert.equal(row('costly', m).crit, null);
 });
 test('the host\'s guide gives the cost of an offered spell the catalogue does not carry', () => {

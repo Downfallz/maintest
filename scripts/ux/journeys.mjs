@@ -363,11 +363,13 @@ async function openHistory(page, blocked) {
 }
 
 // The match's windows whose pictures docs/art/ux12-pictures-plan.md settles: the pick and the Mutation Tree opened
-// from it, the spellbook at its top and at its foot, and the journal once a round is played. UX12 adds the others.
+// from it, the Tempo sheet at its spell reference, the spellbook at its top and at its foot, the order of play once
+// a spell is turned face up, and the journal once a round is played. UX12 adds the others. The team's first
+// creature plays at Instinct, so its spellbook shows a crit chip that does not hold this turn (P8).
 const windows = {
   id: 'windows',
   title: "The match's windows",
-  screens: ['mutation-pick', 'mutation-tree', 'spell-choice', 'spell-choice-foot', 'history'],
+  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'history'],
   strips: {
     // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
     'history-window': { at: 'history', act: async ({ page, blocked }) => { await page.locator('#history-close').click(); await openHistory(page, blocked); } },
@@ -388,6 +390,24 @@ const windows = {
         await page.locator('#atlas-close').click();
         await page.locator('#atlas-dialog').waitFor({ state: 'hidden' });
       }
+      if (!walk.seen('tempo-reference') && await page.locator('#planning-dialog[data-kind="Speed"]').isVisible()) {
+        // The sheet's spell reference, under the pinned creature and its two tempos.
+        // The creature and its tempos stay pinned: the reference is brought just under them, as a thumb leaves it.
+        await page.locator('.tempo-reference').evaluate(node => {
+          const pinned = document.querySelector('.tempo-pinned').getBoundingClientRect();
+          let scroller = node.parentElement;
+          while (scroller && scroller.scrollHeight <= scroller.clientHeight) scroller = scroller.parentElement;
+          if (scroller) scroller.scrollTop += node.getBoundingClientRect().top - pinned.bottom;
+        });
+        await walk.screen('tempo-reference');
+        await page.locator('#planning-choices').evaluate(node => node.scrollIntoView({ block: 'start' }));
+      }
+      // A later turn of the round: the strip read from its start, where the spells already cast are face up.
+      if (walk.seen('spell-choice') && !walk.seen('order-revealed') && await page.locator('#combat-dialog').isVisible()
+        && await page.locator('#timeline li[data-state="Completed"]').count()) {
+        await page.locator('#timeline').evaluate(node => { node.scrollLeft = 0; });
+        await walk.screen('order-revealed');
+      }
       if (!walk.seen('spell-choice') && await page.locator('#combat-dialog').isVisible()) {
         await walk.screen('spell-choice');
         // The foot of the spellbook: its last spell, where a docked sheet on a short phone must keep its foot.
@@ -396,7 +416,7 @@ const windows = {
         await page.locator('#combat-browser').evaluate(node => { node.scrollTop = 0; });
       }
     };
-    await playUntil(page, view => view.board.roundNumber > 1, { look, blocked: walk.blocked });
+    await playUntil(page, view => view.board.roundNumber > 1, { look, blocked: walk.blocked, tempo: index => index === 0 ? 'Quick' : null });
     // A round played, the journal holds its casts.
     await readUntilAsked(page);
     await openHistory(page, walk.blocked);

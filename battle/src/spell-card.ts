@@ -5,7 +5,8 @@ import type { SpellCatalogue } from './combat';
 type Card = NonNullable<SpellCatalogue['cards']>[number];
 type Cue = { kind: string; glyph?: string; harmful: boolean };
 /** A crit chance as a chip shows it: the chance, and what it holds for (a tempo, a d20 face, this turn). */
-export type CritChip = { value: string; hint?: string; face?: string } | null;
+// `idle` is a chance that does not hold this turn: at Instinct, the chance at Precision, drawn grey (UX12 P8).
+export type CritChip = { value: string; hint?: string; face?: string; idle?: boolean } | null;
 export interface SpellCardOptions {
   compact?: boolean;
   // Inside a button, where only phrasing content belongs: the same card, built of spans.
@@ -28,6 +29,22 @@ const maker = (inline: boolean): Make => (block, text = '', cls = '') => {
   return el;
 };
 
+// The crit chance a chip shows: the one the screen gives, else the catalogue's own with its d20 face.
+function chanceOf(card: Card | undefined, crit: CritChip | undefined): CritChip {
+  if (crit !== undefined) return crit;
+  return Number.parseFloat(card?.critical ?? '') > 0 ? { value: card!.critical!, hint: card?.criticalThreshold ? `d20 ${card.criticalThreshold}+` : '' } : null;
+}
+
+// The crit chip. At Instinct (`idle`) it is grey and says the chance is Precision's (UX12 P8).
+function critChip(make: Make, card: Card | undefined, chance: NonNullable<CritChip>, inline: boolean, brief: boolean) {
+  const chip = make('span', '', `spell-chip spell-chip-crit${chance.idle ? ' is-idle' : ''}`);
+  chip.title = chance.idle ? 'Crit chance at Precision · Instinct cannot crit' : card?.criticalNote || 'Crit chance';
+  chip.append(make('span', '✦', 'spell-crit-mark'), document.createTextNode(chance.value), make('span', chance.idle ? ' crit at Precision' : ' crit', 'spell-card-sr'));
+  if (chance.hint && !inline) chip.append(make('small', chance.hint));
+  else if (brief && chance.face) chip.append(make('small', chance.face));
+  return chip;
+}
+
 // The cost and crit chips: what the host says this cast costs and its chance now, over the catalogue's own.
 function chipsOf(make: Make, card: Card | undefined, { inline = false, brief = false, cost, crit }: SpellCardOptions) {
   const chips = make('span', '', 'spell-card-chips');
@@ -37,15 +54,8 @@ function chipsOf(make: Make, card: Card | undefined, { inline = false, brief = f
     chip.append(iconElement('energy-gain'), make('span', String(price), 'spell-cost-value'), make('span', ' energy', 'spell-card-sr'));
     chips.append(chip);
   }
-  const chance = crit !== undefined ? crit
-    : Number.parseFloat(card?.critical ?? '') > 0 ? { value: card!.critical!, hint: card?.criticalThreshold ? `d20 ${card.criticalThreshold}+` : '' } : null;
-  if (chance) {
-    const chip = make('span', '', 'spell-chip spell-chip-crit'); chip.title = card?.criticalNote || 'Crit chance';
-    chip.append(make('span', '✦', 'spell-crit-mark'), document.createTextNode(chance.value), make('span', ' crit', 'spell-card-sr'));
-    if (chance.hint && !inline) chip.append(make('small', chance.hint));
-    else if (brief && chance.face) chip.append(make('small', chance.face));
-    chips.append(chip);
-  }
+  const chance = chanceOf(card, crit);
+  if (chance) chips.append(critChip(make, card, chance, inline, brief));
   return { chips, chance };
 }
 
@@ -81,8 +91,9 @@ export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [
   const head = make('header', '', 'spell-card-head');
   head.append(make('strong', card?.name ?? id, 'spell-card-name'));
   const { chips, chance } = chipsOf(make, card, options);
-  // A compact card sits in a docked sheet whose foot must stay on a 320 by 568 screen: it keeps its text only.
-  const portrait = compact ? null : spellPortrait(card?.visual?.portrait, portraitSizes ?? 40);
+  // A compact card sits in a docked sheet whose foot must stay on a 320 by 568 screen: it keeps its text only,
+  // unless the screen names a width for its portrait (the Tempo sheet's 24 px, UX12 P7).
+  const portrait = compact && !portraitSizes ? null : spellPortrait(card?.visual?.portrait, portraitSizes ?? 40);
   if (portrait) article.append(portrait);
   if (!brief) head.append(chips);
   article.append(head);

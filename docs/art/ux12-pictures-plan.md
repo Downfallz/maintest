@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P5 are built; P6 is next, then P7 and P8 (asked 2026-11-21).
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P8 are built; P6, P7 and P8 share one pull request, which waits for the owner's approval of the sheets.
 
 ## What the owner asked for
 
@@ -139,15 +139,47 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    `ux-designer`'s reading, and the sheets shown to the owner, who approves them before the last pull request is
    reported ready. A short clip at 390 by 844 of one pick, as the craft plan asks of UX7 to UX12.
 
+   *Built (2026-11-21)*: the walk's `windows` journey films seven screens, adding `tempo-reference` (the Tempo sheet
+   at its spell reference, the reference brought just under the pinned head) and `order-revealed` (a later turn, the
+   strip read from its start). The team's first creature plays at Instinct, so `spell-choice` shows P8's chip
+   (`scripts/ux/play.mjs`: a walk may choose a tempo per tab). The two new screens have their lines in the
+   baseline. Both widths were filmed on `main` and on the branch with the same walk. The `ux-designer` wrote the two
+   screens and P8's chip into [the brief](journeys/windows.md), then read the two films. It asked for one change: a shift of
+   0.09 at 390 after the Tempo sheet. The walk, made to name each shift's elements, found the field's captions moving as
+   the docked sheet closes. `main` shows the same on one walk in two, so it stays under the brief's **Left** as UX12's.
+   The clip of one pick at 390 by 844 was recorded with `UX_JOURNEY_VIDEO` (`docs/reference/commands.md`), new here,
+   and cut with `ffmpeg`. Sheets, clip and choices are on the owner's page. Left: the strip's spell name is not
+   written in it (an exception the owner settles), the Tempo reference has almost no room at 320, and the field
+   moves when the Tempo sheet closes.
+
 7. **P7, the Tempo's spells and the order bar.** A spell's portrait at 24 px in the Tempo sheet's spell reference
    (`battle/src/tempo.ts`, today `compact` cards without one) and beside a revealed spell in the activation order at
    the field's foot (`#timeline`, `battle/src/order.ts`), the player's own and the opponent's. The bytes measured
    first: the files are P2's 24 and 48 px, so the page's total should not move. Tests: `battle-tempo.spec.js` and
    `battle-order.spec.js`, at 320 px, each name kept, a missing portrait leaving no gap; `table/battle-spell-art.test.js`.
+
+   *Built (2026-11-21)*: each card of the Tempo sheet's spell reference draws its spell's portrait at 24 px beside
+   its name (`battle/src/tempo.ts`; a `compact` card draws one only when its screen names the width, so the pick's
+   spells keep their text alone). Each slot of the order at the field's foot whose action the host revealed shows
+   that spell's portrait at 24 px after its place badge, for both teams (`battle/src/order.ts`). The spell is read
+   from `board.revealedActions`, which `presentation.js` now passes on: the slots already played, never a private
+   intent. Its name is in the entry's spoken name ("revealed Strike") and in the order window's card
+   ("Revealed · Strike"), not in the strip. A portrait that fails to load is hidden and leaves no gap. The bytes did
+   not move: the 24 and 48 px files are P2's, already counted (322,218 B). Tests: `battle-order.test.js` (the
+   revealed spell, both teams, never an intent), `battle-tempo.spec.js` and `battle-order.spec.js` (24 px at 320,
+   the 24 px file, the name kept, a failed portrait with no gap), `table/battle-spell-art.test.js` (both screens draw
+   at 24 px only).
 8. **P8, the crit chance under Instinct.** The spellbook's crit chip stays on a card at Instinct, in grey instead of
    gold, with the chance it would have at Precision, and says so to a screen reader ("at Precision"). The chance is
    the host's (`guide.standardCriticalChance`, the Precision chance, or the card's own), never computed by the page. Tests:
    `battle-spellbook.spec.js` at both tempos; the brief's spellbook screen updated.
+
+   *Built (2026-11-21)*: at Instinct the spellbook's crit chip stays, grey, with the host's chance at Precision
+   (`guide.standardCriticalChance`, else the card's own), in `table/battle-spellbook.js`. A screen reader hears
+   "75% crit at Precision", and the chip's title says Instinct cannot crit (`battle/src/spell-card.ts`). A chance of
+   zero at Precision shows no chip. The chosen card above the foot reads "Crit 75% · at Precision". At Precision the
+   chip stays gold. Tests: `battle-spellbook.test.js` (the four cases), `battle-spellbook.spec.js` at both tempos
+   (the class, the spoken words, the colour), and [the brief's spellbook](journeys/windows.md#the-spellbook-spell-choice).
 
 P3, P4 and P5 each touch one window and can merge in any order once P2 is in. None needs an ADR: ADR 0197 and
 ADR 0198 already hold the rules.

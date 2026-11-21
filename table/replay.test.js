@@ -50,3 +50,22 @@ test('a round upkeep in a replay is shown before its combat, with nothing turned
   assert.equal(board.subPhase, 'Upkeep');
   assert.deepEqual(board.revealedActions, []);
 });
+
+test('a live cast keeps the round\'s earlier reveals from the latest board, up to its own slot', () => {
+  // The live playback hands one action at a time: the slots already played stay turned over (UX12 P7's strip).
+  const timeline = [{ creature: 4 }, { creature: 1 }, { creature: 2 }, { creature: 5 }];
+  const action = { round: 3, actor: { id: 2 }, action: { actor: 2, spell: 'ward' }, frame: { before: [], after: [], timeline, rollOffs: [] } };
+  const latest = { roundNumber: 3, allies: [], revealedActions: [{ actor: 4, spell: 'hit' }, { actor: 1, spell: 'focus' }, { actor: 2, spell: 'ward' }, { actor: 5, spell: 'later' }] };
+
+  const board = playbackBoard({ actions: [action], index: 0, stage: 'before', round: 3 }, latest);
+
+  assert.deepEqual(board.revealedActions, [{ actor: 4, spell: 'hit' }, { actor: 1, spell: 'focus' }, { actor: 2, spell: 'ward' }]);
+});
+
+test('a cast of an earlier round takes no reveal from the latest board of another round', () => {
+  const timeline = [{ creature: 4 }, { creature: 2 }];
+  const action = { round: 2, actor: { id: 2 }, action: { actor: 2 }, frame: { before: [], after: [], timeline, rollOffs: [] } };
+  const latest = { roundNumber: 3, allies: [], revealedActions: [{ actor: 4, spell: 'hit' }] };
+
+  assert.deepEqual(playbackBoard({ actions: [action], index: 0, stage: 'after', round: 2 }, latest).revealedActions, [{ actor: 2 }]);
+});

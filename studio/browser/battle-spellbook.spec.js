@@ -245,3 +245,22 @@ test('keyboard paging keeps unavailable spell references reachable without selec
   await expect.poll(() => page.locator('#combat-browser').evaluate(node => node.scrollTop)).toBeGreaterThan(0);
   await expect(page.locator('#combat-declare')).toBeDisabled(); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
+// UX12 P8: at Instinct a spell does not crit; its chip stays, grey, with the host's chance at Precision.
+for (const tempo of ['Standard', 'Quick']) test(`at ${tempo === 'Quick' ? 'Instinct' : 'Precision'} the crit chip shows the host's chance at Precision, ${tempo === 'Quick' ? 'grey and said so' : 'in gold'}`, async ({ page }) => {
+  const h = await mount(page);
+  h.view.guidance = h.view.guidance.map(one => one.spell === 'spell-2' ? { ...one, chosenSpeed: tempo, quickCriticalChance: 0, standardCriticalChance: .35 } : one);
+  h.view.waitingAsked++; await notify(page);
+  const chip = spell(page, 'spell-2').locator('.spell-chip-crit');
+  await expect(chip).toContainText('35%');
+  if (tempo === 'Quick') {
+    await expect(chip).toHaveClass(/is-idle/);
+    await expect(chip.locator('.spell-card-sr')).toHaveText(' crit at Precision');
+    await expect(spell(page, 'spell-2')).toHaveAccessibleName(/35% crit at Precision/);
+    expect(await chip.evaluate(node => getComputedStyle(node).color)).toBe('rgb(174, 187, 180)');
+  } else {
+    await expect(chip).not.toHaveClass(/is-idle/);
+    await expect(chip.locator('.spell-card-sr')).toHaveText(' crit');
+    expect(await chip.evaluate(node => getComputedStyle(node).color)).toBe('rgb(248, 232, 176)');
+  }
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});

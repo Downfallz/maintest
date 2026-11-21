@@ -217,6 +217,11 @@
 .tempo-spells .spell-card { margin: 0; }
 .tempo-spells .spell-card-head { flex-wrap: wrap; align-items: flex-start; row-gap: 4px; }
 .tempo-spells .spell-card-name { flex: 1 1 8ch; min-width: 0; }
+/* A spell's portrait at 24 px beside its name, from its own files (UX12 P7); one that fails to load leaves no gap. */
+.tempo-spells .spell-card > .spell-portrait { width: 24px; height: 24px; grid-row: 1; align-self: center; }
+.tempo-spells .spell-card:has(> .spell-portrait) > .spell-card-target { grid-column: 1 / -1; }
+.tempo-spells .spell-card:has(> .spell-portrait.missing) { display: block; }
+.tempo-spells .spell-card > .spell-portrait.missing { display: none; }
 @media (max-width: 480px) { .tempo-options { grid-template-columns: 1fr 1fr; } #planning-choices .tempo-option { flex-direction: column; align-items: flex-start; gap: 8px; min-height: 0; padding: 10px; } }
 .mutation-face { padding: 0 8px 10px; font-size: 14px; color: #c5d2cc; }
 .mutation-face p { margin: 8px 0; }
@@ -1163,6 +1168,9 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .spell-chip-crit { border-color: #f2d76b99; color: #f8e8b0; }
 .spell-crit-mark { color: #f2d76b; }
 .spell-chip-crit small { margin-left: 3px; font-weight: 600; opacity: .8; }
+/* At Instinct a spell does not crit: its chip stays, grey, with the chance it would have at Precision (UX12 P8). */
+.spell-chip-crit.is-idle { border-color: #aebbb466; color: #aebbb4; }
+.spell-chip-crit.is-idle .spell-crit-mark { color: #aebbb4; }
 .spell-card-target { margin: 6px 0 0; color: #aebbb4; font-size: 12px; }
 .spell-card-effects { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
 .spell-card-effect { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #e9e5da; }
@@ -1431,6 +1439,9 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
    and a quiet chevron between places, read left to right. */
 #timeline li > button { display: flex; align-items: center; gap: 8px; }
 #timeline li > button > .timeline-words { display: grid; min-width: 0; }
+/* The spell a creature has turned face up, beside it in the order (UX12 P7). */
+#timeline li > button > .spell-portrait { flex: none; width: 24px; height: 24px; }
+#timeline li > button > .spell-portrait.missing { display: none; }
 #timeline li > button > .timeline-words > span { display: block; white-space: nowrap; }
 #timeline li > button > .timeline-rank { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
   background: #8fc3ef; color: #142126; font: 800 12px/1 system-ui, sans-serif; }
