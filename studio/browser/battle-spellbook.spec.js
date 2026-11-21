@@ -14,11 +14,14 @@ async function mount(page, kind = 'Intent') {
       timeline: [{ creature: 1, owner: 'Player1', speed: 'Standard' }, { creature: 2, owner: 'Player1', speed: 'Quick' }] },
     options: { intent: { creatures: [{ creature: 1, castableSpells: ids.filter(id => !['spell-1', 'spell-2'].includes(id)), unaffordableSpells: ['spell-2'] }] },
       action: { actor: 1, spells: ids.filter(id => id !== 'spell-1').map(spell => ({ spell, legalTargets: legal })) } },
-    guidance: [{ spell: 'spell-1', unavailableReason: 'Cannot use while stunned' }, { spell: 'spell-2', energyAfterCost: -4, chosenSpeed: 'Standard', standardCriticalChance: .35 }] } };
+    guidance: [{ spell: 'unknown-spell', cost: 4 }, { spell: 'spell-1', unavailableReason: 'Cannot use while stunned' }, { spell: 'spell-2', energyAfterCost: -4, chosenSpeed: 'Standard', standardCriticalChance: .35 }] } };
   const cards = ids.slice(0, -1).map((id, index) => ({ id, visual: index === 0 ? { portrait: 'focus' } : null, name: index === 0 ? 'Focus' : `The exceptionally long ${['bone strike', 'protective ward', 'ritual of recovery'][index % 3]} ${index}`,
     type: ['Offensive', 'Defensive', 'Passive'][index % 3], creatureClass: ['Brawler', 'Scoundrel', 'Sorcerer'][index % 3],
     cost: index === 0 ? 0 : index === 2 ? 7 : 2, critical: index % 2 ? '20%' : '0%', criticalThreshold: index % 2 ? 17 : null, targeting: 'One creature in the host offer',
-    effects: ['A detailed effect that remains readable in the full reference.'], casterEffects: ['A separate effect on the caster.'], criticalNote: 'Critical note from the served catalogue.' }));
+    effects: ['A detailed effect that remains readable in the full reference.'], casterEffects: ['A separate effect on the caster.'], criticalNote: 'Critical note from the served catalogue.',
+    // The host's numbers of each line (CardMark.Figures): what a face in its column shows beside the stat's icon.
+    marks: index === 4 ? null : index === 5 ? [{ kind: 'Unmarked', onCaster: false, figures: '9' }, { kind: 'Unmarked', onCaster: true, figures: '9' }]
+      : [{ kind: 'Damage', onCaster: false, figures: '3' }, { kind: 'EnergyGain', onCaster: true, figures: '+1' }] }));
   page.on('pageerror', error => state.errors.push(error.message));
   // The host's change notice, so a test refreshes the seat now instead of waiting out the 5 s poll.
   await page.addInitScript(() => {
@@ -35,7 +38,8 @@ async function mount(page, kind = 'Intent') {
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'spellbook', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards } });
+    // The host's cue for each kind (EffectCue): the stat a line moves, which draws its icon beside its numbers.
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards, effects: [{ kind: 'Damage', glyph: '⚔', harmful: true }, { kind: 'EnergyGain', glyph: 'ϟ', harmful: false }] } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); state.view.waitingFor = null; return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
@@ -51,36 +55,74 @@ async function mount(page, kind = 'Intent') {
 const spell = (page, id) => page.locator(`[data-spell="${id}"]`);
 const notify = page => page.evaluate(() => window.notifyBattle());
 const scrollOf = page => page.locator('#combat-browser').evaluate(node => node.scrollTop);
-// Full details, the default, never fit every card in view, so the browser is scrolled for real before anything is kept.
+// Two cards a row never fit every card in view either, so the browser is scrolled for real before anything is kept.
 async function browseTo(page, id) {
   const node = spell(page, id); await node.scrollIntoViewIfNeeded(); await node.focus();
   expect(await scrollOf(page)).toBeGreaterThan(0); return node;
 }
-test('the spellbook groups the served types and shows truthful stats and full details under a bare header', async ({ page }, info) => {
+const columns = page => page.locator('.combat-spell-grid').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length);
+test('the spellbook groups the served types two a row, each face its portrait, name, targeting, chips, availability and numbers', async ({ page }, info) => {
   const h = await mount(page);
   await expect(page.locator('.combat-spell-group')).toHaveCount(4);
+  // Two spells a row at every width, the side panel included (docs/art/journeys/windows.md): no mode makes it one.
+  expect(await columns(page)).toBe(2);
+  await expect(page.locator('#combat-spells')).not.toHaveAttribute('data-details', /.*/);
   // The header is the creature and its chips: the round is in the field's header, choosing then targeting is what
-  // the panel shows, and full details are its only mode, so no context line, sentence or toggle takes the room.
+  // the panel shows, so no context line, sentence or toggle takes the room.
   await expect(page.locator('#combat-dialog .eyebrow, #combat-context, #combat-details-mode')).toHaveCount(0);
   await expect(page.locator('#combat-help')).toHaveText('Declare a hidden intent. Its targets will be chosen when it resolves.');
   // Under the acting creature's name: its place in the order, its tempo and its energy.
   await expect(page.locator('#combat-actor .actor-chip')).toHaveText(['1 in turn order', '✦ Precision', '3 energy']);
+  // The chips keep the chance and the die's face; the hint and the crit note leave the face for the chosen card.
   await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('20%');
-  await expect(spell(page, 'spell-3').locator('.spell-critical')).toHaveText('Precision only · d20 17+ · catalogue');
-  await expect(spell(page, 'spell-0').locator('.spell-portrait')).toHaveAttribute('src', /\/page-art\/spell-[a-z-]+-40\.[0-9a-f]+\.webp$/);
-  await expect.poll(() => spell(page, 'spell-0').locator('.spell-portrait').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('d20 17+');
+  await expect(spell(page, 'spell-3').locator('.spell-critical, .spell-card-note')).toHaveCount(0);
+  await expect(spell(page, 'spell-2').locator('.spell-chip-crit')).toContainText('35%');
+  await expect(spell(page, 'spell-2')).not.toContainText('at this tempo');
+  // Each effect line is its icon and the host's numbers; its words are kept for a screen reader, never shown.
+  await expect(spell(page, 'spell-3').locator('.spell-card-figures')).toHaveText(['3', '+1']);
+  await expect(spell(page, 'spell-3').locator('.spell-card-effect > .spell-card-sr')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+  // A line the host gave no numbers for keeps its words, and so does one whose kind has no stat to draw.
+  for (const id of ['spell-4', 'spell-5']) {
+    await expect(spell(page, id).locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+    await expect(spell(page, id).locator('.spell-card-figures')).toHaveCount(0);
+  }
+  // The button is named by what it shows, the spell's name first, then the words the face leaves.
+  await expect(spell(page, 'spell-3')).toHaveAccessibleName(/^The exceptionally long bone strike 3 ?One creature in the host offer.*Available ?A detailed effect that remains readable in the full reference\. ?A separate effect on the caster\.$/);
+  await expect(spell(page, 'spell-3')).not.toHaveAttribute('aria-label', /.*/);
+  // A long name is written whole: it wraps, it is never cut.
+  expect(await spell(page, 'spell-5').locator('.spell-card-name').evaluate(node => node.scrollWidth <= node.clientWidth + 1 && getComputedStyle(node).textOverflow !== 'ellipsis')).toBe(true);
+  // The portrait is drawn at 40 px on a screen 660 px tall or more, and at 24 px under it, from its own files.
+  const portrait = spell(page, 'spell-0').locator('.spell-portrait');
+  await expect(portrait).toHaveAttribute('sizes', '(orientation: portrait) and (max-height: 660px) 24px, 40px');
+  await expect(portrait).toHaveAttribute('loading', 'lazy');
+  await expect.poll(() => portrait.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  expect(await portrait.evaluate(image => image.getBoundingClientRect().width)).toBe(40);
   await expect(spell(page, 'unknown-spell').locator('img')).toHaveCount(0);
   await expect(spell(page, 'spell-3').locator('img')).toHaveCount(0);
   await expect(spell(page, 'spell-0')).toContainText('0 energy');
-  await expect(spell(page, 'spell-0').locator('.spell-critical')).toBeEmpty(); await expect(spell(page, 'spell-0').locator('.spell-chip-crit')).toHaveCount(0);
-  await expect(spell(page, 'spell-2').locator('.spell-chip-crit')).toContainText('35%'); await expect(spell(page, 'spell-2').locator('.spell-critical')).toHaveText('at this tempo');
+  await expect(spell(page, 'spell-0').locator('.spell-chip-crit')).toHaveCount(0);
   await expect(spell(page, 'spell-1')).toBeDisabled(); await expect(spell(page, 'spell-1')).toContainText('Cannot use while stunned');
-  await expect(spell(page, 'spell-1').locator('.spell-detail')).toBeVisible();
-  await expect(spell(page, 'spell-1').locator('.spell-detail')).toContainText('separate effect on the caster');
+  // Two cards of a row stand side by side, 8 px apart at the least, each 44 px at the least.
+  const [left, right] = await Promise.all([spell(page, 'spell-0').boundingBox(), spell(page, 'spell-3').boundingBox()]);
+  expect(Math.abs(left.y - right.y)).toBeLessThan(1); expect(right.x - (left.x + left.width)).toBeGreaterThanOrEqual(8);
+  expect(Math.min(left.width, left.height)).toBeGreaterThanOrEqual(44);
   await fitsViewport(page, '#combat-declare, #combat-dialog-close');
-  await page.screenshot({ path: info.outputPath('au9-spellbook-full.png') });
+  await page.screenshot({ path: info.outputPath('ux12-p3-spellbook.png') });
   await expect(spell(page, 'unknown-spell')).toContainText('Catalogue details unavailable');
+  // A spell the catalogue does not hold keeps the cost the host's guide gives it.
+  await expect(spell(page, 'unknown-spell').locator('.spell-chip-cost')).toContainText('4');
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('the chosen card is read in full above the foot before it is declared', async ({ page }) => {
+  const h = await mount(page); await spell(page, 'spell-3').click();
+  const preview = page.locator('#intent-preview');
+  await expect(preview).toBeVisible();
+  // The words the face left: each effect line, the crit note, and what the chance holds for.
+  await expect(preview.locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+  await expect(preview.locator('.spell-card-note')).toHaveText('Critical note from the served catalogue.');
+  await expect(preview).toContainText('Precision only · d20 17+ · catalogue');
+  await expect(page.locator('#combat-declare')).toBeVisible(); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('selection and same-question polls preserve card geometry, keyboard focus, scroll and confirmation position', async ({ page }) => {
   const h = await mount(page), node = await browseTo(page, 'spell-17');
@@ -102,6 +144,14 @@ test('an offered energy plan and repeated taps never declare without the explici
   await page.locator('#combat-declare').click();
   await expect.poll(() => h.writes).toEqual([{ kind: 'Intent', creature: 1, spell: 'spell-2', asked: 21 }]); expect(h.errors).toEqual([]);
 });
+test('at the slot, the field\'s estimate shows the chosen card in full above the confirmation', async ({ page }) => {
+  const h = await mount(page, 'Action'); await spell(page, 'spell-3').click();
+  await expect(page.locator('#combat-targets')).toBeVisible();
+  const preview = page.locator('#combat-preview');
+  await expect(preview.locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+  await expect(preview.locator('.spell-card-note')).toHaveText('Critical note from the served catalogue.');
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
 test('a changed creature clears reference position and the previous draft', async ({ page }) => {
   const h = await mount(page); await (await browseTo(page, 'spell-17')).click();
   h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2; await notify(page);
@@ -115,7 +165,9 @@ test('returning from targets keeps the place and the chosen card in focus, and c
   const node = spell(page, 'unknown-spell'); await node.scrollIntoViewIfNeeded();
   const scroll = await scrollOf(page); expect(scroll).toBeGreaterThan(0);
   await node.dblclick(); await expect(page.locator('#combat-targets')).toBeVisible(); expect(h.writes).toEqual([]);
-  await page.locator('#combat-back').click(); await expect(spell(page, 'spell-0').locator('.spell-detail')).toBeVisible();
+  // A spell the catalogue does not hold has no card to read in full on the field's estimate.
+  await expect(page.locator('#combat-preview .target-card')).toHaveCount(0);
+  await page.locator('#combat-back').click(); await expect(spell(page, 'spell-0')).toBeVisible();
   expect(await scrollOf(page)).toBe(scroll); await expect(node).toBeFocused();
   expect(h.errors).toEqual([]);
 });
@@ -156,15 +208,31 @@ test('short landscape, small portrait and enlarged text keep the browser scrolla
     await page.setViewportSize(viewport);
     await fitsViewport(page, '#combat-declare, #combat-dialog-close');
     expect(await page.locator('#combat-browser').evaluate(node => node.clientHeight)).toBeGreaterThan(60);
+    expect(await columns(page)).toBe(2);
   }
   await page.addStyleTag({ content: '#combat-dialog { font-size: 200%; } #combat-dialog * { font-size: inherit !important; }' });
   await fitsViewport(page, '#combat-declare, #combat-dialog-close');
+  expect(await columns(page)).toBe(2);
   // A chosen hidden intent adds its estimate under the spells: they keep a readable height, the panel scrolls as a
   // fallback, and the declaration stays pinned in reach.
   await spell(page, 'spell-2').click(); await expect(page.locator('#intent-preview')).toBeVisible();
   expect(await page.locator('#combat-browser').evaluate(node => node.clientHeight)).toBeGreaterThanOrEqual(90);
   await fitsViewport(page, '#combat-declare');
   await expect(page.locator('#combat-declare')).toBeEnabled();
+});
+test('at 320 by 568 the portrait is 24 px in the card\'s head, before the name, sent from its own files', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Own viewport');
+  // Set before the page loads: a browser keeps a larger file it already holds when the screen shrinks.
+  await page.setViewportSize({ width: 320, height: 568 }); const h = await mount(page);
+  expect(await columns(page)).toBe(2);
+  const portrait = spell(page, 'spell-0').locator('.spell-portrait');
+  await expect.poll(() => portrait.evaluate(image => image.getBoundingClientRect().width)).toBe(24);
+  const [image, name] = await Promise.all([portrait.boundingBox(), spell(page, 'spell-0').locator('.spell-card-name').boundingBox()]);
+  expect(image.x + image.width).toBeLessThanOrEqual(name.x); expect(Math.abs(image.y - name.y)).toBeLessThan(12);
+  await expect.poll(() => portrait.evaluate(image => image.currentSrc)).toMatch(/spell-focus-24\.[0-9a-f]+\.webp$/);
+  await fitsViewport(page, '#combat-declare, #combat-dialog-close');
+  await page.screenshot({ path: info.outputPath('ux12-p3-spellbook-320x568.png') });
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('keyboard paging keeps unavailable spell references reachable without selecting or sending', async ({ page }) => {
   const h = await mount(page);

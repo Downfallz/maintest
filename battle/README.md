@@ -372,16 +372,21 @@ and availability. Current question guidance supplies current chances and unavail
 catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
 its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
 
-Every card shows the whole reference in full, the spellbook's only mode: complete names, targeting, target/caster
-effects and critical notes, including unavailable cards. Unknown catalogue entries keep their raw identity and remain playable
+The spellbook shows two spells a row at every width, the side panel included (UX12 P3, `docs/art/journeys/windows.md`). Each card is a
+face in its column: the portrait and the whole name (wrapped, never cut), the targeting, the cost and crit chips on
+their own row, the availability, and each effect line as its icon and the host's numbers (`CardMark.Figures`: `3`,
+`+1 · 3`), its words kept for a screen reader. The button is named by those words, the name first. The card in full
+(the effect lines in words, the crit chance and what it holds for, the crit note) is read on the chosen card above
+the foot (`src/target-preview.ts`), before Declare spell. A portrait is 24 px, in the card's head, on a screen under 660 px
+tall in portrait. Otherwise it is 40 px, beside the name and targeting. Each size has its own files
+(`SPELLBOOK_PORTRAIT_SIZES`). Unknown catalogue entries keep their raw identity and remain playable
 when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs
 confirmation. Double-tapping a card never submits a spell.
 
-Each card is the shared spell card (`src/spell-card.ts`, ADR 0146) built of spans inside its button: the
-name with cost and crit-chance chips (the current tempo's chance when the host's guide gives one, the
-catalogue's with its tempo and d20 face otherwise), the targeting line, and the effect lines
-with the icon of the stat each moves.
+Each card is the shared spell card (`src/spell-card.ts`, ADR 0146) built of spans inside its button, in its
+`brief` form: the crit chip holds the current tempo's chance when the host's guide gives one, the catalogue's with
+its d20 face otherwise.
 
 `table/battle-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
 update existing nodes, preserving focus, scroll and card positions. The same asking retains
@@ -389,7 +394,7 @@ browsing when returning from field targets. A new asking, creature, seat, hidden
 the reference and its local state. Nothing is persisted. Group/type fallback never guesses from effect prose.
 
 `battle-spellbook.spec.js` covers a late multiclass hand, long names, zero cost/no critical, unavailable and
-unknown cards, energy plans, full details, stable geometry/focus/scroll through polls, changed creatures,
+unknown cards, energy plans, two columns, the chosen card in full, the 24 and 40 px portraits, stable geometry/focus/scroll through polls, changed creatures,
 explicit confirmation, access loss and short portrait/landscape layouts. Existing combat and real-host
 journeys continue exercising the same decision protocol. AU10 adds selected-target previews below.
 

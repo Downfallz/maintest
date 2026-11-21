@@ -98,7 +98,8 @@
 #combat-browser { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 4px; }
 #combat-spells { display: grid; gap: 16px; }
 .spell-group-title { margin: 0 0 7px; color: #bdcbbf; font-size: 12px; letter-spacing: .06em; }
-.combat-spell-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+/* Two spells a row at every width, the side panel included (docs/art/journeys/windows.md). */
+.combat-spell-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
 .combat-spell { --spell-accent: #a7b6af; min-width: 0; text-align: left; display: flex; flex-direction: column; justify-content: flex-start; align-items: stretch; padding: 0; border: 1px solid #3f554d; border-top: 3px solid var(--spell-accent); border-radius: var(--radius-soft); background: #172a30; }
 /* The spell card inside its button: the same face as the mutation tree's, sized to a grid cell. */
 .combat-spell > .spell-card { display: grid; gap: 4px; margin: 0; padding: 9px 10px 10px; border: 0; border-radius: 0; background: transparent; }
@@ -106,29 +107,24 @@
 .combat-spell .spell-card-name { flex: 1 1 8ch; min-width: 0; font-size: 16px; }
 .combat-spell .spell-card-target { display: block; margin: 0; }
 .combat-spell .spell-card-effects { margin: 0; }
-.combat-spell .spell-card-note { display: block; margin: 2px 0 0; }
 .combat-spell:disabled { opacity: .7; }
 .combat-spell[aria-pressed="true"] { outline: 2px solid var(--gold); outline-offset: -2px; background: #433d2d; }
 /* The selection outline must not hide keyboard focus on the same card. */
 .combat-spell[aria-pressed="true"]:focus-visible { outline: 3px double #ffe2a6; outline-offset: 1px; }
-.spell-critical, .spell-availability { display: block; overflow-wrap: anywhere; }
-.spell-critical:empty { display: none; }
 .spell-class { max-width: 50%; font-size: 11px; color: var(--spell-accent); -webkit-line-clamp: 1; }
-.spell-critical { font-size: 10px; color: #becfc0; line-height: 1.2; }
-.spell-availability { font-size: 11px; color: #e1c79c; line-height: 1.3; }
-.spell-detail { display: none; font-size: 12px; line-height: 1.5; color: #c2d0c5; }
-#combat-spells[data-details="full"] .spell-detail { display: grid; gap: 6px; border-top: 1px solid #73817466; padding-top: 8px; }
+.spell-availability { display: block; overflow-wrap: anywhere; font-size: 11px; color: #e1c79c; line-height: 1.3; }
+/* A face in its column: the chips on their own row under the targeting, each effect line its icon and numbers. */
+.combat-spell .spell-card.brief > .spell-card-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.combat-spell .spell-card.brief .spell-card-effects { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.combat-spell .spell-card-figures { font: 700 13px/1.2 system-ui, sans-serif; white-space: nowrap; }
+.combat-spell .spell-chip small { margin-left: 3px; font-weight: 600; opacity: .8; }
 .spell-caster::before { content: 'Caster · '; color: #e1c79c; }
 .combat-dialog-footer { flex: 0 0 auto; background: #132228; padding: 8px 0 0; border-top: 1px solid #73817466; }
 #combat-declare { width: 100%; height: 58px; overflow: hidden; font-size: 13px; }
-@media (max-width: 800px) {
-  .combat-spell-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-}
 @media (max-width: 619px) {
   #combat-dialog { padding: 12px; gap: 6px; }
   #combat-dialog h2 { font-size: 19px; }
   #combat-dialog-close { right: 12px; top: 12px; }
-  #combat-spells[data-details="full"] .combat-spell-grid { grid-template-columns: 1fr; }
   .combat-spell > .spell-card { padding: 8px; }
   .combat-spell .spell-card-name { font-size: 15px; }
   #combat-help { font-size: 11px; }
@@ -550,6 +546,7 @@
 .target-crit { display: inline-flex; align-items: center; gap: 4px; }
 .target-crit-label { color: #f2d76b; font: 700 10px/1 system-ui, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
 .target-none { color: #b5c6bd; }
+.target-preview .target-card { margin: 4px 0 0; }
 .target-preview .chip-lasting { margin-left: 4px; font: 600 10px/1 system-ui, sans-serif; opacity: .8; white-space: nowrap; }
 .target-caster { color: #bddfb8; }
 #intent-preview { height: 104px; margin-bottom: 6px; }
@@ -1134,6 +1131,12 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .spell-card > .spell-portrait { grid-column: 1; grid-row: 1 / span 2; }
 .spell-card:has(> .spell-portrait) > :is(.spell-card-head, .spell-card-target) { grid-column: 2; }
 .spell-card:has(> .spell-portrait) > :not(.spell-portrait, .spell-card-head, .spell-card-target) { grid-column: 1 / -1; }
+/* Under 660 px tall, in portrait, the spellbook's portrait is 24 px in the card's head, before the name; the
+   targeting takes the column's width under them (SPELLBOOK_PORTRAIT_SIZES, table/battle-spellbook.js). */
+@media (orientation: portrait) and (max-height: 660px) {
+  .combat-spell .spell-card.brief > .spell-portrait { width: 24px; height: 24px; grid-row: 1; align-self: center; }
+  .combat-spell .spell-card.brief:has(> .spell-portrait) > .spell-card-target { grid-column: 1 / -1; }
+}
 #history-dialog .spell-portrait { width: 22px; height: 22px; vertical-align: middle; align-self: center; }
 .preview-name > .spell-portrait, .atlas-card-name > .spell-portrait { width: 24px; height: 24px; vertical-align: middle; margin-inline-end: 8px; }
 /* Beside a title nothing reflows: a picture that failed to load leaves no gap before the name. */
@@ -1237,8 +1240,6 @@ body:has(#combat-dialog[open]) { --spell-height: clamp(300px, 54dvh, 490px); --s
 }
 body:has(#combat-dialog[open]) #battle-zone { grid-row: 3 / -1; margin-bottom: var(--spell-height); }
 body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, footer) { display: none; }
-#combat-dialog .combat-spell-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-#combat-dialog #combat-spells[data-details="full"] .combat-spell-grid { grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 760px), (orientation: landscape) and (max-height: 520px) {
   #combat-dialog { inset: 0 0 0 auto; width: var(--spell-width); height: 100dvh; border: 0; border-left: 2px solid var(--gold); border-radius: 0; }
   body:has(#combat-dialog[open]) #battle-zone { margin: 0 var(--spell-width) 0 0; }

@@ -1,0 +1,2 @@
+- Moving a card's chips out of its head into a later branch (`brief`) puts them after the `if (!card) return` early exit: an offered spell missing from the catalogue loses the host's cost and crit chips; read every moved append against the early returns above it (UX12 P3, battle/src/spell-card.ts, 2e728e6).
+- Fifth time (#812, UX10, #1004, #1010, then UX12 P3): `CardMark.Figures` added to `/api/catalogue`'s cards tested only by CatalogueProjectionTests and a browser spec that writes `figures` by hand; host.md:80 names the rule, and no Cli test reads `marks` at all (2e728e6).

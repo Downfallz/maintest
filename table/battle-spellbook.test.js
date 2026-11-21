@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleSpellbook } from './battle-spellbook.js';
+import { battleSpellbook, chosenSpell } from './battle-spellbook.js';
 
 // Card types and classes as the host serves them (SpellType and CreatureClass names), never invented ones.
 const model = overrides => ({ known: ['free', 'ward', 'costly', 'unknown'], spells: ['free', 'costly'], short: [], reference: { energy: 2 }, ...overrides });
@@ -21,11 +21,14 @@ test('a free spell shows a zero cost rather than none', () => {
 test('a spell that never crits shows no critical badge', () => {
   assert.equal(row('free').crit, null);
 });
-test('the catalogue critical names its tempo and the face of the d20', () => {
-  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · d20 17+ · catalogue' });
+test('the catalogue critical names its tempo and the face of the d20, which the face in a column keeps', () => {
+  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · d20 17+ · catalogue', face: 'd20 17+' });
 });
-test('full details list the target, the effects and the caster effects in card order', () => {
-  assert.deepEqual(row('free').details, [{ role: 'target', text: 'Self' }, { role: 'caster', text: 'Gain energy' }]);
+test('the chosen spell is its card and the crit chance it holds now, for the card in full above the foot', () => {
+  const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Standard', standardCriticalChance: .5 }] } });
+  assert.deepEqual(chosenSpell(m, catalogue, 'costly'), { card: catalogue.cards[0], crit: { value: '50%', hint: 'at this tempo' } });
+  assert.equal(chosenSpell(m, catalogue, 'unknown'), null);
+  assert.equal(chosenSpell(m, catalogue, null), null);
 });
 test('a card carries its creature class and that class\'s accent colour', () => {
   assert.equal(row('ward').creatureClass, 'Scoundrel'); assert.ok(row('ward').colour);
@@ -63,9 +66,9 @@ test('without a catalogue a spell keeps its raw identity and stays playable', ()
   const data = row('free', model(), null);
   assert.equal(data.name, 'free'); assert.equal(data.offered, true); assert.equal(data.missing, true);
 });
-test('without a catalogue no cost, critical or effect is invented', () => {
+test('without a catalogue no cost or critical is invented', () => {
   const data = row('free', model(), null);
-  assert.equal(data.cost, ''); assert.equal(data.crit, null); assert.deepEqual(data.details, []);
+  assert.equal(data.cost, ''); assert.equal(data.crit, null);
 });
 test('a change of offers keeps the known spells where they were and adds new offers after them', () => {
   const before = rows(); const after = rows(model({ spells: ['costly', 'free', 'new'], short: ['costly'] }));

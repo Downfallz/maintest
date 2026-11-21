@@ -1,4 +1,4 @@
-import { battleSpellbook } from '../../table/battle-spellbook.js';
+import { battleSpellbook, SPELLBOOK_PORTRAIT_SIZES } from '../../table/battle-spellbook.js';
 import type { createBattleCombat } from '../../table/battle-combat.js';
 import { cardsById } from '../../table/card.js';
 import type { SpellCatalogue } from './combat';
@@ -11,18 +11,19 @@ const text = (tag: string, className: string, value = '') => {
   const node = document.createElement(tag); node.className = className; node.textContent = value; return node;
 };
 
-// A spell to choose is the same card as everywhere else (the mutation tree's): name, cost and crit chips, its
-// targeting, and its effect lines with their icons. Under it, whether it can be cast now.
+// A spell to choose is the same card as everywhere else (the mutation tree's), as a face in its column, two a row
+// (docs/art/journeys/windows.md): the portrait and the name, the targeting, the cost and crit chips, whether it can
+// be cast now, and each effect line as its icon and numbers. The button is named by those words in that order, the
+// effect lines in full; the card in full is read on the targets step, above the foot, before it is declared.
 function spellButton(spell: Spell, card: Parameters<typeof spellCard>[0], effects: Parameters<typeof spellCard>[2], choose: (id: string) => void) {
   const node = document.createElement('button'); node.type = 'button'; node.className = 'combat-spell'; node.dataset.spell = spell.id;
   node.title = spell.name;
   if (spell.colour) node.style.setProperty('--spell-accent', spell.colour);
-  const face = spellCard(card, spell.id, effects, { inline: true, cost: spell.cost === '' ? null : spell.cost, crit: spell.crit });
-  // The effect lines and the crit note are the card's full details, which the spellbook always shows.
-  const detail = text('span', 'spell-detail');
-  detail.append(...face.querySelectorAll(':scope > .spell-card-effects, :scope > .spell-card-note'));
-  if (spell.missing) detail.append(text('span', 'spell-note', 'Catalogue details unavailable.'));
-  face.append(text('span', 'spell-critical', spell.crit?.hint ?? ''), text('span', 'spell-availability'), detail);
+  const face = spellCard(card, spell.id, effects, { inline: true, brief: true, portraitSizes: SPELLBOOK_PORTRAIT_SIZES, cost: spell.cost === '' ? null : spell.cost, crit: spell.crit });
+  const availability = text('span', 'spell-availability');
+  const lines = face.querySelector(':scope > .spell-card-effects');
+  if (lines) lines.before(availability); else face.append(availability);
+  if (spell.missing) face.append(text('span', 'spell-note', 'Catalogue details unavailable.'));
   node.append(face);
   node.addEventListener('click', () => choose(spell.id));
   return node;
@@ -37,8 +38,6 @@ export function spellbookControls(controller: Controller) {
   let resetPosition = true;
   // Going back from the field clears the draft; the card the player was on is still where they left it.
   let lastChosen: string | null = null;
-  // Every spell is read in full before it is chosen: full details are the spellbook's only mode.
-  list.dataset.details = 'full';
   function clear() {
     question = ''; structure = ''; catalogueIdentity = null; resetPosition = true; lastChosen = null; buttons.clear(); list.replaceChildren();
     scroll.scrollTop = 0;

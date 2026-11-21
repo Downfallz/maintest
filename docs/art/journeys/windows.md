@@ -73,7 +73,7 @@ What holds for every screen of the journey:
   width a page draws a picture at on the phone (`phone`, [the pages' pictures](../page-pictures.md#declare-a-picture)),
   so a spell drawn at 24 and at 40 px counts 137,818 B, not 44,882 B.
 - The spellbook in two columns (the owner, 2026-11-20) amends AU9's "full details" mode: its two screens below,
-  built by P3.
+  built by P3 (2026-11-21).
 - How each window enters, leaves and returns the focus, and the strip `history-window`, are UX12's.
 
 ## The pick (`mutation-pick`)
@@ -254,8 +254,8 @@ knows before reading.
 - **Filled action**: none: a spell's card is the choice, and leads to its targets; Declare spell, at the foot,
   shows only when an intent is declared. The × and the tempo and energy chips are quiet.
 - **Two spells a row**: the owner's choice of 2026-11-20, at 320 by 568, at 390 by 844 and on every wider screen, the side
-  panel included: a column is about 140 px wide at 320 and 170 px at 390. Today `battle/src/spellbook.ts` sets the
-  list to full details, which `table/battle.css` turns into one column; that mode goes (**Left**).
+  panel included: a column is about 140 px wide at 320 and 170 px at 390. P3 removed the full-details mode that
+  turned the list into one column (**Left**).
 - **A card's face, in its column**: top to bottom,
   - the portrait and the spell's name, always written whole: a long name wraps to a second line, never cut;
   - the targeting ("One enemy", "Self");
@@ -338,7 +338,8 @@ None.
 
 - **The two columns amend AU9**: in `docs/tabletop/battle-ux-parity-plan.md`, its "explicit full-details mode"
   and "full details exposes … complete card text" become the face in a column and the chosen card in full on the
-  targets step, read before Declare spell. P3 amends AU9's row and paragraph in that plan, and builds it.
+  targets step, read before Declare spell. Built by P3, which amended AU9's row and paragraph in that plan. The
+  numbers of an effect line are the host's (`CardMark.Figures`), never read from its words by the page.
 - The chosen card in full on the targets step adds up to 20 words to the match's `targets` screen ([the match's
   brief](match.md)); its budget is that brief's.
 - The crit note on Pummel's card states a rule in the catalogue's words; a link to the rulebook in its place is
@@ -419,7 +420,9 @@ None.
   scrolled under the sheet's chips row count as overlapping (at 320 Focus's `Available` line is cut under it).
   P3 does not chase them as new. The critique reads whether a card is covered without a way to reach it, at 320
   and at 200% text (P3's test).
-- Whether the two rows fit above the foot at 320 by 568 without a scroll is not measured (the Job): P3's film says.
+- Measured by P3 at 320 by 568 (`battle-spellbook.spec.js`, a desktop browser at that size): the first row is in
+  view, the second row scrolls under the header, and the foot stays in view and 44 px tall. The
+  film of P6 reads it again with the walk's own spells.
 - The two columns amend AU9: the spellbook's **Left**.
 
 ## The journal (`history`)

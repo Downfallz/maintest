@@ -45,6 +45,40 @@ public sealed class PackageTagsTests : IDisposable
         package.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString()).ShouldBe(["Defense", "Sustain"]);
     }
 
+    /// <summary>
+    /// A narrow face shows each effect line as its icon and its numbers, which the host gives with the line's kind
+    /// (CardMark.Figures): a mark per line, each with its numbers, a damage line's being its amount.
+    /// </summary>
+    [Fact]
+    public async Task The_catalogue_carries_each_effect_line_s_numbers_beside_its_kind()
+    {
+        var table = await Opened();
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
+
+        answer.Status.ShouldBe(200);
+        var cards = JsonDocument.Parse(Encoding.UTF8.GetString(answer.Body)).RootElement.GetProperty("cards").EnumerateArray().ToList();
+        cards.ShouldNotBeEmpty();
+        var damage = 0;
+        foreach (var card in cards)
+        {
+            var lines = card.GetProperty("effects").EnumerateArray().Concat(card.GetProperty("casterEffects").EnumerateArray()).Select(line => line.GetString()!).ToList();
+            var marks = card.GetProperty("marks").EnumerateArray().ToList();
+            marks.Count.ShouldBe(lines.Count);
+            for (var index = 0; index < marks.Count; index++)
+            {
+                marks[index].GetProperty("figures").GetString().ShouldNotBeNullOrEmpty();
+                if (marks[index].GetProperty("kind").GetString() == "Damage" && lines[index].StartsWith("Damage ", StringComparison.Ordinal))
+                {
+                    marks[index].GetProperty("figures").GetString().ShouldBe(lines[index]["Damage ".Length..]);
+                    damage++;
+                }
+            }
+        }
+
+        damage.ShouldBeGreaterThan(0);
+    }
+
     /// <summary>The battle shows a package on the creature that bought it from what the package says (ADR 0133).</summary>
     [Fact]
     public async Task The_catalogue_carries_how_each_package_shows_on_a_creature()

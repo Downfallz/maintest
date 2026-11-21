@@ -1,4 +1,4 @@
-import { cardCost, cardDetails, cardStats, cardsById } from './card.js';
+import { cardCost, cardStats, cardsById } from './card.js';
 import { classColour, talentPalette } from './mat.js';
 import { energyShortfall, guidedShortfall } from './hand.js';
 import { chance } from './guidance.js';
@@ -13,11 +13,23 @@ function availability(id, model, card, guide) {
 
 // The crit chance as the card's chip shows it, and what it holds for: this turn's tempo, from the host's guide, or
 // the card's own stat, which says which tempo crits and the face of the d20 the table rolls.
+// `face` is what the chip keeps on a card in its column: the d20's face, which only the catalogue's chance has.
 function critical(card, guide) {
   const value = guide?.chosenSpeed === 'Quick' ? guide.quickCriticalChance : guide?.standardCriticalChance;
   if (Number.isFinite(value)) return value > 0 ? { value: chance(value), hint: 'at this tempo' } : null;
   const stat = cardStats(card)[0];
-  return stat ? { value: stat.value, hint: `${stat.hint} · catalogue` } : null;
+  return stat ? { value: stat.value, hint: `${stat.hint} · catalogue`, face: card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : '' } : null;
+}
+
+/** A spell's portrait in the spellbook: 24 px on a screen under 660 px tall in portrait, 40 px on a taller one
+ * (docs/art/journeys/windows.md). Both widths are declared for the battle page (docs/art/page-pictures.json). */
+export const SPELLBOOK_PORTRAIT_SIZES = '(orientation: portrait) and (max-height: 660px) 24px, 40px';
+
+/** The chosen spell's card and its crit chance, read in full above the foot before it is declared (AU9). */
+export function chosenSpell(model, catalogue, id) {
+  if (!id) return null;
+  const card = cardsById(catalogue).get(id), guide = model.reference?.guidance?.find(one => one.spell === id);
+  return card ? { card, crit: critical(card, guide) } : null;
 }
 
 // The host's guide knows the cost of an offered spell the catalogue does not carry.
@@ -50,7 +62,7 @@ export function battleSpellbook(model, catalogue) {
       colour: card?.creatureClass ? classColour(card.creatureClass, palette) : null,
       cost: cost(card, guide), crit: critical(card, guide), offered: model.spells.includes(id),
       availability: availability(id, model, card, guide),
-      details: cardDetails(card), criticalNote: card?.criticalNote ?? '', missing: !card });
+      missing: !card });
   }
   const rank = typeRank(catalogue);
   return [...groups].sort(([a], [b]) => rank(a) - rank(b)).map(([type, spells]) => ({ type, spells }));
