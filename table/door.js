@@ -39,6 +39,23 @@ export function doorWords(invitation) {
   };
 }
 
+/**
+ * The paintings the panel draws (docs/art/journeys/doors.md, the sign-in panel). The plain door repeats the
+ * showcase's ground and a creature; a friend who came by an invitation never saw the showcase, so the duel shows
+ * them the game at once: two teams of three facing across the ground. A spent link came from a friend all the same.
+ */
+export function doorPictures(invitation) {
+  return invitation ? ['duel'] : ['eclipse-ground', 'revenant'];
+}
+
+// The duel's steps follow table/lobby.css: beside the words from 1280 px, its file drawn about 980 px wide at the
+// panel's height; whole above them under it.
+const PICTURES = {
+  'eclipse-ground': { class: 'sign-in-ground', sizes: '(min-width: 701px) 100vw, 533px' },
+  revenant: { class: 'sign-in-creature', sizes: '(min-width: 701px) 550px, 107px' },
+  duel: { class: 'sign-in-ground sign-in-duel', sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)' },
+};
+
 /** The keys an invitation carries in the page a visitor is sent back to after signing in, and only this host's. */
 export function invitationKeys(search) {
   const next = new URLSearchParams(search ?? '').get('next');
@@ -83,6 +100,15 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
   const el = id => doc.getElementById(id);
 
   let invitation = null;
+  let signedOut = false;
+  // The paintings follow the door: a link the host answers as the visitor's own seat turns the panel plain.
+  const place = () => {
+    const art = el('sign-in-art');
+    const names = doorPictures(invitation);
+    if (!art || !signedOut || art.dataset.pictures === names.join(' ')) return;
+    art.dataset.pictures = names.join(' ');
+    art.replaceChildren(...names.map(name => pictureElement(doc, name, { page: 'table/sign-in', ...PICTURES[name] })));
+  };
   const draw = () => {
     const words = doorWords(invitation);
     el('sign-in-eyebrow').textContent = words.eyebrow;
@@ -93,6 +119,7 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
     const next = nameNext({ invitation });
     // Never hidden, only empty: a live region shown and filled in one step is often not announced.
     el('name-next').textContent = next ?? '';
+    place();
   };
 
   const keys = invitationKeys(search);
@@ -105,12 +132,8 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
 
   return {
     signedOut() {
-      const art = el('sign-in-art');
-      if (!art || art.childElementCount) return;
-      art.append(
-        pictureElement(doc, 'eclipse-ground', { page: 'table/sign-in', class: 'sign-in-ground', sizes: '(min-width: 701px) 100vw, 533px' }),
-        pictureElement(doc, 'revenant', { page: 'table/sign-in', class: 'sign-in-creature', sizes: '(min-width: 701px) 550px, 107px' }),
-      );
+      signedOut = true;
+      place();
     },
     lesson(card) {
       const next = nameNext({ lesson: card });

@@ -1,0 +1,4 @@
+# code-reviewer lessons (branch ccr-bb05b300-ug55nx)
+
+- An absolutely positioned `<img>` given `left` and `right` with `width: auto` ignores `right`: a replaced element takes its width from its height and ratio, so a cover meant to fill the rest of the panel overflows it and `overflow: hidden` clips it silently (the duel at 1041 px lost ~40 % of its right side). Measure the img's box against its container at each breakpoint, the spec checked only the phone (scene paintings S2, table/lobby.css:241, 8116084).
+- A spec that checks a cover picture's edges against its box (right edge, full height) passes any crop: the duel at 1041 px showed 58 % of its width, and its 160 px left mask faded most of the left team. Measure `(box w/h) / (file w/h)` per width and read the mask against the painting's subject (scene paintings S2 round 2, table/lobby.css:242, 0a301a0).

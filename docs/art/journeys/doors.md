@@ -292,11 +292,12 @@ button. On the sheet the panel counts 41 words plain and 48 invited. On the publ
 | --- | --- | --- | --- |
 | The eclipse ground behind the panel, as an `<img>` asked for first. | 358 by 300 px | Is this the same game the showcase showed? The same ground says yes. | `table/battle-art/eclipse-battle.webp` |
 | The Revenant beside the title. | 107 by 86 px | What do I play? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
-| The duel, for the invited friend: two teams of three facing across the ground. | 358 by 201 px | What is this game, for someone who never saw the showcase? | asked of the owner; until it comes, `table/battle-art/eclipse-battle.webp` and the Revenant hold its place |
+| The duel, for the invited friend: two teams of three facing across the ground, in place of the ground and the Revenant. Above the words under 1280 px, its foreground fading into them: whole on a phone, never taller than half the screen, cover cutting its top and bottom; from 1280 px beside them, its left 160 px fading into them and cover keeping three quarters of its width. | 358 by 201 px | What is this game, for someone who never saw the showcase? | `docs/art/sources/pages/duel.webp` |
 
-At 320 px the panel is 288 px wide and the ground 288 by 300 px. No painting of the library shows two teams
-facing each other: `table/battle-art/creatures.webp` shows three creatures on a white ground, which cannot sit on
-the panel. The prompt to paste:
+At 320 px the panel is 288 px wide, the ground 288 by 300 px and the duel 288 by 162. The duel shows on every
+panel an invitation opens, a spent link included: it still came from a friend. When the host answers the link as
+the visitor's own seat, the panel is the plain door, with its ground and its Revenant. The owner made the duel
+from this prompt (2026-11-21; [the scene paintings' plan](../scene-paintings-plan.md), S2):
 
 ```text
 Dark fantasy painting, wide format 16:9, for a game's sign-in page seen on a phone.
@@ -308,8 +309,8 @@ Palette: deep slate, soot, bone, eclipse gold, a little copper ember. No text, n
 Keep the centre third of the picture readable at 360 pixels wide.
 ```
 
-It comes back as [a page's picture](../page-pictures.md#a-picture-asked-of-the-owner): the owner's file, then the
-sizes `scripts/ux/pictures.mjs` derives.
+It is [a page's picture](../page-pictures.md#a-picture-asked-of-the-owner): the owner's file, then the sizes
+`scripts/ux/pictures.mjs` derives.
 
 ### States
 
@@ -358,7 +359,9 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 ### Cost
 
 - **Bytes**: 790 KB of pictures today (the baseline's paint runs): the ground and the Revenant, sent whole as CSS
-  backgrounds. Both become `<img>` at their drawn size; the asked painting replaces nothing in bytes until it comes.
+  backgrounds. Both become `<img>` at their drawn size. The duel is 71 KB at twice the density on a phone, and the
+  page requests it first. An invited visit loads it alone, a plain one the ground and the Revenant. A link the
+  host answers late as the visitor's own seat loads the three. The page's budget counts the three: 192 KiB.
 - **Largest paint**: 4.7 s today, the ground, median of five on the slow profile; aimed at 2.5 s. It becomes an
   `<img>` with `fetchpriority="high"`, in the first HTML, not waiting for `table/lobby.css`.
 - **Shift**: 0.04 in the paint runs, 0.00 in the walk. The panel's room and Google's box are held before the

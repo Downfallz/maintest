@@ -27,6 +27,12 @@
       "pages": { "table/sign-in": "first" }
     },
     {
+      "name": "duel",
+      "source": "docs/art/sources/pages/duel.webp",
+      "drawn": [358, 980],
+      "pages": { "table/sign-in": "largest" }
+    },
+    {
       "name": "round-mutate",
       "source": "docs/art/sources/pages/round-mutate.webp",
       "drawn": [351],

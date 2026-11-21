@@ -37,6 +37,15 @@ export const PAGE_ART = {
       { file: 'revenant-1100.4e5df9ed.webp', width: 1100, height: 733, bytes: 298776 },
     ],
   },
+  'duel': {
+    from: '6f3de462e890ed1b', frames: 1, drawn: [358,980], pages: {"table/sign-in":"largest"},
+    sizes: [
+      { file: 'duel-358.88a4be74.webp', width: 358, height: 201, bytes: 21516 },
+      { file: 'duel-716.37ad46f4.webp', width: 716, height: 403, bytes: 72758 },
+      { file: 'duel-980.f26b44c6.webp', width: 980, height: 552, bytes: 123364 },
+      { file: 'duel-1672.eb05ce44.webp', width: 1672, height: 941, bytes: 277350 },
+    ],
+  },
   'round-mutate': {
     from: '6aa9a4c5da41b535', frames: 1, drawn: [351], pages: {"showcase/home":"lazy"},
     sizes: [
