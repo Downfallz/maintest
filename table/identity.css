@@ -178,7 +178,9 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .picture { max-width: 100%; height: auto; }
 
 /* Where a box that cuts a painting centres the cut (picture.js, `focus` in docs/art/page-pictures.json): across,
-   then down, in steps of 5%. A box with `object-fit: cover` keeps the subject in view; without a focus, the centre. */
+   then down, in steps of 5%, the steps the pages' own cuts already use (35%, 45%). A box with `object-fit: cover`
+   keeps the subject in view; without a focus, it centres the cut. The rule weighs nothing (`:where`), so a page
+   sheet that sets `object-position` itself always wins. */
 .picture[data-focus-x="0"] { --focus-x: 0%; }
 .picture[data-focus-x="5"] { --focus-x: 5%; }
 .picture[data-focus-x="10"] { --focus-x: 10%; }
@@ -221,7 +223,7 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .picture[data-focus-y="90"] { --focus-y: 90%; }
 .picture[data-focus-y="95"] { --focus-y: 95%; }
 .picture[data-focus-y="100"] { --focus-y: 100%; }
-.picture[data-focus-x], .picture[data-focus-y] { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
+:where(.picture[data-focus-x], .picture[data-focus-y]) { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
 
 /* BEGIN MOTION KIT (ADR 0197, docs/art/ux-craft.md#motion). Five uses, each with one form, and ambience. Only
    transform and opacity move, by the tokens of docs/art/branding.css. Each form is written first as it is under

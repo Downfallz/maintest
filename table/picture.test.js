@@ -64,7 +64,7 @@ test('a painting cut by its box keeps its subject in view: its focus is where th
 test('the sheet places the cut at every focus the form allows, and nothing in the form needs an inline style', () => {
   const sheet = read('table/identity.css');
   for (let at = 0; at <= 100; at += FOCUS_STEP) for (const axis of ['x', 'y']) assert.ok(sheet.includes(`.picture[data-focus-${axis}="${at}"] { --focus-${axis}: ${at}%; }`), `${axis} ${at}`);
-  assert.match(sheet, /\.picture\[data-focus-x\], \.picture\[data-focus-y\] \{ object-position: var\(--focus-x, 50%\) var\(--focus-y, 50%\); \}/);
+  assert.match(sheet, /:where\(\.picture\[data-focus-x\], \.picture\[data-focus-y\]\) \{ object-position: var\(--focus-x, 50%\) var\(--focus-y, 50%\); \}/);
   // The showcase's policy refuses a style attribute (showcase/_headers).
   assert.doesNotMatch(pictureHtml('scene', { page: 'home', art: ART, focus: '10% 90%' }), /style=/);
 });
