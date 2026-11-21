@@ -4,9 +4,9 @@ Ten paintings the owner made before any brief asked for them, kept as handed ove
 bands of 3:1. Their pages, on the showcase and in the app, are chosen in
 [the scene paintings' plan](../../../scene-paintings-plan.md#the-shape) by the question each answers there. Six
 are on the field guide (`showcase/mutations`, S4): the three family heads and the Ironhide, Blightweaver and
-Parasite entries. Three are on the showcase's home and 404 (S5): the broken charge in who you play, the Predator at
-rest under the creator's note, the claw on the 404. The last waits for its stage. A scene reaches its page when that page's brief names it
-in its **Pictures** table and `docs/art/page-pictures.json` declares it ([page-pictures.md](../../../page-pictures.md)).
+Parasite entries. Three more are on the showcase's home and 404 (S5): the broken charge in who you play, the
+Predator at rest under the creator's note, the claw on the 404. The last waits for its stage. A scene reaches its
+page when that page's brief names it in its **Pictures** table and `docs/art/page-pictures.json` declares it ([page-pictures.md](../../../page-pictures.md)).
 
 What a scene shows is named by its content id; `studio/ux-pictures.test.js` checks every id is in `data/`, every
 file is a row and every size is the file's.

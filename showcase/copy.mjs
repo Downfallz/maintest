@@ -55,7 +55,7 @@ export const english = {
     charge: 'The Cataclysm breathes Incinerate into the Colossus’s shoulder, ice and lightning breaking around them under the eclipse.',
     rest: 'A Predator lies at rest in a dark hall, embers still glowing in its shoulder.',
   },
-  lost: { kicker: 'Error 404', title: 'Page not found.', back: 'Back to the game site', scene: 'Three claws grip a crumbling stone arch from above, an eye watching behind them.' },
+  lost: { kicker: 'Error 404', head: 'Page not found', title: 'Page not found.', back: 'Back to the game site', scene: 'Three claws grip a crumbling stone arch from above, an eye watching behind them.' },
 };
 
 export const french = {
@@ -110,8 +110,8 @@ export const french = {
   ],
   leaderboardLink: 'Voir le classement', platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
   scenes: {
-    charge: 'Le Cataclysme souffle Incinerate sur l’épaule du Colosse, la glace et la foudre éclatent autour d’eux sous l’éclipse.',
-    rest: 'Un Prédateur se repose dans une salle sombre, des braises luisent encore dans son épaule.',
+    charge: 'Le Cataclysme souffle Incinerate sur l’épaule du Colosse, tandis que la glace et la foudre éclatent autour d’eux sous l’éclipse.',
+    rest: 'Un Prédateur se repose dans une salle sombre, des braises encore luisantes dans l’épaule.',
   },
-  lost: { kicker: 'Erreur 404', title: 'Page introuvable.', back: 'Retour au site du jeu', scene: 'Trois griffes agrippent d’en haut une arche de pierre qui s’effrite, un œil guette derrière elles.' },
+  lost: { kicker: 'Erreur 404', head: 'Page introuvable', title: 'Page introuvable.', back: 'Retour au site du jeu', scene: 'Trois griffes agrippent d’en haut une arche de pierre qui s’effrite, tandis qu’un œil guette derrière elles.' },
 };

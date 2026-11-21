@@ -241,8 +241,9 @@ result in `battle/src` with UX12.
    asked for first, as the page's one picture on its first screen (the rule above gains that line). A new budget,
    `showcase/404`, 32 KiB. The walk gains `showcase-404` and `showcase-404-fr`: one filled action, no target under
    44 px, axe clean, at 320 and 390. Left: the walk films the home's top only, so the two scenes were read on
-   shots of their sections at 320, 390 and 1280 px; the charge lies on the breach that grounds its section, two
-   paintings in one section, which the owner may refuse (the brief's **Left**).
+   shots of their sections at 320, 390 and 1280 px. The charge lies on the breach that grounds its section: two
+   paintings in one section. The owner may refuse this (the brief's **Left**). That Cloudflare Pages serves
+   `fr/404.html` for a missing French path is checked by hand after the deployment; no test can.
 6. **S6, the three forms.** The head, the ground and the plate in `table/identity.css`, built from
    `pictureElement` with a scrim; the walk's contrast measure under text on a picture
    (a new `--contrast` of `scripts/ux/journey.mjs`); the design system's sources gain them. No screen uses them yet; the

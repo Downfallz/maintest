@@ -53,7 +53,8 @@ h1 em { color: var(--gold); font-style: normal; }
 .specimen { position: absolute; right: 0; bottom: 21px; display: grid; gap: 2px; text-align: right; padding-right: 12px; border-right: 2px solid var(--brand-ember); text-shadow: 0 1px 6px var(--soot); }
 .specimen strong { font-size: 22px; line-height: 1.1; }
 .specimen span { font-size: 11px; color: var(--bone); }
-h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.045em; margin-top: 12px; color: var(--bone); }
+/* The 404's title at a section's size, so "introuvable." holds one line at 320 and the way home stays in view. */
+h2, .lost h1 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.045em; margin-top: 12px; color: var(--bone); }
 .section-head { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
 .section-head .lead { max-width: 40ch; }
 .selector { display: flex; width: fit-content; max-width: 100%; border-bottom: 1px solid var(--line); }
@@ -101,8 +102,6 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 /* The Predator at rest under the creator's coffee, whole, no wider than the note's words. */
 .story-scene { display: block; width: 100%; max-width: 640px; margin-top: 24px; background: var(--paper); }
 /* The 404 (docs/art/scene-paintings-plan.md, S5): the claw on the arch between the title and the way home. */
-/* Its title at a section's size, so "introuvable." holds one line at 320 and the way home stays in view. */
-.lost h1 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; }
 .lost-scene { display: block; width: 100%; max-width: 640px; margin-block: 24px 28px; background: var(--paper); }
 .tabletop-note { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
 .tabletop-note p { margin-top: 12px; }

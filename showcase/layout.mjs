@@ -19,8 +19,10 @@ export function selector(label, choices) {
 
 export function layout(c, kind, app, title, description, body, scripts = []) {
   const other = c.lang === 'fr' ? 'en' : 'fr';
-  // A page without a route of its own (the 404) claims no address and leads to the other language's home.
-  const path = routes[c.lang], localized = routes[other][kind] ?? routes[other].home, addressed = kind in path;
+  // The 404 alone has no route of its own: it claims no address and leads to the other language's home.
+  const path = routes[c.lang], addressed = kind !== 'not-found';
+  if (addressed && !(kind in path)) throw new Error(`The page kind ${kind} has no route in layout.mjs`);
+  const localized = addressed ? routes[other][kind] : routes[other].home;
   const section = id => (kind === 'home' ? '' : path.home) + '#' + id;
   const current = name => kind === name ? ' aria-current="page"' : '';
   return `<!doctype html>

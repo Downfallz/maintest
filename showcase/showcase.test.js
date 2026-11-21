@@ -151,6 +151,9 @@ for (const [lang, documents] of Object.entries(pages)) {
       assert.ok(html.includes(`href="${rightsRoute}"`), file);
       const rulesRoute = '/' + documents[4].replace('index.html', '');
       assert.ok(html.includes(`href="${rulesRoute}"`), file);
+      // A page with a route claims its address and is never hidden from search (S5 added a page without one).
+      assert.match(html, /<link rel="canonical" href="[^"]+">/, file);
+      assert.doesNotMatch(html, /name="robots"/, file);
       const otherFile = pages[lang === 'en' ? 'fr' : 'en'][index];
       assert.equal(/<a class="language"[^>]* href="([^"]+)"/.exec(html)?.[1], '/' + otherFile.replace('index.html', ''));
       for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
@@ -532,8 +535,16 @@ for (const [lang, file, home, title] of [['en', '404.html', '/', 'Page not found
     // The page's one picture, on its first screen: asked for at once, not lazy.
     assert.notEqual(attribute(claw, 'loading'), 'lazy');
     for (const [, path] of attribute(claw, 'srcset').matchAll(/(\/page-art\/\S+)/g)) assert.ok(existsSync(join(root, path)), path);
-    // The sheets and the font are absolute: a 404 is served at any depth.
-    assert.match(html, /href="\/showcase\.css"/);
+    // Every path is absolute and found, its fragment too: a 404 is served at any depth.
+    for (const [, href] of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
+      if (!href.startsWith('/')) continue;
+      const [path, fragment] = href.split('#');
+      const dest = path.endsWith('/') ? path + 'index.html' : path;
+      assert.ok(statSync(join(root, dest)).size > 0, href);
+      if (fragment) assert.ok(read(dest).includes(`id="${fragment}"`), href);
+    }
+    // Its tab is named as the other pages are, without the title's full stop.
+    assert.match(html, new RegExp(`<title>${title.slice(0, -1)} — Downfall Instinct</title>`));
   });
 }
 

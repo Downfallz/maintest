@@ -80,8 +80,8 @@ keeps its English name in French, as the French rulebook writes it (Incinerate).
 
 | Scene | English | French |
 | --- | --- | --- |
-| The broken charge | The Cataclysm breathes Incinerate into the Colossus’s shoulder, ice and lightning breaking around them under the eclipse. | Le Cataclysme souffle Incinerate sur l’épaule du Colosse, la glace et la foudre éclatent autour d’eux sous l’éclipse. |
-| The Predator at rest | A Predator lies at rest in a dark hall, embers still glowing in its shoulder. | Un Prédateur se repose dans une salle sombre, des braises luisent encore dans son épaule. |
+| The broken charge | The Cataclysm breathes Incinerate into the Colossus’s shoulder, ice and lightning breaking around them under the eclipse. | Le Cataclysme souffle Incinerate sur l’épaule du Colosse, tandis que la glace et la foudre éclatent autour d’eux sous l’éclipse. |
+| The Predator at rest | A Predator lies at rest in a dark hall, embers still glowing in its shoulder. | Un Prédateur se repose dans une salle sombre, des braises encore luisantes dans l’épaule. |
 
 No text is laid on either: each is a plate, its section's words above and below it.
 
@@ -165,11 +165,12 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
   `docs/art/page-budget.json`'s.
   S5 adds nothing before a scroll: both scenes are lazy, at the foot of the page. Its `all` counts, at twice the
   density on a phone, 1,251,602 B on `c649804` and 1,350,752 B with the two scenes (the charge's 702 px file is
-  78,956 B, the Predator at rest's 20,194 B: the plan's 100 KB). That is over the 1,280 KiB it allowed, so S5
+  78,956 B, the Predator at rest's 20,194 B; together about the 100 KB the plan allowed). That is over the 1,280 KiB it allowed, so S5
   raises the `all` of showcase/home to 1,344 KiB (1,376,256 B) with that reason; its `first` (224 KiB) holds. The
   paint runs on `c649804` read 234,129 B of pictures before any scroll; S5's read the same, 234,129 B.
 - **Largest paint**: 1.0 s, 4.3 s before UX6, a picture, median of five on the slow profile; aimed at 2.5 s (the
-  plan). On `c649804`, 1,036 ms; S5's film reads 1,048 ms, within the runs' spread, the plan's test: no scene is on the first screen. The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
+  plan). On `c649804`, 1,036 ms; S5's film reads 1,048 ms, within the runs' spread. The plan's test holds: no
+  scene is on the first screen. The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
   Colossus is the largest the measure does not say; both are asked for first.
 - **Shift**: 0.00 before and after. Every picture keeps its `width` and `height`; the round's frames hold their
   room by `aspect-ratio` before they load. S5's two scenes keep their `width` and `height`; from 700 px the charge's
@@ -435,7 +436,8 @@ footer; a derived picture's file name carries its hash, so the page with the cla
 - **Order**: the header (the name, the language, Play now), the kicker, the title, the claw, the button; the footer
   last.
 - **Budget**: 45 words in English, 50 in French, header and footer included as the measure counts them at 390
-  and 320 px (the header's section links are hidden under 920 px). Before S5, 11 in English, counted on the file; S5's film reads 34 in each language, at both widths. The words of the page itself:
+  and 320 px (the header's section links are hidden under 920 px), with room for the footer to grow. Before S5, 11 in English, counted on the file. S5's
+  film reads 34 in each language, at both widths. The words of the page itself:
 
 English:
 
@@ -458,7 +460,7 @@ under the title: the claw answers the question, and the button is the way out. T
 
 | Scene | English | French |
 | --- | --- | --- |
-| The claw on the arch | Three claws grip a crumbling stone arch from above, an eye watching behind them. | Trois griffes agrippent d’en haut une arche de pierre qui s’effrite, un œil guette derrière elles. |
+| The claw on the arch | Three claws grip a crumbling stone arch from above, an eye watching behind them. | Trois griffes agrippent d’en haut une arche de pierre qui s’effrite, tandis qu’un œil guette derrière elles. |
 
 ### Pictures
 
@@ -467,13 +469,10 @@ under the title: the claw answers the question, and the button is the way out. T
 | The claw on the arch, a plate between the title and the button, whole (16:9), no wider than 640 px, asked for first. | 351 by 197 px | Nothing here, or something holding on above? | `docs/art/sources/pages/scenes/latch-under-the-arch.webp` |
 
 At 320 it is 288 by 162 px; from about 730 px it stays 640 by 360, the column's left edge, as the title.
-Declared for the new budget page showcase/404, `drawn: [351, 640]`, with the role `largest`: not lazy, and
-`fetchpriority="high"`. The plan's rule is "every scene is lazy, outside a door's first screen". The 404 is not a
-door, so by its letter the claw would be lazy; I chose `largest` because it is the page's one picture and sits
-on its first screen at both widths. A lazy picture there is asked for only after the layout, later than the
-preload scanner would ask, and nothing else on the page competes with it for the network. The rule's purpose,
-keeping a door's first screen light, does not reach a page whose first screen is this one picture of 27 KB. The
-plan's rule is amended under **Left**.
+Declared for the new budget page showcase/404, `drawn: [351, 640]`, role `largest`: not lazy,
+`fetchpriority="high"`. The plan's rule makes every scene lazy outside a door's first screen; the 404 is not a door,
+and the claw is its one picture on its first screen. A lazy claw would be asked for after the layout, later than
+the preload scanner would ask. The rule is amended under **Left**.
 
 I chose the claw under the title and not above it: the words lead, the page reads with the picture hidden, and the
 claw sits between "Page not found." and the way out, where it answers the question.
