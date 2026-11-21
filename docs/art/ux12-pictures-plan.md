@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P5 are built; P6 is next.
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P5 are built; P6 is next, then P7 and P8 (asked 2026-11-21).
 
 ## What the owner asked for
 
@@ -139,6 +139,16 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    `ux-designer`'s reading, and the sheets shown to the owner, who approves them before the last pull request is
    reported ready. A short clip at 390 by 844 of one pick, as the craft plan asks of UX7 to UX12.
 
+7. **P7, the Tempo's spells and the order bar.** A spell's portrait at 24 px in the Tempo sheet's spell reference
+   (`battle/src/tempo.ts`, today `compact` cards without one) and beside a revealed spell in the activation order at
+   the field's foot (`#timeline`, `battle/src/order.ts`), the player's own and the opponent's. The bytes measured
+   first: the files are P2's 24 and 48 px, so the page's total should not move. Tests: `battle-tempo.spec.js` and
+   `battle-order.spec.js`, at 320 px, each name kept, a missing portrait leaving no gap; `table/battle-spell-art.test.js`.
+8. **P8, the crit chance under Instinct.** The spellbook's crit chip stays on a card at Instinct, in grey instead of
+   gold, with the chance it would have at Precision, and says so to a screen reader ("at Precision"). The chance is
+   the host's (`guide.standardCriticalChance`, the Precision chance, or the card's own), never computed by the page. Tests:
+   `battle-spellbook.spec.js` at both tempos; the brief's spellbook screen updated.
+
 P3, P4 and P5 each touch one window and can merge in any order once P2 is in. None needs an ADR: ADR 0197 and
 ADR 0198 already hold the rules.
 
@@ -163,6 +173,10 @@ The answers:
 Settled after P1 was merged (2026-11-20, issue #1023): the Mutation Tree's board draws each mutation's form at
 64 px too, as the pick and the tree's detail do; the 3 capstones keep their portrait at 24 px. The page's total
 does not change: 322,218 B. P5 builds it.
+
+Asked by the owner after P5 was opened (2026-11-21): the spell portraits also in the Tempo sheet's spell reference
+and in the activation order at the field's foot, for both teams (P7); and the crit chip kept at Instinct, in grey,
+showing the chance at Precision (P8). Each is a stage of its own, after P6.
 
 Settled after the P1 brief was first written (2026-11-20): the spellbook shows two spells a row, at every width,
 in place of one card a row with its full text (AU9 of `docs/tabletop/battle-ux-parity-plan.md`). The brief says
