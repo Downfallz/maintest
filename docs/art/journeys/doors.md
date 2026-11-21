@@ -248,10 +248,10 @@ register ([scenes/README.md](../sources/pages/scenes/README.md)), not seen drawn
 
 ### Job
 
-The bestiary. A visitor who opened Open the field guide on the home, or a link to a form, reads what each family
+The bestiary. A visitor who chose Open the field guide on the home, or a link to a form, reads what each family
 becomes and what each form teaches. Built by `showcase/guide.mjs` from `showcase/lore.mjs` and the content,
-styled by `showcase/showcase.css`. S4 gives each family the scene that shows what the family is, and three forms
-the scene that shows what their body does, as the plan's table asks.
+styled by `showcase/showcase.css`. S4 gives each family a scene of what the family is, and three forms a scene of
+what their body does, as the plan's table asks.
 
 - **Filled action**: none. A reference page: the visitor opens what they choose. The header's Play now stays an
   outline; the family jumps, the search, the path links and each form's disclosure stay quiet. The measure reads
@@ -263,20 +263,20 @@ the scene that shows what their body does, as the plan's table asks.
   jumps and the search; the ancestral creature's record; the hint (Open a form to read its field notes and
   spells); then each family: its scene, its kicker (Mutation paths), its name, its paths, its forms closed. An
   opened entry with a scene: the form's picture, its scene under it, the requirement, the note, the spells.
-- **Budget**: 262 words shown at either width, as the baseline and today's film count (262 at 390 and at 320).
+- **Budget**: 262 words shown at either width, as in the baseline (262 at 390 and at 320 on today's film).
   No word shown changes; the six scenes add only their `alt`, which the measure does not count.
 
-The `alt` of each scene, as `showcase/lore.mjs` writes them, in the form names of
+The `alt` of each scene, as `showcase/lore.mjs` writes it, uses the form names of
 `docs/domain/player-terminology.md` and of the renaming it points to (`docs/domain/package-renaming-plan.md`:
-Prédateur, Altéré, Écorcheur, Blindé, Fléau). Each says what the painting shows, in one sentence, and names the
-family or the form the visitor is reading.
+Prédateur, Altéré, Écorcheur, Blindé, Fléau). Each says what the painting shows, and names the family or the
+form the visitor is reading.
 
 | Scene | English | French |
 | --- | --- | --- |
 | Brute's head | A Brute’s shed shell on the ground, beside the print of what walked away. | La carapace muée d’une Brute, à côté de l’empreinte de ce qui s’en est allé. |
 | Predator's head | A Predator and a Deathstalker drink at one pool among ruins. | Un Prédateur et un Écorcheur boivent au même bassin, parmi les ruines. |
 | Warped's head | A Warped leans over dark water, a claw lowered toward a ripple. | Un Altéré se penche sur l’eau noire, une griffe tendue vers une ride. |
-| Ironhide | The Ironhide’s plates up close, a scar across them above its eye. | Les plaques du Blindé de près, une cicatrice en travers au-dessus de l’œil. |
+| Ironhide | The Ironhide’s plates up close, a scar crossing them above its eye. | Les plaques du Blindé de près, une cicatrice les traverse au-dessus de l’œil. |
 | Blightweaver | The Blightweaver’s swollen sac venting gas, its eye in the smoke. | La poche gonflée du Fléau crache son gaz, son œil dans la fumée. |
 | Parasite | A Parasite waits under a slab of slate, one claw in the light. | Un Parasite guette sous une dalle d’ardoise, une griffe dans la lumière. |
 
@@ -341,7 +341,7 @@ None.
 
 - **Bytes**: nothing before a scroll changes: the scenes are lazy and below the first screen, three of them only
   once their entry is opened. The page's `first` (showcase/mutations) stays 96 KiB; its `all` rises from 168 to 324 KiB
-  (`docs/art/page-budget.json`) for the six scenes at twice the density: 328,142 bytes measured, 160 KB more.
+  (`docs/art/page-budget.json`) for the six scenes at twice the density: 328,142 bytes measured, the plan's 160 KB more.
 - **Largest paint**: not measured for this page (the baseline's paints do not walk it); the guide's title or its
   creature, never a scene, aimed at 2.5 s (the budget's).
 - **Shift**: 0.00 today; none added: every scene keeps its `width` and `height`, and from 700 px its band keeps
@@ -355,8 +355,9 @@ None.
 - Two scenes drift from their forms, the Blightweaver's amber gas and the moult's spined crest (the plan's
   question 3, kept by the owner). Beside the Blightweaver's own picture, lime green, the amber shows most: the
   owner sees it on the sheet of the entry opened.
-- An `alt` read before the family's title is the plate's order; a person may prefer the scene after the header.
-  I chose it first: it opens the section as the plan's head does, and the title stays the section's name.
+- The scene's `alt` is read before the family's title, because the scene comes first. A reader may prefer it after
+  the header. The brief keeps it first: it opens the section as the plan's head does, and the title stays the
+  section's name.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

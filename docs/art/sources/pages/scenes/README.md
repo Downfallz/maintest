@@ -2,8 +2,10 @@
 
 Ten paintings the owner made before any brief asked for them, kept as handed over: six scenes of 16:9 and four
 bands of 3:1. Their pages, on the showcase and in the app, are chosen in
-[the scene paintings' plan](../../../scene-paintings-plan.md#the-shape) by the question each answers there. Six are drawn, on the field guide (`showcase/mutations`, S4); the others wait for their stage. A scene reaches its page when that page's brief names it in
-its **Pictures** table and `docs/art/page-pictures.json` declares it ([page-pictures.md](../../../page-pictures.md)).
+[the scene paintings' plan](../../../scene-paintings-plan.md#the-shape) by the question each answers there. Six
+are on the field guide (`showcase/mutations`, S4): the three family heads and the Ironhide, Blightweaver and
+Parasite entries. The other four wait for their stages. A scene reaches its page when that page's brief names it
+in its **Pictures** table and `docs/art/page-pictures.json` declares it ([page-pictures.md](../../../page-pictures.md)).
 
 What a scene shows is named by its content id; `studio/ux-pictures.test.js` checks every id is in `data/`, every
 file is a row and every size is the file's.

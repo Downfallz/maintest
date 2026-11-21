@@ -213,14 +213,17 @@ result in `battle/src` with UX12.
    390.
 
    *Built (2026-11-21)*: the brief of the field guide (`showcase-mutations`) is in `journeys/doors.md`. Each family's
-   section opens on its scene, across the column: whole on a phone (351 by 197 px at 390 for a 16:9; 323 px wide inside an entry), a 3:1 band from
-   700 px, where cover cuts the Predator's pool at `50% 55%` and the Warped at `50% 40%`. Ironhide, Blightweaver and
-   Parasite carry theirs whole under their form's picture, inside the closed entry, so it loads only when the entry
-   opens. All six are lazy, with an `alt` in English and French (`showcase/lore.mjs`); no word shown changes.
-   `showcase/mutations`'s `all` rose from 168 to 324 KiB (328,142 bytes measured, the plan's 160 KB more); its `first`
-   holds. The walk's measures at 320 and 390: three pictures more on the page, none oversized, the targets, the words
-   and axe as before. `showcase/showcase.css` copies the three focus steps it draws. Left: the walk films the top
-   of the page, so the scenes are read on full-page shots of the family heads and the opened entries, not on its sheet.
+   section opens on its scene across the column: whole on a phone (351 by 197 px at 390 for a 16:9), a 3:1 band from
+   700 px, where cover cuts the Predator's pool at `50% 55%` and the Warped's at `50% 40%`. Ironhide, Blightweaver
+   and Parasite carry theirs whole under their form's picture (323 px wide at 390), inside the closed entry, so it
+   loads only when the entry opens. All six are lazy, with an `alt` in English and French (`showcase/lore.mjs`); no
+   word shown changes. `showcase/mutations`'s `all` rose from 168 to 324 KiB (328,142 bytes measured, the plan's
+   160 KB more); its `first` holds. The walk's measures at 320 and 390: three more pictures on the page as loaded
+   (the heads; the entries' scenes load when opened), none oversized; the targets, the words and axe as before.
+   `showcase/showcase.css` repeats the focus rules of `table/identity.css` for the values it draws (across 50%, down
+   40% and 55%). Left: the walk films the top of the page, so the scenes were read on full-page shots of the family
+   heads and the opened entries, not on its sheet.
+
 5. **S5, the showcase home and its 404.** The broken charge in who you play, the Predator at rest by the
    creator's note, the claw on the 404, through the same pass. Tests: `showcase/showcase.test.js`, the budget,
    the home's largest paint unchanged.
