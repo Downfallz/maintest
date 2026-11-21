@@ -32,13 +32,13 @@ What holds for every screen of the journey:
 
 Screens of the walk this brief leaves out, and why:
 
-- `showcase-mutations` and `showcase-rules`: reference pages a visitor opens by choice, not steps on the way to
-  play. The rulebook's words are the rulebook's (`rules/`). UX6 fixes what their measures showed, with no
-  staging. Their pictures are sent at the size they are drawn: none is over twice it now, where 3 and 2 were.
-  Their targets: 23 of 58 and 17 of 92 were under 44 px at 390. UX6's film shows 18 and 11, but it was taken
-  before the last fixes, which gave the guide's path links 44 px. The rulebook's links inside a sentence are now
-  underlined, and its table that scrolls can take the focus; axe still found the 12 `link-in-text-block` and the
-  table on that film. The next walk confirms these. A brief of their own can follow if the owner asks.
+- `showcase-rules`: a reference page a visitor opens by choice, not a step on the way to play, and its words are
+  the rulebook's (`rules/`). UX6 fixed what its measures showed, with no staging: its pictures are sent at the
+  size they are drawn (2 were over twice it), its links inside a sentence are underlined and its table that
+  scrolls can take the focus. Its targets: 17 of 92 were under 44 px at 390, 11 on UX6's film; axe still found
+  the 12 `link-in-text-block` and the table on that film. The next walk confirms these. A brief of its own can
+  follow if the owner asks. The field guide, the other reference page, has its brief since the scene paintings'
+  S4 ([The mutation field guide](#the-mutation-field-guide-showcase-mutations)).
 - `first-lesson-brief`: the same window as `lesson-1-brief` of the lessons' journey, which UX8 briefs. What UX7
   owns is the step into it, briefed as the last beat of the name window.
 
@@ -237,6 +237,126 @@ nothing animating at rest on this screen: the strip had not come into view.
   chose the three moves: the sentences are already there and the words stay under budget.
 - The pictures' text inside them (a chip, a tab's label) is the battle view's at about 0.9 of its size at 390 and
   0.74 at 320: it is a picture of the screen, not words to read, and the `alt` carries it.
+
+## The mutation field guide (`showcase-mutations`)
+
+Briefed for [the scene paintings' S4](../scene-paintings-plan.md#stages), on `b2a9544`. Read on the walk
+`node scripts/ux/journey.mjs doors --out <folder>` at 390 and 320 px with its measures, which film only the top of
+the page, and on the session's own shots of the three family heads and of the Ironhide, Blightweaver and Parasite
+entries opened, at 390, 320 and 1280 px, in English and in French. The scenes below were read in the build and the
+register ([scenes/README.md](../sources/pages/scenes/README.md)), not seen drawn: the critique sees them.
+
+### Job
+
+The bestiary. A visitor who opened Open the field guide on the home, or a link to a form, reads what each family
+becomes and what each form teaches. Built by `showcase/guide.mjs` from `showcase/lore.mjs` and the content,
+styled by `showcase/showcase.css`. S4 gives each family the scene that shows what the family is, and three forms
+the scene that shows what their body does, as the plan's table asks.
+
+- **Filled action**: none. A reference page: the visitor opens what they choose. The header's Play now stays an
+  outline; the family jumps, the search, the path links and each form's disclosure stay quiet. The measure reads
+  0 at both widths, today and after.
+
+### Words
+
+- **Order**: the kicker (Field guide), the title, the lead, the counts and the ancestral creature; the family
+  jumps and the search; the ancestral creature's record; the hint (Open a form to read its field notes and
+  spells); then each family: its scene, its kicker (Mutation paths), its name, its paths, its forms closed. An
+  opened entry with a scene: the form's picture, its scene under it, the requirement, the note, the spells.
+- **Budget**: 262 words shown at either width, as the baseline and today's film count (262 at 390 and at 320).
+  No word shown changes; the six scenes add only their `alt`, which the measure does not count.
+
+The `alt` of each scene, as `showcase/lore.mjs` writes them, in the form names of
+`docs/domain/player-terminology.md` and of the renaming it points to (`docs/domain/package-renaming-plan.md`:
+Prédateur, Altéré, Écorcheur, Blindé, Fléau). Each says what the painting shows, in one sentence, and names the
+family or the form the visitor is reading.
+
+| Scene | English | French |
+| --- | --- | --- |
+| Brute's head | A Brute’s shed shell on the ground, beside the print of what walked away. | La carapace muée d’une Brute, à côté de l’empreinte de ce qui s’en est allé. |
+| Predator's head | A Predator and a Deathstalker drink at one pool among ruins. | Un Prédateur et un Écorcheur boivent au même bassin, parmi les ruines. |
+| Warped's head | A Warped leans over dark water, a claw lowered toward a ripple. | Un Altéré se penche sur l’eau noire, une griffe tendue vers une ride. |
+| Ironhide | The Ironhide’s plates up close, a scar across them above its eye. | Les plaques du Blindé de près, une cicatrice en travers au-dessus de l’œil. |
+| Blightweaver | The Blightweaver’s swollen sac venting gas, its eye in the smoke. | La poche gonflée du Fléau crache son gaz, son œil dans la fumée. |
+| Parasite | A Parasite waits under a slab of slate, one claw in the light. | Un Parasite guette sous une dalle d’ardoise, une griffe dans la lumière. |
+
+No text is laid on a painting: each scene is a plate, the words beside or under it.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The ancestral creature beside the title, as today, asked for first. | 218 by 145 px | Where does every form start? | `table/battle-art/evolutions/base-creature.webp` |
+| The Brute's head: its shed shell and the print that walked on, a plate above the family's header across the column, shown whole (3:1), lazy. | 351 by 117 px | What is a mutation? A shell shed, a print that walked on. | `docs/art/sources/pages/scenes/brute-moult.webp` |
+| The Predator's head: the Predator and the Deathstalker at one pool, shown whole under 700 px (16:9); from 700 px a 3:1 band, cover cutting top and bottom at the focus 50% 55%, on the pool. Lazy. | 351 by 197 px | What does a Predator become? The base and its stage 3 at one pool. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp` |
+| The Warped's head: the Warped over dark water, as the Predator's, the band's focus at 50% 40%. Lazy. | 351 by 197 px | What is a Warped, before it strikes? | `docs/art/sources/pages/scenes/warped-listening.webp` |
+| Ironhide's scene, whole (3:1), under the form's picture in its column, inside the closed entry. Lazy. | 323 by 108 px | What does its plating hold? | `docs/art/sources/pages/scenes/ironhide-scar.webp` |
+| Blightweaver's scene, whole (3:1), under the form's picture, inside the closed entry. Lazy. | 323 by 108 px | What does it carry, and spread? | `docs/art/sources/pages/scenes/blightweaver-pressure-sac.webp` |
+| Parasite's scene, whole (16:9), under the form's picture, inside the closed entry. Lazy. | 323 by 182 px | How does a Parasite hunt? | `docs/art/sources/pages/scenes/parasite-under-slate.webp` |
+
+The sizes are the boxes the sheet draws at 390: the column is 90% of the screen under 850 px (`.contain`), 351 px,
+and an entry's content 323 px inside its padding. At 320 the heads are 288 by 96 and 288 by 162 px, the entries'
+scenes 260 by 87 and 260 by 146 px. From 700 px every head is a band of 3:1 up to the column's 1250 px; an entry's
+scene follows its column, about 380 px at 1280, up to 421 px on a wider screen. Each is declared in `docs/art/page-pictures.json` and
+sent once and twice its size by `table/picture.js`, with its `focus` where a box cuts it (S3). The forms' own
+pictures and the spells' portraits stay as they are. The brief chose the heads above the header and not beside
+it: on a phone the header's path links then follow the scene, and the scene never sits between a title and its
+paths.
+
+### States
+
+- **First paint**: the guide's head, its tools and the ancestral record, in the HTML; every scene is below the
+  first screen at both widths, its room held by its `width` and `height` on `--paper`.
+- **Empty**: a search that finds nothing says No matching mutation or spell. above the families, as today
+  (`showcase/guide.js`); the families and their scenes stay below it.
+- **Loaded**: each family opens on its scene; an entry with a scene shows it under the form's picture once opened.
+  A closed entry's scene is not asked for; a link to a form (`#form-parasite`) opens its entry, and its scene
+  comes with it.
+- **Waiting**: nothing waits on a host: the page is built. A scene coming in fills its held room.
+- **Error**: a scene that fails to load leaves its room, its colour and its `alt`; the family's name and paths
+  still read.
+- **Offline**: the showcase has no service worker; the browser shows its own page. Not changed here.
+
+### Motion
+
+None: the scenes are still paintings, with no breath and no strip; an entry opens at once, as today. The measure
+reads nothing animating at rest, and should read the same.
+
+### Less motion
+
+None.
+
+### Accessibility
+
+- **Focus**: unchanged: the skip link, the header, the family jumps, the search, then each family's path links and
+  its forms' disclosures in reading order. A scene takes no focus.
+- **Names**: each scene's `alt` as written under **Words**, in the page's language. The forms' pictures and the
+  spells' portraits keep their empty `alt`: the name beside them is the text. Each family stays a `section`
+  named by its title.
+- **Announced**: nothing new; the search keeps its status region (Matching forms and their count), as today.
+- **Targets**: no new control. Today 1 of 58 is under 44 px at either width, none under 24, no overlap, and axe
+  finds nothing; after, the same.
+
+### Cost
+
+- **Bytes**: nothing before a scroll changes: the scenes are lazy and below the first screen, three of them only
+  once their entry is opened. The page's `first` (showcase/mutations) stays 96 KiB; its `all` rises from 168 to 324 KiB
+  (`docs/art/page-budget.json`) for the six scenes at twice the density: 328,142 bytes measured, 160 KB more.
+- **Largest paint**: not measured for this page (the baseline's paints do not walk it); the guide's title or its
+  creature, never a scene, aimed at 2.5 s (the budget's).
+- **Shift**: 0.00 today; none added: every scene keeps its `width` and `height`, and from 700 px its band keeps
+  `aspect-ratio: 3`.
+
+### Left
+
+- The walk films only the guide's top, so no scene is in its sheet. The critique reads shots of the three family
+  heads and the three entries opened, at 320, 390 and 1280 px, in both languages. The walk may gain them as
+  screens of `scripts/ux/journeys.mjs` (a family scrolled to, an entry opened), in a change of its own.
+- Two scenes drift from their forms, the Blightweaver's amber gas and the moult's spined crest (the plan's
+  question 3, kept by the owner). Beside the Blightweaver's own picture, lime green, the amber shows most: the
+  owner sees it on the sheet of the entry opened.
+- An `alt` read before the family's title is the plate's order; a person may prefer the scene after the header.
+  I chose it first: it opens the section as the plan's head does, and the title stays the section's name.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

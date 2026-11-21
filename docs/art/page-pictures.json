@@ -11,39 +11,39 @@
     {
       "name": "brute-moult",
       "source": "docs/art/sources/pages/scenes/brute-moult.webp",
-      "drawn": [344, 1250],
+      "drawn": [351, 1250],
       "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "predator-and-deathstalker",
       "source": "docs/art/sources/pages/scenes/predator-and-deathstalker.webp",
-      "drawn": [344, 1250],
+      "drawn": [351, 1250],
       "focus": "50% 55%",
       "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "warped-listening",
       "source": "docs/art/sources/pages/scenes/warped-listening.webp",
-      "drawn": [344, 1250],
+      "drawn": [351, 1250],
       "focus": "50% 40%",
       "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "ironhide-scar",
       "source": "docs/art/sources/pages/scenes/ironhide-scar.webp",
-      "drawn": [315, 421],
+      "drawn": [323, 421],
       "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "blightweaver-pressure-sac",
       "source": "docs/art/sources/pages/scenes/blightweaver-pressure-sac.webp",
-      "drawn": [315, 421],
+      "drawn": [323, 421],
       "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "parasite-under-slate",
       "source": "docs/art/sources/pages/scenes/parasite-under-slate.webp",
-      "drawn": [315, 421],
+      "drawn": [323, 421],
       "pages": { "showcase/mutations": "lazy" }
     },
     {

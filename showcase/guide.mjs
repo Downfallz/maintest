@@ -94,7 +94,7 @@ function initiativeChip(initiative) {
 // A form's picture, and its scene under it in the same column when it has one.
 function figure(art, form, l) {
   const picture = formScenes[form];
-  return picture ? `<div class="field-figure">${art}${scene(picture, 'form', l.scenes[form], '(min-width: 1421px) 421px, (min-width: 651px) 30vw, 81vw')}</div>` : art;
+  return picture ? `<div class="field-figure">${art}${scene(picture, 'form', l.scenes[form], '(min-width: 1421px) 421px, (min-width: 651px) 30vw, calc(90vw - 28px)')}</div>` : art;
 }
 
 function entry(t, lang, byId) {
@@ -121,7 +121,7 @@ function familySection(family, lang, byId, i) {
   const pairs = nodes.filter(t => t.level === 2).map(t => [t, nodes.find(child => child.level === 3 && child.prerequisites.includes(t.id))]);
   const link = t => `<a href="#form-${key(t.id)}">${escape(name(t, lang))}</a>`;
   return `<section class="family-record" id="family-${family}" aria-labelledby="title-${family}">
-    ${scene(familyScenes[family], 'family', l.scenes[family], '(min-width: 1421px) 1250px, 88vw')}
+    ${scene(familyScenes[family], 'family', l.scenes[family], '(min-width: 1421px) 1250px, (min-width: 851px) 88vw, 90vw')}
     <header><div><p class="kicker">${l.route}</p><h2 id="title-${family}">${l.familyNames[i]}</h2></div>
       <nav class="path-map" aria-label="${l.route} · ${l.familyNames[i]}">${pairs.map(([middle, last]) => `<div>${link(middle)} <span aria-hidden="true">→</span> ${link(last)}</div>`).join('')}</nav></header>
     ${[root, ...pairs.flat(), cap].map(t => entry(t, lang, byId)).join('')}
