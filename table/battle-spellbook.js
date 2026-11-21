@@ -1,4 +1,4 @@
-import { cardCost, cardDetails, cardStats, cardsById } from './card.js';
+import { cardCost, cardStats, cardsById } from './card.js';
 import { classColour, talentPalette } from './mat.js';
 import { energyShortfall, guidedShortfall } from './hand.js';
 import { chance } from './guidance.js';
@@ -62,7 +62,7 @@ export function battleSpellbook(model, catalogue) {
       colour: card?.creatureClass ? classColour(card.creatureClass, palette) : null,
       cost: cost(card, guide), crit: critical(card, guide), offered: model.spells.includes(id),
       availability: availability(id, model, card, guide),
-      details: cardDetails(card), criticalNote: card?.criticalNote ?? '', missing: !card });
+      missing: !card });
   }
   const rank = typeRank(catalogue);
   return [...groups].sort(([a], [b]) => rank(a) - rank(b)).map(([type, spells]) => ({ type, spells }));

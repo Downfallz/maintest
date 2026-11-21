@@ -14,13 +14,14 @@ async function mount(page, kind = 'Intent') {
       timeline: [{ creature: 1, owner: 'Player1', speed: 'Standard' }, { creature: 2, owner: 'Player1', speed: 'Quick' }] },
     options: { intent: { creatures: [{ creature: 1, castableSpells: ids.filter(id => !['spell-1', 'spell-2'].includes(id)), unaffordableSpells: ['spell-2'] }] },
       action: { actor: 1, spells: ids.filter(id => id !== 'spell-1').map(spell => ({ spell, legalTargets: legal })) } },
-    guidance: [{ spell: 'spell-1', unavailableReason: 'Cannot use while stunned' }, { spell: 'spell-2', energyAfterCost: -4, chosenSpeed: 'Standard', standardCriticalChance: .35 }] } };
+    guidance: [{ spell: 'unknown-spell', cost: 4 }, { spell: 'spell-1', unavailableReason: 'Cannot use while stunned' }, { spell: 'spell-2', energyAfterCost: -4, chosenSpeed: 'Standard', standardCriticalChance: .35 }] } };
   const cards = ids.slice(0, -1).map((id, index) => ({ id, visual: index === 0 ? { portrait: 'focus' } : null, name: index === 0 ? 'Focus' : `The exceptionally long ${['bone strike', 'protective ward', 'ritual of recovery'][index % 3]} ${index}`,
     type: ['Offensive', 'Defensive', 'Passive'][index % 3], creatureClass: ['Brawler', 'Scoundrel', 'Sorcerer'][index % 3],
     cost: index === 0 ? 0 : index === 2 ? 7 : 2, critical: index % 2 ? '20%' : '0%', criticalThreshold: index % 2 ? 17 : null, targeting: 'One creature in the host offer',
     effects: ['A detailed effect that remains readable in the full reference.'], casterEffects: ['A separate effect on the caster.'], criticalNote: 'Critical note from the served catalogue.',
     // The host's numbers of each line (CardMark.Figures): what a face in its column shows beside the stat's icon.
-    marks: index === 4 ? null : [{ kind: 'Damage', onCaster: false, figures: '3' }, { kind: 'EnergyGain', onCaster: true, figures: '+1' }] }));
+    marks: index === 4 ? null : index === 5 ? [{ kind: 'Unmarked', onCaster: false, figures: '9' }, { kind: 'Unmarked', onCaster: true, figures: '9' }]
+      : [{ kind: 'Damage', onCaster: false, figures: '3' }, { kind: 'EnergyGain', onCaster: true, figures: '+1' }] }));
   page.on('pageerror', error => state.errors.push(error.message));
   // The host's change notice, so a test refreshes the seat now instead of waiting out the 5 s poll.
   await page.addInitScript(() => {
@@ -37,7 +38,8 @@ async function mount(page, kind = 'Intent') {
   await page.route('**/api/**', route => {
     const request = route.request(), url = new URL(request.url());
     if (url.pathname === '/api/lobby/resume') return route.fulfill({ json: { tables: [{ table: { id: 'spellbook', format: '3v3' }, seats: [{ seat: 'player1', token: 'seat' }] }] } });
-    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards } });
+    // The host's cue for each kind (EffectCue): the stat a line moves, which draws its icon beside its numbers.
+    if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards, effects: [{ kind: 'Damage', glyph: '⚔', harmful: true }, { kind: 'EnergyGain', glyph: 'ϟ', harmful: false }] } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
     if (url.pathname.endsWith('/decision')) { state.writes.push(decided(request)); state.view.waitingFor = null; return route.fulfill({ status: 204 }); }
     if (url.pathname === '/api/seat/player1') {
@@ -80,8 +82,11 @@ test('the spellbook groups the served types two a row, each face its portrait, n
   // Each effect line is its icon and the host's numbers; its words are kept for a screen reader, never shown.
   await expect(spell(page, 'spell-3').locator('.spell-card-figures')).toHaveText(['3', '+1']);
   await expect(spell(page, 'spell-3').locator('.spell-card-effect > .spell-card-sr')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
-  // A line the host gave no numbers for keeps its words.
-  await expect(spell(page, 'spell-4').locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+  // A line the host gave no numbers for keeps its words, and so does one whose kind has no stat to draw.
+  for (const id of ['spell-4', 'spell-5']) {
+    await expect(spell(page, id).locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+    await expect(spell(page, id).locator('.spell-card-figures')).toHaveCount(0);
+  }
   // The button is named by what it shows, the spell's name first, then the words the face leaves.
   await expect(spell(page, 'spell-3')).toHaveAccessibleName(/^The exceptionally long bone strike 3 ?One creature in the host offer.*Available ?A detailed effect that remains readable in the full reference\. ?A separate effect on the caster\.$/);
   await expect(spell(page, 'spell-3')).not.toHaveAttribute('aria-label', /.*/);
@@ -105,6 +110,8 @@ test('the spellbook groups the served types two a row, each face its portrait, n
   await fitsViewport(page, '#combat-declare, #combat-dialog-close');
   await page.screenshot({ path: info.outputPath('ux12-p3-spellbook.png') });
   await expect(spell(page, 'unknown-spell')).toContainText('Catalogue details unavailable');
+  // A spell the catalogue does not hold keeps the cost the host's guide gives it.
+  await expect(spell(page, 'unknown-spell').locator('.spell-chip-cost')).toContainText('4');
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('the chosen card is read in full above the foot before it is declared', async ({ page }) => {
@@ -137,6 +144,14 @@ test('an offered energy plan and repeated taps never declare without the explici
   await page.locator('#combat-declare').click();
   await expect.poll(() => h.writes).toEqual([{ kind: 'Intent', creature: 1, spell: 'spell-2', asked: 21 }]); expect(h.errors).toEqual([]);
 });
+test('at the slot, the field\'s estimate shows the chosen card in full above the confirmation', async ({ page }) => {
+  const h = await mount(page, 'Action'); await spell(page, 'spell-3').click();
+  await expect(page.locator('#combat-targets')).toBeVisible();
+  const preview = page.locator('#combat-preview');
+  await expect(preview.locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
+  await expect(preview.locator('.spell-card-note')).toHaveText('Critical note from the served catalogue.');
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
 test('a changed creature clears reference position and the previous draft', async ({ page }) => {
   const h = await mount(page); await (await browseTo(page, 'spell-17')).click();
   h.view.waitingAsked++; h.view.waitingCreature = 2; h.view.options.intent.creatures[0].creature = 2; await notify(page);
@@ -150,6 +165,8 @@ test('returning from targets keeps the place and the chosen card in focus, and c
   const node = spell(page, 'unknown-spell'); await node.scrollIntoViewIfNeeded();
   const scroll = await scrollOf(page); expect(scroll).toBeGreaterThan(0);
   await node.dblclick(); await expect(page.locator('#combat-targets')).toBeVisible(); expect(h.writes).toEqual([]);
+  // A spell the catalogue does not hold has no card to read in full on the field's estimate.
+  await expect(page.locator('#combat-preview .target-card')).toHaveCount(0);
   await page.locator('#combat-back').click(); await expect(spell(page, 'spell-0')).toBeVisible();
   expect(await scrollOf(page)).toBe(scroll); await expect(node).toBeFocused();
   expect(h.errors).toEqual([]);

@@ -445,7 +445,7 @@ Graph and detail navigation work on phone and keyboard; close restores the origi
 ### AU9 — Choose a spell without fighting the list
 
 Use served card types/family accents for compact grouping, visible cost and positive critical indicators,
-availability reasons, two spells a row (amended by UX12 P3: no full-details mode). Show actor, energy and turn context together.
+availability reasons, two spells a row. UX12 P3 removed the full-details mode. Show actor, energy and turn context together.
 Use paging/internal scrolling appropriate to the viewport; keep confirmation stable.
 The selected row must not grow under the pointer, and polls must not reset focus/scroll.
 Show zero energy cost; omit meaningless zero critical badges.
@@ -463,8 +463,10 @@ Amended by UX12 P3 (`docs/art/ux12-pictures-plan.md`, the owner, 2026-11-20): th
 row at every width, and its full-details mode goes. Each face in its column keeps the whole name, the targeting,
 the cost and crit chips, the availability and each effect line as its icon and the host's numbers; the button
 speaks the lines in words. The complete card text (the effect lines in words, the crit note, what the chance holds
-for) is on the chosen card above the foot: every spell is read in full before it is **declared**, not before it is
-chosen, and going back keeps the card the player was on. The fixed footer retains explicit confirmation and the existing Action/Intent/Target protocol.
+for) is on the chosen card above the foot. Every spell is read in full before it is **declared**, not before it is
+chosen. Going back keeps the card the player was on.
+
+The fixed footer retains explicit confirmation and the existing Action/Intent/Target protocol.
 
 ### AU10 — Understand targets and cost before confirming
 

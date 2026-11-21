@@ -52,10 +52,12 @@ export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [
   if (portrait) article.append(portrait);
   if (!brief) head.append(chips);
   article.append(head);
-  if (!card) { article.append(make('p', 'Spell details unavailable.', 'spell-card-line')); return article; }
+  // Beside the name, the chips would leave it about 60 px of a column at 320. A spell the catalogue does not hold
+  // keeps them too: its cost is the host's guide's.
+  const chipsRow = () => { if (brief && chips.childNodes.length) article.append(chips); };
+  if (!card) { chipsRow(); article.append(make('p', 'Spell details unavailable.', 'spell-card-line')); return article; }
   if (card.targeting) article.append(make('p', card.targeting, 'spell-card-target'));
-  // Beside the name, the chips would leave it about 60 px of a column at 320.
-  if (brief && chips.childNodes.length) article.append(chips);
+  chipsRow();
   const lines = [...(card.effects ?? []).map(text => ({ text, caster: false })), ...(card.casterEffects ?? []).map(text => ({ text, caster: true }))];
   const list = make('ul', '', 'spell-card-effects');
   lines.forEach((line, index) => {
@@ -63,8 +65,8 @@ export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [
     const item = make('li', '', 'spell-card-effect'); if (line.caster) item.dataset.caster = 'true';
     const key = mark ? conditionKey(mark.kind, effects) : 'other';
     item.dataset.cue = key; item.append(iconElement(key));
-    // The host's numbers, where it gave them; a line without them keeps its words in sight.
-    if (brief && mark?.figures) {
+    // The host's numbers, where it gave them, beside the icon of a stat; a line without either keeps its words.
+    if (brief && mark?.figures && key !== 'other') {
       const figures = make('span', mark.figures, 'spell-card-figures'); figures.setAttribute('aria-hidden', 'true');
       item.append(figures, make('span', line.text, 'spell-card-sr'));
     } else item.append(make('span', line.text));

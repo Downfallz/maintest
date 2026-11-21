@@ -420,8 +420,8 @@ None.
   scrolled under the sheet's chips row count as overlapping (at 320 Focus's `Available` line is cut under it).
   P3 does not chase them as new. The critique reads whether a card is covered without a way to reach it, at 320
   and at 200% text (P3's test).
-- Measured by P3 at 320 by 568 (`battle-spellbook.spec.js`, a desktop browser at that size): the cards' scroller
-  holds the first row, the second row scrolls under the header, and the foot stays in view and 44 px tall. The
+- Measured by P3 at 320 by 568 (`battle-spellbook.spec.js`, a desktop browser at that size): the first row is in
+  view, the second row scrolls under the header, and the foot stays in view and 44 px tall. The
   film of P6 reads it again with the walk's own spells.
 - The two columns amend AU9: the spellbook's **Left**.
 

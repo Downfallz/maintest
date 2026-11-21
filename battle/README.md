@@ -372,13 +372,13 @@ and availability. Current question guidance supplies current chances and unavail
 catalogue-only chances are labelled. An offered hidden intent that lacks energy remains selectable with
 its shortfall and possible fizzle. Card cost, colour and ownership never create or revoke host offers.
 
-Two spells a row at every width, the side panel included (UX12 P3, `docs/art/journeys/windows.md`). Each card is a
+The spellbook shows two spells a row at every width, the side panel included (UX12 P3, `docs/art/journeys/windows.md`). Each card is a
 face in its column: the portrait and the whole name (wrapped, never cut), the targeting, the cost and crit chips on
 their own row, the availability, and each effect line as its icon and the host's numbers (`CardMark.Figures`: `3`,
 `+1 · 3`), its words kept for a screen reader. The button is named by those words, the name first. The card in full
 (the effect lines in words, the crit chance and what it holds for, the crit note) is read on the chosen card above
-the foot (`src/target-preview.ts`), before Declare spell. A portrait is drawn at 24 px in the card's head on a screen
-under 660 px tall in portrait, at 40 px beside the name and targeting otherwise, each from its own files
+the foot (`src/target-preview.ts`), before Declare spell. A portrait is 24 px, in the card's head, on a screen under 660 px
+tall in portrait. Otherwise it is 40 px, beside the name and targeting. Each size has its own files
 (`SPELLBOOK_PORTRAIT_SIZES`). Unknown catalogue entries keep their raw identity and remain playable
 when offered. Actor, round, phase, tempo and energy stay beside the scrollable list; the explicit declaration
 footer stays outside it. In at-activation mode, selecting still opens field targeting and casting still needs

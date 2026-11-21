@@ -99,13 +99,13 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    (`battle/src/spellbook.ts`, `table/battle.css`). A card's face (`spellCard`'s `brief` form) holds the portrait and
    the whole name, the targeting, the cost and crit chips on their own row (the crit chip keeps its d20 face), the
    availability, and each effect line as its icon and numbers. The numbers are the host's: `CardMark` gains
-   `Figures` (`3`, `+1 · 3`, `+3 · perm.`, `EffectLine.Figures`), so the page never reads them from the words, and a
-   line without them keeps its words. The words stay in the button's name. The chosen card in full (the lines in
+   `Figures` (for example `3`, `+1 · 3`, `+3 · perm.`, written by `EffectLine.Figures`), so the page never reads them from the words. A line
+   without them, or whose kind has no stat icon, keeps its words. The words stay in the button's name. The chosen card in full (the lines in
    words, the crit chance and what it holds for, the crit note) is in the estimate above the foot
-   (`src/target-preview.ts`), before Declare spell. The portrait is drawn at 40 px, or at 24 px in the card's head
-   under 660 px tall in portrait, from its own files (`SPELLBOOK_PORTRAIT_SIZES`, held to the declaration by
+   (`src/target-preview.ts`), before Declare spell. The portrait is 40 px. Under 660 px tall in portrait it is 24 px,
+   in the card's head. Each size has its own files (`SPELLBOOK_PORTRAIT_SIZES`, held to the declaration by
    `table/battle-spell-art.test.js`). AU9 is amended in `docs/tabletop/battle-ux-parity-plan.md`. Measured at 320 by
-   568: the first row is in view, the second scrolls, the foot stays. Left: the walk's sheets and the critique (P6).
+   568: the first row is in view, the second scrolls, the foot stays. Still to do (P6): the walk's sheets and the critique.
 4. **P4, the journal.** The portraits drawn at 24 px from their own files; the acting creature gets no picture. Tests:
    `battle-history.spec.js`, a row named the same with its picture missing.
 5. **P5, the pick and the Mutation Tree.** The form on each package's face and in the tree's detail, at 64 px.
