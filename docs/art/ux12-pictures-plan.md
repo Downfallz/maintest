@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1, P2 and P3 are built; P4 and P5 are next.
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P4 are built; P5 is next.
 
 ## What the owner asked for
 
@@ -108,6 +108,13 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    568: the first row is in view, the second scrolls, the foot stays. Still to do (P6): the walk's sheets and the critique.
 4. **P4, the journal.** The portraits drawn at 24 px from their own files; the acting creature gets no picture. Tests:
    `battle-history.spec.js`, a row named the same with its picture missing.
+
+   *Built (2026-11-21)*: the journal draws a spell's portrait at 24 px, in a row's title under All events and in a
+   cast's line of the summary (`battle/src/history.ts`, `table/battle.css`), so the browser takes the 24 or the 48 px
+   file P2 declared, in place of the 40 px file it scaled to 22. The acting creature has no picture. A portrait that
+   fails keeps its 24 px room, hidden, and the row and the cast keep their names (`battle-history.spec.js`).
+   `table/battle-spell-art.test.js` holds the journal's widths to the declaration. The page's total does not move:
+   P2 already counted the 24 and 48 px files. Still to do (P6): the walk's sheets and the critique.
 5. **P5, the pick and the Mutation Tree.** The form on each package's face and in the tree's detail, at 64 px.
    Tests: `battle-mutations.spec.js`, the short portrait sheet and the phone tree with the forms in, each form
    named by its words, none loaded before the window opens.

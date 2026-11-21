@@ -52,3 +52,13 @@ test('the spellbook draws a portrait only at widths the battle page declares, th
   assert.match(SPELLBOOK_PORTRAIT_SIZES, /^\(orientation: portrait\) and \(max-height: 660px\) 24px, 40px$/);
   for (const name of declared) assert.ok(widths.every(width => PAGE_ART[name].phone['table/battle'].includes(width)), name);
 });
+
+test('the journal draws a portrait at 24 px only, a width the battle page declares, sent from its own files', () => {
+  // The journal's rows and casts once drew it at 22 px, scaled from a file of another size (UX12 P4).
+  const source = readFileSync(new URL('../battle/src/history.ts', import.meta.url), 'utf8');
+  const widths = [...source.matchAll(/spellPortrait\([^,]+,\s*(\d+)\)/g)].map(match => Number(match[1]));
+  assert.deepEqual(widths, [24, 24]);
+  for (const name of declared) assert.ok(PAGE_ART[name].phone['table/battle'].includes(24), name);
+  const css = readFileSync(new URL('./battle.css', import.meta.url), 'utf8');
+  assert.match(css, /#history-dialog \.spell-portrait \{ width: 24px; height: 24px;/);
+});
