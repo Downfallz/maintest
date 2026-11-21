@@ -167,10 +167,11 @@ test('every scene in the folder is in its register, at its size, and names only 
   assert.deepEqual(rows.map(row => row[1]).sort(), files, 'a scene in the folder is a row of the register, and a row is a file');
   const walk = url => readdirSync(url, { withFileTypes: true })
     .flatMap(entry => entry.isDirectory() ? walk(new URL(`${entry.name}/`, url)) : entry.name.endsWith('.json') ? [new URL(entry.name, url)] : []);
-  const ids = new Set(walk(new URL('data/', root)).flatMap(url => [...readFileSync(url, 'utf8').matchAll(/"id":\s*"([^"]+)"/g)].map(match => match[1])));
+  const ids = new Set(['Creatures', 'Tiers', 'Spells'].flatMap(kind => walk(new URL(`data/${kind}/`, root))).flatMap(url => [...readFileSync(url, 'utf8').matchAll(/"id":\s*"([^"]+)"/g)].map(match => match[1])));
   for (const [, file, width, height, rest] of rows) {
     assert.deepEqual(webpSize(read(folder + file)), { width: Number(width), height: Number(height) }, `${file}: the size the register gives`);
-    const named = [...rest.matchAll(/`((?:creature|tier|spell):[a-z0-9_]+:v\d+)`/g)].map(match => match[1]);
+    const named = [...rest.split('|')[1].matchAll(/`([^`]+)`/g)].map(match => match[1]);
+    for (const id of named) assert.match(id, /^(creature|tier|spell):[a-z0-9_]+:v\d+$/, `${file}: ${id} is no content id`);
     assert.ok(named.length > 0, `${file}: the register names what it shows by content id`);
     for (const id of named) assert.ok(ids.has(id), `${file}: ${id} is no id of data/`);
   }

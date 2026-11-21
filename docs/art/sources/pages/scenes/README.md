@@ -18,12 +18,12 @@ file is a row and every size is the file's.
 | `ironhide-scar.webp` | 1536 by 512 | The Ironhide's plates close up, a scar across them above the eye. | `tier:ironbound:v1` | `showcase/mutations`, the Ironbound entry |
 | `blightweaver-pressure-sac.webp` | 1536 by 512 | The Blightweaver's pressure sac, venting gas, the eye in the smoke. | `tier:blightweaver:v1` | `showcase/mutations`, the Blightweaver entry |
 | `parasite-under-slate.webp` | 1536 by 864 | The Parasite under a slab of slate: a claw in the light, the teeth in the dark. | `tier:parasite:v1` | `showcase/mutations`, the Parasite entry |
-| `latch-under-the-arch.webp` | 1536 by 864 | Three claws Latch onto a crumbling arch; an eye behind them. | `spell:latch:v1` | The showcase's 404 |
+| `latch-under-the-arch.webp` | 1536 by 864 | Three claws grip a crumbling arch, the spell Latch; an eye behind them. | `spell:latch:v1` | The showcase's 404 |
 | `crushing-stomp-aftermath.webp` | 1536 by 512 | The ground after Crushing Stomp: three marks, a slab shedding dust. | `spell:crushing_stomp:v1` | `table/battle`, the match's result |
 
 Two scenes drift from the battle's forms (`table/battle-art/evolutions/`), and are kept as they are, under their
 names (the plan's question 3): the Blightweaver's sac and gas are amber where its form's are lime green, and the
 Brute's shed shell has a long spined crest, closer to the Predator's than to the Brute's plated back.
 
-Nothing records where the scenes come from (the plan's question 5): they are the owner's files, as the rest of
+Nothing records where the scenes come from (the plan's question 5): they are the owner's files, like the rest of
 this folder.

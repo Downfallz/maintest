@@ -7,6 +7,6 @@ this folder: `scripts/ux/pictures.mjs` derives what a page is sent from it.
 The `round-*.webp` files are not paintings: they are the real battle view, made by `scripts/ux/round.mjs` for the
 showcase's round seen played ([a picture of the game itself](../../page-pictures.md#a-picture-of-the-game-itself)).
 
-The `scenes/` folder holds ten paintings that came before their briefs: a register of scenes, each with its page
-in [the scene paintings' plan](../../scene-paintings-plan.md). A brief draws one once it names it
-([scenes/README.md](scenes/README.md)).
+The `scenes/` folder holds ten paintings made before any brief asked for them. Its [register](scenes/README.md)
+gives each one a page, chosen in [the scene paintings' plan](../../scene-paintings-plan.md). A brief draws a scene
+once it names it.
