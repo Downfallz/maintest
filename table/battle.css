@@ -1137,7 +1137,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   .combat-spell .spell-card.brief > .spell-portrait { width: 24px; height: 24px; grid-row: 1; align-self: center; }
   .combat-spell .spell-card.brief:has(> .spell-portrait) > .spell-card-target { grid-column: 1 / -1; }
 }
-#history-dialog .spell-portrait { width: 22px; height: 22px; vertical-align: middle; align-self: center; }
+#history-dialog .spell-portrait { width: 24px; height: 24px; vertical-align: middle; align-self: center; }
 .preview-name > .spell-portrait, .atlas-card-name > .spell-portrait { width: 24px; height: 24px; vertical-align: middle; margin-inline-end: 8px; }
 /* Beside a title nothing reflows: a picture that failed to load leaves no gap before the name. */
 :is(.preview-name, .atlas-card-name) > .spell-portrait.missing { display: none; }
