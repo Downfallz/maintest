@@ -1,6 +1,6 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
-Status: accepted, 2026-11-21 (the owner settled the questions at the end). Nothing is built.
+Status: accepted, 2026-11-21 (the owner settled the questions at the end). S1 is built; S2 is next.
 
 ## What the owner asked for
 
@@ -117,6 +117,13 @@ guide in `showcase/guide.mjs`; the home in `showcase/page.mjs`; the 404 in `show
    by content id, its page in this plan. `docs/art/sources/pages/README.md` names the folder. #1033 is closed with
    a link to this plan. Test: `studio/ux-pictures.test.js` checks every file of `scenes/` is in the register and
    every content id it names exists in `data/`.
+
+   *Built (2026-11-21)*: the ten WebPs came over from #1033 byte for byte, without its guide.
+   [scenes/README.md](sources/pages/scenes/README.md) is the register: each file, its size, what it shows, its
+   creatures and spells by content id (a form by its tier: the Predator is `tier:prowler:v1`, the Warped
+   `tier:occultist:v1`), its page, and the two forms that drift. `docs/art/sources/pages/README.md` names the
+   folder. The test also checks each size against the file's header. Left: no scene is declared or drawn; that
+   starts with S3, after S2's focus point.
 2. **S2, the focus point.** An optional `focus` in a declaration (`"focus": "30% 60%"`), written by
    `pictureElement` and `pictureHtml` as the image's `object-position`. ADR 0198's "nothing is cropped" holds: no
    file changes, only where CSS cuts; [page-pictures.md](page-pictures.md) gains the line. Tests:

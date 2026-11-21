@@ -1,0 +1,29 @@
+# Scenes
+
+Ten paintings the owner made before any brief asked for them, kept as handed over: six scenes of 16:9 and four
+bands of 3:1. Each has one page, chosen in [the scene paintings' plan](../../../scene-paintings-plan.md#the-shape)
+by the question it answers there. None is drawn yet: a scene reaches its page when that page's brief names it in
+its **Pictures** table and `docs/art/page-pictures.json` declares it ([page-pictures.md](../../../page-pictures.md)).
+
+What a scene shows is named by its content id; `studio/ux-pictures.test.js` checks every id is in `data/`, every
+file is a row and every size is the file's.
+
+| File | Size | What it shows | Content | Page |
+| --- | --- | --- | --- | --- |
+| `elemental-charge.webp` | 1536 by 864 | The Cataclysm breathes Incinerate into the Colossus's shoulder; ice and lightning break around the Colossus, under an eclipse. | `tier:harbinger:v1`, `tier:dreadnought:v1`, `spell:engulfing_flames:v1` | `showcase/home`, who you play |
+| `predator-at-rest.webp` | 1536 by 864 | The Predator lies at rest in a dark hall, embers in its shoulder. | `tier:prowler:v1` | `showcase/home`, the creator's note |
+| `brute-moult.webp` | 1536 by 512 | The Brute's shed shell, and the fresh print of what walked away. | `tier:brute:v1` | `showcase/mutations`, the Brute family's head |
+| `predator-and-deathstalker.webp` | 1536 by 864 | The Predator and the Deathstalker drink at one pool among ruins. | `tier:prowler:v1`, `tier:deathstalker:v1` | `showcase/mutations`, the Predator family's head |
+| `warped-listening.webp` | 1536 by 864 | The Warped leans over dark water, a claw lowered toward a ripple. | `tier:occultist:v1` | `showcase/mutations`, the Warped family's head |
+| `ironhide-scar.webp` | 1536 by 512 | The Ironhide's plates close up, a scar across them above the eye. | `tier:ironbound:v1` | `showcase/mutations`, the Ironbound entry |
+| `blightweaver-pressure-sac.webp` | 1536 by 512 | The Blightweaver's pressure sac, venting gas, the eye in the smoke. | `tier:blightweaver:v1` | `showcase/mutations`, the Blightweaver entry |
+| `parasite-under-slate.webp` | 1536 by 864 | The Parasite under a slab of slate: a claw in the light, the teeth in the dark. | `tier:parasite:v1` | `showcase/mutations`, the Parasite entry |
+| `latch-under-the-arch.webp` | 1536 by 864 | Three claws grip a crumbling arch, the spell Latch; an eye behind them. | `spell:latch:v1` | The showcase's 404 |
+| `crushing-stomp-aftermath.webp` | 1536 by 512 | The ground after Crushing Stomp: three marks, a slab shedding dust. | `spell:crushing_stomp:v1` | `table/battle`, the match's result |
+
+Two scenes drift from the battle's forms (`table/battle-art/evolutions/`), and are kept as they are, under their
+names (the plan's question 3): the Blightweaver's sac and gas are amber where its form's are lime green, and the
+Brute's shed shell has a long spined crest, closer to the Predator's than to the Brute's plated back.
+
+Nothing records where the scenes come from (the plan's question 5): they are the owner's files, like the rest of
+this folder.
