@@ -48,11 +48,12 @@ export function doorPictures(invitation) {
   return invitation ? ['duel'] : ['eclipse-ground', 'revenant'];
 }
 
-// The duel's steps follow table/lobby.css: beside the words above 1040 px, whole above them under it.
+// The duel's steps follow table/lobby.css: beside the words from 1280 px, its file drawn about 980 px wide at the
+// panel's height; whole above them under it.
 const PICTURES = {
   'eclipse-ground': { class: 'sign-in-ground', sizes: '(min-width: 701px) 100vw, 533px' },
   revenant: { class: 'sign-in-creature', sizes: '(min-width: 701px) 550px, 107px' },
-  duel: { class: 'sign-in-ground sign-in-duel', sizes: '(min-width: 1041px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)' },
+  duel: { class: 'sign-in-ground sign-in-duel', sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)' },
 };
 
 /** The keys an invitation carries in the page a visitor is sent back to after signing in, and only this host's. */

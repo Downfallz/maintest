@@ -292,7 +292,7 @@ button. On the sheet the panel counts 41 words plain and 48 invited. On the publ
 | --- | --- | --- | --- |
 | The eclipse ground behind the panel, as an `<img>` asked for first. | 358 by 300 px | Is this the same game the showcase showed? The same ground says yes. | `table/battle-art/eclipse-battle.webp` |
 | The Revenant beside the title. | 107 by 86 px | What do I play? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
-| The duel, for the invited friend: two teams of three facing across the ground, in place of the ground and the Revenant. Whole above the words up to 1040 px; beside them on a wider screen, its left edge fading into them. | 358 by 201 px | What is this game, for someone who never saw the showcase? | `docs/art/sources/pages/duel.webp` |
+| The duel, for the invited friend: two teams of three facing across the ground, in place of the ground and the Revenant. Above the words under 1280 px, its foreground fading into them: whole on a phone, never taller than half the screen, cover cutting its top and bottom; from 1280 px beside them, its left 160 px fading into them and cover keeping three quarters of its width. | 358 by 201 px | What is this game, for someone who never saw the showcase? | `docs/art/sources/pages/duel.webp` |
 
 At 320 px the panel is 288 px wide, the ground 288 by 300 px and the duel 288 by 162. The duel shows on every
 panel an invitation opens, a spent link included: it still came from a friend. When the host answers the link as

@@ -183,14 +183,15 @@ result in `battle/src` with UX12.
 
    *Built (2026-11-21)*: `duel` is declared for `table/sign-in`, drawn 358 px on a phone and 980 px wide, and
    requested first. Its budget rose from 128 to 192 KiB. The budget counts the duel, the ground and the Revenant
-   together, though a visit loads only one of the two sets. `doorPictures` in `table/door.js` draws the duel on
-   every panel an invitation opens, a spent link included, and the ground and the Revenant again when the host
-   answers the link as the visitor's own seat. Up to 1040 px the duel is drawn whole above the words. Wider, it
-   sits beside them and its left edge fades into them; cover cuts a fifth of its width at 1280 px, a little of
-   each team, and more toward 1041 px. The brief's row names the file. Seen on the walk's sheets at 390 and 320 px
-   and on the real host from 800 to 1600 px. The measures of `invitation-sign-in` hold (no target under 44 px, no
-   overlap, no shift, axe clean); the page is 830 px high at 320 px. Left: the browser suite's mock server does
-   not serve `page-art/`, so its specs check the picture's box, not its pixels.
+   together, though a visit loads only one of the two sets. `doorPictures` in `table/door.js` draws the duel on every
+   panel an invitation opens, a spent link included, and the ground and the Revenant again when the host answers the
+   link as the visitor's own seat. Under 1280 px the duel is drawn above the words: whole on a phone, never taller
+   than half the screen, so the sign-in stays in view on a laptop. From 1280 px it sits beside them and its left edge
+   fades into them; cover keeps three quarters of its width or more, so both teams show (a spec measures it). The
+   brief's row names the file. Seen on the walk's sheets at 390 and 320 px and on the real host from 800 to 1600 px.
+   The measures of `invitation-sign-in` hold (no target under 44 px, no overlap, no shift, axe clean); the page is
+   830 px high at 320 px. Left: the browser suite's mock server does not serve `page-art/`, so its specs check the
+   picture's box, not its pixels.
 3. **S3, the focus point.** An optional `focus` in a declaration (`"focus": "30% 60%"`), written by
    `pictureElement` and `pictureHtml` as the image's `object-position`. ADR 0198's "nothing is cropped" holds: no
    file changes, only where CSS cuts; [page-pictures.md](page-pictures.md) gains the line. Tests:
