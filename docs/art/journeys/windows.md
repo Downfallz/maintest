@@ -40,8 +40,8 @@ What holds for every screen of the journey:
   gap: beside a name it is not drawn (`.missing`, as the portraits do today).
 - **The sizes**, as `docs/art/page-pictures.json` declares them for the page "table/battle" (P2): a spell's portrait drawn at
   40 px (files of 40 and 80) and at 24 px (files of 24 and 48); the page counts both widths (`phone`); a mutation's form drawn
-  at 64 px (files of 64 and 128), 64 by 43 px since the paintings are 3:2 (P5 draws them whole, never cropped to a
-  square, which would scale the 64 px file up). The journal's 22 px becomes 24 px, so it is sent at its own size.
+  at 64 px (files of 64 and 128), 64 by 43 px since the paintings are 3:2 (P5 draws them whole. Cropping to a square
+  would scale the 64 px file up.). The journal's 22 px becomes 24 px, so it is sent at its own size.
 - **The owner's answer 1, and the decision after it** (2026-11-20, issue #1023): the form a mutation leads to is
   drawn at 64 px on each mutation of the pick, on each mutation of the Mutation Tree's board and in the tree's detail. A
   capstone keeps its portrait at 24 px. The board's forms make the tree's screen 192,598 B, against 5,232 B for

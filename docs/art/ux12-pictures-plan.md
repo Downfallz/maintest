@@ -125,14 +125,16 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    numeral and the name, and in the detail, left of the family, the stage and the name (`battle/src/mutation-atlas.ts`).
    The form is the catalogue's `artwork` (`MutationVisual.Artwork`, already served; the page's `Package` type and
    the pick's face now carry it), drawn by `mutationForm` (`battle/src/spell-portrait.ts`) from the 64 and 128 px
-   files P2 declared. The paintings are 3:2: a form is 64 by 43 px, its room held by `aspect-ratio`, never cropped
-   to a square (the brief's "64 by 64" is corrected). A capstone keeps its portrait, at 24 px on the board. A form
+   files P2 declared. The paintings are 3:2, so a form is 64 by 43 px. `aspect-ratio` holds its room, and it is
+   never cropped to a square. This corrects the brief's "64 by 64". A capstone keeps its portrait, at 24 px on the board. A form
    that fails to load is not drawn; the name stays. `battle-mutations.spec.js`: the short portrait sheet at 320 by
    568 and the phone tree with the forms in, each named by its words, the tree's forms not asked for before it
-   opens, a failed form; `table/battle-spell-art.test.js` holds every `artwork` to a declared 64 px picture and every
-   call to that width. Measured with the real tree at 320 and 390: three mutations of a stage share one line, no
-   column overflows. Still to do (P6): the walk's sheets and the critique; the pick's names under the foot at 320 by
-   568 and the buttons' names that do not begin with their words stay the brief's **Left**.
+   opens, a failed form on the board and in the detail; `PackageTagsTests` holds the catalogue's `artwork`;
+   `table/battle-spell-art.test.js` holds every `artwork` to a declared 64 px picture and every
+   call to that width. Measured once by hand, with the real tree at 320 and 390: three mutations of a stage share one
+   line, no column overflows; no test holds it, P6's walk measures it. Still to do in P6: the walk's sheets and the
+   critique. Two items stay in the brief's **Left** list: the pick's names under the foot at 320 by 568, and the
+   buttons whose names do not begin with their words.
 6. **P6, the sheets.** The walk filmed again at 320 and 390 px, the measures against the brief, the
    `ux-designer`'s reading, and the sheets shown to the owner, who approves them before the last pull request is
    reported ready. A short clip at 390 by 844 of one pick, as the craft plan asks of UX7 to UX12.

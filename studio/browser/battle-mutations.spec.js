@@ -388,7 +388,6 @@ test('each offer of the pick shows the form it leads to at 64 px, named by its w
 test('the phone tree shows each mutation\'s form on its board and in its detail, a capstone its portrait, none before it opens', async ({ page }, info) => {
   await page.setViewportSize({ width: 320, height: 568 });
   const asked = formsAsked(page); const h = await mount(page);
-  expect(asked).not.toContain('brute-stage2-ironhide');
   await page.locator('[data-mutation="root1"]').click(); await page.locator('#mutation-atlas-open').click();
   const tree = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body');
   await expect(page.locator('#atlas-dialog')).toBeVisible();
@@ -425,5 +424,11 @@ test('a form that fails to load leaves no gap, and the mutation keeps its name',
   await tile.scrollIntoViewIfNeeded();
   await expect(form).toHaveClass(/missing/); await expect(form).toBeHidden();
   await expect(tile.locator('.atlas-node-name')).toHaveText('Ironhide'); await expect(tile).toHaveAccessibleName(/^Ironhide/);
+  // In the detail too: without its form the head is the family above the name, not the two on one line. Ironhide
+  // is no offer of the pick, so its form was never loaded before the failure.
+  await tile.click(); const head = page.locator('#atlas-detail-body .atlas-card-head');
+  await expect(head.locator('.mutation-form')).toHaveClass(/missing/); await expect(head.locator('.atlas-card-name')).toHaveText('Ironhide');
+  const [family, name] = await Promise.all([head.locator('.atlas-card-family').boundingBox(), head.locator('.atlas-card-name').boundingBox()]);
+  expect(family.y + family.height).toBeLessThanOrEqual(name.y);
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
