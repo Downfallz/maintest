@@ -75,6 +75,10 @@ test('the journey film plays its real-engine journey', () => {
   assert.equal(plan(['showcase/showcase.test.js'], specs).realEngine, false);
 });
 
+test('the contrast measure plays the picture kit\'s spec and the real-engine journey that walks with it', () => {
+  assert.deepEqual(plan(['scripts/ux/contrast.mjs'], specs), { ...nothing, journeys: 'picture-kit.spec.js', realEngine: true });
+});
+
 test("the pages' own tests play no journey", () => {
   assert.deepEqual(plan(['studio/catalogue.test.js'], specs), nothing);
   assert.deepEqual(plan(['table/presentation.test.js'], specs), { ...nothing, image: true });
