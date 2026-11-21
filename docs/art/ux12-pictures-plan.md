@@ -1,10 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-<<<<<<< HEAD
 Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P8 are built; P6, P7 and P8 share one pull request, its sheets approved by the owner on 2026-11-21.
-=======
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P8 are built; P6, P7 and P8 share one pull request, which waits for the owner's approval of the sheets.
->>>>>>> origin/main
 
 ## What the owner asked for
 
@@ -152,16 +148,10 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    0.09 at 390 after the Tempo sheet. The walk, made to name each shift's elements, found the field's captions moving as
    the docked sheet closes. `main` shows the same on one walk in two, so it stays under the brief's **Left** as UX12's.
    The clip of one pick at 390 by 844 was recorded with `UX_JOURNEY_VIDEO` (`docs/reference/commands.md`), new here,
-<<<<<<< HEAD
    and cut with `ffmpeg`. The owner approved the sheets and the clip on 2026-11-21. The owner also settled two
    choices. The strip's spell name stays unwritten, the rule's one named exception. The Tempo reference keeps its
-   hint beside the grey chip's bare chance. Left to UX12: the Tempo reference has almost no room at 320, and the
-   field moves when the Tempo sheet closes.
-=======
-   and cut with `ffmpeg`. Sheets, clip and choices are on the owner's page. Left: the strip's spell name is not
-   written in it (an exception the owner settles), the Tempo reference has almost no room at 320, and the field
-   moves when the Tempo sheet closes.
->>>>>>> origin/main
+   hint beside the grey chip's bare chance. Left to UX12: the Tempo reference has almost no room at 320 (#1034),
+   and the field moves when the Tempo sheet closes (#1035).
 
 7. **P7, the Tempo's spells and the order bar.** A spell's portrait at 24 px in the Tempo sheet's spell reference
    (`battle/src/tempo.ts`, today `compact` cards without one) and beside a revealed spell in the activation order at
