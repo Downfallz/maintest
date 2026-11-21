@@ -1195,6 +1195,34 @@ test('an invitation is one before the host describes it, and a late answer namin
   expect(state.errors).toEqual([]);
 });
 
+test('the panel an invitation opens shows the duel whole on a phone, in place of the ground and the Revenant, the sign-in within reach', async ({ page }) => {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 568 });
+    const state = await home(page, { account: null, mode: 'google', invited: rooks, search: invitedSearch });
+    await expect(page.getByRole('heading', { name: 'Rook invited you to a 3v3 battle.' })).toBeVisible();
+    const duel = page.locator('#sign-in-art img.sign-in-duel');
+    await expect(duel).toHaveAttribute('fetchpriority', 'high');
+    await expect(duel).toHaveAttribute('alt', '');
+    await expect(page.locator('#sign-in-art img')).toHaveCount(1);
+    const [panel, drawn] = await Promise.all([page.locator('#sign-in-panel').boundingBox(), duel.boundingBox()]);
+    expect(Math.abs(drawn.width - panel.width), `at ${width}`).toBeLessThanOrEqual(2);
+    expect(Math.abs(drawn.height - drawn.width * 941 / 1672), `whole at ${width}`).toBeLessThanOrEqual(2);
+    await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeInViewport();
+    await noOverflow(page);
+    expect(state.errors).toEqual([]);
+  }
+});
+
+test('a link the host answers as the visitor\'s own seat turns the panel plain, with its ground and its Revenant', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch });
+  await page.route('**/api/lobby/invitations', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ invitations: [{ token: 'inv', kind: 'seat', seat: 'player2', table: rooks }] }) }));
+  await page.reload();
+  await expect(page.locator('#sign-in-panel')).toHaveAttribute('data-door', 'plain');
+  await expect(page.locator('#sign-in-art img.sign-in-creature')).toHaveCount(1);
+  await expect(page.locator('#sign-in-art img.sign-in-duel')).toHaveCount(0);
+  expect(state.errors).toEqual([]);
+});
+
 test('a spent link is not called an invitation that waits', async ({ page }) => {
   await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch });
   await expect(page.getByRole('heading', { name: 'This invitation can no longer be used.' })).toBeVisible();

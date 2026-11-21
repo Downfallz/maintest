@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { doorWords, invitationKeys, invitationOf, nameNext } from './door.js';
+import { doorPictures, doorWords, invitationKeys, invitationOf, nameNext } from './door.js';
 
 const offered = (table, seat = 'player2') => ({ invitations: [{ token: 'inv', kind: 'invitation', seat, table }] });
 const bastiens = { format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'bastien' }, { seat: 'player2', kind: 'open', name: 'Open seat' }] };
@@ -62,4 +62,11 @@ test('a link the host says is spent is not called an invitation that waits: the 
 
 test('a link that carries the visitor\'s own seat is a way back to their game, not an invitation', () => {
   assert.equal(invitationOf({ invitations: [{ token: 'mine', kind: 'seat', seat: 'player1', table: bastiens }] }), null);
+});
+
+test('the panel an invitation opens shows the duel, two teams of three, in place of the ground and the Revenant', () => {
+  assert.deepEqual(doorPictures(null), ['eclipse-ground', 'revenant']);
+  assert.deepEqual(doorPictures({}), ['duel'], 'before the host describes it');
+  assert.deepEqual(doorPictures(invitationOf(offered(bastiens))), ['duel']);
+  assert.deepEqual(doorPictures({ spent: true }), ['duel'], 'a spent link still came from a friend who never saw the showcase');
 });

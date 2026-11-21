@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 is built; S2 is next.
+questions at the end). S1 and S2 are built; S3 is next.
 
 ## What the owner asked for
 
@@ -180,6 +180,16 @@ result in `battle/src` with UX12.
    points the brief's row at the file, and looks at the sheet (`/ux-pass`). At 358 px drawn it is 21 KB, 71 KB at
    twice the density. Tests: `studio/ux-pictures.test.js`, `table/door.test.js`, the door's cases in
    `lobby-home.spec.js`, the measures.
+
+   *Built (2026-11-21)*: `duel` is declared for `table/sign-in`, drawn 358 px on a phone and 980 px wide, asked for
+   first; its budget rose from 128 to 192 KiB (it counts the duel with the ground and the Revenant, though a visit
+   loads one or the other). `doorPictures` in `table/door.js` draws it on every panel an invitation opens, a spent
+   link included, and the ground and the Revenant again when the host answers the link as the visitor's own seat.
+   Up to 1040 px the duel is drawn whole above the words; wider, it sits beside them, its left edge fading under
+   a mask, and the cover cuts a little of the right team. The brief's row names the file. Seen on the walk's
+   sheets at 390 and 320 px and on the real host at 800 to 1280 px; the measures of `invitation-sign-in` hold
+   (no target under 44 px, no overlap, no shift, axe clean), its height 830 px at 320. Left: the browser suite's
+   mock server does not serve `page-art/`, so its specs check the picture's box and not its pixels.
 3. **S3, the focus point.** An optional `focus` in a declaration (`"focus": "30% 60%"`), written by
    `pictureElement` and `pictureHtml` as the image's `object-position`. ADR 0198's "nothing is cropped" holds: no
    file changes, only where CSS cuts; [page-pictures.md](page-pictures.md) gains the line. Tests:

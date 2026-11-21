@@ -150,11 +150,14 @@ test('a brief\'s request is listed with its screen, its size, what holds its pla
   assert.deepEqual(asked('# A\n\n## B\n\n### Pictures\n\nNone.\n', 'x.md'), []);
 });
 
-test('every request of the briefs in the repository can be listed, and the doors ask for one painting', () => {
+test('every request of the briefs in the repository can be listed, and the doors\' duel is answered by the owner\'s painting', () => {
   const folder = new URL('docs/art/journeys/', root);
   const requests = readdirSync(folder).filter(name => name.endsWith('.md'))
     .flatMap(name => asked(readFileSync(new URL(name, folder), 'utf8'), `docs/art/journeys/${name}`));
-  assert.equal(requests.filter(one => one.brief.endsWith('doors.md')).length, 1);
+  // docs/art/scene-paintings-plan.md, S2: the one request the doors had open is the owner's file, drawn on the sign-in.
+  assert.equal(requests.filter(one => one.brief.endsWith('doors.md')).length, 0);
+  assert.match(read('docs/art/journeys/doors.md').toString('utf8'), /\| The duel, for the invited friend:[^\n]*\| `docs\/art\/sources\/pages\/duel\.webp` \|/);
+  assert.deepEqual(authored.pictures.find(one => one.name === 'duel')?.pages, { 'table/sign-in': 'largest' });
   for (const one of requests) assert.ok(one.prompt.length > 40 && existsSync(new URL(one.holds, root)), `${one.shows}: a prompt, and a painting that holds its place`);
 });
 
