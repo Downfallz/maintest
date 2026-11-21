@@ -368,8 +368,18 @@ public sealed class CatalogueProjectionTests
 
         var card = Card(spell);
 
-        card.Marks.ShouldNotBeNull().ShouldBe([new CardMark(nameof(Damage), OnCaster: false), new CardMark(nameof(Heal), OnCaster: true)]);
+        card.Marks.ShouldNotBeNull().ShouldBe([new CardMark(nameof(Damage), OnCaster: false, "1"), new CardMark(nameof(Heal), OnCaster: true, "2")]);
         card.Marks.Count.ShouldBe(card.Effects.Count + card.CasterEffects.Count);
+    }
+
+    [Fact]
+    public void A_marked_line_carries_its_numbers_alone_the_amount_then_how_many_rounds_it_lasts()
+    {
+        var spell = Spell(TestContent.Strike, TargetingSpec.SingleTarget(TargetOrigin.Enemy), casterEffects: [EnergyGain.Of(2), DefenseBuff.Of(1, Duration.OfRounds(3)), DefenseBuff.Of(3, Duration.Permanent), Bleed.Of(4, 2), Stun.For(1)]);
+
+        var card = Card(spell);
+
+        card.Marks.ShouldNotBeNull().Select(mark => mark.Figures).ShouldBe(["1", "+2", "+1 · 3", "+3 · perm.", "4 · 2", "1"]);
     }
 
     /// <summary>

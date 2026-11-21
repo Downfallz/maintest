@@ -43,3 +43,12 @@ test('every form a mutation leads to is declared for the battle page at 64 px, l
     assert.ok([64, 128].every(width => picture.sizes.some(size => size.width === width)), `${artwork} is sent at 64 and 128 px`);
   }
 });
+
+test('the spellbook draws a portrait only at widths the battle page declares, the 24 px under 660 px tall', async () => {
+  // A size the declaration does not hold would be scaled down from a larger file, and counted by no budget.
+  const { SPELLBOOK_PORTRAIT_SIZES } = await import('./battle-spellbook.js');
+  const widths = [...SPELLBOOK_PORTRAIT_SIZES.matchAll(/(\d+)px(?:,|$)/g)].map(match => Number(match[1]));
+  assert.deepEqual(widths, [24, 40]);
+  assert.match(SPELLBOOK_PORTRAIT_SIZES, /^\(orientation: portrait\) and \(max-height: 660px\) 24px, 40px$/);
+  for (const name of declared) assert.ok(widths.every(width => PAGE_ART[name].phone['table/battle'].includes(width)), name);
+});

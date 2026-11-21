@@ -72,6 +72,37 @@ public static class EffectLine
     }
 
     /// <summary>
+    /// The line's numbers without its words, as a narrow face shows them beside the stat's icon: <c>Damage 7</c>
+    /// is <c>7</c>, <c>Defense +1, 3 rounds</c> is <c>+1 · 3</c>, <c>Bleed 4 a round, 2 rounds</c> is
+    /// <c>4 · 2</c>, <c>Defense +3, permanent</c> is <c>+3 · perm.</c>.
+    /// </summary>
+    public static string Figures(Effect effect)
+    {
+        ArgumentNullException.ThrowIfNull(effect);
+        return effect switch
+        {
+            Damage damage => Number(damage.Amount),
+            Heal heal => Number(heal.Amount),
+            EnergyGain energy => $"+{Number(energy.Amount)}",
+            EnergyDrain drain => $"-{Number(drain.Amount)}",
+            Bleed bleed => $"{Number(bleed.AmountPerRound)} · {Span(bleed.Duration)}",
+            Regeneration regeneration => $"{Number(regeneration.AmountPerRound)} · {Span(regeneration.Duration)}",
+            EnergyRegeneration energy => $"{Number(energy.AmountPerRound)} · {Span(energy.Duration)}",
+            Stun stun => Span(stun.Duration),
+            DefenseBuff buff => $"+{Number(buff.Amount)} · {Span(buff.Duration)}",
+            DamageBuff buff => $"+{Number(buff.Amount)} · {Span(buff.Duration)}",
+            DefenseDebuff debuff => $"-{Number(debuff.Amount)} · {Span(debuff.Duration)}",
+            InitiativeBuff buff => $"+{Number(buff.Amount)} · {Span(buff.Duration)}",
+            InitiativeDebuff debuff => $"-{Number(debuff.Amount)} · {Span(debuff.Duration)}",
+            _ => throw new NotSupportedException($"No card figures are written for {effect.GetType().Name}. The set of effects is closed (ADR 0012), so a new one is added here as well."),
+        };
+    }
+
+    private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
+
+    private static string Span(Duration duration) => duration.Rounds is { } rounds ? Number(rounds) : "perm.";
+
+    /// <summary>
     /// How long it lasts, as a card says it: <c>permanent</c>, <c>1 round</c>, <c>2 rounds</c>.
     /// <see cref="Duration.ToString" /> is always plural, and the printed deck is not — "1 rounds" is on no
     /// card of <c>docs/tabletop/components.md</c> §2.2, and the widths §2.3 measured were measured without it.

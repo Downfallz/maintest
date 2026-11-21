@@ -5,10 +5,11 @@ import { cardTitle, cardsById } from '../../table/card.js';
 import { tempoLabel, TEMPO_RULE } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { spellbookControls } from './spellbook';
+import { chosenSpell } from '../../table/battle-spellbook.js';
 
 type Controller = ReturnType<typeof createBattleCombat>;
 type Model = ReturnType<Controller['model']>;
-export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string; visual?: { portrait?: string | null } | null; marks?: { kind: string; onCaster: boolean }[] }[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
+export interface SpellCatalogue { cards?: { id: string; name: string; type?: string; creatureClass?: string; cost?: number; targeting?: string; effects?: string[]; casterEffects?: string[]; critical?: string; criticalThreshold?: number | null; criticalNote?: string; visual?: { portrait?: string | null } | null; marks?: { kind: string; onCaster: boolean; figures?: string }[] | null }[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
 
 // The combat form owns HTML only. Choices and request lifetimes live in the controller; the scene only
 // receives the current highlights. Rebuilding a list is keyed so polls never steal keyboard focus or scroll.
@@ -67,7 +68,9 @@ export function combatControls(controller: Controller, name: (id: unknown) => st
     el('combat-open').textContent = model.waitingFor === 'Target' ? 'Choose targets' : 'Choose spell';
     el('combat-targets').hidden = !targeting;
     const preview = battleTargetPreview(model);
-    const about = { name: preview ? cardTitle(cards.get(preview.spell)) || '' : '', effects: catalogue?.effects ?? [] };
+    // The chosen card in full, which the spellbook's faces leave: its lines in words, its crit chance and note.
+    const about = { name: preview ? cardTitle(cards.get(preview.spell)) || '' : '', effects: catalogue?.effects ?? [],
+      chosen: preview ? chosenSpell(model, catalogue, preview.spell) : null };
     targetPreview.render(targeting ? preview : null, about);
     intentPreview.render(choosing && model.waitingFor === 'Intent' ? preview : null, about);
     el('combat-error').textContent = model.error; el('combat-error').hidden = !model.error || choosing;

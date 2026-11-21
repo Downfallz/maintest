@@ -74,7 +74,7 @@ not physical-device certification or an observed novice playtest. Each row maps 
 | Tempo | #411: tabs, editable team draft, one confirmation, compact spell reference | Covered — editable team tabs, one frozen batch and explicit interrupted continuation; [AU5 #454](https://github.com/Downfallz/maintest/pull/454) | Sequential host protocol retained; AU5 |
 | Tempo consequences | Short rule and compact cost/critical spell reference | Covered — per-creature energy, cost/critical reference, catalogue fallback; [AU5 #454](https://github.com/Downfallz/maintest/pull/454) | Instinct/Precision tradeoff and expandable spell details; AU5 |
 | Initiative / ties | Turn number, initiative, d20 rerolls, turn-order panel, completed slots | Covered — exact order/roll reference and same-team ordering; [AU11 #458](https://github.com/Downfallz/maintest/pull/458) | Public reveal only; same-team choices retain the host protocol |
-| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Covered — compact grouped cards, full details and retained browsing; [AU9 #455](https://github.com/Downfallz/maintest/pull/455) | Selected-target preview remains AU10 |
+| Spell selection | Compact grouped cards, detailed view, stable size, availability and cost | Covered — compact grouped cards two a row, the chosen card in full and retained browsing; [AU9 #455](https://github.com/Downfallz/maintest/pull/455), amended by UX12 P3 | Selected-target preview remains AU10 |
 | Targeting predictions | Host guidance: remaining energy, normal/critical effects, caster effects and caveats | Covered — current-question estimates, costs, caster effects and fallback; [AU10 #459](https://github.com/Downfallz/maintest/pull/459) | Compact confirmation summary and current-board estimates; AU10 |
 | Action result | Caster → spell → targets, critical/fizzle, applied effects, dropped targets, before/after | Covered — applied effects, recorded before/after and linked journal; [AU6 #456](https://github.com/Downfallz/maintest/pull/456) | Persist structured detail and link scene/result to its console entry; AU1/AU6 |
 | Creature inspection | Conditions, source/duration, public mutations and spell faces, ally/opponent references | Covered — public mutations/spells/conditions and last action; [AU12 #461](https://github.com/Downfallz/maintest/pull/461) | Current or explicitly recorded/pinned reference; AU12 |
@@ -263,7 +263,7 @@ No implementation slice is completed by this document.
 | AU6 (implemented) | Console filters, earlier rounds, detailed action inspection and live round review | History loading/rendering and recorded action boundaries | AU1, AU3b |
 | AU7 | Step/Auto/Skip and coherent last-action → aftermath → upkeep pacing | Playback coordinator, match model, historical display | AU3b, AU6 |
 | AU8 (implemented) | Persistent Mutation Tree reference and public unlock receipts | Tree reference, inspection, shared acquisition data | AU4, AU1 |
-| AU9 | Compact grouped spellbook with stable selection and full details (implemented) | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
+| AU9 | Compact grouped spellbook with stable selection, two a row and the chosen card in full (implemented; amended by UX12 P3) | `combat.ts`, `card.js`, `hand.js`, responsive UI | AU2 |
 | AU10 (implemented) | Host-backed targeting preview and readable confirmation summary | `guidance.js`, combat controls and target HUD | AU9 |
 | AU11 | Readable initiative/ties and reveal summary | `timeline.js`, `ties.js`, planning + scene overlays | AU5, AU1 |
 | AU12 | Creature inspector with public mutations, spell details and effect sources | `live.ts`, inspection surface, cards/conditions | AU8–AU11 |
@@ -445,7 +445,7 @@ Graph and detail navigation work on phone and keyboard; close restores the origi
 ### AU9 — Choose a spell without fighting the list
 
 Use served card types/family accents for compact grouping, visible cost and positive critical indicators,
-availability reasons, plus an explicit full-details mode. Show actor, energy and turn context together.
+availability reasons, two spells a row (amended by UX12 P3: no full-details mode). Show actor, energy and turn context together.
 Use paging/internal scrolling appropriate to the viewport; keep confirmation stable.
 The selected row must not grow under the pointer, and polls must not reset focus/scroll.
 Show zero energy cost; omit meaningless zero critical badges.
@@ -457,8 +457,14 @@ position; a same-question poll preserves deliberate browsing. No second tap subm
 Implemented by `table/battle-spellbook.js` and `battle/src/spellbook.ts` through the existing combat
 controller. Served types/palette remain presentation-only; current host offers alone control eligibility.
 The reference preserves its DOM, focus and scroll through same-question reads and field-target round trips;
-a new question clears it. Full details exposes long names and complete card text, including unavailable
-cards. The fixed footer retains explicit confirmation and the existing Action/Intent/Target protocol.
+a new question clears it.
+
+Amended by UX12 P3 (`docs/art/ux12-pictures-plan.md`, the owner, 2026-11-20): the spellbook shows two spells a
+row at every width, and its full-details mode goes. Each face in its column keeps the whole name, the targeting,
+the cost and crit chips, the availability and each effect line as its icon and the host's numbers; the button
+speaks the lines in words. The complete card text (the effect lines in words, the crit note, what the chance holds
+for) is on the chosen card above the foot: every spell is read in full before it is **declared**, not before it is
+chosen, and going back keeps the card the player was on. The fixed footer retains explicit confirmation and the existing Action/Intent/Target protocol.
 
 ### AU10 — Understand targets and cost before confirming
 

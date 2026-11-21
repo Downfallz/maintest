@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleSpellbook } from './battle-spellbook.js';
+import { battleSpellbook, chosenSpell } from './battle-spellbook.js';
 
 // Card types and classes as the host serves them (SpellType and CreatureClass names), never invented ones.
 const model = overrides => ({ known: ['free', 'ward', 'costly', 'unknown'], spells: ['free', 'costly'], short: [], reference: { energy: 2 }, ...overrides });
@@ -21,8 +21,14 @@ test('a free spell shows a zero cost rather than none', () => {
 test('a spell that never crits shows no critical badge', () => {
   assert.equal(row('free').crit, null);
 });
-test('the catalogue critical names its tempo and the face of the d20', () => {
-  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · d20 17+ · catalogue' });
+test('the catalogue critical names its tempo and the face of the d20, which the face in a column keeps', () => {
+  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · d20 17+ · catalogue', face: 'd20 17+' });
+});
+test('the chosen spell is its card and the crit chance it holds now, for the card in full above the foot', () => {
+  const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Standard', standardCriticalChance: .5 }] } });
+  assert.deepEqual(chosenSpell(m, catalogue, 'costly'), { card: catalogue.cards[0], crit: { value: '50%', hint: 'at this tempo' } });
+  assert.equal(chosenSpell(m, catalogue, 'unknown'), null);
+  assert.equal(chosenSpell(m, catalogue, null), null);
 });
 test('full details list the target, the effects and the caster effects in card order', () => {
   assert.deepEqual(row('free').details, [{ role: 'target', text: 'Self' }, { role: 'caster', text: 'Gain energy' }]);

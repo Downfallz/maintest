@@ -1,13 +1,14 @@
 import { battleTargetPreview } from '../../table/battle-targets.js';
 import { outcomeChip } from '../../table/effect-chips.js';
 import { recapEffectText } from '../../table/feed.js';
-import { chipElement, iconElement, type EffectChip } from './condition-icons';
+import { chipElement, conditionKey, iconElement, type EffectChip } from './condition-icons';
 
 type Preview = ReturnType<typeof battleTargetPreview>;
 type Cue = { kind: string; glyph?: string; harmful: boolean };
 const line = (tag: string, value: string, className = '') => {
   const node = document.createElement(tag); node.textContent = value; node.className = className; return node;
 };
+type Chosen = { card: { effects?: string[]; casterEffects?: string[]; criticalNote?: string; marks?: { kind: string }[] | null }; crit: { value: string; hint?: string } | null } | null;
 type Outcome = { effect?: { amount?: number; amountPerRound?: number; duration?: { rounds?: number; isPermanent?: boolean } } };
 /** How long an outcome lasts, as the chip shows it beside its amount: "2 rds", "/ rd", "perm."; empty when it is at once. */
 export function lasting(outcome: Outcome) {
@@ -31,15 +32,36 @@ function chips(outcomes: unknown[], effects: Cue[]) {
 }
 
 // The estimate under the field while targets are chosen, in the spell card's design: the spell's name with its
-// cost and crit chips, then what each selected target would take, plain and on a crit, as the field's effect
+// cost and crit chips, the chosen card in full (its lines in the host's words, its crit chance and what it holds
+// for, its crit note: what the spellbook's faces leave, read before the spell is declared), then what each
+// selected target would take, plain and on a crit, as the field's effect
 // chips, and what the caster takes once. The scroll region and its position survive polls; only changed facts
 // replace the non-interactive content, and the confirmation buttons stay outside it.
+function chosenCard({ card, crit }: NonNullable<Chosen>, effects: Cue[]) {
+  const nodes: HTMLElement[] = [];
+  const lines = [...(card.effects ?? []), ...(card.casterEffects ?? [])];
+  if (lines.length) {
+    const list = line('ul', '', 'spell-card-effects target-card');
+    list.append(...lines.map((text, index) => {
+      const item = line('li', '', 'spell-card-effect'), mark = card.marks?.[index];
+      const key = mark ? conditionKey(mark.kind, effects) : 'other';
+      item.dataset.cue = key; item.append(iconElement(key), line('span', text));
+      if (index >= (card.effects ?? []).length) item.dataset.caster = 'true';
+      return item;
+    }));
+    nodes.push(list);
+  }
+  if (crit) nodes.push(line('p', [`Crit ${crit.value}`, crit.hint].filter(Boolean).join(' · '), 'target-crit-hint'));
+  if (crit && card.criticalNote) nodes.push(line('p', card.criticalNote, 'spell-card-note'));
+  return nodes;
+}
+
 export function targetPreviewControls(id: string) {
   const region = document.getElementById(id)!;
   let key = '';
-  function render(model: Preview, { name = '', effects = [] }: { name?: string; effects?: Cue[] } = {}) {
+  function render(model: Preview, { name = '', effects = [], chosen = null }: { name?: string; effects?: Cue[]; chosen?: Chosen } = {}) {
     region.hidden = !model;
-    const nextKey = JSON.stringify([model, name]);
+    const nextKey = JSON.stringify([model, name, chosen]);
     if (key === nextKey) return;
     key = nextKey;
     const scroll = region.scrollTop;
@@ -60,6 +82,7 @@ export function targetPreviewControls(id: string) {
     }
     head.append(line('strong', name || model.spell, 'spell-card-name'), badges);
     const nodes: HTMLElement[] = [head];
+    if (chosen) nodes.push(...chosenCard(chosen, effects));
     if (model.reason) nodes.push(line('p', model.reason, 'target-reason'));
     if (model.note) nodes.push(line('p', model.note, 'target-note'));
     for (const row of model.rows) {
