@@ -6,8 +6,8 @@ import { decided } from './decision.js';
 test.beforeEach(returningBattlePlayer);
 const roster = [1, 2, 3].map(id => ({ id, name: `Creature ${id}`, isAlive: true, health: 20, maxHealth: 20, energy: 2, conditions: [], acquiredTiers: [], knownSpells: [] }));
 const roots = ['Brute', 'Predator', 'Warped'];
-const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, visual: { family: name.toLowerCase() }, level: 1, initiativeBonus: i, spells: [`spell${i}`], tags: [['Guard', 'Pressure'], ['Speed', 'Bleed'], ['Magic', 'Control']][i] })).concat([
-  { id: 'future', name: 'Ironhide', level: 2, prerequisites: ['root0'], initiativeBonus: 1, spells: [] },
+const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, visual: { family: name.toLowerCase(), artwork: `${name.toLowerCase()}-base` }, level: 1, initiativeBonus: i, spells: [`spell${i}`], tags: [['Guard', 'Pressure'], ['Speed', 'Bleed'], ['Magic', 'Control']][i] })).concat([
+  { id: 'future', name: 'Ironhide', visual: { family: 'brute', artwork: 'brute-stage2-ironhide' }, level: 2, prerequisites: ['root0'], initiativeBonus: 1, spells: [] },
   { id: 'cap', name: 'Shared capstone', visual: { family: 'brute', portrait: 'titan' }, level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: i === 1 ? '15%' : '0%',
@@ -349,5 +349,86 @@ test('a private preview draws the illustration the drafted mutation would give t
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
   await page.clock.runFor(200);
   await expect(page.locator('#actor-layer [data-creature="1"]')).toHaveAttribute('data-artwork-shown', 'predator-base');
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+// The forms a mutation leads to (UX12 P5): the catalogue's `artwork`, 64 px wide (the paintings are 3:2), from its own 64 or 128 px files.
+const formsAsked = page => {
+  const asked = [];
+  page.on('request', request => { const name = /\/page-art\/mutation-([a-z0-9-]+?)-(?:64|128)\./.exec(request.url()); if (name) asked.push(name[1]); });
+  return asked;
+};
+const drawnAt64 = image => image.evaluate(one => [one.getBoundingClientRect().width, Math.round(one.getBoundingClientRect().height), one.alt]);
+
+test('each offer of the pick shows the form it leads to at 64 px, named by its words, in a short portrait sheet', async ({ page }, info) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const asked = formsAsked(page); const h = await mount(page);
+  const offers = page.locator('[data-mutation]'); await expect(offers).toHaveCount(3);
+  for (const [i, name] of roots.entries()) {
+    const offer = page.locator(`[data-mutation="root${i}"]`), form = offer.locator('img.mutation-form');
+    await expect(form).toHaveCount(1); await expect(offer.locator('svg')).toHaveCount(0);
+    await expect(form).toHaveAttribute('loading', 'lazy');
+    await expect(form).toHaveAttribute('srcset', new RegExp(`mutation-${name.toLowerCase()}-base-64\\.[0-9a-f]+\\.webp 64w, .*mutation-${name.toLowerCase()}-base-128\\.`));
+    expect(await drawnAt64(form)).toEqual([64, 43, '']);
+    // The form adds no word: the offer is still named by the mutation it shows.
+    await expect(offer.locator('.mutation-name')).toHaveText(name); await expect(offer).toHaveAccessibleName(new RegExp(`^${name}`));
+  }
+  await offers.first().scrollIntoViewIfNeeded();
+  await expect.poll(() => offers.first().locator('img').evaluate(image => image.currentSrc)).toMatch(/mutation-brute-base-(64|128)\.[0-9a-f]+\.webp$/);
+  await expect(page.locator('#planning-creatures')).toBeHidden();
+  await offers.first().click(); await page.clock.runFor(150);
+  await fitsViewport(page, '#planning-confirm, #planning-close');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('mutation-forms-pick.png') });
+  // The tree's forms are its own: none is asked for before the Full Mutation Tree opens.
+  expect(asked.filter(name => !['brute-base', 'predator-base', 'warped-base'].includes(name))).toEqual([]);
+  expect(h.state.errors).toEqual([]);
+});
+
+test('the phone tree shows each mutation\'s form on its board and in its detail, a capstone its portrait, none before it opens', async ({ page }, info) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const asked = formsAsked(page); const h = await mount(page);
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#mutation-atlas-open').click();
+  const tree = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body');
+  await expect(page.locator('#atlas-dialog')).toBeVisible();
+  for (const [id, artwork] of [['root0', 'brute-base'], ['root1', 'predator-base'], ['root2', 'warped-base'], ['future', 'brute-stage2-ironhide']]) {
+    const form = tree.locator(`[data-package="${id}"] img.mutation-form`);
+    await expect(form).toHaveCount(1); await expect(form).toHaveAttribute('src', new RegExp(`mutation-${artwork}-`));
+    expect(await drawnAt64(form)).toEqual([64, 43, '']);
+  }
+  await expect(tree.locator('[data-package="future"]')).toHaveAccessibleName(/^Ironhide/);
+  await expect(tree.locator('[data-package="future"] .atlas-node-name')).toHaveText('Ironhide');
+  // A capstone names no form: it keeps its portrait, at 24 px.
+  const cap = tree.locator('[data-package="cap"]');
+  await expect(cap.locator('img.mutation-form')).toHaveCount(0); await expect(cap.locator('img.spell-portrait')).toHaveCount(1);
+  expect(await cap.locator('img').evaluate(image => image.getBoundingClientRect().width)).toBe(24);
+  await tree.locator('[data-package="future"]').scrollIntoViewIfNeeded();
+  await expect.poll(() => asked).toContain('brute-stage2-ironhide');
+  // The detail's form stands left of the name, and Choose stays on the detail's first screen.
+  const head = detail.locator('.atlas-card-head'), form = head.locator('img.mutation-form');
+  await expect(head.locator('.atlas-card-name')).toHaveText('Predator');
+  await expect(form).toHaveAttribute('src', /mutation-predator-base-/); expect(await drawnAt64(form)).toEqual([64, 43, '']);
+  const [picture, name] = await Promise.all([form.boundingBox(), head.locator('.atlas-card-name').boundingBox()]);
+  expect(picture.x + picture.width).toBeLessThanOrEqual(name.x);
+  await expect(detail.getByRole('button', { name: 'Choose Predator' })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath('mutation-forms-tree.png') });
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('a form that fails to load leaves no gap, and the mutation keeps its name', async ({ page }) => {
+  const h = await mount(page);
+  await page.route('**/page-art/mutation-*', route => route.fulfill({ status: 404, body: '' }));
+  await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  const tile = page.locator('#atlas-board [data-package="future"]'), form = tile.locator('img.mutation-form');
+  await tile.scrollIntoViewIfNeeded();
+  await expect(form).toHaveClass(/missing/); await expect(form).toBeHidden();
+  await expect(tile.locator('.atlas-node-name')).toHaveText('Ironhide'); await expect(tile).toHaveAccessibleName(/^Ironhide/);
+  // In the detail too: without its form the head is the family above the name, not the two on one line. Ironhide
+  // is no offer of the pick, so its form was never loaded before the failure.
+  await tile.click(); const head = page.locator('#atlas-detail-body .atlas-card-head');
+  await expect(head.locator('.mutation-form')).toHaveClass(/missing/); await expect(head.locator('.atlas-card-name')).toHaveText('Ironhide');
+  const [family, name] = await Promise.all([head.locator('.atlas-card-family').boundingBox(), head.locator('.atlas-card-name').boundingBox()]);
+  expect(family.y + family.height).toBeLessThanOrEqual(name.y);
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });

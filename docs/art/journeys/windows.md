@@ -40,7 +40,8 @@ What holds for every screen of the journey:
   gap: beside a name it is not drawn (`.missing`, as the portraits do today).
 - **The sizes**, as `docs/art/page-pictures.json` declares them for the page "table/battle" (P2): a spell's portrait drawn at
   40 px (files of 40 and 80) and at 24 px (files of 24 and 48); the page counts both widths (`phone`); a mutation's form drawn
-  at 64 px (files of 64 and 128). The journal's 22 px becomes 24 px, so it is sent at its own size.
+  at 64 px (files of 64 and 128), 64 by 43 px since the paintings are 3:2 (P5 draws them whole. Cropping to a square
+  would scale the 64 px file up.). The journal's 22 px becomes 24 px, so it is sent at its own size.
 - **The owner's answer 1, and the decision after it** (2026-11-20, issue #1023): the form a mutation leads to is
   drawn at 64 px on each mutation of the pick, on each mutation of the Mutation Tree's board and in the tree's detail. A
   capstone keeps its portrait at 24 px. The board's forms make the tree's screen 192,598 B, against 5,232 B for
@@ -106,9 +107,9 @@ answers "what will my creature become?" before the mutation's words.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The form Brute leads to, on its face above its name. | 64 by 64 px | What will my creature become if I choose Brute? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of `tier:brute:v1` |
-| The form Warped leads to, on its face. | 64 by 64 px | The same, for Warped. | `table/battle-art/evolutions/warped-base.webp` |
-| The form Predator leads to, on its face. | 64 by 64 px | The same, for Predator. | `table/battle-art/evolutions/predator-base.webp` |
+| The form Brute leads to, on its face above its name. | 64 by 43 px | What will my creature become if I choose Brute? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of `tier:brute:v1` |
+| The form Warped leads to, on its face. | 64 by 43 px | The same, for Warped. | `table/battle-art/evolutions/warped-base.webp` |
+| The form Predator leads to, on its face. | 64 by 43 px | The same, for Predator. | `table/battle-art/evolutions/predator-base.webp` |
 
 The form takes the place of the family's sigil on the face (the sigil drew the family; the form, the colour and
 the name say it now), so the face grows by the form's height less the sigil's. A mutation offered later in the
@@ -185,9 +186,9 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The form each mutation of the board leads to, beside its stage numeral and name (21 mutations). | 64 by 64 px | Where does each branch lead? | `table/battle-art/evolutions/brute-base.webp` for Brute, and each mutation's own `artwork` |
+| The form each mutation of the board leads to, beside its stage numeral and name (21 mutations). | 64 by 43 px | Where does each branch lead? | `table/battle-art/evolutions/brute-base.webp` for Brute, and each mutation's own `artwork` |
 | A capstone's portrait beside its name on the board (Apex, Archmage, Titan), in place of a form it does not have. | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
-| The form the mutation in the detail leads to, left of its family, stage and name. | 64 by 64 px | What will this mutation make of my creature? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of the mutation open (Brute here) |
+| The form the mutation in the detail leads to, left of its family, stage and name. | 64 by 43 px | What will this mutation make of my creature? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of the mutation open (Brute here) |
 | A capstone's portrait beside its name in the detail, in place of a form it does not have (Apex, Archmage, Titan; not on this screen). | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
 | Pummel's portrait on its card in the detail. | 40 by 40 px | Which spell is this, before its words? | `docs/art/spell-portraits/pummel.webp` |
 | Brace's portrait on its card in the detail. | 40 by 40 px | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
@@ -240,8 +241,9 @@ None.
   reads it at 320.
 - Text under 11 px: 38 elements at 9 px at both widths (the board's stage numerals and OFFER, the detail's
   chips). The floor of 11 px is the match's ([the match's brief](match.md)); fixing it here is UX12's.
-- The board's forms, built by P5: each mutation of the board grows by its form, in columns of `min(94vw, 400px)`;
-  the critique reads it at 320. P5's test shows that no form loads before the window opens.
+- The board's forms, built by P5 (2026-11-21): each mutation of the board shows its form above its stage numeral and
+  name, in columns of `min(94vw, 400px)`; three mutations of a stage still share one line at 320. P5's test shows
+  that no form of the board loads before the window opens. The critique (P6) reads it at 320.
 
 ## The spellbook (`spell-choice`)
 

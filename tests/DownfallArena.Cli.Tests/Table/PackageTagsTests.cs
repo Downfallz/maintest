@@ -92,6 +92,24 @@ public sealed class PackageTagsTests : IDisposable
         visual.GetProperty("family").GetString().ShouldBe("brute");
         visual.GetProperty("motif").ValueKind.ShouldBe(JsonValueKind.Null);
         visual.GetProperty("portrait").ValueKind.ShouldBe(JsonValueKind.Null);
+        visual.GetProperty("artwork").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>The form a package leads to rides on its visual: the pick and the Mutation Tree draw it (UX12 P5).</summary>
+    [Fact]
+    public async Task The_catalogue_carries_the_form_a_package_s_art_names()
+    {
+        using var hosted = new HostedTables(null, content: content => content.Write("presentation/mutation-art.json", """{ "tier:guard:v1": { "family": "brute", "artwork": "brute-base" } }"""));
+        using var registry = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken);
+        using var place = (await registry.ReserveAsync(TestContext.Current.CancellationToken)).ShouldNotBeNull();
+        await registry.AddAsync(table, place, TestContext.Current.CancellationToken);
+
+        var answer = await table.Api.HandleAsync("GET", "/api/catalogue", string.Empty, table.Seats[0].Token);
+
+        answer.Status.ShouldBe(200);
+        var visual = JsonDocument.Parse(Encoding.UTF8.GetString(answer.Body)).RootElement.GetProperty("packages").EnumerateArray().Single().GetProperty("visual");
+        visual.GetProperty("artwork").GetString().ShouldBe("brute-base");
     }
 
     /// <summary>The portrait a package's art names rides on the package's visual, as a card's does.</summary>

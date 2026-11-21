@@ -1,6 +1,6 @@
 # Plan: the pictures of the spellbook, the journal and the Mutation Tree (UX12)
 
-Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P4 are built; P5 is next.
+Status: accepted, 2026-11-20 (the owner settled the questions at the end). P1 to P5 are built; P6 is next, then P7 and P8 (asked 2026-11-21).
 
 ## What the owner asked for
 
@@ -119,9 +119,35 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
 5. **P5, the pick and the Mutation Tree.** The form on each package's face and in the tree's detail, at 64 px.
    Tests: `battle-mutations.spec.js`, the short portrait sheet and the phone tree with the forms in, each form
    named by its words, none loaded before the window opens.
+
+   *Built (2026-11-21)*: each offer of the pick shows the form it leads to in place of its family's sigil
+   (`battle/src/mutation-tree.ts`), and the Mutation Tree shows it on each mutation of its board, above the stage
+   numeral and the name, and in the detail, left of the family, the stage and the name (`battle/src/mutation-atlas.ts`).
+   The form is the catalogue's `artwork` (`MutationVisual.Artwork`, already served; the page's `Package` type and
+   the pick's face now carry it), drawn by `mutationForm` (`battle/src/spell-portrait.ts`) from the 64 and 128 px
+   files P2 declared. The paintings are 3:2, so a form is 64 by 43 px. `aspect-ratio` holds its room, and it is
+   never cropped to a square. This corrects the brief's "64 by 64". A capstone keeps its portrait, at 24 px on the board. A form
+   that fails to load is not drawn; the name stays. `battle-mutations.spec.js`: the short portrait sheet at 320 by
+   568 and the phone tree with the forms in, each named by its words, the tree's forms not asked for before it
+   opens, a failed form on the board and in the detail; `PackageTagsTests` holds the catalogue's `artwork`;
+   `table/battle-spell-art.test.js` holds every `artwork` to a declared 64 px picture and every
+   call to that width. Measured once by hand, with the real tree at 320 and 390: three mutations of a stage share one
+   line, no column overflows; no test holds it, P6's walk measures it. Still to do in P6: the walk's sheets and the
+   critique. Two items stay in the brief's **Left** list: the pick's names under the foot at 320 by 568, and the
+   buttons whose names do not begin with their words.
 6. **P6, the sheets.** The walk filmed again at 320 and 390 px, the measures against the brief, the
    `ux-designer`'s reading, and the sheets shown to the owner, who approves them before the last pull request is
    reported ready. A short clip at 390 by 844 of one pick, as the craft plan asks of UX7 to UX12.
+
+7. **P7, the Tempo's spells and the order bar.** A spell's portrait at 24 px in the Tempo sheet's spell reference
+   (`battle/src/tempo.ts`, today `compact` cards without one) and beside a revealed spell in the activation order at
+   the field's foot (`#timeline`, `battle/src/order.ts`), the player's own and the opponent's. The bytes measured
+   first: the files are P2's 24 and 48 px, so the page's total should not move. Tests: `battle-tempo.spec.js` and
+   `battle-order.spec.js`, at 320 px, each name kept, a missing portrait leaving no gap; `table/battle-spell-art.test.js`.
+8. **P8, the crit chance under Instinct.** The spellbook's crit chip stays on a card at Instinct, in grey instead of
+   gold, with the chance it would have at Precision, and says so to a screen reader ("at Precision"). The chance is
+   the host's (`guide.standardCriticalChance`, the Precision chance, or the card's own), never computed by the page. Tests:
+   `battle-spellbook.spec.js` at both tempos; the brief's spellbook screen updated.
 
 P3, P4 and P5 each touch one window and can merge in any order once P2 is in. None needs an ADR: ADR 0197 and
 ADR 0198 already hold the rules.
@@ -147,6 +173,10 @@ The answers:
 Settled after P1 was merged (2026-11-20, issue #1023): the Mutation Tree's board draws each mutation's form at
 64 px too, as the pick and the tree's detail do; the 3 capstones keep their portrait at 24 px. The page's total
 does not change: 322,218 B. P5 builds it.
+
+Asked by the owner after P5 was opened (2026-11-21): the spell portraits also in the Tempo sheet's spell reference
+and in the activation order at the field's foot, for both teams (P7); and the crit chip kept at Instinct, in grey,
+showing the chance at Precision (P8). Each is a stage of its own, after P6.
 
 Settled after the P1 brief was first written (2026-11-20): the spellbook shows two spells a row, at every width,
 in place of one card a row with its full text (AU9 of `docs/tabletop/battle-ux-parity-plan.md`). The brief says
