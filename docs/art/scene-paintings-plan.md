@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 and S2 are built; S3 is next.
+questions at the end). S1 to S3 are built; S4 is next.
 
 ## What the owner asked for
 
@@ -196,6 +196,17 @@ result in `battle/src` with UX12.
    `pictureElement` and `pictureHtml` as the image's `object-position`. ADR 0198's "nothing is cropped" holds: no
    file changes, only where CSS cuts; [page-pictures.md](page-pictures.md) gains the line. Tests:
    `table/picture.test.js` and `studio/ux-pictures.test.js`.
+
+   *Built (2026-11-21)*: `focus` is optional in a declaration, two percentages in steps of 5%, refused on a strip.
+   `scripts/ux/pictures.mjs` checks it and carries it into `table/page-art.js` without encoding anything: it is no
+   part of a file's origin. `pictureElement` and `pictureHtml` write it as `data-focus-x` and `data-focus-y`, and
+   `table/identity.css` declares one rule a step on each axis that sets `object-position`. Not a style attribute, as
+   the stage said: the showcase's policy refuses one. A page may pass its own `focus`, for one scene in two boxes
+   (S7's pool and the Deathstalker's bank). [page-pictures.md](page-pictures.md) gains the field. The rule weighs nothing
+   (`:where`), so a page sheet's own `object-position` wins. Left: no scene is declared yet (S4). The showcase's
+   sheet copies only the rules it uses, so the stage that cuts a scene there copies its focus rules; a test of
+   `showcase/showcase.test.js` fails until it does. The pages' own `object-position` (the duel's 50% 45%, the
+   featured ground's 50% 40%) stay in their sheets.
 4. **S4, the field guide.** A `/ux-pass` on `showcase/mutations`: the brief gains the field guide's screen
    (`journeys/doors.md`), the three family heads and the three entries draw their scenes, `showcase/mutations`
    raises its `all` budget. Tests: `showcase/showcase.test.js`, the budget, the journey's measures at 320 and

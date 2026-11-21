@@ -3,6 +3,9 @@
 // into page-art.js; a page names a picture and where it is, and this writes the element. The showcase's build
 // writes the same form as text, with its own folder as `base`.
 import { PAGE_ART } from './page-art.js';
+import { focusAttributes } from './picture-focus.js';
+
+export { FOCUS_STEP, focusAttributes } from './picture-focus.js';
 
 /** Where the host serves the derived files. */
 export const PAGE_ART_BASE = '/page-art/';
@@ -24,9 +27,10 @@ function entryOf(name, page, art) {
  * The attributes of a picture's `<img>`, in the order they are written. `page` is the page's name in the
  * declaration, which says whether the picture is asked for first. `sizes` is the width it is drawn at when the
  * page draws it at another than the declaration's first, and for a strip the width of all its frames, since its
- * file holds them side by side; `alt` is empty for decoration.
+ * file holds them side by side; `alt` is empty for decoration. `focus` is where a box that cuts the painting
+ * centres the cut, when this box wants another than the declaration's: one scene in two boxes.
  */
-export function pictureAttributes(name, { page, alt = '', sizes, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
+export function pictureAttributes(name, { page, alt = '', sizes, focus, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
   const entry = entryOf(name, page, art), role = entry.pages[page], whole = entry.drawn[0] * entry.frames;
   const shown = entry.sizes.find(size => size.width >= whole) ?? entry.sizes.at(-1);
   const attributes = {
@@ -41,7 +45,8 @@ export function pictureAttributes(name, { page, alt = '', sizes, base = PAGE_ART
   if (role === 'largest') attributes.fetchpriority = 'high';
   else attributes.decoding = 'async';
   if (role === 'lazy') attributes.loading = 'lazy';
-  return attributes;
+  const cut = focus === undefined ? entry.focus : focus;
+  return cut === undefined ? attributes : { ...attributes, ...focusAttributes(cut) };
 }
 
 const written = attributes => Object.entries(attributes).map(([name, value]) => `${name}="${escaped(value)}"`).join(' ');
@@ -62,8 +67,9 @@ export function pictureElement(doc, name, options = {}) {
   return image;
 }
 
-function stripOf(name, { page, art = PAGE_ART }) {
+function stripOf(name, { page, focus, art = PAGE_ART }) {
   const entry = entryOf(name, page, art);
+  if (focus !== undefined) throw new Error(`${name}: a strip is never cut, and takes no focus`);
   if (entry.frames < 2 || entry.frames > STRIP_FRAMES) throw new Error(`${name} is not a strip of 2 to ${STRIP_FRAMES} frames`);
   return entry;
 }

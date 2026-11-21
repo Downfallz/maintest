@@ -415,6 +415,13 @@ for (const [lang, file] of [['en', 'index.html'], ['fr', 'fr/index.html']]) {
   });
 }
 
+test('a picture the showcase cuts at a focus finds its rules in the showcase\'s own sheet, which copies only what it uses', () => {
+  const css = read('showcase.css'), html = readdirSync(root, { recursive: true }).filter(name => String(name).endsWith('.html')).map(name => read(String(name))).join('\n');
+  const focused = [...html.matchAll(/data-focus-([xy])="(\d+)"/g)];
+  if (focused.length) assert.ok(css.includes(':where(.picture[data-focus-x], .picture[data-focus-y]) { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }'), 'the rule that places the cut');
+  for (const [, axis, at] of focused) assert.ok(css.includes(`.picture[data-focus-${axis}="${at}"] { --focus-${axis}: ${at}%; }`), `the step ${axis} ${at}`);
+});
+
 test('the showcase sends the kit\'s files only, none twice, and no picture smaller than 11 px of text beside it', () => {
   const sent = readdirSync(join(root, 'page-art'));
   assert.ok(sent.length > 0);

@@ -14,6 +14,7 @@ kit of [the pages' craft plan](ux-craft-plan.md), UX5). The patterns and their s
 | `table/page-art/` | Each picture at the sizes it is sent, as WebP, named by its own bytes. | `scripts/ux/pictures.mjs` |
 | `table/page-art.js` | The module the pages and the showcase's build read: each file, its width, its height, its bytes. | `scripts/ux/pictures.mjs` |
 | `table/picture.js` | The form: the `<img>`, and the strip. | A session |
+| `table/picture-focus.js` | Where a cut picture centres: the check of a `focus`, which imports nothing, so the script runs on a broken `page-art.js`. | A session |
 | `table/icons.js` | The icon set. | A session |
 | `docs/art/page-budget.json` | The bytes of pictures a page may load, and ADR 0197's times. | A session |
 
@@ -42,6 +43,12 @@ One entry in `docs/art/page-pictures.json`:
   first of `drawn`, or at more than one, each listed in `drawn`. The battle draws a spell's portrait at 40 px on a card and at 24 px in
   the journal's rows: `"drawn": [40, 24]`, `"phone": { "table/battle": [40, 24] }`. A page it does not name draws it
   at the first width.
+- `focus` (optional): where a box that cuts the painting centres the cut, across then down, in steps of 5%:
+  `"focus": "30% 60%"` keeps a subject left of centre and low in view. `pictureElement` and `pictureHtml` write it as
+  `data-focus-x` and `data-focus-y`, which `table/identity.css` turns into the image's `object-position`. The
+  showcase's policy refuses a style attribute, so it cannot be written inline; `showcase/showcase.css` copies the
+  rules of the focus it draws, and a test holds it. Nothing is cropped; the files are the same, and a focus that changes
+  derives nothing. A strip is never cut and takes none.
 
 Then derive, and commit what it writes:
 
@@ -64,6 +71,8 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 ```
 
 - `page` is required and must be in the picture's `pages`: that is what the budget counts.
+- `focus` gives this box its own cut when one picture is drawn in two boxes that cut it differently; without it, the
+  box uses the declaration's. A page sheet that sets `object-position` itself wins over both.
 - `alt` says what is shown; leave it out for decoration. `sizes` says the width it is drawn at when it is not
   the declaration's first; for a strip it is the width of all its frames. `class` goes on the image.
 - `pictureHtml` and `stripHtml` write the same as text, for a page built before it is served. The showcase's

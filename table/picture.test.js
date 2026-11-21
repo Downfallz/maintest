@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from './page-art.js';
-import { PAGE_ART_BASE, STRIP_FRAMES, pictureAttributes, pictureElement, pictureHtml, stripElement, stripHtml } from './picture.js';
+import { FOCUS_STEP, PAGE_ART_BASE, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, stripElement, stripHtml } from './picture.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -13,6 +13,8 @@ const read = path => readFileSync(new URL(path, root), 'utf8');
 const ART = {
   beast: { frames: 1, drawn: [308, 620], pages: { home: 'largest', ladder: 'lazy', door: 'first' }, sizes: [
     { file: 'beast-308.aa.webp', width: 308, height: 205, bytes: 1 }, { file: 'beast-620.bb.webp', width: 620, height: 413, bytes: 2 }] },
+  scene: { frames: 1, drawn: [533], focus: '30% 60%', pages: { home: 'lazy' }, sizes: [
+    { file: 'scene-533.ee.webp', width: 533, height: 300, bytes: 5 }] },
   cast: { frames: 6, drawn: [358], pages: { home: 'lazy' }, sizes: [
     { file: 'cast-2148.cc.webp', width: 2148, height: 201, bytes: 3 }, { file: 'cast-4296.dd.webp', width: 4296, height: 402, bytes: 4 }] },
 };
@@ -45,6 +47,27 @@ test('a page says its own width, its words for the picture and its folder', () =
 test('a picture nobody declared, or not for this page, is a fault and not a broken image', () => {
   assert.throws(() => pictureHtml('ghost', { page: 'home', art: ART }), /ghost is not a picture/);
   assert.throws(() => pictureHtml('beast', { page: 'stats', art: ART }), /beast is not declared for stats/);
+});
+
+test('a painting cut by its box keeps its subject in view: its focus is where the cut centres, and no file changes', () => {
+  assert.match(pictureHtml('scene', { page: 'home', art: ART }), /^<img class="picture" src="\/page-art\/scene-533\.ee\.webp" .* data-focus-x="30" data-focus-y="60">$/);
+  assert.doesNotMatch(pictureHtml('beast', { page: 'home', art: ART }), /data-focus/, 'without a focus, the centre, and nothing written');
+  // One scene in two boxes: the page that places it names where this one cuts.
+  assert.deepEqual(focusAttributes('0% 100%'), { 'data-focus-x': '0', 'data-focus-y': '100' });
+  const image = pictureElement(fakeDocument(), 'scene', { page: 'home', art: ART, focus: '75% 25%' });
+  assert.equal(image.attributes['data-focus-x'], '75');
+  assert.equal(image.attributes['data-focus-y'], '25');
+  for (const focus of ['05% 50%', '50% 005%', null, '30%', '30% 60', '33% 60%', '-5% 50%', '105% 50%', 'left top', 30]) assert.throws(() => focusAttributes(focus), /a focus is two percentages/, String(focus));
+  assert.throws(() => pictureHtml('scene', { page: 'home', art: ART, focus: null }), /a focus is two percentages/, 'a null focus is refused, not the declaration\'s');
+  assert.throws(() => stripHtml('cast', { page: 'home', art: ART, focus: '50% 50%' }), /a strip is never cut/);
+});
+
+test('the sheet places the cut at every focus the form allows, and nothing in the form needs an inline style', () => {
+  const sheet = read('table/identity.css');
+  for (let at = 0; at <= 100; at += FOCUS_STEP) for (const axis of ['x', 'y']) assert.ok(sheet.includes(`.picture[data-focus-${axis}="${at}"] { --focus-${axis}: ${at}%; }`), `${axis} ${at}`);
+  assert.match(sheet, /:where\(\.picture\[data-focus-x\], \.picture\[data-focus-y\]\) \{ object-position: var\(--focus-x, 50%\) var\(--focus-y, 50%\); \}/);
+  // The showcase's policy refuses a style attribute (showcase/_headers).
+  assert.doesNotMatch(pictureHtml('scene', { page: 'home', art: ART, focus: '10% 90%' }), /style=/);
 });
 
 test('a page that builds itself gets the same picture as an element', () => {
