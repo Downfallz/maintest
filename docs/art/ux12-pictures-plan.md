@@ -16,7 +16,7 @@ moment) stays UX12's.
 | Concern | What the code and the docs hold |
 | --- | --- |
 | The spellbook | `#combat-browser` in `#combat-dialog` (`table/battle.html`), the model `table/battle-spellbook.js`, drawn by `battle/src/spellbook.ts`. Each spell is a card from `battle/src/spell-card.ts`, with its portrait at 40 px. A `compact` card, in the docked sheet that must fit 320 by 568, keeps its text only. |
-| The journal | `#history-dialog`, eyebrow "Match journal", title History. `table/battle-history.js` keeps the public events; `battle/src/history.ts` draws a spell's portrait at 22 px in a row's title and in a cast's line. |
+| The journal | `#history-dialog`, eyebrow "Match journal", title History. `table/battle-history.js` keeps the public events; `battle/src/history.ts` draws a spell's portrait at 22 px in a row's title and in a cast's line (24 px since P4). |
 | The pick | `#planning-dialog[data-kind="Evolution"]`, drawn by `battle/src/mutation-tree.ts`: a package's face carries its portrait at 24 px; its spells are `compact` cards, without theirs. Under 660 px tall, in portrait, the sheet hides its recipients' tabs. |
 | The Mutation Tree | `#atlas-dialog`, drawn by `battle/src/mutation-atlas.ts`: packages at 24 px, a spell's card in the detail at 40 px. Under 820 px wide it fills the screen, its columns snap at `min(94vw, 400px)` and the detail is a bottom sheet. |
 | The classic table's tree | `table/table.js` (`renderMat`, `treeNode`): no picture. Not a window of the kit (ADR 0197). |
@@ -109,12 +109,13 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
 4. **P4, the journal.** The portraits drawn at 24 px from their own files; the acting creature gets no picture. Tests:
    `battle-history.spec.js`, a row named the same with its picture missing.
 
-   *Built (2026-11-21)*: the journal draws a spell's portrait at 24 px, in a row's title under All events and in a
-   cast's line of the summary (`battle/src/history.ts`, `table/battle.css`), so the browser takes the 24 or the 48 px
-   file P2 declared, in place of the 40 px file it scaled to 22. The acting creature has no picture. A portrait that
-   fails keeps its 24 px room, hidden, and the row and the cast keep their names (`battle-history.spec.js`).
-   `table/battle-spell-art.test.js` holds the journal's widths to the declaration. The page's total does not move:
-   P2 already counted the 24 and 48 px files. Still to do (P6): the walk's sheets and the critique.
+   *Built (2026-11-21)*: the journal draws a spell's portrait at 24 px, in the title of a row under All events and in
+   each cast line of the summary (`battle/src/history.ts`, `table/battle.css`). The browser now takes the 24 or 48 px
+   file that P2 declared. Before, it scaled the 40 px file down to 22 px. The acting creature has no picture. A
+   portrait that fails to load stays hidden but keeps its 24 px space. The row and the cast keep their names
+   (`battle-history.spec.js`). `table/battle-spell-art.test.js` holds the journal's widths to the declaration. The
+   page's total weight does not change: P2 already counted the 24 and 48 px files. Still to do (P6): the walk's
+   sheets and the critique.
 5. **P5, the pick and the Mutation Tree.** The form on each package's face and in the tree's detail, at 64 px.
    Tests: `battle-mutations.spec.js`, the short portrait sheet and the phone tree with the forms in, each form
    named by its words, none loaded before the window opens.

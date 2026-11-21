@@ -92,7 +92,9 @@ test('History opens on a summary of each round, and All events holds the full re
   const casts = card.locator('.summary-casts > li'); await expect(casts).toHaveCount(2);
   await expect(casts.first().locator('.spell-portrait')).toHaveAttribute('src', /\/page-art\/spell-[a-z-]+-40\.[0-9a-f]+\.webp$/);
   await expect.poll(() => casts.first().locator('.spell-portrait').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
-  // Drawn at 24 px and sent from its own 24 and 48 px files, never scaled down from the card's 40 (UX12 P4).
+  // Drawn at 24 px from its own 24 or 48 px file, never scaled down from the card's 40 px file (UX12 P4).
+  // The spell is the cast's one picture: the acting creature gets none.
+  await expect(casts.first().locator('img')).toHaveCount(1);
   await expect.poll(() => casts.first().locator('.spell-portrait').evaluate(image => image.currentSrc)).toMatch(/spell-[a-z-]+-(24|48)\.[0-9a-f]+\.webp$/);
   expect(await casts.first().locator('.spell-portrait').evaluate(image => image.getBoundingClientRect().width)).toBe(24);
   await expect(casts.nth(0)).toHaveAttribute('data-side', 'Opponent'); await expect(casts.nth(0)).toContainText('Creature 4');
@@ -124,10 +126,10 @@ test('History opens on a summary of each round, and All events holds the full re
   await expect(page.locator('#history-filter-kind')).toHaveValue(''); await expect(rows(page)).toHaveCount(2);
   expect(h.state.errors).toEqual([]);
 });
-test('a journal row whose portrait fails to load is named the same, its room held, and nothing is written', async ({ page }) => {
+test('a journal row whose portrait fails to load keeps its name and its space, and writes nothing', async ({ page }) => {
   await page.addInitScript(() => localStorage.removeItem('downfall.battle.history-view.v1'));
   const h = await mount(page);
-  // A window's portraits are made when it opens: from here every one of them fails.
+  // A window makes its portraits when it opens. From here on, every portrait request fails.
   await page.route('**/page-art/*', route => route.fulfill({ status: 404, body: '' }));
   await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
   const cast = page.locator('.summary-cast').first(), portrait = cast.locator('.spell-portrait');
@@ -136,7 +138,7 @@ test('a journal row whose portrait fails to load is named the same, its room hel
   expect(await portrait.evaluate(image => image.getBoundingClientRect().width)).toBe(24);
   await page.locator('#history-mode-events').click(); await expect(rows(page)).toHaveCount(1);
   const title = rows(page).first().locator('summary strong');
-  await expect(title.locator('.spell-portrait')).toHaveClass(/missing/);
+  await expect(title.locator('.spell-portrait')).toHaveClass(/missing/); await expect(rows(page).first().locator('summary img')).toHaveCount(1);
   await expect(title).toHaveText('Creature 4 (Opponent) · Strike');
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
