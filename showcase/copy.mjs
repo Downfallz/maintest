@@ -50,6 +50,12 @@ export const english = {
     ['Ranked PvP', 'Play another commander in 3v3. Each result updates your public rating. Your private stats show your wins, losses and draws, the mutations you picked and the spells you cast.'],
   ],
   leaderboardLink: 'See the leaderboard', platform: 'Play in your browser', footerTop: 'Back to top',
+  // The home's scenes (docs/art/scene-paintings-plan.md, S5), and the 404's.
+  scenes: {
+    charge: 'The Cataclysm breathes Incinerate into the Colossus’s shoulder, ice and lightning breaking around them under the eclipse.',
+    rest: 'A Predator lies at rest in a dark hall, embers still glowing in its shoulder.',
+  },
+  lost: { kicker: 'Error 404', title: 'Page not found.', back: 'Back to the game site', scene: 'Three claws grip a crumbling stone arch from above, an eye watching behind them.' },
 };
 
 export const french = {
@@ -103,4 +109,9 @@ export const french = {
     ['PvP classé', 'Affronte un autre joueur en 3 contre 3. Chaque résultat met à jour ta cote publique. Tes stats privées montrent tes victoires, tes défaites, tes nulles, les mutations choisies et les sorts lancés.'],
   ],
   leaderboardLink: 'Voir le classement', platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
+  scenes: {
+    charge: 'Le Cataclysme souffle Incinerate sur l’épaule du Colosse, la glace et la foudre éclatent autour d’eux sous l’éclipse.',
+    rest: 'Un Prédateur se repose dans une salle sombre, des braises luisent encore dans son épaule.',
+  },
+  lost: { kicker: 'Erreur 404', title: 'Page introuvable.', back: 'Retour au site du jeu', scene: 'Trois griffes agrippent d’en haut une arche de pierre qui s’effrite, un œil guette derrière elles.' },
 };

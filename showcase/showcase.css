@@ -79,6 +79,10 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .play-modes { position: relative; isolation: isolate; overflow: hidden; border-block: 1px solid var(--line-soft); background: var(--soot); }
 .play-modes::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(100deg, var(--soot), rgb(7 13 16 / .88) 56%, rgb(7 13 16 / .46)); }
 .modes-ground { position: absolute; inset: 0; z-index: -2; width: 100%; max-width: none; height: 100%; object-fit: cover; object-position: center 56%; }
+/* The broken charge above the ways to play (docs/art/scene-paintings-plan.md, S5): whole on a phone, a 3:1 band
+   from 700 px, cut at its focus on the flame. */
+.modes-scene { display: block; width: 100%; margin-top: clamp(18px, 2.5vw, 32px); background: var(--paper); }
+@media (min-width: 700px) { .modes-scene { aspect-ratio: 3; object-fit: cover; } }
 .mode-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 2vw, 30px); padding: 0; margin: clamp(22px, 3vw, 40px) 0 0; list-style: none; }
 .mode-list li { padding: clamp(16px, 2.2vw, 30px); background: var(--paper-glass); border-top: 2px solid var(--brand-line); }
 .mode-list li:nth-child(2) { border-color: var(--brand-ember); }
@@ -94,6 +98,12 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 .story-copy > p:not(.kicker), .tabletop-note p { margin-top: 18px; color: var(--muted); max-width: 65ch; }
 .story-copy > p:last-of-type { color: var(--ink); }
 .story h3 { font-size: clamp(24px, 2.5vw, 34px); line-height: 1.2; color: var(--bone); }
+/* The Predator at rest under the creator's coffee, whole, no wider than the note's words. */
+.story-scene { display: block; width: 100%; max-width: 640px; margin-top: 24px; background: var(--paper); }
+/* The 404 (docs/art/scene-paintings-plan.md, S5): the claw on the arch between the title and the way home. */
+/* Its title at a section's size, so "introuvable." holds one line at 320 and the way home stays in view. */
+.lost h1 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; }
+.lost-scene { display: block; width: 100%; max-width: 640px; margin-block: 24px 28px; background: var(--paper); }
 .tabletop-note { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
 .tabletop-note p { margin-top: 12px; }
 .commitments { padding: clamp(22px, 3vw, 36px); background: var(--tex-grain), var(--paper); border-top: 2px solid var(--brand-ember); }
@@ -231,6 +241,7 @@ h2 { font-size: clamp(37px, 4.5vw, 75px); line-height: 1.07; letter-spacing: -.0
 :where(.picture[data-focus-x], .picture[data-focus-y]) { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
 .picture[data-focus-x="50"] { --focus-x: 50%; }
 .picture[data-focus-y="40"] { --focus-y: 40%; }
+.picture[data-focus-y="45"] { --focus-y: 45%; }
 .picture[data-focus-y="55"] { --focus-y: 55%; }
 .anatomy { margin: 8px 0; max-width: 62ch; }
 /* The guide uses the same stat marks and palette as the battle cards and history. */

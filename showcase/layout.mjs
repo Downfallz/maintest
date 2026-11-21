@@ -19,7 +19,8 @@ export function selector(label, choices) {
 
 export function layout(c, kind, app, title, description, body, scripts = []) {
   const other = c.lang === 'fr' ? 'en' : 'fr';
-  const path = routes[c.lang], localized = routes[other][kind];
+  // A page without a route of its own (the 404) claims no address and leads to the other language's home.
+  const path = routes[c.lang], localized = routes[other][kind] ?? routes[other].home, addressed = kind in path;
   const section = id => (kind === 'home' ? '' : path.home) + '#' + id;
   const current = name => kind === name ? ' aria-current="page"' : '';
   return `<!doctype html>
@@ -30,12 +31,12 @@ export function layout(c, kind, app, title, description, body, scripts = []) {
   <meta name="theme-color" content="#0b1519">
   <title>${escape(title)} — Downfall Instinct</title>
   <meta name="description" content="${escape(description)}">
-  <link rel="canonical" href="${new URL(path[kind], SITE_ORIGIN).href}">
+  ${addressed ? `<link rel="canonical" href="${new URL(path[kind], SITE_ORIGIN).href}">
   ${Object.entries(routes).map(([lang, paths]) => `<link rel="alternate" hreflang="${lang}" href="${new URL(paths[kind], SITE_ORIGIN).href}">`).join('\n  ')}
   <meta property="og:type" content="website"><meta property="og:title" content="${escape(title)} — Downfall Instinct">
   <meta property="og:description" content="${escape(description)}">
   <meta property="og:url" content="${new URL(path[kind], SITE_ORIGIN).href}">
-  <meta property="og:image" content="${new URL('assets/eclipse-battle.webp', SITE_ORIGIN).href}">
+  <meta property="og:image" content="${new URL('assets/eclipse-battle.webp', SITE_ORIGIN).href}">` : '<meta name="robots" content="noindex">'}
   <link rel="icon" href="/assets/icon.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/marcellus-latin-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/branding.css"><link rel="stylesheet" href="/showcase.css">

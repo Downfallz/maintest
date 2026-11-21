@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S4 are built; S5 is next.
+questions at the end). S1 to S5 are built; S6 is next.
 
 ## What the owner asked for
 
@@ -146,7 +146,8 @@ The rules every placement keeps:
   walk on the screenshot at both widths. The screen reads with the pictures hidden.
 - A scene never pushes a window's filled action off a 320 by 568 screen: under 600 px tall, a head shrinks to
   64 px or goes.
-- Every scene is lazy, outside a door's first screen.
+- Every scene is lazy, outside a door's first screen. A page's one picture, on its first screen, is asked for
+  first: the 404's claw (S5).
 - Under less data (`Save-Data`), a ground goes and its card keeps its slate.
 - A cut, when a box is narrower than the painting, keeps the subject in view: a `focus` point in the
   declaration, not a second file.
@@ -154,7 +155,7 @@ The rules every placement keeps:
 
 Where the code goes: the register in `docs/art/sources/pages/scenes/README.md`; the declarations in
 `docs/art/page-pictures.json`; the focus point in `scripts/ux/pictures.mjs` and `table/picture.js`; the field
-guide in `showcase/guide.mjs`; the home in `showcase/page.mjs`; the 404 in `showcase/404.html`; the three forms in
+guide in `showcase/guide.mjs`; the home in `showcase/page.mjs`; the 404 in `showcase/not-found.mjs`; the three forms in
 `table/identity.css` and `table/picture.js`; the contrast measure in `scripts/ux/journey.mjs`; each screen in its
 page's script (`table/lobby*.js`, `table/account.js`, `table/leaderboard.js`, `table/stats.js`), the tree and the
 result in `battle/src` with UX12.
@@ -227,6 +228,21 @@ result in `battle/src` with UX12.
 5. **S5, the showcase home and its 404.** The broken charge in who you play, the Predator at rest by the
    creator's note, the claw on the 404, through the same pass. Tests: `showcase/showcase.test.js`, the budget,
    the home's largest paint unchanged.
+
+   *Built (2026-11-21)*: the brief adds both scenes to the home's section of `journeys/doors.md` and writes the 404's.
+   The broken charge sits under Who will you play?, above the three ways to play: whole on a phone (351 by 197 px at
+   390), a 3:1 band from 700 px cut at `50% 45%`, on the flame. The Predator at rest sits under the paragraph of the
+   morning coffee, whole, no wider than the note's 640 px. Both lazy, with an `alt` in English and French
+   (`showcase/copy.mjs`); no word shown changes. `showcase/home`'s `all` rose from 1,280 to 1,344 KiB (1,350,752
+   bytes measured, 99,150 more); its `first` holds, and the walk's paints read the same bytes before a scroll and the
+   same largest paint (1,036 and 1,048 ms, the median of five). The 404 is built by `showcase/not-found.mjs`, one a
+   language (`404.html`, `fr/404.html`: Cloudflare Pages serves the closest one up the path), in the site's layout
+   without an address of its own (`noindex`, no `canonical`); the claw sits between the title and the way home,
+   asked for first, as the page's one picture on its first screen (the rule above gains that line). A new budget,
+   `showcase/404`, 32 KiB. The walk gains `showcase-404` and `showcase-404-fr`: one filled action, no target under
+   44 px, axe clean, at 320 and 390. Left: the walk films the home's top only, so the two scenes were read on
+   shots of their sections at 320, 390 and 1280 px; the charge lies on the breach that grounds its section, two
+   paintings in one section, which the owner may refuse (the brief's **Left**).
 6. **S6, the three forms.** The head, the ground and the plate in `table/identity.css`, built from
    `pictureElement` with a scrim; the walk's contrast measure under text on a picture
    (a new `--contrast` of `scripts/ux/journey.mjs`); the design system's sources gain them. No screen uses them yet; the

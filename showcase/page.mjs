@@ -24,6 +24,9 @@ const SIZES = {
   move: '(max-width: 600px) 90vw, (max-width: 1420px) 26vw, 368px',
   // A strip's file holds its six frames side by side: it is drawn six times as wide.
   strip: '(max-width: 600px) 540vw, (max-width: 1420px) 156vw, 2208px',
+  // The scenes (docs/art/scene-paintings-plan.md, S5): the charge across the column, the rest no wider than the note.
+  modesScene: '(max-width: 850px) 90vw, min(1250px, 88vw)',
+  storyScene: '(max-width: 850px) min(90vw, 640px), min(640px, 52vw)',
 };
 // The round's three moves, one Brute followed through them, each a picture of the real battle view
 // (scripts/ux/round.mjs); Cast is a strip.
@@ -96,6 +99,7 @@ export function page(c, specimen, app) {
       <div class="story-copy">
         <p class="kicker">${c.storyKicker}</p><h2 id="story-title">${c.storyTitle}</h2>
         ${c.story.map(paragraph => `<p>${escape(paragraph)}</p>`).join('')}
+        ${art('predator-at-rest', { class: 'story-scene', alt: c.scenes.rest, sizes: SIZES.storyScene })}
         <div class="tabletop-note"><h3>${c.tabletopTitle}</h3><p>${c.tabletop}</p></div>
       </div>
       <aside class="commitments" aria-labelledby="commitments-title">
@@ -106,6 +110,7 @@ export function page(c, specimen, app) {
     </section>
     <section id="modes" class="play-modes" aria-labelledby="modes-title">${art('battlefield-breach', { class: 'modes-ground', sizes: '100vw' })}<div class="section contain">
       <p class="kicker">${c.platform}</p><h2 id="modes-title">${c.modesTitle}</h2>
+      ${art('elemental-charge', { class: 'modes-scene', alt: c.scenes.charge, sizes: SIZES.modesScene })}
       <ul class="mode-list">${c.modes.map(([name, description]) => `<li><h3>${escape(name)}</h3><p>${escape(description)}</p></li>`).join('')}</ul>
       <div class="actions">${play(c.play, 'outline-button')}<a class="discover" href="${new URL('leaderboard', app).href}">${c.leaderboardLink} ${arrow}</a></div>
       <p class="play-note">${c.playNote}</p>

@@ -47,6 +47,25 @@
       "pages": { "showcase/mutations": "lazy" }
     },
     {
+      "name": "elemental-charge",
+      "source": "docs/art/sources/pages/scenes/elemental-charge.webp",
+      "drawn": [351, 1250],
+      "focus": "50% 45%",
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "predator-at-rest",
+      "source": "docs/art/sources/pages/scenes/predator-at-rest.webp",
+      "drawn": [351, 640],
+      "pages": { "showcase/home": "lazy" }
+    },
+    {
+      "name": "latch-under-the-arch",
+      "source": "docs/art/sources/pages/scenes/latch-under-the-arch.webp",
+      "drawn": [351, 640],
+      "pages": { "showcase/404": "largest" }
+    },
+    {
       "name": "showcase-ground",
       "source": "table/battle-art/eclipse-battle.webp",
       "drawn": [720, 1440],

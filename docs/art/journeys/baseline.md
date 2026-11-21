@@ -16,7 +16,8 @@ axe cannot read the text set over a picture or inside the canvas.
 ## The two doors
 
 `showcase-round`, the round seen played, was added by UX6: its line is UX6's walk of 2026-11-20, the first that
-has the screen, not the baseline's.
+has the screen, not the baseline's. `showcase-404` and `showcase-404-fr`, the 404 with its claw, were added by the
+scene paintings' S5: their lines are S5's walk of 2026-11-21.
 
 At 320 by 568:
 
@@ -27,6 +28,8 @@ At 320 by 568:
 | showcase-home-fr | 7307 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-mutations | 4025 px | 262 | 0 | 3 img; 3 sent over twice their size | 11 px | 0 | 23 of 58 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-rules | 32495 px | 5895 | 0 | 2 img; 2 sent over twice their size | 10 px | 20 | 15 of 92 | 9 | 0 | 0 | 0.00 | label-content-name-mismatch (1), link-in-text-block (12), scrollable-region-focusable (2) |
+| showcase-404 | 767 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
+| showcase-404-fr | 767 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
 | sign-in-panel | 609 px | 35 | 0 | 4 background | 10 px | 10 | 4 of 7 | 2 | 0 | 0 | 0.00 | nothing |
 | invitation-sign-in | 609 px | 35 | 0 | 4 background | 10 px | 10 | 4 of 7 | 2 | 0 | 0 | 0.00 | nothing |
 | name-window (staged) | 446 px, a window | 41 | 1 | 1 background | 10 px | 4 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
@@ -42,6 +45,8 @@ At 390 by 844:
 | showcase-home-fr | 6754 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-mutations | 3922 px | 262 | 0 | 3 img; 3 sent over twice their size | 11 px | 0 | 23 of 58 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-rules | 27854 px | 5895 | 0 | 2 img; 2 sent over twice their size | 10 px | 20 | 17 of 92 | 11 | 0 | 0 | 0.00 | label-content-name-mismatch (1), link-in-text-block (12), scrollable-region-focusable (1) |
+| showcase-404 | 844 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
+| showcase-404-fr | 844 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
 | sign-in-panel | 844 px | 35 | 0 | 4 background | 10 px | 10 | 4 of 7 | 2 | 0 | 0 | 0.00 | nothing |
 | invitation-sign-in | 844 px | 35 | 0 | 4 background | 10 px | 10 | 4 of 7 | 2 | 0 | 0 | 0.00 | nothing |
 | name-window (staged) | 410 px, a window | 41 | 1 | 1 background | 10 px | 4 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
