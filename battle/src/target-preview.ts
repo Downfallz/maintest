@@ -56,6 +56,39 @@ function chosenCard({ card, crit }: NonNullable<Chosen>, effects: Cue[]) {
   return nodes;
 }
 
+// The spell's name with its cost, the energy left after it, and its crit chance at this tempo.
+function headOf(model: NonNullable<Preview>, name: string) {
+  const head = line('div', '', 'spell-card-head target-head');
+  const badges = line('span', '', 'spell-card-chips');
+  const cost = line('span', '', 'spell-chip spell-chip-cost target-cost');
+  if (Number.isFinite(model.costValue)) {
+    cost.append(iconElement('energy-gain'), line('span', String(model.costValue)), line('span', ' energy', 'spell-card-sr'));
+    if (Number.isFinite(model.energyAfter)) cost.append(line('small', ` → ${model.energyAfter} left`));
+  } else cost.append(line('span', 'Cost unavailable'));
+  cost.title = model.cost;
+  badges.append(cost);
+  if (Number.isFinite(model.critChance) && model.critChance! > 0) {
+    const crit = line('span', '', 'spell-chip spell-chip-crit'); crit.title = model.critical;
+    crit.append(line('span', '✦', 'spell-crit-mark'), document.createTextNode(`${Math.round(model.critChance! * 100)}%`), line('span', ' crit at this tempo', 'spell-card-sr'));
+    badges.append(crit);
+  }
+  head.append(line('strong', name || model.spell, 'spell-card-name'), badges);
+  return head;
+}
+
+// What one selected target would take, plain and on a crit.
+function estimate(row: NonNullable<Preview>['rows'][number], effects: Cue[]) {
+  const one = line('div', '', 'target-estimate');
+  one.append(line('strong', row.name, 'target-name'));
+  if (row.plainEffects) one.append(row.plainEffects.length ? chips(row.plainEffects, effects) : line('span', 'No effect on this target', 'target-none'));
+  else one.append(line('span', row.plain, 'target-none'));
+  if (row.criticalEffects.length) {
+    const crit = line('span', '', 'target-crit'); crit.append(line('span', '✦ Crit', 'target-crit-label'), chips(row.criticalEffects, effects));
+    one.append(crit);
+  }
+  return one;
+}
+
 export function targetPreviewControls(id: string) {
   const region = document.getElementById(id)!;
   let key = '';
@@ -66,36 +99,12 @@ export function targetPreviewControls(id: string) {
     key = nextKey;
     const scroll = region.scrollTop;
     if (!model) { region.replaceChildren(); region.scrollTop = 0; return; }
-    const head = line('div', '', 'spell-card-head target-head');
-    const badges = line('span', '', 'spell-card-chips');
-    const cost = line('span', '', 'spell-chip spell-chip-cost target-cost');
-    if (Number.isFinite(model.costValue)) {
-      cost.append(iconElement('energy-gain'), line('span', String(model.costValue)), line('span', ' energy', 'spell-card-sr'));
-      if (Number.isFinite(model.energyAfter)) cost.append(line('small', ` → ${model.energyAfter} left`));
-    } else cost.append(line('span', 'Cost unavailable'));
-    cost.title = model.cost;
-    badges.append(cost);
-    if (Number.isFinite(model.critChance) && model.critChance! > 0) {
-      const crit = line('span', '', 'spell-chip spell-chip-crit'); crit.title = model.critical;
-      crit.append(line('span', '✦', 'spell-crit-mark'), document.createTextNode(`${Math.round(model.critChance! * 100)}%`), line('span', ' crit at this tempo', 'spell-card-sr'));
-      badges.append(crit);
-    }
-    head.append(line('strong', name || model.spell, 'spell-card-name'), badges);
+    const head = headOf(model, name);
     const nodes: HTMLElement[] = [head];
     if (chosen) nodes.push(...chosenCard(chosen, effects));
     if (model.reason) nodes.push(line('p', model.reason, 'target-reason'));
     if (model.note) nodes.push(line('p', model.note, 'target-note'));
-    for (const row of model.rows) {
-      const one = line('div', '', 'target-estimate');
-      one.append(line('strong', row.name, 'target-name'));
-      if (row.plainEffects) one.append(row.plainEffects.length ? chips(row.plainEffects, effects) : line('span', 'No effect on this target', 'target-none'));
-      else one.append(line('span', row.plain, 'target-none'));
-      if (row.criticalEffects.length) {
-        const crit = line('span', '', 'target-crit'); crit.append(line('span', '✦ Crit', 'target-crit-label'), chips(row.criticalEffects, effects));
-        one.append(crit);
-      }
-      nodes.push(one);
-    }
+    nodes.push(...model.rows.map(row => estimate(row, effects)));
     if (model.casterEffects.length) {
       const caster = line('div', '', 'target-estimate target-caster');
       caster.append(line('strong', 'Caster, once', 'target-name'), chips(model.casterEffects, effects));

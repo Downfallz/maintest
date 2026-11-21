@@ -20,17 +20,13 @@ export interface SpellCardOptions {
   portraitSizes?: string;
 }
 
-// One spell as a card, everywhere a spell is shown in full: the mutation tree, a mutation's preview, the spell
-// choice and the creature inspection to come. Its words are the host's, line for line; each effect line carries the
-// icon of the stat it moves, from the kind the host marks it with (CardMark) and the catalogue's cue for that kind,
-// so the page never reads the words to draw it. Cost and crit chance sit in the head as chips.
-export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [], { compact = false, inline = false, cost, crit, brief = false, portraitSizes }: SpellCardOptions = {}) {
-  const make = (block: string, text = '', cls = '') => { const el = document.createElement(inline ? 'span' : block); if (text) el.textContent = text; if (cls) el.className = cls; return el; };
-  const article = make('article', '', `spell-card${compact ? ' compact' : ''}${inline ? ' inline' : ''}${brief ? ' brief' : ''}`);
-  // Inside a button, the button names the spell: one element per spell answers [data-spell].
-  if (!inline) article.dataset.spell = id;
-  const head = make('header', '', 'spell-card-head');
-  head.append(make('strong', card?.name ?? id, 'spell-card-name'));
+type Make = (block: string, text?: string, cls?: string) => HTMLElement;
+const maker = (inline: boolean): Make => (block, text = '', cls = '') => {
+  const el = document.createElement(inline ? 'span' : block); if (text) el.textContent = text; if (cls) el.className = cls; return el;
+};
+
+// The cost and crit chips: what the host says this cast costs and its chance now, over the catalogue's own.
+function chipsOf(make: Make, card: Card | undefined, { inline = false, brief = false, cost, crit }: SpellCardOptions) {
   const chips = make('span', '', 'spell-card-chips');
   const price = cost !== undefined ? cost : card?.cost;
   if (price !== null && price !== undefined && price !== '') {
@@ -47,6 +43,41 @@ export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [
     else if (brief && chance.face) chip.append(make('small', chance.face));
     chips.append(chip);
   }
+  return { chips, chance };
+}
+
+// Each effect line with the icon of the stat it moves. On a brief face, the host's numbers beside the icon of a
+// stat, the words kept for a screen reader; a line without either keeps its words in sight.
+function effectList(make: Make, card: Card, effects: Cue[], brief: boolean) {
+  const lines = [...(card.effects ?? []).map(text => ({ text, caster: false })), ...(card.casterEffects ?? []).map(text => ({ text, caster: true }))];
+  const list = make('ul', '', 'spell-card-effects');
+  lines.forEach((line, index) => {
+    const mark = card.marks?.[index];
+    const item = make('li', '', 'spell-card-effect'); if (line.caster) item.dataset.caster = 'true';
+    const key = mark ? conditionKey(mark.kind, effects) : 'other';
+    item.dataset.cue = key; item.append(iconElement(key));
+    if (brief && mark?.figures && key !== 'other') {
+      const figures = make('span', mark.figures, 'spell-card-figures'); figures.setAttribute('aria-hidden', 'true');
+      item.append(figures, make('span', line.text, 'spell-card-sr'));
+    } else item.append(make('span', line.text));
+    list.append(item);
+  });
+  return lines.length ? list : null;
+}
+
+// One spell as a card, everywhere a spell is shown in full: the mutation tree, a mutation's preview, the spell
+// choice and the creature inspection to come. Its words are the host's, line for line; each effect line carries the
+// icon of the stat it moves, from the kind the host marks it with (CardMark) and the catalogue's cue for that kind,
+// so the page never reads the words to draw it. Cost and crit chance sit in the head as chips.
+export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [], options: SpellCardOptions = {}) {
+  const { compact = false, inline = false, brief = false, portraitSizes } = options;
+  const make = maker(inline);
+  const article = make('article', '', `spell-card${compact ? ' compact' : ''}${inline ? ' inline' : ''}${brief ? ' brief' : ''}`);
+  // Inside a button, the button names the spell: one element per spell answers [data-spell].
+  if (!inline) article.dataset.spell = id;
+  const head = make('header', '', 'spell-card-head');
+  head.append(make('strong', card?.name ?? id, 'spell-card-name'));
+  const { chips, chance } = chipsOf(make, card, options);
   // A compact card sits in a docked sheet whose foot must stay on a 320 by 568 screen: it keeps its text only.
   const portrait = compact ? null : spellPortrait(card?.visual?.portrait, portraitSizes ?? 40);
   if (portrait) article.append(portrait);
@@ -58,21 +89,8 @@ export function spellCard(card: Card | undefined, id: string, effects: Cue[] = [
   if (!card) { chipsRow(); article.append(make('p', 'Spell details unavailable.', 'spell-card-line')); return article; }
   if (card.targeting) article.append(make('p', card.targeting, 'spell-card-target'));
   chipsRow();
-  const lines = [...(card.effects ?? []).map(text => ({ text, caster: false })), ...(card.casterEffects ?? []).map(text => ({ text, caster: true }))];
-  const list = make('ul', '', 'spell-card-effects');
-  lines.forEach((line, index) => {
-    const mark = card.marks?.[index];
-    const item = make('li', '', 'spell-card-effect'); if (line.caster) item.dataset.caster = 'true';
-    const key = mark ? conditionKey(mark.kind, effects) : 'other';
-    item.dataset.cue = key; item.append(iconElement(key));
-    // The host's numbers, where it gave them, beside the icon of a stat; a line without either keeps its words.
-    if (brief && mark?.figures && key !== 'other') {
-      const figures = make('span', mark.figures, 'spell-card-figures'); figures.setAttribute('aria-hidden', 'true');
-      item.append(figures, make('span', line.text, 'spell-card-sr'));
-    } else item.append(make('span', line.text));
-    list.append(item);
-  });
-  if (lines.length) article.append(list);
+  const list = effectList(make, card, effects, brief);
+  if (list) article.append(list);
   if (!compact && !brief && card.criticalNote && chance) article.append(make('p', card.criticalNote, 'spell-card-note'));
   return article;
 }
