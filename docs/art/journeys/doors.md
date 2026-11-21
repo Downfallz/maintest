@@ -167,13 +167,13 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
   density on a phone, 1,251,602 B on `c649804` and 1,350,752 B with the two scenes (the charge's 702 px file is
   78,956 B, the Predator at rest's 20,194 B: the plan's 100 KB). That is over the 1,280 KiB it allowed, so S5
   raises the `all` of showcase/home to 1,344 KiB (1,376,256 B) with that reason; its `first` (224 KiB) holds. The
-  paint runs on `c649804` read 234,129 B of pictures before any scroll; S5 should read the same.
+  paint runs on `c649804` read 234,129 B of pictures before any scroll; S5's read the same, 234,129 B.
 - **Largest paint**: 1.0 s, 4.3 s before UX6, a picture, median of five on the slow profile; aimed at 2.5 s (the
-  plan). On `c649804`, 1,036 ms; S5 holds it unchanged, the plan's test: no scene is on the first screen. The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
+  plan). On `c649804`, 1,036 ms; S5's film reads 1,048 ms, within the runs' spread, the plan's test: no scene is on the first screen. The ground is an `<img>` in the HTML, so the preload scanner finds it. Which of the ground and the
   Colossus is the largest the measure does not say; both are asked for first.
 - **Shift**: 0.00 before and after. Every picture keeps its `width` and `height`; the round's frames hold their
   room by `aspect-ratio` before they load. S5's two scenes keep their `width` and `height`; from 700 px the charge's
-  band keeps `aspect-ratio: 3`. The page grows by about 400 px at 390 (two plates of 197 px and their margins).
+  band keeps `aspect-ratio: 3`. The page grows by 436 px at 390 (7,218 to 7,654) and 365 px at 320 (7,541 to 7,906), S5's film: two plates and their margins.
 
 ### Left
 
@@ -435,8 +435,7 @@ footer; a derived picture's file name carries its hash, so the page with the cla
 - **Order**: the header (the name, the language, Play now), the kicker, the title, the claw, the button; the footer
   last.
 - **Budget**: 45 words in English, 50 in French, header and footer included as the measure counts them at 390
-  and 320 px (the header's section links are hidden under 920 px). Today 11 in English, counted on the file: the
-  walk does not film it. The words of the page itself:
+  and 320 px (the header's section links are hidden under 920 px). Before S5, 11 in English, counted on the file; S5's film reads 34 in each language, at both widths. The words of the page itself:
 
 English:
 
