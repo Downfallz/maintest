@@ -158,6 +158,25 @@ test('every request of the briefs in the repository can be listed, and the doors
   for (const one of requests) assert.ok(one.prompt.length > 40 && existsSync(new URL(one.holds, root)), `${one.shows}: a prompt, and a painting that holds its place`);
 });
 
+test('every scene in the folder is in its register, at its size, and names only creatures and spells the content holds', () => {
+  // docs/art/scene-paintings-plan.md, S1: the scenes are a register, each with its page in the plan.
+  const folder = 'docs/art/sources/pages/scenes/';
+  const files = readdirSync(new URL(folder, root)).filter(name => name.endsWith('.webp')).sort();
+  const rows = read(`${folder}README.md`).toString('utf8').split('\n')
+    .map(line => line.match(/^\| `([a-z0-9-]+\.webp)` \| (\d+) by (\d+) \|(.*)\|$/)).filter(Boolean);
+  assert.deepEqual(rows.map(row => row[1]).sort(), files, 'a scene in the folder is a row of the register, and a row is a file');
+  const walk = url => readdirSync(url, { withFileTypes: true })
+    .flatMap(entry => entry.isDirectory() ? walk(new URL(`${entry.name}/`, url)) : entry.name.endsWith('.json') ? [new URL(entry.name, url)] : []);
+  const ids = new Set(walk(new URL('data/', root)).flatMap(url => [...readFileSync(url, 'utf8').matchAll(/"id":\s*"([^"]+)"/g)].map(match => match[1])));
+  for (const [, file, width, height, rest] of rows) {
+    assert.deepEqual(webpSize(read(folder + file)), { width: Number(width), height: Number(height) }, `${file}: the size the register gives`);
+    const named = [...rest.matchAll(/`((?:creature|tier|spell):[a-z0-9_]+:v\d+)`/g)].map(match => match[1]);
+    assert.ok(named.length > 0, `${file}: the register names what it shows by content id`);
+    for (const id of named) assert.ok(ids.has(id), `${file}: ${id} is no id of data/`);
+  }
+  assert.match(read('docs/art/sources/pages/README.md').toString('utf8'), /`scenes\/`/);
+});
+
 test('the script and the kit are where a session looks for them', () => {
   const commands = read('docs/reference/commands.md').toString('utf8');
   assert.match(commands, /^### ux\/pictures\.mjs$/m);
