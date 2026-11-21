@@ -89,6 +89,16 @@ test('a painting that changed, a file that went or a stranger in the folder is s
   assert.match(check({ authored: fewer, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is derived but not declared/);
 });
 
+test('a focus is carried to the module, and held there, without deriving a file again', () => {
+  const list = () => readdirSync(new URL('table/page-art', root)), one = authored.pictures[0];
+  const focused = { ...authored, pictures: [{ ...one, focus: '30% 60%' }, ...authored.pictures.slice(1)] };
+  assert.equal(origin(focused.pictures[0], [read(one.source)], authored.encoding), PAGE_ART[one.name].from, 'where CSS cuts is no part of the files');
+  assert.match(check({ authored: focused, art: PAGE_ART, read, list }).join('\n'), new RegExp(`${one.name}: the module does not say what the declaration says`));
+  const art = { ...PAGE_ART, [one.name]: { ...PAGE_ART[one.name], focus: '30% 60%' } };
+  assert.deepEqual(check({ authored: focused, art, read, list }), []);
+  assert.match(moduleText(art), new RegExp(`'${one.name}': \\{\\n    from: '[0-9a-f]+', frames: 1, drawn: \\[[\\d,]+\\], pages: \\{[^}]+\\}, focus: '30% 60%',\\n`));
+});
+
 test('the module the pages import is what the script writes from its entries', () => {
   assert.equal(read('table/page-art.js').toString('utf8'), moduleText(PAGE_ART));
   assert.equal(origin({ name: 'a', source: 'x', drawn: [1] }, [Buffer.from('p')], authored.encoding).length, 16);
@@ -134,6 +144,8 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ phone: [533] }), /phone gives each page the widths it draws/);
   assert.match(bad({ phone: { 'showcase/home': [533] } }), /eclipse-ground: phone names showcase\/home, a page that does not draw it/);
   assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
+  assert.match(bad({ focus: '33% 60%' }), /eclipse-ground: a focus is two percentages/);
+  assert.match(bad({ source: undefined, frames: ['a.webp', 'b.webp'], focus: '50% 50%' }), /eclipse-ground: a strip is never cut, and takes no focus/);
   assert.throws(() => webpSize(Buffer.concat([Buffer.from('RIFF\0\0\0\0WEBPVP8X'), Buffer.alloc(10)])), /not a WebP file/, 'a header cut short');
 });
 

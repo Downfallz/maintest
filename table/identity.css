@@ -177,6 +177,52 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
    room its own dimensions hold is the room it fills. */
 .picture { max-width: 100%; height: auto; }
 
+/* Where a box that cuts a painting centres the cut (picture.js, `focus` in docs/art/page-pictures.json): across,
+   then down, in steps of 5%. A box with `object-fit: cover` keeps the subject in view; without a focus, the centre. */
+.picture[data-focus-x="0"] { --focus-x: 0%; }
+.picture[data-focus-x="5"] { --focus-x: 5%; }
+.picture[data-focus-x="10"] { --focus-x: 10%; }
+.picture[data-focus-x="15"] { --focus-x: 15%; }
+.picture[data-focus-x="20"] { --focus-x: 20%; }
+.picture[data-focus-x="25"] { --focus-x: 25%; }
+.picture[data-focus-x="30"] { --focus-x: 30%; }
+.picture[data-focus-x="35"] { --focus-x: 35%; }
+.picture[data-focus-x="40"] { --focus-x: 40%; }
+.picture[data-focus-x="45"] { --focus-x: 45%; }
+.picture[data-focus-x="50"] { --focus-x: 50%; }
+.picture[data-focus-x="55"] { --focus-x: 55%; }
+.picture[data-focus-x="60"] { --focus-x: 60%; }
+.picture[data-focus-x="65"] { --focus-x: 65%; }
+.picture[data-focus-x="70"] { --focus-x: 70%; }
+.picture[data-focus-x="75"] { --focus-x: 75%; }
+.picture[data-focus-x="80"] { --focus-x: 80%; }
+.picture[data-focus-x="85"] { --focus-x: 85%; }
+.picture[data-focus-x="90"] { --focus-x: 90%; }
+.picture[data-focus-x="95"] { --focus-x: 95%; }
+.picture[data-focus-x="100"] { --focus-x: 100%; }
+.picture[data-focus-y="0"] { --focus-y: 0%; }
+.picture[data-focus-y="5"] { --focus-y: 5%; }
+.picture[data-focus-y="10"] { --focus-y: 10%; }
+.picture[data-focus-y="15"] { --focus-y: 15%; }
+.picture[data-focus-y="20"] { --focus-y: 20%; }
+.picture[data-focus-y="25"] { --focus-y: 25%; }
+.picture[data-focus-y="30"] { --focus-y: 30%; }
+.picture[data-focus-y="35"] { --focus-y: 35%; }
+.picture[data-focus-y="40"] { --focus-y: 40%; }
+.picture[data-focus-y="45"] { --focus-y: 45%; }
+.picture[data-focus-y="50"] { --focus-y: 50%; }
+.picture[data-focus-y="55"] { --focus-y: 55%; }
+.picture[data-focus-y="60"] { --focus-y: 60%; }
+.picture[data-focus-y="65"] { --focus-y: 65%; }
+.picture[data-focus-y="70"] { --focus-y: 70%; }
+.picture[data-focus-y="75"] { --focus-y: 75%; }
+.picture[data-focus-y="80"] { --focus-y: 80%; }
+.picture[data-focus-y="85"] { --focus-y: 85%; }
+.picture[data-focus-y="90"] { --focus-y: 90%; }
+.picture[data-focus-y="95"] { --focus-y: 95%; }
+.picture[data-focus-y="100"] { --focus-y: 100%; }
+.picture[data-focus-x], .picture[data-focus-y] { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
+
 /* BEGIN MOTION KIT (ADR 0197, docs/art/ux-craft.md#motion). Five uses, each with one form, and ambience. Only
    transform and opacity move, by the tokens of docs/art/branding.css. Each form is written first as it is under
    less motion, a fade or a change of shade; what travels is added for full motion alone, where neither the

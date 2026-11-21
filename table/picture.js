@@ -10,6 +10,21 @@ export const PAGE_ART_BASE = '/page-art/';
 /** The most frames a strip may hold: identity.css declares one rule a count. */
 export const STRIP_FRAMES = 12;
 
+/** A focus is placed in steps of this many percent: identity.css declares one rule a step, on each axis. */
+export const FOCUS_STEP = 5;
+
+/**
+ * Where a painting cut by its box centres the cut (`"30% 60%"`: across, then down): two attributes that
+ * identity.css turns into the image's `object-position`, since the showcase's policy refuses a style attribute.
+ * Nothing is cropped: the file is the same, only where CSS cuts it moves.
+ */
+export function focusAttributes(focus) {
+  const parts = /^(\d{1,3})% (\d{1,3})%$/.exec(typeof focus === 'string' ? focus : '');
+  const [x, y] = parts ? [Number(parts[1]), Number(parts[2])] : [];
+  if (!parts || ![x, y].every(at => at <= 100 && at % FOCUS_STEP === 0)) throw new Error(`a focus is two percentages from 0 to 100 in steps of ${FOCUS_STEP}, across then down ("30% 60%"), not ${focus}`);
+  return { 'data-focus-x': String(x), 'data-focus-y': String(y) };
+}
+
 const escaped = text => String(text).replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[char]);
 
 function entryOf(name, page, art) {
@@ -24,9 +39,10 @@ function entryOf(name, page, art) {
  * The attributes of a picture's `<img>`, in the order they are written. `page` is the page's name in the
  * declaration, which says whether the picture is asked for first. `sizes` is the width it is drawn at when the
  * page draws it at another than the declaration's first, and for a strip the width of all its frames, since its
- * file holds them side by side; `alt` is empty for decoration.
+ * file holds them side by side; `alt` is empty for decoration. `focus` is where a box that cuts the painting
+ * centres the cut, when this box wants another than the declaration's: one scene in two boxes.
  */
-export function pictureAttributes(name, { page, alt = '', sizes, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
+export function pictureAttributes(name, { page, alt = '', sizes, focus, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
   const entry = entryOf(name, page, art), role = entry.pages[page], whole = entry.drawn[0] * entry.frames;
   const shown = entry.sizes.find(size => size.width >= whole) ?? entry.sizes.at(-1);
   const attributes = {
@@ -41,7 +57,8 @@ export function pictureAttributes(name, { page, alt = '', sizes, base = PAGE_ART
   if (role === 'largest') attributes.fetchpriority = 'high';
   else attributes.decoding = 'async';
   if (role === 'lazy') attributes.loading = 'lazy';
-  return attributes;
+  const cut = focus ?? entry.focus;
+  return cut === undefined ? attributes : { ...attributes, ...focusAttributes(cut) };
 }
 
 const written = attributes => Object.entries(attributes).map(([name, value]) => `${name}="${escaped(value)}"`).join(' ');
@@ -62,8 +79,9 @@ export function pictureElement(doc, name, options = {}) {
   return image;
 }
 
-function stripOf(name, { page, art = PAGE_ART }) {
+function stripOf(name, { page, focus, art = PAGE_ART }) {
   const entry = entryOf(name, page, art);
+  if (focus !== undefined) throw new Error(`${name}: a strip is never cut, and takes no focus`);
   if (entry.frames < 2 || entry.frames > STRIP_FRAMES) throw new Error(`${name} is not a strip of 2 to ${STRIP_FRAMES} frames`);
   return entry;
 }
