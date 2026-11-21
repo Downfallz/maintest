@@ -340,7 +340,7 @@ None.
 ### Cost
 
 - **Bytes**: nothing before a scroll changes: the scenes are lazy and below the first screen, three of them only
-  once their entry is opened. The page's `first` (showcase/mutations) stays 96 KiB; its `all` rises from 168 to 324 KiB
+  once their entry is opened. The page's `first` (showcase/mutations) stays 96 KiB; its `all` rises from 168 to 336 KiB
   (`docs/art/page-budget.json`) for the six scenes at twice the density: 328,142 bytes measured, the plan's 160 KB more.
 - **Largest paint**: not measured for this page (the baseline's paints do not walk it); the guide's title or its
   creature, never a scene, aimed at 2.5 s (the budget's).

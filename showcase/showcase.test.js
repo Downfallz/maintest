@@ -455,6 +455,9 @@ for (const [lang, file] of [['en', 'mutations/index.html'], ['fr', 'fr/mutations
       alts.add(alt);
     }
     assert.equal(alts.size, 6, 'six alts, none shared');
+    // A 16:9 head is a 3:1 band from 700 px: its focus keeps the subject in the cut.
+    assert.match(sceneOf('family-predator', heads['family-predator']), /data-focus-x="50" data-focus-y="55"/, 'the pool');
+    assert.match(sceneOf('family-warped', heads['family-warped']), /data-focus-x="50" data-focus-y="40"/, 'the head');
     // The head comes before the family's title, so the picture opens the section.
     for (const section of Object.keys(heads)) {
       const part = html.slice(html.indexOf(`id="${section}"`));

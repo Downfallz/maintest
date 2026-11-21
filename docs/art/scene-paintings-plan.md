@@ -79,9 +79,9 @@ the words in place, and may move it within the page; a scene leaves its page onl
 | `brute-moult` (3:1) | `showcase/mutations`, the Brute family's head | 351 by 117 | What is a mutation? A shell shed, a print that walked on. |
 | `predator-and-deathstalker` (16:9) | `showcase/mutations`, the Predator family's head | 351 by 197 | What does a Predator become? The base and its stage 3 at one pool. |
 | `warped-listening` (16:9) | `showcase/mutations`, the Warped family's head | 351 by 197 | What is a Warped, before it strikes? |
-| `ironhide-scar` (3:1) | `showcase/mutations`, inside the Ironbound entry (the Ironhide form), under its form | 351 by 117 | What does its plating hold? |
-| `blightweaver-pressure-sac` (3:1) | `showcase/mutations`, inside the Blightweaver entry, under its form | 351 by 117 | What does it carry, and spread? |
-| `parasite-under-slate` (16:9) | `showcase/mutations`, inside the Parasite entry, under its form | 351 by 197 | How does a Parasite hunt? |
+| `ironhide-scar` (3:1) | `showcase/mutations`, inside the Ironbound entry (the Ironhide form), under its form | 323 by 108 | What does its plating hold? |
+| `blightweaver-pressure-sac` (3:1) | `showcase/mutations`, inside the Blightweaver entry, under its form | 323 by 108 | What does it carry, and spread? |
+| `parasite-under-slate` (16:9) | `showcase/mutations`, inside the Parasite entry, under its form | 323 by 182 | How does a Parasite hunt? |
 | `latch-under-the-arch` (16:9) | The showcase's 404, English and French | 351 by 197 | Nothing here, or something holding on above? |
 | `crushing-stomp-aftermath` (3:1) | `table/battle`, the match's result, above the verdict: UX12's brief of the result | 358 by 119 | How did it end? The ground the last blow left. |
 
@@ -217,7 +217,7 @@ result in `battle/src` with UX12.
    700 px, where cover cuts the Predator's pool at `50% 55%` and the Warped's at `50% 40%`. Ironhide, Blightweaver
    and Parasite carry theirs whole under their form's picture (323 px wide at 390), inside the closed entry, so it
    loads only when the entry opens. All six are lazy, with an `alt` in English and French (`showcase/lore.mjs`); no
-   word shown changes. `showcase/mutations`'s `all` rose from 168 to 324 KiB (328,142 bytes measured, the plan's
+   word shown changes. `showcase/mutations`'s `all` rose from 168 to 336 KiB (328,142 bytes measured, the plan's
    160 KB more); its `first` holds. The walk's measures at 320 and 390: three more pictures on the page as loaded
    (the heads; the entries' scenes load when opened), none oversized; the targets, the words and axe as before.
    `showcase/showcase.css` repeats the focus rules of `table/identity.css` for the values it draws (across 50%, down
