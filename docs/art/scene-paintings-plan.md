@@ -245,23 +245,27 @@ result in `battle/src` with UX12.
    paintings in one section. The owner may refuse this (the brief's **Left**). That Cloudflare Pages serves
    `fr/404.html` for a missing French path is checked by hand after the deployment; no test can.
 6. **S6, the three forms.** The head, the ground and the plate in `table/identity.css`, built from
-   `pictureElement` with a scrim; the walk's contrast measure under text on a picture
-   (a new `--contrast` of `scripts/ux/journey.mjs`); the design system's sources gain them. No screen uses them yet; the
-   battle lab shows each. Tests: `table/picture.test.js`, the measure's own test, the design system's.
+   `pictureElement` with a scrim; the walk's contrast measure under text on a picture, on every screen
+   (`scripts/ux/contrast.mjs`); the design system's sources gain them. No screen uses them yet; the design system's
+   card and the picture kit's spec show each (the owner's choices, below). Tests: `table/picture.test.js`, the measure's own test, the design system's.
 
    *Built (2026-11-21)*: `sceneElement` and `sceneHtml` of `table/picture.js` draw a scene as a `head`, a `ground`
    or a `plate`, and `table/identity.css` holds the three. A head is a 3:1 band, at most 120 px, 64 px on a screen
-   under 600 px tall; its words sit on the `side` the page names, `start` or `end` (the owner chose a side per
-   screen), over a scrim to `--soot`. A ground dims its painting under `--soot` and is not drawn under
-   `Save-Data`. A plate is a `figure`, its words the caption. A head's or a ground's painting takes no `alt`.
-   `scripts/ux/contrast.mjs` reads each box of text on a head or a ground against the lightest pixel under it, the
-   words hidden, on the screenshot. The owner chose it always on: the walk adds `contrast` to every screen that
-   lays such words, and a screen with none keeps its line. [page-pictures.md](page-pictures.md) gains the forms,
-   the design system a `Scene` card. The owner moved the showcase of the forms from the battle lab, the
-   Phaser laboratory, to that card and to `studio/browser/picture-kit.spec.js`, which mounts each on a white
-   painting: the scrims hold 4.5:1 there, and the measure finds the words once the scrim is taken away. Nothing is
-   declared and no budget moves. Left: no screen uses the forms (S7 on); the scrims' strength is read again on
-   the real paintings, at both widths, by the stage that first draws each form.
+   under 600 px tall; words that wrap make it taller rather than being cut. Its words sit on the `side` the page
+   names, `start` or `end` (the owner chose a side per screen), over a scrim to `--soot` that is opaque under the
+   whole column of words. A ground dims its painting under `--soot` and is not drawn under `Save-Data`. A plate is
+   a `figure` with its `alt`, its words the caption. A head's or a ground's painting takes no `alt`.
+   `scripts/ux/contrast.mjs` reads each box of text on a head or a ground in view against the lightest pixel under
+   it, the words hidden, on the screenshot. The walk always measures it: it adds `contrast` to every screen that
+   lays such words, and a screen with none keeps its line. The baseline's page gains the column. A box under
+   4.5:1 is counted; it does not stop the walk. [page-pictures.md](page-pictures.md) describes the forms, and the
+   design system has a `Scene` card. The owner moved the showcase of the forms from the battle lab to that card
+   and to `studio/browser/picture-kit.spec.js`. The spec mounts each form on a white painting, with a short title
+   and one that fills the column. The scrims hold 4.5:1 there, and the measure finds the words once the scrim is
+   taken away. Nothing is declared and no budget moves. Left: no screen uses the forms (S7 on). A scene scrolled
+   out of view is measured on the screen that shows it, not before. The stage that first draws each form reads
+   its scrim again on the real paintings, at both widths.
+
 7. **S7, invitations and friends.** A `/ux-pass` on the Create window opened on a friend, the invitation card,
    the Friends window. Tests: `studio/browser/lobby-home.spec.js` and the friends' specs, the budgets, the
    measures.

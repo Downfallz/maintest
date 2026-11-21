@@ -33,3 +33,12 @@ test('a screen\'s measure counts the boxes of text on a painting, the lowest rat
   assert.deepEqual(contrastMeasure([7.214, 4.49, 12]), { texts: 3, lowest: 4.49, under: 1 });
   assert.deepEqual(contrastMeasure([9.876]), { texts: 1, lowest: 9.87, under: 0 }, 'rounded down, so a ratio never reads higher than it is');
 });
+
+test('a text not quite opaque is blended over the pixel under it before it is read', () => {
+  const white = [255, 255, 255, 255];
+  assert.equal(lowestContrast([0, 0, 0, 1], white), 21);
+  assert.equal(lowestContrast([0, 0, 0, 0], white), 1, 'a text that is not drawn reads as the painting itself');
+  const half = lowestContrast([0, 0, 0, 0.5], white);
+  assert.ok(half > 1 && half < 5, String(half));
+  assert.equal(lowestContrast([0, 0, 0], white), 21, 'opaque when the alpha is left out');
+});

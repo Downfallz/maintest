@@ -1138,10 +1138,11 @@ consolidated (`data/dst`), the battle bundle and the browser suite's Playwright 
 A screen's line: the window it was measured on (the modal window when one is open, else the page), its height,
 the words shown, the filled actions, the pictures (`<img>`, CSS backgrounds, the canvas, and those sent at over
 twice the size they are drawn), the smallest text and the words under 11 px, the targets under 44 and under
-24 px, the controls that overlap, what still animates at rest, the layout's shift, the WCAG 2.2 AA rules
-axe finds failing, and, on a screen that lays words on a scene's head or ground, `contrast`: the boxes of text in
-view, the lowest ratio against the lightest pixel under them once the words are hidden, and how many fall under
-4.5:1 (`scripts/ux/contrast.mjs`). Two walks of one journey give the same lines (`studio/browser/table.journey.js`), the shift aside: it
+24 px, the controls that overlap, what still animates at rest, the layout's shift, and the WCAG 2.2 AA rules
+axe finds failing. On a screen that lays words on a scene's head or ground, the line also has `contrast`: the boxes
+of text in view, the lowest ratio against the lightest pixel under them once the words are hidden, and how many
+fall under 4.5:1 (`scripts/ux/contrast.mjs`). A box under 4.5:1 is counted, as a target under 44 px is; it does
+not stop the walk. Two walks of one journey give the same lines (`studio/browser/table.journey.js`), the shift aside: it
 moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. The walk
 fails when it misses a screen its journey names, or when the page throws.
 

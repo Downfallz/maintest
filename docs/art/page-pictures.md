@@ -82,7 +82,6 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
   following. Its room is held before it loads.
 - Never write a derived file's name in a page: it changes when the picture is derived again.
 
-
 ## A scene in one of three forms
 
 A painting of the scenes' library (`docs/art/sources/pages/scenes/`) takes one of three forms in the table
@@ -94,15 +93,19 @@ dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'tabl
 ```
 
 - `head`: a 3:1 band across the top of a window, a sheet or a page, no taller than 120 px, 64 px on a screen under
-  600 px tall. Its `words` sit on its `side`, `start` (the default) or `end`, whichever is darker, over a scrim
-  to `--soot`.
-- `ground`: a card's or a dialog's painting, cut to its box and dimmed under `--soot`, its words on it. Under less
-  data (`navigator.connection.saveData`) it is not drawn, and the card keeps its own slate.
-- `plate`: a `<figure>`, the painting whole and named by its `alt`, its `words` as the caption under it.
+  600 px tall; words that wrap make it taller. Its `words` sit on its `side`, `start` (the default) or `end`,
+  whichever is darker, over a scrim to `--soot`.
+- `ground`: a card's or a dialog's painting, cut to its box and dimmed under `--soot`, with the words on top. Under
+  less data (`navigator.connection.saveData`) it is not drawn, and the card keeps its plain background (its slate).
+  Only `sceneElement`, run in the reader's browser, can know it; `sceneHtml` is told by its `saveData` option.
+- `plate`: a `<figure>`, the painting whole and named by its `alt`, which it requires, its `words` as the caption under
+  it.
 - A head's and a ground's painting is a decoration: it takes no `alt`, its words say what the screen is. The
-  other options are `pictureElement`'s; `sceneHtml` writes the same as text, `words` then being HTML.
-- Words on a painting hold 4.5:1 against the lightest pixel under them. The journey walk measures it on every
-  screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
+  other options are `pictureElement`'s. `sceneHtml` returns the same scene as an HTML string; its `words` are then
+  HTML too.
+- Words on a head or a ground hold 4.5:1 against the lightest pixel under them. The journey walk measures it on
+  every screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
+
 ## A picture that moves
 
 First by code, on a still: `.motion-breath` ([ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)).

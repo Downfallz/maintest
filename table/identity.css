@@ -19,7 +19,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); }
 .lobby-section h2 { font: 400 22px/1.2 var(--font-display); color: var(--bone); }
 .lobby-section h2 .lobby-count { font-family: var(--font-text); }
 .eyebrow { letter-spacing: .16em; }
-dialog .eyebrow, .lobby-hero .eyebrow { color: var(--brand-ember); }
+dialog .eyebrow, .lobby-hero .eyebrow, .scene-head .eyebrow { color: var(--brand-ember); }
 
 /* The rule under a title: the rune, then a bone hairline that fades out. */
 .lobby-section > .section-heading, .home-dialog > .dialog-heading { position: relative; }
@@ -226,35 +226,35 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 :where(.picture[data-focus-x], .picture[data-focus-y]) { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
 
 /* A scene (picture.js, docs/art/scene-paintings-plan.md): a painting of the library in one of three forms, so a
-   page sheet only places it. Words on a painting sit on a scrim to soot and hold 4.5:1 against the lightest pixel
-   under them, which the journey walk measures (scripts/ux/contrast.mjs). A head and a ground cut their painting
-   by its focus; a plate shows it whole. */
-.scene { position: relative; isolation: isolate; overflow: hidden; margin: 0; }
+   page sheet only places it. Words on a head or a ground sit on a scrim to soot and hold 4.5:1 against the
+   lightest pixel under them, which the journey walk measures (scripts/ux/contrast.mjs). A head and a ground cut
+   their painting by its focus; a plate shows it whole. Nothing is clipped, so a focus ring inside keeps its edge. */
+.scene { position: relative; isolation: isolate; margin: 0; }
 .scene-head > .picture, .scene-ground > .picture {
   position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; max-width: none; object-fit: cover;
 }
 .scene-head::before, .scene-ground::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .scene-words { position: relative; }
 
-/* The head: a 3:1 band across the top of a window, a sheet or a page, its eyebrow and title on its darker side.
-   On a short screen it shrinks, so it never pushes the window's filled action out of view. */
-.scene-head {
-  display: flex; flex-direction: column; justify-content: flex-end; aspect-ratio: 3 / 1; max-height: 120px;
-  background-color: var(--soot);
-}
-.scene-head > .scene-words { max-width: 62%; padding: 10px 16px; }
-.scene-head[data-side="end"] > .scene-words { align-self: flex-end; text-align: end; }
-.scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 88%, transparent) 45%, transparent 85%); }
-.scene-head[data-side="end"]::before { background: linear-gradient(to left, var(--soot) 0, color-mix(in srgb, var(--soot) 88%, transparent) 45%, transparent 85%); }
+/* The head: a band across the top of a window, a sheet or a page, its eyebrow and title on its darker side. The
+   band is 3:1, at most 120 px tall, 64 px on a short screen, so it never pushes the window's filled action out of
+   view; words that wrap make it taller rather than being cut. The scrim is opaque under the whole column of words
+   and fades out beyond it. */
+.scene-head { display: grid; background-color: var(--soot); }
+.scene-head::after { content: ""; grid-area: 1 / 1; aspect-ratio: 3 / 1; max-height: 120px; }
+.scene-head > .scene-words { grid-area: 1 / 1; align-self: end; max-width: 60%; padding: 10px 16px; }
+.scene-head[data-side="end"] > .scene-words { justify-self: end; text-align: end; }
+.scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 90%, transparent) 62%, transparent 100%); }
+.scene-head[data-side="end"]::before { background: linear-gradient(to left, var(--soot) 0, color-mix(in srgb, var(--soot) 90%, transparent) 62%, transparent 100%); }
 .scene-head :is(h1, h2, h3) { margin: 0; color: var(--bone); }
-.scene-head .eyebrow { margin: 0 0 2px; color: var(--brand-ember); }
+.scene-head .eyebrow { margin: 0 0 2px; }
 @media (max-height: 600px) {
-  .scene-head { max-height: 64px; }
+  .scene-head::after { max-height: 64px; }
   .scene-head > .scene-words { padding: 6px 12px; }
 }
 
-/* The ground: a card's or a dialog's painting dimmed behind its words. Under less data it is not drawn, and the
-   card keeps its own slate. */
+/* The ground: a card's or a dialog's painting, dimmed by a layer of soot from 84% to 92% opaque behind its words.
+   Under less data it is not drawn, and the card keeps its own background. */
 .scene-ground::before { background: linear-gradient(color-mix(in srgb, var(--soot) 84%, transparent), color-mix(in srgb, var(--soot) 92%, transparent)); }
 .scene-ground[data-saved]::before { content: none; }
 

@@ -12,7 +12,7 @@ import { pathToFileURL } from 'node:url';
 import { JOURNEYS } from './journeys.mjs';
 import { parseMeasures } from './measures.mjs';
 
-const COLUMNS = ['Screen', 'Height', 'Words', 'Filled actions', 'Pictures', 'Smallest text', 'Words under 11 px', 'Targets under 44 px', 'Targets under 24 px', 'Overlaps', 'Animating', 'Shift', 'axe'];
+const COLUMNS = ['Screen', 'Height', 'Words', 'Filled actions', 'Pictures', 'Smallest text', 'Words under 11 px', 'Targets under 44 px', 'Targets under 24 px', 'Overlaps', 'Animating', 'Shift', 'Words on a picture', 'axe'];
 
 function row(screen, axe) {
   const { pictures, text, targets } = screen;
@@ -21,7 +21,8 @@ function row(screen, axe) {
   return [
     `${screen.screen}${screen.staged ? ' (staged)' : ''}`, `${screen.height} px${screen.window ? ', a window' : ''}`, screen.words, screen.filled,
     `${drawn || 'none'}${pictures.oversized ? `; ${pictures.oversized} sent over twice their size` : ''}`, text.smallest === null ? 'none' : `${text.smallest} px`, text.under,
-    `${targets.under} of ${targets.all}`, targets.tiny, screen.overlaps, screen.animating, screen.shift.toFixed(2), axe ? found || 'nothing' : 'not run',
+    `${targets.under} of ${targets.all}`, targets.tiny, screen.overlaps, screen.animating, screen.shift.toFixed(2),
+    screen.contrast ? `${screen.contrast.under} of ${screen.contrast.texts} under 4.5:1, lowest ${screen.contrast.lowest}` : 'none', axe ? found || 'nothing' : 'not run',
   ];
 }
 
@@ -44,7 +45,8 @@ other colour. A target is a control; it counts as under 44 px when either side i
 than 2 px each way. Animating is what still runs once the screen is at rest. The shift is the layout shift, summed
 since the page loaded; it moves by a hundredth from one walk to the next, and is not what two walks are compared on. axe ran the rules tagged WCAG 2.2 AA; a number is the elements a rule fails on. A staged
 screen was opened by the walk itself, because the walk cannot press what a player can (Google's button).
-axe cannot read the text set over a picture or inside the canvas.`];
+Words on a picture are the boxes of text on a scene's head or ground, read against the lightest pixel under them
+(\`scripts/ux/contrast.mjs\`), which axe cannot read; axe cannot read inside the canvas either.`];
   for (const journey of JOURNEYS) {
     const mine = walks.filter(walk => walk.header.journey === journey.id);
     if (!mine.length) continue;

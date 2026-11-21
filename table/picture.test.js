@@ -119,7 +119,7 @@ test('a head is a band behind its words, its painting a decoration, its scrim on
   const html = sceneHtml('scene', { page: 'home', art: ART, form: 'head', words: '<p class="eyebrow">Friends</p><h2>Invite</h2>' });
   assert.match(html, /^<div class="scene scene-head" data-side="start"><img class="picture" src="\/page-art\/scene-533\.ee\.webp" [^>]*alt="" [^>]*data-focus-x="30" data-focus-y="60"><div class="scene-words"><p class="eyebrow">Friends<\/p><h2>Invite<\/h2><\/div><\/div>$/);
   assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'head', side: 'end' }), /^<div class="scene scene-head" data-side="end">/);
-  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'head', side: 'left' }), /a head's words sit at its start or its end, not left/);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'head', side: 'left' }), /a head's words sit on its start or its end, not left/);
   assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'ground', side: 'end' }), /only a head has a side/);
   assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'head', alt: 'A pool.' }), /a head's or a ground's painting is a decoration/);
 });
@@ -137,6 +137,7 @@ test('a plate is a figure, its painting named and its words under it', () => {
   assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw on an arch.', words: 'Nothing reaches us here.' }),
     /^<figure class="scene scene-plate"><img class="picture" [^>]*alt="A claw on an arch\." [^>]*><figcaption class="scene-words">Nothing reaches us here\.<\/figcaption><\/figure>$/);
   assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw.' }), /^<figure class="scene scene-plate"><img [^>]*><\/figure>$/);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'plate' }), /a plate's painting says what it shows: it needs an alt/);
 });
 
 test('a page that builds itself gets the same scene as an element, its words appended where they sit', () => {
@@ -158,10 +159,10 @@ test('a page that builds itself gets the same scene as an element, its words app
   assert.equal(plate.children.length, 1, 'a plate without words has no caption');
 });
 
-test('the sheet holds the three forms: a head no taller than 120 px, 64 on a short screen, a scrim to soot under words', () => {
+test('the sheet holds the three forms: a band of 3:1 no taller than 120 px, 64 on a short screen, a scrim to soot under words', () => {
   const sheet = read('table/identity.css');
-  assert.match(sheet, /\.scene-head \{[^}]*aspect-ratio: 3 \/ 1;[^}]*max-height: 120px;/);
-  assert.match(sheet, /@media \(max-height: 600px\) \{\s*\.scene-head \{ max-height: 64px; \}/);
+  assert.match(sheet, /\.scene-head::after \{[^}]*aspect-ratio: 3 \/ 1; max-height: 120px; \}/);
+  assert.match(sheet, /@media \(max-height: 600px\) \{\s*\.scene-head::after \{ max-height: 64px; \}/);
   assert.match(sheet, /\.scene-head::before \{[^}]*linear-gradient\(to right, var\(--soot\)/);
   assert.match(sheet, /\.scene-head\[data-side="end"\]::before \{[^}]*linear-gradient\(to left, var\(--soot\)/);
   assert.match(sheet, /\.scene-ground::before \{[^}]*var\(--soot\)/);
