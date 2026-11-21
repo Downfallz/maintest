@@ -121,3 +121,72 @@ test('an icon takes the colour and the size of its text, and says nothing of its
   expect(drawn).toEqual({ stroke: 'rgb(1, 2, 3)', fill: 'none', size: [20, 20] });
   await expect(page.getByRole('button', { name: 'Close settings' })).toHaveCount(1);
 });
+
+/**
+ * A scene of each form, its painting a white canvas made in the page: the worst painting there is under bone
+ * words. `scrim: false` takes the scrim away, to show what the measure finds without it.
+ */
+const addScene = (page, form, { scrim = true, saveData = false, side } = {}) => page.evaluate(async ({ form, scrim, saveData, side }) => {
+  const canvas = Object.assign(document.createElement('canvas'), { width: 900, height: 300 });
+  const pen = canvas.getContext('2d');
+  pen.fillStyle = '#fff'; pen.fillRect(0, 0, 900, 300);
+  const { sceneElement } = await import('./picture.js');
+  const art = { pool: { frames: 1, drawn: [358], pages: { here: 'first' }, sizes: [{ file: 'pool.webp', width: 900, height: 300, bytes: 1 }] } };
+  const eyebrow = Object.assign(document.createElement('p'), { className: 'eyebrow', textContent: 'Friends' });
+  const title = Object.assign(document.createElement('h2'), { textContent: 'Invite a friend' });
+  const scene = sceneElement(document, 'pool', { page: 'here', art, form, side, saveData, alt: form === 'plate' ? 'A pool.' : undefined, words: form === 'plate' ? ['See you soon.'] : [eyebrow, title] });
+  const image = scene.querySelector('img');
+  if (image) { image.removeAttribute('srcset'); image.src = canvas.toDataURL(); }
+  scene.id = 'kit-scene';
+  document.body.replaceChildren(scene);
+  if (!scrim) document.head.append(Object.assign(document.createElement('style'), { textContent: '#kit-scene::before { content: none; }' }));
+  await image?.decode();
+  const box = scene.getBoundingClientRect();
+  return { width: Math.round(box.width), height: Math.round(box.height), images: scene.querySelectorAll('img').length };
+}, { form, scrim, saveData, side });
+
+test('a head is a 3:1 band no taller than 120 px, and its words hold 4.5:1 on its scrim over the lightest painting', async ({ page }) => {
+  const { measureContrast } = await import('../../scripts/ux/contrast.mjs');
+  await open(page);
+  for (const side of ['start', 'end']) {
+    const drawn = await addScene(page, 'head', { side });
+    expect(drawn.height).toBe(Math.min(120, Math.round(drawn.width / 3)));
+    const contrast = await measureContrast(page);
+    expect(contrast.texts).toBe(2);
+    expect(contrast.under, `${side}: ${JSON.stringify(contrast)}`).toBe(0);
+  }
+});
+
+test('the measure finds words on a painting with no scrim, and says nothing of a screen with none', async ({ page }) => {
+  const { measureContrast } = await import('../../scripts/ux/contrast.mjs');
+  await open(page);
+  expect(await measureContrast(page)).toBeNull();
+  await addScene(page, 'head', { scrim: false });
+  const contrast = await measureContrast(page);
+  expect(contrast.under).toBe(2);
+  expect(contrast.lowest).toBeLessThan(2);
+});
+
+test('on a short screen a head shrinks to 64 px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await open(page);
+  expect((await addScene(page, 'head')).height).toBe(64);
+});
+
+test('a ground holds its words on its dimmed painting, and goes under less data', async ({ page }) => {
+  const { measureContrast } = await import('../../scripts/ux/contrast.mjs');
+  await open(page);
+  expect((await addScene(page, 'ground')).images).toBe(1);
+  expect((await measureContrast(page)).under).toBe(0);
+  expect((await addScene(page, 'ground', { saveData: true })).images).toBe(0);
+  expect(await measureContrast(page), 'a ground not drawn lays no words on a painting').toBeNull();
+});
+
+test('a plate is its painting whole, named, with its words under it', async ({ page }) => {
+  await open(page);
+  const drawn = await addScene(page, 'plate');
+  await expect(page.getByRole('figure', { name: 'See you soon.' }).getByRole('img', { name: 'A pool.' })).toHaveCount(1);
+  const picture = await page.locator('#kit-scene img').boundingBox();
+  expect(Math.round(picture.width / picture.height)).toBe(3);
+  expect(drawn.height).toBeGreaterThan(picture.height);
+});

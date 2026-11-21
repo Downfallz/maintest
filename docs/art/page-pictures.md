@@ -13,7 +13,7 @@ kit of [the pages' craft plan](ux-craft-plan.md), UX5). The patterns and their s
 | `docs/art/page-pictures.json` | The declaration: each picture a page draws, its painting, the width it is drawn at, the pages that draw it. | A session, by hand |
 | `table/page-art/` | Each picture at the sizes it is sent, as WebP, named by its own bytes. | `scripts/ux/pictures.mjs` |
 | `table/page-art.js` | The module the pages and the showcase's build read: each file, its width, its height, its bytes. | `scripts/ux/pictures.mjs` |
-| `table/picture.js` | The form: the `<img>`, and the strip. | A session |
+| `table/picture.js` | The form: the `<img>`, the strip, and a scene as a head, a ground or a plate. | A session |
 | `table/picture-focus.js` | Where a cut picture centres: the check of a `focus`, which imports nothing, so the script runs on a broken `page-art.js`. | A session |
 | `table/icons.js` | The icon set. | A session |
 | `docs/art/page-budget.json` | The bytes of pictures a page may load, and ADR 0197's times. | A session |
@@ -82,6 +82,27 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
   following. Its room is held before it loads.
 - Never write a derived file's name in a page: it changes when the picture is derived again.
 
+
+## A scene in one of three forms
+
+A painting of the scenes' library (`docs/art/sources/pages/scenes/`) takes one of three forms in the table
+([the scenes' plan](scene-paintings-plan.md#the-app)), drawn by `table/identity.css`:
+
+```js
+import { sceneElement } from './picture.js';
+dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'table/home', form: 'head', side: 'end', words: [eyebrow, title] }));
+```
+
+- `head`: a 3:1 band across the top of a window, a sheet or a page, no taller than 120 px, 64 px on a screen under
+  600 px tall. Its `words` sit on its `side`, `start` (the default) or `end`, whichever is darker, over a scrim
+  to `--soot`.
+- `ground`: a card's or a dialog's painting, cut to its box and dimmed under `--soot`, its words on it. Under less
+  data (`navigator.connection.saveData`) it is not drawn, and the card keeps its own slate.
+- `plate`: a `<figure>`, the painting whole and named by its `alt`, its `words` as the caption under it.
+- A head's and a ground's painting is a decoration: it takes no `alt`, its words say what the screen is. The
+  other options are `pictureElement`'s; `sceneHtml` writes the same as text, `words` then being HTML.
+- Words on a painting hold 4.5:1 against the lightest pixel under them. The journey walk measures it on every
+  screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
 ## A picture that moves
 
 First by code, on a still: `.motion-breath` ([ADR 0197](../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)).

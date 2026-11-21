@@ -100,3 +100,56 @@ export function stripElement(doc, name, options = {}) {
   frame.append(pictureElement(doc, name, { ...options, alt: '' }));
   return frame;
 }
+
+/**
+ * The three forms a scene takes in the table (docs/art/scene-paintings-plan.md, the app): a head, a band across
+ * the top of a window, a sheet or a page, behind its eyebrow and title; a ground, a card's or a dialog's painting
+ * dimmed behind its words; a plate, a picture on its own with its words under it. identity.css draws them, so a
+ * page sheet only places them.
+ */
+export const SCENE_FORMS = ['head', 'ground', 'plate'];
+const SIDES = ['start', 'end'];
+
+/** Less data asked by the browser (`Save-Data`): a ground goes, its card keeps its slate. */
+const savingData = () => globalThis.navigator?.connection?.saveData === true;
+
+function sceneOf(name, { form, side, alt, page, art = PAGE_ART, saveData = savingData() }) {
+  if (!SCENE_FORMS.includes(form)) throw new Error(`${name}: a scene is a head, a ground or a plate, not ${form}`);
+  if (entryOf(name, page, art).frames > 1) throw new Error(`${name}: a strip is never a scene`);
+  if (side !== undefined && form !== 'head') throw new Error(`${name}: only a head has a side`);
+  if (form === 'head' && !SIDES.includes(side ?? 'start')) throw new Error(`${name}: a head's words sit at its start or its end, not ${side}`);
+  // Its words say what the screen is; the painting behind them says nothing of its own.
+  if (alt && form !== 'plate') throw new Error(`${name}: a head's or a ground's painting is a decoration, and takes no alt`);
+  const container = form === 'plate'
+    ? { tag: 'figure', words: 'figcaption', attributes: {} }
+    : { tag: 'div', words: 'div', attributes: form === 'head' ? { 'data-side': side ?? 'start' } : {} };
+  const drawn = !(form === 'ground' && saveData);
+  if (!drawn) container.attributes['data-saved'] = '';
+  return { ...container, class: `scene scene-${form}`, drawn };
+}
+
+const pictureOptions = ({ form, side, words, saveData, ...options }) => options;
+
+/** A scene as text, for a page built before it is served. `words` is the HTML that sits on it, or under a plate. */
+export function sceneHtml(name, options = {}) {
+  const scene = sceneOf(name, options), words = options.words ?? '';
+  const image = scene.drawn ? pictureHtml(name, pictureOptions(options)) : '';
+  const caption = words || options.form !== 'plate' ? `<${scene.words} class="scene-words">${words}</${scene.words}>` : '';
+  return `<${scene.tag} ${written({ class: scene.class, ...scene.attributes })}>${image}${caption}</${scene.tag}>`;
+}
+
+/** A scene as an element. `words` are the nodes (or strings) that sit on it, or under a plate. */
+export function sceneElement(doc, name, options = {}) {
+  const scene = sceneOf(name, options), words = options.words ?? [];
+  const element = doc.createElement(scene.tag);
+  element.className = scene.class;
+  for (const [attribute, value] of Object.entries(scene.attributes)) element.setAttribute(attribute, value);
+  if (scene.drawn) element.append(pictureElement(doc, name, pictureOptions(options)));
+  if (words.length || options.form !== 'plate') {
+    const holder = doc.createElement(scene.words);
+    holder.className = 'scene-words';
+    holder.append(...words.map(word => (typeof word === 'string' ? doc.createTextNode(word) : word)));
+    element.append(holder);
+  }
+  return element;
+}

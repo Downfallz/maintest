@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S5 are built; S6 is next.
+questions at the end). S1 to S6 are built; S7 is next.
 
 ## What the owner asked for
 
@@ -248,6 +248,20 @@ result in `battle/src` with UX12.
    `pictureElement` with a scrim; the walk's contrast measure under text on a picture
    (a new `--contrast` of `scripts/ux/journey.mjs`); the design system's sources gain them. No screen uses them yet; the
    battle lab shows each. Tests: `table/picture.test.js`, the measure's own test, the design system's.
+
+   *Built (2026-11-21)*: `sceneElement` and `sceneHtml` of `table/picture.js` draw a scene as a `head`, a `ground`
+   or a `plate`, and `table/identity.css` holds the three. A head is a 3:1 band, at most 120 px, 64 px on a screen
+   under 600 px tall; its words sit on the `side` the page names, `start` or `end` (the owner chose a side per
+   screen), over a scrim to `--soot`. A ground dims its painting under `--soot` and is not drawn under
+   `Save-Data`. A plate is a `figure`, its words the caption. A head's or a ground's painting takes no `alt`.
+   `scripts/ux/contrast.mjs` reads each box of text on a head or a ground against the lightest pixel under it, the
+   words hidden, on the screenshot. The owner chose it always on: the walk adds `contrast` to every screen that
+   lays such words, and a screen with none keeps its line. [page-pictures.md](page-pictures.md) gains the forms,
+   the design system a `Scene` card. The owner moved the showcase of the forms from the battle lab, the
+   Phaser laboratory, to that card and to `studio/browser/picture-kit.spec.js`, which mounts each on a white
+   painting: the scrims hold 4.5:1 there, and the measure finds the words once the scrim is taken away. Nothing is
+   declared and no budget moves. Left: no screen uses the forms (S7 on); the scrims' strength is read again on
+   the real paintings, at both widths, by the stage that first draws each form.
 7. **S7, invitations and friends.** A `/ux-pass` on the Create window opened on a friend, the invitation card,
    the Friends window. Tests: `studio/browser/lobby-home.spec.js` and the friends' specs, the budgets, the
    measures.

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from './page-art.js';
-import { FOCUS_STEP, PAGE_ART_BASE, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, stripElement, stripHtml } from './picture.js';
+import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sceneHtml, stripElement, stripHtml } from './picture.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -21,7 +21,7 @@ const ART = {
 
 function fakeDocument() {
   const element = tag => ({ tag, attributes: {}, children: [], className: '', setAttribute(name, value) { this.attributes[name] = value; }, append(...nodes) { this.children.push(...nodes); } });
-  return { createElement: element };
+  return { createElement: element, createTextNode: text => ({ text }) };
 }
 
 test('a picture is an image with its width, its height and the sizes it is sent at', () => {
@@ -106,6 +106,66 @@ test('the sheet steps a strip of every count the form allows, and nothing in the
   for (let frames = 2; frames <= STRIP_FRAMES; frames++) assert.ok(sheet.includes(`.motion-strip[data-frames="${frames}"] { --frames: ${frames}; }`), `${frames} frames`);
   // The showcase's policy refuses a style attribute (showcase/_headers).
   assert.doesNotMatch(stripHtml('cast', { page: 'home', art: ART }) + pictureHtml('beast', { page: 'home', art: ART }), /style=/);
+});
+
+test('a scene takes one of three forms: a head, a ground or a plate', () => {
+  assert.deepEqual(SCENE_FORMS, ['head', 'ground', 'plate']);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'banner' }), /a scene is a head, a ground or a plate, not banner/);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART }), /a scene is a head, a ground or a plate, not undefined/);
+  assert.throws(() => sceneHtml('cast', { page: 'home', art: ART, form: 'head' }), /a strip is never a scene/);
+});
+
+test('a head is a band behind its words, its painting a decoration, its scrim on the side the words sit', () => {
+  const html = sceneHtml('scene', { page: 'home', art: ART, form: 'head', words: '<p class="eyebrow">Friends</p><h2>Invite</h2>' });
+  assert.match(html, /^<div class="scene scene-head" data-side="start"><img class="picture" src="\/page-art\/scene-533\.ee\.webp" [^>]*alt="" [^>]*data-focus-x="30" data-focus-y="60"><div class="scene-words"><p class="eyebrow">Friends<\/p><h2>Invite<\/h2><\/div><\/div>$/);
+  assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'head', side: 'end' }), /^<div class="scene scene-head" data-side="end">/);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'head', side: 'left' }), /a head's words sit at its start or its end, not left/);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'ground', side: 'end' }), /only a head has a side/);
+  assert.throws(() => sceneHtml('scene', { page: 'home', art: ART, form: 'head', alt: 'A pool.' }), /a head's or a ground's painting is a decoration/);
+});
+
+test('a ground is a card\'s painting behind its words, and goes under less data: the card keeps its slate', () => {
+  assert.match(sceneHtml('beast', { page: 'ladder', art: ART, form: 'ground', words: '<p>Waiting</p>', saveData: false }),
+    /^<div class="scene scene-ground"><img class="picture" [^>]*loading="lazy"><div class="scene-words"><p>Waiting<\/p><\/div><\/div>$/);
+  assert.equal(sceneHtml('beast', { page: 'ladder', art: ART, form: 'ground', words: '<p>Waiting</p>', saveData: true }),
+    '<div class="scene scene-ground" data-saved=""><div class="scene-words"><p>Waiting</p></div></div>');
+  // A head and a plate say something: they stay under less data.
+  assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'head', saveData: true }), /<img /);
+});
+
+test('a plate is a figure, its painting named and its words under it', () => {
+  assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw on an arch.', words: 'Nothing reaches us here.' }),
+    /^<figure class="scene scene-plate"><img class="picture" [^>]*alt="A claw on an arch\." [^>]*><figcaption class="scene-words">Nothing reaches us here\.<\/figcaption><\/figure>$/);
+  assert.match(sceneHtml('scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw.' }), /^<figure class="scene scene-plate"><img [^>]*><\/figure>$/);
+});
+
+test('a page that builds itself gets the same scene as an element, its words appended where they sit', () => {
+  const doc = fakeDocument(), title = { tag: 'h2' };
+  const head = sceneElement(doc, 'scene', { page: 'home', art: ART, form: 'head', side: 'end', words: [title, 'Friends'] });
+  assert.equal(head.tag, 'div');
+  assert.equal(head.className, 'scene scene-head');
+  assert.equal(head.attributes['data-side'], 'end');
+  const [image, words] = head.children;
+  assert.equal(image.tag, 'img');
+  assert.equal(image.attributes.alt, '');
+  assert.equal(words.className, 'scene-words');
+  assert.deepEqual(words.children, [title, { text: 'Friends' }]);
+  const ground = sceneElement(doc, 'beast', { page: 'ladder', art: ART, form: 'ground', saveData: true });
+  assert.equal(ground.attributes['data-saved'], '');
+  assert.deepEqual(ground.children.map(child => child.className), ['scene-words']);
+  const plate = sceneElement(doc, 'scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw.' });
+  assert.equal(plate.tag, 'figure');
+  assert.equal(plate.children.length, 1, 'a plate without words has no caption');
+});
+
+test('the sheet holds the three forms: a head no taller than 120 px, 64 on a short screen, a scrim to soot under words', () => {
+  const sheet = read('table/identity.css');
+  assert.match(sheet, /\.scene-head \{[^}]*aspect-ratio: 3 \/ 1;[^}]*max-height: 120px;/);
+  assert.match(sheet, /@media \(max-height: 600px\) \{\s*\.scene-head \{ max-height: 64px; \}/);
+  assert.match(sheet, /\.scene-head::before \{[^}]*linear-gradient\(to right, var\(--soot\)/);
+  assert.match(sheet, /\.scene-head\[data-side="end"\]::before \{[^}]*linear-gradient\(to left, var\(--soot\)/);
+  assert.match(sheet, /\.scene-ground::before \{[^}]*var\(--soot\)/);
+  assert.match(sheet, /\.scene-ground\[data-saved\]::before \{ content: none; \}/);
 });
 
 test('every picture of the kit is declared with the files a page is given', () => {

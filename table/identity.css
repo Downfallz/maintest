@@ -225,6 +225,44 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .picture[data-focus-y="100"] { --focus-y: 100%; }
 :where(.picture[data-focus-x], .picture[data-focus-y]) { object-position: var(--focus-x, 50%) var(--focus-y, 50%); }
 
+/* A scene (picture.js, docs/art/scene-paintings-plan.md): a painting of the library in one of three forms, so a
+   page sheet only places it. Words on a painting sit on a scrim to soot and hold 4.5:1 against the lightest pixel
+   under them, which the journey walk measures (scripts/ux/contrast.mjs). A head and a ground cut their painting
+   by its focus; a plate shows it whole. */
+.scene { position: relative; isolation: isolate; overflow: hidden; margin: 0; }
+.scene-head > .picture, .scene-ground > .picture {
+  position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; max-width: none; object-fit: cover;
+}
+.scene-head::before, .scene-ground::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.scene-words { position: relative; }
+
+/* The head: a 3:1 band across the top of a window, a sheet or a page, its eyebrow and title on its darker side.
+   On a short screen it shrinks, so it never pushes the window's filled action out of view. */
+.scene-head {
+  display: flex; flex-direction: column; justify-content: flex-end; aspect-ratio: 3 / 1; max-height: 120px;
+  background-color: var(--soot);
+}
+.scene-head > .scene-words { max-width: 62%; padding: 10px 16px; }
+.scene-head[data-side="end"] > .scene-words { align-self: flex-end; text-align: end; }
+.scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 88%, transparent) 45%, transparent 85%); }
+.scene-head[data-side="end"]::before { background: linear-gradient(to left, var(--soot) 0, color-mix(in srgb, var(--soot) 88%, transparent) 45%, transparent 85%); }
+.scene-head :is(h1, h2, h3) { margin: 0; color: var(--bone); }
+.scene-head .eyebrow { margin: 0 0 2px; color: var(--brand-ember); }
+@media (max-height: 600px) {
+  .scene-head { max-height: 64px; }
+  .scene-head > .scene-words { padding: 6px 12px; }
+}
+
+/* The ground: a card's or a dialog's painting dimmed behind its words. Under less data it is not drawn, and the
+   card keeps its own slate. */
+.scene-ground::before { background: linear-gradient(color-mix(in srgb, var(--soot) 84%, transparent), color-mix(in srgb, var(--soot) 92%, transparent)); }
+.scene-ground[data-saved]::before { content: none; }
+
+/* The plate: a painting on its own, whole, its words under it. */
+.scene-plate { display: grid; gap: 8px; }
+.scene-plate > .picture { display: block; width: 100%; }
+.scene-plate > .scene-words { color: var(--muted); font-size: 14px; line-height: 1.4; }
+
 /* BEGIN MOTION KIT (ADR 0197, docs/art/ux-craft.md#motion). Five uses, each with one form, and ambience. Only
    transform and opacity move, by the tokens of docs/art/branding.css. Each form is written first as it is under
    less motion, a fade or a change of shade; what travels is added for full motion alone, where neither the

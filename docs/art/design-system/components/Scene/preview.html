@@ -1,0 +1,16 @@
+<!-- @dsCard group="Surfaces" height=420 subtitle="A painting as a head, a ground or a plate, words on a scrim to soot" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Scene</title>
+<style>
+.wrap{padding:24px;display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start}
+.painting{position:absolute;inset:0;z-index:-2;background:radial-gradient(60% 90% at 78% 40%,var(--bone) 0,var(--brand-ember) 35%,var(--raised) 75%),var(--panel)}
+.plate-painting{aspect-ratio:16/9;background:radial-gradient(60% 90% at 50% 40%,var(--bone) 0,var(--brand-ember) 35%,var(--raised) 75%),var(--panel)}
+.scene-ground{padding:16px;min-height:120px}
+.scene-ground .scene-words p{margin:0 0 6px;color:var(--bone)}
+.scene-ground .scene-words .muted{color:var(--ink)}
+</style></head>
+<body><div class="wrap">
+<div class="scene scene-head" data-side="start"><span class="painting" aria-hidden="true"></span><div class="scene-words"><p class="eyebrow">Friends</p><h2>Invite a friend</h2></div></div>
+<div class="scene scene-ground"><span class="painting" aria-hidden="true"></span><div class="scene-words"><p>Waiting on Mira</p><p class="muted">Round 4 · your plan is in</p></div></div>
+<figure class="scene scene-plate"><div class="plate-painting" role="img" aria-label="A stand-in for a painting"></div><figcaption class="scene-words">See you soon.</figcaption></figure>
+</div></body></html>
