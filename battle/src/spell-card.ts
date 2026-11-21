@@ -22,7 +22,10 @@ export interface SpellCardOptions {
 
 type Make = (block: string, text?: string, cls?: string) => HTMLElement;
 const maker = (inline: boolean): Make => (block, text = '', cls = '') => {
-  const el = document.createElement(inline ? 'span' : block); if (text) el.textContent = text; if (cls) el.className = cls; return el;
+  const el = document.createElement(inline ? 'span' : block);
+  if (text) el.textContent = text;
+  if (cls) el.className = cls;
+  return el;
 };
 
 // The cost and crit chips: what the host says this cast costs and its chance now, over the catalogue's own.
