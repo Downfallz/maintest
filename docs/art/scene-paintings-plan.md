@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). Nothing is built.
+questions at the end). S1 is built; S2 is next.
 
 ## What the owner asked for
 
@@ -166,6 +166,13 @@ result in `battle/src` with UX12.
    by content id, its page in this plan. `docs/art/sources/pages/README.md` names the folder. #1033 is closed with
    a link to this plan. Test: `studio/ux-pictures.test.js` checks every file of `scenes/` is in the register and
    every content id it names exists in `data/`.
+
+   *Built (2026-11-21)*: the ten WebPs came over from #1033 byte for byte, without its guide.
+   [scenes/README.md](sources/pages/scenes/README.md) is the register: each file, its size, what it shows, its
+   creatures and spells by content id (a form by its tier: the Predator is `tier:prowler:v1`, the Warped
+   `tier:occultist:v1`), its page, and the two forms that drift. `docs/art/sources/pages/README.md` names the
+   folder. The test also checks each size against the file's header. Left: no scene is declared or drawn; that
+   starts with S4, after S3's focus point.
 2. **S2, the duel.** The owner's painting of two teams of three under the eclipse answers the one request a
    brief had open (`journeys/doors.md`, the sign-in panel for the invited friend). It is already in the
    repository, unchanged but for its format: `docs/art/sources/pages/duel.webp`, 1672 by 941. The stage declares
