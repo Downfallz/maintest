@@ -1,9 +1,11 @@
 # The match's windows
 
 The brief of the match's windows, the pictures first. Stage P1 of [the pictures of the windows](../ux12-pictures-plan.md)
-wrote its first five screens, and P6 adds two (`tempo-reference` and `order-revealed`, the screens of P7); the rest of UX12 of [the pages' craft plan](../ux-craft-plan.md) (how each window
-enters, leaves and gives the focus back, a mutation followed back onto the field, the result as a moment) adds its
-screens to this file later. What a phase asks and in what order is `docs/tabletop/battle-ux-parity-plan.md`'s; the
+wrote its first five screens, and P6 adds two (`tempo-reference` and `order-revealed`, the screens of P7). UX12 of
+[the pages' craft plan](../ux-craft-plan.md), as the owner scoped it on 2026-11-22, adds part A: the match's 18
+windows as one family (how each enters, leaves and gives the focus back; Escape; Tab held in a modal window; the
+11 px floor), with the screen `inspect`. A mutation followed back onto the field and the result as a moment are
+UX12b's, and are not briefed here. What a phase asks and in what order is `docs/tabletop/battle-ux-parity-plan.md`'s; the
 frame around a docked sheet is [the match's brief](match.md); inside the canvas is the battle craft's. Still a
 proposal: the owner has not yet seen the journey's sheets.
 
@@ -21,6 +23,15 @@ screen with their measures. The walk now films seven screens: `mutation-pick`, `
 `spell-choice` and `spell-choice-foot` are filmed at Instinct; the Precision state of the crit chip is read on
 `order-revealed`, where Creature 2's spellbook is docked at Precision. P6's critique read this walk on the branch
 against the same walk on `main` (P1 to P5 built), at 320 then 390. "P6's walk" below is the branch's film.
+
+UX12 walked the journey on its branch from `main` at `6b831c3`, with the walk's new screen `inspect` and strip
+`inspect-window`: `node scripts/ux/journey.mjs windows --out <folder>`, then `--strip inspect-window` and
+`--strip history-window` into the same folder, and `node scripts/ux/journey.mjs match --strip settings-window`. The
+sheets read are the journey's at 320 by 568 and 390 by 844 with their measures (two walks of the branch, which agree
+on every screen but the summed shift), the match journey's at both widths for its windows (`upkeep`, `phase-tip`,
+`settings`, `concede`, `match-result`, briefed in [the match's brief](match.md)), and the three strips before the
+change, where each window is whole from the first frame. "UX12's walk" below is the branch's film. The strips after
+the change are the critique's to read.
 
 The pictures counted on each screen (the same walk, read in the page, alike at both widths): the spellbook holds 4
 spells (Strike, Pummel, Focus, Brace) and 4 portraits, 2 in view at its top at 390 and 4 at its foot; the pick 3
@@ -76,6 +87,40 @@ What holds for every screen of the journey:
 - **The screen's size decides a spell portrait's size**, never the window it is in: 24 px on a screen under 660 px
   tall (in portrait), 40 px on a taller one, where the card has the room; the journal's rows, 24 px everywhere.
 
+**The windows' family** (UX12, part A). It holds for the 18 `<dialog>` of `table/battle.html` once, and each screen
+below names only what differs. Two kinds:
+
+- **A window** (15 of them: Settings, Concede, Help, History, the order, the Mutation Tree, the mutation's growth,
+  the opponent, the reactions, the recap, the result, the match's report, the lesson's brief, the concept card, the
+  inspection). It opens with `showModal()` and takes the kit's form of `table/identity.css` (block "2. A window
+  enters"): it fades in over `--motion-normal` on `--motion-enter`, and under full motion rises the last 8 px; it
+  leaves faster than it came, over `--motion-fast` on `--motion-exit`. Its backdrop fades with it. A browser without
+  `transition-behavior: allow-discrete` opens and closes it at once
+  ([A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves), [Durations](../ux-craft.md#durations)).
+- **A docked sheet** (3: the Command sheet `#planning-dialog`, the Combat sheet `#combat-dialog`, the upkeep
+  `#upkeep-dialog`, each `.docked-sheet`). It is part of the frame: it fades in where it stands over
+  `--motion-normal` on `--motion-enter`, with no travel, and leaves at once. A sheet that faded out would still stand
+  over the field the player goes back to, to a player and to a test (UX4's **Left** in the plan).
+- **Less motion**: the rise goes and the fade stays, for both kinds
+  ([Less motion is not no motion](../ux-craft.md#less-motion-is-not-no-motion)). Nothing in a window moves by itself.
+- **The focus** ([A window that holds the focus](../ux-craft.md#a-window-that-holds-the-focus)): it goes in on the
+  window's `autofocus`, else its first control. In a modal window (the 15, and the upkeep) Tab and Shift+Tab go round
+  its own controls (`battle/src/windows.ts`); the Command and Combat sheets are not modal, and the bar and the field
+  stay in reach. Escape closes the top window; a window with a layer of its own (the inspection's zoomed portrait,
+  the result's) closes that layer first; the Concede window does not close while its answer is awaited. On close,
+  each window's own module gives the focus back to what opened it; when that is gone (its opener closed with it, as
+  Help's History button does, or left the frame) the focus goes to the frame's control that reaches the window again,
+  in the order `battle/src/live.ts` lists them (History's: History on the bar, then Help). A window opened from
+  another gives the focus back inside the first, which stays open.
+- **The floor**: no word in a window or a docked sheet under 11 px, written `.6875rem` so the reader's own size
+  applies ([Readable text](../ux-craft.md#readable-text)); a label set in capitals keeps its size, and the match
+  report's column heads lose their letter spacing under 620 px wide. Under it on the film before the floor: Help's
+  window (`phase-tip`) 9 px and 4 words, the match's report (`match-result`) 9 px and 20 words, the inspection 9.17 px
+  and 4, the Mutation Tree 9.17 px and 2, the Tempo sheet 9.17 px and 12. Settings, Concede, the upkeep and the
+  journal were at 11 px or more.
+- **What it does not change**: no window's words, pictures, filled action or order. A window's words are its
+  screen's; the screens below keep their budgets.
+
 **Left**, across the journey (each screen's **Left** names its own):
 
 - Settled by P2: the budget of 320 KiB holds the 322,218 B measured, the files derived; `budgetOf` counts each
@@ -83,7 +128,20 @@ What holds for every screen of the journey:
   so a spell drawn at 24 and at 40 px counts 137,818 B, not 44,882 B.
 - The spellbook in two columns (the owner, 2026-11-20) amends AU9's "full details" mode: its two screens below,
   built by P3 (2026-11-21).
-- How each window enters, leaves and returns the focus, and the strip `history-window`, are UX12's.
+- How each window enters, leaves and returns the focus is the family's (above), built by UX12's part A. The strips
+  `history-window` and `inspect-window` (and the match's `settings-window`) are what the critique reads it on, frame
+  by frame; how it feels at full speed no strip says.
+- **A choice the owner may refuse**: a docked sheet leaves at once while a window fades out. I chose it because a
+  sheet still fading stands over the field the player returns to; the cost is two forms of leaving in one match.
+- **A choice the owner may refuse**: a docked sheet fades in without the 8 px rise, since the field above it
+  resizes as it docks and a second movement would stack on the first.
+- The Command and Combat sheets do not hold Tab: they are not modal, so a keyboard player reaches the field and the
+  bar past their last control. Holding Tab there would cut off the targets on the field.
+- The craft book is stale on three entries: "Here" of
+  [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) (the 18 "still open at once"),
+  of [A window that holds the focus](../ux-craft.md#a-window-that-holds-the-focus) and of
+  [Durations](../ux-craft.md#durations). Bringing them to the built form is the session's, in this change.
+- UX12b's (not briefed here): a mutation followed back onto the field, and the result as a moment.
 
 ## The pick (`mutation-pick`)
 
@@ -138,8 +196,8 @@ their text only, as today.
 
 ### Motion
 
-None: a form appears in its held room when it arrives; nothing fades. How the sheet docks and how a choice answers
-are UX12's.
+None of its own: a form appears in its held room when it arrives. The sheet docks by the family's form (the
+opening: a fade where it stands); how a confirmed choice is followed back onto the field is UX12b's.
 
 ### Less motion
 
@@ -215,8 +273,8 @@ they draw today. The two spell portraits are drawn today, at the same size.
 
 ### Motion
 
-None: the form appears in its held room when it arrives. The board's swipe between families and the detail's
-sheet are UX12's.
+None of its own: the form appears in its held room when it arrives. The window enters and leaves by the family's
+form (the opening). The board's swipe between families and the detail's sheet are not staged: a later pass's.
 
 ### Less motion
 
@@ -224,7 +282,9 @@ None.
 
 ### Accessibility
 
-- **Focus**: as today, on the window's opening (UX12's); Choose Brute is the first control of the detail.
+- **Focus**: in on the window's first control, held there by Tab, and back on Full Mutation Tree when it closes,
+  or on the frame's control that reaches it (the family, the opening); Choose Brute is the first control of the
+  detail.
 - **Names**: the form's `alt` is empty: the detail's heading is the mutation's name. axe finds 8
   `label-content-name-mismatch` at both widths: the board's mutations speak "Brute · Stage 1 · Offered now" over
   "I Brute OFFER". The name starts with the visible words.
@@ -248,7 +308,9 @@ None.
   stands left of the family, the stage and the name, which together are already about its height. The critique
   reads it at 320.
 - Text under 11 px: 38 elements at 9 px at both widths (the board's stage numerals and OFFER, the detail's
-  chips). The floor of 11 px is the match's ([the match's brief](match.md)); fixing it here is UX12's.
+  chips). UX12 brings them to 11 px (the family's floor, the opening): the board's stage numerals, OFFER and the detail's
+  family are in its block. UX12's walk, filmed before the floor, still reads 9.17 px and 2 words (the crit chip's
+  `d20 6+`); the critique reads the built film.
 - The board's forms, built by P5 (2026-11-21): each mutation of the board shows its form above its stage numeral and
   name, in columns of `min(94vw, 400px)`; three mutations of a stage still share one line at 320. P5's test shows
   that no form of the board loads before the window opens. The critique (P6) reads it at 320.
@@ -276,7 +338,7 @@ portrait at 24 px beside its name: it answers "which of my spells is this?" whil
   word; the name stays written beside each one.
 - **Small text**: the smallest 9.17 px at both widths, 26 words under 11 px: the tempos' lines ("Acts before
   Precision · cannot crit") and the crit chips' hints ("Precision · current"). The same on `main`; the floor of
-  11 px is the match's ([the match's brief](match.md)) and UX12's (**Left**).
+  11 px is the match's ([the match's brief](match.md)), and the family's floor brings these to it (**Left**).
 
 ### Pictures
 
@@ -306,7 +368,8 @@ fails to load is hidden and leaves no gap; the name stays written.
 
 ### Motion
 
-None: a portrait appears in its held room when it arrives; nothing fades. How the sheet docks is UX12's.
+None of its own: a portrait appears in its held room when it arrives. The sheet docks by the family's form (the
+opening).
 
 ### Less motion
 
@@ -333,11 +396,12 @@ None.
 ### Left
 
 - The 26 words under 11 px (the **Words**) are there on `main` too: the match journey's `tempo-sheet` measured
-  8 px and 57 words under 11 px. Fixing them is UX12's, not P7's.
+  8 px and 57 words under 11 px. UX12's walk, before the floor, reads 9.17 px and 12 words; the family's floor
+  (the tempos' lines and the chips' hints are in its block) brings them to 11 px, and the critique reads it.
 - At 320 by 568 the reference is out of sight: the walk brings it just under the pinned head, but the team's tabs,
   the creature, its two tempos and the foot fill the docked sheet, and only the note's first line shows; no card and
   no portrait is in view. The same on `main`, before any portrait: the sheet's height at 320, not P7's. At 390
-  Strike and Focus are in view (overlaps 1 at 390, 0 at 320). Worth an issue for UX12: a short screen does not see
+  Strike and Focus are in view (overlaps 1 at 390, 0 at 320). Worth an issue, not part A's: a short screen does not see
   what the creature could cast while it chooses a tempo.
 - Pummel's crit chip here keeps its hint written ("Precision · current"), where the spellbook's grey chip at
   Instinct writes the chance alone: two forms of one fact on two sheets. Whether the reference takes the
@@ -420,7 +484,8 @@ screen). No third size: 24 and 40 px are the two the plan declares.
 
 ### Motion
 
-None: a portrait appears in its held room when it arrives. How the sheet docks is UX12's.
+None of its own: a portrait appears in its held room when it arrives. The sheet docks by the family's form (the
+opening).
 
 ### Less motion
 
@@ -465,7 +530,8 @@ None.
   `tempo-reference` and `spell-choice`. The walk, made to name each shift's elements, found the field's five creature
   captions moving down 120 px as the docked Tempo sheet closes and the field grows. Not a portrait, not the chip.
   `main` walked the same way shows the same 0.09 on one walk and none on the next: it counts only when the host's
-  answer lands more than 0.5 s after the confirming tap. Holding the field still while a sheet closes is UX12's.
+  answer lands more than 0.5 s after the confirming tap. Holding the field still while a sheet closes is not part A's: the sheet now leaves at once, which does not
+  move the field less. A later pass's, with the field's resizing.
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 
@@ -638,6 +704,111 @@ None.
 - The shift at 320 (0.05) is summed over the walk; whether a reveal's widening moves the strip under the player's
   finger is read on a strip of the order, not on this sheet.
 
+## The inspection (`inspect`) (new)
+
+### Job
+
+A creature read in its window: the player taps a slot of the order strip, then Inspect on the card that opens under
+it (`#order-why-inspect`), after `order-revealed`. The same window opens from a creature tapped on the field and from
+the upkeep. It shows the creature as the host gives it: its side, its health, energy, defense and initiative, its
+conditions, its acquired mutations, its known spells and its last public action. It is the family's centred window
+on a phone, so it carries the family's contract where a player reaches it most.
+
+- **Filled action**: none: the window is read. Close, at its foot, is quiet; Explore Mutation Tree, Read action in
+  History and the portrait's zoom are quiet too.
+
+### Words
+
+- **Order**: the portrait, the side ("YOUR TEAM") and the name, the round and "Current state"; the four tiles; the
+  conditions; the acquired mutations and Explore Mutation Tree; the known spells and their note; the last public
+  action; Close, pinned at the foot.
+- **Budget**: 155 words at both widths (155 today, on UX12's walk). No word changes: part A moves none.
+- **Small text**: on UX12's walk, before the floor, the smallest 9.17 px and 4 words under 11 px (the crit chip's
+  "Precision only · d20" on a known spell); the tiles' labels (HEALTH, ENERGY, DEFENSE, INITIATIVE, at 9 px in the
+  sheet) and the side's eyebrow (10 px) are in the floor's block too. Built, none under 11 px
+  (`studio/browser/battle-windows.spec.js`); the critique reads it on the film.
+- **The note under Known spells** ("Catalogue reference. Known spells do not reveal a planned spell or its
+  targets.") states what the window does not show, not a rule: it stays.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The creature's illustration in its present form, on the portrait button at the window's head (Brute's form for Creature 1). | 104 by 70 px, at both widths (under 620 px wide) | Which creature am I reading, and in what form? | `table/battle-art/evolutions/brute-base.webp`, the form's `artwork` the host names (`artworkFile`), the field's own illustration (ADR 0151) |
+| Each known spell's portrait on its card (Strike, Pummel, Focus, Brace; Strike in view at 390, none at 320). | 40 by 40 px at 390 by 844; 24 by 24 px at 320 by 568 | Which spell is this, before its words? | `docs/art/spell-portraits/strike.webp`, and `pummel.webp`, `focus.webp`, `brace.webp` |
+
+The portrait is a CSS background on a button, not an `<img>`: the measure counts it as a background, and its
+oversize is not counted (**Left**). The spell portraits follow the spellbook's rule of 660 px (the opening); at 320
+they are below the first screen and were not seen.
+
+### States
+
+- **First paint**: not reached: the window opens over the field, on a press.
+- **Empty**: a creature with nothing to list says so in each section: "No ongoing effects", "No publicly acquired
+  mutations.", "No known spells." (read in the code, `battle/src/inspection.ts`, not seen).
+- **Loaded**: as filmed: Creature 1, 30/30, energy 1, defense 2, initiative 6; two DefenseBuff conditions from Brace;
+  Brute acquired; four known spells.
+- **Waiting**: none: the window sends nothing. When the host's stream changes the creature (a new snapshot), the
+  window redraws what changed in place, without moving the scroll or the focus.
+- **Error**: a creature the host no longer gives closes the window, and the focus goes to the receipt being read
+  (`#reading-open`), else to the recap (read in the code, not seen). A record the host did not keep says so
+  ("Conditions not recorded").
+- **Offline**: `#connection` and the field dimmed behind the backdrop; the window keeps what it holds.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The inspection enters | A press on Inspect (the order's card), on a creature of the field, or in the upkeep; the page calls `showModal()`. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-normal`, `--motion-enter` |
+| The inspection leaves | Close, or Escape with the portrait not zoomed. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves), [Durations](../ux-craft.md#durations) | `--motion-fast`, `--motion-exit` |
+
+The family's form (the opening). The portrait's zoom opens and closes at once, as today: no beat. The strip
+`inspect-window` (Escape, then Inspect again) filmed before the change shows the window whole from its first frame,
+`0 animating` on every frame, and the gold focus ring on the portrait from 40 ms.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The inspection enters | A fade over `--motion-normal`, no rise. |
+| The inspection leaves | A fade over `--motion-fast`, no fall. |
+
+### Accessibility
+
+- **Focus**: in on the window's first control, the portrait's button ("Show the illustration large"), as the strip
+  shows; then the details region (`#inspect-body`, "Creature details", scrollable by keys), its buttons, and Close.
+  Tab and Shift+Tab go round them. Escape closes the zoom first, then the window. On close the focus goes back to
+  Inspect on the order's card, or to the creature on the field it was opened from; if that creature is gone, to
+  the receipt being read, then to the recap (`battle/src/live.ts`).
+- **Names**: the window is named by the creature's name (`aria-labelledby="inspect-name"`); the four tiles are hidden
+  from a screen reader and said once in a sentence (`#inspect-stats`); Close is "Close inspection". axe finds nothing
+  at either width on UX12's walk.
+- **Announced**: nothing: the window is read where the focus is. A snapshot that changes the creature is redrawn
+  without an announcement.
+- **Targets**: 5 controls at both widths on UX12's walk, none under 44 px.
+
+### Cost
+
+- **Bytes**: 0 before any scroll of the page. Open, the window takes the illustration the field already draws (not
+  measured whether it is a second request) and the known spells' portraits, the spellbook's files.
+- **Largest paint**: not this screen's: the window opens after the page's first paint.
+- **Shift**: 0.06 at 320 on both walks, and 0.02 and 0.10 at 390, summed over the walk: the 0.09 more at 390 on
+  one walk is the field's, after the Tempo sheet (the spellbook's **Left**). The window's rise is a `transform`.
+
+### Left
+
+- **A choice the owner may refuse**: the focus lands on the portrait's zoom, the window's first control, as it did
+  before. I kept it: its name says what it does, and the creature's name is read with the window. The other choice
+  is `autofocus` on the details region, so a keyboard player scrolls the details at once.
+- The portrait is drawn at 104 by 70 px from a file 1,536 px wide (`brute-base.webp`, 314,646 B): over twice its
+  size, and not counted by the measure, which reads `<img>` alone. A smaller declared file is the pictures' plan's
+  ([the pages' pictures](../page-pictures.md#declare-a-picture)), not part A's.
+- The window is 1,271 px tall at 320 and 1,130 at 390 in all; its body scrolls under a pinned head and foot. At 320
+  by 568 the first screen shows the tiles, the conditions and the head of Acquired mutations; the known spells and
+  the last action are below.
+- The order strip's card (`#order-why`) is the frame's, [the match's brief](match.md); the walk reaches the window
+  from it because it is the path a player taps on a phone.
+
 ## The journal (`history`)
 
 ### Job
@@ -676,16 +847,28 @@ becomes 24 px, sent from its own 24 and 48 px files.
 
 ### Motion
 
-None: a portrait appears in its held room when it arrives. How the journal enters and leaves (the strip
-`history-window`) is UX12's.
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The journal enters | A press on History, on the bar or in Help's window, and the page calls `showModal()`. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-normal`, `--motion-enter` |
+| The journal leaves | Close, or Escape. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves), [Durations](../ux-craft.md#durations) | `--motion-fast`, `--motion-exit` |
+
+The form is the family's (the opening): a fade and the last 8 px of a rise, its backdrop fading with it. A portrait
+appears in its held room when it arrives, with no beat. The strip `history-window` filmed before the change shows the
+journal whole from its first frame; the strip after the change is the critique's.
 
 ### Less motion
 
-None.
+| Beat | Form |
+| --- | --- |
+| The journal enters | A fade over `--motion-normal`, no rise. |
+| The journal leaves | A fade over `--motion-fast`, no fall. |
 
 ### Accessibility
 
-- **Focus**: on Close (`autofocus`), as today.
+- **Focus**: in on Close (`autofocus`). Tab and Shift+Tab go round the journal's controls, Close to the foot's
+  Latest and back; the field behind is inert. Escape closes it, as Close does. The focus goes back to History on
+  the bar; opened from Help's window (under 360 px wide), it goes back to Help's History, Help still open; and if
+  neither is left, to History on the bar, then to Help (the family, the opening).
 - **Names**: the portrait's `alt` is empty: the row speaks the actor and the spell. axe finds 6
   `label-content-name-mismatch` at 390 and 3 at 320: the row's name begins with the visible words.
 - **Announced**: a row added by Latest is said through the journal's region, as today; a picture says nothing.
@@ -703,6 +886,9 @@ None.
 
 ### Left
 
-- One element animates at rest at 390 (`animating` 1, 0 at 320): the measure does not name it. The critique names
-  it; until then it is not counted as the journal's.
-- The revealed mutations' chips under 44 px (9 at 390), for UX12.
+- One element animates at rest (`animating` 1 at both widths on UX12's walk, at 390 alone on P6's): the measure
+  does not name it. The critique names it; until then it is not counted as the journal's. It is not the window's
+  entrance, which ends in `--motion-normal`.
+- The revealed mutations' chips under 44 px (9 at 390, 7 at 320): not part A's; for the targets' pass (UX13).
+- **Shift on UX12's walk**: 0.39 at 390 and 0.11 at 320 on one walk, 0.30 and 0.19 on the other, summed over the
+  walk. The window's rise is a `transform` and moves no layout, so it adds nothing to the measure.
