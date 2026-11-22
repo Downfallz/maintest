@@ -809,7 +809,7 @@ opens at once, as that page's windows do until UX12.
 
 ### Left
 
-- Sign out filled and focused first is a choice the owner may refuse: [Undo, then one confirmation](../ux-craft.md#undo-then-one-confirmation)
+- Settled by the owner on 2026-11-22: Sign out is filled and focused first. [Undo, then one confirmation](../ux-craft.md#undo-then-one-confirmation)
   keeps a window for what cannot be undone, and a sign out can be, so the safe default (Stay signed in focused)
   weighs less here than [One dominant action](../ux-craft.md#one-dominant-action). Removing a friend keeps Cancel and
   no fill: its brief is `pages.md`'s, if it gets one.
@@ -921,13 +921,12 @@ the Predator rests.
 
 ### Left
 
-- The plate in place of both the ground and the Revenant, not on the ground, is a choice the owner may refuse; it
+- Settled by the owner on 2026-11-22: the plate takes the place of both the ground and the Revenant. It
   follows the invited door's shape and keeps the panel to one painting.
 - No caption on the plate: "See you soon." is the title under it. The owner may want the plan's form whole (the
   words as the plate's caption), which would move the title into the `figcaption`.
-- The `alt` written and the holder `aria-hidden`: kept so the panel reads as the plain door does. If the owner
-  wants the picture heard, the holder loses `aria-hidden` in this state only, and the title should then come first
-  in the reading order.
+- Settled by the owner on 2026-11-22: the holder stays `aria-hidden`, so the panel reads as the plain door does, and
+  the `alt` is not heard.
 - The mark that says "this browser signed out" lives in the tab, not the address, so a shared link never says
   goodbye; it is shown only once the host has said nobody is signed in.
 - The plan's table names this panel's form a plate "in place of the Revenant"; this brief reads it as in place of

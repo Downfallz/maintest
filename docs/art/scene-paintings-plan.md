@@ -311,9 +311,8 @@ result in `battle/src` with UX12.
    One file of 20,646 bytes at twice the density on a phone serves both. `table/sign-in` rose to 200 KiB (201,822
    measured), `table/home`, `table/stats` and `table/battle` raised their `all` to 286, 782 and 402 KiB, and
    `table/leaderboard` and `table/rules` to 88 KiB. The walk's `contrast` reads 11.34:1 at the least on the
-   confirmation, at both widths; both screens are axe clean, with no target under 44 px. Left: the owner may refuse
-   the fill on Sign out, the plate in place of both paintings, and its holder kept `aria-hidden` (the brief's
-   **Left**). A sign out from another page reaches the home by `location.replace`, so that goodbye was read in code
+   confirmation, at both widths; both screens are axe clean, with no target under 44 px. The owner settled the fill
+   on Sign out, the plate in place of both paintings, and its holder kept `aria-hidden` (2026-11-22). Left: a sign out from another page reaches the home by `location.replace`, so that goodbye was read in code
    and in the specs of the home, not filmed. The mock server does not serve `page-art/`, so its specs check the boxes.
 10. **S10, the ladder, the statistics, the rulebook and offline.** Their heads and the offline plate. Tests: the
    pages' specs, a budget for each new page, the measures.
