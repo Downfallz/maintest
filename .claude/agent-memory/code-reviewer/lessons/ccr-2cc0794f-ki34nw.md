@@ -1,0 +1,3 @@
+# code-reviewer lessons (branch ccr-2cc0794f-ki34nw)
+- A "held on each window" check written as a hand list of openers misses the windows no list names: lobby-home.spec.js's 11 px check (#1068) skips `#action-dialog` and `#delete-dialog` (navigation.js:74,82); grep `<dialog` in the page and its scripts against the list before accepting "each" (437d413; both probed clean).
+- A 44 px check that passes can lean on a sibling's height, not the control's own rule: with `.history-modes button` back at 36 px, `#history-close` (no min-height of its own) also fell under 44; ask which rule gives each measured control its floor (#1029, 437d413).

@@ -283,6 +283,7 @@
 #history-dialog[open] { display: flex; }
 .history-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px; border-bottom: 1px solid #52695e; flex: none; }
 #history-title { font: 28px var(--font-display); margin: 0; }
+#history-close { flex: none; min-width: 44px; min-height: 44px; }
 #history-range { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 #history-list { overflow: auto; overscroll-behavior: contain; min-height: 0; flex: 1; padding: 12px; scroll-padding: 8px; }
 .history-entry { border: 1px solid #42594f; border-left: 3px solid #8dab9d; background: #192b30; margin-bottom: 9px; border-radius: var(--radius-sharp); overflow-wrap: anywhere; }

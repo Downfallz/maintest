@@ -1023,8 +1023,8 @@ journal whole from its first frame; the strip after the change is the critique's
   `label-content-name-mismatch` at 390 and 3 at 320: the row's name begins with the visible words.
 - **Announced**: a row added by Latest is said through the journal's region, as today; a picture says nothing.
 - **Targets**: 12 controls; 9 under 44 px at 390 and 7 at 320 (the revealed mutations' chips, a round's All
-  events, Summary and All events); none under 24. Since #1029, Summary and All events, a round's All events and a
-  cast line are 44 px tall at the least, at 320 and 390 (`battle-history.spec.js`). A revealed mutation is a line of
+  events, Summary and All events); none under 24. Since #1029, the Summary and All events buttons, a round's All
+  events button and a cast line are at least 44 px tall, at 320 and 390 (`battle-history.spec.js`). A revealed mutation is a line of
   text, not a control: it takes no tap.
 
 ### Cost

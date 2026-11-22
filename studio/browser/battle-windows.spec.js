@@ -272,7 +272,7 @@ for (const window of WINDOWS) {
     const ends = () => page.evaluate(id => {
       const all = [...document.getElementById(id).querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]')]
         .filter(one => one.tabIndex >= 0 && !one.matches(':disabled') && one.checkVisibility({ visibilityProperty: true }));
-      return { count: all.length, first: all[0] === document.activeElement };
+      return { count: all.length, first: all[0] === document.activeElement, last: all.at(-1) === document.activeElement };
     }, window.id);
     await page.evaluate(id => [...document.getElementById(id).querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]')]
       .find(one => one.tabIndex >= 0 && !one.matches(':disabled') && one.checkVisibility({ visibilityProperty: true })).focus(), window.id);
@@ -287,8 +287,9 @@ for (const window of WINDOWS) {
     expect(seen.size, 'each Tab moves the focus to another control').toBe(count);
     expect((await ends()).first, 'Tab past the last control comes back to the first').toBe(true);
     await page.keyboard.press('Shift+Tab');
+    expect((await ends()).last, 'Shift+Tab from the first goes to the last').toBe(true);
     await page.keyboard.press('Tab');
-    expect((await ends()).first, 'Shift+Tab from the first goes to the last').toBe(true);
+    expect((await ends()).first, 'Tab from the last comes back to the first').toBe(true);
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveJSProperty('open', false);
     await expect(page.locator(typeof window.back === 'function' ? await window.back(page) : window.back), 'the focus comes back').toBeFocused();

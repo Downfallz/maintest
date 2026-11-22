@@ -1637,6 +1637,19 @@ test('no word a lobby window shows is under 11 px', async ({ page }) => {
     const dialog = await openAccountSettings(page, tab); read.push(...await under11(page));
     await dialog.getByRole('button', { name: 'Close settings' }).click(); await expect(dialog).toBeHidden();
   }
+  // Deleting the account asks in a window of its own, from Settings, Account; removing a friend and signing out
+  // ask in the confirmation window.
+  await openAccountSettings(page, 'Account'); await page.locator('#delete-account').click();
+  await expect(page.locator('#delete-dialog')).toBeVisible(); read.push(...await under11(page));
+  await page.keyboard.press('Escape'); await expect(page.locator('#delete-dialog')).toBeHidden();
+  if (await page.locator('#app-settings-dialog').isVisible()) await close('app-settings-dialog');
+  await openPanel(page, /^Friends/); await page.locator('#friend-list').getByRole('button', { name: /^Remove / }).first().click();
+  await expect(page.locator('#action-dialog')).toBeVisible(); read.push(...await under11(page));
+  await page.locator('#action-cancel').click(); await expect(page.locator('#action-dialog')).toBeHidden();
+  if (await page.locator('#friends-dialog').isVisible()) await close('friends-dialog');
+  await page.locator('#account-menu summary').click(); await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.locator('#action-dialog')).toBeVisible(); read.push(...await under11(page));
+  await page.locator('#action-cancel').click(); await expect(page.locator('#action-dialog')).toBeHidden();
   await page.locator('#new-table').click(); await expect(page.locator('#create-dialog')).toBeVisible();
   read.push(...await under11(page)); await close('create-dialog');
   await page.locator('#account-menu summary').click(); await page.locator('#account-menu').getByRole('button', { name: 'Report or suggest…' }).click();
