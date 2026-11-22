@@ -1087,7 +1087,8 @@ The script serves `table/` itself and opens the bench in Chromium at phone size 
 clock (`window.battleBench.film`) makes two runs agree. `start` stops the game's loop and hands `Date.now` to
 the film, because Phaser's tweens read it. It also seeds `Math.random`, which the camera shake and the
 particles read. It lets the scene rest and shows the play's first frame. `advance` steps the game in ticks of
-20 ms. `stop` gives the clocks back and restarts the loop. The frames are spread over the whole play, 240 ms
+20 ms and draws only the last: the ticks between run the scene's update alone, as Phaser's headless step does, and
+a sheet's picture is taken on the frame a step stops on (#961). `drawn()` counts the frames a film drew. `stop` gives the clocks back and restarts the loop. The frames are spread over the whole play, 240 ms
 apart at 1×; `--interval` takes another multiple of 20, and `--speed` is 0.5, 1 or 2.
 
 Two sheets of one effect are the same file, byte for byte, on one machine: `studio/browser/battle-bench.spec.js`

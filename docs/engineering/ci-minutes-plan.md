@@ -211,6 +211,17 @@ complete runs.
       What is left: a run with no archives to start from still meets Azure's mirror as it is that day, and can still
       fail, at 10 minutes instead of 25.
 
+      *Read after three and a half days of `main` (2026-11-19 to 11-22, #907)*: 66 runs (62 CI, 4 nightly) and 532
+      browser jobs that ran the install, every log read. The install's median is 9 seconds, its 90th percentile 22,
+      its longest 276; no job reached the 10-minute cap. The archives were restored on every job: 527 on the exact
+      key, 4 on another image's through the fallback, none missed. Every job that printed it says "Need to get 0 B"
+      (477 of 21.9 MB, 53 of 140 MB). Four images ran the jobs, two of them on EC2 (`20261111.82.6` and
+      `20261116.88.1`, 74 jobs). Each of those 74 printed the rewrite to Azure's mirror, none fetched from an EC2
+      host, and both EC2 images filled caches of their own. Four jobs took over a minute. Three on one run
+      (44524601801) met `azure.archive.ubuntu.com` timing out, from an Azure image. One small-phone job (run
+      44643519846) failed at 276 seconds on `security.ubuntu.com`, which the rewrite leaves alone. That is what is
+      left: a mirror that stalls fails its job in minutes, with its name in the log.
+
 3. **M3, the wait evened out.** Desktop in three shards, Playwright's browsers cached, the learning job folded
    into `build-and-test` (`browser-suite.test.js` holds the gate's `needs`).
 
@@ -221,6 +232,12 @@ complete runs.
    battle-playback in the same one. Those three specs now play in a job of their own, `desktop replays` (748
    seconds, filtered with `--grep` on their file names). The rest play in two halves with the same pattern in
    `--grep-invert` (660 and 699 seconds), so every test plays once. A spec that grows that heavy joins the pattern.
+
+   *Each phone in two halves (2026-11-22, #1003)*: on `main` from 11-19 to 11-22, the phone's journeys ran 22
+   minutes at the median and hit the job's 30 minutes 9 times in 53 runs; the small phone's took up to 24. Each
+   phone project now plays in two shards (`small-phone 1/2` to `phone 2/2`), as desktop does. In the same change the
+   effects bench draws only the frame a film stops on (#961): a film's ticks between run the scene's update alone,
+   so the bench's specs on desktop, whose 1440 px frame took most of a tick, no longer run past their 30 seconds.
 
    Every browser job (journeys, real engine, battle-release) restores `~/.cache/ms-playwright` with
    `actions/cache/restore`, keyed by the runner's image, Playwright's version and the job's one `ENGINE`. It then
