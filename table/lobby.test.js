@@ -131,26 +131,27 @@ test('games in progress are grouped by kind, each with the ones waiting for you 
   assert.deepEqual(ongoing.players.map(entry => entry.table.id), ['e', 'd']);
 });
 
-test('a game of mine waits on another when it is against a player and not my turn, or its seat is still open', () => {
-  assert.equal(waitsOnAnother(game('d', { against: 'person' })), true);
+test('a game of mine waits on another when the player against it is asked to play, or its seat is still open', () => {
+  const theirs = game('d', { against: 'person' });
+  theirs.table.seats[1].turn = true;
+  assert.equal(waitsOnAnother(theirs), true);
   assert.equal(waitsOnAnother(game('e', { against: 'person', turn: true })), false, 'my turn');
   assert.equal(waitsOnAnother(game('a')), false, 'a bot answers at once: its round in play waits on nobody');
+  assert.equal(waitsOnAnother(game('r', { against: 'person' })), false, 'a round being played, nobody asked, waits on no one');
   assert.equal(waitsOnAnother(game('b', { against: 'person', over: true })), false, 'over');
   const open = { table: { id: 'o', waiting: true, openSeats: 1, format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'You', turn: false }, { seat: 'player2', kind: 'open' }] }, seats: [{ seat: 'player1' }] };
   assert.equal(waitsOnAnother(open), true, 'a seat not yet taken');
   assert.equal(waitsOnAnother(null), false, 'not one of mine');
 });
 
-test('the latest finished game is the one that ended last among the groups on their first page', () => {
-  const page = (items, at = 1) => ({ page: at, pages: 2, total: items.length, items });
+test('the latest finished game is the one that ended last among the first game of each group\'s first page', () => {
   const ended = (table, finishedAt) => ({ table, finishedAt });
-  assert.equal(latestFinished([page([ended('p1', '2026-11-05T20:00:00Z')]), page([ended('b1', '2026-11-07T20:00:00Z'), ended('b2', '2026-11-08T20:00:00Z')])]), 'b1',
-    'each page lists its most recent first: only its first counts');
-  assert.equal(latestFinished([page([ended('p1', '2026-11-09T20:00:00Z')]), page([ended('b1', '2026-11-07T20:00:00Z')])]), 'p1');
-  assert.equal(latestFinished([page([ended('p1', null)]), page([ended('b1', null)])]), 'p1', 'without dates, the first group');
-  assert.equal(latestFinished([page([ended('p9', '2026-11-09T20:00:00Z')], 2), page([])]), null, 'an older page holds no latest one');
-  assert.equal(latestFinished([page([ended('p1', '2026-11-05T20:00:00Z')]), page([ended('b9', '2026-11-09T20:00:00Z')], 2)]), 'p1', 'nor does it hide the other group\'s');
-  assert.equal(latestFinished([null, page([ended('b1', null)])]), 'b1', 'a group not read yet');
+  assert.equal(latestFinished([ended('p1', '2026-11-05T20:00:00Z'), ended('b1', '2026-11-07T20:00:00Z')]), 'b1');
+  assert.equal(latestFinished([ended('p1', '2026-11-09T20:00:00Z'), ended('b1', '2026-11-07T20:00:00Z')]), 'p1');
+  assert.equal(latestFinished([null, ended('b1', '2026-11-07T20:00:00Z')]), 'b1', 'a group with no game, or not read yet');
+  assert.equal(latestFinished([ended('p1', null), ended('b1', null)]), null, 'without dates no game is the last');
+  assert.equal(latestFinished([ended(null, '2026-11-09T20:00:00Z'), ended('b1', '2026-11-07T20:00:00Z')]), 'b1', 'a result kept without its table is never chosen');
+  assert.equal(latestFinished([]), null);
 });
 
 test('a group in progress says how many of the most at once, and whether it is full', () => {

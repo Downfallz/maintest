@@ -775,7 +775,7 @@ test('nothing waiting for the player shows no Your turn at all', async ({ page }
 test('your games are grouped against players and against bots, at most five of each in progress, finished ones read a page at a time', async ({ page }, info) => {
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
   const game = (id, { turn = false, against = 'bot' } = {}) => ({ table: { ...battle, id, over: false,
-    seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+    seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: !turn }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
   const games = [game('waiting-on-them', { against: 'person' }), ...Array.from({ length: 4 }, (_, index) => game(`bot-${index}`)), game('your-move', { turn: true })];
   const result = (index, outcome, opponent) => ({ match: `m${index}`, table: `t${index}`, finishedAt: `2026-11-0${1 + (index % 7)}T20:00:00Z`, format: '3v3', rounds: 9,
     outcome, you: ['player1'], opponent, seats: null, replay: `/battle?replay=t${index}&seat=player1`,

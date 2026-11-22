@@ -92,25 +92,27 @@ export function gameKind(table) {
 }
 
 /**
- * A game of mine that waits on someone else: against a player and not my turn, or its seat not yet taken. A bot's
+ * A game of mine that waits on someone else: against a player who is asked to play, or its seat not yet taken. A bot's
  * round in play waits on nobody (a bot answers at once). Such a game stands on the Warped listening
  * (docs/art/scene-paintings-plan.md, S8).
  */
 export function waitsOnAnother(entry) {
   if (!entry || entry.table.over) return false;
   if (entry.table.waiting || entry.table.openSeats > 0) return true;
-  return gameKind(entry.table) === 'players' && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine !== true;
+  // Someone else is asked: a round being played, where nobody is, waits on no one.
+  return gameKind(entry.table) === 'players' && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === false;
 }
 
 /**
- * The finished game that ended last, among the groups on their first page (each lists its most recent first): a group
- * turned to an older page offers none. It alone stands on the stomp's aftermath: a list does not repeat one painting.
+ * The finished game that ended last: `firsts` holds, for each group, the first game of its first page as the host
+ * last read it (each lists its most recent first), so turning a group to an older page does not move it. A game the
+ * host gave no time it finished, or no table, is never it: without dates no game is the last, and no row is chosen.
+ * It alone stands on the stomp's aftermath: a list does not repeat one painting.
  */
-export function latestFinished(pages) {
-  const firsts = pages.filter(shown => shown?.page === 1).map(shown => shown.items?.[0]).filter(Boolean);
-  if (!firsts.length) return null;
-  const at = item => (item.finishedAt ? Date.parse(item.finishedAt) : -Infinity);
-  return firsts.reduce((best, item) => (at(item) > at(best) ? item : best)).table;
+export function latestFinished(firsts) {
+  const dated = firsts.filter(item => item?.table && item.finishedAt && Number.isFinite(Date.parse(item.finishedAt)));
+  if (!dated.length) return null;
+  return dated.reduce((best, item) => (Date.parse(item.finishedAt) > Date.parse(best.finishedAt) ? item : best)).table;
 }
 
 /**
@@ -285,9 +287,10 @@ function statusText(state) {
   return state.recording ? '' : 'This host is not saving games. New tables are unavailable until recording is enabled.';
 }
 
-// The widths a card's and a finished row's ground are drawn at, as table/lobby.css lays Your games: one card a row up
-// to 760 px and two or three above, the rows across the whole column, at most 1280 px.
-const CARD_SIZES = '(min-width: 761px) 50vw, calc(100vw - 36px)';
+// The widths a card's and a finished row's ground are drawn at, as table/lobby.css lays Your games (cards at least
+// 330 px wide in a column of at most 1280 px): one card a row up to 760 px, two up to 1053 px, three from there; the
+// rows across the whole column.
+const CARD_SIZES = '(min-width: 1054px) 430px, (min-width: 761px) 50vw, calc(100vw - 36px)';
 const ROW_SIZES = '(min-width: 1344px) 1280px, calc(100vw - 36px)';
 
 export function mountLobby(doc, location, storage, { changes = onLobbyChange, featured = null } = {}) {
@@ -629,7 +632,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       detail: [summary.voided, created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
     // The game that ended last stands on the ground the stomp left, dimmed behind its words; the others keep their slate.
-    if (item.table && latestFinished(KINDS.map(([kind]) => finished[kind].data)) === item.table) {
+    if (item.table && latestFinished(KINDS.map(([kind]) => finished[kind].first)) === item.table) {
       wearScene(doc, line, 'crushing-stomp-aftermath', { page: 'table/home', form: 'ground', words: Array.from(line.children).filter(child => child !== action), sizes: ROW_SIZES });
     }
     return line;
@@ -655,6 +658,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       const data = account ? await lobbyRequest(`/api/lobby/finished/${kind}/${wanted + 1}`) : localFinished(mine, kind, wanted);
       if (reading !== revision || wanted !== finished[kind].page) return;
       finished[kind].data = data; finished[kind].page = data.page - 1;
+      if (data.page === 1) finished[kind].first = data.items[0] ?? null;
     } catch (error) {
       // Read again on the next change: a page that failed once is not given up on.
       if (reading === revision) { finishedReads = Math.max(finishedReads, 1); problem(error.message || 'Could not read your finished games. Try again.'); }
