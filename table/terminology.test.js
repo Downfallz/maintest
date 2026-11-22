@@ -73,6 +73,7 @@ test('the retired words are the ones the page replaced', () => {
   assert.deepEqual([...retired().keys()].filter(word => !word.includes(' ') || word === 'Talent atlas').sort(), [
     'Package',
     'Planning',
+    'PvP',
     'Quick',
     'Speed',
     'Standard',

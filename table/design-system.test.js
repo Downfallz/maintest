@@ -108,3 +108,10 @@ test('the frame that gives a tag its game-card context draws no card', () => {
   // .game-card sets display: flex; the frame's rule wins only by being more specific or coming later.
   assert.ok(selector.includes('.game-card.tag-frame') || rules.indexOf(contents) > card, selector);
 });
+
+test('the home\'s featured space has its card, naming its parts and its one rule (#986)', () => {
+  const card = join(source, 'components', 'FeaturedSpace');
+  const readme = readFileSync(join(card, 'README.md'), 'utf8');
+  for (const part of ['.featured', '.featured-art', '.featured-status', '.featured-actions', '.featured-shortcuts']) assert.ok(readme.includes(`\`${part}\``), part);
+  assert.match(readFileSync(join(card, 'preview.html'), 'utf8').split('\n')[0], /^<!-- @dsCard group="Surfaces"/);
+});

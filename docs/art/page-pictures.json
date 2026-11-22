@@ -185,7 +185,7 @@
     {
       "name": "mist-duel",
       "source": "docs/art/sources/pages/scenes/mist-duel.webp",
-      "drawn": [390, 900],
+      "drawn": [475, 950],
       "pages": { "table/home": "largest" }
     },
     {
@@ -207,16 +207,10 @@
       "pages": { "table/home": "lazy" }
     },
     {
-      "name": "home-ancestral",
+      "name": "lesson-base",
       "source": "table/battle-art/evolutions/base-creature.webp",
       "drawn": [150],
       "pages": { "table/home": "first" }
-    },
-    {
-      "name": "lesson-base",
-      "source": "table/battle-art/evolutions/base-creature.webp",
-      "drawn": [96, 150],
-      "pages": { "table/home": "lazy" }
     },
     {
       "name": "lesson-brute",

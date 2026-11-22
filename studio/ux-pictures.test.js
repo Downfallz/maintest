@@ -217,3 +217,16 @@ test('the script and the kit are where a session looks for them', () => {
   assert.match(read('scripts/README.md').toString('utf8'), /ux\/pictures\.mjs/);
   assert.match(read('docs/README.md').toString('utf8'), /art\/page-pictures\.md/);
 });
+
+test('a table page never takes one file under two names: one painting drawn in two places is one declaration (#985)', () => {
+  const named = new Map();
+  for (const [name, picture] of Object.entries(PAGE_ART)) {
+    for (const page of Object.keys(picture.pages).filter(one => one.startsWith('table/'))) {
+      for (const size of picture.sizes) {
+        const bytes = `${page} ${size.file.split('.').at(-2)}`;
+        named.set(bytes, [...(named.get(bytes) ?? []), name]);
+      }
+    }
+  }
+  assert.deepEqual([...named].filter(([, names]) => names.length > 1), []);
+});

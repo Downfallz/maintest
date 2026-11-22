@@ -214,7 +214,7 @@ function mountSignIn(doc, { request, google, refresh, say }) {
     // The window stays while the page goes where the press leads, its line saying where: the cue the player
     // carries across the page that changes. Its button stays off, since the name is taken. It closes when the
     // account stays on this page, or when the page could not be read again.
-    const leaving = await refresh().then(state => state.leaving, () => false);
+    const leaving = await refresh().then(state => state.leaving).catch(() => false);
     if (!leaving) { el('name-dialog').close(); el('name-submit').disabled = false; }
   });
 
@@ -267,8 +267,11 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
         el('app-settings-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
       }
     }
-    // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so.
-    state.leaving = Boolean(await Promise.resolve(onChange(state.account, state.mode)));
+    // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so, once it
+    // knows: `leaving` is a promise of that boolean. The rest of the page is drawn without waiting for it (#972); only
+    // what must stay until the page leaves (the name window, the button that signed in) awaits it, and sees it fail.
+    state.leaving = Promise.resolve(onChange(state.account, state.mode)).then(Boolean);
+    state.leaving.catch(() => {});
     return state;
   }
 

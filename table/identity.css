@@ -14,12 +14,12 @@ body:not(.battle-page) {
 input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); }
 
 /* Titles are carved in bone; gold stays for what can be done. */
-.lobby-hero h2, .dialog-heading h2, .name-title, .lobby-panel h2, .game-card h3,
+.lobby-hero h2, .featured h2, .dialog-heading h2, .name-title, .lobby-panel h2, .game-card h3,
 .mine-group-head h3, .home-header h1 { color: var(--bone); }
 .lobby-section h2 { font: 400 22px/1.2 var(--font-display); color: var(--bone); }
 .lobby-section h2 .lobby-count { font-family: var(--font-text); }
 .eyebrow { letter-spacing: .16em; }
-dialog .eyebrow, .lobby-hero .eyebrow, .scene-head .eyebrow { color: var(--brand-ember); }
+dialog .eyebrow, .lobby-hero .eyebrow, .featured .eyebrow, .scene-head .eyebrow { color: var(--brand-ember); }
 
 /* The rule under a title: the rune, then a bone hairline that fades out. */
 .lobby-section > .section-heading, .home-dialog > .dialog-heading { position: relative; }
@@ -162,7 +162,7 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .concept-card .concept-example:last-child { margin-bottom: 0; }
 
 /* The operator's notice (ADR 0177): one line under the header, bone on soot with a gold rule at its left, never over
-   the board. */
+   the board. On a phone's home it lies over the featured space's painting, on a denser ground (lobby.css). */
 .host-notice {
   max-width: 1500px; margin: 10px auto 0; padding: 8px 14px; border-left: 2px solid var(--gold);
   background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--bone); font-size: 14px; line-height: 1.4;

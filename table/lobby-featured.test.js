@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { arrivalLine, featuredChoice, featuredView, groundOf, mountFeatured } from './lobby-featured.js';
 import { ARRIVAL_KEY, arrivalFor, readArrival, writeArrival } from './arrival.js';
 
@@ -122,7 +123,7 @@ test('a bot is named as one, and a table still waiting for a player says so with
 test('a lesson\'s featured view is its place, its title and goal, its creature on the eclipse, and Play or Continue', () => {
   const first = featuredView({ kind: 'lesson', lesson: lesson(1, { skipped: true }) });
   assert.deepEqual([first.eyebrow, first.title, first.detail, first.action, first.ground, first.creature, first.link],
-    ['Tutorial 1 of 4', 'Lesson 1', 'Goal 1.', 'Play →', 'home-ground-eclipse', 'home-ancestral', '/battle?scenario=t1']);
+    ['Tutorial 1 of 4', 'Lesson 1', 'Goal 1.', 'Play →', 'home-ground-eclipse', 'lesson-base', '/battle?scenario=t1']);
   assert.equal(first.label, 'Play: Lesson 1, tutorial 1 of 4');
   assert.equal(featuredView({ kind: 'lesson', lesson: lesson(3) }, { started: true }).action, 'Continue →');
 });
@@ -374,4 +375,12 @@ test('creation waits for the host: Play a bot is disabled until it says whether 
   assert.equal(doc.ids['featured-action'].disabled, true, 'before the host answers');
   featured.setDisabled(false);
   assert.equal(doc.ids['featured-action'].disabled, false);
+});
+
+test('the featured space is its own part, not the hero it replaced: its title and eyebrow are dressed by identity.css as .featured (#985)', () => {
+  const html = readFileSync(new URL('./lobby.html', import.meta.url), 'utf8'), identity = readFileSync(new URL('./identity.css', import.meta.url), 'utf8');
+  const featured = /<section id="featured" class="([^"]+)"/.exec(html)?.[1] ?? '';
+  assert.deepEqual(featured.split(' '), ['featured']);
+  assert.match(identity, /\.featured h2[,\s{]/);
+  assert.match(identity, /\.featured \.eyebrow[,\s{]/);
 });

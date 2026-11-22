@@ -81,3 +81,30 @@ test('the tab remembers a sign out once: the next read says goodbye, the one aft
   assert.equal(takeSignedOut(refusing), false, 'a browser without storage says no goodbye');
   assert.equal(takeSignedOut(null), false);
 });
+
+// Any element the account asks for, by id: enough to mount it without a browser.
+function anyPage() {
+  const made = new Map();
+  const element = () => ({ hidden: false, textContent: '', value: '', open: false, disabled: false, className: '', listeners: {},
+    classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {}, focus() {}, showModal() { this.open = true; }, close() { this.open = false; },
+    addEventListener(kind, heard) { this.listeners[kind] = heard; }, querySelector: () => element() });
+  return { getElementById: id => made.get(id) ?? made.set(id, element()).get(id) };
+}
+
+test('a refresh of the account does not wait for the page to know whether it leaves', async () => {
+  let answer;
+  const tutorials = new Promise(resolve => { answer = resolve; });
+  const { mountAccount } = await import('./account.js');
+  const mounted = mountAccount(anyPage(), { readMe: async () => ({ accounts: 'dev', account: { username: 'ada' } }), onChange: () => tutorials, google: async () => ({}), session: null });
+  const drawn = await Promise.race([mounted.then(() => 'drawn'), new Promise(resolve => setTimeout(() => resolve('waiting'), 50))]);
+  assert.equal(drawn, 'drawn');
+  answer(true);
+  assert.equal(await (await mounted).leaving, true);
+});
+
+test('a page that fails to say whether it leaves is told to whoever waits for it, and the page is still drawn', async () => {
+  const { mountAccount } = await import('./account.js');
+  const state = await mountAccount(anyPage(), { readMe: async () => ({ accounts: 'dev', account: { username: 'ada' } }), onChange: async () => { throw new Error('lessons unread'); }, google: async () => ({}), session: null });
+  assert.equal(state.account.username, 'ada');
+  await assert.rejects(state.leaving, /lessons unread/);
+});

@@ -20,6 +20,7 @@ apocalyptic battle; the words carry that fantasy and stay short, plain and easy 
 | `Speed.Standard` | Standard | **Precision** | **Précision** |
 | A Creature's known Spells (the hand) | Spellbook | **Spellbook** | **Grimoire** |
 | The base creature definition (`creature:main:v1`, named `Main`) | Main | **Creature**, numbered by id (Creature 4) | **Créature** (Créature 4) |
+| A game against another player, not a bot (the lobby's button, the Create window's tab) | PvP | **Multiplayer** | **Multijoueur** |
 
 A Stage is written in Roman numerals, I to IV, in both languages: Stage III, Stade IV. The domain and the data
 keep the number (`level: 3`); only what a player reads turns it into a numeral (`stageLabel` in `table/terms.js`). The studio is for
@@ -120,7 +121,7 @@ behaviour moves with them:
 The table translates once, in [`table/terms.js`](../../table/terms.js): the tempo labels, the phase labels and the
 stage label all come from there, so no page spells them out a second time. `table/terminology.test.js` reads the
 tables of this page. It holds `terms.js` to the Player-facing EN column. It also fails when the table's pages, the
-sentences of its scripts or the battle view use a legacy word that column replaced: Package, Talent atlas, Tier,
+sentences of its scripts or the battle view use a legacy word that column replaced: Package, Talent atlas, Tier, PvP,
 and Speed, Quick, Standard or Planning as a capitalised label; or a sentence the Before column lists, in any case.
 The content studio is an authoring tool and keeps the content's own words (Tier, level) where they name the file
 being edited.

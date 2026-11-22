@@ -62,7 +62,7 @@ What holds for every screen of the journey:
   the host's read differs, the page says by how much in words and plays the kit's value that changes once, then
   remembers the new. It computes nothing the host does not send: a difference of two numbers it showed.
 - **Each empty page teaches and links.** It says what is empty, what fills it, and has one action that does it:
-  **Open a ranked table →**, to `/lobby?rematch=person`, which opens the home's Create window on PvP, Another
+  **Open a ranked table →**, to `/lobby?rematch=person`, which opens the home's Create window on Multiplayer, Another
   player, Ranked (`rematchRequest` of `table/lobby.js` learns `person`, as it knows `bot` and `hotseat`). The
   action is filled because it is the only thing a player with nothing can do there. A page with something on it has
   no filled action: it is read.
@@ -198,6 +198,11 @@ No painting answers "who could be my friend?", and none is drawn in the list: a 
 - The painting has no beat of its own. It enters with the window, and until it loads the band's soot holds its
   room. If the sheet or a phone shows it pop in after the window has entered, the remedy is the statistics' fade
   ([Room held while it loads](../ux-craft.md#room-held-while-it-loads)), not a new beat.
+- Named in #1052: the one animation the walk counted on `friends-asked`, `friends-with-a-friend` and
+  `friend-invited` after S7 was the featured lesson creature's breath, behind the window. The head's painting made
+  the walk measure its contrast. That measure's still picture resumed every endless animation with `play()`, which
+  takes the animation out of the control of the CSS that pauses it behind a window. The measure now holds those animations still and gives
+  them back (`scripts/ux/contrast.mjs`); the walk reads 0 on every screen of the window, at both widths.
 - The walk's `contrast` does not read the × (it reads `.scene-words`). A × that lost its fill would not be caught
   by a measure.
 
@@ -372,7 +377,7 @@ players I meet, whether there are none yet or one. At 320 by 568 the window is n
 
 ### Job
 
-Invite pressed on Rook's row: the Friends window closes and the home's Create window opens on PvP, A friend, Rook,
+Invite pressed on Rook's row: the Friends window closes and the home's Create window opens on Multiplayer, A friend, Rook,
 Ranked. The player sees who the seat is kept for, by their initial and name, and creates the table.
 
 - **Filled action**: Create & play →. Cancel and × are quiet.
@@ -396,7 +401,7 @@ Rook is told on their phone, and you wait at the table. One invitation at a time
 ```
 
 Opened on a friend (from Invite, from a recent opponent's Challenge, or from a Rematch link on another page), the
-window replaces the PvP and Solo tabs, Who are you playing? and Which friend? with the friend's line: the choice is
+window replaces the Multiplayer and Solo tabs, Who are you playing? and Which friend? with the friend's line: the choice is
 made, and the line is drawn from the list `loadFriends` reads, by the friend's id, so it is the same on every page.
 To play someone else, the player cancels and opens New battle. My choice: it shortens the window by the tabs and two
 selects. Settled by the owner on 2026-11-20: another opponent is a new battle, with no way to change the friend in
@@ -556,8 +561,9 @@ the two windows' heads, so a home that opened either window sends nothing more.
 | The press | A pointer down on Accept & play → or Decline. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
 The ground has no beat: it is under the card from the card's first frame, and lazy. The home's own ambience is the
-featured space's, which is the lobby's: the walk's `animating` is 1 at 390 and 0 at 320: there the walk scrolls the
-card into view, and the featured space, now out of view, stops.
+featured space's, which is the lobby's: the walk's `animating` is 0 at both widths, since the walk scrolls the
+card into view and the featured space, out of view, stops. It read 1 at 390 before #1052: the walk's contrast
+measure had restarted the lesson creature's breath, which then ran on whatever motion.js said.
 
 ### Less motion
 
@@ -588,9 +594,9 @@ card into view, and the featured space, now out of view, stops.
 
 - The walk's `contrast` reads only a scene in view (S6's **Left**), and at 320 the card is below the first screen:
   the walk scrolls it into view before the screen (`scripts/ux/journeys.mjs`).
-- The home redraws its cards when anything in its key changes, the minute included (`replaceChildren`), so the
-  ground's image is made again each time, from the cache. If the sheet or a phone shows a blink, the build keys the
-  card by its table's id, as the Friends window keys its rows.
+- Settled in #1053: the home redraws its lists when anything in their key changes, the minute included, and keeps
+  an invitation's card that has not changed, by its table's id, as the Friends window keeps its rows. Its ground's
+  image is not made again each minute.
 - My choices, which the owner may refuse on the sheets: a ground and not a head, since a card has no heading band;
   no focus of its own; a second painting on the home's first screens at 390, under the featured space's ground and
   creature.

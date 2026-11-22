@@ -1017,6 +1017,10 @@ test('sound and haptics sit in the masthead beside the Round guide, one popover 
   expect((await toggle.boundingBox()).height).toBeLessThanOrEqual(48);
   await toggle.click();
   await expect(page.locator('#feedback-sound')).toBeVisible();
+  // Each switch is pressed through its whole label, a 44 px target (#974).
+  for (const id of ['feedback-sound', 'feedback-haptics']) {
+    expect((await page.locator(`label:has(#${id})`).boundingBox()).height).toBeGreaterThanOrEqual(44);
+  }
   await page.locator('#feedback-sound').check();
   await expect(page.locator('#feedback-preferences')).toHaveClass(/on/);
   await page.locator('#shape > summary').click();
