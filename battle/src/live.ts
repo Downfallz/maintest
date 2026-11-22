@@ -159,7 +159,7 @@ const beforePlanning = () => {
 };
 // A pick followed back onto the field (UX12b): the focus on the creature it went to, else the team's first living one.
 function followPick(creature: number | null) {
-  const own = creature == null ? creatures.find(one => !one.enemy && one.isAlive)?.id : creature;
+  const own = creature ?? creatures.find(one => !one.enemy && one.isAlive)?.id;
   if (own != null) nodes.get(String(own))?.focus({ preventScroll: true });
 }
 const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI, followPick);
