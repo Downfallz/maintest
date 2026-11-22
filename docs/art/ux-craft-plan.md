@@ -734,8 +734,12 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
       travel and leaves at once.
 
     Left:
-    - The windows the spec does not open from its state (the result, the recap, Upkeep, the order, the opponent and
-      the reactions, Concede, the reveal, the lessons' two) are held by the shared code and by their own specs.
+    - Built since (#1067): `battle-windows.spec.js` mounts a state for each of the other windows (the last result
+      and History opened from it, the match's result, the recap, Upkeep, the order, the opponent and the reactions,
+      Concede, the feedback sheet, the reveal, the briefing and a concept card) and holds each to the contract.
+    - Built since (#1068): the lobby's windows keep the 11 px floor UX9 gave them, and `lobby-home.spec.js` holds it
+      on each (Friends, Notifications, Join, Settings's tabs, Create, the feedback sheet, the name of a new
+      account). The owner's answer (2026-11-22): the studio, a tool, keeps its sizes.
     - The docked sheets do not hold Tab: they are not modal, and the field beside them stays usable.
     - A strip films a window entering (`settings-window`) or leaving (`history-window`, `inspect-window`), never
       both in one act: a frozen exit has nothing to fade back from.
