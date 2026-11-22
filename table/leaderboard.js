@@ -1,5 +1,6 @@
 import { onLobbyChange } from './changes.js';
 import { browserStorage, numberChanged } from './motion.js';
+import { wearPageHead } from './picture.js';
 
 // The ladder (ADR 0124): who ranks where among the players with an account, and, for whoever is signed in,
 // their own place and their record against each bot. The host computes everything; this page only draws it.
@@ -296,6 +297,8 @@ async function load(doc) {
 // The statistics import the drawn record from here: the ladder reads itself on its own page only.
 if (typeof document !== 'undefined' && document.getElementById('ladder-rows')) {
   focusableScrolls(document);
+  // The broken charge: where the fights are counted (docs/art/journeys/pages.md), cut on the flame.
+  wearPageHead(document, 'elemental-charge', { page: 'table/leaderboard' });
   // Read when a game ends or begins somewhere (the lobby's public changes, ADR 0164) and when the stream opens --
   // the page loaded, back in view -- rather than on a clock. A ladder moves only when a ranked game ends.
   onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('lobby'))) void load(document); });
