@@ -668,9 +668,9 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     `battle-mutations.spec.js`; the result's verdict and action in `battle-live.spec.js`; the journey's measures.
 
     *Built (2026-11-22)*: UX12b. [The brief](journeys/windows.md) gained "A mutation followed back onto the field"
-    (`mutation-followed`) and the result as a moment (`match-result`, a loss, and `match-won`, a win), written by the
-    designer from the walk. The walk films both new screens: the field once the team's last pick is confirmed, and a
-    second game the friend concedes; and a strip, `pick-confirmed`.
+    (`mutation-followed`) and the result as a moment (`match-result`, a loss, and `match-won`, a win). The
+    `ux-designer` wrote it from the walk. The walk films the field once the team's last pick is confirmed, and a second
+    game that the friend concedes. A strip, `pick-confirmed`, films the step before.
 
     A pick the host accepted keeps its creature in the form it leads to until the reveal applies it, tagged PICKED and
     spoken "picked Brute, hidden until reveal", read from the seat's own `board.evolutionChoices`, never from a draft

@@ -402,4 +402,16 @@ test('the final blow names its caster, its spell and every creature it defeated'
   assert.equal(finalBlow([blow(2, 5, [2], [])], board, cards), null, 'the last action defeated nobody');
   assert.equal(finalBlow([blow(2, 5, [2], [2]), { sequence: 3, round: 4, event: { kind: 'OngoingEffectsApplied', roundId: 4 } }], board, cards), null, 'an upkeep came after it');
   assert.equal(finalBlow([], board, cards), null);
+  // The engine's frame lists the whole board: a creature already fallen before the blow is not named again.
+  const whole = { sequence: 9, round: 5, event: { kind: 'CombatActionResolved', roundId: 5,
+    resolution: { action: { actor: 1, spell: 'spell:throwing_star:v1', targets: [5] } }, appliedOutcomes: [],
+    frame: { before: [{ id: 1, isAlive: true }, { id: 4, isAlive: false }, { id: 5, isAlive: true }],
+      after: [{ id: 1, isAlive: true }, { id: 4, isAlive: false }, { id: 5, isAlive: false }] } } };
+  assert.equal(finalBlow([whole], board, cards), "Creature 1's Throwing Star defeated Creature 5.");
+  // Entries read out of order are put back in it: the last by sequence is the blow.
+  assert.equal(finalBlow([blow(7, 5, [2], [2]), blow(3, 4, [1], [1])], board, cards), "Creature 5's Throwing Star defeated Creature 2.");
+  assert.equal(finalBlow([blow(2, 1, [4, 5, 2], [4, 5, 2])], board, cards), "Creature 1's Throwing Star defeated Creature 4, Creature 5 and Creature 2.");
+  assert.equal(finalBlow([{ sequence: 1, round: 1, event: { kind: 'OngoingEffectsApplied', roundId: 1 } }], board, cards), null, 'a bleed with no action before it');
+  // A spell the catalogue does not name writes no line rather than an id.
+  assert.equal(finalBlow([blow(2, 5, [2], [2])], board, new Map()), null);
 });

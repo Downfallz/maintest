@@ -45,8 +45,8 @@ sheet has closed, the bot's picks in at once: the receipt "Mutations revealed" w
 creature that mutated. `match-result` is the loss (Walker concedes, round 2); `match-won` is a second game, against the
 friend, who concedes when the first round asks: a win in round 1. The strip `pick-confirmed` presses the first
 mutation offered and Confirm choice, picks left. Both sheets and the strip were read screen by screen and frame by
-frame at 320 by 568 and 390 by 844, with their measures. The 390 walk logs one block after `match-result` ("#settings
-could not be pressed"); `match-won` was filmed after it at both widths. "UX12b's walk" below is this film. No walk
+frame at 320 by 568 and 390 by 844, with their measures. At 390 the walk logged one block after `match-result`: it could
+not press `#settings`. `match-won` was filmed after it, at both widths. "UX12b's walk" below is this film. No walk
 films a match ended by a blow, nor the two results with their pictures hidden: they are read in the code, and held by
 `studio/browser/battle-live.spec.js` (the result's screen, below).
 
@@ -213,8 +213,8 @@ their text only, as today.
 
 None of its own: a form appears in its held room when it arrives. The sheet docks by the family's form (the
 opening: a fade where it stands); how a confirmed choice is followed back onto the field is
-[the next screen but one](#a-mutation-followed-back-onto-the-field-mutation-followed)'s (UX12b), and so is a pick
-closed without a confirm.
+the brief of [A mutation followed back onto the field](#a-mutation-followed-back-onto-the-field-mutation-followed)
+(UX12b), and so is a pick closed without a confirm.
 
 ### Less motion
 
@@ -368,16 +368,16 @@ What the build does, each read from what the host confirmed, never from a draft:
 2. **Between the confirm and the reveal, the creature keeps its new form.** Before UX12b the would-be form was drawn
    from the draft alone, gone once sent. The walk cannot film the gap: against the bot the host applies the pick at
    once, and the strip shows Creature 1 as Brute from 80 ms, before and after the build alike;
-   `battle-mutations.spec.js` holds the form, the tag and the spoken name. Each creature of
-   the seat whose pick is in the seat's own `board.evolutionChoices` is drawn in the form it leads to, as
-   `battle/src/mutation-scene.ts` draws a draft today, and its caption's tag reads **PICKED**. The opponent's view, a
+   `battle-mutations.spec.js` holds the form, the tag and the spoken name. A creature of the player's team that has a
+   pick in `board.evolutionChoices` is drawn in the form that pick leads to, as `battle/src/mutation-scene.ts` draws a
+   draft. Its caption's tag reads **PICKED**. The opponent's view, a
    replay, the journal and the inspection never see it. A pick the host has not accepted draws nothing.
-3. **The last pick confirmed**: the sheet closes (today) and the focus goes once to the field's button of the
+3. **The last pick confirmed**: the sheet closes, as it did before, and the focus goes once to the field's button of the
    creature the last pick went to (`#actor-layer [data-creature]`); after Pass all remaining picks, to the team's
    first living creature. It moves on the host's acceptance of that pick, never on a later snapshot.
 4. **The reveal** (`PurchasesRevealed` on the stream): the receipt and the crests appear, as filmed; PICKED leaves
    each creature whose `acquiredTiers` hold the tier, the form stays. The focus does not move. Team tempos is
-   available and filled as soon as the host asks; the receipt never hides it or must be read first.
+   the filled action and can be pressed as soon as the host asks; the receipt never hides it and need not be read first.
 5. **The new spell, where it is used and where it is inspected.** The spellbook marks it "New · Available" the first
    time the creature acts (`growth.highlights()`, filmed on `spell-choice`, kept). The inspection's Known spells write
    **New** before the source line ("New · Learned from Brute") on each spell the reveal granted that creature and its
@@ -460,7 +460,7 @@ None: the page moves nothing; the crests appear settled under less motion alread
 - **A pattern the book lacks**: a part of the frame that arrives by itself (the receipt). It appears at once until
   the book gains the entry, with its source, in its own change.
 - At 320 by 568 the team's crests stand over the opponent row's health, and the receipt over the field's top
-  (overlaps 2): the crests' place is the `battle-designer`'s.
+  (overlaps 2): where the crests stand is the `battle-designer`'s to decide.
 - At 320 the receipt's line is cut ("You 2 · Oppone…"), as before UX12b: the receipt's own pass.
 - The measure counts no filled action where the gold is a gradient (`scripts/ux/measures.mjs`): Team tempos here,
   Confirm choice on the pick. The measure's fix, not the page's.

@@ -171,6 +171,8 @@ export function finalBlow(entries, board, cards) {
   const entry = ordered[index], before = new Map((entry.event.frame?.before ?? []).map(one => [one.id, one]));
   const fallen = (entry.event.frame?.after ?? []).filter(one => one.isAlive === false && before.get(one.id)?.isAlive !== false);
   if (!fallen.length) return null;
+  // A spell the catalogue does not name writes no line: a player never reads an id.
+  if (!cards?.get?.(entry.event.resolution?.action?.spell)?.name) return null;
   const action = recapAction(entry, board, cards);
   const names = fallen.map(one => recapCreature(one.id, board).label);
   const listed = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
