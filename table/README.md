@@ -536,6 +536,14 @@ The worker shows a notice unless a window on the page it opens is in front of so
 game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
 reads its lists again at once.
 
+Every notice to an account goes through one door (ADR 0201): a notice that is news (a friend accepted, the
+invited friend took the seat, the other player left, a match ended) is kept first in the account's **notice log**
+(`notices/<accountId>.json`, the 100 latest of the last 90 days, a notice with the same tag replacing that entry),
+push keys or not, and then pushed to the account's devices. What waits (a turn, an invitation, a friend request, a
+declined invitation) is not kept: the bell lists it while it waits. The log and the devices are written only if
+the version read is unchanged, since the API, the worker and the hourly job all write them. No log is kept for an
+account that is gone.
+
 ## Loading and offline (ADR 0166)
 
 The host reads each file once, sends it compressed (Brotli or gzip) with an `ETag`, and answers 304 when the
@@ -750,6 +758,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `DELETE /api/account` | account | Deletes the account. |
 | `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187). |
 | `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices. |
+| `GET /api/account/notices`, `POST /api/account/notices/read` | account | The notice log (ADR 0201): the news the bell keeps, newest first, with the unread count; read marks up to an id (`{"upTo": <id>}`). 404 on a host that keeps none. |
 | `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time. |
 | `GET /api/lobby/events`, `GET /api/lobby/negotiate` | anyone | What changed: the stream (ADR 0164), or the relay's address (ADR 0165). |
 | `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations (a game waiting for the player carries its recap: the casts since the last visit); the eight latest opponents. |

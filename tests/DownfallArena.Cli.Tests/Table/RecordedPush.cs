@@ -29,24 +29,37 @@ internal sealed class InMemoryDeviceStore : IDeviceStore
 
     public const string Auth = "AAECAwQFBgcICQoLDA0ODw";
 
-    private readonly Dictionary<AccountId, IReadOnlyList<PushDevice>> _held = [];
+    private readonly Dictionary<AccountId, (IReadOnlyList<PushDevice> Devices, string Version)> _held = [];
+    private long _written;
 
     public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         lock (_held)
         {
-            return Task.FromResult(_held.TryGetValue(account, out var devices) ? devices : []);
+            return Task.FromResult(_held.TryGetValue(account, out var held) ? held.Devices : []);
         }
     }
 
-    public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default)
+    public Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         lock (_held)
         {
-            _held[account] = [.. devices];
+            return Task.FromResult(_held.TryGetValue(account, out var held) ? new DeviceListRead(held.Devices, held.Version) : new DeviceListRead([], null));
         }
+    }
 
-        return Task.CompletedTask;
+    public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
+    {
+        lock (_held)
+        {
+            if ((_held.TryGetValue(account, out var held) ? held.Version : null) != version)
+            {
+                return Task.FromResult(false);
+            }
+
+            _held[account] = ([.. devices], $"{++_written}");
+            return Task.FromResult(true);
+        }
     }
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)

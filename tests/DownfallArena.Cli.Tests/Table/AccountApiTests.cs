@@ -230,6 +230,108 @@ public sealed class AccountApiTests : IDisposable
     private static async Task<SharedKernel.Identifiers.AccountId> IdOf(AccountApi api, string? session) =>
         (await api.WhoAsync(Signed(session), TestContext.Current.CancellationToken)).ShouldNotBeNull().Account.Id;
 
+    /// <summary>An API whose host keeps the bell's news (ADR 0201), with no push keys: the log is kept all the same.</summary>
+    private async Task<(AccountApi Api, AccountNoticeLog Log)> KeepingNoticesAsync()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var log = new AccountNoticeLog(new FileNoticeStore(_root), _clock);
+        api.NoticeLog = log;
+        return (api, log);
+    }
+
+    private static Notice Over(string table) => new(NoticeKind.MatchOver, "Victory", "You won against bastien.", $"/play?table={table}", $"match:{table}");
+
+    [Fact]
+    public async Task The_notices_are_listed_newest_first_with_how_many_are_unread()
+    {
+        var (api, log) = await KeepingNoticesAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var mark = await IdOf(api, session);
+        await log.AddAsync(mark, Over("t1"), TestContext.Current.CancellationToken);
+        _clock.Advance(TimeSpan.FromMinutes(1));
+        await log.AddAsync(mark, Over("t2"), TestContext.Current.CancellationToken);
+
+        var answer = await api.HandleAsync("GET", "/api/account/notices", "", Signed(session));
+
+        answer.Status.ShouldBe(200);
+        var read = Json(answer);
+        read.GetProperty("unread").GetInt32().ShouldBe(2);
+        var notices = read.GetProperty("notices");
+        notices.GetArrayLength().ShouldBe(2);
+        notices[0].GetProperty("url").GetString().ShouldBe("/play?table=t2");
+        notices[0].GetProperty("kind").GetString().ShouldBe("match-over");
+        notices[0].GetProperty("title").GetString().ShouldBe("Victory");
+        notices[0].GetProperty("body").GetString().ShouldBe("You won against bastien.");
+        notices[0].GetProperty("read").GetBoolean().ShouldBeFalse();
+        notices[0].GetProperty("at").GetDateTimeOffset().ShouldBe(_clock.GetUtcNow());
+        notices[0].GetProperty("id").GetInt64().ShouldBeGreaterThan(notices[1].GetProperty("id").GetInt64());
+    }
+
+    [Fact]
+    public async Task Reading_up_to_a_notice_marks_it_and_the_older_ones_read()
+    {
+        var (api, log) = await KeepingNoticesAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var mark = await IdOf(api, session);
+        var first = await log.AddAsync(mark, Over("t1"), TestContext.Current.CancellationToken);
+        await log.AddAsync(mark, Over("t2"), TestContext.Current.CancellationToken);
+
+        var marked = await api.HandleAsync("POST", "/api/account/notices/read", $$"""{"upTo":{{first.Id}}}""", Signed(session));
+
+        marked.Status.ShouldBe(200);
+        Json(marked).GetProperty("marked").GetInt32().ShouldBe(1);
+        Json(await api.HandleAsync("GET", "/api/account/notices", "", Signed(session))).GetProperty("unread").GetInt32().ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("{}")]
+    [InlineData("""{"upTo":"seven"}""")]
+    public async Task Reading_without_saying_up_to_which_notice_is_refused(string body)
+    {
+        var (api, _) = await KeepingNoticesAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        var answer = await api.HandleAsync("POST", "/api/account/notices/read", body, Signed(session));
+
+        answer.Status.ShouldBe(400);
+        Json(answer).GetProperty("error").GetString().ShouldBeOneOf("Account.BadNoticeRead", "Account.BadRequest");
+    }
+
+    [Fact]
+    public async Task The_notices_are_the_signed_in_player_s_alone()
+    {
+        var (api, _) = await KeepingNoticesAsync();
+
+        (await api.HandleAsync("GET", "/api/account/notices", "", Nobody)).Status.ShouldBe(401);
+        (await api.HandleAsync("POST", "/api/account/notices/read", """{"upTo":1}""", Nobody)).Status.ShouldBe(401);
+    }
+
+    [Fact]
+    public async Task A_host_that_keeps_no_notices_answers_404()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        var answer = await api.HandleAsync("GET", "/api/account/notices", "", Signed(session));
+
+        answer.Status.ShouldBe(404);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.NoNoticeLog");
+    }
+
+    [Fact]
+    public async Task Deleting_the_account_forgets_its_notices()
+    {
+        var (api, log) = await KeepingNoticesAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var mark = await IdOf(api, session);
+        await log.AddAsync(mark, Over("t1"), TestContext.Current.CancellationToken);
+
+        await api.ForgetAsync(mark, TestContext.Current.CancellationToken);
+
+        (await log.ListAsync(mark, TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_signed_in_browser_registers_itself_as_a_device_and_can_be_tested()
     {

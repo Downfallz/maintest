@@ -12,7 +12,7 @@ namespace DownfallArena.Cli.Table;
 /// silent ways out. Every route is the signed-in account's own; a request from nobody is 401. A request and an
 /// acceptance each reach the other player's devices as a notice, when the host sends any.
 /// </summary>
-internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNotices? notices = null)
+internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNotifier? notifier = null)
 {
     public const string Prefix = "/api/friends";
 
@@ -77,13 +77,10 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
         }
 
         Told(me.Id, asked.Value.Other);
-        if (notices is { } send)
+        if (notifier is { } door)
         {
             // Told once either way: of the request, or, when asking back is accepting, of the friendship.
-            var payload = asked.Value.Accepted
-                ? AccountNotices.Payload("A new friend", $"{me.Username.Value} accepted your friend request.", "/lobby#friends", $"friend:{me.Id.Value}")
-                : AccountNotices.Payload("A friend request", $"{me.Username.Value} wants to be your friend.", "/lobby#friends", $"friend:{me.Id.Value}");
-            await send.SendAsync(asked.Value.Other, payload, "friend");
+            await door.NotifyAsync(asked.Value.Other, asked.Value.Accepted ? NewFriend(me) : new Notice(NoticeKind.FriendRequest, "A friend request", $"{me.Username.Value} wants to be your friend.", "/lobby#friends", $"friend:{me.Id.Value}"));
         }
 
         return Answer(new { accepted = asked.Value.Accepted, other = await DescribeAsync(new FriendLink(asked.Value.Other, default)) });
@@ -98,13 +95,16 @@ internal sealed class FriendsApi(Friends friends, AccountApi accounts, AccountNo
         }
 
         Told(me.Id, other);
-        if (notices is { } send)
+        if (notifier is { } door)
         {
-            await send.SendAsync(other, AccountNotices.Payload("A new friend", $"{me.Username.Value} accepted your friend request.", "/lobby#friends", $"friend:{me.Id.Value}"), "friend");
+            await door.NotifyAsync(other, NewFriend(me));
         }
 
         return Answer(new { accepted = true });
     }
+
+    private static Notice NewFriend(Account me) =>
+        new(NoticeKind.FriendAccepted, "A new friend", $"{me.Username.Value} accepted your friend request.", "/lobby#friends", $"friend:{me.Id.Value}");
 
     private async Task<StudioResponse> UnlinkAsync(AccountId me, AccountId other)
     {

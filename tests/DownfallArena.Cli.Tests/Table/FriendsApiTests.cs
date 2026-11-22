@@ -21,6 +21,7 @@ public sealed class FriendsApiTests : IDisposable
     private readonly AccountApi _accounts;
     private readonly FriendsApi _api;
     private readonly Friends _friends;
+    private readonly AccountNoticeLog _log = new(new InMemoryNoticeStore(), TimeProvider.System);
 
     public FriendsApiTests()
     {
@@ -33,12 +34,16 @@ public sealed class FriendsApiTests : IDisposable
         _accounts.Notices = new AccountNotices(_sender, devices);
         _friends = new Friends(new FileFriendStore(_root), store, clock);
         _accounts.ForgetFriends = id => _friends.ForgetAsync(id);
-        _api = new FriendsApi(_friends, _accounts, _accounts.Notices);
+        _api = new FriendsApi(_friends, _accounts, new AccountNotifier(_log, _accounts.Notices));
     }
 
     private static AccountRequest Signed(string? session) => new(session, Secure: true);
 
     private static AccountRequest Nobody => new(null, Secure: true);
+
+    private static CancellationToken Cancel => TestContext.Current.CancellationToken;
+
+    private async Task<SharedKernel.Identifiers.AccountId> IdAsync(string session) => (await _accounts.WhoAsync(Signed(session), Cancel)).ShouldNotBeNull().Account.Id;
 
     private static JsonElement Json(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
@@ -107,6 +112,47 @@ public sealed class FriendsApiTests : IDisposable
 
         Json(asked).GetProperty("accepted").GetBoolean().ShouldBeTrue();
         JsonDocument.Parse(_sender.Sent[^1].Payload).RootElement.GetProperty("body").GetString().ShouldBe("bastien accepted your friend request.");
+    }
+
+    [Fact]
+    public async Task A_friend_request_waits_on_the_friends_list_and_is_not_kept_as_news()
+    {
+        var mark = await SignInAsync("MarkF");
+        var bastien = await SignInAsync("bastien");
+
+        await Ask(mark, "bastien");
+
+        (await _log.ListAsync(await IdAsync(bastien), Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task With_push_off_an_accepted_request_is_kept_in_the_asker_s_bell()
+    {
+        var api = new FriendsApi(_friends, _accounts, new AccountNotifier(_log, push: null));
+        var mark = await SignInAsync("MarkF");
+        var bastien = await SignInAsync("bastien");
+        await api.HandleAsync("POST", "/api/friends/requests", """{"username":"bastien"}""", Signed(mark));
+        var request = IdOf(await List(bastien), "incoming");
+
+        await api.HandleAsync("POST", $"/api/friends/requests/{request}/accept", "", Signed(bastien));
+
+        var kept = (await _log.ListAsync(await IdAsync(mark), Cancel)).ShouldHaveSingleItem();
+        kept.Kind.ShouldBe(NoticeKind.FriendAccepted);
+        kept.Body.ShouldBe("bastien accepted your friend request.");
+        kept.Url.ShouldBe("/lobby#friends");
+        _sender.Sent.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Asking_back_keeps_the_friendship_in_the_first_asker_s_bell()
+    {
+        var mark = await SignInAsync("MarkF");
+        var bastien = await SignInAsync("bastien");
+        await Ask(mark, "bastien");
+
+        await Ask(bastien, "markf");
+
+        (await _log.ListAsync(await IdAsync(mark), Cancel)).ShouldHaveSingleItem().Kind.ShouldBe(NoticeKind.FriendAccepted);
     }
 
     [Fact]

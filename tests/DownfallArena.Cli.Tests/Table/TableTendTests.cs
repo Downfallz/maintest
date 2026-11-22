@@ -2,6 +2,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.FeedbackBox;
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.FeedbackBox;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Matches;
@@ -177,6 +178,26 @@ public sealed class TableTendTests : IDisposable
         System.Text.Json.JsonDocument.Parse(notice.Payload).RootElement.GetProperty("body").GetString().ShouldBe("6 hours left to answer, or the match is lost.");
     }
 
+    /// <summary>A turn is not news (ADR 0201): with no push to send, nothing is claimed, said or kept.</summary>
+    [Fact]
+    public async Task With_push_off_nobody_is_warned_and_no_bell_keeps_the_warning()
+    {
+        var log = new AccountNoticeLog(new InMemoryNoticeStore(), TimeProvider.System);
+        _hosted.Composer.Notifier = new AccountNotifier(log, push: null);
+        var late = AccountId.New();
+        using var host = _hosted.Registry();
+        var table = await BegunAsync(host);
+        table.Seats[1].Account = late;
+        await PassAsync(table, table.Seats[0]);
+        await table.RecordAsync(Cancel);
+        using var job = await _hosted.RestartedAsync();
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+
+        tended.Warned.ShouldBeEmpty();
+        (await log.ListAsync(late, Cancel)).ShouldBeEmpty();
+    }
+
     /// <summary>A pass run again in the same hour, as the job is after a failure, tells nobody twice (ADR 0169).</summary>
     [Fact]
     public async Task A_second_pass_in_the_same_hour_warns_nobody_again()
@@ -306,7 +327,7 @@ public sealed class TableTendTests : IDisposable
             await devices.AddAsync(account, new PushDevice($"https://push.example/{account.Value}", InMemoryDeviceStore.Key, InMemoryDeviceStore.Auth, default), Cancel);
         }
 
-        _hosted.Composer.Notices = new AccountNotices(sent, devices);
+        _hosted.Composer.Notifier = new AccountNotifier(null, new AccountNotices(sent, devices));
         return (sent, late, answered);
     }
 

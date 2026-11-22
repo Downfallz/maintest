@@ -20,10 +20,10 @@ public abstract class DeviceStoreContract
         var store = await StoreAsync();
         var account = AccountId.New();
 
-        await store.SaveAsync(account, [Phone("one", 1), Phone("two", 2)], Cancel);
+        (await store.SaveAsync(account, [Phone("one", 1), Phone("two", 2)], null, Cancel)).ShouldBeTrue();
         (await store.ListAsync(account, Cancel)).ShouldBe([Phone("one", 1), Phone("two", 2)]);
 
-        await store.SaveAsync(account, [Phone("two", 2)], Cancel);
+        (await store.SaveAsync(account, [Phone("two", 2)], (await store.ReadAsync(account, Cancel)).Version, Cancel)).ShouldBeTrue();
         (await store.ListAsync(account, Cancel)).ShouldBe([Phone("two", 2)]);
     }
 
@@ -35,8 +35,8 @@ public abstract class DeviceStoreContract
 
         (await store.ListAsync(account, Cancel)).ShouldBeEmpty();
 
-        await store.SaveAsync(account, [Phone("one", 1)], Cancel);
-        await store.SaveAsync(account, [], Cancel);
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
+        (await store.SaveAsync(account, [], (await store.ReadAsync(account, Cancel)).Version, Cancel)).ShouldBeTrue();
         (await store.ListAsync(account, Cancel)).ShouldBeEmpty();
     }
 
@@ -45,11 +45,64 @@ public abstract class DeviceStoreContract
     {
         var store = await StoreAsync();
         var account = AccountId.New();
-        await store.SaveAsync(account, [Phone("one", 1)], Cancel);
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
 
         await store.ForgetAsync(account, Cancel);
         await store.ForgetAsync(account, Cancel);
 
         (await store.ListAsync(account, Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_save_over_a_version_another_write_replaced_is_refused_and_leaves_that_write()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
+        var stale = (await store.ReadAsync(account, Cancel)).Version;
+        await store.SaveAsync(account, [Phone("one", 1), Phone("two", 2)], stale, Cancel);
+
+        var saved = await store.SaveAsync(account, [Phone("three", 3)], stale, Cancel);
+
+        saved.ShouldBeFalse();
+        (await store.ListAsync(account, Cancel)).ShouldBe([Phone("one", 1), Phone("two", 2)]);
+    }
+
+    [Fact]
+    public async Task A_first_save_is_refused_once_another_one_made_the_list()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
+
+        var saved = await store.SaveAsync(account, [Phone("two", 2)], null, Cancel);
+
+        saved.ShouldBeFalse();
+        (await store.ListAsync(account, Cancel)).ShouldBe([Phone("one", 1)]);
+    }
+
+    [Fact]
+    public async Task Emptying_a_list_over_a_version_another_write_replaced_is_refused_and_leaves_that_write()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
+        var stale = (await store.ReadAsync(account, Cancel)).Version;
+        await store.SaveAsync(account, [Phone("one", 1), Phone("two", 2)], stale, Cancel);
+
+        var saved = await store.SaveAsync(account, [], stale, Cancel);
+
+        saved.ShouldBeFalse();
+        (await store.ListAsync(account, Cancel)).ShouldBe([Phone("one", 1), Phone("two", 2)]);
+    }
+
+    [Fact]
+    public async Task Forgetting_an_account_on_a_store_that_never_wrote_anything_is_fine()
+    {
+        var store = await StoreAsync();
+
+        await store.ForgetAsync(AccountId.New(), Cancel);
+
+        (await store.ListAsync(AccountId.New(), Cancel)).ShouldBeEmpty();
     }
 }

@@ -1,4 +1,5 @@
 using System.Globalization;
+using DownfallArena.Application.Accounts;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
@@ -107,7 +108,8 @@ internal static class TurnTimeouts
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(composer);
         var warned = new List<string>();
-        if (composer.Notices is not { } notices)
+        // A turn waits in the bell already: the warning is the push's alone, and none is claimed without one.
+        if (composer.Notifier is not { Push: not null } notifier)
         {
             return warned;
         }
@@ -144,10 +146,10 @@ internal static class TurnTimeouts
             }
 
             var left = since + TimeSpan.FromHours(listed.Summary.TurnLimitHours.Value) - now;
-            var payload = AccountNotices.Payload("Your turn is waiting", $"{Left(left)} left to answer, or the match is lost.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"turn:{table.Id}");
+            var notice = new Notice(NoticeKind.Turn, "Your turn is waiting", $"{Left(left)} left to answer, or the match is lost.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"turn:{table.Id}");
             foreach (var account in asked.Distinct())
             {
-                await notices.SendAsync(account, payload, "turn");
+                await notifier.NotifyAsync(account, notice);
             }
 
             warned.Add(listed.Id);
