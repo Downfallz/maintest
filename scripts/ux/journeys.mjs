@@ -420,8 +420,9 @@ const windows = {
   strips: {
     // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
     'history-window': { at: 'history', act: async ({ page, blocked }) => { await page.locator('#history-close').click(); await openHistory(page, blocked); } },
-    // The inspection closed by Escape, the focus back on the card's Inspect, and opened again from it (UX12).
-    'inspect-window': { at: 'inspect', act: async ({ page, blocked }) => { await page.keyboard.press('Escape'); await choose(page, '#order-why-inspect', blocked); } },
+    // The inspection closed by Escape: it fades out faster than it came, and the focus is back on the card's Inspect
+    // (UX12). Closed and opened again in one act, a frozen exit leaves nothing to fade in.
+    'inspect-window': { at: 'inspect', act: ({ page }) => page.keyboard.press('Escape') },
   },
   async walk(walk) {
     const { page, set } = walk;
