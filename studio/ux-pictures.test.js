@@ -191,9 +191,10 @@ test('every request of the briefs in the repository can be listed, and the doors
   for (const one of requests) assert.ok(one.prompt.length > 40 && existsSync(new URL(one.holds, root)), `${one.shows}: a prompt, and a painting that holds its place`);
 });
 
-test('every scene in the folder is in its register, at its size, and names only creatures and spells the content holds', () => {
-  // docs/art/scene-paintings-plan.md, S1: the scenes are a register, each with its page in the plan.
-  const folder = 'docs/art/sources/pages/scenes/';
+// docs/art/scene-paintings-plan.md, S1: the scenes are a register, each with its page in the plan. The replacements
+// (docs/art/scene-replacement-plan.md) are one too; a painting there may show no creature and no spell.
+for (const [folder, mustName] of [['docs/art/sources/pages/scenes/', true], ['docs/art/sources/pages/replacements/', false]])
+test(`every painting in ${folder} is in its register, at its size, and names only creatures and spells the content holds`, () => {
   const files = readdirSync(new URL(folder, root)).filter(name => name.endsWith('.webp')).sort();
   const rows = read(`${folder}README.md`).toString('utf8').split('\n')
     .map(line => line.match(/^\| `([a-z0-9-]+\.webp)` \| (\d+) by (\d+) \|(.*)\|$/)).filter(Boolean);
@@ -205,10 +206,11 @@ test('every scene in the folder is in its register, at its size, and names only 
     assert.deepEqual(webpSize(read(folder + file)), { width: Number(width), height: Number(height) }, `${file}: the size the register gives`);
     const named = [...rest.split('|')[1].matchAll(/`([^`]+)`/g)].map(match => match[1]);
     for (const id of named) assert.match(id, /^(creature|tier|spell):[a-z0-9_]+:v\d+$/, `${file}: ${id} is no content id`);
-    assert.ok(named.length > 0, `${file}: the register names what it shows by content id`);
+    assert.ok(named.length > 0 || !mustName, `${file}: the register names what it shows by content id`);
     for (const id of named) assert.ok(ids.has(id), `${file}: ${id} is no id of data/`);
   }
-  assert.match(read('docs/art/sources/pages/README.md').toString('utf8'), /`scenes\/`/);
+  const name = folder.split('/').at(-2);
+  assert.match(read('docs/art/sources/pages/README.md').toString('utf8'), new RegExp(`\`${name}/\``));
 });
 
 test('the script and the kit are where a session looks for them', () => {

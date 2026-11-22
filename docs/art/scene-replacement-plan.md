@@ -1,49 +1,58 @@
 # Replacement art for repeated scenes
 
-The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Eleven have approved replacement paintings. Five keep their current art. The featured lobby game changes painting once, at round 6. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
+The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Eleven have approved replacement paintings. Five keep their current art. The featured lobby game changes painting once, at round 6. Placements 01 to 03 are moments players can see back to back.
 
 ## Review and delivery
 
-1. In the plan PR, show the owner one numbered candidate at a time. If the owner requests a change, revise that same image.
-2. On the owner's explicit OK for that version, add its WebP source under `docs/art/sources/pages/replacements/` on this PR's branch. Change its Pending cell to a link to the accepted file. Use the accepted image itself for any companion piece.
-3. The second PR wires the approved sources into the screens. Update the relevant [journey briefs](journeys/README.md) and [picture declarations](page-pictures.json), derive responsive files with the [picture kit](page-pictures.md), and check the affected budgets. Review the actual crops at 320 and 390 px and on desktop, text contrast, and Save-Data grounds.
+1. In the plan's pull request (#1103), each candidate was shown to the owner one at a time, by number. A change request revised that same image.
+2. On the owner's explicit OK for a version, its WebP source was added under `docs/art/sources/pages/replacements/`, listed in [its register](sources/pages/replacements/README.md), and linked in the table below. A companion piece was matched to the accepted image itself.
+3. The second pull request wires the approved sources into the screens. It updates the relevant [journey briefs](journeys/README.md) and [picture declarations](page-pictures.json), derives responsive files with the [picture kit](page-pictures.md), and checks the affected budgets. It reviews the crops at 320 px, 390 px and on desktop, the text contrast, and the Save-Data fallback.
 
 ## Featured lobby painting
 
-The round selects the large painting at the top of the lobby. Turn ownership selects the status and action.
+The round selects the large painting at the top of the lobby. Whose turn it is selects the status line and the action.
 
-| Featured game | Your turn | Their turn |
-| --- | --- | --- |
-| Rounds 0–5 inclusive | Existing Deathstalker–Ethereal duel in the mist | Same mist duel |
-| Round 6 and every later round | The Great Rupture (09) | Same Great Rupture |
+| Featured game, on either player's turn | Painting |
+| --- | --- |
+| Rounds 0 to 5 | The existing Deathstalker–Ethereal duel in the mist |
+| From round 6 | The Great Rupture (09) |
 
-A new battle or a seat waiting before play begins uses the mist duel. Round 10 and later keep the round 6 painting.
+A new battle or a seat waiting before play begins uses the mist duel. A lesson keeps its eclipse ground (#1081).
 
-**Approved painting (09, revision 3).** The Deathstalker leaps toward the Ethereal as the arch collapses. Mist veils the three fragments of the sun. Amber light rises from the chasm beneath the duel.
+This rule supersedes two earlier ones, on the owner's choice: a game that waits on the other player no longer
+stands on `warped-listening` ([S8 of the first plan](scene-paintings-plan.md#stages)), and the breach (rounds
+6 to 9) and the shattered sky (from round 10), with their portraits from #1090, give way to the one painting.
 
-**Implementation check for PR 2.** On a portrait phone, open a featured game at rounds 5, 6 and 10. Confirm the actual painting is visible above the action on both players' turns, including the reported round 6 game against a bot.
+**Approved painting (09, revision 3).** The Deathstalker leaps toward the Ethereal as the arch collapses. Behind the clouds, the sun is broken in three. Amber light shows in the cracks of the rock at the chasm's edge.
+
+**A landscape cut is still to come.** The approved source is a portrait, 941 by 1672. From 761 px up, and on a phone turned on its side, the featured space is a landscape box (up to 950 px wide, `table/lobby.css`) that would keep only a third of its height. The owner asks for a landscape cut of 09 before the second pull request, which draws it as the `wide` source of a `<picture>`, as #1090 does for the grounds today.
+
+**Implementation check for the second pull request.**
+
+- On a portrait phone and on desktop, open a featured game at rounds 5, 6 and 10. Confirm the painting is visible above the action on both players' turns, including the round 6 game against a bot that showed the wrong painting (#1081).
+- Remove the declarations the rule leaves unused (`home-ground-breach`, `home-ground-sky`, and `warped-listening` on `table/home` if no card still draws it), and update `table/lobby-featured.test.js`, which holds rounds 6 to 14 to the breach and the sky.
 
 ## Final selections
 
-The current painting names below are from the [source register](sources/pages/scenes/README.md). For creature anatomy, use the [battle forms](../../table/battle-art/evolutions/) as references. Keep the slate, soot, bone and restrained ember palette. Compose window heads for a shallow band with the title at the start.
+The current painting names below are from the [source register](sources/pages/scenes/README.md) or, for the battle's plates and the offline page, from the [picture declarations](page-pictures.json). For creature anatomy, use the [battle forms](../../table/battle-art/evolutions/) as references. Keep the slate, soot, bone and restrained ember palette. Compose each window's head as a shallow band, with the title at its start (left) edge.
 
 | # | Placement | Current image | New composition | Approved source |
 | --- | --- | --- | --- | --- |
-| 01 | Create a game with a selected friend | predator-and-deathstalker | The empty bank. From behind a six-legged Predator, look across still water to a gap in the mist. Keep the Predator on the right and a broken arch visible across the pool. | [Empty bank](sources/pages/replacements/empty-bank.webp) |
-| 02 | Received invitation card | predator-and-deathstalker | Reverse the view from 01. The recipient stands on the empty bank and sees the waiting Predator looking back. Match the arch, waterline and evening light to the accepted 01. Leave room for card text. | [Invitation reverse angle](sources/pages/replacements/invitation-reverse.webp) |
-| 03 | Sign-out confirmation | predator-at-rest | One open amber eye beneath the Predator's armoured lid, on the right of the band. The panel after sign-out reveals the existing full painting of the resting creature. | [The eye still open](sources/pages/replacements/eye-still-open.webp) |
+| 01 | Create a game with a selected friend | predator-and-deathstalker | The empty bank. From behind a six-legged Predator, look across still water to a gap in the mist. Keep the Predator on the right, and keep a broken arch visible across the pool. | [Empty bank](sources/pages/replacements/empty-bank.webp) |
+| 02 | Received invitation card | predator-and-deathstalker | Reverse the view from 01. The recipient stands on the empty bank and sees the waiting Predator looking back. Match the arch, waterline and evening light to 01 as accepted. Leave room for card text. | [Invitation reverse angle](sources/pages/replacements/invitation-reverse.webp) |
+| 03 | Sign-out confirmation | predator-at-rest | Show one open amber eye beneath the Predator's armoured lid, on the right of the band. After sign-out, the panel reveals the full painting of the resting Predator. | [The eye still open](sources/pages/replacements/eye-still-open.webp) |
 | 04 | Friends window | predator-and-deathstalker | A reclining Brute and a watchful Predator share the shelter of one arch. Both look out in the same direction. Group their silhouettes on the right. | [Under one arch](sources/pages/replacements/under-one-arch.webp) |
-| 05 | Mutation Tree heading | brute-moult | Three trails diverge in wet ash. A deep Brute print, narrow Predator claw marks and a scar in the stone from a Warped share one point of origin. | [Three trails in the ash](sources/pages/replacements/three-trails-in-ash.webp) |
+| 05 | Mutation Tree heading | brute-moult | Three trails diverge in wet ash. A deep Brute print, narrow Predator claw marks and a Warped's scar in the stone share one point of origin. | [Three trails in the ash](sources/pages/replacements/three-trails-in-ash.webp) |
 | 06 | Mutation Tree, Brute column | ironhide-scar | Keep the Ironhide eye beneath its scarred plates. | Keep existing |
 | 07 | Mutation Tree, Predator column | blightweaver-pressure-sac | Keep the Blightweaver pressure sac and the eye visible through the gas. | Keep existing |
 | 08 | Mutation Tree, Warped column | warped-listening | Complete the three family close-ups with the Cataclysm's eye in three-quarter view. Keep the forked ivory brow, an ember iris with a cold violet reflection, and a thin veil of mist. Frame the eye for the 48 px band. | [Cataclysm eye](sources/pages/replacements/cataclysm-eye.webp) |
-| 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. The Deathstalker leaps at the Ethereal over the opening chasm. Use the featured lobby rule above. | [The Great Rupture](sources/pages/replacements/great-rupture.webp) |
+| 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. The Deathstalker leaps toward the Ethereal over the opening chasm. Use the featured lobby rule above. | [The Great Rupture](sources/pages/replacements/great-rupture.webp) |
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | [Waiting ripples](sources/pages/replacements/waiting-ripples.webp) |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | [After the impact](sources/pages/replacements/after-the-impact.webp) |
-| 12 | Showcase, creator's note | predator-at-rest | The owner started with the app. A physical prototype has yet to be built. Defer this replacement and keep the resting Predator here. | Keep existing |
-| 13 | Leaderboard heading | elemental-charge | A scarlet-striated stage 3 Ravager stands on a broken tier, framed on the right against a low eclipse. | [Last one standing](sources/pages/replacements/last-one-standing.webp) |
+| 12 | Showcase, creator's note | predator-at-rest | Defer this replacement: the note speaks of a physical prototype, and the owner started with the app; none exists yet. Keep the resting Predator here. | Keep existing |
+| 13 | Leaderboard heading | elemental-charge | A scarlet-striped Stage III Ravager stands on a broken tier, framed on the right against a low eclipse. | [Last one standing](sources/pages/replacements/last-one-standing.webp) |
 | 14 | Statistics heading | ironhide-scar | A slate slab bears overlapping claw marks worn almost smooth. One fresh cut exposes pale stone. | [Combat marks](sources/pages/replacements/combat-marks.webp) |
 | 15 | Rulebook heading | latch-under-the-arch | Keep the claws gripping the arch above the book. | Keep existing |
 | 16 | Offline page | parasite-under-slate (parasite-offline) | Keep the Parasite sheltering under the slab on the offline page. | Keep existing |
 
-The pool, moult, scar, sac, listening Warped and hidden Parasite keep their places in the field guide. The elemental charge stays in the showcase's modes section, Latch on the 404, and the fresh stomp on the match result. The mist duel continues to introduce both a new battle and the early rounds in the lobby.
+The field guide keeps the pool, the moult, the scar, the sac, the listening Warped and the hidden Parasite. The elemental charge stays in the showcase's modes section, Latch stays on the 404, and the fresh stomp stays on the match result.
