@@ -18,7 +18,7 @@ public sealed class LobbyChangesTests
     {
         var changes = new LobbyChanges();
 
-        var written = await StreamedAsync(changes, Mark, "account 1", () =>
+        var written = await StreamedAsync(changes, Mark, ["lobby 1", "account 1"], () =>
         {
             changes.Everyone();
             changes.Account(Mark);
@@ -34,7 +34,7 @@ public sealed class LobbyChangesTests
     {
         var changes = new LobbyChanges();
 
-        var written = await StreamedAsync(changes, Mark, "lobby 1", () =>
+        var written = await StreamedAsync(changes, Mark, ["lobby 1"], () =>
         {
             changes.Account(Bastien);
             changes.Everyone();
@@ -48,7 +48,7 @@ public sealed class LobbyChangesTests
     {
         var changes = new LobbyChanges();
 
-        var written = await StreamedAsync(changes, null, "lobby 1", () =>
+        var written = await StreamedAsync(changes, null, ["lobby 1"], () =>
         {
             changes.Account(Mark);
             changes.Everyone();
@@ -63,20 +63,26 @@ public sealed class LobbyChangesTests
     {
         var changes = new LobbyChanges { KeepAlive = TimeSpan.FromMilliseconds(20) };
 
-        var written = await StreamedAsync(changes, Mark, ": keep-alive", () => { });
+        var written = await StreamedAsync(changes, Mark, [": keep-alive"], () => { });
 
         written.ShouldContain(": keep-alive\n\n");
     }
 
-    // Runs the stream until what it wrote holds `until`, after `act` once it said ready; then the browser goes.
-    private static async Task<string> StreamedAsync(LobbyChanges changes, AccountId? account, string until, Action act)
+    // Runs the stream until what it wrote holds each of `until`, after `act` once it said ready; then the browser goes.
+    // Each is waited for: the stream does not promise the order of two changes made together, and stopping at the
+    // last one expected cut the other off when the account's wait was answered first (#945).
+    private static async Task<string> StreamedAsync(LobbyChanges changes, AccountId? account, string[] until, Action act)
     {
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         var stream = new Written();
         var streaming = changes.StreamAsync(stream, account, stopping.Token);
         await stream.HoldsAsync("event: ready", TestContext.Current.CancellationToken);
         act();
-        await stream.HoldsAsync(until, TestContext.Current.CancellationToken);
+        foreach (var text in until)
+        {
+            await stream.HoldsAsync(text, TestContext.Current.CancellationToken);
+        }
+
         await stopping.CancelAsync();
         await Should.ThrowAsync<OperationCanceledException>(() => streaming);
         return stream.Text;
