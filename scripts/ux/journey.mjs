@@ -157,13 +157,13 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
     }
     if (strip) {
       if (!shots) throw new Error(`The ${journey.id} journey never reached "${filmed.at}", where ${strip} is filmed.`);
-      return Object.assign(shots, { blocked: blocks });
+      return walked(shots, blocks);
     }
     const missed = journey.screens.filter(name => !walk.seen(name));
     if (missed.length) throw new Error(`The ${journey.id} journey never reached: ${missed.join(', ')}.`);
     if (errors.length) throw new Error(`The ${journey.id} journey's page threw: ${errors.join(' | ')}`);
     // What the walk could not press rides on the screens: a walk with none is one a player can make.
-    return Object.assign(screens, { blocked: blocks });
+    return walked(screens, blocks);
   } finally {
     for (const context of contexts) await context.close().catch(() => {});
     await set.close();
@@ -218,9 +218,14 @@ for (const flag of ['--frames', '--interval', '--runs']) {
   };
 }
 
+/** A walk's screens or a strip's frames, carrying what it had to press by script (`blocked`). */
+export function walked(taken, blocks) {
+  return Object.assign(taken, { blocked: blocks });
+}
+
 /** What a walk or a strip had to press by script, a line each, named by its journey and its width. */
-export function blockedLines(id, viewport, walked) {
-  return walked.blocked.map(line => `${id} at ${viewport.width} px, ${line}`);
+export function blockedLines(id, viewport, taken) {
+  return taken.blocked.map(line => `${id} at ${viewport.width} px, ${line}`);
 }
 
 export function parseArguments(argv) {

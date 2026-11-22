@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { JOURNEYS } from '../scripts/ux/journeys.mjs';
-import { VIEWPORTS, blockedLines, listing, parseArguments } from '../scripts/ux/journey.mjs';
+import { VIEWPORTS, blockedLines, listing, parseArguments, walked } from '../scripts/ux/journey.mjs';
 import { differences, measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
 import { readPaintInPage, spread, summary } from '../scripts/ux/paint.mjs';
 
@@ -47,9 +47,10 @@ test('the match\'s settings-window strip presses Settings as the walk does, so a
 // A strip, like a walk, says what it had to press by script: frames of a press no player could make are not taken
 // for a player's (#1021).
 test('what a walk or a strip pressed by script is said with its journey and its width', () => {
-  assert.deepEqual(blockedLines('match', { width: 320 }, Object.assign([], { blocked: ['after second-round: #settings could not be pressed'] })),
-    ['match at 320 px, after second-round: #settings could not be pressed']);
-  assert.deepEqual(blockedLines('match', { width: 390 }, Object.assign([], { blocked: [] })), []);
+  const frames = walked([{ ms: 0 }], ['after second-round: #settings could not be pressed']);
+  assert.deepEqual(frames.map(frame => frame.ms), [0]);
+  assert.deepEqual(blockedLines('match', { width: 320 }, frames), ['match at 320 px, after second-round: #settings could not be pressed']);
+  assert.deepEqual(blockedLines('match', { width: 390 }, walked([], [])), []);
 });
 
 test('the walk is at 320 by 568 and 390 by 844', () => {

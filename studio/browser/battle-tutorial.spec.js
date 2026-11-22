@@ -253,7 +253,7 @@ test('on a 320 px phone the header still says Tutorial n of 4, and the coach car
 // the runner's fonts the band's Leave lay over Settings at 390 px, and the tests below timed out on it (#1046). The
 // place in the series reads whole at our size, and at 390 px a step above it, the margin a wider font takes; past
 // that it is the one to shorten, as Leave and Settings must stay whole and 44 px.
-test('on a phone the tutorial band never covers Settings, whatever the size of its text', async ({ page }) => {
+test('on a phone the tutorial band never covers Settings at any size of its text, and reads its place whole at ours', async ({ page }) => {
   test.skip(!['phone', 'small-phone'].includes(test.info().project.name), 'The header is short on a phone held upright.');
   test.setTimeout(120000);
   const state = await mount(page);
@@ -264,11 +264,13 @@ test('on a phone the tutorial band never covers Settings, whatever the size of i
       const read = await page.evaluate(() => {
         const box = one => document.querySelector(one).getBoundingClientRect(), band = document.getElementById('practice-band');
         const settings = box('#settings'), leave = box('#practice-leave'), eyebrow = document.getElementById('practice-eyebrow');
+        const restart = document.getElementById('practice-restart'), controls = [leave, settings, ...(restart.getClientRects().length ? [restart.getBoundingClientRect()] : [])];
         const hit = document.elementFromPoint(settings.left + settings.width / 2, settings.top + settings.height / 2);
         const shown = [...band.querySelectorAll('.practice-actions > *, .eyebrow')].filter(node => node.getClientRects().length && getComputedStyle(node).display !== 'none');
         return { reached: hit?.closest('#settings') !== null, inside: shown.every(node => node.getBoundingClientRect().right <= box('#practice-band').right + 1),
           clear: leave.right <= settings.left + 1, fits: band.scrollWidth <= band.clientWidth + 1,
-          targets: [leave, settings].every(one => one.width >= 44 && one.height >= 44), whole: eyebrow.scrollWidth <= eyebrow.clientWidth + 1 };
+          targets: controls.every(one => one.width >= 44 && one.height >= 44),
+          whole: eyebrow.scrollWidth <= eyebrow.clientWidth + 1 && eyebrow.scrollHeight <= eyebrow.clientHeight + 1 };
       });
       // At 320 px a finished lesson leaves the place in the series no step to spare: it reads whole at our size.
       const whole = size === '16px' || (size === '17px' && test.info().project.name === 'phone') ? true : read.whole;

@@ -1941,8 +1941,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle .hud-top > .practice-band { position: static; flex: 1 1 auto; display: flex; align-items: center; gap: 10px; width: auto; min-width: 0; margin: 0 0 0 8px; padding: 0 0 0 10px;
   border: 0; border-left: 2px solid var(--gold); border-radius: 0; background: none; box-shadow: none; }
 #battle .hud-top > .practice-band[hidden] { display: none; }
-/* The band's place in the series gives way before its ways out: it reads whole at our size and a step above it, and
-   past that (a much wider font, a reader's larger text) it is cut, so Restart the round and Leave keep their place,
+/* The band's place in the series gives way before its ways out: it reads whole at our size (and at 390 px a step
+   above it), and past that (a much wider font, a reader's larger text) it is cut, so Restart the round and Leave keep their place,
    clear of Settings (#1046). */
 #battle .hud-top > .practice-band .eyebrow { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #battle .hud-top > .practice-band strong, #battle .hud-top > .practice-band #practice-goal { display: none; }
@@ -2093,8 +2093,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle .hud-top > .practice-band .eyebrow, .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow {
   font-size: .6875rem;
 }
-/* "TUTORIAL 1 OF 4" on two lines at 11 px: its column is as wide as its longest word. */
-.battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { max-width: none; width: min-content; letter-spacing: 0; }
+/* "TUTORIAL 1 OF 4" on two lines at 11 px, for a member at every width: its column is as wide as its longest word. */
+.battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { width: min-content; letter-spacing: 0; }
 
 /* The round's bar under 360 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
    drawn on the menu's button, and History leaves it, so the round, the opponent, Help and Settings keep their own
