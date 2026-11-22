@@ -30,43 +30,48 @@ function personAgainst(table, held) {
   return name && name !== 'Player' ? name : 'another player';
 }
 
+// A game against another person where it is this player's turn, as the bell lists it; null when none waits on them.
+function turnItem(entry, now) {
+  const held = (entry.seats ?? []).map(seat => seat.seat), against = personAgainst(entry.table, held);
+  if (!against || !turnOf(entry.table, held)?.mine) return null;
+  const round = Number.isInteger(entry.table.round) ? ` · Round ${entry.table.round}` : '';
+  return { kind: 'turn', key: `turn:${entry.table.id}`, title: `Your turn against ${against}`,
+    detail: [`${entry.table.format ?? ''} battle${round}`.trim(), sinceVisitLine(entry.recap, now)].filter(Boolean).join(' · '), seats: entry.seats };
+}
+
+// An invitation of this player's a friend declined, while its game is still open; null otherwise.
+function declinedItem(entry) {
+  if (!entry.invited?.declined || entry.table.over) return null;
+  return { kind: 'declined', key: `declined:${entry.table.id}`, title: `${entry.invited.username ?? 'Your friend'} declined your invitation`,
+    detail: `${entry.table.format ?? ''} battle · invite another friend or open the seat from the lobby`.trim() };
+}
+
+// Only a path of this site is a link: `//host` and `/\host` leave it.
+const sitePath = url => (typeof url === 'string' && /^\/(?![/\\])/.test(url) ? url : null);
+
+// One entry of the notice log, as the bell lists it; null for one without an id or a title.
+function newsItem(entry, now) {
+  if (!Number.isFinite(entry?.id) || !entry.title) return null;
+  const ago = entry.at ? sentAgo(entry.at, now) || 'just now' : '';
+  return { kind: 'news', key: `news:${entry.id}`, id: entry.id, title: entry.title, unread: entry.read !== true,
+    detail: [entry.body, ago].filter(Boolean).join(' · '), url: sitePath(entry.url) };
+}
+
 /**
  * The things waiting for this player, in the order the window lists them: the games against another person where it is their turn,
- * then the invitations they received, then the friend requests, then their own invitations a friend declined.
+ * then the invitations they received, then the friend requests, then their own invitations a friend declined,
  * then the news, newest first. `mine` and `invitations` are `GET /api/lobby/mine`'s; `friends` is `GET /api/friends`'s;
  * `news` is `GET /api/account/notices`'s `notices`.
  */
 export function inboxItems({ mine = [], invitations = [], friends = null, news = [] } = {}, now = Date.now()) {
-  const items = [];
-  for (const entry of mine) {
-    const held = (entry.seats ?? []).map(seat => seat.seat), against = personAgainst(entry.table, held);
-    if (against && turnOf(entry.table, held)?.mine) {
-      const round = Number.isInteger(entry.table.round) ? ` · Round ${entry.table.round}` : '';
-      const since = sinceVisitLine(entry.recap, now);
-      items.push({ kind: 'turn', key: `turn:${entry.table.id}`, title: `Your turn against ${against}`,
-        detail: [`${entry.table.format ?? ''} battle${round}`.trim(), since].filter(Boolean).join(' · '), seats: entry.seats });
-    }
-  }
-  for (const invitation of invitations) {
-    items.push({ kind: 'invitation', key: `invitation:${invitation.table.id}`, table: invitation.table.id,
-      title: `${invitation.from?.username ?? 'A friend'} invites you`, detail: `${invitation.table.format ?? ''} battle`.trim() });
-  }
-  for (const asker of friends?.incoming ?? []) {
-    items.push({ kind: 'friend', key: `friend:${asker.id}`, account: asker.id, title: `${asker.username} wants to be your friend`, detail: '' });
-  }
-  for (const entry of mine) {
-    if (entry.invited?.declined && !entry.table.over) {
-      items.push({ kind: 'declined', key: `declined:${entry.table.id}`, title: `${entry.invited.username ?? 'Your friend'} declined your invitation`,
-        detail: `${entry.table.format ?? ''} battle · invite another friend or open the seat from the lobby`.trim() });
-    }
-  }
-  for (const entry of news ?? []) {
-    if (!Number.isFinite(entry?.id) || !entry.title) continue;
-    const ago = entry.at ? sentAgo(entry.at, now) || 'just now' : '';
-    items.push({ kind: 'news', key: `news:${entry.id}`, id: entry.id, title: entry.title, unread: entry.read !== true,
-      detail: [entry.body, ago].filter(Boolean).join(' · '), url: typeof entry.url === 'string' && /^\/(?![/\\])/.test(entry.url) ? entry.url : null });
-  }
-  return items;
+  return [
+    ...mine.map(entry => turnItem(entry, now)),
+    ...invitations.map(invitation => ({ kind: 'invitation', key: `invitation:${invitation.table.id}`, table: invitation.table.id,
+      title: `${invitation.from?.username ?? 'A friend'} invites you`, detail: `${invitation.table.format ?? ''} battle`.trim() })),
+    ...(friends?.incoming ?? []).map(asker => ({ kind: 'friend', key: `friend:${asker.id}`, account: asker.id, title: `${asker.username} wants to be your friend`, detail: '' })),
+    ...mine.map(declinedItem),
+    ...(news ?? []).map(entry => newsItem(entry, now)),
+  ].filter(Boolean);
 }
 
 /** What the bell counts: what waits, and the news not read yet; the badge shows their sum. */
