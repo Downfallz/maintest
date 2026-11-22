@@ -200,3 +200,48 @@ test('a reference spell whose portrait fails to load leaves no gap before its na
   await expect(strike.locator('.spell-card-name')).toHaveText('Strike');
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
+// #1035: the host's answer lands late, well after the tap; the field keeps the layout it had beside the sheet, then
+// eases into the room the sheet leaves. Its captions follow their figures by a translation, so none jumps.
+test('when the tempos close on a late answer the field keeps its layout, then eases into the room, its captions never jumping', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Own viewport');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    window.shifts = [];
+    new PerformanceObserver(list => { for (const entry of list.getEntries()) if (!entry.hadRecentInput) window.shifts.push({ value: entry.value, sources: entry.sources.map(one => one.node?.className ?? '') }); })
+      .observe({ type: 'layout-shift', buffered: true });
+  });
+  const h = await mount(page); await fill(page, 3);
+  const caption = page.locator('#actor-layer [data-creature="1"] .caption'), bottom = async () => { const box = await caption.boundingBox(); return box.y + box.height; };
+  const before = await bottom();
+  // The caption's foot read every frame, from before the tap until the field has settled.
+  await caption.evaluate(node => { window.shifts = []; window.feet = []; const read = () => { const box = node.getBoundingClientRect(); window.feet.push(box.bottom); requestAnimationFrame(read); }; read(); });
+  h.hold = new Promise(resolve => setTimeout(resolve, 900));
+  await page.locator('#planning-confirm').click(); await expect(page.locator('#planning-dialog')).toBeHidden();
+  await expect.poll(bottom).toBeGreaterThan(before + 150);
+  await page.waitForTimeout(300);
+  const feet = await page.evaluate(() => window.feet);
+  const steps = feet.slice(1).map((one, index) => Math.abs(one - feet[index]));
+  expect(Math.max(...steps)).toBeLessThan(40);
+  const shifts = await page.evaluate(() => window.shifts);
+  expect(shifts.flatMap(one => one.sources).filter(name => /\b(caption|creature-tag|creature)\b/.test(name))).toEqual([]);
+  expect(shifts.reduce((sum, one) => sum + one.value, 0)).toBeLessThan(0.02);
+  expect(h.errors).toEqual([]);
+});
+// #1034: under 660 px tall the pinned head folds, so the spell reference brought under it shows a card above the foot.
+test('at 320 by 568 the pinned head folds and the spell reference shows its first card above the foot', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Own viewport');
+  await page.setViewportSize({ width: 320, height: 568 }); const h = await mount(page);
+  // As a thumb leaves it: the reference brought just under the pinned head.
+  await page.locator('.tempo-reference').evaluate(node => {
+    const pinned = document.querySelector('.tempo-pinned').getBoundingClientRect();
+    document.getElementById('planning-choices').scrollTop += node.getBoundingClientRect().top - pinned.bottom;
+  });
+  const [pinned, name, foot] = await Promise.all(['.tempo-pinned', '.tempo-reference .spell-card-name', '.planning-footer'].map(one => page.locator(one).first().boundingBox()));
+  expect(name.y).toBeGreaterThanOrEqual(pinned.y + pinned.height - 1);
+  expect(name.y + name.height).toBeLessThanOrEqual(foot.y);
+  // The tempos stay pinned and named, their lines kept for the ear.
+  await expect(page.locator('[data-speed="Quick"]')).toBeInViewport(); await expect(page.locator('[data-speed="Standard"]')).toBeInViewport();
+  await expect(page.locator('[data-speed="Quick"]')).toHaveAccessibleName(/Instinct.*Acts before Precision/);
+  await page.screenshot({ path: info.outputPath('tempo-reference-320.png') });
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});

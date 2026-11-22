@@ -440,6 +440,8 @@ function render() {
   const spellsHeld = playbackState.active || replay.active || upkeep.model().pending || orderUI.isReading() || orderUI.isOpening();
   controls.render(action, catalogue, growth.highlights(action, visible() && !playbackState.active && !replay.active), spellsHeld);
   const shape = `${$<HTMLDialogElement>('combat-dialog').open}|${$<HTMLDialogElement>('planning-dialog').open && ['Evolution', 'Speed', 'TieOrder'].includes($('planning-dialog').dataset.kind ?? '')}`;
+  // A docked sheet that leaves hands the field the room it took: the field eases into it rather than jumping (#1035).
+  if (shape !== dockShape && dockShape.includes('true') && !shape.includes('true')) scene.holdLayout();
   if (shape !== dockShape) { dockShape = shape; dockMoved = playbackState.active; }
   else if (!playbackState.active) dockMoved = false; planningUI.render(planning.model(), catalogue); atlasUI.refresh(catalogue); matchUI.render(); servicesUI.render(); reactionsUI.render(); historyUI.render(history.model());
   // No command is offered while results are still to be read: the next choice appears once the player has

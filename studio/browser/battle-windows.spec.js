@@ -4,6 +4,7 @@
 // motion-kit.spec.js's; what each window holds is its own spec's.
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { openSpells, servePageArt } from './battle-spells-fixture.js';
 import { returningBattlePlayer, withoutCanvas } from './battle-help-fixture.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
@@ -349,4 +350,41 @@ test('the floor shrinks nothing that was above 11 px', async ({ page }) => {
     const size = getComputedStyle(probe).fontSize; (wrap ? parent : probe).remove(); return size;
   }));
   expect(sizes).toEqual(['14px', '13px', '12px']);
+});
+
+// #1087: a control named by words of its own still speaks the words it shows (axe's label-content-name-mismatch):
+// the pick's offers, the Mutation Tree's mutations and the journal's casts.
+const axeScript = createRequire(import.meta.url).resolve('axe-core/axe.min.js');
+const mismatched = async (page, id) => {
+  if (!await page.evaluate(() => 'axe' in window)) await page.addScriptTag({ path: axeScript });
+  return page.evaluate(async scope => (await window.axe.run(document.getElementById(scope), { runOnly: ['label-content-name-mismatch'] }))
+    .violations.flatMap(one => one.nodes.map(node => node.target.join(' '))), id);
+};
+test('the pick, the Mutation Tree and the journal speak the words their controls show', async ({ page }) => {
+  // axe waits on timers: the seat's clock runs again from here.
+  await mount(page); await page.clock.resume();
+  const found = {};
+  await page.locator('#planning-open').click(); await expect(page.locator('#planning-dialog')).toHaveJSProperty('open', true);
+  found['planning-dialog'] = await mismatched(page, 'planning-dialog');
+  await expect(page.locator('[data-mutation="root"]')).toHaveAccessibleName(/^Warden · Warden · Stage 1\b/);
+  await page.locator('#mutation-atlas-open').click(); await page.locator('#atlas-dialog .atlas-node').first().click();
+  found['atlas-dialog'] = await mismatched(page, 'atlas-dialog');
+  await expect(page.locator('#atlas-board .atlas-node[data-package="root"]')).toHaveAccessibleName(/^Warden · Stage 1 · Offered now$/);
+  await page.keyboard.press('Escape'); await page.keyboard.press('Escape');
+  await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveJSProperty('open', true);
+  await page.locator('#history-mode-summary').click(); await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  await expect(page.locator('.summary-cast')).toHaveCount(1);
+  await expect(page.locator('.summary-cast')).toHaveAccessibleName('Creature 4 cast Strike. Inspect event');
+  found['history-dialog'] = await mismatched(page, 'history-dialog');
+  expect(found).toEqual({ 'planning-dialog': [], 'atlas-dialog': [], 'history-dialog': [] });
+});
+
+// #1087: the journal opened as a new round is announced leaves nothing playing beneath it.
+test('a window opened over a new round\'s announcement leaves nothing animating beneath it', async ({ page }) => {
+  const state = await mount(page); await page.clock.resume();
+  await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
+  await expect(page.locator('#round-toast')).toHaveClass(/showing/);
+  await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveJSProperty('open', true);
+  expect(await page.locator('#round-toast').evaluate(toast => toast.getAnimations().length)).toBe(0);
+  await expect(page.locator('#round-toast')).toBeHidden();
 });

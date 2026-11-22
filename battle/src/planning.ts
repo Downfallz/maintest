@@ -71,13 +71,17 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const choices = mutationChoices(model.latest, catalogue, creature);
     creature = choices.selected;
     el('planning-creatures').replaceChildren(...choices.roster.map((one: { id: number; name: string; context: string }) => {
+      // Named by its words (#1087): the creature, then its state, written under it or kept for the ear.
       const node = button(one.name, () => selectCreature(one.id));
-      node.setAttribute('aria-label', `${one.name} · ${one.context}`);
-      if (!one.context.endsWith('available')) { const status = document.createElement('small'); status.textContent = one.context; node.append(status); }
+      const shown = !one.context.endsWith('available'), status = document.createElement(shown ? 'small' : 'span');
+      const gap = document.createElement('span'); gap.className = 'unseen'; gap.textContent = ' · ';
+      status.textContent = one.context; if (!shown) status.className = 'unseen'; node.append(gap, status);
       node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); return node;
     }));
     tree?.dispose();
     tree = mutationTree(choices, catalogue, tier => controller.choose({ creature, tier }));
+    // The rule sentence describes the graph, so it is still read where a short screen hides it (#1031).
+    tree.graph.setAttribute('aria-describedby', pickNote.id);
     el('planning-choices').replaceChildren(pickNote, tree.graph);
     el('mutation-preview-region').replaceChildren(tree.pane);
     // The whole tree opens full screen on the mutation in hand; an offer can be chosen from its card there.
