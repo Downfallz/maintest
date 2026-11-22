@@ -694,9 +694,10 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 
     Tests:
     - `studio/browser/battle-windows.spec.js`, new: Settings, Help, History (from the bar and from Help), the
-      inspection and the Mutation Tree. The focus goes in, stays in over 14 Tabs, comes back, and Escape closes; an
-      opener that went sends the focus to the frame; no word under 11 px. Without `windows.ts`, four of its cases
-      fail.
+      inspection, and the Mutation Tree (from its sheet and from the inspection, the window on top coming earlier in
+      the page). The focus goes in, Tab visits every control once and comes round, Shift+Tab from the first goes to
+      the last, Escape closes, the focus comes back. An opener that went sends the focus to the frame. No word is
+      under 11 px, and a heading above it keeps its size. Without `windows.ts`, four of its cases fail.
     - `motion-kit.spec.js`: every window of the battle page enters and leaves and keeps its layout while it fades
       out, which fails on the battle page and the admin panel without the change; a docked sheet fades in without
       travel and leaves at once.
