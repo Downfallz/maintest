@@ -294,6 +294,10 @@ result in `battle/src` with UX12.
 8. **S8, the lobby's games.** The waiting game and the ended game take their ground; the brief's ground by round
    stays for a game in play. Tests: the lobby's specs, the budget, the measures.
 
+   *Superseded in the featured space*: [the replacement plan](scene-replacement-plan.md#featured-lobby-painting)
+   draws the mist duel to round 5 and the Great Rupture from round 6 on either player's turn, so a waiting game no
+   longer stands on `warped-listening` there.
+
    *Built (2026-11-22)*: a game of the player's waits on someone else when the player against it is asked to play,
    or when its seat is not yet taken (`waitsOnAnother` in `table/lobby.js`). A bot's game never does: a bot answers
    at once. A waiting game stands on `warped-listening` in the two places the owner chose. The featured space draws
