@@ -523,13 +523,16 @@ itself, through the worker and no push service, and one the host sends through t
 the service answered under the button. Both appearing is a phone that works; only the page's is a push that
 does not reach this browser; neither is a browser not showing notifications for this site.
 
-With accounts on as well (ADR 0122), a signed-in player's lobby offers **Notify me on this device**
-(`docs/tabletop/friends-plan.md`, stage 1): the browser's push subscription becomes one of the account's
-**devices**, kept beside the accounts (`devices/<accountId>.json`, five at most, the oldest replaced), where a
-notice that is not about a seat will reach the player: a friend's request, an invitation, the end of a match. A
-seat's "your turn" still goes to the seat's browser as above; the same subscription is registered for both, and
-the host tells each endpoint once. **Stop notifying this device** forgets the device and leaves the subscription
-to the seats; **Send a test** sends one notice through the push service to this device. *Sign out everywhere* and
+With accounts on as well (ADR 0122), Settings, Notifications, says first that the bell keeps everything, then offers
+**Pop-ups on this device** (ADR 0202): on, the browser's push subscription becomes one of the account's **devices**,
+kept beside the accounts (`devices/<accountId>.json`, five at most, the oldest replaced); off forgets the device and
+lets go of the subscription itself, so no page of this browser is told anything. **What pops up** chooses, for the
+account, *Your turn*, *Invitations and friends* and *Results*. A seat that belongs to an account is told its turn
+on the account's devices, as it chose, tagged with the table, and not on the seat's own subscription; its match
+settings' switch is the same one, since a signed-in seat's subscription is registered as one of its account's
+devices too, and its `DELETE` forgets it there. No device is told a signed-in seat's turn when the other seat is the
+same account's or the device is the other seat's subscription (hotseat, ADR 0120). **Send a test** sends one notice
+through the push service to this device. *Sign out everywhere* and
 deleting the account forget every device. The routes are `PUT`/`DELETE /api/account/push` and
 `POST /api/account/push/test`, all signed in; a host without push keys answers 404 and the lobby shows no panel.
 The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
@@ -756,7 +759,8 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `DELETE /api/account` | account | Deletes the account. |
-| `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187). |
+| `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187) and what pops up (`notices`, ADR 0202). |
+| `PUT /api/account/preferences/notices` | account | What pops up on the account's devices (ADR 0202): `{"turns", "invitations", "results"}`, each `true` or `false`, a choice left out on. The bell keeps everything whatever they say. 404 on a host that keeps no settings. |
 | `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices. |
 | `GET /api/account/notices`, `POST /api/account/notices/read` | account | The notice log (ADR 0201): the news the bell keeps, newest first, with the unread count; read marks up to an id (`{"upTo": <id>}`) and, when it marked any, tells the account's other pages through their stream. 404 on a host that keeps none. |
 | `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time. |

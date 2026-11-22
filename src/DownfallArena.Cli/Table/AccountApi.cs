@@ -23,6 +23,7 @@ internal sealed class AccountApi
 
     private const string PushRoute = Prefix + "/push";
     private const string PreferencesRoute = Prefix + "/preferences";
+    private const string NoticePreferencesRoute = PreferencesRoute + "/notices";
     private const string NoticesRoute = Prefix + "/notices";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
@@ -408,6 +409,7 @@ internal sealed class AccountApi
                 ("POST", NoticesRoute + "/read") => await ReadNoticesAsync(body, request),
                 ("GET", PreferencesRoute) => await PreferencesAsync(request),
                 ("PUT", PreferencesRoute) => await SavePreferencesAsync(body, request),
+                ("PUT", NoticePreferencesRoute) => await SaveNoticePreferencesAsync(body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
             };
@@ -698,8 +700,33 @@ internal sealed class AccountApi
 
         var saved = await store.GetAsync(who.Account.Id);
         var tutorials = await store.GetTutorialsAsync(who.Account.Id);
-        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null, tutorials = new { done = tutorials.Done, skipped = tutorials.Skipped } }, who.Renewed);
+        var notices = await store.GetNoticesAsync(who.Account.Id);
+        return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null, tutorials = new { done = tutorials.Done, skipped = tutorials.Skipped }, notices = DescribeNotices(notices) }, who.Renewed);
     }
+
+    /// <summary>
+    /// Replaces what pops up on the account's devices (ADR 0202): its turns, its invitations and friends, its results.
+    /// A choice left out pops up. The bell keeps every notice whatever is chosen here.
+    /// </summary>
+    private async Task<StudioResponse> SaveNoticePreferencesAsync(string body, AccountRequest request)
+    {
+        if (Preferences is not { } store)
+        {
+            return Problem(404, "Account.NoPreferences", "This host keeps no game settings.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        var asked = Read<NoticePreferencesBody>(body);
+        var chosen = new NoticePreferences(asked?.Turns ?? true, asked?.Invitations ?? true, asked?.Results ?? true);
+        await store.SaveNoticesAsync(who.Account.Id, chosen);
+        return Answer(new { notices = DescribeNotices(chosen) }, who.Renewed);
+    }
+
+    private static object DescribeNotices(NoticePreferences notices) => new { turns = notices.Turns, invitations = notices.Invitations, results = notices.Results };
 
     /// <summary>Replaces the account's settings; a game already open keeps what it was set to.</summary>
     private async Task<StudioResponse> SavePreferencesAsync(string body, AccountRequest request)
@@ -774,6 +801,8 @@ internal sealed class AccountApi
         StudioResponse.OfJson(new { error = code, message }, Web, status);
 
     private sealed record CredentialBody(string? Credential);
+
+    private sealed record NoticePreferencesBody(bool? Turns, bool? Invitations, bool? Results);
 
     private sealed record PreferencesBody(string? Pace, decimal? Speed, bool? Help, bool? ReducedMotion, bool? Reactions);
 

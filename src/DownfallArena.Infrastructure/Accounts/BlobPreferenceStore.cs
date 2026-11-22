@@ -42,10 +42,20 @@ public sealed class BlobPreferenceStore : IPreferenceStore
         return WriteAsync(PreferenceDocuments.TutorialsPathOf(account), PreferenceDocuments.WriteTutorials(tutorials), cancellationToken);
     }
 
+    public async Task<NoticePreferences> GetNoticesAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        await ReadAsync(PreferenceDocuments.NoticesPathOf(account), cancellationToken) is { } json ? PreferenceDocuments.ReadNotices(json) : NoticePreferences.Default;
+
+    public Task SaveNoticesAsync(AccountId account, NoticePreferences notices, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notices);
+        return WriteAsync(PreferenceDocuments.NoticesPathOf(account), PreferenceDocuments.WriteNotices(notices), cancellationToken);
+    }
+
     public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         await _container.DeleteBlobIfExistsAsync(PreferenceDocuments.PathOf(account), cancellationToken: cancellationToken);
         await _container.DeleteBlobIfExistsAsync(PreferenceDocuments.TutorialsPathOf(account), cancellationToken: cancellationToken);
+        await _container.DeleteBlobIfExistsAsync(PreferenceDocuments.NoticesPathOf(account), cancellationToken: cancellationToken);
     }
 
     private async Task<string?> ReadAsync(string path, CancellationToken cancellationToken)

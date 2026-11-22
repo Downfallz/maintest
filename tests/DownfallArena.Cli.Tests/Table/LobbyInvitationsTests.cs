@@ -319,6 +319,25 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
     }
 
+    /// <summary>One switch a device (ADR 0202): a signed-in seat's subscription is its account's device too, and goes with the seat's DELETE.</summary>
+    [Fact]
+    public async Task A_signed_in_seat_s_subscription_joins_its_account_s_devices_and_leaves_them_with_the_seat()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var lobby = new LobbyApi(_registry, _hosted.Composer, _clock, new PushNotices(_sender, "BP8", _clock)) { Accounts = (await LobbyAsync()).Accounts, Devices = _devices };
+        var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
+        var table = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
+        var token = table.Seats[0].Token;
+        var browser = JsonSerializer.Serialize(new { endpoint = "https://push.example/laptop", keys = new { p256dh = Key, auth = Auth } });
+
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", browser, token, mark)).Status.ShouldBe(200);
+        var joined = (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ToList();
+        (await lobby.HandleAsync("DELETE", "/api/lobby/push", "", token, mark)).Status.ShouldBe(200);
+
+        joined.ShouldBe(["https://push.example/MarkF", "https://push.example/laptop"], ignoreOrder: true);
+        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+    }
+
     [Fact]
     public async Task A_table_that_has_begun_is_not_closed_from_the_lobby()
     {

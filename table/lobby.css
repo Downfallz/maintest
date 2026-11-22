@@ -155,6 +155,15 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .friends-panel p:not(.eyebrow) { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
 .device-panel p:not(.eyebrow), .device-panel output { color: var(--muted); font-size: 13px; line-height: 1.7; margin-bottom: 12px; display: block; }
 .device-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; } .device-actions button { flex: 1; min-height: 44px; }
+/* The device's switch and the account's kinds read as the game settings' rows (ADR 0202). */
+.device-panel label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.device-panel label > span { display: flex; flex-direction: column; gap: 3px; }
+.device-panel label small, .device-panel legend small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.device-panel input[type="checkbox"] { width: 22px; height: 22px; flex: none; }
+.device-panel fieldset { border: 0; padding: 0; margin: 14px 0 0; min-width: 0; }
+.device-panel fieldset:disabled { opacity: .6; }
+.device-panel legend { font-weight: 600; padding: 0; }
+.device-bell { font-size: 13px; line-height: 1.6; margin: 0 0 12px; }
 .name-title { font: 400 28px var(--font-display); margin: 8px 0 10px; }
 .name-check { display: block; margin: 10px 0 0; font-size: 13px; }
 .name-check[hidden] { display: none; }

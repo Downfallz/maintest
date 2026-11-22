@@ -30,6 +30,15 @@ public sealed class FilePreferenceStore : IPreferenceStore
         return WriteAsync(TutorialsPath(account), PreferenceDocuments.WriteTutorials(tutorials), cancellationToken);
     }
 
+    public async Task<NoticePreferences> GetNoticesAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        await ReadAsync(NoticesPath(account), cancellationToken) is { } json ? PreferenceDocuments.ReadNotices(json) : NoticePreferences.Default;
+
+    public Task SaveNoticesAsync(AccountId account, NoticePreferences notices, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notices);
+        return WriteAsync(NoticesPath(account), PreferenceDocuments.WriteNotices(notices), cancellationToken);
+    }
+
     public async Task SaveAsync(AccountId account, GamePreferences preferences, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(preferences);
@@ -43,6 +52,7 @@ public sealed class FilePreferenceStore : IPreferenceStore
         {
             File.Delete(FullPath(account));
             File.Delete(TutorialsPath(account));
+            File.Delete(NoticesPath(account));
         }
 
         return Task.CompletedTask;
@@ -69,6 +79,8 @@ public sealed class FilePreferenceStore : IPreferenceStore
     }
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, PreferenceDocuments.PathOf(account));
+
+    private string NoticesPath(AccountId account) => Path.Combine(RootDirectory, PreferenceDocuments.NoticesPathOf(account));
 
     private string TutorialsPath(AccountId account) => Path.Combine(RootDirectory, PreferenceDocuments.TutorialsPathOf(account));
 }

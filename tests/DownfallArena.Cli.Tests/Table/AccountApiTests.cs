@@ -543,6 +543,56 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task What_pops_up_is_every_kind_until_chosen_then_what_the_account_chose_and_saving_game_settings_leaves_it()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        api.Preferences = new FilePreferenceStore(_root);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var fresh = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session))).GetProperty("notices");
+
+        var saved = await api.HandleAsync("PUT", "/api/account/preferences/notices", """{"turns":true,"invitations":false,"results":false}""", Signed(session));
+        await api.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":2,"help":true,"reducedMotion":false}""", Signed(session));
+
+        (fresh.GetProperty("turns").GetBoolean(), fresh.GetProperty("invitations").GetBoolean(), fresh.GetProperty("results").GetBoolean()).ShouldBe((true, true, true));
+        saved.Status.ShouldBe(200);
+        var read = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session)));
+        var notices = read.GetProperty("notices");
+        (notices.GetProperty("turns").GetBoolean(), notices.GetProperty("invitations").GetBoolean(), notices.GetProperty("results").GetBoolean()).ShouldBe((true, false, false));
+        read.GetProperty("saved").GetBoolean().ShouldBeTrue("the game settings saved after are kept beside them");
+    }
+
+    [Fact]
+    public async Task What_pops_up_needs_a_session_a_store_and_choices_that_are_true_or_false()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var storeless = await api.HandleAsync("PUT", "/api/account/preferences/notices", """{"turns":false}""", Signed(session));
+        api.Preferences = new FilePreferenceStore(_root);
+
+        var nobody = await api.HandleAsync("PUT", "/api/account/preferences/notices", """{"turns":false}""", Nobody);
+        var wrong = await api.HandleAsync("PUT", "/api/account/preferences/notices", """{"turns":"no"}""", Signed(session));
+
+        storeless.Status.ShouldBe(404);
+        nobody.Status.ShouldBe(401);
+        wrong.Status.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task Deleting_the_account_forgets_what_pops_up()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new FilePreferenceStore(_root);
+        api.Preferences = store;
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.HandleAsync("PUT", "/api/account/preferences/notices", """{"turns":false,"invitations":false,"results":false}""", Signed(session));
+
+        await api.HandleAsync("DELETE", "/api/account", """{"username":"MarkF"}""", Signed(session));
+
+        (await store.GetNoticesAsync(id, TestContext.Current.CancellationToken)).ShouldBe(NoticePreferences.Default);
+    }
+
+    [Fact]
     public async Task Skipping_a_tutorial_leaves_an_account_that_chose_no_settings_without_saved_ones()
     {
         var api = await ApiAsync(AccountsMode.Development);

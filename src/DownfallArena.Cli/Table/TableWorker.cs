@@ -36,6 +36,9 @@ internal static class TableWorker
         /// <summary>Where each account's notice log is kept (ADR 0201): the bell's news of a match ended here.</summary>
         public INoticeStore? Notices { get; init; }
 
+        /// <summary>Where each account's choices of what pops up are kept (ADR 0202): a result it turned off is not pushed.</summary>
+        public IPreferenceStore? Preferences { get; init; }
+
         /// <summary>Where the content the tables began on is kept (ADR 0163), or nowhere.</summary>
         public IArtifactStore? Contents { get; init; }
     }
@@ -97,6 +100,7 @@ internal static class TableWorker
                     Results = await ArtifactStores.OpenResultsAsync(target, stopping.Token),
                     Devices = await ArtifactStores.OpenDevicesAsync(target, stopping.Token),
                     Notices = await ArtifactStores.OpenNoticesAsync(target, stopping.Token),
+                    Preferences = await ArtifactStores.OpenPreferencesAsync(target, stopping.Token),
                 };
             }
 
@@ -154,6 +158,7 @@ internal static class TableWorker
                 over.Devices is { } devices && sender is not null ? new AccountNotices(sender, new AccountDevices(devices, clock)) : null)
             {
                 Exists = async (id, token) => await accounts.FindAsync(id, token) is not null,
+                Preferences = over.Preferences,
             };
             composer.NameOf = async id => (await accounts.FindAsync(id, stopping))?.Username.Value;
         }

@@ -1,5 +1,8 @@
 import { keyBytes, sameKey, noticeButton, pushSupported, showOwnNotice, testReading, TAG } from './push.js';
 
+/** Where the rest of the notifications is chosen, said under the match settings' switch. */
+export const WHERE = 'This switch is this device\'s, for every game. Settings, Notifications, in the menu, chooses what pops up; the bell keeps everything.';
+
 // Optional notices use the existing seat endpoints, never the decision/acknowledgement path.
 // Each asynchronous continuation belongs to one selected seat and can only update that seat's UI.
 export function createBattleServices({ onChange, scope = globalThis }) {
@@ -114,7 +117,9 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     const notice = noticeButton(current?.push ?? {});
     return { owner: current?.key ?? null, loaded: Boolean(view), notice: { ...notice, disabled: notice.disabled || !online || !current?.registration },
       testShown: Boolean(current?.push.subscribed && notice.offered),
-      canTest: Boolean(online && current?.push.subscribed && notice.offered && !current.push.busy), message: current?.message ?? '' };
+      canTest: Boolean(online && current?.push.subscribed && notice.offered && !current.push.busy), message: current?.message ?? '',
+      // One switch a device (ADR 0202): this one is the browser's, for every game, and Settings says what pops up.
+      where: notice.offered ? WHERE : '' };
   }
   scope.navigator?.serviceWorker?.addEventListener?.('message', event => {
     if (event.data?.kind !== 'subscription-changed') return;

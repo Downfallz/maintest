@@ -16,6 +16,8 @@ export function serviceControls(controller: ReturnType<typeof createBattleServic
     el<HTMLButtonElement>('notices-toggle').disabled = model.notice.disabled;
     el('notices-toggle').textContent = model.notice.label;
     el('notices-hint').textContent = model.notice.hint;
+    el('notices-where').textContent = model.where;
+    el('notices-where').hidden = !model.where;
     el('notices-problem').textContent = model.message;
     el('notices-test').hidden = !model.testShown;
     el<HTMLButtonElement>('notices-test').disabled = !model.canTest;

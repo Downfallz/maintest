@@ -18,6 +18,25 @@ internal static class PreferenceDocuments
     /// <summary>The account's Tutorials done and skipped (ADR 0187), beside its settings.</summary>
     public static string TutorialsPathOf(AccountId account) => $"preferences/{account.Value}.tutorials.json";
 
+    /// <summary>What pops up on the account's devices (ADR 0202), beside its settings.</summary>
+    public static string NoticesPathOf(AccountId account) => $"preferences/{account.Value}.notices.json";
+
+    public static string WriteNotices(NoticePreferences notices) => JsonSerializer.Serialize(new NoticesRecord(notices.Turns, notices.Invitations, notices.Results), Web);
+
+    /// <summary>The choices a document says; a kind it does not name pops up, and one that is not JSON reads as every kind.</summary>
+    public static NoticePreferences ReadNotices(string json)
+    {
+        try
+        {
+            var record = JsonSerializer.Deserialize<NoticesRecord>(json, Web);
+            return record is null ? NoticePreferences.Default : new NoticePreferences(record.Turns ?? true, record.Invitations ?? true, record.Results ?? true);
+        }
+        catch (JsonException)
+        {
+            return NoticePreferences.Default;
+        }
+    }
+
     public static string WriteTutorials(TutorialProgress tutorials) => JsonSerializer.Serialize(new TutorialsRecord(tutorials.Done, tutorials.Skipped), Web);
 
     /// <summary>The progress a document says; one that is not JSON reads as none, so the account starts again as new.</summary>
@@ -51,6 +70,8 @@ internal static class PreferenceDocuments
 
     // Reactions is missing from a document written before ADR 0173, which shows them, as every account did then.
     private sealed record PreferencesRecord(string? Pace, decimal Speed, bool Help, bool ReducedMotion, bool? Reactions);
+
+    private sealed record NoticesRecord(bool? Turns, bool? Invitations, bool? Results);
 
     private sealed record TutorialsRecord(IReadOnlyList<string>? Done, IReadOnlyList<string>? Skipped);
 }

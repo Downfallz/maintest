@@ -104,4 +104,37 @@ public abstract class PreferenceStoreContract
 
         (await store.GetTutorialsAsync(account, Cancel)).ShouldBe(TutorialProgress.None);
     }
+
+    [Fact]
+    public async Task An_account_that_never_chose_lets_every_notice_pop_up()
+    {
+        var store = await StoreAsync();
+
+        (await store.GetNoticesAsync(AccountId.New(), Cancel)).ShouldBe(NoticePreferences.Default);
+    }
+
+    [Fact]
+    public async Task What_pops_up_reads_back_as_saved_and_leaves_the_account_without_settings()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var chosen = new NoticePreferences(Turns: true, Invitations: false, Results: false);
+
+        await store.SaveNoticesAsync(account, chosen, Cancel);
+
+        (await store.GetNoticesAsync(account, Cancel)).ShouldBe(chosen);
+        (await store.GetAsync(account, Cancel)).ShouldBeNull("choosing what pops up chooses no game settings");
+    }
+
+    [Fact]
+    public async Task Forgetting_an_account_forgets_what_pops_up()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.SaveNoticesAsync(account, new NoticePreferences(Turns: false, Invitations: false, Results: false), Cancel);
+
+        await store.ForgetAsync(account, Cancel);
+
+        (await store.GetNoticesAsync(account, Cancel)).ShouldBe(NoticePreferences.Default);
+    }
 }

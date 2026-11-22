@@ -44,6 +44,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
     public AccountNotifier? Notifier { get; set; }
 
+    /// <summary>
+    /// The devices each account is told on (ADR 0202): a signed-in seat's subscription is its account's device too, so
+    /// the seat's switch and Settings' are one switch a device. None on a host without accounts.
+    /// </summary>
+    public AccountDevices? Devices { get; set; }
+
     /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0164); none on a host that streams no lobby.</summary>
     public LobbyChanges? Changes { get; set; }
 
@@ -1117,11 +1123,37 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 throw;
             }
 
+            if (seat.Account is { } owner && Devices is { } devices)
+            {
+                await DeviceAsync(devices, owner, subscription, before);
+            }
+
             return Json(new { seat = seat.Name, notices = subscription is not null });
         }
         finally
         {
             Claims.Release();
+        }
+    }
+
+    // The seat's subscription joins its account's devices, and leaves them with the seat's DELETE (ADR 0202). The
+    // seat's own record holds it already: a device list that cannot be written is a line, not a refused switch.
+    private static async Task DeviceAsync(AccountDevices devices, AccountId owner, PushSubscription? subscription, PushSubscription? before)
+    {
+        try
+        {
+            if (subscription is not null)
+            {
+                await devices.AddAsync(owner, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));
+            }
+            else if (before is not null)
+            {
+                await devices.RemoveAsync(owner, before.Endpoint);
+            }
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+        {
+            Console.WriteLine($"  Account {owner}: a seat's subscription could not be kept with its devices: {HttpHost.OneLine(failure)}");
         }
     }
 

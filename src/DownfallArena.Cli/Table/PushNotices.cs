@@ -2,9 +2,11 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
 
@@ -48,6 +50,13 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     /// send to it either. Set by the host once it has the codes a record carries.
     /// </summary>
     public Func<PlayedTable, Task>? Record { get; set; }
+
+    /// <summary>
+    /// The door of every notice to an account (ADR 0201): a seat that belongs to an account is told its turn on the
+    /// account's devices through it, as the account chose (ADR 0202), rather than on the seat's own subscription.
+    /// Set by the host that keeps accounts; none on a host without them.
+    /// </summary>
+    public AccountNotifier? Accounts { get; set; }
 
     /// <summary>Every seat a person holds at this table, from now on: whatever the match asks it is noticed.</summary>
     public void Watch(PlayedTable table)
@@ -139,6 +148,22 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         ArgumentNullException.ThrowIfNull(question);
         ArgumentNullException.ThrowIfNull(seat);
         ArgumentNullException.ThrowIfNull(table);
+        return JsonSerializer.Serialize(new { title = "Your turn", body = Body(question, round, casts), url = $"/play?table={Uri.EscapeDataString(table)}", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
+    }
+
+    /// <summary>
+    /// "Your turn" to the account a seat belongs to: tagged with the table, since an account's devices hold every table
+    /// it plays, and replaced on the phone by the warning that the same turn is about to time out (<see cref="TurnTimeouts" />).
+    /// </summary>
+    public static Notice AccountNotice(Asking question, int? round, string table, int? casts = null)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        ArgumentNullException.ThrowIfNull(table);
+        return new Notice(NoticeKind.Turn, "Your turn", Body(question, round, casts), $"/play?table={Uri.EscapeDataString(table)}", $"turn:{table}");
+    }
+
+    private static string Body(Asking question, int? round, int? casts)
+    {
         var what = question.Kind switch
         {
             PlayerOptionsKind.Evolution => "choose your mutations",
@@ -155,7 +180,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             body += string.Create(CultureInfo.InvariantCulture, $" {casts} {(casts == 1 ? "cast" : "casts")} since your last visit.");
         }
 
-        return JsonSerializer.Serialize(new { title = "Your turn", body, url = $"/play?table={Uri.EscapeDataString(table)}", tag = $"turn:{seat.Name}", asked = question.Asked }, Web);
+        return body;
     }
 
     // The count is a line added to the notice, never a reason to lose it: whatever its read throws, the notice goes without it.
@@ -172,17 +197,43 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         }
     }
 
+    // A signed-in seat is told on its account's devices (ADR 0202), as the account chose, and never on a phone that
+    // holds the other seat: one account in both seats, or a device the other seat's page registered, is hotseat (ADR 0120).
+    private static async Task NoticeAccountAsync(AccountNotifier door, AccountId account, PlayedTable table, TableSeat seat, Asking question, int? round)
+    {
+        var others = table.Seats.Where(other => other != seat).ToList();
+        if (others.Any(other => other.Account == account))
+        {
+            return;
+        }
+
+        var except = others.Where(other => other.Push is not null).Select(other => other.Push!.Endpoint).ToList();
+        var reached = await door.NotifyAsync(account, AccountNotice(question, round, table.Id, await CastsAsync(table, seat)), except);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"  Session {table.Id}: {seat.Name} notified of asking {question.Asked} on {reached} of its account's devices."));
+    }
+
     private async Task NoticeAsync(PlayedTable table, TableSeat seat, Asking question, int? round)
     {
         try
         {
             await Task.Delay(_grace, clock);
-            if (seat.Push is not { } subscription || table.IsOver || seat.Person?.Waiting != question)
+            if (table.IsOver || seat.Person?.Waiting != question)
             {
                 return;
             }
 
             if (seat.Person is { } person && _shown.TryGetValue(person, out var shown) && shown.Value >= question.Asked)
+            {
+                return;
+            }
+
+            if (seat.Account is { } account && Accounts is { } door)
+            {
+                await NoticeAccountAsync(door, account, table, seat, question, round);
+                return;
+            }
+
+            if (seat.Push is not { } subscription)
             {
                 return;
             }

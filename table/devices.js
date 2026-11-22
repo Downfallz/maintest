@@ -1,23 +1,55 @@
-// A signed-in player is told on this device (friends plan, stage 1): a friend's request, an invitation, the end
-// of a match -- what a seat's own "your turn" (push.js, ADR 0118) cannot carry, because the player it is for
-// holds no seat yet. The browser's one push subscription is registered with the account as a device; the seat
-// pages keep registering the same subscription for their seats, and the host tells each endpoint once.
+// A signed-in player's pop-ups (notifications plan, N3, ADR 0202). The bell keeps every notice whatever is chosen
+// here: this is about pop-ups only. One switch a device: the browser's one push subscription, registered with the
+// account as a device and, by the seat pages, with each seat it plays (push.js, ADR 0118); turning it off here lets
+// go of the subscription itself, so no page of this browser is told anything until it is turned on again. Three
+// choices an account: what pops up on every one of its devices.
 //
-// The pure part is here: what the button says. The page does the asking.
+// The pure part is here: what the switch says and what the choices send. The page does the asking.
 
 import { accountRequest } from './account.js';
 import { keyBytes, noticeButton, pushSupported, sameKey } from './push.js';
 
-/** What the one button of the lobby's notices panel says, from where the page stands, in the account's words rather than a seat's. */
-export function deviceButton(state) {
-  const shown = noticeButton({ ...state, practice: false, hotseat: false });
-  if (shown.hidden) return shown;
-  if (!shown.disabled || state.busy) {
-    return state.subscribed
-      ? { ...shown, label: 'Stop notifying this device', hint: 'This device is told about your friends, your invitations and your games.' }
-      : { ...shown, label: 'Notify me on this device', hint: 'Friend requests, invitations and the end of your games, even with the browser closed.' };
+// Where a browser kept, before ADR 0202, that it was turned off for an account while it held its subscription.
+const OptOutKey = 'downfall.table.device-opt-out';
+
+/**
+ * Whether this browser was turned off for the account under the old switch, which kept the subscription: read once,
+ * and forgotten, so the page lets go of the subscription as the new switch does and the choice holds.
+ */
+export function takeOldOptOut(storage, accountId) {
+  try {
+    if (!accountId || storage?.getItem(OptOutKey) !== accountId) return false;
+    storage.removeItem(OptOutKey);
+    return true;
+  } catch {
+    return false;
   }
-  return { ...shown, hint: shown.hint.replace(/to be told when it is your turn/g, 'to be told about your friends and your games') };
+}
+
+/** The kinds the account chooses, in the order Settings shows them: the names the host reads. */
+export const KINDS = ['turns', 'invitations', 'results'];
+
+/**
+ * What the device's switch shows, from where the page stands: on when this browser is a device of the account, and
+ * the reason when it cannot be one, said about the account rather than a seat.
+ */
+export function deviceSwitch(state) {
+  const shown = noticeButton({ ...state, practice: false, hotseat: false });
+  if (shown.hidden) return { hidden: true, disabled: true, checked: false, hint: '' };
+  if (!shown.disabled || state.busy) {
+    return {
+      hidden: false,
+      disabled: shown.disabled,
+      checked: Boolean(state.subscribed),
+      hint: state.subscribed ? 'On: what you choose below pops up here, even with the browser closed.' : 'Off: nothing pops up here.',
+    };
+  }
+  return { hidden: false, disabled: true, checked: false, hint: `${shown.label}. ${shown.hint.replace(/to be told when it is your turn/g, 'to see pop-ups')}` };
+}
+
+/** The body that saves the account's choices: each kind the boxes say, a kind with no box kept on. */
+export function kindsBody(checked) {
+  return Object.fromEntries(KINDS.map(kind => [kind, checked?.[kind] !== false]));
 }
 
 /** Whether the host's answer to a registration says the browser's subscription is dead and a new one is needed. */
@@ -25,33 +57,10 @@ export function needsFreshSubscription(error) {
   return error?.status === 410;
 }
 
-const OptOutKey = 'downfall.table.device-opt-out';
-
 /**
- * Whether this browser was told to stop notifying this account: the opt-out is the browser's, kept beside the
- * seats it saves, since the subscription itself stays for the seat pages and cannot carry it.
- */
-export function optedOut(storage, accountId) {
-  try {
-    return Boolean(accountId) && storage?.getItem(OptOutKey) === accountId;
-  } catch {
-    return false;
-  }
-}
-
-export function rememberOptOut(storage, accountId, out) {
-  try {
-    if (out) storage?.setItem(OptOutKey, accountId);
-    else storage?.removeItem(OptOutKey);
-  } catch {
-    // A browser that keeps nothing asks again on its next visit.
-  }
-}
-
-/**
- * The panel: offered to a signed-in player on a host with push keys, in a browser that takes a push. The
- * subscription is the browser's one and only; stopping tells the host to forget this device and leaves the
- * subscription to the seats that use it.
+ * The panel: offered to a signed-in player on a host with push keys. The switch is this browser's: off tells the
+ * host to forget this device and lets go of the subscription, which every page of the browser shares. The kinds
+ * are the account's, read with its settings and saved as soon as a box changes.
  */
 export function mountDevices(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, storage = null } = {}) {
   const el = id => doc.getElementById(id);
@@ -64,6 +73,8 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     subscribed: false,
     busy: false,
     registration: null,
+    kinds: null,
+    saving: false,
     ios: /iPhone|iPad|iPod/.test(nav?.userAgent ?? '') && !win.MSStream,
     secure: win.isSecureContext !== false,
   };
@@ -73,14 +84,53 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
   function render() {
     const panel = el('device-panel');
     if (!panel) return;
-    const shown = deviceButton(state);
+    const shown = deviceSwitch(state);
     panel.hidden = !state.account || shown.hidden;
     if (el('device-unavailable')) el('device-unavailable').hidden = !panel.hidden;
-    const button = el('device-toggle');
-    button.textContent = shown.label;
-    button.disabled = shown.disabled;
+    if (el('device-bell')) el('device-bell').hidden = !state.account;
+    const toggle = el('device-toggle');
+    toggle.checked = shown.checked;
+    toggle.disabled = shown.disabled;
     el('device-hint').textContent = shown.hint;
     el('device-test').hidden = !state.subscribed;
+    const kinds = el('device-kinds');
+    if (kinds) {
+      kinds.hidden = !state.kinds;
+      kinds.disabled = state.saving;
+      for (const kind of KINDS) {
+        const box = kinds.querySelector(`[data-kind="${kind}"]`);
+        if (box) box.checked = state.kinds?.[kind] !== false;
+      }
+    }
+  }
+
+  // The account's choices, read with its settings: none on a host that keeps no settings, and the boxes stay hidden.
+  async function readKinds() {
+    try {
+      state.kinds = (await request('/api/account/preferences')).notices ?? null;
+    } catch {
+      state.kinds = null;
+    }
+  }
+
+  async function saveKinds() {
+    const kinds = el('device-kinds');
+    if (!kinds || state.saving || !state.kinds) return;
+    const checked = Object.fromEntries(KINDS.map(kind => [kind, kinds.querySelector(`[data-kind="${kind}"]`)?.checked !== false]));
+    const before = state.kinds;
+    state.saving = true;
+    state.kinds = kindsBody(checked);
+    problem();
+    render();
+    try {
+      state.kinds = (await request('/api/account/preferences/notices', kindsBody(checked), undefined, 'PUT')).notices ?? state.kinds;
+    } catch (error) {
+      state.kinds = before;
+      problem(error.message || 'Could not reach the host. Try again.');
+    } finally {
+      state.saving = false;
+      render();
+    }
   }
 
   async function held() {
@@ -102,11 +152,12 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     return subscription;
   }
 
-  // What this browser already holds is told to the host on every visit, unless the player stopped it here: the
-  // host forgets a device whose push service let it go, and a page that stays quiet would leave the account
-  // believing it can be reached here.
+  // What this browser already holds is told to the host on every visit: the host forgets a device whose push
+  // service let it go, and a page that stays quiet would leave the account believing it can be reached here. A
+  // browser the player turned off holds no subscription, so it is told nothing.
   async function sync() {
     state.subscribed = false;
+    state.kinds = null;
     problem();
     result();
     if (!state.account) { render(); return; }
@@ -114,11 +165,13 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       const key = await request('/api/lobby/push');
       state.publicKey = key.publicKey ?? null;
       state.keyed = Boolean(state.publicKey);
+      if (state.keyed) await readKinds();
       if (!state.keyed || !state.supported) { render(); return; }
       await nav.serviceWorker.register('/sw.js');
       state.registration = await nav.serviceWorker.ready;
       const subscription = await current();
-      if (subscription && !optedOut(storage, state.account.id)) {
+      if (subscription && takeOldOptOut(storage, state.account.id)) await subscription.unsubscribe();
+      else if (subscription) {
         try { await register(subscription); }
         catch (error) {
           if (!needsFreshSubscription(error)) throw error;
@@ -141,14 +194,15 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     try {
       if (state.subscribed) {
         const subscription = await held();
-        if (subscription) await request('/api/account/push', { endpoint: subscription.endpoint }, undefined, 'DELETE');
-        rememberOptOut(storage, state.account.id, true);
+        if (subscription) {
+          await request('/api/account/push', { endpoint: subscription.endpoint }, undefined, 'DELETE');
+          await subscription.unsubscribe();
+        }
         state.subscribed = false;
       } else {
         state.permission = await win.Notification.requestPermission();
         if (state.permission === 'granted') {
           const subscription = (await current()) ?? await state.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(state.publicKey) });
-          rememberOptOut(storage, state.account.id, false);
           try { await register(subscription); }
           catch (error) {
             if (!needsFreshSubscription(error)) throw error;
@@ -188,7 +242,8 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     }
   }
 
-  el('device-toggle')?.addEventListener('click', () => void toggle());
+  el('device-toggle')?.addEventListener('change', () => void toggle());
+  el('device-kinds')?.addEventListener('change', () => void saveKinds());
   el('device-test')?.addEventListener('click', () => void test());
   nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'subscription-changed') void sync(); });
   render();

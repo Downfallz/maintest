@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.SharedKernel.Identifiers;
+using NSubstitute;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -108,6 +109,62 @@ public sealed class AccountNotifierTests
 
         (await _log.ListAsync(_mark, Cancel)).ShouldBeEmpty();
         changes.VersionOf(_mark).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_kind_the_account_turned_off_is_kept_in_the_bell_and_not_pushed()
+    {
+        var notifier = new AccountNotifier(_log, await PushAsync()) { Preferences = Chose(new NoticePreferences(Turns: true, Invitations: true, Results: false)) };
+
+        var reached = await notifier.NotifyAsync(_mark, Over, Cancel);
+
+        reached.ShouldBe(0);
+        _sender.Sent.ShouldBeEmpty();
+        (await _log.ListAsync(_mark, Cancel)).ShouldHaveSingleItem().Kind.ShouldBe(NoticeKind.MatchOver);
+    }
+
+    [Fact]
+    public async Task A_kind_the_account_kept_is_pushed_whatever_it_turned_off_elsewhere()
+    {
+        var notifier = new AccountNotifier(_log, await PushAsync()) { Preferences = Chose(new NoticePreferences(Turns: false, Invitations: true, Results: false)) };
+
+        await notifier.NotifyAsync(_mark, Invited, Cancel);
+
+        _sender.Sent.ShouldHaveSingleItem().Topic.ShouldBe("invitation");
+    }
+
+    [Fact]
+    public async Task Choices_that_cannot_be_read_leave_the_notice_pushed_and_say_so()
+    {
+        var said = new List<string>();
+        var preferences = Substitute.For<IPreferenceStore>();
+        preferences.GetNoticesAsync(_mark, Arg.Any<CancellationToken>()).Returns<NoticePreferences>(_ => throw new IOException("The preferences are out."));
+        var notifier = new AccountNotifier(_log, await PushAsync()) { Preferences = preferences, Said = said.Add };
+
+        var reached = await notifier.NotifyAsync(_mark, Over, Cancel);
+
+        reached.ShouldBe(1);
+        said.ShouldHaveSingleItem().ShouldContain("what pops up could not be read");
+    }
+
+    [Fact]
+    public async Task A_device_named_as_an_exception_is_not_pushed()
+    {
+        var push = await PushAsync();
+        await _devices.AddAsync(_mark, new PushDevice("https://push.example/laptop", InMemoryDeviceStore.Key, InMemoryDeviceStore.Auth, default), Cancel);
+        var notifier = new AccountNotifier(_log, push);
+
+        var reached = await notifier.NotifyAsync(_mark, Invited, ["https://push.example/phone"], Cancel);
+
+        reached.ShouldBe(1);
+        _sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/laptop");
+    }
+
+    private IPreferenceStore Chose(NoticePreferences chosen)
+    {
+        var preferences = Substitute.For<IPreferenceStore>();
+        preferences.GetNoticesAsync(_mark, Arg.Any<CancellationToken>()).Returns(chosen);
+        return preferences;
     }
 
     [Theory]

@@ -1,47 +1,39 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deviceButton, needsFreshSubscription, optedOut, rememberOptOut } from './devices.js';
-
-function storage() {
-  const values = new Map();
-  return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key) };
-}
+import { deviceSwitch, kindsBody, KINDS, mountDevices, needsFreshSubscription, takeOldOptOut } from './devices.js';
 
 const base = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false };
+const tick = () => new Promise(resolve => setImmediate(resolve));
+const settled = async () => { for (let turn = 0; turn < 10; turn++) await tick(); };
 
-test('the button speaks for the account, not for a seat', () => {
-  assert.equal(deviceButton(base).label, 'Notify me on this device');
-  assert.match(deviceButton(base).hint, /Friend requests, invitations/);
-  assert.equal(deviceButton({ ...base, subscribed: true }).label, 'Stop notifying this device');
-  assert.match(deviceButton({ ...base, subscribed: true }).hint, /your friends, your invitations and your games/);
-  assert.equal(deviceButton({ ...base, busy: true }).disabled, true);
-  assert.equal(deviceButton({ ...base, busy: true }).label, 'Notify me on this device', 'busy keeps the account\'s words');
+test('the switch is on when this browser is a device of the account, and says what on and off mean', () => {
+  assert.deepEqual(deviceSwitch(base), { hidden: false, disabled: false, checked: false, hint: 'Off: nothing pops up here.' });
+  assert.equal(deviceSwitch({ ...base, subscribed: true }).checked, true);
+  assert.match(deviceSwitch({ ...base, subscribed: true }).hint, /what you choose below pops up here/);
+  assert.equal(deviceSwitch({ ...base, busy: true }).disabled, true);
+  assert.equal(deviceSwitch({ ...base, busy: true }).hint, 'Off: nothing pops up here.', 'busy keeps its words');
 });
 
-test('the reasons a device cannot be told are the seat page\'s, said about the account', () => {
-  assert.equal(deviceButton({ ...base, keyed: false }).hidden, true, 'a host without keys offers nothing');
-  assert.equal(deviceButton({ ...base, permission: 'denied' }).disabled, true);
-  assert.match(deviceButton({ ...base, permission: 'denied' }).hint, /about your friends and your games/);
-  assert.doesNotMatch(deviceButton({ ...base, permission: 'denied' }).hint, /your turn/);
-  assert.equal(deviceButton({ ...base, supported: false, ios: true }).label, 'Notifications need the home screen');
-  assert.equal(deviceButton({ ...base, supported: false, secure: false }).label, 'Notifications need https');
+test('the reasons a device cannot show pop-ups are the seat page\'s, said about the account', () => {
+  assert.equal(deviceSwitch({ ...base, keyed: false }).hidden, true, 'a host without keys offers nothing');
+  const blocked = deviceSwitch({ ...base, permission: 'denied' });
+  assert.equal(blocked.disabled, true);
+  assert.equal(blocked.checked, false);
+  assert.match(blocked.hint, /^Notifications are blocked\. .*to see pop-ups/);
+  assert.doesNotMatch(blocked.hint, /your turn/);
+  assert.match(deviceSwitch({ ...base, supported: false, ios: true }).hint, /^Notifications need the home screen/);
+  assert.match(deviceSwitch({ ...base, supported: false, secure: false }).hint, /^Notifications need https/);
 });
 
-test('a hotseat seat page\'s silence does not apply to an account: the panel never says both seats are here', () => {
-  assert.equal(deviceButton({ ...base, hotseat: true }).label, 'Notify me on this device');
+test('a hotseat seat page\'s silence does not apply to an account: the switch never says both seats are here', () => {
+  assert.equal(deviceSwitch({ ...base, hotseat: true }).disabled, false);
 });
 
-test('stopping the notices on this device is remembered for the account, until the player asks again', () => {
-  const kept = storage();
-  assert.equal(optedOut(kept, 'acct_mark'), false);
-  rememberOptOut(kept, 'acct_mark', true);
-  assert.equal(optedOut(kept, 'acct_mark'), true, 'the next visit does not register the device again');
-  assert.equal(optedOut(kept, 'acct_bastien'), false, 'another account on the same browser is asked as usual');
-  rememberOptOut(kept, 'acct_mark', false);
-  assert.equal(optedOut(kept, 'acct_mark'), false);
-  assert.equal(optedOut(null, 'acct_mark'), false, 'a browser that keeps nothing');
-  assert.equal(optedOut({ getItem() { throw new Error('blocked'); } }, 'acct_mark'), false);
-  assert.doesNotThrow(() => rememberOptOut({ setItem() { throw new Error('blocked'); } }, 'acct_mark', true));
+test('the kinds are sent as the boxes say, and a kind with no box stays on', () => {
+  assert.deepEqual(KINDS, ['turns', 'invitations', 'results']);
+  assert.deepEqual(kindsBody({ turns: true, invitations: false, results: false }), { turns: true, invitations: false, results: false });
+  assert.deepEqual(kindsBody({ invitations: false }), { turns: true, invitations: false, results: true });
+  assert.deepEqual(kindsBody(null), { turns: true, invitations: true, results: true });
 });
 
 test('only a 410 from the host means the browser must make a new subscription', () => {
@@ -49,4 +41,105 @@ test('only a 410 from the host means the browser must make a new subscription', 
   assert.equal(needsFreshSubscription({ status: 401 }), false);
   assert.equal(needsFreshSubscription(new Error('offline')), false);
   assert.equal(needsFreshSubscription(undefined), false);
+});
+
+/** The panel's elements as the page draws them, and a browser that holds one subscription. */
+function harness({ notices = { turns: true, invitations: true, results: true }, held = true, storage = null } = {}) {
+  const calls = [];
+  const listeners = {};
+  const element = id => ({ id, hidden: false, checked: false, disabled: false, textContent: '', addEventListener: (type, listener) => { listeners[`${id}:${type}`] = listener; } });
+  const boxes = Object.fromEntries(KINDS.map(kind => [kind, element(`device-kind-${kind}`)]));
+  const elements = Object.fromEntries(['device-panel', 'device-unavailable', 'device-bell', 'device-toggle', 'device-hint', 'device-test', 'device-problem', 'device-result'].map(id => [id, element(id)]));
+  elements['device-kinds'] = { ...element('device-kinds'), querySelector: selector => boxes[/data-kind="(\w+)"/.exec(selector)[1]] };
+  elements['device-kinds'].addEventListener = (type, listener) => { listeners[`device-kinds:${type}`] = listener; };
+  let subscription = held ? { endpoint: 'https://push.example/laptop', options: { applicationServerKey: new Uint8Array([1, 2, 3]) }, toJSON: () => ({ endpoint: 'https://push.example/laptop' }), unsubscribe: async () => { calls.push('unsubscribe'); subscription = null; } } : null;
+  const registration = { pushManager: { getSubscription: async () => subscription } };
+  const nav = { serviceWorker: { register: async () => registration, ready: Promise.resolve(registration) } };
+  const win = { PushManager: {}, Notification: { permission: 'granted' } };
+  const request = async (path, body, _fetch, method = body === undefined ? 'GET' : 'POST') => {
+    calls.push(`${method} ${path}${body === undefined ? '' : ` ${JSON.stringify(body)}`}`);
+    if (path === '/api/lobby/push') return { publicKey: 'AQID' };
+    if (path === '/api/account/preferences') return notices ? { notices } : {};
+    if (path === '/api/account/preferences/notices') return { notices: body };
+    if (path === '/api/account/push') return { notices: method === 'PUT' };
+    return {};
+  };
+  const doc = { getElementById: id => elements[id] ?? null };
+  const devices = mountDevices(doc, { request, nav, win, storage });
+  return { devices, calls, elements, boxes, listeners };
+}
+
+test('a signed-in player reads the line on the bell, the switch on, and the kinds the account chose', async () => {
+  const h = harness({ notices: { turns: true, invitations: false, results: true } });
+
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  assert.equal(h.elements['device-bell'].hidden, false);
+  assert.equal(h.elements['device-panel'].hidden, false);
+  assert.equal(h.elements['device-toggle'].checked, true);
+  assert.equal(h.elements['device-kinds'].hidden, false);
+  assert.deepEqual(KINDS.map(kind => h.boxes[kind].checked), [true, false, true]);
+  assert.ok(h.calls.includes('PUT /api/account/push {"endpoint":"https://push.example/laptop"}'));
+});
+
+test('turning the switch off forgets the device and lets go of the browser\'s subscription, which every page shares', async () => {
+  const h = harness();
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  h.listeners['device-toggle:change']();
+  await settled();
+
+  assert.deepEqual(h.calls.slice(-2), ['DELETE /api/account/push {"endpoint":"https://push.example/laptop"}', 'unsubscribe']);
+  assert.equal(h.elements['device-toggle'].checked, false);
+  assert.equal(h.elements['device-kinds'].hidden, false, 'the kinds are the account\'s, whatever this device does');
+});
+
+test('a box changed saves the three kinds for the account at once', async () => {
+  const h = harness();
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+  h.boxes.results.checked = false;
+
+  h.listeners['device-kinds:change']();
+  await settled();
+
+  assert.equal(h.calls.at(-1), 'PUT /api/account/preferences/notices {"turns":true,"invitations":true,"results":false}');
+  assert.equal(h.boxes.results.checked, false);
+});
+
+test('a host that keeps no settings shows the switch and no kinds', async () => {
+  const h = harness({ notices: null });
+
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  assert.equal(h.elements['device-panel'].hidden, false);
+  assert.equal(h.elements['device-kinds'].hidden, true);
+});
+
+function kept(values = {}) {
+  const map = new Map(Object.entries(values));
+  return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key), map };
+}
+
+test('a browser turned off under the old switch is read once, for its account only, and forgotten', () => {
+  const storage = kept({ 'downfall.table.device-opt-out': 'acct_mark' });
+  assert.equal(takeOldOptOut(storage, 'acct_bastien'), false, 'another account on the same browser');
+  assert.equal(takeOldOptOut(storage, 'acct_mark'), true);
+  assert.equal(takeOldOptOut(storage, 'acct_mark'), false, 'read once');
+  assert.equal(takeOldOptOut(null, 'acct_mark'), false, 'a browser that keeps nothing');
+  assert.equal(takeOldOptOut({ getItem() { throw new Error('blocked'); } }, 'acct_mark'), false);
+});
+
+test('a browser turned off under the old switch lets go of its subscription instead of registering it again', async () => {
+  const h = harness({ storage: kept({ 'downfall.table.device-opt-out': 'acct_mark' }) });
+
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  assert.ok(h.calls.includes('unsubscribe'));
+  assert.ok(!h.calls.some(call => call.startsWith('PUT /api/account/push')));
+  assert.equal(h.elements['device-toggle'].checked, false);
 });
