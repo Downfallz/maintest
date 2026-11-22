@@ -1,6 +1,6 @@
 # Replacement art for repeated scenes
 
-The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Fourteen receive new art. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
+The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Thirteen receive new art. The featured lobby game uses its existing round paintings on either player's turn. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
 
 ## Review and delivery
 
@@ -22,7 +22,7 @@ The current painting names below are from the [source register](sources/pages/sc
 | 06 | Mutation Tree, Brute column | ironhide-scar | Keep the Ironhide eye beneath its scarred plates. | Keep existing |
 | 07 | Mutation Tree, Predator column | blightweaver-pressure-sac | Keep the Blightweaver pressure sac and the eye visible through the gas. | Keep existing |
 | 08 | Mutation Tree, Warped column | warped-listening | Complete the three family close-ups with the Cataclysm's eye in three-quarter view. Keep the forked ivory brow, an ember iris with a cold violet reflection, and a thin veil of mist. Frame the eye for the 48 px band. | [Cataclysm eye](sources/pages/replacements/cataclysm-eye.webp) |
-| 09 | Lobby, featured game waiting on another player | warped-listening | Through a breach in the fog, one motionless creature stands on the far slope. Keep its silhouette legible at the featured space's phone crop. | Pending |
+| 09 | Lobby, featured game waiting on another player | warped-listening | In the implementation PR, select the existing ground by round for either player's turn and for an open seat. Use the Deathstalker–Ethereal mist duel through round 5 (also before round 1), the breach at rounds 6–9, and the shattered sky from round 10. The status and action still identify whose turn it is. | Reuse round grounds |
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | Pending |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | Pending |
 | 12 | Showcase, creator's note | predator-at-rest | Owner's photograph of the actual paper prototype mid-game. Shoot at table height with played cards, tokens and the player screen in view. | Pending |
