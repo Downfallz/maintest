@@ -609,7 +609,10 @@ function render() {
     readingDetail({ detail: awaiting.detail }); $('reading-detail').hidden = false;
     text('reading-what', '');
   }
-  text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
+  // With nothing to name yet, the heading keeps its unseen word (#984): a heading is never empty for a screen reader.
+  const heading = playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board);
+  if (heading) text('actor-name', heading);
+  else if ($('actor-name').textContent !== 'Match') $('actor-name').replaceChildren(Object.assign(document.createElement('span'), { className: 'unseen', textContent: 'Match' }));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
   let instruction = '';

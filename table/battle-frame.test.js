@@ -9,7 +9,8 @@ const page = read('table/battle.html');
 const inner = id => page.match(new RegExp(`id="${id}"[^>]*>([^<]*)<`))?.[1];
 
 test('the battle\'s first frame names nothing before its module runs', () => {
-  assert.equal(inner('actor-name'), '');
+  // The heading shows no word, and still has one for a screen reader (Sonar's S6850): an unseen "Match".
+  assert.match(page, /<h1 id="actor-name"><span class="unseen">Match<\/span><\/h1>/);
   assert.equal(inner('actor-meta'), '');
   assert.equal(inner('instruction'), '');
   assert.doesNotMatch(read('battle/src/live.ts'), /'Battle view'/, 'the dock does not name the view while it waits');

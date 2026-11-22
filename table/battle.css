@@ -1398,8 +1398,9 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #battle #perspective { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #battle .actor-summary > div { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
 #battle .actor-summary h1 { margin: 0; font: 21px var(--font-display); color: var(--ink); }
-/* The first frame names nothing (#984): the heading keeps its line, unseen, until the game or the board names it. */
-#battle .actor-summary h1:empty { min-height: 1lh; visibility: hidden; }
+/* The first frame names nothing (#984): the heading keeps its line, its one word unseen ("Match", for a screen
+   reader), until the game or the board names it. */
+#battle .actor-summary h1:has(> .unseen:only-child) { min-height: 1lh; }
 #battle #actor-meta { margin: 0; padding: 3px 10px; border: 1px solid #c7a96b66; border-radius: var(--radius-sharp); color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: .4px; }
 #battle #actor-meta:empty { display: none; }
 #battle[data-connection="live"] .actor-summary > div::before {
