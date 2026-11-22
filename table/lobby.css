@@ -249,6 +249,9 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 /* After a sign out the Predator at rest takes the duel's place: its plate's figure gives way, so the picture is laid
    out against the panel as the duel is (docs/art/journeys/doors.md, the panel after a sign out). */
 .sign-in-art > .scene-plate { display: contents; }
+/* identity.css sizes a plate's picture to its figure, a rule of the same weight that comes later: the duel's width
+   is said again with one more class, before the steps below it. */
+.sign-in-panel .scene-plate > .sign-in-duel { width: calc(100% - min(60%, 560px) + 96px); }
 /* An <img> is not stretched between left and right: its width is given, and cover cuts it. */
 .sign-in-panel .sign-in-duel { left: calc(min(60%, 560px) - 96px); width: calc(100% - min(60%, 560px) + 96px); -webkit-mask-image: linear-gradient(90deg, transparent, #000 160px); mask-image: linear-gradient(90deg, transparent, #000 160px); }
 /* 1279 px is also the step of the duel's `sizes` in door.js. */
@@ -263,7 +266,7 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .sign-in-content h2 { font: 400 clamp(38px, 5vw, 76px)/1.06 var(--font-display); letter-spacing: -.04em; color: var(--bone); margin: 16px 0 12px; overflow-wrap: anywhere; }
 .sign-in-panel[data-door="invited"] .sign-in-content h2 { font-size: clamp(30px, 4vw, 60px); }
 /* The goodbye's title takes the focus once, by script, since the menu that held it is gone: no ring on a heading. */
-#sign-in-heading:focus { outline: none; }
+.sign-in-panel[data-door="left"] #sign-in-heading:focus { outline: none; }
 .sign-in-content .sign-in-game { margin: 0 0 6px; color: var(--bone); font-size: 15px; line-height: 1.6; }
 .sign-in-content .muted { margin: 0; font-size: 15px; line-height: 1.6; }
 .sign-in-actions { display: grid; gap: 8px; margin-top: 26px; min-width: 0; }

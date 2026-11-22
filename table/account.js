@@ -254,6 +254,8 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       else if (el('sign-in-problem').textContent.startsWith('Could not reach the host to check')) say('sign-in-problem');
     }
     el('account').hidden = !state.account;
+    // Somebody is signed in: a mark left by an earlier sign out is no goodbye any more.
+    if (state.account) takeSignedOut(session);
     if (state.account) {
       el('account-name').textContent = state.account.username;
       el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);

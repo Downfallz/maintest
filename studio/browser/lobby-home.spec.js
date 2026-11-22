@@ -353,6 +353,10 @@ test('a sign out is asked under the Predator at rest, Sign out filled; the panel
   await expect(page.locator('#sign-in-art img')).toHaveCount(1);
   await expect(page.locator('#sign-in-art')).toHaveAttribute('data-pictures', 'predator-at-rest');
   await expect(page.getByLabel('Developer sign-in: any player name')).toBeInViewport();
+  // Its picture stays inside the panel at every width: whole above the words, beside them from 1280 px.
+  const [plate, room] = await Promise.all([page.locator('#sign-in-art img').boundingBox(), panel.boundingBox()]);
+  expect(plate.x + plate.width).toBeLessThanOrEqual(room.x + room.width + 1);
+  expect(plate.width).toBeLessThan(room.width + 1);
   // Read once: a reload shows the plain door.
   await page.reload();
   await expect(panel).toHaveAttribute('data-door', 'plain');

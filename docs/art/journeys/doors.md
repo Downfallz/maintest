@@ -29,8 +29,8 @@ adds to the walk: no film of it was read.
 
 The scene paintings' S9 ([its plan](../scene-paintings-plan.md#stages)) was briefed on `987374a`: signing out, the
 confirmation and the panel it leaves. Both are screens of this walk, after `first-lesson-brief`: the walk skips the
-lesson's brief, opens the account menu and presses Sign out (`sign-out`), then the confirmation's Sign out
-(`signed-out-panel`). They follow S7's precedent: a screen is briefed in the journey whose walk reaches it, here the
+lesson's brief, opens the account menu and presses Sign out, which shows the confirmation (`sign-out`); the
+confirmation's Sign out then shows the panel (`signed-out-panel`). They follow S7's precedent: a screen is briefed in the journey whose walk reaches it, here the
 doors, not `lobby.md` as the plan's table said. Both were read on S9's walk at 320 and 390 px, with their measures.
 
 What holds for every screen of the journey:
@@ -710,12 +710,12 @@ plain window.
 
 - **Filled action**: Sign out, or Sign out everywhere, by the window's own words. The player pressed Sign out on
   purpose and is one sign-in away from undoing it, so the window's one action is the one they came for. The
-  other becomes Stay signed in, an outline, named by what it does, in place of Cancel. Escape does what it does.
+  other becomes Stay signed in, an outline, named by what it does, in place of Cancel. Escape does what Stay signed in does.
 
 ### Words
 
 - **Order**: the title on the band, the line under it, then Sign out, then Stay signed in.
-- **Budget**: 20 words, today 17 for either (title, line, Cancel and the action). No eyebrow joins the title: it
+- **Budget**: 20 words. Today's window, with Cancel, has 17; with Stay signed in it has 19, for either. No eyebrow joins the title: it
   is already a question, and under 600 px tall the band is 64 px, room for the title alone. The words:
 
 On this device, from the account menu:
@@ -734,7 +734,7 @@ You will need to sign in again on every device.
 [Sign out everywhere]  [Stay signed in]
 ```
 
-19 words each. The title and the line stay as they are; only Cancel changes.
+The title and the line stay as they are; only Cancel changes.
 
 ### Pictures
 
@@ -809,12 +809,11 @@ opens at once, as that page's windows do until UX12.
 
 ### Left
 
-- The plan's table puts this screen in `lobby.md`; it is here, after S7's precedent, since the doors' walk reaches it.
 - Sign out filled and focused first is a choice the owner may refuse: [Undo, then one confirmation](../ux-craft.md#undo-then-one-confirmation)
   keeps a window for what cannot be undone, and a sign out can be, so the safe default (Stay signed in focused)
   weighs less here than [One dominant action](../ux-craft.md#one-dominant-action). Removing a friend keeps Cancel and
   no fill: its brief is `pages.md`'s, if it gets one.
-- Whether a sign out on this device needs a window at all is the same entry's question; the flow is
+- Whether a sign out on this device needs a window at all is the question of that entry, above; the flow is
   `docs/tabletop/accounts-plan.md`'s, and this brief keeps the window.
 - On the battle page the window is drawn by the battle's sheets, and under 620 px a battle window loses its cut
   corner (`table/identity.css`). S9 gives it the home's frame there, as S7 did for the header's windows. Read,
@@ -836,7 +835,7 @@ another device, which this page learns from the host, shows the plain door: this
 
 - **Order**: the eyebrow, the title, the line on the games, the line on the account, the button. Privacy policy last.
 - **Budget**: 45 words, the panel's, today 35 on the plain door (the baseline's count; 41 on the developer's
-  sheet). The panel after a sign out shows 20 on the public host; the walk's sheet, the developer's form and the
+  sheet). The panel after a sign out shows 21 on the public host, the privacy policy included; the walk's sheet, the developer's form and the
   header and footer included, counts 34:
 
 ```text
@@ -848,16 +847,18 @@ Sign in again to resume them.
 Privacy policy
 ```
 
-The line on the game goes: this player knows it, and the line on their games is what they need to hear. "Your
+The line that explains the game goes: this player knows it. The line on their games is what they need to hear. "Your
 games wait for you" is Settings' own line for Sign out everywhere; "resume" is the confirmation's word.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The Predator at rest, a plate in place of the ground and the Revenant, as the duel is for the invited friend: above the words under 1280 px, whole, never taller than half the screen; from 1280 px beside them, whole. No caption: the title under it is the plate's answer. | 358 by 201 px | See you soon: the game rests until I come back. | `docs/art/sources/pages/scenes/predator-at-rest.webp` |
+| The Predator at rest, a plate in place of the ground and the Revenant, as the duel is for the invited friend: above the words under 1280 px, whole, never taller than half the screen; from 1280 px beside them, cover keeping three quarters of its width, as the duel's. No caption: the title under it is the plate's answer. | 358 by 201 px | See you soon: the game rests until I come back. | `docs/art/sources/pages/scenes/predator-at-rest.webp` |
 
-At 320 px the plate is 288 by 162. From 1280 px it is drawn 640 wide, the width the showcase already draws it at.
+At 320 px the plate is 288 by 162. From 1280 px it is drawn 980 wide, as the duel, and stays inside the panel
+(`lobby-home.spec.js` measures it on a desktop). Its `alt` is written because a plate needs one, but the panel's
+art holder is `aria-hidden`, so no screen reader hears it (see **Left**).
 The plate replaces both the eclipse ground and the Revenant: a plate is a picture on its own, and the panel holds
 one painting, as the invited door does. Its `alt`: "The Predator at rest in a dark hall, an ember on its
 shoulder." It is declared for table/sign-in as `first`: on the first screen, not lazy; the duel and the ground
