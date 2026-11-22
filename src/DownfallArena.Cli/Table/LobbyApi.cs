@@ -42,7 +42,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     public Func<string, Task<StudioResponse>>? Replay { get; set; }
 
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
-    public AccountNotices? Notices { get; set; }
+    public AccountNotifier? Notifier { get; set; }
 
     /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0164); none on a host that streams no lobby.</summary>
     public LobbyChanges? Changes { get; set; }
@@ -590,7 +590,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             table.Touch(clock.GetUtcNow());
             if (inviterSeat?.Account is { } inviter)
             {
-                await NoticeAsync(inviter, $"{player.Account.Username.Value} accepted", "Take your seat: the battle begins when you are both there.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"invite:{table.Id}");
+                await NoticeAsync(inviter, NoticeKind.SeatTaken, $"{player.Account.Username.Value} accepted", "Take your seat: the battle begins when you are both there.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"invite:{table.Id}");
             }
 
             return Json(new { table = await DescribeAsync(table), seats = new[] { new { seat = seat.Name, token = seat.Token } } });
@@ -620,7 +620,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             if (table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account is { } inviter)
             {
-                await NoticeAsync(inviter, "Invitation declined", $"{player.Account.Username.Value} declined your invitation.", "/lobby", $"invite:{table.Id}");
+                await NoticeAsync(inviter, NoticeKind.Declined, "Invitation declined", $"{player.Account.Username.Value} declined your invitation.", "/lobby", $"invite:{table.Id}");
             }
 
             return Json(new { declined = true });
@@ -823,7 +823,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     private async Task InviteNoticeAsync(AccountId friend, AccountId me, PlayedTable table) =>
-        await NoticeAsync(friend, "An invitation", $"{await NameAsync(me)} invites you to a {table.Session.Rules.Format} battle.", "/lobby#invitations", $"invite:{table.Id}");
+        await NoticeAsync(friend, NoticeKind.Invitation, "An invitation", $"{await NameAsync(me)} invites you to a {table.Session.Rules.Format} battle.", "/lobby#invitations", $"invite:{table.Id}");
 
     /// <summary>
     /// The lobby's changes as they happen (ADR 0164): the public lists for anybody, and the signed-in player's own
@@ -860,12 +860,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
-    private async Task NoticeAsync(AccountId to, string title, string body, string url, string tag, string topic = "invitation")
+    private async Task NoticeAsync(AccountId to, NoticeKind kind, string title, string body, string url, string tag)
     {
         Changes?.Account(to);
-        if (Notices is { } notices)
+        if (Notifier is { } notifier)
         {
-            await notices.SendAsync(to, AccountNotices.Payload(title, body, url, tag), topic);
+            await notifier.NotifyAsync(to, new Notice(kind, title, body, url, tag));
         }
     }
 
@@ -995,7 +995,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 foreach (var other in table.Seats.Where(other => other != seat && other.Account is { } held && held != leaver).Select(other => other.Account!.Value).Distinct())
                 {
-                    await NoticeAsync(other, $"{(leaver is { } who ? await NameAsync(who) : "A player")} left the table", "Their team is offered to another player. The match waits.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"match:{table.Id}", "match");
+                    await NoticeAsync(other, NoticeKind.Left, $"{(leaver is { } who ? await NameAsync(who) : "A player")} left the table", "Their team is offered to another player. The match waits.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"match:{table.Id}");
                 }
             }
 

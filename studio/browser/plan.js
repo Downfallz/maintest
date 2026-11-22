@@ -80,8 +80,10 @@ const isHeavy = (spec) => new RegExp(HEAVY).test(spec);
 // The mock-host journeys' jobs, side by side in CI, each with the Playwright arguments it plays and the specs it
 // has something to play in. Tablet runs only table.ux.spec.js (playwright.config.js), so it shares a desktop half.
 export const JOURNEY_JOBS = [
-  { name: 'small-phone', arguments: ['--project=small-phone'], plays: () => true },
-  { name: 'phone', arguments: ['--project=phone'], plays: () => true },
+  // Each phone in two halves: the phone's one job ran past its 30 minutes (#1003).
+  ...['small-phone', 'phone'].flatMap((project) =>
+    [1, 2].map((shard) => ({ name: `${project} ${shard}/2`, arguments: [`--project=${project}`, `--shard=${shard}/2`], plays: () => true })),
+  ),
   { name: 'desktop replays', arguments: ['--project=desktop', `--grep=${HEAVY}`], plays: isHeavy },
   ...[1, 2].map((shard) => ({
     name: `desktop and tablet ${shard}/2`,

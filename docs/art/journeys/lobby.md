@@ -14,7 +14,20 @@ button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to
 and sky take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
 appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint, sent at
 the width it covers: 475 px on a 390 by 844 phone (844 px tall times the painting's 0.5625 width-to-height ratio),
-950 px at 1280 px and wider (#1070). The first-paint budget of the home is 192 KiB (`docs/art/page-budget.json`).
+950 px at 1280 px and wider (#1070). The lesson, rounds 6 to 9 and round 10 onward each have their own portrait
+painting (#1081). On a 390 by 844 phone each is 390 CSS pixels wide and fills the screen; at 2× the browser
+requests the 841 px WebP. When the screen is wider than it is tall (a phone turned, a desktop), the browser loads
+the existing battlefield landscape instead; a portrait tablet keeps the portrait, which its tall box stretches less
+than it would the landscape. The 841 px file is the largest there is, so a 3× phone or a portrait tablet draws it
+somewhat stretched. The home's first-paint budget is 288 KiB, and 832 KiB for all its pictures across every state
+(`docs/art/page-budget.json`).
+
+| Featured state | Portrait source |
+| --- | --- |
+| Lesson | `docs/art/sources/pages/eclipse-portrait.webp` |
+| Rounds 6 to 9 | `docs/art/sources/pages/breach-portrait.webp` |
+| Round 10 onward | `docs/art/sources/pages/sky-portrait.webp` |
+
 On a phone, the host notice lies under the header, over the painting's top, so the space keeps its full screen
 (#1072). Where this paragraph and the
 UX9 text below disagree, this paragraph holds; the measurements and storyboards below record the previous panel
@@ -76,7 +89,8 @@ What holds for every screen of the journey:
   against Rook") to the battle page through the tab's session storage, keyed by the table and the seat tokens, read
   once. The battle page names the game in its headline (`#actor-name`) and says "Opening the game…" as its
   instruction (`#instruction`) until the board arrives, from the start of the seats' discovery; the frame the
-  page paints before its script runs still says Battle view (under **Left**). The cue is stale after a minute, and
+  page paints before its script runs names nothing (#984, the owner's choice), so the game's line reads as an
+  arrival. The cue is stale after a minute, and
   a page brought back from the back-forward cache gives the action back. Session storage, not the address: a link
   shared or kept would carry a round that is no longer true.
 - **One filled action a screen.** Every other action of the home is quiet (an outline): a game card's Resume game,
@@ -158,13 +172,16 @@ table → opens the Create window on Multiplayer, Play a bot → on Solo.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground, the field a game starts on, a band across the card. | 390 by 150 px | Where will I play? | `table/battle-art/eclipse-battle.webp` |
+| The eclipse ground, the field a lesson stands on, the whole featured space on a phone. | 390 by 844 px | Where will I play? | `docs/art/sources/pages/eclipse-portrait.webp` |
+| The breach, from a game's round 6. | 390 by 844 px | How far along is this game? | `docs/art/sources/pages/breach-portrait.webp` |
+| The shattered sky, from a game's round 10. | 390 by 844 px | How far along is this game? | `docs/art/sources/pages/sky-portrait.webp` |
 | The base creature, the form a lesson's team starts from, standing on the ground (tutorial 1). | 120 by 80 px | Who do I play? | `table/battle-art/evolutions/base-creature.webp` |
 | A Brute, in place of the base creature when tutorial 2 is the next lesson. | 120 by 80 px | Which lesson is this, before reading? | `table/battle-art/evolutions/brute-base.webp` |
 | Ironhide, when tutorial 3 is next. | 120 by 80 px | What will I grow into? | `table/battle-art/evolutions/brute-stage2-ironhide.webp` |
 | The Colossus, when tutorial 4 is next. | 120 by 80 px | How far does the series go? | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
 
-The ground is declared drawn at 390 (the card's width on a phone) and 640 (a wide screen); the creature is 120 px
+Each portrait ground is declared drawn at 390 (a phone's width) and 760 (the widest it is drawn: 74% of a
+1024 px portrait tablet), and its landscape is the battlefield's own declaration, `wide` on the home; the creature is 120 px
 wide on a phone and 150 on a wide screen. Each is declared for the home's page (table/home) in
 `docs/art/page-pictures.json` and derived by `scripts/ux/pictures.mjs` at these sizes and twice them. The ground is
 the featured space's largest picture; one creature loads with it. Learn to play's four paintings stay lazy, below

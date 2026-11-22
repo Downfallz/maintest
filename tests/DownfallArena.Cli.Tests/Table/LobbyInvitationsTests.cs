@@ -27,6 +27,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     private readonly AccountRegistry _accounts;
     private readonly Friends _friends;
     private readonly AccountDevices _devices;
+    private readonly AccountNoticeLog _log;
     private readonly Sender _sender = new();
     private LobbyApi? _lobby;
 
@@ -37,6 +38,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         _accounts = new AccountRegistry(_store, _clock);
         _friends = new Friends(new FileFriendStore(_root), _store, _clock);
         _devices = new AccountDevices(new FileDeviceStore(_root), _clock);
+        _log = new AccountNoticeLog(new FileNoticeStore(_root), _clock);
     }
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
@@ -46,7 +48,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         if (_lobby is null)
         {
             var api = new AccountApi(_accounts, new AccountSessions(await _store.SessionKeyAsync(Cancel), _clock), AccountsMode.Development);
-            _lobby = new LobbyApi(_registry, _hosted.Composer, _clock) { Accounts = api, Friends = _friends, Notices = new AccountNotices(_sender, _devices) };
+            _lobby = new LobbyApi(_registry, _hosted.Composer, _clock) { Accounts = api, Friends = _friends, Notifier = new AccountNotifier(_log, new AccountNotices(_sender, _devices)) };
         }
 
         return _lobby;
@@ -358,6 +360,33 @@ public sealed class LobbyInvitationsTests : IDisposable
         notice.GetProperty("title").GetString().ShouldBe("bastien left the table");
         notice.GetProperty("url").GetString().ShouldBe($"/play?table={table.Id}");
         _sender.Sent[0].Topic.ShouldBe("match");
+    }
+
+    [Fact]
+    public async Task With_push_off_the_inviter_s_bell_keeps_the_seat_taken_and_the_other_leaving_but_not_what_waits()
+    {
+        (await LobbyAsync()).Notifier = new AccountNotifier(_log, push: null);
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        (await _log.ListAsync(bastien.Account.Id, Cancel)).ShouldBeEmpty("an invitation waits in the bell's own list");
+        var accepted = Read(await ActAsync("POST", table, "/accept", bastien));
+        var token = accepted.GetProperty("seats")[0].GetProperty("token").GetString();
+        foreach (var seat in table.Seats)
+        {
+            seat.Person!.Arrive();
+        }
+
+        table.Session.Begin();
+
+        (await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/leave", "{}", token, bastien)).Status.ShouldBe(200);
+
+        var kept = await _log.ListAsync(mark.Account.Id, Cancel);
+        kept.Select(entry => entry.Kind).ShouldBe([NoticeKind.Left, NoticeKind.SeatTaken]);
+        kept[0].Title.ShouldBe("bastien left the table");
+        kept[1].Body.ShouldBe("Take your seat: the battle begins when you are both there.");
+        _sender.Sent.ShouldBeEmpty();
     }
 
     [Fact]

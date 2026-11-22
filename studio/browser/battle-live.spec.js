@@ -158,10 +158,15 @@ test('the header names the opponent with its rank and friendship, and its card a
   await expect(page.locator('#opponent-note')).toHaveText('Friend request sent'); await expect(page.locator('#opponent-friend')).toBeHidden();
   expect(asked).toEqual([{ username: 'bastien' }]);
   await page.keyboard.press('Escape'); await expect(chip).toBeFocused();
-  // A friend wears a heart in the header.
+  // A friend is said in the header.
   friends = { friends: [{ id: 'acct_bastien' }], incoming: [], outgoing: [] };
   await chip.click(); await expect(page.locator('#opponent-note')).toHaveText('Your friend');
+  // The word, not a heart (#1000): the set's heart is health, and health is not friendship.
   await page.keyboard.press('Escape'); await expect(page.locator('#opponent-heart')).toBeVisible();
+  await expect(page.locator('#opponent-heart')).toHaveText('Friend');
+  await fitsViewport(page, '#opponent-open, #help-open, #settings');
+  const word = await page.locator('#opponent-heart').boundingBox();
+  expect(word.x).toBeGreaterThanOrEqual(0); expect(word.y).toBeGreaterThanOrEqual(0); expect(word.x + word.width).toBeLessThanOrEqual(page.viewportSize().width);
   expect(state.requests.filter(one => one.path.endsWith('/decision'))).toEqual([]);
 });
 test('a bot opponent is named as a bot, with no rank and no friend action', async ({ page }) => {
@@ -249,8 +254,10 @@ const people = [{ seat: 'player1', kind: 'person', name: 'Ash' }, { seat: 'playe
 function finished(state, outcome, feed = []) {
   state.first = { ...state.first, over: true, waitingFor: null, waitingAsked: null, outcome, feed, feedNext: 90 };
 }
-test('a match won by a blow says the blow under its verdict, and the result opens on the next action', async ({ page }) => {
+test('a match won by a blow says the blow under its verdict, and the result opens on its heading', async ({ page }) => {
   const state = await mount(page, { tableSeats: people }); await choose(page);
+  // The seat's whole feed never answers (#1073): the blow's line comes from the live feed, there when the result opens.
+  await page.route(url => url.pathname.startsWith('/api/seat/') && url.searchParams.get('since') === '0', () => {});
   const fallen = { ...creature(6), health: 0, isAlive: false };
   state.first.board = { ...state.first.board, enemies: [creature(4, { health: 0, isAlive: false }), creature(5, { health: 0, isAlive: false }), fallen] };
   finished(state, { winner: 'player1', reason: 'Elimination' }, [{ sequence: 84, round: 4, event: { kind: 'CombatActionResolved', roundId: 4,
@@ -262,11 +269,15 @@ test('a match won by a blow says the blow under its verdict, and the result open
   await expect(page.locator('#match-outcome')).toHaveText('You win · the last team standing.');
   await expect(page.locator('#match-blow')).toHaveText("Creature 1's Host spell name defeated Creature 6.");
   await expect(result).toHaveAccessibleDescription("You win · the last team standing. Creature 1's Host spell name defeated Creature 6.");
-  await expect(page.locator('#match-rematch')).toBeFocused();
-  // Closed, it does not open again on a snapshot; Match result opens it on the same action.
+  // The heading, not Rematch (#1076): a key held from the last OK starts nothing; Tab goes on to the window's controls.
+  await expect(page.locator('#match-title')).toBeFocused();
+  await page.keyboard.press('Enter'); await page.keyboard.press('Space');
+  await expect(result).toBeVisible(); await expect(page.locator('#match-rematch')).not.toHaveText('Starting…');
+  await page.keyboard.press('Tab'); await expect(page.locator('#match-dialog .match-close')).toBeFocused();
+  // Closed, it does not open again on a snapshot; Match result opens it on the same heading.
   await page.keyboard.press('Escape'); await expect(result).toBeHidden();
   await page.waitForTimeout(1500); await expect(result).toBeHidden();
-  await page.locator('#match-open').click(); await expect(page.locator('#match-rematch')).toBeFocused();
+  await page.locator('#match-open').click(); await expect(page.locator('#match-title')).toBeFocused();
 });
 test('a match lost by a concession reads with its pictures refused, says no blow, and names the other seat the opponent', async ({ page }) => {
   // The page's paintings refused, and every picture of the window hidden: its words carry the verdict alone.
@@ -285,7 +296,7 @@ test('a match lost by a concession reads with its pictures refused, says no blow
   await expect(page.locator('#match-title')).toHaveText('Defeat'); await expect(page.locator('#match-title')).toBeVisible();
   await expect(page.locator('#match-outcome')).toHaveText('You conceded · your opponent wins.');
   await expect(page.locator('#match-blow')).toBeHidden();
-  await expect(page.locator('#match-rematch')).toBeVisible(); await expect(page.locator('#match-rematch')).toBeFocused();
+  await expect(page.locator('#match-rematch')).toBeVisible(); await expect(page.locator('#match-title')).toBeFocused();
   await expect(page.locator('#match-dialog')).toHaveAccessibleDescription('You conceded · your opponent wins.');
 });
 for (const size of [1, 2]) test(`${size}v${size} keeps opponents across the field after rotation`, async ({ page }) => {

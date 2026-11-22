@@ -34,6 +34,8 @@ function entryOf(name, page, art) {
  */
 export function pictureAttributes(name, { page, alt = '', sizes, focus, lazy = false, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
   const entry = entryOf(name, page, art), role = entry.pages[page], whole = entry.drawn[0] * entry.frames;
+  // A `wide` picture counts no bytes in the phone budget (scripts/ux/pictures.mjs): it may only be a `<source>`.
+  if (role === 'wide') throw new Error(`${name} is a wide source on ${page}: write it with sourceAttributes, never as an <img>`);
   const shown = entry.sizes.find(size => size.width >= whole) ?? entry.sizes.at(-1);
   const attributes = {
     src: base + shown.file,
@@ -49,6 +51,16 @@ export function pictureAttributes(name, { page, alt = '', sizes, focus, lazy = f
   if (role === 'lazy' || (lazy && role !== 'largest')) attributes.loading = 'lazy';
   const cut = focus === undefined ? entry.focus : focus;
   return cut === undefined ? attributes : { ...attributes, ...focusAttributes(cut) };
+}
+
+/**
+ * The `srcset` of a picture declared `wide` on the page: the landscape alternate a `<picture>`'s `<source>` offers,
+ * which takes its loading from the `<img>` it stands beside. The `<source>`'s `media` and `sizes` are the page's.
+ */
+export function sourceAttributes(name, { page, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
+  const entry = entryOf(name, page, art);
+  if (entry.pages[page] !== 'wide') throw new Error(`${name} is not a wide source on ${page}`);
+  return { srcset: entry.sizes.map(size => `${base}${size.file} ${size.width}w`).join(', ') };
 }
 
 const written = attributes => Object.entries(attributes).map(([name, value]) => `${name}="${escaped(value)}"`).join(' ');

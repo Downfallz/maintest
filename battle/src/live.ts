@@ -157,10 +157,29 @@ const beforePlanning = () => {
   const receipt = growth.receipt() as { sequence: number } | null;
   if (receipt && planning.model().latest?.waitingFor === 'Speed') { revealRead = receipt.sequence; growth.dismiss(); }
 };
-// A pick followed back onto the field (UX12b): the focus on the creature it went to, else the team's first living one.
+// The team's last pick followed back onto the field (UX12b, #1076): the focus on the reveal's receipt once it is on the
+// frame; until the host reveals (a friend still picking), on the creature the pick went to, else the team's first
+// living one. A reveal that comes later takes the focus from that creature only, never from where the player went.
+// The wait belongs to its round: a reveal with no receipt (both teams passed) ends it when the round moves on.
+let receiptAwaited: string | null = null, receiptRound: number | null = null;
+const receiptOpen = () => $('growth-receipt').querySelector<HTMLElement>('[data-growth-open]');
+const shownRound = () => (view as { board?: { roundNumber?: number } } | null)?.board?.roundNumber ?? null;
 function followPick(creature: number | null) {
   const own = creature ?? creatures.find(one => !one.enemy && one.isAlive)?.id;
+  receiptAwaited = own == null ? '' : String(own); receiptRound = shownRound();
   if (own != null) nodes.get(String(own))?.focus({ preventScroll: true });
+  giveReceiptFocus();
+}
+function giveReceiptFocus() {
+  if (receiptAwaited == null) return;
+  if (shownRound() !== receiptRound) { receiptAwaited = null; return; }
+  // The body counts as waiting: a creature's button disabled while the friend picks drops the focus there.
+  const focused = document.activeElement as HTMLElement | null;
+  const waiting = !focused || focused === document.body || (focused.dataset.creature === receiptAwaited && $('actor-layer').contains(focused));
+  if (!waiting) { receiptAwaited = null; return; }
+  const see = receiptOpen();
+  if (!see?.getClientRects().length) return;
+  receiptAwaited = null; see.focus({ preventScroll: true });
 }
 const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI, followPick);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
@@ -342,8 +361,8 @@ function tagOf(one: Creature) {
 
 // The dock's heading: the match's end, the creature whose slot it is, or where the round stands.
 function headline(board: { turn: { slot: { creature: unknown } } | null; phase: string }) {
-  // The game the lobby opened names itself until its board arrives (UX9).
-  if (!view) return arriving ?? 'Battle view';
+  // The game the lobby opened names itself until its board arrives (UX9); with none, the dock names nothing (#984).
+  if (!view) return arriving ?? '';
   if (view.over) return 'Match complete';
   if (board.turn) return name(board.turn.slot.creature);
   return phaseLabel(board.phase) || 'Waiting room';
@@ -590,7 +609,10 @@ function render() {
     readingDetail({ detail: awaiting.detail }); $('reading-detail').hidden = false;
     text('reading-what', '');
   }
-  text('actor-name', playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board));
+  // With nothing to name yet, the heading keeps its unseen word (#984): a heading is never empty for a screen reader.
+  const heading = playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board);
+  if (heading) text('actor-name', heading);
+  else if ($('actor-name').textContent !== 'Match') $('actor-name').replaceChildren(Object.assign(document.createElement('span'), { className: 'unseen', textContent: 'Match' }));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
   text('actor-meta', playbackState.active ? playbackState.label : phase);
   let instruction = '';
@@ -644,8 +666,10 @@ function render() {
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
   // The receipt floats over the top of the field: crests start below it rather than behind it.
-  const receiptBox = $('growth-receipt').getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
-  const inset = unlocks && stageBox && receiptBox.height ? Math.max(0, receiptBox.bottom - stageBox.top + 4) : 0;
+  // Its arrival's rise (`translate`, the kit's `.motion-arrive`) is taken out: the crests stand under where it settles.
+  const receiptNode = $('growth-receipt'), receiptBox = receiptNode.getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
+  const rising = Number.parseFloat(getComputedStyle(receiptNode).translate.split(' ')[1] ?? '0') || 0;
+  const inset = unlocks && stageBox && receiptBox.height ? Math.max(0, receiptBox.bottom - rising - stageBox.top + 4) : 0;
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
@@ -669,6 +693,7 @@ function render() {
     lastMutationReveal = reveal.sequence;
     if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
   }
+  giveReceiptFocus();
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !roundHeld && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
   // A tutorial's coach (ADR 0187): the step of the question asked, and its concept cards before the question's sheet.
   tutorialUI.render(rendererFailed ? null : view, { held: playbackState.active || replay.active, canAuto: canAuto() && !upkeep.model().pending && !orderReveal.model().pending });

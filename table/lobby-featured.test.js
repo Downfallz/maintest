@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { arrivalLine, featuredChoice, featuredView, groundOf, mountFeatured } from './lobby-featured.js';
+import { LANDSCAPE_MEDIA, arrivalLine, featuredChoice, featuredView, groundOf, mountFeatured } from './lobby-featured.js';
 import { ARRIVAL_KEY, arrivalFor, readArrival, writeArrival } from './arrival.js';
 
 const me = { seat: 'player1', kind: 'person', name: 'Walker' };
@@ -211,9 +211,24 @@ test('a lesson featured after the duel was asked for stands on the eclipse, and 
   assert.match(doc.ids['featured-art'].children[0].attributes.src, /mist-duel-/);
   featured.setGames([]); featured.setLessons(series('new'));
   assert.equal(doc.ids.featured.dataset.featured, 'lesson');
-  assert.match(doc.ids['featured-art'].children[0].attributes.src, /home-ground-eclipse-/);
+  assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /home-ground-eclipse-/);
   featured.setGames([game('g', { round: 2 })]);
   assert.equal(doc.ids['new-table'].textContent, '＋ New battle');
+});
+
+test('a portrait ground is a picture whose landscape source is the battlefield, and the duel stays a bare image', () => {
+  const doc = page();
+  const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {} });
+  featured.playable();
+  assert.equal(doc.ids['featured-art'].children[0].tag, 'img');
+  featured.setGames([game('g', { round: 10 })]); featured.setLessons([]);
+  const [picture] = doc.ids['featured-art'].children;
+  const [source, image] = picture.children;
+  assert.deepEqual([picture.tag, source.tag, image.tag], ['picture', 'source', 'img']);
+  assert.equal(source.attributes.media, LANDSCAPE_MEDIA);
+  assert.match(source.attributes.srcset, /^\/page-art\/battlefield-sky-/);
+  assert.match(source.attributes.sizes, /\* 3\.48/, 'the sky strip\'s ratio comes from its derived file');
+  assert.match(image.attributes.src, /home-ground-sky-/);
 });
 
 test('the ground is drawn again only when it changes, so a repeated update leaves the picture settled', () => {
@@ -321,7 +336,7 @@ test('a round the host could not read in time keeps the last one known for that 
   const later = game('g'); later.table.round = null;
   featured.setGames([later]);
   assert.equal(doc.ids.welcome.textContent, 'Round 7 against Rook');
-  assert.match(doc.ids['featured-art'].children[0].attributes.src, /home-ground-breach-/);
+  assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /home-ground-breach-/);
 });
 
 test('a cue left unread goes stale within the minute', () => {

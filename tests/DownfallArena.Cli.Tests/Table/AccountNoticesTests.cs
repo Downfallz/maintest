@@ -156,15 +156,24 @@ public sealed class AccountNoticesTests
 
     private sealed class InMemoryDevices : IDeviceStore
     {
-        private readonly Dictionary<AccountId, IReadOnlyList<PushDevice>> _held = [];
+        private readonly Dictionary<AccountId, (IReadOnlyList<PushDevice> Devices, string Version)> _held = [];
+        private long _written;
 
         public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_held.TryGetValue(account, out var devices) ? devices : []);
+            Task.FromResult(_held.TryGetValue(account, out var held) ? held.Devices : []);
 
-        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default)
+        public Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_held.TryGetValue(account, out var held) ? new DeviceListRead(held.Devices, held.Version) : new DeviceListRead([], null));
+
+        public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
         {
-            _held[account] = [.. devices];
-            return Task.CompletedTask;
+            if ((_held.TryGetValue(account, out var held) ? held.Version : null) != version)
+            {
+                return Task.FromResult(false);
+            }
+
+            _held[account] = ([.. devices], $"{++_written}");
+            return Task.FromResult(true);
         }
 
         public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)

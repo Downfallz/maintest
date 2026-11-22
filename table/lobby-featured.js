@@ -5,7 +5,8 @@
 
 import { gameKind, invitedState, tableState, waitingGames, waitsOnAnother, versus } from './lobby.js';
 import { sinceVisitLine, turnOf } from './players.js';
-import { pictureElement } from './picture.js';
+import { PAGE_ART } from './page-art.js';
+import { pictureElement, sourceAttributes } from './picture.js';
 import { writeArrival } from './arrival.js';
 
 /**
@@ -38,6 +39,43 @@ const creatureOf = picture => picture || 'lesson-base';
  * on a 390 by 844 screen); 74% of the space in between; 950 px of the 1280 px column, at 1280 px and wider (#1070).
  */
 export const GROUND_SIZES = '(min-width: 1280px) 950px, (min-width: 761px) 74vw, max(100vw, 56.25svh)';
+
+// The lesson and later rounds have paintings composed for a tall phone. A native picture changes source when the
+// phone turns, without fetching both paintings on its first draw. A portrait tablet keeps the portrait: the
+// landscape would be stretched to cover its tall box.
+const LANDSCAPES = new Map([
+  [LESSON_GROUND, 'battlefield-eclipse'],
+  ['home-ground-breach', 'battlefield-breach'],
+  ['home-ground-sky', 'battlefield-sky'],
+]);
+export const LANDSCAPE_MEDIA = '(orientation: landscape)';
+
+/** A landscape's width over its height, from its largest derived file (page-art.js), so a repaint carries over. */
+function ratioOf(name) {
+  const largest = PAGE_ART[name].sizes.at(-1);
+  return largest.width / largest.height;
+}
+
+function featuredGround(doc, name) {
+  const options = { page: 'table/home', class: 'featured-ground' };
+  const wideName = LANDSCAPES.get(name);
+  if (!wideName) return pictureElement(doc, name, { ...options, sizes: GROUND_SIZES });
+
+  const ratio = ratioOf(wideName);
+  const picture = doc.createElement('picture'), source = doc.createElement('source');
+  source.setAttribute('media', LANDSCAPE_MEDIA);
+  source.setAttribute('srcset', sourceAttributes(wideName, options).srcset);
+  // object-fit: cover can make the painting wider than the box, especially the sky strip. The 320 px is the
+  // featured space's least height on a short screen (lobby.css, `.home-page .featured`).
+  const sizes = [
+    `(max-height: 500px) and (min-width: 500px) max(min(72vw, 922px), ${Math.ceil(320 * ratio)}px)`,
+    `(max-width: 760px) max(100vw, calc(max(440px, 100svh) * ${ratio}))`,
+    `max(min(74vw, 950px), calc(clamp(450px, 77svh, 810px) * ${ratio}))`,
+  ];
+  source.setAttribute('sizes', sizes.join(', '));
+  picture.append(source, pictureElement(doc, name, { ...options, sizes: 'max(100vw, 45svh, 198px)' }));
+  return picture;
+}
 
 const held = entry => (entry?.seats ?? []).map(seat => seat.seat);
 const capital = text => (text ? text[0].toUpperCase() + text.slice(1) : '');
@@ -159,7 +197,7 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     drawnGround = view.ground; drawnCreature = view.creature;
     // Decoration: the title says what the game or the lesson is. Each holds its room by its width and height.
     // The painting stays still. Only the mist and a lesson's creature move, under the motion preferences, paused behind a window.
-    const pictures = [pictureElement(doc, view.ground, { page: 'table/home', class: 'featured-ground', sizes: GROUND_SIZES })];
+    const pictures = [featuredGround(doc, view.ground)];
     if (view.ground === DUEL) {
       const mist = doc.createElement('span');
       mist.className = 'featured-mist motion-breath';

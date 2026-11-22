@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -21,6 +22,7 @@ public sealed class MatchNoticesTests : IDisposable
     private readonly RecordedPush _sender = new();
     private readonly AccountDevices _devices = new(new InMemoryDeviceStore(), TimeProvider.System);
     private readonly Dictionary<AccountId, string> _names = [];
+    private readonly AccountNoticeLog _log = new(new InMemoryNoticeStore(), TimeProvider.System);
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
 
@@ -29,9 +31,9 @@ public sealed class MatchNoticesTests : IDisposable
 
     private static TableRequest OnePerson => new(null, AgentSpec.Parse("greedy"), Who: null, Handover: 999, Seed: 7);
 
-    private TableComposer Composer() => new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory))
+    private TableComposer Composer(bool push = true) => new(_hosted.Services, HostedTables.Rules, new FileArtifactStore(_hosted.RunsDirectory))
     {
-        Notices = new AccountNotices(_sender, _devices),
+        Notifier = new AccountNotifier(_log, push ? new AccountNotices(_sender, _devices) : null),
         NameOf = id => Task.FromResult(_names.GetValueOrDefault(id)),
         Agents = [new SeatableAgent("greedy", "Greedy — the plain one", Featured: true)],
         Index = _hosted.Index,
@@ -93,6 +95,43 @@ public sealed class MatchNoticesTests : IDisposable
 
         _sender.Sent.ShouldAllBe(sent => sent.Topic == "match");
         JsonDocument.Parse(_sender.Sent[0].Payload).RootElement.GetProperty("url").GetString().ShouldBe($"/play?table={table.Id}");
+        table.Dispose();
+    }
+
+    [Fact]
+    public async Task With_push_off_each_player_s_bell_keeps_how_the_match_ended()
+    {
+        var table = await Composer(push: false).ComposeAsync(TwoPeople, Cancel);
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        table.Seats[0].Account = mark;
+        table.Seats[1].Account = bastien;
+
+        await FinishedAsync(table);
+
+        foreach (var account in new[] { mark, bastien })
+        {
+            var kept = (await _log.ListAsync(account, Cancel)).ShouldHaveSingleItem();
+            kept.Kind.ShouldBe(NoticeKind.MatchOver);
+            kept.Url.ShouldBe($"/play?table={table.Id}");
+            kept.Read.ShouldBeFalse();
+        }
+
+        _sender.Sent.ShouldBeEmpty();
+        table.Dispose();
+    }
+
+    [Fact]
+    public async Task A_shared_device_holding_both_seats_keeps_one_entry_in_its_bell()
+    {
+        var table = await Composer(push: false).ComposeAsync(TwoPeople, Cancel);
+        var mark = await PlayerAsync("MarkF");
+        table.Seats[0].Account = mark;
+        table.Seats[1].Account = mark;
+
+        await FinishedAsync(table);
+
+        (await _log.ListAsync(mark, Cancel)).ShouldHaveSingleItem().Title.ShouldBe("Match over");
         table.Dispose();
     }
 

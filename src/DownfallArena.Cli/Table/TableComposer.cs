@@ -112,7 +112,7 @@ internal sealed class TableComposer
     /// What tells each seat's account how the match ended (ADR 0129, stage 4), when the host has push keys and
     /// accounts; set once the accounts are open, which is after the composer exists.
     /// </summary>
-    public AccountNotices? Notices { get; set; }
+    public AccountNotifier? Notifier { get; set; }
 
     /// <summary>Where its console lines go: the host's console unless a test reads them (#800).</summary>
     public Action<string> Said { get; init; } = Console.WriteLine;
@@ -590,7 +590,7 @@ internal sealed class TableComposer
     /// <param name="explanation">Why the operator voided it (ADR 0176); none for a match the engine voided.</param>
     internal async Task NotifyVoidAsync(string id, TableRecord record, string? explanation = null)
     {
-        if (Notices is not { } notices)
+        if (Notifier is not { } notifier)
         {
             return;
         }
@@ -600,7 +600,7 @@ internal sealed class TableComposer
         {
             foreach (var account in accounts)
             {
-                await notices.SendAsync(AccountId.Parse(account), AccountNotices.Payload(explanation is null ? "Match ended" : "Match voided", explanation ?? VoidNotice, "/lobby", $"match:{id}"), "match");
+                await notifier.NotifyAsync(AccountId.Parse(account), new Notice(NoticeKind.MatchOver, explanation is null ? "Match ended" : "Match voided", explanation ?? VoidNotice, "/lobby", $"match:{id}"));
             }
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or FormatException or Azure.RequestFailedException or HttpRequestException)
@@ -857,14 +857,14 @@ internal sealed class TableComposer
     /// </summary>
     private async Task NotifyFinishedAsync(PlayedTable table, MatchOutcome outcome, AccountId?[] owners)
     {
-        if (Notices is not { } notices)
+        if (Notifier is not { } notifier)
         {
             return;
         }
 
         try
         {
-            await NotifyEachAsync(table, outcome, owners, notices);
+            await NotifyEachAsync(table, outcome, owners, notifier);
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or Azure.RequestFailedException or HttpRequestException)
         {
@@ -872,7 +872,7 @@ internal sealed class TableComposer
         }
     }
 
-    private async Task NotifyEachAsync(PlayedTable table, MatchOutcome outcome, AccountId?[] owners, AccountNotices notices)
+    private async Task NotifyEachAsync(PlayedTable table, MatchOutcome outcome, AccountId?[] owners, AccountNotifier notifier)
     {
         var url = $"/play?table={Uri.EscapeDataString(table.Id)}";
         var tag = $"match:{table.Id}";
@@ -880,7 +880,7 @@ internal sealed class TableComposer
         if (held.Length == 1 && owners.All(owner => owner == held[0]))
         {
             var who = outcome.Winner is { } slot ? $"{(slot == PlayerSlot.Player1 ? "Player 1" : "Player 2")} wins." : "a draw.";
-            await notices.SendAsync(held[0], AccountNotices.Payload("Match over", $"The match is over: {who}", url, tag), "match");
+            await notifier.NotifyAsync(held[0], new Notice(NoticeKind.MatchOver, "Match over", $"The match is over: {who}", url, tag));
             return;
         }
 
@@ -900,7 +900,7 @@ internal sealed class TableComposer
                     ? ("Victory", $"You won against {opponent}.")
                     // A player's name is written as they chose it; a bot's opens the sentence ("The Hard bot won.").
                     : ("Defeat", table.Seats[otherIndex].Person is null ? $"{char.ToUpperInvariant(opponent[0])}{opponent[1..]} won." : $"{opponent} won.");
-            await notices.SendAsync(account, AccountNotices.Payload(title, body, url, tag), "match");
+            await notifier.NotifyAsync(account, new Notice(NoticeKind.MatchOver, title, body, url, tag));
         }
     }
 

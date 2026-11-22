@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
@@ -22,6 +23,7 @@ internal sealed class AccountApi
 
     private const string PushRoute = Prefix + "/push";
     private const string PreferencesRoute = Prefix + "/preferences";
+    private const string NoticesRoute = Prefix + "/notices";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -81,6 +83,12 @@ internal sealed class AccountApi
 
     /// <summary>What sends a notice to those devices; none when the host has no push keys, and then no device is registered either.</summary>
     public AccountNotices? Notices { get; set; }
+
+    /// <summary>
+    /// The account's notice log (ADR 0201): the news its bell keeps whatever the push does. Set by the host that keeps
+    /// the accounts, push keys or not; forgotten with the account.
+    /// </summary>
+    public AccountNoticeLog? NoticeLog { get; set; }
 
     /// <summary>What deleting an account does to its friendships (ADR 0129): no link to it left on anybody's list. Set by the host that keeps them.</summary>
     public Func<AccountId, Task>? ForgetFriends { get; set; }
@@ -288,6 +296,20 @@ internal sealed class AccountApi
             await devices.ForgetAsync(id, cancellationToken);
         }
 
+        if (NoticeLog is { } log)
+        {
+            // After the account: a notice on its way reads the account gone and forgets what it wrote. A log that
+            // cannot be forgotten now does not stop the rest of the deletion, which a retry could not finish.
+            try
+            {
+                await log.ForgetAsync(id, cancellationToken);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Console.WriteLine($"  Account {id}: its notices could not be forgotten with it: {HttpHost.OneLine(failure)}");
+            }
+        }
+
         if (ForgetFriends is { } forget)
         {
             await forget(id);
@@ -379,6 +401,8 @@ internal sealed class AccountApi
                 ("PUT", PushRoute) => await RegisterDeviceAsync(body, request),
                 ("DELETE", PushRoute) => await ForgetDeviceAsync(body, request),
                 ("POST", PushRoute + "/test") => await TestDeviceAsync(body, request),
+                ("GET", NoticesRoute) => await NoticesAsync(request),
+                ("POST", NoticesRoute + "/read") => await ReadNoticesAsync(body, request),
                 ("GET", PreferencesRoute) => await PreferencesAsync(request),
                 ("PUT", PreferencesRoute) => await SavePreferencesAsync(body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
@@ -530,6 +554,16 @@ internal sealed class AccountApi
         }
 
         var held = await devices.AddAsync(who.Account.Id, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));
+
+        // Asked again after the write: a "sign out everywhere" or a suspension that forgot the devices while this one
+        // was being written (its write then reads the list again and makes it anew) must not leave a lost or lent
+        // device told for good (ADR 0201). The revocation marks the account before it forgets the devices.
+        if (await WhoAsync(request) is null)
+        {
+            await devices.RemoveAsync(who.Account.Id, subscription.Endpoint);
+            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+        }
+
         return Answer(new { notices = true, devices = held.Count }, who.Renewed);
     }
 
@@ -571,6 +605,74 @@ internal sealed class AccountApi
         var test = await notices.TestAsync(who.Account.Id, Read<BrowserSubscription>(body)?.Endpoint);
         return StudioResponse.OfJson(new { sent = test.Sent, message = test.Message }, Web, test.Sent ? 200 : 502);
     }
+
+    /// <summary>
+    /// The account's notice log (ADR 0201), newest first, and how many entries are unread: what the bell's news reads.
+    /// Signed in; 404 on a host that keeps none.
+    /// </summary>
+    private async Task<StudioResponse> NoticesAsync(AccountRequest request)
+    {
+        if (NoticeLog is not { } log)
+        {
+            return Problem(404, "Account.NoNoticeLog", "This host keeps no notices.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        try
+        {
+            var entries = await log.ListAsync(who.Account.Id);
+            return Answer(new { notices = entries.Select(DescribeNotice), unread = entries.Count(entry => !entry.Read) }, who.Renewed);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+        {
+            Console.WriteLine($"  Account {who.Account.Id}: its notices could not be read: {HttpHost.OneLine(failure)}");
+            return Problem(503, "Account.NoticesUnavailable", "The notices could not be read. Try again in a moment.");
+        }
+    }
+
+    /// <summary>Marks read every entry of the log up to the id the page saw last, that one included. How many it marked.</summary>
+    private async Task<StudioResponse> ReadNoticesAsync(string body, AccountRequest request)
+    {
+        if (NoticeLog is not { } log)
+        {
+            return Problem(404, "Account.NoNoticeLog", "This host keeps no notices.");
+        }
+
+        if (await WhoAsync(request) is not { } who)
+        {
+            return Problem(401, "Account.SignInRequired", "Sign in first.");
+        }
+
+        if (Read<ReadNoticesBody>(body)?.UpTo is not { } upTo)
+        {
+            return Problem(400, "Account.BadNoticeRead", "Say up to which notice, by its id: { \"upTo\": 123 }.");
+        }
+
+        try
+        {
+            return Answer(new { marked = await log.MarkReadAsync(who.Account.Id, upTo) }, who.Renewed);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+        {
+            Console.WriteLine($"  Account {who.Account.Id}: its notices could not be marked read: {HttpHost.OneLine(failure)}");
+            return Problem(503, "Account.NoticesUnavailable", "The notices could not be marked read. Try again in a moment.");
+        }
+    }
+
+    private static object DescribeNotice(NoticeEntry entry) => new
+    {
+        id = entry.Id,
+        kind = NoticeKinds.Name(entry.Kind),
+        title = entry.Title,
+        body = entry.Body,
+        url = entry.Url,
+        at = entry.At,
+        read = entry.Read,
+    };
 
     /// <summary>The settings every new game of the account starts from (ADR 0140): the saved ones, or the defaults.</summary>
     private async Task<StudioResponse> PreferencesAsync(AccountRequest request)
@@ -669,6 +771,8 @@ internal sealed class AccountApi
     private sealed record RegisterBody(string? Ticket, string? Username);
 
     private sealed record SignOutBody(bool? Everywhere);
+
+    private sealed record ReadNoticesBody(long? UpTo);
 
     private sealed record BrowserSubscription(string? Endpoint, BrowserKeys? Keys);
 

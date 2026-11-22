@@ -20,7 +20,7 @@ import { focusAttributes } from '../../table/picture-focus.js';
 const ROOT = new URL('../../', import.meta.url);
 export const DECLARATION = 'docs/art/page-pictures.json', BUDGET = 'docs/art/page-budget.json';
 export const FOLDER = 'table/page-art', MODULE = 'table/page-art.js', BRIEFS = 'docs/art/journeys';
-const ROLES = new Set(['largest', 'first', 'lazy']);
+const ROLES = new Set(['largest', 'first', 'lazy', 'wide']);
 const ASKED = 'asked of the owner';
 
 /** The widths a picture is sent at: each width it is drawn at, once and twice, never past its painting. */
@@ -73,7 +73,7 @@ export function budgetOf(art, page, density) {
   const sum = { first: 0, all: 0, largest: 0 };
   for (const picture of Object.values(art)) {
     const role = picture.pages?.[page];
-    if (!role) continue;
+    if (!role || role === 'wide') continue;
     const taken = new Set(phoneWidths(picture, page).map(width => phoneSize(picture.sizes, width, density, picture.frames)));
     const bytes = [...taken].reduce((total, size) => total + size.bytes, 0);
     sum.all += bytes;
@@ -103,7 +103,7 @@ function declared(picture) {
   if (picture.frames && !(Array.isArray(picture.frames) && picture.frames.length >= 2)) problems.push(`${name}: a strip has at least two frames`);
   if (!(Array.isArray(picture.drawn) && picture.drawn.length && picture.drawn.every(width => Number.isInteger(width) && width > 0)))
     problems.push(`${name}: the width it is drawn at, in whole pixels, the phone's first`);
-  for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first or lazy, not ${role}`);
+  for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first, lazy or wide, not ${role}`);
   return [...problems, ...phoneProblems(picture, name), ...focusProblems(picture, name)];
 }
 

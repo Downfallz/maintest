@@ -102,9 +102,21 @@ test('the match frame is written at 11 px at least and no two of its controls sh
     await expect(page.locator('#actor-layer .stat-health').first()).toBeVisible();
     await expect(page.locator('#actor-layer .creature-defense').first()).toBeVisible();
     for (const hidden of ['.creature-init', '.stat-energy', '#ally-label']) await expect(page.locator(hidden).first()).toBeHidden();
-    await expect(page.locator('#actor-layer .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag:visible')).toHaveCount(0);
+    await expect(page.locator('#actor-layer .creature:not([data-sheet-focus="true"], [data-mutation-focus="true"]) .creature-tag:visible')).toHaveCount(0);
+    // The opponent's label names the opponent at 568 px tall too (#1000), at the floor and over nothing.
+    await expect(page.locator('#enemy-label')).toBeVisible();
     await fitsViewport(page, '#recap-open, #opponent-open, #order-open, #history-open, #help-open, #settings, .home-menu-toggle, .inbox-button, .account-chip');
   }
+  // Under 360 px History is off the bar: its unread mark is a dot on Help, which opens it (#1000).
+  const narrowBar = page.viewportSize().width < 360;
+  // The count is written as history.ts writes it, again on each read: a redraw of the journal may clear it between two.
+  const unread = count => page.locator('#help-open').evaluate((node, count) => {
+    const mark = document.getElementById('history-unread'); mark.dataset.count = count; mark.textContent = count ? ` · ${count} new` : '';
+    return getComputedStyle(node, '::after').content;
+  }, count);
+  await expect.poll(() => unread('2')).toBe(narrowBar ? '""' : 'none');
+  // The dot is drawn; the words are spoken: Help is described by History's unread count (table/battle-frame.test.js).
+  await expect.poll(() => unread('')).toBe('none');
   // Under 360 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell").
   const narrow = page.viewportSize().width < 360;
   await expect(page.locator('#inbox-open')).toBeVisible({ visible: !narrow });

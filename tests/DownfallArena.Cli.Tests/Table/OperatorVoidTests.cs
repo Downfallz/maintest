@@ -5,6 +5,7 @@ using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Admin;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -97,7 +98,7 @@ public sealed class OperatorVoidTests : IDisposable
     {
         var (id, _) = await OpenedAsync();
         await OwnedAsync(id);
-        _composer.Notices = new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System));
+        _composer.Notifier = new AccountNotifier(null, new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System)));
         _admin.Notes = new OperatorNotes(new OperatorActions(new OperatorLogOut(), TimeProvider.System)) { Said = _said.Add };
 
         (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
@@ -129,6 +130,42 @@ public sealed class OperatorVoidTests : IDisposable
         await VoidAsync(id, Reason());
 
         (await _registry.VoidSeatAsync(seat, Cancel)).ShouldBe(Explanation);
+    }
+
+    [Fact]
+    public async Task With_push_off_each_seat_s_bell_keeps_the_void_and_its_explanation()
+    {
+        var (id, _) = await OpenedAsync();
+        var accounts = await OwnedAsync(id);
+        var log = new AccountNoticeLog(new InMemoryNoticeStore(), TimeProvider.System);
+        _composer.Notifier = new AccountNotifier(log, push: null);
+
+        (await VoidAsync(id, Reason())).Status.ShouldBe(200);
+
+        accounts.ShouldNotBeEmpty();
+        foreach (var account in accounts)
+        {
+            var kept = (await log.ListAsync(account, Cancel)).ShouldHaveSingleItem();
+            kept.Kind.ShouldBe(NoticeKind.MatchOver);
+            kept.Title.ShouldBe("Match voided");
+            kept.Body.ShouldBe(Explanation);
+        }
+    }
+
+    [Fact]
+    public async Task A_void_keeps_nothing_in_the_bell_of_an_account_deleted_before_it()
+    {
+        var (id, _) = await OpenedAsync();
+        var accounts = await OwnedAsync(id);
+        var log = new AccountNoticeLog(new InMemoryNoticeStore(), TimeProvider.System);
+        _composer.Notifier = new AccountNotifier(log, push: null) { Exists = (_, _) => Task.FromResult(false) };
+
+        (await VoidAsync(id, Reason())).Status.ShouldBe(200);
+
+        foreach (var account in accounts)
+        {
+            (await log.ListAsync(account, Cancel)).ShouldBeEmpty();
+        }
     }
 
     [Fact]
@@ -268,11 +305,12 @@ public sealed class OperatorVoidTests : IDisposable
     }
 
     /// <summary>The table's person seat made an account's, as a lobby game's is, so its void is a notice to send.</summary>
-    private async Task OwnedAsync(string id)
+    private async Task<IReadOnlyList<AccountId>> OwnedAsync(string id)
     {
         var record = (await _hosted.Stored!.RecordAsync(id, Cancel)).ShouldNotBeNull();
         var owned = record with { Seats = [.. record.Seats.Select(seat => seat.Person ? seat with { Account = AccountId.New().Value } : seat)] };
         await new FileArtifactStore(_hosted.RunsDirectory).Writer(id).WriteJsonAsync(TableRecord.File, owned, Cancel);
+        return [.. owned.Seats.Where(seat => seat.Account is not null).Select(seat => AccountId.Parse(seat.Account!))];
     }
 
     /// <summary>A device store that is out, as one whose storage account does not answer.</summary>
@@ -280,7 +318,9 @@ public sealed class OperatorVoidTests : IDisposable
     {
         public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
 
-        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+        public Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+
+        public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
 
         public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
     }

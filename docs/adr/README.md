@@ -223,5 +223,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0198](0198-send-a-pages-pictures-at-the-size-they-are-drawn-and-draw-one-icon-set.md) | Send a page's pictures at the size they are drawn, and draw one icon set | Accepted |
 | [0199](0199-let-a-strip-of-frames-rest-on-the-frame-that-says-what-it-shows.md) | Let a strip of frames rest on the frame that says what it shows | Accepted |
 | [0200](0200-keep-the-offline-page-s-plate-in-the-service-worker.md) | Keep the offline page's plate in the service worker | Proposed. Amends [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) and [0191](0191-keep-the-rulebook-in-the-service-worker.md) (the worker keeps the offline page's plate) |
+| [0201](0201-send-every-account-notice-through-one-door-and-keep-the-news-in-the-bell.md) | Send every account notice through one door, and keep the news in the bell | Accepted. Amends [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) (push is a channel a player chooses, not the only carrier of a notice) |
 
 <!-- index:end -->
