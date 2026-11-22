@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S7 and S9 are built; S8 is next.
+questions at the end). S1 to S9 are built; S10 is next.
 
 ## What the owner asked for
 
@@ -293,6 +293,25 @@ result in `battle/src` with UX12.
 
 8. **S8, the lobby's games.** The waiting game and the ended game take their ground; the brief's ground by round
    stays for a game in play. Tests: the lobby's specs, the budget, the measures.
+
+   *Built (2026-11-22)*: a game of the player's waits on someone else when the player against it is asked to play,
+   or when its seat is not yet taken (`waitsOnAnother` in `table/lobby.js`). A bot's game never does: a bot answers
+   at once. A waiting game stands on `warped-listening` in the two places the owner chose. The featured space draws
+   it in place of the ground by round (`THEIR TURN`, `YOUR TABLE`). Its card in Your games wears it as its ground,
+   except the game the featured space already shows. A turn keeps the ground by round.
+
+   The finished game that ended last wears `crushing-stomp-aftermath` as its row's ground; the other rows keep their
+   slate (the owner chose one row, not each). It is the latest of each group's first game on its first page, as the
+   host last read it (`latestFinished`), so turning a page does not move it; without dates, on a host without
+   accounts, no row wears it. Both grounds are lazy and not drawn under `Save-Data`.
+
+   `table/home`'s `all` budget rose from 266 to 308 KiB (313,570 bytes measured, 41,362 more); its `first` holds.
+   The home and the field guide now share one set of widths. The field guide's Warped moved to the 390 px file:
+   4,174 bytes more on `showcase/mutations`, still inside its budget. The walk gains `home-ended-ground` and
+   `home-waiting-ground`, each ground scrolled into view and briefed in `journeys/lobby.md`. Its `contrast` reads
+   7.61:1 at the least, at both widths; axe is clean and no target is under 44 px. Left: the mock server does not
+   serve `page-art/`, so the specs check the boxes and the files named, not the pixels.
+
 9. **S9, signing out.** The confirmation's head, the panel's state after a sign out. Tests: `table/account.test.js`,
    `lobby-home.spec.js`, the measures.
 
@@ -309,11 +328,13 @@ result in `battle/src` with UX12.
    `sign-out` and `signed-out-panel`.
 
    One file of 20,646 bytes at twice the density on a phone serves both. `table/sign-in` rose to 200 KiB (201,822
-   measured), `table/home`, `table/stats` and `table/battle` raised their `all` to 286, 782 and 402 KiB, and
+   measured), `table/home`, `table/stats` and `table/battle` raised their `all` to 328 (after S8's 308), 782 and 402 KiB, and
    `table/leaderboard` and `table/rules` to 88 KiB. The walk's `contrast` reads 11.34:1 at the least on the
    confirmation, at both widths; both screens are axe clean, with no target under 44 px. The owner settled the fill
-   on Sign out, the plate in place of both paintings, and its holder kept `aria-hidden` (2026-11-22). Left: a sign out from another page reaches the home by `location.replace`, so that goodbye was read in code
-   and in the specs of the home, not filmed. The mock server does not serve `page-art/`, so its specs check the boxes.
+   on Sign out, the plate in place of both paintings, and its holder kept `aria-hidden` (2026-11-22). Left: a sign out
+   from another page reaches the home by `location.replace`, so that goodbye was read in code and in the specs of the
+   home, not filmed. The mock server does not serve `page-art/`, so its specs check the boxes.
+
 10. **S10, the ladder, the statistics, the rulebook and offline.** Their heads and the offline plate. Tests: the
    pages' specs, a budget for each new page, the measures.
 11. **S11, the Mutation Tree and the result.** The tree's head and its column heads, the result's head, with

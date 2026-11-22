@@ -3,7 +3,7 @@
 // game of theirs waiting on someone else, then the next lesson, then a new battle. The host says all of it: whose
 // turn it is (`/api/lobby/mine`), where the account stands with each lesson (`/api/tutorials`). Nothing is decided here.
 
-import { gameKind, invitedState, tableState, waitingGames, versus } from './lobby.js';
+import { gameKind, invitedState, tableState, waitingGames, waitsOnAnother, versus } from './lobby.js';
 import { sinceVisitLine, turnOf } from './players.js';
 import { pictureElement } from './picture.js';
 import { writeArrival } from './arrival.js';
@@ -16,6 +16,12 @@ const GROUNDS = Object.freeze([[10, 'home-ground-sky'], [6, 'home-ground-breach'
 export function groundOf(round) {
   return GROUNDS.find(([from]) => (Number.isInteger(round) ? round : 1) >= from)?.[1] ?? 'home-ground-eclipse';
 }
+
+/**
+ * A game that waits on someone else stands on the Warped listening at the edge of the dark instead of its round's
+ * ground (docs/art/scene-paintings-plan.md, S8): something on the other side is still deciding.
+ */
+const LISTENING = 'warped-listening';
 
 /**
  * The ancestral creature: a new battle's, and the first lesson's. The same painting as the first lesson's card, but
@@ -96,7 +102,7 @@ function gameView(choice) {
   const action = mine ? 'Play your turn →' : 'Open the game →';
   return { kind: choice.kind, id: table.id, announced: mine ? ['Your turn', status].filter(Boolean).join(' · ') : '', eyebrow: eyebrowOf(mine, turn, table), title, status,
     detail: capital(sinceVisitLine(choice.entry.recap) ?? ''), action, label: labelOf(action, `${title[0].toLowerCase()}${title.slice(1)}`),
-    ground: groundOf(table.round), creature: null, link: null };
+    ground: !mine && waitsOnAnother(choice.entry) ? LISTENING : groundOf(table.round), creature: null, link: null };
 }
 
 function lessonView({ lesson }, started) {

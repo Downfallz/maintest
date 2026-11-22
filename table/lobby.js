@@ -92,6 +92,30 @@ export function gameKind(table) {
 }
 
 /**
+ * A game of mine that waits on someone else: against a player who is asked to play, or its seat not yet taken. A bot's
+ * round in play waits on nobody (a bot answers at once). Such a game stands on the Warped listening
+ * (docs/art/scene-paintings-plan.md, S8).
+ */
+export function waitsOnAnother(entry) {
+  if (!entry || entry.table.over) return false;
+  if (entry.table.waiting || entry.table.openSeats > 0) return true;
+  // Someone else is asked: a round being played, where nobody is, waits on no one.
+  return gameKind(entry.table) === 'players' && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === false;
+}
+
+/**
+ * The finished game that ended last: `firsts` holds, for each group, the first game of its first page as the host
+ * last read it (each lists its most recent first), so turning a group to an older page does not move it. A game the
+ * host gave no time it finished, or no table, is never it: without dates no game is the last, and no row is chosen.
+ * It alone stands on the stomp's aftermath: a list does not repeat one painting.
+ */
+export function latestFinished(firsts) {
+  const dated = firsts.filter(item => item?.table && item.finishedAt && Number.isFinite(Date.parse(item.finishedAt)));
+  if (!dated.length) return null;
+  return dated.reduce((best, item) => (Date.parse(item.finishedAt) > Date.parse(best.finishedAt) ? item : best)).table;
+}
+
+/**
  * The player's games in progress, by kind: in each, the ones waiting for this player first, the most pressing first as
  * "Your turn" lists them, then the others in the host's order.
  */
@@ -262,6 +286,12 @@ export function challengeRequest(opponent) {
 function statusText(state) {
   return state.recording ? '' : 'This host is not saving games. New tables are unavailable until recording is enabled.';
 }
+
+// The widths a card's and a finished row's ground are drawn at, as table/lobby.css lays Your games (cards at least
+// 330 px wide in a column of at most 1280 px): one card a row up to 760 px, two up to 1053 px, three from there; the
+// rows across the whole column.
+const CARD_SIZES = '(min-width: 1054px) 430px, (min-width: 761px) 50vw, calc(100vw - 36px)';
+const ROW_SIZES = '(min-width: 1344px) 1280px, calc(100vw - 36px)';
 
 export function mountLobby(doc, location, storage, { changes = onLobbyChange, featured = null } = {}) {
   const el = id => doc.getElementById(id);
@@ -453,6 +483,11 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       }
       root.append(ways);
     }
+    // A game of mine that waits on someone else lays its words on the Warped listening, dimmed; the one the featured
+    // space shows already stands on it there.
+    if (waitsOnAnother(entry) && featured?.shown() !== table.id) {
+      wearScene(doc, root, 'warped-listening', { page: 'table/home', form: 'ground', words: Array.from(root.children).filter(child => child.tagName !== 'BUTTON' && !child.classList.contains('card-ways')), sizes: CARD_SIZES });
+    }
     return root;
   }
   // A table waiting for this player (ADR 0129): who asks, and the two answers.
@@ -592,10 +627,15 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     }
     // Created and finished, labelled, since a card carries both: a game against a player can last days (ADR 0169).
     const standing = { true: 'ranked', false: 'unranked' }[String(summary.ranked)];
-    return row({ heading: summary.title, casual: summary.casual, standing, tag: summary.tag, tone: `outcome ${summary.tone}`,
+    const line = row({ heading: summary.title, casual: summary.casual, standing, tag: summary.tag, tone: `outcome ${summary.tone}`,
       sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }],
       detail: [summary.voided, created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
+    // The game that ended last stands on the ground the stomp left, dimmed behind its words; the others keep their slate.
+    if (item.table && latestFinished(KINDS.map(([kind]) => finished[kind].first)) === item.table) {
+      wearScene(doc, line, 'crushing-stomp-aftermath', { page: 'table/home', form: 'ground', words: Array.from(line.children).filter(child => child !== action), sizes: ROW_SIZES });
+    }
+    return line;
   }
   // A kind's finished games, a page at a time from the host, with that kind's own pages.
   function finishedGroup(kind, label) {
@@ -618,6 +658,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       const data = account ? await lobbyRequest(`/api/lobby/finished/${kind}/${wanted + 1}`) : localFinished(mine, kind, wanted);
       if (reading !== revision || wanted !== finished[kind].page) return;
       finished[kind].data = data; finished[kind].page = data.page - 1;
+      if (data.page === 1) finished[kind].first = data.items[0] ?? null;
     } catch (error) {
       // Read again on the next change: a page that failed once is not given up on.
       if (reading === revision) { finishedReads = Math.max(finishedReads, 1); problem(error.message || 'Could not read your finished games. Try again.'); }

@@ -25,9 +25,16 @@
     {
       "name": "warped-listening",
       "source": "docs/art/sources/pages/scenes/warped-listening.webp",
-      "drawn": [351, 1250],
+      "drawn": [351, 1250, 390, 640, 358, 680],
       "focus": "50% 40%",
-      "pages": { "showcase/mutations": "lazy" }
+      "pages": { "showcase/mutations": "lazy", "table/home": "lazy" },
+      "phone": { "table/home": [390, 358] }
+    },
+    {
+      "name": "crushing-stomp-aftermath",
+      "source": "docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp",
+      "drawn": [358, 1280],
+      "pages": { "table/home": "lazy" }
     },
     {
       "name": "ironhide-scar",
