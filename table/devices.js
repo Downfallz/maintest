@@ -51,7 +51,7 @@ export function deviceSwitch(state) {
       hint: state.subscribed ? 'On: what you choose below pops up here, even with the browser closed.' : 'Off: nothing pops up here.',
     };
   }
-  return { hidden: false, disabled: true, checked: false, hint: `${shown.label}. ${shown.hint.replace(/to be told when it is your turn/g, 'to see pop-ups')}` };
+  return { hidden: false, disabled: true, checked: false, hint: `${shown.label}. ${shown.hint.replaceAll('to be told when it is your turn', 'to see pop-ups')}` };
 }
 
 /** The body that saves the account's choices: each kind the boxes say, a kind with no box kept on. */
@@ -109,7 +109,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       // While a save is on its way the boxes stay as the player left them: a tick made meanwhile is saved next.
       for (const kind of state.saving ? [] : KINDS) {
         const box = kinds.querySelector(`[data-kind="${kind}"]`);
-        if (box) box.checked = state.kinds?.[kind] !== false;
+        if (box) box.checked = Boolean(state.kinds?.[kind] ?? true);
       }
     }
   }

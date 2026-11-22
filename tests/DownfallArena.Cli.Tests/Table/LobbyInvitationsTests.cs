@@ -345,7 +345,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         var lobby = new LobbyApi(_registry, _hosted.Composer, _clock, new PushNotices(_sender, "BP8", _clock)) { Accounts = (await LobbyAsync()).Accounts, Devices = _devices };
         var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
         var token = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!.Seats[0].Token;
-        string Browser(string endpoint) => JsonSerializer.Serialize(new { endpoint, keys = new { p256dh = Key, auth = Auth } });
+        static string Browser(string endpoint) => JsonSerializer.Serialize(new { endpoint, keys = new { p256dh = Key, auth = Auth } });
 
         (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://push.example/old"), token, mark)).Status.ShouldBe(200);
         (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://push.example/new"), token, mark)).Status.ShouldBe(200);
