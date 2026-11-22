@@ -3,27 +3,23 @@
 // game of theirs waiting on someone else, then the next lesson, then a new battle. The host says all of it: whose
 // turn it is (`/api/lobby/mine`), where the account stands with each lesson (`/api/tutorials`). Nothing is decided here.
 
-import { gameKind, invitedState, tableState, waitingGames, waitsOnAnother, versus } from './lobby.js';
+import { gameKind, invitedState, tableState, waitingGames, versus } from './lobby.js';
 import { sinceVisitLine, turnOf } from './players.js';
 import { PAGE_ART } from './page-art.js';
 import { pictureElement, sourceAttributes } from './picture.js';
 import { writeArrival } from './arrival.js';
 
 /**
- * The ground a game is on, by its round: the lobby's duel in the mist for rounds 1 to 5 (not the battle's eclipse, on
- * purpose), then the battle's plates (battle/src/battle-horizon.ts), the breach from round 6, the shattered sky from round 10. Each is declared for the home in docs/art/page-pictures.json.
+ * The ground a game is on, by its round, on either player's turn (docs/art/scene-replacement-plan.md): the lobby's
+ * duel in the mist for rounds 1 to 5 (not the battle's eclipse, on purpose), then the Great Rupture from round 6.
+ * Each is declared for the home in docs/art/page-pictures.json.
  */
 const DUEL = 'mist-duel';
-const GROUNDS = Object.freeze([[10, 'home-ground-sky'], [6, 'home-ground-breach'], [1, DUEL]]);
+const RUPTURE = 'great-rupture';
+const GROUNDS = Object.freeze([[6, RUPTURE], [1, DUEL]]);
 export function groundOf(round) {
   return GROUNDS.find(([from]) => (Number.isInteger(round) ? round : 1) >= from)?.[1] ?? DUEL;
 }
-
-/**
- * A game that waits on someone else stands on the Warped listening at the edge of the dark instead of its round's
- * ground (docs/art/scene-paintings-plan.md, S8): something on the other side is still deciding.
- */
-const LISTENING = 'warped-listening';
 
 /** A lesson stands on the battle's eclipse, the ground its first round is played on. */
 const LESSON_GROUND = 'home-ground-eclipse';
@@ -40,13 +36,12 @@ const creatureOf = picture => picture || 'lesson-base';
  */
 export const GROUND_SIZES = '(min-width: 1280px) 950px, (min-width: 761px) 74vw, max(100vw, 56.25svh)';
 
-// The lesson and later rounds have paintings composed for a tall phone. A native picture changes source when the
+// The lesson and the Great Rupture have paintings composed for a tall phone. A native picture changes source when the
 // phone turns, without fetching both paintings on its first draw. A portrait tablet keeps the portrait: the
 // landscape would be stretched to cover its tall box.
 const LANDSCAPES = new Map([
   [LESSON_GROUND, 'battlefield-eclipse'],
-  ['home-ground-breach', 'battlefield-breach'],
-  ['home-ground-sky', 'battlefield-sky'],
+  [RUPTURE, 'great-rupture-landscape'],
 ]);
 export const LANDSCAPE_MEDIA = '(orientation: landscape)';
 
@@ -73,7 +68,9 @@ function featuredGround(doc, name) {
     `max(min(74vw, 950px), calc(clamp(450px, 77svh, 810px) * ${ratio}))`,
   ];
   source.setAttribute('sizes', sizes.join(', '));
-  picture.append(source, pictureElement(doc, name, { ...options, sizes: 'max(100vw, 45svh, 198px)' }));
+  // The eclipse's portrait is cut taller than the screen, so the screen's width covers it; the Rupture's is the duel's
+  // 9:16, which covers the screen's height first.
+  picture.append(source, pictureElement(doc, name, { ...options, sizes: name === LESSON_GROUND ? 'max(100vw, 45svh, 198px)' : GROUND_SIZES }));
   return picture;
 }
 
@@ -149,7 +146,7 @@ function gameView(choice) {
   const action = mine ? 'Play your turn →' : 'Open the game →';
   return { kind: choice.kind, id: table.id, announced: mine ? ['Your turn', status].filter(Boolean).join(' · ') : '', eyebrow: eyebrowOf(mine, turn, table), title, status,
     detail: capital(sinceVisitLine(choice.entry.recap) ?? ''), action, label: labelOf(action, `${title[0].toLowerCase()}${title.slice(1)}`),
-    ground: !mine && waitsOnAnother(choice.entry) ? LISTENING : groundOf(table.round), creature: null, link: null };
+    ground: groundOf(table.round), creature: null, link: null };
 }
 
 function lessonView({ lesson }, started) {

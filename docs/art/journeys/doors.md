@@ -704,7 +704,8 @@ A signed-in player is leaving this browser, or every device, and is asked once. 
 of every page whose header's windows wear a head (`HEADER_SCENE_PAGES` of `table/navigation.js`: the home, the
 statistics, the ladder, the rulebook, the battle); Sign out everywhere sits in Settings, Account. Both open
 `#action-dialog` through `confirmAction` (`table/account.js`). For a sign out the window's title wears
-`predator-at-rest` as its head: I am leaving; the game rests. The same window confirms removing a friend, which
+`eye-still-open` as its head ([the replacement plan](../scene-replacement-plan.md), 03): I am leaving; the game
+watches, one eye open. The panel after the sign out keeps `predator-at-rest`. The same window confirms removing a friend, which
 keeps its plain heading, its words and its two outlined buttons. The admin page and the classic table keep the
 plain window.
 
@@ -740,7 +741,7 @@ The title and the line stay as they are; only Cancel changes.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The Predator at rest in its dark hall, as the head of the window: a 3:1 band across its top, edge to edge over the window's 28 px padding, as the Create window's head is. The title on the start side, over the painting's left half, which is dark hall; cut at `70% 45%`, the Predator's head and the ember on its shoulder right of centre. | 358 by 119 px | I am leaving; does the game wait for me? It rests. | `docs/art/sources/pages/scenes/predator-at-rest.webp` |
+| One open amber eye beneath the Predator's armoured lid, as the head of the window: a 3:1 band across its top, edge to edge over the window's 28 px padding, as the Create window's head is. The title on the start side, over the painting's dark left; cut at `70% 45%`, the eye right of centre. | 358 by 119 px | I am leaving; does the game wait for me? It watches. | `docs/art/sources/pages/replacements/eye-still-open.webp` |
 
 At 320 px the window is 288 px wide and the band 288 by 96. Under 600 px tall it is 64 px, 288 by 64 at 320 by
 568. From 480 px wide the window stops growing and the band is 480 by 120, the cap. The painting is 16:9, so in

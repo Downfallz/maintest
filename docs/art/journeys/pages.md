@@ -41,10 +41,10 @@ What holds for every screen of the journey:
   `docs/art/branding.css`. No ambience: nothing on these pages moves unasked. The home behind `home-invitation` keeps
   its own, which is [the lobby's](lobby.md).
 - **A scene where there is room.** Paintings of the scenes' library in the kit's forms
-  ([a scene in one of three forms](../page-pictures.md#a-scene-in-one-of-three-forms)). `predator-and-deathstalker`
-  (the Predator and its stage 3, the Deathstalker, drinking at one pool) is a head on the Friends window and on the
-  Create window opened on a friend, and a ground on the invitation's card. Each page of the journey opens on a head:
-  `elemental-charge` on the ladder, `ironhide-scar` on the statistics, `latch-under-the-arch` on the rulebook. The
+  ([a scene in one of three forms](../page-pictures.md#a-scene-in-one-of-three-forms)). Since
+  [the replacement plan](../scene-replacement-plan.md): `under-one-arch` is the Friends window's head, `empty-bank`
+  the Create window's opened on a friend, and `invitation-reverse` the invitation card's ground. Each page of the
+  journey opens on a head: `last-one-standing` on the ladder, `combat-marks` on the statistics, `latch-under-the-arch` on the rulebook. The
   offline page shows `parasite-under-slate` as a plate. The words on a head or a ground are the ones the screen
   already had, on its scrim, at 4.5:1 or more by the walk's `contrast`. A head's or a ground's painting takes no
   `alt`; the plate's has one. No scene pushes a filled action off a 320 by 568 screen. A player is still their
@@ -110,7 +110,7 @@ cards already have Ask.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The scene as the window's head, its focus on the Deathstalker's bank: its back, its blades and its claws on the stones, its jaw at the water. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+| The scene as the window's head, focus `75% 35%`: a reclining Brute and a watchful Predator under one arch, both looking out. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/replacements/under-one-arch.webp`, declared as `under-one-arch` |
 
 The head is the window's heading. The band takes the place of the heading's slate, from edge to edge, clipped by the
 window's cut corner. The heading's rune rule goes: the band's lower edge is the rule. The band holds the eyebrow,
@@ -175,7 +175,7 @@ No painting answers "who could be my friend?", and none is drawn in the list: a 
 ### Cost
 
 - **Bytes**: the head, lazy, loaded when the window opens. The window is `min(720px, 100vw - 24px)` wide, so
-  `predator-and-deathstalker` is drawn 366 px wide at 390 and 296 at 320. The 732 px file goes to a phone at twice
+  the head (`under-one-arch` since the replacement plan; the figures below were measured on the pool) is drawn 366 px wide at 390 and 296 at 320. The 732 px file goes to a phone at twice
   the density, 68,750 bytes; the 366 px file goes at the walk's density, 20,744 bytes (`table/page-art.js`). The same
   file at both widths. On a wide screen the window is up to 720 px wide and takes a larger file. The budget is
   counted at 390, so it does not see that file. The pages that draw the head count those 68,750 bytes: table/home,
@@ -236,7 +236,7 @@ Asked. Rook will see your request.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The head of the empty window, unchanged, focus `75% 35%`, its words on its `start` side. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+| The head of the empty window, unchanged, focus `75% 35%`, its words on its `start` side. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/replacements/under-one-arch.webp`, declared as `under-one-arch` |
 
 Rook is their initial in the identity's square, drawn in CSS, not a picture. At 320 by 568 the window is at its
 greatest height today, 486 px: `#friends-dialog` is no taller than the screen less its margin, 488 px here, and its
@@ -317,7 +317,7 @@ says why, in place of today's `title`: "One invitation at a time: Invite returns
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The head of the empty window, unchanged, focus `75% 35%`, its words on its `start` side. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+| The head of the empty window, unchanged, focus `75% 35%`, its words on its `start` side. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/replacements/under-one-arch.webp`, declared as `under-one-arch` |
 
 Each friend is their initial in the identity's square. The head is the window's on every state: these are the
 players I meet, whether there are none yet or one. At 320 by 568 the window is no taller than today, 414 px.
@@ -411,7 +411,7 @@ place.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The scene as the window's head, its focus on the pool: the water both creatures drink from, the Deathstalker's blade-tail dipped in it, their reflections. | 358 by 119 px | I am asking someone to meet me. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+| The scene as the window's head, focus `70% 50%`: from behind the Predator, still water and a broken arch across the pool. | 358 by 119 px | I am asking someone to meet me. | `docs/art/sources/pages/replacements/empty-bank.webp`, declared as `empty-bank` |
 
 Rook is their initial in the identity's square, 44 px here, the size of the controls under it, right under the head.
 The head is drawn only when the window is opened on a friend, with the friend's line: in every other state the
@@ -530,7 +530,7 @@ Rook invites you to a 3v3 battle                         [Invitation]
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The scene as the card's ground, dimmed under `--soot`: the Predator and the Deathstalker drinking at one pool. | 358 by 200 px | Someone asked me to meet them. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+| The scene as the card's ground, dimmed under `--soot`: the Predator waits on the far bank, looking back. | 358 by 200 px | Someone asked me to meet them. | `docs/art/sources/pages/replacements/invitation-reverse.webp`, declared as `invitation-reverse` |
 
 The card is the ground: its whole box, inside its border, its gold top edge and its cut corner, which clip the
 painting. Its words sit on the ground's scrim, from 84% to 92% soot (`table/identity.css`), so the painting is the
@@ -649,7 +649,7 @@ rating is provisional, listed after the settled ones. Games against a bot, on a 
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The scene as the page's head, its focus on the charge: the Cataclysm's breath of flame crossing the band toward the Colossus, the arches and the eclipse behind. | 354 by 118 px | This is where the fights are counted. | `docs/art/sources/pages/scenes/elemental-charge.webp`, declared as `elemental-charge` |
+| The scene as the page's head: a Stage III Ravager on a broken tier against a low eclipse, framed right. | 354 by 118 px | This is where the fights are counted. | `docs/art/sources/pages/replacements/last-one-standing.webp`, declared as `last-one-standing` |
 
 The head is the page's own; the rows are not pictures. The player is their initial, and the rating and the record
 are drawn in CSS. What follows holds for the head of the statistics and of the rulebook too.
@@ -726,7 +726,7 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
 
 ### Cost
 
-- **Bytes**: the head, lazy, in view. `elemental-charge` is declared for table/leaderboard at the band's phone width,
+- **Bytes**: the head, lazy, in view (`last-one-standing` since the replacement plan; measured on `elemental-charge`). It is declared for table/leaderboard at the band's phone width,
   354 px (`phone`). The kit keeps one file for 351 and 354, within a tenth: the 708 px file at twice the density. The
   702 px file weighs 78,956 bytes today (`table/page-art.js`); the 708's bytes are `--budget`'s once derived.
   table/leaderboard's `all` rises from 69,632 bytes (the Friends window's head) by that file; its `first` stays 0. A
@@ -810,7 +810,7 @@ draws, each part labelled in words, never by its shade alone. Both are CSS on th
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The head of the ladder before a ranked game, unchanged, focus `50% 45%`, its words on its `start` side. | 354 by 118 px | This is where the fights are counted. | `docs/art/sources/pages/scenes/elemental-charge.webp`, declared as `elemental-charge` |
+| The head of the ladder before a ranked game, unchanged, its words on its `start` side. | 354 by 118 px | This is where the fights are counted. | `docs/art/sources/pages/replacements/last-one-standing.webp`, declared as `last-one-standing` |
 
 A player is their initial (ADR 0122), and the rating and the record are drawn in CSS, not painted. The head is the
 page's in every state: the ladder is where fights are counted, whether the player is on it yet or not.
@@ -898,7 +898,7 @@ it.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The scene as the page's head: the Ironhide's plates close up, the scar across them, the eye under them at the band's end. | 354 by 118 px | What the games left on me. | `docs/art/sources/pages/scenes/ironhide-scar.webp`, declared as `ironhide-scar` |
+| The scene as the page's head: a slate slab of claw marks worn almost smooth, one fresh cut in pale stone. | 354 by 118 px | What the games left on me. | `docs/art/sources/pages/replacements/combat-marks.webp`, declared as `combat-marks` |
 
 The head is the ladder's form ([the ladder before a ranked game](#the-ladder-before-a-ranked-game-leaderboard)): the
 eyebrow, Your ranked games, and the title, Your statistics., on the band, at 28 px on a phone; the detail line under
@@ -948,7 +948,7 @@ it. No mutation has been acquired, so no evolution is drawn; the empty state is 
 
 ### Cost
 
-- **Bytes**: the head, lazy, in view. `ironhide-scar` is declared for table/stats at 354 px (`phone`); the kit keeps
+- **Bytes**: the head, lazy, in view (`combat-marks` since the replacement plan; measured on `ironhide-scar`). It is declared for table/stats at 354 px (`phone`); the kit keeps
   one file for 323 and 354, the 708 px file at twice the density. Today's 646 and 842 px files weigh 13,736 and 20,714
   bytes; the 708's bytes are `--budget`'s once derived. table/stats raises its `all` from 780,288 bytes by that file;
   its `first` stays 0.
@@ -1016,7 +1016,7 @@ capstone whose `artwork` is null shows its name and counts without a painting.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The head of the statistics before a ranked game, unchanged, focus `50% 65%`, its words on its `start` side. | 354 by 118 px | What the games left on me. | `docs/art/sources/pages/scenes/ironhide-scar.webp`, declared as `ironhide-scar` |
+| The head of the statistics before a ranked game, unchanged, its words on its `start` side. | 354 by 118 px | What the games left on me. | `docs/art/sources/pages/replacements/combat-marks.webp`, declared as `combat-marks` |
 | The evolution of the mutation acquired most, whole, beside its name and count. | 144 by 96 px | Which build is mine, before I read its name? | `table/battle-art/evolutions/`, the file `data/presentation/mutation-art.json` names for the mutation, sent through the picture kit (`table/picture.js`) |
 
 Each evolution the mapping names is declared in `docs/art/page-pictures.json` as `mutation-<artwork id>` for the

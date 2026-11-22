@@ -54,5 +54,5 @@ test('the Friends window wears its head on the player\'s pages, each declared fo
   const { HEADER_SCENE_PAGES } = await import('./navigation.js');
   const { PAGE_ART } = await import('./page-art.js');
   assert.deepEqual(Object.keys(HEADER_SCENE_PAGES).sort(), ['battle', 'leaderboard', 'lobby', 'rules', 'stats']);
-  for (const page of Object.values(HEADER_SCENE_PAGES)) assert.equal(PAGE_ART['predator-and-deathstalker'].pages[page], 'lazy', page);
+  for (const page of Object.values(HEADER_SCENE_PAGES)) assert.equal(PAGE_ART['under-one-arch'].pages[page], 'lazy', page);
 });

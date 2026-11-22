@@ -11,39 +11,36 @@
     {
       "name": "brute-moult",
       "source": "docs/art/sources/pages/scenes/brute-moult.webp",
-      "drawn": [351, 1250, 390],
-      "pages": { "showcase/mutations": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [390] }
+      "drawn": [351, 1250],
+      "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "predator-and-deathstalker",
       "source": "docs/art/sources/pages/scenes/predator-and-deathstalker.webp",
-      "drawn": [351, 1250, 366, 358, 480, 720],
+      "drawn": [351, 1250],
       "focus": "50% 55%",
-      "pages": { "showcase/mutations": "lazy", "table/home": "lazy", "table/stats": "lazy", "table/battle": "lazy", "table/leaderboard": "lazy", "table/rules": "lazy" },
-      "phone": { "table/home": [366, 358], "table/stats": [366], "table/battle": [366], "table/leaderboard": [366], "table/rules": [366] }
+      "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "warped-listening",
       "source": "docs/art/sources/pages/scenes/warped-listening.webp",
-      "drawn": [351, 1250, 390, 640, 358, 680],
+      "drawn": [351, 1250],
       "focus": "50% 40%",
-      "pages": { "showcase/mutations": "lazy", "table/home": "lazy", "table/battle": "lazy" },
-      "phone": { "table/home": [390, 358], "table/battle": [390] }
+      "pages": { "showcase/mutations": "lazy" }
     },
     {
       "name": "crushing-stomp-aftermath",
       "source": "docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp",
-      "drawn": [358, 1280, 620],
-      "pages": { "table/home": "lazy", "table/battle": "lazy" },
+      "drawn": [358, 620],
+      "pages": { "table/battle": "lazy" },
       "phone": { "table/battle": [358] }
     },
     {
       "name": "ironhide-scar",
       "source": "docs/art/sources/pages/scenes/ironhide-scar.webp",
-      "drawn": [323, 421, 354, 1280, 366],
-      "pages": { "showcase/mutations": "lazy", "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/stats": [354], "table/battle": [366] }
+      "drawn": [323, 421, 366],
+      "pages": { "showcase/mutations": "lazy", "table/battle": "lazy" },
+      "phone": { "table/battle": [366] }
     },
     {
       "name": "blightweaver-pressure-sac",
@@ -61,17 +58,16 @@
     {
       "name": "elemental-charge",
       "source": "docs/art/sources/pages/scenes/elemental-charge.webp",
-      "drawn": [351, 1250, 354, 1280],
+      "drawn": [351, 1250],
       "focus": "50% 45%",
-      "pages": { "showcase/home": "lazy", "table/leaderboard": "lazy" },
-      "phone": { "table/leaderboard": [354] }
+      "pages": { "showcase/home": "lazy" }
     },
     {
       "name": "predator-at-rest",
       "source": "docs/art/sources/pages/scenes/predator-at-rest.webp",
-      "drawn": [351, 640, 358, 480, 980],
-      "pages": { "showcase/home": "lazy", "table/sign-in": "first", "table/home": "lazy", "table/stats": "lazy", "table/battle": "lazy", "table/leaderboard": "lazy", "table/rules": "lazy" },
-      "phone": { "table/sign-in": [358], "table/home": [358], "table/stats": [358], "table/battle": [358], "table/leaderboard": [358], "table/rules": [358] }
+      "drawn": [351, 640, 358, 980],
+      "pages": { "showcase/home": "lazy", "table/sign-in": "first" },
+      "phone": { "table/sign-in": [358] }
     },
     {
       "name": "latch-under-the-arch",
@@ -138,7 +134,7 @@
       "name": "battlefield-breach",
       "source": "table/battle-art/horizon/breach.webp",
       "drawn": [351, 390, 1250],
-      "pages": { "showcase/home": "lazy", "table/home": "wide" }
+      "pages": { "showcase/home": "lazy" }
     },
     {
       "name": "battlefield-broken",
@@ -150,7 +146,7 @@
       "name": "battlefield-sky",
       "source": "table/battle-art/horizon/shattered-sky.webp",
       "drawn": [351, 1250],
-      "pages": { "showcase/home": "lazy", "table/home": "wide" }
+      "pages": { "showcase/home": "lazy" }
     },
     {
       "name": "specimen-base-creature",
@@ -195,16 +191,78 @@
       "pages": { "table/home": "largest" }
     },
     {
-      "name": "home-ground-breach",
-      "source": "docs/art/sources/pages/breach-portrait.webp",
-      "drawn": [390, 760],
+      "name": "empty-bank",
+      "source": "docs/art/sources/pages/replacements/empty-bank.webp",
+      "drawn": [358, 480],
       "pages": { "table/home": "lazy" }
     },
     {
-      "name": "home-ground-sky",
-      "source": "docs/art/sources/pages/sky-portrait.webp",
-      "drawn": [390, 760],
+      "name": "invitation-reverse",
+      "source": "docs/art/sources/pages/replacements/invitation-reverse.webp",
+      "drawn": [358],
       "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "eye-still-open",
+      "source": "docs/art/sources/pages/replacements/eye-still-open.webp",
+      "drawn": [358, 480],
+      "pages": { "table/home": "lazy", "table/stats": "lazy", "table/battle": "lazy", "table/leaderboard": "lazy", "table/rules": "lazy" }
+    },
+    {
+      "name": "under-one-arch",
+      "source": "docs/art/sources/pages/replacements/under-one-arch.webp",
+      "drawn": [366, 720],
+      "pages": { "table/home": "lazy", "table/stats": "lazy", "table/battle": "lazy", "table/leaderboard": "lazy", "table/rules": "lazy" }
+    },
+    {
+      "name": "three-trails-in-ash",
+      "source": "docs/art/sources/pages/replacements/three-trails-in-ash.webp",
+      "drawn": [390, 1240],
+      "pages": { "table/battle": "lazy" },
+      "phone": { "table/battle": [390] }
+    },
+    {
+      "name": "cataclysm-eye",
+      "source": "docs/art/sources/pages/replacements/cataclysm-eye.webp",
+      "drawn": [366],
+      "pages": { "table/battle": "lazy" },
+      "phone": { "table/battle": [366] }
+    },
+    {
+      "name": "great-rupture",
+      "source": "docs/art/sources/pages/replacements/great-rupture.webp",
+      "drawn": [475, 950],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "great-rupture-landscape",
+      "source": "docs/art/sources/pages/replacements/great-rupture-landscape.webp",
+      "drawn": [475, 950],
+      "pages": { "table/home": "wide" }
+    },
+    {
+      "name": "waiting-ripples",
+      "source": "docs/art/sources/pages/replacements/waiting-ripples.webp",
+      "drawn": [358, 680],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "after-the-impact",
+      "source": "docs/art/sources/pages/replacements/after-the-impact.webp",
+      "drawn": [358, 1280],
+      "pages": { "table/home": "lazy" }
+    },
+    {
+      "name": "last-one-standing",
+      "source": "docs/art/sources/pages/replacements/last-one-standing.webp",
+      "drawn": [354, 1280],
+      "pages": { "table/leaderboard": "lazy" }
+    },
+    {
+      "name": "combat-marks",
+      "source": "docs/art/sources/pages/replacements/combat-marks.webp",
+      "drawn": [354, 1280],
+      "pages": { "table/stats": "lazy" }
     },
     {
       "name": "lesson-base",

@@ -8,6 +8,13 @@ The [first scene plan](scene-paintings-plan.md) placed the original paintings. T
 2. On the owner's explicit OK for a version, its WebP source was added under `docs/art/sources/pages/replacements/`, listed in [its register](sources/pages/replacements/README.md), and linked in the table below. A companion piece was matched to the accepted image itself.
 3. The second pull request wires the approved sources into the screens. It updates the relevant [journey briefs](journeys/README.md) and [picture declarations](page-pictures.json), derives responsive files with the [picture kit](page-pictures.md), and checks the affected budgets. It reviews the crops at 320 px, 390 px and on desktop, the text contrast, and the Save-Data fallback.
 
+   *Built (2026-11-22)*: the eleven paintings are declared in `docs/art/page-pictures.json` and worn where the table
+   below places them (`table/lobby.js`, `lobby-featured.js`, `navigation.js`, `account.js`, `battle-scenes.js`,
+   `leaderboard.js`, `stats.js`). The Rupture's portrait is drawn as the duel's 9:16, 475 px on a 390 by 844 phone,
+   and its landscape is the `wide` source. `home-ground-breach`, `home-ground-sky` and their portraits are gone, and
+   the replaced scenes keep only their showcase pages (and the match's result, the panel after a sign out). The
+   briefs' Pictures tables name the new sources.
+
 ## Featured lobby painting
 
 The round selects the large painting at the top of the lobby. Whose turn it is selects the status line and the action.

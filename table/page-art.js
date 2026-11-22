@@ -14,55 +14,50 @@ export const PAGE_ART = {
     ],
   },
   'brute-moult': {
-    from: 'a82cf6d28963a2d6', frames: 1, drawn: [351,1250,390], pages: {"showcase/mutations":"lazy","table/battle":"lazy"}, phone: {"table/battle":[390]},
+    from: '064e8da2d516cc2e', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"},
     sizes: [
       { file: 'brute-moult-351.6f8d3803.webp', width: 351, height: 117, bytes: 5594 },
-      { file: 'brute-moult-390.203c3600.webp', width: 390, height: 130, bytes: 6728 },
       { file: 'brute-moult-702.3c962d65.webp', width: 702, height: 234, bytes: 18096 },
-      { file: 'brute-moult-780.e6d9d975.webp', width: 780, height: 260, bytes: 21592 },
       { file: 'brute-moult-1250.0605382f.webp', width: 1250, height: 417, bytes: 49256 },
       { file: 'brute-moult-1536.b492f0b8.webp', width: 1536, height: 512, bytes: 71762 },
     ],
   },
   'predator-and-deathstalker': {
-    from: '4b5002d728ebc7f6', frames: 1, drawn: [351,1250,366,358,480,720], pages: {"showcase/mutations":"lazy","table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"}, phone: {"table/home":[366,358],"table/stats":[366],"table/battle":[366],"table/leaderboard":[366],"table/rules":[366]}, focus: '50% 55%',
+    from: '3f73818d49b7676d', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"}, focus: '50% 55%',
     sizes: [
-      { file: 'predator-and-deathstalker-366.4120cac8.webp', width: 366, height: 206, bytes: 20744 },
-      { file: 'predator-and-deathstalker-480.054d7c5d.webp', width: 480, height: 270, bytes: 33592 },
-      { file: 'predator-and-deathstalker-732.2808075e.webp', width: 732, height: 412, bytes: 68750 },
-      { file: 'predator-and-deathstalker-960.c03f958e.webp', width: 960, height: 540, bytes: 109458 },
+      { file: 'predator-and-deathstalker-351.c641fd0e.webp', width: 351, height: 197, bytes: 19394 },
+      { file: 'predator-and-deathstalker-702.cc754b16.webp', width: 702, height: 395, bytes: 64978 },
       { file: 'predator-and-deathstalker-1250.3b035ad3.webp', width: 1250, height: 703, bytes: 158418 },
       { file: 'predator-and-deathstalker-1536.a7311680.webp', width: 1536, height: 864, bytes: 208348 },
     ],
   },
   'warped-listening': {
-    from: '1723f536a43ae6cf', frames: 1, drawn: [351,1250,390,640,358,680], pages: {"showcase/mutations":"lazy","table/home":"lazy","table/battle":"lazy"}, phone: {"table/home":[390,358],"table/battle":[390]}, focus: '50% 40%',
+    from: 'a905ad6d4315f7c3', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"}, focus: '50% 40%',
     sizes: [
-      { file: 'warped-listening-390.dee74911.webp', width: 390, height: 219, bytes: 8304 },
-      { file: 'warped-listening-780.5324000a.webp', width: 780, height: 439, bytes: 25278 },
-      { file: 'warped-listening-1360.3e4d2917.webp', width: 1360, height: 765, bytes: 55636 },
+      { file: 'warped-listening-351.26058703.webp', width: 351, height: 197, bytes: 7086 },
+      { file: 'warped-listening-702.82c3d3ff.webp', width: 702, height: 395, bytes: 21104 },
+      { file: 'warped-listening-1250.f589c2db.webp', width: 1250, height: 703, bytes: 49654 },
       { file: 'warped-listening-1536.4cbd321c.webp', width: 1536, height: 864, bytes: 66628 },
     ],
   },
   'crushing-stomp-aftermath': {
-    from: 'a915eb68c47ff9e3', frames: 1, drawn: [358,1280,620], pages: {"table/home":"lazy","table/battle":"lazy"}, phone: {"table/battle":[358]},
+    from: '9100714c0207ac57', frames: 1, drawn: [358,620], pages: {"table/battle":"lazy"}, phone: {"table/battle":[358]},
     sizes: [
       { file: 'crushing-stomp-aftermath-358.2616af1c.webp', width: 358, height: 119, bytes: 4946 },
       { file: 'crushing-stomp-aftermath-620.9d401b3a.webp', width: 620, height: 207, bytes: 12598 },
       { file: 'crushing-stomp-aftermath-716.0ef50fe6.webp', width: 716, height: 239, bytes: 16084 },
-      { file: 'crushing-stomp-aftermath-1280.0980e273.webp', width: 1280, height: 427, bytes: 43398 },
-      { file: 'crushing-stomp-aftermath-1536.b57a85f1.webp', width: 1536, height: 512, bytes: 60076 },
+      { file: 'crushing-stomp-aftermath-1240.f639ad91.webp', width: 1240, height: 413, bytes: 40552 },
     ],
   },
   'ironhide-scar': {
-    from: '7d9f8a92a0d73bc6', frames: 1, drawn: [323,421,354,1280,366], pages: {"showcase/mutations":"lazy","table/stats":"lazy","table/battle":"lazy"}, phone: {"table/stats":[354],"table/battle":[366]},
+    from: 'd608213d7c88d395', frames: 1, drawn: [323,421,366], pages: {"showcase/mutations":"lazy","table/battle":"lazy"}, phone: {"table/battle":[366]},
     sizes: [
+      { file: 'ironhide-scar-323.acb28cf1.webp', width: 323, height: 108, bytes: 4760 },
       { file: 'ironhide-scar-366.c05ac51c.webp', width: 366, height: 122, bytes: 5674 },
       { file: 'ironhide-scar-421.9208ad44.webp', width: 421, height: 140, bytes: 7016 },
+      { file: 'ironhide-scar-646.bab90441.webp', width: 646, height: 215, bytes: 13736 },
       { file: 'ironhide-scar-732.ef8d6c3d.webp', width: 732, height: 244, bytes: 16600 },
       { file: 'ironhide-scar-842.2025ca64.webp', width: 842, height: 281, bytes: 20714 },
-      { file: 'ironhide-scar-1280.df972da0.webp', width: 1280, height: 427, bytes: 40386 },
-      { file: 'ironhide-scar-1536.080ec7ff.webp', width: 1536, height: 512, bytes: 54686 },
     ],
   },
   'blightweaver-pressure-sac': {
@@ -86,19 +81,18 @@ export const PAGE_ART = {
     ],
   },
   'elemental-charge': {
-    from: '6da9bebc95b58fd5', frames: 1, drawn: [351,1250,354,1280], pages: {"showcase/home":"lazy","table/leaderboard":"lazy"}, phone: {"table/leaderboard":[354]}, focus: '50% 45%',
+    from: '8b39d243c0426801', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"}, focus: '50% 45%',
     sizes: [
-      { file: 'elemental-charge-354.4d982393.webp', width: 354, height: 199, bytes: 24830 },
-      { file: 'elemental-charge-708.4f43bccf.webp', width: 708, height: 398, bytes: 79800 },
-      { file: 'elemental-charge-1280.0d8ee1a7.webp', width: 1280, height: 720, bytes: 190132 },
+      { file: 'elemental-charge-351.93b574a1.webp', width: 351, height: 197, bytes: 24506 },
+      { file: 'elemental-charge-702.a5e70cfc.webp', width: 702, height: 395, bytes: 78956 },
+      { file: 'elemental-charge-1250.681d4ddc.webp', width: 1250, height: 703, bytes: 185362 },
       { file: 'elemental-charge-1536.b0201d5a.webp', width: 1536, height: 864, bytes: 233066 },
     ],
   },
   'predator-at-rest': {
-    from: '82fd6321a88c3bed', frames: 1, drawn: [351,640,358,480,980], pages: {"showcase/home":"lazy","table/sign-in":"first","table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"}, phone: {"table/sign-in":[358],"table/home":[358],"table/stats":[358],"table/battle":[358],"table/leaderboard":[358],"table/rules":[358]},
+    from: 'd00a5d3a34f6f74f', frames: 1, drawn: [351,640,358,980], pages: {"showcase/home":"lazy","table/sign-in":"first"}, phone: {"table/sign-in":[358]},
     sizes: [
       { file: 'predator-at-rest-358.d0e427da.webp', width: 358, height: 201, bytes: 7016 },
-      { file: 'predator-at-rest-480.abefbc56.webp', width: 480, height: 270, bytes: 10976 },
       { file: 'predator-at-rest-716.7d247733.webp', width: 716, height: 403, bytes: 20646 },
       { file: 'predator-at-rest-980.d8d01512.webp', width: 980, height: 551, bytes: 32996 },
       { file: 'predator-at-rest-1280.28addeed.webp', width: 1280, height: 720, bytes: 48202 },
@@ -186,7 +180,7 @@ export const PAGE_ART = {
     ],
   },
   'battlefield-breach': {
-    from: 'a89ac3d4912a0ad8', frames: 1, drawn: [351,390,1250], pages: {"showcase/home":"lazy","table/home":"wide"},
+    from: 'a89ac3d4912a0ad8', frames: 1, drawn: [351,390,1250], pages: {"showcase/home":"lazy"},
     sizes: [
       { file: 'battlefield-breach-351.d8fab4dc.webp', width: 351, height: 198, bytes: 11412 },
       { file: 'battlefield-breach-390.9109b627.webp', width: 390, height: 219, bytes: 13642 },
@@ -206,7 +200,7 @@ export const PAGE_ART = {
     ],
   },
   'battlefield-sky': {
-    from: 'd31783f31db8f625', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy","table/home":"wide"},
+    from: 'd31783f31db8f625', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"},
     sizes: [
       { file: 'battlefield-sky-351.beaf4f34.webp', width: 351, height: 101, bytes: 8730 },
       { file: 'battlefield-sky-702.c38c3fc5.webp', width: 702, height: 202, bytes: 27088 },
@@ -275,18 +269,103 @@ export const PAGE_ART = {
       { file: 'home-ground-eclipse-841.372d3460.webp', width: 841, height: 1870, bytes: 147518 },
     ],
   },
-  'home-ground-breach': {
-    from: 'c1ca11240594db71', frames: 1, drawn: [390,760], pages: {"table/home":"lazy"},
+  'empty-bank': {
+    from: 'd38c079179a9b9fd', frames: 1, drawn: [358,480], pages: {"table/home":"lazy"},
     sizes: [
-      { file: 'home-ground-breach-390.23d28460.webp', width: 390, height: 867, bytes: 41192 },
-      { file: 'home-ground-breach-841.2b1dcbd8.webp', width: 841, height: 1870, bytes: 142908 },
+      { file: 'empty-bank-358.c8ebde6e.webp', width: 358, height: 119, bytes: 7064 },
+      { file: 'empty-bank-480.17cdca5b.webp', width: 480, height: 160, bytes: 11652 },
+      { file: 'empty-bank-716.0174cd0f.webp', width: 716, height: 239, bytes: 23696 },
+      { file: 'empty-bank-960.9f8c9295.webp', width: 960, height: 320, bytes: 40478 },
     ],
   },
-  'home-ground-sky': {
-    from: 'd9a671919623e161', frames: 1, drawn: [390,760], pages: {"table/home":"lazy"},
+  'invitation-reverse': {
+    from: '1f7ddf60f7cb029e', frames: 1, drawn: [358], pages: {"table/home":"lazy"},
     sizes: [
-      { file: 'home-ground-sky-390.c23b2806.webp', width: 390, height: 867, bytes: 76804 },
-      { file: 'home-ground-sky-841.80fa5945.webp', width: 841, height: 1870, bytes: 248768 },
+      { file: 'invitation-reverse-358.1d620e04.webp', width: 358, height: 201, bytes: 13992 },
+      { file: 'invitation-reverse-716.fd4ab2b1.webp', width: 716, height: 403, bytes: 47520 },
+    ],
+  },
+  'eye-still-open': {
+    from: '2b87b16065faa615', frames: 1, drawn: [358,480], pages: {"table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"},
+    sizes: [
+      { file: 'eye-still-open-358.92bab49b.webp', width: 358, height: 119, bytes: 5312 },
+      { file: 'eye-still-open-480.0daea76c.webp', width: 480, height: 160, bytes: 8288 },
+      { file: 'eye-still-open-716.034ddc99.webp', width: 716, height: 239, bytes: 15382 },
+      { file: 'eye-still-open-960.70ad3da3.webp', width: 960, height: 320, bytes: 24094 },
+    ],
+  },
+  'under-one-arch': {
+    from: 'ec7129a8a191141d', frames: 1, drawn: [366,720], pages: {"table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"},
+    sizes: [
+      { file: 'under-one-arch-366.027399fd.webp', width: 366, height: 122, bytes: 8078 },
+      { file: 'under-one-arch-732.814c247d.webp', width: 732, height: 244, bytes: 26628 },
+      { file: 'under-one-arch-1440.1c0cd1a8.webp', width: 1440, height: 480, bytes: 82674 },
+    ],
+  },
+  'three-trails-in-ash': {
+    from: '4db01a2bd78860ce', frames: 1, drawn: [390,1240], pages: {"table/battle":"lazy"}, phone: {"table/battle":[390]},
+    sizes: [
+      { file: 'three-trails-in-ash-390.7d44b152.webp', width: 390, height: 130, bytes: 8092 },
+      { file: 'three-trails-in-ash-780.03f24928.webp', width: 780, height: 260, bytes: 29598 },
+      { file: 'three-trails-in-ash-1240.2b5e5d16.webp', width: 1240, height: 413, bytes: 73040 },
+      { file: 'three-trails-in-ash-2172.fbc533c1.webp', width: 2172, height: 724, bytes: 188142 },
+    ],
+  },
+  'cataclysm-eye': {
+    from: 'e2e4ce2ffcd233b0', frames: 1, drawn: [366], pages: {"table/battle":"lazy"}, phone: {"table/battle":[366]},
+    sizes: [
+      { file: 'cataclysm-eye-366.5bb06328.webp', width: 366, height: 122, bytes: 10250 },
+      { file: 'cataclysm-eye-732.deff6556.webp', width: 732, height: 244, bytes: 32708 },
+    ],
+  },
+  'great-rupture': {
+    from: '2959d0fd1b6155d6', frames: 1, drawn: [475,950], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'great-rupture-475.82bdaef9.webp', width: 475, height: 844, bytes: 41926 },
+      { file: 'great-rupture-941.164780d8.webp', width: 941, height: 1672, bytes: 114602 },
+    ],
+  },
+  'great-rupture-landscape': {
+    from: '5b1d666e5e018f82', frames: 1, drawn: [475,950], pages: {"table/home":"wide"},
+    sizes: [
+      { file: 'great-rupture-landscape-475.5f304d92.webp', width: 475, height: 267, bytes: 17520 },
+      { file: 'great-rupture-landscape-950.70253ece.webp', width: 950, height: 535, bytes: 56512 },
+      { file: 'great-rupture-landscape-1672.5a02645d.webp', width: 1672, height: 941, bytes: 130782 },
+    ],
+  },
+  'waiting-ripples': {
+    from: 'a5a3b6188d28e0ef', frames: 1, drawn: [358,680], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'waiting-ripples-358.1bb11d1f.webp', width: 358, height: 201, bytes: 5884 },
+      { file: 'waiting-ripples-716.78ede622.webp', width: 716, height: 403, bytes: 18712 },
+      { file: 'waiting-ripples-1360.641e14eb.webp', width: 1360, height: 765, bytes: 50532 },
+    ],
+  },
+  'after-the-impact': {
+    from: 'aa040a7524cc2a7e', frames: 1, drawn: [358,1280], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'after-the-impact-358.d528253e.webp', width: 358, height: 119, bytes: 4748 },
+      { file: 'after-the-impact-716.9a390197.webp', width: 716, height: 239, bytes: 15988 },
+      { file: 'after-the-impact-1280.56a99486.webp', width: 1280, height: 427, bytes: 43900 },
+      { file: 'after-the-impact-2172.cc05af19.webp', width: 2172, height: 724, bytes: 95288 },
+    ],
+  },
+  'last-one-standing': {
+    from: 'fcb44e1895344d4f', frames: 1, drawn: [354,1280], pages: {"table/leaderboard":"lazy"},
+    sizes: [
+      { file: 'last-one-standing-354.f050363e.webp', width: 354, height: 118, bytes: 7576 },
+      { file: 'last-one-standing-708.dcb21832.webp', width: 708, height: 236, bytes: 23796 },
+      { file: 'last-one-standing-1280.91ad71b1.webp', width: 1280, height: 427, bytes: 66888 },
+      { file: 'last-one-standing-2172.17d78264.webp', width: 2172, height: 724, bytes: 152872 },
+    ],
+  },
+  'combat-marks': {
+    from: 'e572e3e7ae7ab70b', frames: 1, drawn: [354,1280], pages: {"table/stats":"lazy"},
+    sizes: [
+      { file: 'combat-marks-354.05b4d5d7.webp', width: 354, height: 118, bytes: 6784 },
+      { file: 'combat-marks-708.d8a14483.webp', width: 708, height: 236, bytes: 24300 },
+      { file: 'combat-marks-1280.fea42371.webp', width: 1280, height: 427, bytes: 71264 },
+      { file: 'combat-marks-2172.4ef0443e.webp', width: 2172, height: 724, bytes: 167416 },
     ],
   },
   'lesson-base': {
