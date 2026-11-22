@@ -663,11 +663,11 @@ are drawn in CSS. What follows holds for the head of the statistics and of the r
   (its eyebrow on two). The eyebrow wraps more than the mock said (82, 90 and 70 px there). At 36 px the title would
   add a line to each.
 - **Room.** The hero over a head takes 16 px above it in place of 32 under 700 px wide, and 12 px between the band
-  and the detail line in place of the hero's 20. On the film before that gap, the pages measure: at 320, the ladder
-  856 px against 857, the statistics 616 against 571, the rulebook 29 px taller; at 390, the ladder 866 against 844,
-  the ladder and the statistics after a ranked game 45 px taller. At 320 the foot of Open a ranked table → was 4 px
-  below the first screen before the build and is 3 px below it after; the 8 px of the gap bring it inside. The
-  statistics' action ends about 541 px down at 320, inside the first screen.
+  and the detail line in place of the hero's 20; it does not wrap there. Against the film of `main` at `987374a`: at
+  320, the ladder is 848 px (857 before), the statistics 594 (571), the rulebook 20 px shorter; at 390, the ladder 856
+  (844), the ladder and the statistics after a ranked game 35 px taller. At 320 the foot of Open a ranked table → was
+  4 px below the first screen before the build, and is inside it with the 12 px gap. The statistics' action ends
+  inside the first screen too.
 - **Focus `50% 45%`**, the declaration's, where the showcase cuts it. At 390 the band shows the painting from 18% to
   77% of its height, the breath across its middle; at 320, 88 px tall, from 20% to 75%; on a wide screen, 120 px tall, from 38%
   to 54%, the line of the flame.
