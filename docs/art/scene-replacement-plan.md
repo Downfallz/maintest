@@ -1,6 +1,6 @@
 # Replacement art for repeated scenes
 
-The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass gives sixteen placements their own art. The first three are moments players can see back to back.
+The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Fourteen receive new art. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
 
 ## Review and delivery
 
@@ -19,9 +19,9 @@ The current painting names below are from the [source register](sources/pages/sc
 | 03 | Sign-out confirmation | predator-at-rest | One open amber eye beneath the Predator's armoured lid, on the right of the band. The panel after sign-out reveals the existing full painting of the resting creature. | [The eye still open](sources/pages/replacements/eye-still-open.webp) |
 | 04 | Friends window | predator-and-deathstalker | A reclining Brute and a watchful Predator share the shelter of one arch. Both look out in the same direction. Group their silhouettes on the right. | [Under one arch](sources/pages/replacements/under-one-arch.webp) |
 | 05 | Mutation Tree heading | brute-moult | Three trails diverge in wet ash. A deep Brute print, narrow Predator claw marks and a scar in the stone from a Warped share one point of origin. | [Three trails in the ash](sources/pages/replacements/three-trails-in-ash.webp) |
-| 06 | Mutation Tree, Brute column | ironhide-scar | A base Brute sets its forefoot down. Its shoulder plates compress under the load. Frame the shoulder in profile for the 48 px band. | Pending |
-| 07 | Mutation Tree, Predator column | blightweaver-pressure-sac | A base Predator coils before a leap. Three legs fold along its near flank. Its back gives the 48 px band a continuous silhouette. | Pending |
-| 08 | Mutation Tree, Warped column | warped-listening | Stone splinters rise toward a Warped's bony fingers. Frame the gap between hand and stone so the gesture reads at 48 px. | Pending |
+| 06 | Mutation Tree, Brute column | ironhide-scar | Keep the Ironhide eye beneath its scarred plates. | Keep existing |
+| 07 | Mutation Tree, Predator column | blightweaver-pressure-sac | Keep the Blightweaver pressure sac and the eye visible through the gas. | Keep existing |
+| 08 | Mutation Tree, Warped column | warped-listening | Complete the three family close-ups with the Cataclysm's eye in three-quarter view. Keep the forked ivory brow, an ember iris with a cold violet reflection, and a thin veil of mist. Frame the eye for the 48 px band. | Pending |
 | 09 | Lobby, featured game waiting on another player | warped-listening | Through a breach in the fog, one motionless creature stands on the far slope. Keep its silhouette legible at the featured space's phone crop. | Pending |
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | Pending |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | Pending |
