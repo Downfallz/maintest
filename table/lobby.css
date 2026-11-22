@@ -220,9 +220,12 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .inbox-items { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .inbox-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); }
 .inbox-item.turn { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); }
+.inbox-item.news { background: transparent; }
+.inbox-item.news.unread { background: var(--raised); }
+.inbox-new { color: var(--bone); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .inbox-text { display: grid; gap: 3px; min-width: 0; }
 .inbox-text strong { overflow-wrap: anywhere; }
-.inbox-text small { color: var(--muted); font-size: 12px; }
+.inbox-text small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .inbox-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex: none; }
 .inbox-actions :is(button, a) { min-height: 44px; }
 .inbox-actions .button-link { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); color: var(--gold); text-decoration: none; }

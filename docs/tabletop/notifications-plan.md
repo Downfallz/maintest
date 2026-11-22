@@ -1,6 +1,6 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 is built; each stage below is one
+Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 and N2 are built; each stage below is one
 pull request.
 
 ## What the owner asked for
@@ -154,6 +154,19 @@ Jobs tab show the counts and the queue's length.
 
 2. **N2, the bell shows the news.** `table/inbox.js` gains News and the unread count; the window marks read;
    the privacy sentences. Tests: `inbox.test.js`, `terminology.test.js`, the lobby's browser spec with push off.
+
+   *Built (2026-11-22)*: the bell's window lists **News** below what waits, newest first, each with its line, how long
+   ago and **Open →** (a link inside the site only), read from `GET /api/account/notices` beside the lobby's and the
+   friends' reads; a host that answers 404 keeps no notices and is not asked again. The badge counts what waits and
+   the unread news; the bell's name says both (`Notifications · 1 waiting · 2 new`). Opening the window marks the
+   news read up to the newest entry; what it showed stays drawn *New* until it closes, and a refused read is not
+   retried until the next opening. `POST /api/account/notices/read` now tells the account's other pages through the
+   lobby's stream when it marked any. The privacy sentences: Settings, Privacy, and the showcase's policy (English and
+   French), on what is kept, for how long, and the other player's name kept as it was. Left to N3: the Settings
+   line *The bell keeps everything…* belongs with the redrawn Notifications tab. Left to N4: the push offer.
+   `terminology.test.js` reads the new words (*News*, *New*, *Open →*) unchanged. An entry older than 90 days is
+   hidden, not erased at rest, until the account's next write: the privacy sentences say so, and a sweep is an
+   issue. The test that the API wires the read's stream joins #1109.
 3. **N3, one switch.** The account's notice preferences, "your turn" to the account's devices, Settings,
    Notifications redrawn, the match settings' section pointing to it. ADR (amends ADR 0118
    and 0120: a device holding both seats still gets nothing). Tests: Cli tests on a kind turned off (the bell

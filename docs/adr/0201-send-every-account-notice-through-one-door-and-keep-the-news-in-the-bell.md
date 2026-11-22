@@ -37,8 +37,10 @@ push still goes.
 - Good: two processes writing one account's devices or log both keep their change.
 - Bad: one more blob read and write for each notice that is news, in the request that causes it (under the lobby's
   claim gate for a seat taken or left), until the queue arrives (stage N5).
-- Bad: an entry names the other player as they were named then, and keeps that name for up to 90 days after they
-  rename or delete their account, as the push on a phone already does. N2 says so in the privacy sentences.
+- Bad: an entry names the other player as they were named then, and keeps that name after they rename or delete
+  their account, as the push on a phone already does. An entry older than 90 days is no longer listed, but it is
+  erased only at the account's next write or with the account: nothing sweeps a log at rest yet. N2 says so in the
+  privacy sentences.
 - Neutral: a host skips an entry of a kind it does not know, and its next write drops it: a new kind is sent only
   once every process (the API, the worker, the hourly job) reads it.
 - Neutral: push still goes to every device on every kind until the account's preferences (stage N3).
