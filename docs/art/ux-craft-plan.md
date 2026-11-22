@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX11 are built; UX12 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX12 are built; UX12b is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -656,6 +656,61 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     The pictures of the spellbook, the journal and the Mutation Tree are planned apart, in
     [their own plan](ux12-pictures-plan.md); the brief it writes, `journeys/windows.md`, is the one UX12 extends.
 
+    Split by the owner on 2026-11-22: UX12 builds the windows as one family (how each enters, leaves and gives
+    the focus back, Escape, the sheets' text at 11 px). Two parts of UX12 as written above are UX12b's: following a
+    mutation back onto the field, and the result as a moment.
+
+    **UX12b, a mutation followed back onto the field, and the result as a moment.** The second and third parts of
+    UX12 as written above: the pick confirmed, the tree closed, the creature in its new form and its new spell
+    found where the player can use or inspect them; the final exchange carried into the verdict and the next
+    action, a win and a loss reviewed, both read with the illustrations hidden. It extends `journeys/windows.md`.
+    Tests: a pick followed back to its creature and a cancelled pick back to its opener, in
+    `battle-mutations.spec.js`; the result's verdict and action in `battle-live.spec.js`; the journey's measures.
+
+    *Built (2026-11-22)*: UX12, the windows as one family. [The brief](journeys/windows.md) gained "The windows'
+    family", written by the designer from the walk, and a screen for a creature inspected, `inspect`, which the walk's
+    `windows` journey now films from the order strip's card, with a strip `inspect-window`.
+
+    The kit's window form (`table/identity.css`) now reaches the battle page. Its 15 modal windows fade in on
+    `--motion-normal` and, under full motion, rise 8 px; they leave faster, on `--motion-fast`. The three docked
+    sheets (`.docked-sheet`: the Command and Combat sheets, Upkeep) are part of the frame. They fade in where they
+    stand and leave at once, which answers what UX4 left: a closed sheet no longer stands over the field. The lessons'
+    own copy of the form in `battle.css` went.
+
+    The `inspect-window` strip showed the layout breaking during the fade out. The window's `flex-direction` applied
+    only while `[open]` was set, but `display` stays until the fade ends. Ten windows of the battle page and the lobby's own (since UX4) now keep
+    their layout off `[open]`.
+
+    `battle/src/windows.ts` holds the focus for all of them. Tab and Shift+Tab go round the top modal window's own
+    controls, where the browser let the focus leave the page past its last one. A window whose opener went, as
+    History opened from Help once Help has closed, gives the focus to the frame's control that reaches it again,
+    from a map in `live.ts`.
+
+    The windows' words are 11 px at least (`.6875rem`, a block at the foot of `battle.css`): eyebrows, the
+    inspection's tile labels, the Mutation Tree's stage and flags, the Tempo sheet's lines, the result's table and a
+    chip's `small`. Under 11 px, on the walk: 38 words to 0 on the Mutation Tree, 26 to 0 on the Tempo sheet, 20 to 0
+    on the result, 4 to 0 on a phase tip, 2 to 0 on the journal. Words, filled actions and targets did not move.
+    The designer's critique agrees.
+
+    Tests:
+    - `studio/browser/battle-windows.spec.js`, new: Settings, Help, History (from the bar and from Help), the
+      inspection, and the Mutation Tree (from its sheet and from the inspection, the window on top coming earlier in
+      the page). The focus goes in, Tab visits every control once and comes round, Shift+Tab from the first goes to
+      the last, Escape closes, the focus comes back. An opener that went sends the focus to the frame. No word is
+      under 11 px, and a heading above it keeps its size. Without `windows.ts`, four of its cases fail.
+    - `motion-kit.spec.js`: every window of the battle page enters and leaves and keeps its layout while it fades
+      out, which fails on the battle page and the admin panel without the change; a docked sheet fades in without
+      travel and leaves at once.
+
+    Left:
+    - The windows the spec does not open from its state (the result, the recap, Upkeep, the order, the opponent and
+      the reactions, Concede, the reveal, the lessons' two) are held by the shared code and by their own specs.
+    - The docked sheets do not hold Tab: they are not modal, and the field beside them stays usable.
+    - A strip films a window entering (`settings-window`) or leaving (`history-window`, `inspect-window`), never
+      both in one act: a frozen exit has nothing to fade back from.
+    - The craft book's word on how it feels at full speed waits for the owner's clip and UX14's phone.
+    - Following a mutation back onto the field and the result as a moment are UX12b's.
+
 13. **UX13, accessibility.** The checks the gate runs: axe on every screen and state of the five journeys (a
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
     one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
@@ -669,7 +724,7 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     joins the account. Tests: the host's routes for a guest and their limits; a guest reaches nothing but
     tutorial 1; the journey's measures. `security-reviewer` and `host-reviewer` read it.
 
-UX6 to UX12 and UX15 each end with the owner approving the journey's sheets before the pull request is reported
+UX6 to UX12b and UX15 each end with the owner approving the journey's sheets before the pull request is reported
 ready.
 
 **Evidence across UX7–UX12.** With each stage's existing journey sheets, include a short real-time phone-width

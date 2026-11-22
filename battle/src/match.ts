@@ -2,6 +2,7 @@ import { createBattleMatch } from '../../table/battle-match.js';
 import { rematchPlan } from '../../table/outcome.js';
 import { activateSeats } from '../../table/session.js';
 import { presentationPath } from '../../table/battle-preferences.js';
+import { wearResultHead } from '../../table/battle-scenes.js';
 import { resultCardElement, type ResultCard } from './result-card';
 
 type Controller = ReturnType<typeof createBattleMatch>;
@@ -130,6 +131,8 @@ async function playAgain(plan: NonNullable<Rematch>) {
 export function matchControls(controller: Controller, beforeOpen: () => void, rematch: () => Rematch = () => null,
   cues: () => Parameters<typeof resultCardElement>[1] = () => [], tutorial: () => { again: () => void; done: boolean; eyebrow: string; last: boolean; finished: boolean } | null = () => null) {
   const result = el<HTMLDialogElement>('match-dialog'), concede = el<HTMLDialogElement>('concede-dialog');
+  // The result opens on the ground the last blow left, above the verdict (S11); the painting loads when it opens.
+  wearResultHead(document);
   let roundsKey = '', resultKey = '', reportKey = '', cardKey = '', starting = false, rematchError = '';
   el('match-rematch').addEventListener('click', async () => {
     const plan = rematch();

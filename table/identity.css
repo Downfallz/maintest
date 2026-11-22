@@ -241,7 +241,7 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
    view; words that wrap make it taller rather than being cut. The scrim is opaque under the whole column of words
    and fades out beyond it. */
 .scene-head { display: grid; background-color: var(--soot); }
-.scene-head::after { content: ""; grid-area: 1 / 1; aspect-ratio: 3 / 1; max-height: 120px; }
+.scene-head::after { content: ""; grid-area: 1 / 1; aspect-ratio: 3 / 1; max-height: 120px; pointer-events: none; }
 .scene-head > .scene-words { grid-area: 1 / 1; align-self: end; max-width: 60%; padding: 10px 16px; }
 .scene-head[data-side="end"] > .scene-words { justify-self: end; text-align: end; }
 .scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 90%, transparent) 62%, transparent 100%); }
@@ -287,28 +287,34 @@ dialog .dialog-heading.scene-head { justify-content: normal; align-items: normal
 }
 
 /* 2. A window enters from its starting style and leaves through its fade: `display` and `overlay` wait for it.
-   It leaves faster than it enters. A browser without the features opens and closes it at once. Two are left
-   out. The classic table's mutation tree is always open, shown by `hidden` and dragged about, and keeps the fade
-   table.css gives it. The match's windows wait for UX12: its docked sheets are part of the frame, and the frame
-   moves when one opens. */
+   It leaves faster than it enters. A browser without the features opens and closes it at once. The match's
+   windows are one family with the others (UX12, docs/art/journeys/windows.md). Two kinds are left out. The
+   classic table's mutation tree is always open, shown by `hidden` and dragged about, and keeps the fade table.css
+   gives it. The match's docked sheets (`.docked-sheet`: the Command and Combat sheets, Upkeep) are part of the
+   frame: they fade in where they stand, without travel, and leave at once, so a closed sheet never stands over
+   the field the player goes back to. */
 @supports (transition-behavior: allow-discrete) {
-  body:not(.battle-page) dialog:not(.talent-window), body:not(.battle-page) dialog:not(.talent-window)::backdrop {
+  dialog:not(.talent-window, .docked-sheet), dialog:not(.talent-window, .docked-sheet)::backdrop {
     opacity: 0;
     transition: opacity var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
   }
-  body:not(.battle-page) dialog:not(.talent-window)[open], body:not(.battle-page) dialog:not(.talent-window)[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
+  dialog:not(.talent-window, .docked-sheet)[open], dialog:not(.talent-window, .docked-sheet)[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
   @starting-style {
-    body:not(.battle-page) dialog:not(.talent-window)[open], body:not(.battle-page) dialog:not(.talent-window)[open]::backdrop { opacity: 0; }
+    dialog:not(.talent-window, .docked-sheet)[open], dialog:not(.talent-window, .docked-sheet)[open]::backdrop { opacity: 0; }
   }
   @media (prefers-reduced-motion: no-preference) {
-    :root:not([data-motion="less"]) body:not(.battle-page) dialog:not(.talent-window) {
+    :root:not([data-motion="less"]) dialog:not(.talent-window, .docked-sheet) {
       translate: 0 8px;
       transition: opacity var(--motion-fast) var(--motion-exit), translate var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
     }
-    :root:not([data-motion="less"]) body:not(.battle-page) dialog:not(.talent-window)[open] { translate: 0 0; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
+    :root:not([data-motion="less"]) dialog:not(.talent-window, .docked-sheet)[open] { translate: 0 0; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
     @starting-style {
-      :root:not([data-motion="less"]) body:not(.battle-page) dialog:not(.talent-window)[open] { translate: 0 8px; }
+      :root:not([data-motion="less"]) dialog:not(.talent-window, .docked-sheet)[open] { translate: 0 8px; }
     }
+  }
+  .docked-sheet[open] { transition: opacity var(--motion-normal) var(--motion-enter); }
+  @starting-style {
+    .docked-sheet[open] { opacity: 0; }
   }
 }
 

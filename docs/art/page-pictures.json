@@ -11,8 +11,9 @@
     {
       "name": "brute-moult",
       "source": "docs/art/sources/pages/scenes/brute-moult.webp",
-      "drawn": [351, 1250],
-      "pages": { "showcase/mutations": "lazy" }
+      "drawn": [351, 1250, 390],
+      "pages": { "showcase/mutations": "lazy", "table/battle": "lazy" },
+      "phone": { "table/battle": [390] }
     },
     {
       "name": "predator-and-deathstalker",
@@ -27,27 +28,29 @@
       "source": "docs/art/sources/pages/scenes/warped-listening.webp",
       "drawn": [351, 1250, 390, 640, 358, 680],
       "focus": "50% 40%",
-      "pages": { "showcase/mutations": "lazy", "table/home": "lazy" },
-      "phone": { "table/home": [390, 358] }
+      "pages": { "showcase/mutations": "lazy", "table/home": "lazy", "table/battle": "lazy" },
+      "phone": { "table/home": [390, 358], "table/battle": [390] }
     },
     {
       "name": "crushing-stomp-aftermath",
       "source": "docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp",
-      "drawn": [358, 1280],
-      "pages": { "table/home": "lazy" }
+      "drawn": [358, 1280, 620],
+      "pages": { "table/home": "lazy", "table/battle": "lazy" },
+      "phone": { "table/battle": [358] }
     },
     {
       "name": "ironhide-scar",
       "source": "docs/art/sources/pages/scenes/ironhide-scar.webp",
-      "drawn": [323, 421, 354, 1280],
-      "pages": { "showcase/mutations": "lazy", "table/stats": "lazy" },
-      "phone": { "table/stats": [354] }
+      "drawn": [323, 421, 354, 1280, 366],
+      "pages": { "showcase/mutations": "lazy", "table/stats": "lazy", "table/battle": "lazy" },
+      "phone": { "table/stats": [354], "table/battle": [366] }
     },
     {
       "name": "blightweaver-pressure-sac",
       "source": "docs/art/sources/pages/scenes/blightweaver-pressure-sac.webp",
-      "drawn": [323, 421],
-      "pages": { "showcase/mutations": "lazy" }
+      "drawn": [323, 421, 366],
+      "pages": { "showcase/mutations": "lazy", "table/battle": "lazy" },
+      "phone": { "table/battle": [366] }
     },
     {
       "name": "parasite-under-slate",

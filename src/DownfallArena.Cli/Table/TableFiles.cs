@@ -182,6 +182,7 @@ internal sealed partial class TableFiles
             ["/battle-inspection.js"] = (Path.Combine(tableDirectory, "battle-inspection.js"), JavaScript),
             ["/battle-growth.js"] = (Path.Combine(tableDirectory, "battle-growth.js"), JavaScript),
             ["/battle-mutations.js"] = (Path.Combine(tableDirectory, "battle-mutations.js"), JavaScript),
+            ["/battle-scenes.js"] = (Path.Combine(tableDirectory, "battle-scenes.js"), JavaScript),
             ["/battle-targets.js"] = (Path.Combine(tableDirectory, "battle-targets.js"), JavaScript),
             ["/battle-spellbook.js"] = (Path.Combine(tableDirectory, "battle-spellbook.js"), JavaScript),
             ["/battle-planning.js"] = (Path.Combine(tableDirectory, "battle-planning.js"), JavaScript),

@@ -67,7 +67,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
     await expect(page.locator('#atlas-detail-body .atlas-choose')).toHaveCount(0);
     await fitsViewport(page, '#atlas-close, #atlas-creature');
     await page.screenshot({ path: info.outputPath('mutation-reference-real-host.png') });
-    await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').evaluate(dialog => dialog.open)) await page.keyboard.press('Escape');
     // The reveal read, the team's tempos open by themselves (ADR 0150) and acknowledge their asking, once; the
     // creature references read from here acknowledge nothing.
     await expect(page.locator('#planning-dialog')).toHaveAttribute('data-kind', 'Speed');

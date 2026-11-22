@@ -29,6 +29,7 @@ import { BattleScene } from './scene';
 import type { SceneFrame } from './types';
 import { creatureButton, placeHitTargets, speakCreature } from './targets';
 import { bootScene } from './boot';
+import { windowFamily } from './windows';
 import { combatControls } from './combat';
 import { createBattleCombat } from '../../table/battle-combat.js';
 import { planningControls, type Catalogue } from './planning';
@@ -1037,4 +1038,15 @@ $('inspect-dialog').addEventListener('close', () => {
   if (focused && focused !== document.body && !$('inspect-dialog').contains(focused)) return;
   const node = inspected === null ? undefined : nodes.get(inspected);
   (node ?? (!$('playback-pacing').hidden ? $('reading-open') : undefined))?.focus({ preventScroll: true });
+});
+// The windows' one contract (UX12): Tab stays in a modal window, and a window whose opener went gives the focus to
+// the frame's control that reaches it again. Registered last, so each window's own close handler runs first.
+windowFamily({
+  'settings-dialog': ['#settings'], 'concede-dialog': ['#settings'], 'help-dialog': ['#help-open'],
+  'history-dialog': ['#history-open', '#help-open'], 'order-dialog': ['#order-open', '#recap-open'],
+  'atlas-dialog': ['#mutation-atlas-open', '#planning-open', '#help-open'], 'growth-dialog': ['#growth-receipt [data-growth-open]', '#help-open'],
+  'opponent-dialog': ['#opponent-open'], 'reactions-dialog': ['#reactions-open', '#opponent-open'],
+  'recap-dialog': ['#recap-open'], 'result-dialog': ['#playback-result', '#waiting-last', '#match-open'],
+  'match-dialog': ['#match-open'], 'practice-brief': ['#practice-brief-open'],
+  'inspect-dialog': ['#reading-open', '#recap-open'], 'concept-dialog': ['#recap-open'], 'upkeep-dialog': ['#recap-open'],
 });

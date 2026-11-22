@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer, matchResult, withoutCanvas } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
+import { servePageArt } from './battle-spells-fixture.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
   currentInitiative: 5, isAlive: health > 0, conditions: [], knownSpells: [], acquiredTiers: [] });
@@ -80,6 +81,32 @@ for (const [winner, reason, title] of [['player1', 'Elimination', 'Victory'], ['
     expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
   });
 }
+test('the result opens on the ground the last blow left, the verdict on its dark side and the close on its own fill', async ({ page }, info) => {
+  await servePageArt(page);
+  const h = await mount(page); await matchResult(page);
+  // docs/art/scene-paintings-plan.md, S11: a head above the verdict, its words on the end side, the crest gone.
+  const header = page.locator('#match-dialog > .match-header');
+  await expect(header).toHaveClass(/scene-head/); await expect(header).toHaveAttribute('data-side', 'end');
+  const picture = header.locator('img[data-scene]');
+  await expect(picture).toHaveAttribute('src', /page-art\/crushing-stomp-aftermath-/); await expect(picture).toHaveAttribute('alt', '');
+  await expect(picture).toHaveAttribute('loading', 'lazy');
+  await expect.poll(() => picture.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+  // Its sizes are the window's real width (a dialog is held 2em and 6 px inside the screen): a phone takes the file the
+  // budget counts, never the wide screen's.
+  const drawn = await picture.evaluate(image => [image.getBoundingClientRect().width, Number(/-(\d+)\.[0-9a-f]+\.webp$/.exec(image.currentSrc)[1]), devicePixelRatio]);
+  expect(drawn[1]).toBeGreaterThanOrEqual(Math.round(drawn[0] * drawn[2] * 0.9));
+  expect(drawn[1]).toBeLessThanOrEqual(Math.max(drawn[0] * drawn[2] * 1.25, 620));
+  await expect(header.locator('.match-crest')).toBeHidden(); await expect(page.locator('#match-title')).toHaveText('Victory');
+  const [close, title] = await Promise.all([page.locator('#match-dialog .match-close').boundingBox(), page.locator('#match-title').boundingBox()]);
+  expect(close.x + close.width).toBeLessThanOrEqual(title.x);
+  expect(await page.locator('#match-dialog .match-close').evaluate(one => { const box = one.getBoundingClientRect(); return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) === one; })).toBe(true);
+  // The words keep inside the band at every width: they wrap rather than run off its edge.
+  const [words, band] = await Promise.all([header.locator('.scene-words').boundingBox(), header.boundingBox()]);
+  expect(words.x + words.width).toBeLessThanOrEqual(band.x + band.width + 1);
+  await fitsViewport(page, '#match-replay, #match-lobby, #match-dialog [aria-label="Close match result"]');
+  await page.screenshot({ path: info.outputPath('result-head.png') });
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
 // A match's public feed as the host serves it: three casts, one fully blocked, and an upkeep whose bleed finishes a creature.
 const hit = (sequence, actor, target, amount, { blocked = 0, dies = false, bleed = false } = {}) => ({ sequence, round: 2, event: { kind: 'CombatActionResolved',
   resolution: { action: { actor, spell: 'spell:strike:v1', targets: [target] }, fizzled: false, isCritical: amount > 8,

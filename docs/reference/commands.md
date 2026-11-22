@@ -118,7 +118,7 @@ browser suite's `battle-lab.spec.js`, `battle-live.spec.js`, `battle-combat.spec
 `battle-mutations.spec.js`, `battle-evolution.spec.js`, `battle-tempo.spec.js`, `battle-spellbook.spec.js`,
 `battle-pacing.spec.js`, `battle-growth.spec.js`, `battle-order.spec.js`, `battle-targets.spec.js`,
 `battle-inspection.spec.js`, `battle-services.spec.js`, `battle-parity.spec.js`, `battle-reactions.spec.js`,
-`battle-tutorial.spec.js` and `battle-release.spec.js`, which live under `studio/browser/` (battle/README.md, studio/README.md).
+`battle-tutorial.spec.js`, `battle-windows.spec.js` and `battle-release.spec.js`, which live under `studio/browser/` (battle/README.md, studio/README.md).
 
 CI runs these, then sends the build and the coverage reports (C# and Python) to SonarCloud with the scanner for
 .NET (`.config/dotnet-tools.json`). The Sonar quality gate covers C#, Python, shell scripts, and workflows, and

@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S10 are built; S11 is next.
+questions at the end). S1 to S11 are built: every scene has its pages.
 
 ## What the owner asked for
 
@@ -352,11 +352,36 @@ result in `battle/src` with UX12.
     to its band, is 79,800 bytes), `table/rules` to 116 KiB, `table/stats` to 800 KiB, each with S9's sign-out head; `table/offline` is 24 KiB, its
     plate asked for first. Each painting gains a 1280 px file for the band on a wide screen. The walk's `contrast` reads 7.27:1 at
     the least, at both widths; at 320 the bands are 88, 120 and 102 px. Left: the worker keeps the kit but not the rulebook's head
-    painting, so its band is soot offline; the French rulebook's band was not filmed; the rulebook's own measures (words
-    under 11 px, targets under 44) are its brief's **Left**.
+    painting, so its band is soot offline, and the French rulebook's band was not filmed (#1060); the rulebook's own
+    measures, words under 11 px and targets under 44, are its brief's **Left** (#1059); `offline.js` is refreshed only
+    when the worker installs again (#1061). A first build left the rulebook's deep links 135 px short of their section
+    on a phone; #1058 fixed it.
 11. **S11, the Mutation Tree and the result.** The tree's head and its column heads, the result's head, with
     UX12's windows (its brief, `windows.md`). Tests: `battle-mutations.spec.js`, the battle's budget, the
     measures.
+
+    *Built (2026-11-22)*: `table/battle-scenes.js` holds the match's scenes. The Mutation Tree's heading becomes a band
+    (`.atlas-band`) that wears `brute-moult`, its eyebrow, title and progress line on the start side, Close in the far
+    corner; the list of creatures sits under the band on a phone, in its lower end corner from 820 by 601 px, and beside
+    the band on a wide, short screen. Each
+    family column opens on a band of 48 px under its coloured rule, its sigil, name and progress on the start side:
+    Brute on `ironhide-scar` at `50% 75%`, Predator on `blightweaver-pressure-sac` at `50% 50%`, Warped on
+    `warped-listening` at `50% 40%`. The result's header wears `crushing-stomp-aftermath`, its verdict on the end side,
+    the × in the start corner on a soot fill; the crest gives way to the band. No word changes. UX12 is not built: the
+    windows keep their own entrance, none.
+
+    A head's `::after`, the band's room, shared a cell with the Close and took its taps; `identity.css` now gives it
+    `pointer-events: none`, and the specs press each control at its centre. `table/battle`'s `all` rose from 402 to
+    512 KiB (520,212 bytes measured, 108,598 more): the four bands of the tree (92,514) and the result's (16,084), each
+    at twice the density of a phone. Every one is lazy and none loads with the pick. A column is 366 px on a 390 px
+    phone, so the Ironhide's 354 px file became a 366 px one, which the statistics' head now shares (1,008 bytes more
+    there). The result's `sizes` subtracts the 2em and 6 px a browser keeps around a dialog: it is 352 px wide on that
+    phone, not 366, and a first build fetched the wide screen's 1280 px file.
+
+    The `windows` journey films the result as Walker concedes after the journal (`match-result`, briefed in
+    `windows.md`). The walk's `contrast` reads 7.69:1 at the least on `mutation-tree` and 9.06:1 on `match-result`, at
+    both widths; at 320 by 568 Choose Brute stays in view under the band. Left: the families' bands
+    were read on the specs' shots at 320, 390 and 1440 px, not on the walk's sheet, which films the first column only.
 
 ## Questions the owner settled (2026-11-21)
 

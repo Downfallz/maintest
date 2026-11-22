@@ -63,7 +63,7 @@
     <div id="order-body"><p id="order-context"></p><details id="order-rules"><summary>How the order is decided</summary><p id="order-explanation"></p><p id="order-roll-note"></p></details><ol id="order-list"></ol></div>
     <footer class="order-footer"><button id="order-close" class="primary" type="button">Continue</button></footer>
   </dialog>
-  <dialog id="upkeep-dialog" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
+  <dialog id="upkeep-dialog" class="docked-sheet" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
     <header class="upkeep-header"><div><h2 id="upkeep-title"></h2><p id="upkeep-intro"></p></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
     <div class="upkeep-tools"><button id="upkeep-details" type="button" aria-controls="upkeep-body" aria-expanded="false">Details</button><button type="button" data-history-open>History</button></div>
     <div id="upkeep-body" class="upkeep-scroll" hidden></div>
@@ -117,7 +117,7 @@
     <footer class="help-footer"><label><input id="help-mute" type="checkbox"> Do not show phase tips in this game</label><p>Help stays available. History keeps your match events.</p></footer>
   </dialog>
   <dialog id="atlas-dialog" aria-labelledby="atlas-title">
-    <header class="atlas-header"><div><p class="eyebrow" id="atlas-eyebrow">MUTATION TREE</p><h2 id="atlas-title">Mutation tree</h2><p id="atlas-progress" hidden></p></div><select id="atlas-creature" aria-label="Creature" hidden></select><button id="atlas-close" type="button">Close</button></header>
+    <header class="atlas-header"><div class="atlas-band"><div class="atlas-words"><p class="eyebrow" id="atlas-eyebrow">MUTATION TREE</p><h2 id="atlas-title">Mutation tree</h2><p id="atlas-progress" hidden></p></div><button id="atlas-close" type="button">Close</button></div><select id="atlas-creature" aria-label="Creature" hidden></select></header>
     <div class="atlas-main"><div id="atlas-board" aria-label="Mutation families"></div><button id="atlas-prev" class="atlas-swipe" data-direction="prev" type="button" aria-label="Previous mutation family" hidden></button><button id="atlas-next" class="atlas-swipe" data-direction="next" type="button" aria-label="Next mutation family" hidden></button>
     <aside id="atlas-detail" aria-label="Mutation details" hidden><button id="atlas-detail-close" type="button" aria-label="Back to the tree">×</button><div id="atlas-detail-body"></div></aside></div>
   </dialog>
@@ -136,7 +136,7 @@
     <section id="history-review" aria-label="Recorded event inspection" hidden><nav class="history-review-controls"><button id="history-back" type="button">Back to events</button><button id="history-previous" type="button">Previous</button><button id="history-next" type="button">Next</button><button id="history-before" type="button">Before</button><button id="history-after" type="button">After</button></nav><div id="history-detail"></div></section></div>
     <footer class="history-footer"><button id="history-new" type="button" hidden>Latest</button><button id="history-earlier" type="button">Load earlier rounds</button><button id="history-latest" type="button">Latest</button><p id="history-load-error" role="alert"></p><p id="history-limit"></p></footer>
   </dialog>
-  <dialog id="planning-dialog" aria-labelledby="planning-heading">
+  <dialog id="planning-dialog" class="docked-sheet" aria-labelledby="planning-heading">
     <div class="planning-header"><button type="button" data-help-open class="history-reference">Help</button><button type="button" data-history-open class="history-reference">History</button><p class="eyebrow">YOUR COMMAND</p><div id="planning-tools" class="planning-tools"></div><button id="planning-order" type="button" data-order-open hidden>Inspect turn order</button><h2 id="planning-heading">Your choice</h2><p id="planning-help"></p>
     <div id="planning-creatures" aria-label="Choose a creature"></div></div><div id="planning-choices"></div>
     <section id="mutation-preview-region" aria-label="Selected mutation preview" hidden></section>
@@ -155,7 +155,7 @@
     <div id="result-card" class="result-body"></div><p id="result-text" class="unseen" aria-hidden="true"></p>
     <footer class="result-footer"><button type="button" data-history-open>Open match history</button></footer>
   </dialog>
-  <dialog id="combat-dialog" aria-labelledby="combat-heading">
+  <dialog id="combat-dialog" class="docked-sheet" aria-labelledby="combat-heading">
     <button id="combat-dialog-close" type="button" class="close" aria-label="Close spell choices">×</button>
     <h2 id="combat-heading">Choose a spell</h2>
     <div id="combat-actor" class="combat-actor"></div>
