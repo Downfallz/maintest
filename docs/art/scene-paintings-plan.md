@@ -282,8 +282,9 @@ result in `battle/src` with UX12.
    way to the band.
 
    One file serves all three on a phone, 68,750 bytes at twice the density, more than the plan's 15 to 26 KB: this
-   painting is the heaviest of the ten. `table/home`, `table/stats` and `table/battle` raised their `all` by that
-   much; `table/leaderboard` and `table/rules` gained a budget of 68 KiB.
+   painting is the heaviest of the ten. The pages that draw it count those bytes: `table/home`, `table/stats` and
+   `table/battle` raised their `all` to 266, 762 and 382 KiB (their slack took the rest), and `table/leaderboard` and
+   `table/rules` gained a budget of 68 KiB.
 
    The walk's `contrast` reads 7.67:1 at the least on the five screens, at both widths. At 320 px the Friends window
    is 389 px tall (409 before) and the Create window 708 (716). Left: the Create window is still taller than 568 px at

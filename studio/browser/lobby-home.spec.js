@@ -371,7 +371,7 @@ async function closeInTheFarCorner(page, heading, close) {
   expect(band.height).toBeLessThanOrEqual(page.viewportSize().height < 600 ? 64 + 1 : 120 + 1);
 }
 
-test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics and the ladder', async ({ page }) => {
+test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics, the ladder and the rules', async ({ page }) => {
   const state = await home(page);
   for (const path of ['/table/lobby.html', '/table/stats.html', '/table/leaderboard.html', '/table/rules.html']) {
     if (path !== '/table/lobby.html') await page.goto(path);

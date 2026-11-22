@@ -166,8 +166,8 @@ No painting answers "who could be my friend?", and none is drawn in the list: a 
   `predator-and-deathstalker` is drawn 366 px wide at 390 and 296 at 320. The 732 px file goes to a phone at twice
   the density, 68,750 bytes; the 366 px file goes at the walk's density, 20,744 bytes (`table/page-art.js`). The same
   file at both widths. On a wide screen the window is up to 720 px wide and takes a larger file. The budget is
-  counted at 390, so it does not see that file. The pages that draw the head raise their `all` by 68,750 bytes:
-  table/home, table/stats and table/battle. table/leaderboard and table/rules gain a budget of 69,632 bytes (68 KiB). The walk's
+  counted at 390, so it does not see that file. The pages that draw the head count those 68,750 bytes: table/home,
+  table/stats and table/battle raise their `all` to 266, 762 and 382 KiB. table/leaderboard and table/rules gain a budget of 69,632 bytes (68 KiB). The walk's
   `pictures` count one more `img` and 0 oversized.
 - **Largest paint**: the page's own, not the window's; no paint was measured for the window.
 - **Shift**: 0.00 at both widths. The band holds its 3:1 room before the painting arrives, and the window is in the
