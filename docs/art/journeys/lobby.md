@@ -6,6 +6,17 @@ is open. UX9 of [the pages' craft plan](../ux-craft-plan.md) builds it, with its
 the place a player returns to" and its table of four states. A proposal until the owner has seen the journey's
 sheets.
 
+The returning player's first screen now shows the Deathstalker and Ethereal duel in the mist, edge to edge on a
+phone. The two buttons sit over the dark foreground, at the foot of the space; links to Your games and Open seats
+sit below them. With nothing to resume or learn, the eyebrow is `NEW BATTLE · BETA`, the title "Choose your
+opponent" and there is no detail: **Play a bot →** opens the Create window on Solo, and Multiplayer, the quiet
+button, opens it on PvP. The same duel stays behind a game's rounds 1 to 5; from round 6 the battle's breach and sky
+take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
+appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint: the
+first-paint budget of the home rises to 164 KiB (`docs/art/page-budget.json`). Where this paragraph and the
+UX9 text below disagree, this paragraph holds; the measurements and storyboards below record the previous panel
+layout.
+
 Which sections the home has, and in what order, is `docs/tabletop/home-navigation.md`'s; who may play,
 `docs/tabletop/accounts-plan.md`'s; what a lesson teaches and when it is done, `docs/tabletop/onboarding-plan.md`'s
 (ADR 0187); the Learn to play section is [the lessons' brief](lessons.md#learn-to-play-home-after-the-lessons)'s,

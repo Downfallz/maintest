@@ -260,6 +260,15 @@ export const PAGE_ART = {
       { file: 'specimen-warped-revenant-brute-930.f20f8a23.webp', width: 930, height: 620, bytes: 248450 },
     ],
   },
+  'mist-duel': {
+    from: '8d7d7cc5d8c3d5db', frames: 1, drawn: [390,900], pages: {"table/home":"largest"},
+    sizes: [
+      { file: 'mist-duel-390.a2aae5a3.webp', width: 390, height: 693, bytes: 26150 },
+      { file: 'mist-duel-780.4a415ea2.webp', width: 780, height: 1387, bytes: 87706 },
+      { file: 'mist-duel-900.e84f90a0.webp', width: 900, height: 1600, bytes: 108176 },
+      { file: 'mist-duel-1800.cec2f212.webp', width: 1800, height: 3200, bytes: 242200 },
+    ],
+  },
   'home-ground-eclipse': {
     from: 'a2a31537b442b4d2', frames: 1, drawn: [390,640], pages: {"table/home":"largest"},
     sizes: [

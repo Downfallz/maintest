@@ -9,12 +9,13 @@ import { pictureElement } from './picture.js';
 import { writeArrival } from './arrival.js';
 
 /**
- * The ground a game is on, by its round, as the battle lays its plates (battle/src/battle-horizon.ts): the eclipse,
- * the breach from round 6, the shattered sky from round 10. Each is declared for the home in docs/art/page-pictures.json.
+ * The ground a game is on, by its round: the lobby's duel in the mist for rounds 1 to 5 (not the battle's eclipse, on
+ * purpose), then the battle's plates (battle/src/battle-horizon.ts), the breach from round 6, the shattered sky from round 10. Each is declared for the home in docs/art/page-pictures.json.
  */
-const GROUNDS = Object.freeze([[10, 'home-ground-sky'], [6, 'home-ground-breach'], [1, 'home-ground-eclipse']]);
+const DUEL = 'mist-duel';
+const GROUNDS = Object.freeze([[10, 'home-ground-sky'], [6, 'home-ground-breach'], [1, DUEL]]);
 export function groundOf(round) {
-  return GROUNDS.find(([from]) => (Number.isInteger(round) ? round : 1) >= from)?.[1] ?? 'home-ground-eclipse';
+  return GROUNDS.find(([from]) => (Number.isInteger(round) ? round : 1) >= from)?.[1] ?? DUEL;
 }
 
 /**
@@ -23,8 +24,11 @@ export function groundOf(round) {
  */
 const LISTENING = 'warped-listening';
 
+/** A lesson stands on the battle's eclipse, the ground its first round is played on. */
+const LESSON_GROUND = 'home-ground-eclipse';
+
 /**
- * The ancestral creature: a new battle's, and the first lesson's. The same painting as the first lesson's card, but
+ * The ancestral creature: the first lesson's. The same painting as the first lesson's card, but
  * asked for with the featured space's ground, before Learn to play's lazy ones.
  */
 const ANCESTRAL = 'home-ancestral';
@@ -108,16 +112,16 @@ function gameView(choice) {
 function lessonView({ lesson }, started) {
   const action = started || lesson.done ? 'Continue →' : 'Play →';
   return { kind: 'lesson', id: lesson.id, eyebrow: lesson.place, title: lesson.title, status: '', detail: lesson.goal ?? '', action,
-    label: labelOf(action, `${lesson.title}, ${lesson.place.toLowerCase()}`), ground: groundOf(1), creature: creatureOf(lesson.picture), link: lesson.link };
+    label: labelOf(action, `${lesson.title}, ${lesson.place.toLowerCase()}`), ground: LESSON_GROUND, creature: creatureOf(lesson.picture), link: lesson.link };
 }
 
 /** What the featured space says and shows for a choice. `started` is whether the account has done a lesson yet. */
 export function featuredView(choice, { started = false } = {}) {
   if (choice.kind === 'turn' || choice.kind === 'waiting') return gameView(choice);
   if (choice.kind === 'lesson') return lessonView(choice, started);
-  // A match started the quickest way, a bot answering at once; New battle, just under it, opens every other way.
-  return { kind: 'new', id: null, eyebrow: 'A new battle', title: 'Your next battle.', status: '', detail: 'A bot answers at once. Or challenge a friend, or take an open seat.',
-    action: 'Play a bot →', label: 'Play a bot', ground: groundOf(1), creature: ANCESTRAL, link: null };
+  // A match started the quickest way, a bot answering at once; Multiplayer, just under it, opens every other way.
+  return { kind: 'new', id: null, eyebrow: 'New battle · Beta', title: 'Choose your opponent', status: '', detail: '',
+    action: 'Play a bot →', label: 'Play a bot', ground: DUEL, creature: null, link: null };
 }
 
 /**
@@ -149,8 +153,13 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     if (view.ground === drawnGround && view.creature === drawnCreature) return;
     drawnGround = view.ground; drawnCreature = view.creature;
     // Decoration: the title says what the game or the lesson is. Each holds its room by its width and height.
-    // The one quiet movement is the creature's breath; a ground alone stays still, since a landscape that swells reads as a zoom.
-    const pictures = [pictureElement(doc, view.ground, { page: 'table/home', class: 'featured-ground', sizes: '(min-width: 761px) 640px, 100vw' })];
+    // The painting stays still. Only the mist and a lesson's creature move, under the motion preferences, paused behind a window.
+    const pictures = [pictureElement(doc, view.ground, { page: 'table/home', class: 'featured-ground', sizes: '(min-width: 1280px) 900px, (min-width: 761px) 72vw, 100vw' })];
+    if (view.ground === DUEL) {
+      const mist = doc.createElement('span');
+      mist.className = 'featured-mist motion-breath';
+      pictures.push(mist);
+    }
     if (view.creature) pictures.push(pictureElement(doc, view.creature, { page: 'table/home', class: 'featured-creature motion-breath', sizes: '150px' }));
     el('featured-art').replaceChildren(...pictures);
     ambience();
@@ -165,6 +174,7 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     root.removeAttribute('aria-busy');
     el('featured-eyebrow').textContent = view.eyebrow;
     el('welcome').textContent = view.title;
+    el('new-table').textContent = view.kind === 'new' ? 'Multiplayer' : '＋ New battle';
     el('featured-detail').textContent = view.detail;
     // Each number kept on one line with its unit.
     const shownStatus = view.status.replace(/(\d) /g, '$1\u00a0');
@@ -230,8 +240,10 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
 
   return {
     /**
-     * Someone can play here: the eclipse is asked for now, before the lists are read, since most states stand on it
-     * (the largest paint of the home). A guest's door never loads it. A later round's ground replaces it.
+     * Someone can play here: the duel is asked for now, before the lists are read, since a returning player's states
+     * stand on it (the largest paint of the home). A guest's door never loads it. A later round's ground replaces it,
+     * and so does a lesson's eclipse: an account with a lesson still to play pays for both, a cost accepted so that
+     * the returning player's first paint does not wait for the lists.
      */
     playable() { if (drawnGround === null && root.dataset.featured === 'loading') art({ ground: groundOf(1), creature: null }); },
     /** The table on show, or null: the lobby leaves out of its Your turn band a lone turn already featured. */
