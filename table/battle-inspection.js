@@ -81,8 +81,11 @@ export function spokenCues(...parts) {
 // nothing to it.
 export function creatureSpoken(creature, { cues = '', tag = '', offered = false, targeting = false } = {}) {
   const initiative = creature.currentInitiative == null ? 'initiative not set yet' : `${creature.currentInitiative} initiative`;
-  const press = offered ? 'Choose a mutation for this creature' : targeting ? '' : 'Inspect creature';
+  let press = 'Inspect creature';
+  if (offered) press = 'Choose a mutation for this creature';
+  else if (targeting) press = '';
   const said = [spokenCues(cues, tag), press].filter(Boolean).join('. ');
-  return `${creature.enemy ? 'of the opponent' : 'of your team'}, ${creature.health} of ${creature.maxHealth} HP, ${creature.energy} energy, ` +
-    `${creature.totalDefense} defense, ${initiative}.${said ? ` ${said}.` : ''}`;
+  const side = creature.enemy ? 'of the opponent' : 'of your team';
+  const numbers = `${side}, ${creature.health} of ${creature.maxHealth} HP, ${creature.energy} energy, ${creature.totalDefense} defense, ${initiative}.`;
+  return said ? `${numbers} ${said}.` : numbers;
 }
