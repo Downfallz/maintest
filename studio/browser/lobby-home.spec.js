@@ -10,8 +10,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null } = {}) {
-  const state = { holdInvitation, news, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null } = {}) {
+  const state = { holdInvitation, news, holdFirstNews, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -101,7 +101,13 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     }
     if (path === '/api/lobby/push') return json({ publicKey: null });
     // The account's notice log (ADR 0201), when the test keeps one: listed, then marked read up to an id.
-    if (path === '/api/account/notices' && state.news) { state.newsReads = (state.newsReads ?? 0) + 1; return json({ notices: state.news, unread: state.news.filter(one => !one.read).length }); }
+    if (path === '/api/account/notices' && state.news) {
+      state.newsReads = (state.newsReads ?? 0) + 1;
+      // The list as it stood when asked: a read held back answers with it later.
+      const asked = state.news;
+      if (state.newsReads === 1 && state.holdFirstNews) await state.holdFirstNews;
+      return json({ notices: asked, unread: asked.filter(one => !one.read).length });
+    }
     if (path === '/api/account/notices/read' && state.news) {
       const { upTo } = route.request().postDataJSON();
       state.readUpTo = [...(state.readUpTo ?? []), upTo];
@@ -1105,6 +1111,25 @@ test('a read the host refused keeps the news counted, and is asked again only wh
   await bell.click();
   await expect.poll(() => state.readUpTo).toEqual([7, 7]);
   await expect(badge).toBeHidden();
+  expect(state.errors).toEqual([]);
+});
+
+test('a read of the news that answers after a later one cannot bring back what another page marked read', async ({ page }) => {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const news = [{ id: 9, kind: 'match-over', title: 'Defeat', body: '', url: '/lobby', at: new Date().toISOString(), read: false }];
+  const state = await home(page, { incoming: [], games: [], news, holdFirstNews: held });
+  await expect.poll(() => state.newsReads).toBe(1);
+  // Another page marked it read; this page reads again (the bell opened) and gets the newer list first.
+  state.news = state.news.map(one => ({ ...one, read: true }));
+  await page.locator('#inbox-open').click();
+  await expect.poll(() => state.newsReads).toBe(2);
+  await expect(page.locator('#inbox-dialog .inbox-item.news')).toHaveCount(1);
+  release();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#inbox-badge')).toBeHidden();
+  await expect(page.locator('#inbox-dialog .inbox-item.news.unread')).toHaveCount(0);
+  expect(state.readUpTo).toBeUndefined();
   expect(state.errors).toEqual([]);
 });
 

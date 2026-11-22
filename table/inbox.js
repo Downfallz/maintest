@@ -101,7 +101,7 @@ export function bellLabel(waiting, unread = 0) {
  */
 export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, reopen = signedInChanged, fresh: freshFor = 5000, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
-  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, readThrough = 0, fed = 0, busy = false, drawn = '';
+  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, readThrough = 0, issued = 0, applied = 0, fed = 0, busy = false, drawn = '';
   // The news unread when the window showed it: marked new while the window stays open, though the host has it read.
   const shownNew = new Set();
   const dialog = () => doc.getElementById('inbox-dialog');
@@ -240,10 +240,12 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
   }
   async function refresh(force = false) {
     if (!account) { mine = []; invitations = []; friends = null; render(); return; }
-    const reading = account.id, fresh = !force && Date.now() - fed < freshFor;
+    const reading = account.id, fresh = !force && Date.now() - fed < freshFor, order = ++issued;
     try {
       const [games, list, kept] = await Promise.all([fresh ? null : request('/api/lobby/mine'), request('/api/friends'), readNews()]);
-      if (account?.id !== reading) return;
+      // A read that answers after a later one was drawn is older than what the bell shows: dropped.
+      if (account?.id !== reading || order < applied) return;
+      applied = order;
       if (games) { mine = games.tables ?? []; invitations = games.invitations ?? []; }
       friends = list;
       // A list read before a mark the host confirmed may answer after it: what was marked stays read.
