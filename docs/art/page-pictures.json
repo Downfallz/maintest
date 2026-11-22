@@ -17,9 +17,10 @@
     {
       "name": "predator-and-deathstalker",
       "source": "docs/art/sources/pages/scenes/predator-and-deathstalker.webp",
-      "drawn": [351, 1250],
+      "drawn": [351, 1250, 366, 358, 480, 720],
       "focus": "50% 55%",
-      "pages": { "showcase/mutations": "lazy" }
+      "pages": { "showcase/mutations": "lazy", "table/home": "lazy", "table/stats": "lazy", "table/battle": "lazy", "table/leaderboard": "lazy", "table/rules": "lazy" },
+      "phone": { "table/home": [366, 358], "table/stats": [366], "table/battle": [366], "table/leaderboard": [366], "table/rules": [366] }
     },
     {
       "name": "warped-listening",

@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S6 are built; S7 is next.
+questions at the end). S1 to S7 are built; S8 is next.
 
 ## What the owner asked for
 
@@ -114,7 +114,7 @@ declares it once, at the size it draws it. In the app a scene takes one of three
 | Screen (its brief) | Scene | Form | Answers |
 | --- | --- | --- | --- |
 | The Create window opened on a friend (`friend-invited`, `pages.md`) | `predator-and-deathstalker`, focus on the pool | head | I am asking someone to meet me. |
-| An invitation's card in the lobby, "A friend kept a seat for you" (`lobby.md`, new screen) | `predator-and-deathstalker` | ground | Someone asked me to meet them. |
+| An invitation's card in the lobby, "A friend kept a seat for you" (`home-invitation`, `pages.md`) | `predator-and-deathstalker` | ground | Someone asked me to meet them. |
 | The Friends window, every state (`friends-*`, `pages.md`) | `predator-and-deathstalker`, focus on the Deathstalker's bank | head | These are the players I meet. |
 | A game that waits on the opponent (`home-waiting`, `lobby.md`) | `warped-listening` | ground, in place of the ground by round | I am waiting; something listens on the other side. |
 | A game that ended (`home-game-ended`, `lobby.md`) | `crushing-stomp-aftermath` | ground, in place of the ground by round | This one is over. |
@@ -269,6 +269,28 @@ result in `battle/src` with UX12.
 7. **S7, invitations and friends.** A `/ux-pass` on the Create window opened on a friend, the invitation card,
    the Friends window. Tests: `studio/browser/lobby-home.spec.js` and the friends' specs, the budgets, the
    measures.
+
+   *Built (2026-11-22)*: `wearScene` and `undressScene` of `table/picture.js` dress an element a page already holds,
+   its children left in place. The Friends window's heading wears `predator-and-deathstalker` as its head, words on the
+   start side, cut at `75% 35%` on the Deathstalker's bank, its × in the far corner on its own fill. It does so on the
+   home, the statistics, the ladder, the rules and the battle (`FRIENDS_HEAD_PAGES` of `table/navigation.js`); the
+   admin page and the archived classic table keep the plain heading. The header's windows now have the home's frame
+   on every page, so the band runs edge to edge there too. The Create window wears the same head, cut at `50% 75%` on
+   the pool, only when it is opened on a friend. The invitation's card wears it as its ground, not drawn under
+   `Save-Data`. The card's screen is `home-invitation`, walked in the `pages` journey (Rook keeps a seat for Walker)
+   and briefed in `pages.md`, not `lobby.md`: the walk that reaches it is that journey's. The heading's rune rule gives
+   way to the band.
+
+   One file serves all three on a phone, 68,750 bytes at twice the density, more than the plan's 15 to 26 KB: this
+   painting is the heaviest of the ten. The pages that draw it count those bytes: `table/home`, `table/stats` and
+   `table/battle` raised their `all` to 266, 762 and 382 KiB (their slack took the rest), and `table/leaderboard` and
+   `table/rules` gained a budget of 68 KiB.
+
+   The walk's `contrast` reads 7.67:1 at the least on the five screens, at both widths. At 320 px the Friends window
+   is 389 px tall (409 before) and the Create window 708 (716). Left: the Create window is still taller than 568 px at
+   320, as before (the lobby's **Left**). The mock server does not serve `page-art/`, so its specs check the boxes,
+   not the pixels; they open the Friends head on the home, the statistics, the ladder and the rules, not the battle.
+
 8. **S8, the lobby's games.** The waiting game and the ended game take their ground; the brief's ground by round
    stays for a game in play. Tests: the lobby's specs, the budget, the measures.
 9. **S9, signing out.** The confirmation's head, the panel's state after a sign out. Tests: `table/account.test.js`,

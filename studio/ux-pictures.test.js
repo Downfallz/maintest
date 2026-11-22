@@ -118,9 +118,10 @@ test('every page of the declaration has a budget, and its pictures hold under it
   }
 });
 
-test('the battle page may load the 320 KiB the windows\' brief measured, and none of it before any scroll', () => {
-  // docs/art/journeys/windows.md: 322,218 B with every portrait at 24 and 40 px and every form at 64 px.
-  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 327680 });
+test('the battle page may load the 320 KiB the windows\' brief measured and the Friends window\'s head, and none of it before any scroll', () => {
+  // docs/art/journeys/windows.md: 322,218 B with every portrait at 24 and 40 px and every form at 64 px; the Friends
+  // window opened from the battle's menu adds its head, 68,750 B, to 382 KiB (docs/art/journeys/pages.md).
+  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 391168 });
   const measured = budgetOf(PAGE_ART, 'table/battle', budget.density);
   assert.equal(measured.first, 0);
   // Without phone the page would count each portrait at 40 px alone and each form at the statistics' 144: phone

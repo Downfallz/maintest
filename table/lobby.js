@@ -12,6 +12,7 @@ import { mountTutorials } from './lobby-tutorials.js';
 import { mountFeatured } from './lobby-featured.js';
 import { initialOf } from './friends.js';
 import { motion } from './motion.js';
+import { undressScene, wearScene } from './picture.js';
 
 export function visibleTables(tables, mine, all = false) {
   const held = new Set(mine.map(entry => entry.table.id));
@@ -458,9 +459,12 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   function invitationCard(invitation) {
     const table = invitation.table;
     const root = node('article', '', 'game-card invitation');
-    const top = node('div', '', 'game-card-top');
+    const top = node('div', '', 'game-card-top'), line = node('p', `${table.format} battle · ${table.id}`, 'game-id');
     top.append(node('h3', invitationLine(invitation)), node('span', 'Invitation', 'status-tag invited'));
-    root.append(top, node('p', `${table.format} battle · ${table.id}`, 'game-id'));
+    root.append(top, line);
+    // A friend kept a seat: the Predator and the Deathstalker at one pool, dimmed behind the card's words (the game's
+    // line is not shown on the home).
+    wearScene(doc, root, 'predator-and-deathstalker', { page: 'table/home', form: 'ground', words: [top], sizes: '(min-width: 744px) 400px, calc(100vw - 32px)' });
     const ways = node('div', '', 'card-ways');
     // Quiet too: the bell counts it, and the featured space holds the home's one filled action.
     const accept = node('button', 'Accept & play →', 'secondary');
@@ -752,6 +756,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     void loadTables();
   });
   const dialog = el('create-dialog');
+  // Found once: once the heading wears its head, its first child is the painting.
+  const createHeading = dialog.querySelector('.dialog-heading'), createWords = createHeading.firstElementChild;
   // The friends a seat can be kept for (ADR 0129), read when the dialog opens: the list is short and changes rarely.
   async function loadFriends(chosen) {
     if (mode === 'off' || !account) { friends = []; }
@@ -854,6 +860,12 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('create-friend').hidden = !chosen;
     for (const part of [el('create-tabs'), el('opponent'), dialog.querySelector('label[for="opponent"]')]) part.hidden = Boolean(chosen);
     showOpponent();
+    // Opened on a friend, the window's heading wears the pool: someone is asked to meet the player there.
+    if (chosen) wearScene(doc, createHeading, 'predator-and-deathstalker', {
+      page: 'table/home', form: 'head', side: 'start', words: createWords, focus: '50% 75%',
+      sizes: '(min-width: 512px) 480px, calc(100vw - 32px)',
+    });
+    else undressScene(createHeading);
     if (chosen) {
       el('create-friend-initial').textContent = initialOf(chosen.username);
       el('create-friend-name').textContent = chosen.username;

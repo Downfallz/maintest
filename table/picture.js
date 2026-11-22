@@ -142,6 +142,38 @@ export function sceneHtml(name, options = {}) {
   return `<${scene.tag} ${written({ class: scene.class, ...scene.attributes })}>${image}${caption}</${scene.tag}>`;
 }
 
+/**
+ * A scene worn by an element a page already holds, which keeps its children where they are: a window's heading takes
+ * it as its head (`words`, the child that holds its eyebrow and title, sits on the scrim; the close keeps its place),
+ * a card takes it as its ground (`words`, the children whose words lie on the painting, a list, so the walk measures
+ * them). A plate is a figure of its own, drawn by `sceneElement`. Worn again, it is replaced.
+ */
+export function wearScene(doc, element, name, options = {}) {
+  if (options.form === 'plate') throw new Error(`${name}: a plate is drawn by sceneElement, not worn`);
+  if (options.form === 'head' && !options.words) throw new Error(`${name}: a head names the element that holds its words`);
+  const holders = [options.words ?? []].flat();
+  // A page that looks for its words after a first wear finds the painting that wear prepended.
+  if (holders.some(holder => 'scene' in holder.dataset)) throw new Error(`${name}: its words are its own painting; find them before the first wear`);
+  const scene = sceneOf(name, options);
+  undressScene(element);
+  element.classList.add(...scene.class.split(' '));
+  for (const [attribute, value] of Object.entries(scene.attributes)) element.setAttribute(attribute, value);
+  for (const holder of holders) holder.classList.add('scene-words');
+  if (scene.drawn) {
+    const image = pictureElement(doc, name, pictureOptions(options));
+    image.dataset.scene = '';
+    element.prepend(image);
+  }
+}
+
+/** Takes off a scene `wearScene` put on: the element is as it was, for a window that wears one in one state only. */
+export function undressScene(element) {
+  Array.from(element.children).find(child => 'scene' in child.dataset)?.remove();
+  element.classList.remove('scene', ...SCENE_FORMS.map(form => `scene-${form}`));
+  for (const attribute of ['data-side', 'data-saved']) element.removeAttribute(attribute);
+  for (const child of element.children) child.classList?.remove('scene-words');
+}
+
 /** A scene as an element. `words` are the nodes (or strings) that sit on it, or under a plate. */
 export function sceneElement(doc, name, options = {}) {
   const scene = sceneOf(name, options), words = options.words ?? [];

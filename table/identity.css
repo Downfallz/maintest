@@ -253,6 +253,14 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
   .scene-head > .scene-words { padding: 6px 12px; }
 }
 
+/* A window's own heading wearing a head (picture.js, wearScene): the band runs from edge to edge, the close keeps
+   its own opaque fill in the top corner away from the words. The heading's rune rule gives its ::after back to the
+   band's 3:1 room. */
+dialog .dialog-heading.scene-head { justify-content: normal; align-items: normal; padding: 0; border-bottom: 0; background: var(--soot); }
+.home-dialog > .dialog-heading.scene-head::after { position: static; height: auto; background: none; }
+.dialog-heading.scene-head > button { grid-area: 1 / 1; justify-self: end; align-self: start; margin: 8px; }
+.dialog-heading.scene-head[data-side="end"] > button { justify-self: start; }
+
 /* The ground: a card's or a dialog's painting, dimmed by a layer of soot from 84% to 92% opaque behind its words.
    Under less data it is not drawn, and the card keeps its own background. */
 .scene-ground::before { background: linear-gradient(color-mix(in srgb, var(--soot) 84%, transparent), color-mix(in srgb, var(--soot) 92%, transparent)); }

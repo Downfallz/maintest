@@ -1,0 +1,3 @@
+# code-reviewer lessons (branch claude/scene-paintings-plan-s7-i56kcf)
+
+- A decoration worn in one state only (`wearScene` on the Create window opened on a friend) must be exercised on the second entry into that state without leaving it: `words: heading.firstElementChild` is read before wearScene's own undress, so the second open names the old painting and the words lose `.scene-words` (band 120 -> 161 px, words pushed below it). The unit test's "worn twice" passed words captured once and hid it; the walk's contrast (`:scope > .scene-words`) silently measures nothing (S7, lobby.js:862, f7c12dd).

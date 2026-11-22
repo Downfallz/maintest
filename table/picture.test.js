@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from './page-art.js';
-import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sceneHtml, stripElement, stripHtml } from './picture.js';
+import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sceneHtml, stripElement, stripHtml, undressScene, wearScene } from './picture.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -192,4 +192,60 @@ test('every picture a page names has its width and its height, so its room is he
 test('a page reaches a derived picture through the kit, never by its file name', () => {
   for (const path of sources.filter(path => !['table/page-art.js', 'table/picture.js'].includes(path)))
     assert.doesNotMatch(read(path), /page-art\/[\w-]+\.[0-9a-f]{8}\.webp/, `${path} names a derived file: its name changes when it is derived again`);
+});
+
+// An element a page already holds, as the browser's DOM has it: enough of classList, attributes and children.
+function heldElement(tag, ...children) {
+  const element = {
+    tag, attributes: {}, dataset: {}, children: [], classes: new Set(),
+    classList: { add: (...names) => names.forEach(name => element.classes.add(name)), remove: (...names) => names.forEach(name => element.classes.delete(name)) },
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; },
+    prepend(node) { node.parentNode = this; this.children.unshift(node); },
+    get firstElementChild() { return this.children[0]; },
+  };
+  for (const child of children) { child.parentNode = element; element.children.push(child); }
+  return element;
+}
+const removable = doc => ({ ...doc, createElement: tag => ({ ...doc.createElement(tag), dataset: {}, remove() { this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); } }) });
+
+test('a window\'s own heading wears a scene as its head, its words and its close where they were, and takes it off again', () => {
+  const words = heldElement('div'), close = heldElement('button'), heading = heldElement('div', words, close);
+  heading.classList.add('dialog-heading');
+  const doc = removable(fakeDocument());
+  wearScene(doc, heading, 'scene', { page: 'home', art: ART, form: 'head', side: 'start', words, focus: '75% 35%' });
+  assert.deepEqual([...heading.classes], ['dialog-heading', 'scene', 'scene-head']);
+  assert.equal(heading.attributes['data-side'], 'start');
+  const [image] = heading.children;
+  assert.equal(image.tag, 'img');
+  assert.equal(image.attributes.alt, '', 'a head\'s painting is a decoration');
+  assert.equal(image.attributes['data-focus-x'], '75');
+  assert.deepEqual(heading.children.slice(1), [words, close], 'the words and the close stay in their order');
+  assert.ok(words.classes.has('scene-words'));
+  // Worn twice, it is still one painting, and its words still sit on it.
+  wearScene(doc, heading, 'scene', { page: 'home', art: ART, form: 'head', words });
+  assert.equal(heading.children.filter(child => child.tag === 'img').length, 1);
+  assert.ok(words.classes.has('scene-words'));
+  // A page that looks for its words after a first wear finds the painting first: that is refused, not worn.
+  assert.throws(() => wearScene(doc, heading, 'scene', { page: 'home', art: ART, form: 'head', words: heading.firstElementChild }), /its words are its own painting/);
+  undressScene(heading);
+  assert.deepEqual([...heading.classes], ['dialog-heading']);
+  assert.deepEqual(heading.children, [words, close]);
+  assert.equal(heading.attributes['data-side'], undefined);
+  assert.ok(!words.classes.has('scene-words'));
+});
+
+test('a card wears a scene as its ground, which it does not draw under less data, and never a plate', () => {
+  const doc = removable(fakeDocument()), title = heldElement('h3'), card = heldElement('article', title);
+  wearScene(doc, card, 'beast', { page: 'ladder', art: ART, form: 'ground', words: [title], saveData: false });
+  assert.ok(title.classes.has('scene-words'), 'the words on the painting are the ones the walk measures');
+  assert.deepEqual([...card.classes], ['scene', 'scene-ground']);
+  assert.equal(card.children[0].attributes.loading, 'lazy');
+  assert.equal(card.children[1], title);
+  const saved = heldElement('article', heldElement('h3'));
+  wearScene(doc, saved, 'beast', { page: 'ladder', art: ART, form: 'ground', saveData: true });
+  assert.equal(saved.attributes['data-saved'], '');
+  assert.equal(saved.children.length, 1, 'the card keeps its slate');
+  assert.throws(() => wearScene(doc, heldElement('div'), 'scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw.' }), /a plate is drawn by sceneElement/);
+  assert.throws(() => wearScene(doc, heldElement('div'), 'scene', { page: 'home', art: ART, form: 'head' }), /a head names the element that holds its words/);
 });

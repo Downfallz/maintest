@@ -6,6 +6,7 @@ import { operatorToken } from './session.js';
 import { mountGameSettings } from './game-preferences.js';
 import { SITE_ORIGIN } from './site-origins.js';
 import { mountShowAgain } from './lobby-tutorials.js';
+import { wearScene } from './picture.js';
 import { catchPageErrors, createPageErrors, mountFeedback } from './feedback-sheet.js';
 
 // A page catches its errors from the moment the menu loads, for a bug report sent from it (ADR 0189). The battle view
@@ -206,6 +207,20 @@ function mountHomeNavigation(doc, win = globalThis) {
   };
 }
 
+// The pages whose header draws the Friends window's head, by their name in docs/art/page-budget.json. The admin page
+// (an operator's) and the archived classic table keep its plain heading (docs/art/journeys/pages.md).
+export const FRIENDS_HEAD_PAGES = { lobby: 'table/home', stats: 'table/stats', leaderboard: 'table/leaderboard', rules: 'table/rules', battle: 'table/battle' };
+
+/** The Friends window's head: the Predator and the Deathstalker at one pool, the Deathstalker's bank kept in view. */
+export function wearFriendsHead(doc, page) {
+  const heading = doc.querySelector('#friends-dialog > .dialog-heading');
+  if (!FRIENDS_HEAD_PAGES[page] || !heading) return;
+  wearScene(doc, heading, 'predator-and-deathstalker', {
+    page: FRIENDS_HEAD_PAGES[page], form: 'head', side: 'start', words: heading.firstElementChild, focus: '75% 35%',
+    sizes: '(min-width: 744px) 720px, calc(100vw - 24px)',
+  });
+}
+
 // The pages share the same controls and dialogs. Only creating a new match belongs to the lobby.
 export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, onFriends = () => {}, onInbox = () => {} } = {}) {
   const header = doc.querySelector('[data-navigation]');
@@ -215,6 +230,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   header.innerHTML = headerContent;
   header.insertAdjacentHTML('afterend', '<p id="host-notice" class="host-notice" role="status" hidden></p>');
   doc.body.insertAdjacentHTML('beforeend', panels);
+  wearFriendsHead(doc, page);
   const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', rules: 'rules-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
   const navigation = mountHomeNavigation(doc);

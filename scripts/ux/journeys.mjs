@@ -235,7 +235,7 @@ const lobby = {
 const pages = {
   id: 'pages',
   title: "The player's pages",
-  screens: ['friends-empty', 'friends-asked', 'friends-with-a-friend', 'friend-invited', 'leaderboard', 'statistics', 'leaderboard-ranked', 'statistics-ranked'],
+  screens: ['friends-empty', 'friends-asked', 'friends-with-a-friend', 'friend-invited', 'home-invitation', 'leaderboard', 'statistics', 'leaderboard-ranked', 'statistics-ranked'],
   strips: {
     // The window closed and opened again from the menu, which closes behind the window.
     'friends-window': { at: 'friends-empty', act: async ({ page }) => {
@@ -268,6 +268,13 @@ const pages = {
     await page.locator('#friend-list li button').first().click();
     await page.locator('#create-dialog[open]').waitFor();
     await walk.screen('friend-invited');
+    // The other way round: Rook keeps a seat for the walker, and the walker's home shows the invitation's card.
+    await page.keyboard.press('Escape');
+    await friendInvites(walk, friend);
+    await home(page, set.game);
+    // In view, so the walk's contrast reads the card's words on its ground: at 320 it is below the first screen.
+    await page.locator('#invitation-cards .invitation').first().scrollIntoViewIfNeeded({ timeout: 30000 });
+    await walk.screen('home-invitation');
     await page.goto(`${set.game}/leaderboard`);
     await page.locator('main').waitFor();
     await walk.screen('leaderboard');
@@ -285,6 +292,16 @@ const pages = {
     await walk.screen('statistics-ranked');
   },
 };
+
+// The friend opens a table whose second seat is kept for the walker (ADR 0129), from their own browser.
+async function friendInvites(walk, friend) {
+  const headers = { Origin: walk.set.game };
+  const list = await (await friend.request.get(`${walk.set.game}/api/friends`, { headers })).json();
+  const walker = list.friends?.find(one => one.username === WALKER);
+  if (!walker) throw new Error(`${FRIEND} does not count ${WALKER} among their friends.`);
+  const made = await friend.request.post(`${walk.set.game}/api/lobby/tables`, { data: { opponent: 'friend', friend: walker.id }, headers });
+  if (!made.ok()) throw new Error(`The host refused ${FRIEND}'s table for ${WALKER}: ${made.status()}`);
+}
 
 // A ranked 3v3 game between the walker and the friend: an open seat from the Create window, taken by the friend,
 // a first round played by both with the first choices offered, then conceded by the walker.
