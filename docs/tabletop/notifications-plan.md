@@ -24,7 +24,7 @@ their mind. Clean, best practice, able to grow if the game gets big, cheap to st
 | Install | `table/manifest.webmanifest` is served. No page handles `beforeinstallprompt`. An iPhone is told, in the button's hint, that a push needs the home screen. |
 | Sending | `WebPushSender` (`Lib.Net.Http.WebPush`, VAPID keys in `DOWNFALL_PUSH_KEYS`), straight to the browser's push service. An account's notice is awaited inside the request that caused it, device after device, ten seconds a device at worst. "Your turn" is a delay in the API's process (`docs/architecture/stateless-table-inventory.md`): a process that stops loses it. |
 | Dead subscriptions | Forgotten from the store on a 404 or 410. The endpoints answered 410 afterwards are a dictionary in memory, lost on a restart. |
-| Replicas | The API runs zero to one replica (`infra/main.bicep`, ADR 0080). `AccountDevices` writes under a lock of its process. |
+| Processes | The API runs zero to one replica (`infra/main.bicep`, ADR 0080). The worker (`TableWorker`) and the tending job (`TableTend`) send account notices too, when a match ends in their hands. `AccountDevices` writes under a lock of its own process, which three processes do not share. |
 | Cost | A push costs nothing: the browsers' push services are free, and no Azure service sits between. The devices are a few bytes of blob an account. |
 | Measures | None. A send that fails is one console line. Nobody can say how many notices left, arrived or died. Not measured here for that reason. |
 
@@ -72,6 +72,12 @@ The bell's window keeps *Your turn*, *Invitations*, *Friend requests* and *Decli
 badge counts what waits plus the unread news. Opening the window marks the news read. The player's stream
 (ADR 0164) already says "your lists changed"; a new entry says so too, so the bell reads on no clock.
 
+Three processes write an account's log: the API, the worker and the tending job. A lock inside one of them
+protects nothing. So the log is written on a condition from its first day: read with the blob's ETag, written
+only if it has not changed, read again and tried again on a conflict. The devices' list
+(`devices/<accountId>.json`) gets the same write in N1, since a 410 from the worker already removes a device
+there.
+
 The port (`INoticeStore`) is the Application's, beside `IDeviceStore`; the adapters (memory, file, blob) are the
 Infrastructure's. `Settings`, *Privacy* and the showcase's privacy page gain one sentence on what is kept.
 
@@ -112,8 +118,7 @@ turn" becomes a message visible after the grace, checked against what the seat's
 process loses nothing. The 410 list moves to the store. A local host with no queue sends in process, as today.
 
 What this costs: queue operations, cents a month at thousands of notices a day. What it does not need, at any
-size: Azure Notification Hubs, Firebase or a native app. What changes if the API ever runs two replicas:
-`AccountDevices` and the log write on the blob's ETag instead of a lock. That is named here and built then.
+size: Azure Notification Hubs, Firebase or a native app.
 
 ### Seeing it work
 
@@ -124,9 +129,10 @@ Jobs tab show the counts and the queue's length.
 
 1. **N1, the door and the log.** ADR: every account notice goes through one door, the bell keeps the news,
    push is a channel a player chooses (amends ADR 0118). `AccountNotifier`, `INoticeStore` and its three
-   adapters, the two routes, the seven sites moved. Tests: Application tests on the log (the cut, the tag that
-   replaces, read), Cli tests on the routes and on each site writing its entry with push off, the storage test
-   on Azurite.
+   adapters, the two routes, the seven sites moved. The log and the devices are written on the blob's ETag.
+   Tests: Application tests on the log (the cut, the tag that replaces, read, two writers that both keep their
+   entry), Cli tests on the routes and on each site writing its entry with push off, the storage test on
+   Azurite.
 2. **N2, the bell shows the news.** `table/inbox.js` gains News and the unread count; the window marks read;
    the privacy sentences. Tests: `inbox.test.js`, `terminology.test.js`, the lobby's browser spec with push off.
 3. **N3, one switch.** The account's notice preferences, "your turn" to the account's devices, Settings,
