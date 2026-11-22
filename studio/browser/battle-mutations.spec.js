@@ -432,3 +432,41 @@ test('a form that fails to load leaves no gap, and the mutation keeps its name',
   expect(family.y + family.height).toBeLessThanOrEqual(name.y);
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+
+test('the tree opens on the moult behind its title, and each family column on its scene, loaded only when it opens', async ({ page }, info) => {
+  const asked = [];
+  page.on('request', request => { const name = /\/page-art\/(brute-moult|ironhide-scar|blightweaver-pressure-sac|warped-listening)-/.exec(request.url()); if (name) asked.push(name[1]); });
+  const h = await mount(page);
+  // docs/art/scene-paintings-plan.md, S11: no scene of the tree loads with the pick.
+  expect(asked).toEqual([]);
+  await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  const band = page.locator('#atlas-dialog .atlas-band');
+  await expect(band).toHaveClass(/scene-head/); await expect(band).toHaveAttribute('data-side', 'start');
+  await expect(band.locator('img[data-scene]')).toHaveAttribute('src', /page-art\/brute-moult-/);
+  await expect(band.locator('img[data-scene]')).toHaveAttribute('alt', '');
+  await expect(band.locator('.atlas-words')).toHaveClass(/scene-words/);
+  // The Close keeps its corner of the band; the creature's list sits under the band on a phone, in its lower corner on
+  // a wide screen. Neither covers the title, and both are in view and take taps.
+  const [close, list, title, box] = await Promise.all(['#atlas-close', '#atlas-creature', '#atlas-title', '#atlas-dialog .atlas-band'].map(one => page.locator(one).boundingBox()));
+  const apart = (a, b) => a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+  expect(apart(close, title)).toBe(true); expect(apart(list, title)).toBe(true); expect(apart(list, close)).toBe(true);
+  if (page.viewportSize().width < 820) expect(list.y).toBeGreaterThanOrEqual(box.y + box.height - 1);
+  else expect(list.y + list.height).toBeLessThanOrEqual(box.y + box.height);
+  await fitsViewport(page, '#atlas-close, #atlas-creature');
+  // The band's room is a box of its own in the Close's cell: it never takes the Close's taps.
+  for (const control of ['#atlas-close', '#atlas-creature']) {
+    expect(await page.locator(control).evaluate(one => { const box = one.getBoundingClientRect(); return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) === one; }), control).toBe(true);
+  }
+  const heads = page.locator('#atlas-board .atlas-family-head');
+  await expect(heads).toHaveCount(3);
+  const scenes = await heads.evaluateAll(all => all.map(head => head.querySelector('img[data-scene]')?.getAttribute('src')?.match(/page-art\/([a-z-]+?)-\d+\./)?.[1]));
+  expect(scenes).toEqual(['ironhide-scar', 'blightweaver-pressure-sac', 'warped-listening']);
+  for (const head of await heads.all()) {
+    await expect(head).toHaveClass(/scene-head/);
+    expect(Math.round((await head.boundingBox()).height)).toBe(48);
+    await expect(head.locator('.atlas-family-words')).toHaveClass(/scene-words/);
+  }
+  await expect.poll(() => asked).toContain('brute-moult');
+  await page.screenshot({ path: info.outputPath('mutation-tree-heads.png') });
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});

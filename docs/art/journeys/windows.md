@@ -15,6 +15,10 @@ choice, `table/battle.css`): at 320 the walk opens the journal from Help's windo
 name is its journey's: the `match` journey films the same Evolution sheet as `mutation-tree`; here it is
 `mutation-pick`, and `mutation-tree` is the Mutation Tree window opened from it.
 
+S11 of [the scene paintings' plan](../scene-paintings-plan.md) gives the Mutation Tree its heads and adds the
+result, `match-result`, filmed as Walker concedes after the journal: the walk films eight screens. Both sheets were
+read on its branch at 320 and 390, with their measures.
+
 P6 walked the journey again on its branch, with P7 and P8 built (on `55731bb`), and read both sheets screen by
 screen with their measures. The walk now films seven screens: `mutation-pick`, `mutation-tree`, `tempo-reference`,
 `spell-choice`, `spell-choice-foot`, `order-revealed`, `history`. The team's first creature plays at Instinct, so
@@ -200,9 +204,22 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 | A capstone's portrait beside its name in the detail, in place of a form it does not have (Apex, Archmage, Titan; not on this screen). | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
 | Pummel's portrait on its card in the detail. | 40 by 40 px | Which spell is this, before its words? | `docs/art/spell-portraits/pummel.webp` |
 | Brace's portrait on its card in the detail. | 40 by 40 px | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
+| The Brute's moult as the window's head: a 3:1 band across its top, behind the eyebrow, the title and the progress line on the start side, which is dark ground; the shell and the print lie right. Close keeps the band's top end corner on its own fill. | 390 by 120 px | Everything here is a shell to shed. | `docs/art/sources/pages/scenes/brute-moult.webp` |
+| The Ironhide's scar as the Brute column's head: a band of 48 px across the column under its coloured rule, the sigil, the family and how far the creature is on the start side, cut at `50% 75%` on the eye under the plates. | 366 by 48 px | Which family is this column? The plated one. | `docs/art/sources/pages/scenes/ironhide-scar.webp` |
+| The Blightweaver's pressure sac as the Predator column's head, cut at `50% 50%` on the sac and the eye in the gas. | 366 by 48 px | The same: the one that carries and spreads. | `docs/art/sources/pages/scenes/blightweaver-pressure-sac.webp` |
+| The Warped listening as the Warped column's head, cut at `50% 40%` on its head and its lowered claw. | 366 by 48 px | The same: the one that listens before it strikes. | `docs/art/sources/pages/scenes/warped-listening.webp` |
 
 The board's 21 forms follow the owner's decision (the opening, issue #1023); its 3 capstones keep the portrait
 they draw today. The two spell portraits are drawn today, at the same size.
+
+The four scenes are S11 of [the scene paintings' plan](../scene-paintings-plan.md#the-app): a head on the window and
+one on each family's column, no painting behind the board (the owner's question 8). The window's band is the
+screen's width on a phone, 3:1 under the cap of 120 px from 360 px wide, 64 px under 600 px tall, taller when its
+words wrap. On a phone the creature's list sits under the band, on soot, across the window; from 820 px wide and
+601 px tall it takes the band's lower end corner, under Close. A column is `min(94vw, 400px)` wide on a phone and
+about 390 px on a wide screen; its band is 48 px tall at every width, so each painting is cut to a strip and the
+focus names what stays. The Brute's band is drawn from the Ironhide's painting: the family's first stage has no
+scene of its own, and the plated eye says what the family becomes.
 
 ### States
 
@@ -238,7 +255,9 @@ None.
   forms of the board from their 128 px files (184,400 B; Brute's, Warped's and Predator's are the pick's files,
   already taken), the 3 capstones' portraits from their 48 px files (2,966 B) and the two spell portraits from
   their 80 px files (5,232 B). The detail alone would take 5,232 B. Every form is lazy: none loads before the
-  window opens.
+  window opens. The four scenes add 91,506 B on a phone, at twice the density: the moult's 780 px file (21,592 B),
+  the Ironhide's 708 (15,592 B), the Blightweaver's 732 (29,044 B) and the Warped's 780 (25,278 B). They are lazy
+  too: none loads with the pick (`battle-mutations.spec.js`), and a column's band loads as the column scrolls near.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
 - **Shift**: 0 at 390 and 0.03 at 320 today. The form's room is held: Choose Brute does not move when it arrives.
 
@@ -706,3 +725,77 @@ None.
 - One element animates at rest at 390 (`animating` 1, 0 at 320): the measure does not name it. The critique names
   it; until then it is not counted as the journal's.
 - The revealed mutations' chips under 44 px (9 at 390), for UX12.
+
+## The match's result (`match-result`)
+
+### Job
+
+The match is over: the result opens by itself once (ADR 0145), over the field, or from Match result in the field's
+foot. It says how the match ended, the verdict and its reason, then each team's standing, the battle report, and
+the ways on. S11 of [the scene paintings' plan](../scene-paintings-plan.md#the-app) gives it a head: the ground
+after Crushing Stomp, above the verdict. The walk reaches it as Walker concedes after the journal.
+
+- **Filled action**: Rematch, under the report (filled 1 at both widths); a tutorial's end fills Play again or
+  Leave the tutorial instead. Replay the match, Lobby, Report or suggest and the × are quiet.
+
+### Words
+
+- **Order**: the eyebrow (MATCH COMPLETE and the round), the verdict, its reason; each team's standing and health;
+  the battle report; Rematch, Replay the match, Lobby, Report or suggest.
+- **Budget**: 112 words at both widths, as filmed (112 in the match journey before the head). The head adds no word.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The ground after Crushing Stomp as the window's head: a 3:1 band across its top, edge to edge, the slab and the three marks on the left, the eyebrow, the verdict and its reason on the end side, which is dark plain. The × keeps the start corner on its own soot fill. The crest gives way to the band. | 366 by 122 px | How did it end? The ground the last blow left. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp` |
+| The creature of the match in the battle report, as today: the illustration its mutations gave it, or its form's figure. | 64 by 64 px | Who carried the match? | `table/battle-art/base-creature.webp`, or the creature's own illustration under `table/battle-art/` |
+
+The window is `min(620px, 100vw - 24px)` wide: the band is 296 by 99 at 320, 366 by 120 (the cap) at 390 and 620 by
+120 from 644 px. The verdict's 30 to 42 px wraps its reason onto a second line on a phone, and the band grows to
+hold them rather than cut them. The painting is 3:1, so the band cuts only its top and bottom, centred.
+
+### States
+
+- **First paint**: not reached: the window opens over a field already drawn. The band holds its room in `--soot`
+  until the painting arrives; it loads when the window opens.
+- **Empty**: cannot be: a finished match always has its verdict and its two teams.
+- **Loaded**: the band with the verdict, the two teams, the report and the ways on, as filmed.
+- **Waiting**: Rematch, once pressed, waits on the host and says so on its own button (`match.ts`); the band does not
+  change.
+- **Error**: a refused rematch says why under the ways on; the band and the verdict stay (read in the code, not seen).
+- **Offline**: the window stays open on what it holds; a band not yet loaded keeps its soot room.
+
+### Motion
+
+None: the match's windows open at once until UX12 gives them the kit's entrance. The band does not move by itself.
+
+### Less motion
+
+None.
+
+### Accessibility
+
+- **Focus**: as today, on the window's first control, the ×; the band holds no control.
+- **Names**: the painting's `alt` is empty: the verdict is the window's name (`aria-labelledby="match-title"`).
+  axe finds nothing at either width.
+- **Announced**: nothing new.
+- **Targets**: 12 controls, 6 under 44 px at both widths, as the match journey filmed before the head;
+  none under 24. The × takes its own taps over the band (`battle-services.spec.js`).
+
+### Cost
+
+- **Bytes**: 16,084 B on a phone, the 716 px file at twice the density; 12,598 B or 43,398 B from 644 px, by the
+  screen's density. Lazy: nothing loads before the window opens.
+- **Largest paint**: not this screen's: the window opens after the page's first paint.
+- **Shift**: 0.25 at 320 and 0.30 at 390, as the match journey filmed before the head (0.32 and 0.22): the band
+  holds its room before the painting arrives, so it adds none.
+
+### Left
+
+- The report's creature is the battle's own file, sent whole: the one picture the walk counts as sent over twice its
+  size, as before the head. Its intake is the battle's ([asset-intake.md](../asset-intake.md)), not the kit's.
+- The words under 11 px (20 at both widths) and the targets under 44 px are UX12's, as on
+  every window of the match.
+- The verdict's colour on the band is the tone's (`--tone`), measured at 9.06:1 at the least against the scrim; the
+  crest that carried the tone is gone, so the tone is in the title and the top rule alone.

@@ -1039,12 +1039,23 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
    screen, rising from the bottom on a narrow one. */
 #atlas-dialog { padding: 0; width: min(1240px, calc(100vw - 24px)); height: min(860px, calc(100dvh - 24px)); max-height: none; overflow: hidden; background: #0f1c21; border: 1px solid #5b7064; }
 #atlas-dialog[open] { display: flex; flex-direction: column; }
-.atlas-header { display: flex; align-items: center; gap: 12px; flex: none; padding: 14px 18px; border-bottom: 1px solid #3f554d; background: linear-gradient(#162a30, #11211f); }
-.atlas-header > div { flex: 1; min-width: 0; }
+.atlas-header { flex: none; border-bottom: 1px solid #3f554d; background: var(--soot); }
+.atlas-band { display: flex; align-items: center; gap: 12px; padding: 14px 18px; }
+.atlas-words { flex: 1; min-width: 0; }
+/* The tree's band (docs/art/scene-paintings-plan.md, S11): the Brute's moult behind the eyebrow, the title and the
+   progress line, the Close in the far corner on its own fill. The creature's list sits under the band, on soot. */
+#atlas-dialog .atlas-band.scene-head { display: grid; grid-template-columns: minmax(0, 1fr); align-items: normal; gap: 0; padding: 0; }
+#atlas-dialog .atlas-band.scene-head > #atlas-close { grid-area: 1 / 1; justify-self: end; align-self: start; margin: 8px; }
+/* A wide, tall screen has room for the list in the band's lower corner, under the Close, on its own fill. */
+@media (min-width: 820px) and (min-height: 601px) {
+  #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) { display: grid; }
+  #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) > :is(.atlas-band, #atlas-creature) { grid-area: 1 / 1; }
+  #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) > #atlas-creature { position: relative; z-index: 1; align-self: end; justify-self: end; margin: 0 8px 8px; }
+}
 .atlas-header .eyebrow { margin: 0 0 4px; }
 #atlas-title { margin: 0; font: 24px/1.2 var(--font-display); }
 #atlas-progress { margin: 4px 0 0; color: #c9b88f; font-size: 12px; }
-#atlas-creature { max-width: 42%; min-height: 44px; padding: 8px 10px; background: #192b30; color: #edf0e8; border: 1px solid #7d9689; border-radius: var(--radius-soft); }
+#atlas-creature { display: block; max-width: 42%; margin: 8px 18px 10px auto; min-height: 44px; padding: 8px 10px; background: #192b30; color: #edf0e8; border: 1px solid #7d9689; border-radius: var(--radius-soft); }
 #atlas-close { min-height: 44px; }
 .atlas-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; position: relative; }
 #atlas-board { min-height: 0; overflow: auto; overscroll-behavior: contain; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 14px; padding: 16px; align-items: start; }
@@ -1053,7 +1064,13 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .atlas-links path { fill: none; stroke: #4c6159; stroke-width: 1.6; }
 .atlas-links path.held { stroke: color-mix(in srgb, var(--mutation-colour) 70%, #4c6159); stroke-width: 2.2; }
 .atlas-links path.lit { stroke: var(--mutation-colour); stroke-width: 3; filter: drop-shadow(0 0 4px var(--mutation-colour)); }
-.atlas-family-head { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; }
+.atlas-family-head { position: relative; }
+.atlas-family-words { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; }
+/* A family's column opens on its scene, a band of 48 px across the column under its coloured rule (S11): its name
+   and how far the creature is sit on the scrim, on the left. */
+#atlas-board .atlas-family-head.scene-head { margin: -12px -10px 0; overflow: hidden; }
+#atlas-board .atlas-family-head.scene-head::after { aspect-ratio: auto; height: 48px; max-height: none; }
+#atlas-board .atlas-family-head.scene-head > .scene-words { align-self: center; padding: 4px 10px; }
 .atlas-family-head .atlas-sigil { grid-row: 1 / 3; width: 28px; height: 28px; fill: none; stroke: var(--mutation-colour); stroke-width: 1.6; }
 .atlas-family-head strong { font: 18px var(--font-display); color: var(--mutation-colour); }
 .atlas-family-head small { color: var(--muted); font-size: 11px; }
@@ -1108,14 +1125,15 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 #battle[data-reduced-motion="true"] ~ dialog .atlas-swipe::before, body:has(#battle[data-reduced-motion="true"]) .atlas-swipe::before { animation: none; }
 @media (max-width: 819px) {
   #atlas-dialog { width: 100vw; height: 100dvh; max-width: none; margin: 0; border: 0; border-radius: 0; }
-  .atlas-header { padding: 10px 12px; flex-wrap: wrap; }
+  .atlas-band { padding: 10px 12px; }
   #atlas-title { font-size: 20px; }
-  #atlas-creature { order: 3; flex-basis: 100%; max-width: none; }
+  #atlas-creature { width: calc(100% - 24px); max-width: none; margin: 8px 12px; }
   .atlas-main { grid-template-columns: minmax(0, 1fr); }
   #atlas-board { grid-auto-columns: min(94vw, 400px); padding: 12px 8px; scroll-snap-type: x mandatory; }
   /* Three mutations of a stage share one line on a phone: the pills tighten before anything wraps, and a name
      never breaks inside a word. */
   .atlas-family { padding: 12px 6px 18px; }
+  #atlas-board .atlas-family-head.scene-head { margin: -12px -6px 0; }
   .atlas-stage { gap: 4px; }
   .atlas-node { gap: 4px; padding: 4px 8px 4px 4px; font-size: 11.5px; }
   .atlas-node-stage { min-width: 17px; height: 17px; padding: 0 3px; border-radius: 9px; font-size: 9px; }
@@ -1389,6 +1407,12 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #match-dialog .match-header h2 { font: clamp(30px, 7vw, 42px)/1.05 var(--font-display); color: var(--tone); }
 #match-dialog .match-header .eyebrow { margin: 0 0 4px; color: color-mix(in srgb, var(--tone) 75%, var(--ink)); letter-spacing: 2px; }
 #match-outcome { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+/* The result opens on the ground the last blow left (S11): the verdict on the band's dark right, the close in the
+   other corner on its own fill. The band says how it ended in place of the crest. */
+#match-dialog .match-header.scene-head { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: normal; align-items: normal; gap: 0; padding: 0; background: var(--soot); }
+#match-dialog .match-header.scene-head > .match-crest { display: none; }
+#match-dialog .match-header.scene-head > form { grid-area: 1 / 1; justify-self: start; align-self: start; margin: 4px; }
+#match-dialog .match-header.scene-head .match-close { border-radius: 50%; background: var(--soot); }
 #match-dialog .match-close { align-self: start; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 24px; }
 #match-dialog .match-body { padding: 4px 18px 14px; }
 #match-stats { gap: 10px; }

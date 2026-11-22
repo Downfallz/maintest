@@ -416,12 +416,13 @@ async function openHistory(page, blocked) {
 
 // The match's windows whose pictures docs/art/ux12-pictures-plan.md settles: the pick and the Mutation Tree opened
 // from it, the Tempo sheet at its spell reference, the spellbook at its top and at its foot, the order of play once
-// a spell is turned face up, and the journal once a round is played. UX12 adds the others. The team's first
+// a spell is turned face up, the journal once a round is played, and the result once Walker concedes. UX12 adds the
+// others. The team's first
 // creature plays at Instinct, so its spellbook shows a crit chip that does not hold this turn (P8).
 const windows = {
   id: 'windows',
   title: "The match's windows",
-  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'history'],
+  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'history', 'match-result'],
   strips: {
     // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
     'history-window': { at: 'history', act: async ({ page, blocked }) => { await page.locator('#history-close').click(); await openHistory(page, blocked); } },
@@ -474,6 +475,10 @@ const windows = {
     await openHistory(page, walk.blocked);
     await page.locator('#history-dialog[open]').waitFor();
     await walk.screen('history');
+    // The result, on the ground the last blow left (S11 of docs/art/scene-paintings-plan.md): Walker concedes.
+    await page.locator('#history-close').click();
+    await concede(walk);
+    await walk.screen('match-result');
   },
 };
 

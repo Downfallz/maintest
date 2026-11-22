@@ -161,7 +161,9 @@ test('a page that builds itself gets the same scene as an element, its words app
 
 test('the sheet holds the three forms: a band of 3:1 no taller than 120 px, 64 on a short screen, a scrim to soot under words', () => {
   const sheet = read('table/identity.css');
-  assert.match(sheet, /\.scene-head::after \{[^}]*aspect-ratio: 3 \/ 1; max-height: 120px; \}/);
+  assert.match(sheet, /\.scene-head::after \{[^}]*aspect-ratio: 3 \/ 1; max-height: 120px;[^}]*\}/);
+  // The band's room shares a cell with the words and any control: it never takes a tap (S11, the Mutation Tree's Close).
+  assert.match(sheet, /\.scene-head::after \{[^}]*pointer-events: none; \}/);
   assert.match(sheet, /@media \(max-height: 600px\) \{\s*\.scene-head::after \{ max-height: 64px; \}/);
   assert.match(sheet, /\.scene-head::before \{[^}]*linear-gradient\(to right, var\(--soot\)/);
   assert.match(sheet, /\.scene-head\[data-side="end"\]::before \{[^}]*linear-gradient\(to left, var\(--soot\)/);
