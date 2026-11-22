@@ -19,7 +19,7 @@ The round selects the large painting at the top of the lobby. Turn ownership sel
 
 A new battle or a seat waiting before play begins uses the mist duel. Round 10 and later keep the round 6 painting.
 
-**Next painting to generate for review (09).** Return to the same Deathstalker and Ethereal at the instant their world breaks apart. The arch collapses behind them, a chasm splits the wet slate between them, and light cuts through the falling stone. Keep both silhouettes readable on a phone. Leave the outcome of the duel open.
+**Approved painting (09, revision 3).** The Deathstalker leaps toward the Ethereal as the arch collapses. Mist veils the three fragments of the sun. Amber light rises from the chasm beneath the duel.
 
 **Implementation check for PR 2.** On a portrait phone, open a featured game at rounds 5, 6 and 10. Confirm the actual painting is visible above the action on both players' turns, including the reported round 6 game against a bot.
 
@@ -37,7 +37,7 @@ The current painting names below are from the [source register](sources/pages/sc
 | 06 | Mutation Tree, Brute column | ironhide-scar | Keep the Ironhide eye beneath its scarred plates. | Keep existing |
 | 07 | Mutation Tree, Predator column | blightweaver-pressure-sac | Keep the Blightweaver pressure sac and the eye visible through the gas. | Keep existing |
 | 08 | Mutation Tree, Warped column | warped-listening | Complete the three family close-ups with the Cataclysm's eye in three-quarter view. Keep the forked ivory brow, an ember iris with a cold violet reflection, and a thin veil of mist. Frame the eye for the 48 px band. | [Cataclysm eye](sources/pages/replacements/cataclysm-eye.webp) |
-| 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. Generate one late-game companion to the mist duel for owner review. See the featured lobby rule below. | Pending |
+| 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. The Deathstalker leaps at the Ethereal over the opening chasm. Use the featured lobby rule above. | [The Great Rupture](sources/pages/replacements/great-rupture.webp) |
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | Pending |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | Pending |
 | 12 | Showcase, creator's note | predator-at-rest | Owner's photograph of the actual paper prototype mid-game. Shoot at table height with played cards, tokens and the player screen in view. | Pending |
