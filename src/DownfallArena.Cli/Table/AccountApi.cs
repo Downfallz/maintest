@@ -554,6 +554,16 @@ internal sealed class AccountApi
         }
 
         var held = await devices.AddAsync(who.Account.Id, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));
+
+        // Asked again after the write: a "sign out everywhere" or a suspension that forgot the devices while this one
+        // was being written (its write then reads the list again and makes it anew) must not leave a lost or lent
+        // device told for good (ADR 0201). The revocation marks the account before it forgets the devices.
+        if (await WhoAsync(request) is null)
+        {
+            await devices.RemoveAsync(who.Account.Id, subscription.Endpoint);
+            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+        }
+
         return Answer(new { notices = true, devices = held.Count }, who.Renewed);
     }
 

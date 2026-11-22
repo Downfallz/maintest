@@ -332,6 +332,28 @@ public sealed class AccountApiTests : IDisposable
         (await log.ListAsync(mark, TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 
+    /// <summary>
+    /// A registration whose write meets a "sign out everywhere" (it read the list, the sign-out forgot it, the write
+    /// read it again and made it anew) leaves no device behind: the lost phone is told nothing more (ADR 0201).
+    /// </summary>
+    [Fact]
+    public async Task A_device_registered_while_its_account_signs_out_everywhere_is_not_kept()
+    {
+        var api = await ApiAsync(AccountsMode.Development);
+        var store = new SignOutDuringSave(new FileDeviceStore(_root));
+        var devices = new AccountDevices(store, _clock);
+        api.Devices = devices;
+        api.Notices = new AccountNotices(new DeviceSender(), devices);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var mark = await IdOf(api, session);
+        store.BeforeNextSave = () => api.SignOutEverywhereAsync(mark, TestContext.Current.CancellationToken);
+
+        var registered = await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+
+        registered.Status.ShouldBe(401);
+        (await devices.ListAsync(mark, TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_signed_in_browser_registers_itself_as_a_device_and_can_be_tested()
     {
@@ -655,6 +677,29 @@ public sealed class AccountApiTests : IDisposable
     {
         public Task<ExternalIdentity?> VerifyAsync(string token, CancellationToken cancellationToken = default) =>
             Task.FromResult(token == GoodToken ? Mark : (ExternalIdentity?)null);
+    }
+
+    /// <summary>A device store that runs something once, just before its next save: another request landing in between.</summary>
+    private sealed class SignOutDuringSave(IDeviceStore inner) : IDeviceStore
+    {
+        public Func<Task>? BeforeNextSave { get; set; }
+
+        public Task<IReadOnlyList<PushDevice>> ListAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.ListAsync(account, cancellationToken);
+
+        public Task<DeviceListRead> ReadAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.ReadAsync(account, cancellationToken);
+
+        public async Task<bool> SaveAsync(SharedKernel.Identifiers.AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
+        {
+            if (BeforeNextSave is { } before)
+            {
+                BeforeNextSave = null;
+                await before();
+            }
+
+            return await inner.SaveAsync(account, devices, version, cancellationToken);
+        }
+
+        public Task ForgetAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.ForgetAsync(account, cancellationToken);
     }
 
     /// <summary>A push service as far as these tests need one: it takes every notice, or says every subscription is gone.</summary>
