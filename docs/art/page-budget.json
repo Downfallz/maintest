@@ -22,15 +22,23 @@
     },
     "table/home": {
       "first": 81920,
-      "all": 229376
+      "all": 272384
     },
     "table/stats": {
       "first": 0,
-      "all": 724992
+      "all": 780288
     },
     "table/battle": {
       "first": 0,
-      "all": 327680
+      "all": 391168
+    },
+    "table/leaderboard": {
+      "first": 0,
+      "all": 69632
+    },
+    "table/rules": {
+      "first": 0,
+      "all": 69632
     }
   }
 }

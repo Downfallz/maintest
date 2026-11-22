@@ -23,10 +23,12 @@ export const PAGE_ART = {
     ],
   },
   'predator-and-deathstalker': {
-    from: '3f73818d49b7676d', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"}, focus: '50% 55%',
+    from: '4b5002d728ebc7f6', frames: 1, drawn: [351,1250,366,358,480,720], pages: {"showcase/mutations":"lazy","table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"}, phone: {"table/home":[366,358],"table/stats":[366],"table/battle":[366],"table/leaderboard":[366],"table/rules":[366]}, focus: '50% 55%',
     sizes: [
-      { file: 'predator-and-deathstalker-351.c641fd0e.webp', width: 351, height: 197, bytes: 19394 },
-      { file: 'predator-and-deathstalker-702.cc754b16.webp', width: 702, height: 395, bytes: 64978 },
+      { file: 'predator-and-deathstalker-366.4120cac8.webp', width: 366, height: 206, bytes: 20744 },
+      { file: 'predator-and-deathstalker-480.054d7c5d.webp', width: 480, height: 270, bytes: 33592 },
+      { file: 'predator-and-deathstalker-732.2808075e.webp', width: 732, height: 412, bytes: 68750 },
+      { file: 'predator-and-deathstalker-960.c03f958e.webp', width: 960, height: 540, bytes: 109458 },
       { file: 'predator-and-deathstalker-1250.3b035ad3.webp', width: 1250, height: 703, bytes: 158418 },
       { file: 'predator-and-deathstalker-1536.a7311680.webp', width: 1536, height: 864, bytes: 208348 },
     ],
