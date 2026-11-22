@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from './page-art.js';
-import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sceneHtml, stripElement, stripHtml, undressScene, wearScene } from './picture.js';
+import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sceneHtml, stripElement, stripHtml, undressScene, wearPageHead, wearScene } from './picture.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -248,4 +248,39 @@ test('a card wears a scene as its ground, which it does not draw under less data
   assert.equal(saved.children.length, 1, 'the card keeps its slate');
   assert.throws(() => wearScene(doc, heldElement('div'), 'scene', { page: 'home', art: ART, form: 'plate', alt: 'A claw.' }), /a plate is drawn by sceneElement/);
   assert.throws(() => wearScene(doc, heldElement('div'), 'scene', { page: 'home', art: ART, form: 'head' }), /a head names the element that holds its words/);
+});
+
+test('a page\'s head is the band its HTML holds, dressed with its painting on the side the HTML names, across the column', () => {
+  const words = heldElement('div'), head = heldElement('div', words);
+  head.dataset.side = 'end';
+  words.classList.add('scene-words');
+  head.querySelector = selector => (selector === ':scope > .scene-words' ? words : null);
+  const doc = { ...removable(fakeDocument()), querySelector: selector => (selector === '.page-head' ? head : null) };
+  wearPageHead(doc, 'scene', { page: 'home', art: ART, focus: '50% 65%' });
+  assert.ok(head.classes.has('scene-head'));
+  assert.equal(head.attributes['data-side'], 'end');
+  const [image] = head.children;
+  assert.equal(image.tag, 'img');
+  assert.equal(image.attributes.sizes, '(min-width: 1316px) 1280px, calc(100vw - 36px)', 'the lobby pages\' column, gutters of 18 px');
+  assert.equal(image.attributes['data-focus-y'], '65');
+  assert.equal(head.children[1], words);
+  // A page without a head is left as it is.
+  wearPageHead({ querySelector: () => null }, 'scene', { page: 'home', art: ART });
+});
+
+test('the ladder, the statistics and the rulebook hold their head in their HTML, its eyebrow and title on it, and wear their scene', () => {
+  // docs/art/journeys/pages.md: the band's room and words are there at first paint; the script adds the painting.
+  for (const [html, script, name, page, title] of [
+    ['table/leaderboard.html', 'table/leaderboard.js', 'elemental-charge', 'table/leaderboard', 'ladder-title'],
+    ['table/stats.html', 'table/stats.js', 'ironhide-scar', 'table/stats', 'stats-title'],
+    ['table/rules.html', 'table/rules.js', 'latch-under-the-arch', 'table/rules', 'rules-title'],
+  ]) {
+    const band = read(html).match(/<div class="scene scene-head page-head" data-side="start"><div class="scene-words">(.*?)<\/div><\/div>/);
+    assert.ok(band, `${html} holds its head`);
+    assert.match(band[1], /^<p class="eyebrow"[^>]*>[^<]+<\/p><h2 id="([\w-]+)"/);
+    assert.ok(band[1].includes(`id="${title}"`), `${html}: the title is on the band`);
+    assert.doesNotMatch(band[1], /hero-detail/, `${html}: the detail line stays under the band`);
+    assert.match(read(script), new RegExp(`wearPageHead\\(document, '${name}', \\{ page: '${page}'`), `${script} wears ${name}`);
+    assert.equal(PAGE_ART[name].pages[page], 'lazy', `${name} is lazy on ${page}: these pages are not doors`);
+  }
 });

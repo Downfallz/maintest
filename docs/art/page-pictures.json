@@ -32,8 +32,9 @@
     {
       "name": "ironhide-scar",
       "source": "docs/art/sources/pages/scenes/ironhide-scar.webp",
-      "drawn": [323, 421],
-      "pages": { "showcase/mutations": "lazy" }
+      "drawn": [323, 421, 354, 1280],
+      "pages": { "showcase/mutations": "lazy", "table/stats": "lazy" },
+      "phone": { "table/stats": [354] }
     },
     {
       "name": "blightweaver-pressure-sac",
@@ -50,9 +51,10 @@
     {
       "name": "elemental-charge",
       "source": "docs/art/sources/pages/scenes/elemental-charge.webp",
-      "drawn": [351, 1250],
+      "drawn": [351, 1250, 354, 1280],
       "focus": "50% 45%",
-      "pages": { "showcase/home": "lazy" }
+      "pages": { "showcase/home": "lazy", "table/leaderboard": "lazy" },
+      "phone": { "table/leaderboard": [354] }
     },
     {
       "name": "predator-at-rest",
@@ -63,8 +65,15 @@
     {
       "name": "latch-under-the-arch",
       "source": "docs/art/sources/pages/scenes/latch-under-the-arch.webp",
-      "drawn": [351, 640],
-      "pages": { "showcase/404": "largest" }
+      "drawn": [351, 640, 354, 1280],
+      "pages": { "showcase/404": "largest", "table/rules": "lazy" },
+      "phone": { "table/rules": [354] }
+    },
+    {
+      "name": "parasite-offline",
+      "source": "docs/art/sources/pages/scenes/parasite-under-slate.webp",
+      "drawn": [358],
+      "pages": { "table/offline": "largest" }
     },
     {
       "name": "showcase-ground",

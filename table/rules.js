@@ -536,4 +536,9 @@ async function load(doc, win = globalThis) {
   if (!rules) trouble(doc, language);
 }
 
-if (typeof document !== 'undefined') await load(document);
+if (typeof document !== 'undefined') {
+  // The claws on the arch: the rules hold the game up (docs/art/journeys/pages.md). Loaded apart, and its failure let
+  // go: a book read offline from the worker's copy draws without the picture kit, its band soot with its words.
+  import('./picture.js').then(({ wearPageHead }) => wearPageHead(document, 'latch-under-the-arch', { page: 'table/rules', focus: '50% 55%' })).catch(() => {});
+  await load(document);
+}

@@ -43,12 +43,14 @@ export const PAGE_ART = {
     ],
   },
   'ironhide-scar': {
-    from: '27128c24d80cbfbb', frames: 1, drawn: [323,421], pages: {"showcase/mutations":"lazy"},
+    from: 'd0fb75e250b1d82d', frames: 1, drawn: [323,421,354,1280], pages: {"showcase/mutations":"lazy","table/stats":"lazy"}, phone: {"table/stats":[354]},
     sizes: [
-      { file: 'ironhide-scar-323.acb28cf1.webp', width: 323, height: 108, bytes: 4760 },
+      { file: 'ironhide-scar-354.4f7367cc.webp', width: 354, height: 118, bytes: 5418 },
       { file: 'ironhide-scar-421.9208ad44.webp', width: 421, height: 140, bytes: 7016 },
-      { file: 'ironhide-scar-646.bab90441.webp', width: 646, height: 215, bytes: 13736 },
+      { file: 'ironhide-scar-708.221cf270.webp', width: 708, height: 236, bytes: 15592 },
       { file: 'ironhide-scar-842.2025ca64.webp', width: 842, height: 281, bytes: 20714 },
+      { file: 'ironhide-scar-1280.df972da0.webp', width: 1280, height: 427, bytes: 40386 },
+      { file: 'ironhide-scar-1536.080ec7ff.webp', width: 1536, height: 512, bytes: 54686 },
     ],
   },
   'blightweaver-pressure-sac': {
@@ -70,11 +72,11 @@ export const PAGE_ART = {
     ],
   },
   'elemental-charge': {
-    from: '8b39d243c0426801', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"}, focus: '50% 45%',
+    from: '6da9bebc95b58fd5', frames: 1, drawn: [351,1250,354,1280], pages: {"showcase/home":"lazy","table/leaderboard":"lazy"}, phone: {"table/leaderboard":[354]}, focus: '50% 45%',
     sizes: [
-      { file: 'elemental-charge-351.93b574a1.webp', width: 351, height: 197, bytes: 24506 },
-      { file: 'elemental-charge-702.a5e70cfc.webp', width: 702, height: 395, bytes: 78956 },
-      { file: 'elemental-charge-1250.681d4ddc.webp', width: 1250, height: 703, bytes: 185362 },
+      { file: 'elemental-charge-354.4d982393.webp', width: 354, height: 199, bytes: 24830 },
+      { file: 'elemental-charge-708.4f43bccf.webp', width: 708, height: 398, bytes: 79800 },
+      { file: 'elemental-charge-1280.0d8ee1a7.webp', width: 1280, height: 720, bytes: 190132 },
       { file: 'elemental-charge-1536.b0201d5a.webp', width: 1536, height: 864, bytes: 233066 },
     ],
   },
@@ -87,11 +89,19 @@ export const PAGE_ART = {
     ],
   },
   'latch-under-the-arch': {
-    from: '4d6da917fbb83d77', frames: 1, drawn: [351,640], pages: {"showcase/404":"largest"},
+    from: 'cb931c5a95899f60', frames: 1, drawn: [351,640,354,1280], pages: {"showcase/404":"largest","table/rules":"lazy"}, phone: {"table/rules":[354]},
     sizes: [
-      { file: 'latch-under-the-arch-351.28db5282.webp', width: 351, height: 197, bytes: 8908 },
-      { file: 'latch-under-the-arch-702.558e2d67.webp', width: 702, height: 395, bytes: 27382 },
+      { file: 'latch-under-the-arch-354.2b771376.webp', width: 354, height: 199, bytes: 9046 },
+      { file: 'latch-under-the-arch-708.7582ba28.webp', width: 708, height: 398, bytes: 27978 },
       { file: 'latch-under-the-arch-1280.ed263c9a.webp', width: 1280, height: 720, bytes: 68804 },
+      { file: 'latch-under-the-arch-1536.f963d8d6.webp', width: 1536, height: 864, bytes: 88754 },
+    ],
+  },
+  'parasite-offline': {
+    from: '059ed970c7c59ba1', frames: 1, drawn: [358], pages: {"table/offline":"largest"},
+    sizes: [
+      { file: 'parasite-offline-358.e2a04ace.webp', width: 358, height: 201, bytes: 7012 },
+      { file: 'parasite-offline-716.478e4b37.webp', width: 716, height: 403, bytes: 22820 },
     ],
   },
   'showcase-ground': {

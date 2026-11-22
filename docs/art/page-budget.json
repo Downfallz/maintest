@@ -26,7 +26,7 @@
     },
     "table/stats": {
       "first": 0,
-      "all": 780288
+      "all": 798720
     },
     "table/battle": {
       "first": 0,
@@ -34,11 +34,15 @@
     },
     "table/leaderboard": {
       "first": 0,
-      "all": 69632
+      "all": 151552
     },
     "table/rules": {
       "first": 0,
-      "all": 69632
+      "all": 98304
+    },
+    "table/offline": {
+      "first": 24576,
+      "all": 24576
     }
   }
 }
