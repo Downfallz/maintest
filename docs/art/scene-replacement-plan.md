@@ -1,11 +1,11 @@
 # Replacement art for repeated scenes
 
-The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Fourteen receive new art. The featured lobby game changes painting once, at round 6. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
+The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Thirteen receive new art. The featured lobby game changes painting once, at round 6. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
 
 ## Review and delivery
 
 1. In the plan PR, show the owner one numbered candidate at a time. If the owner requests a change, revise that same image.
-2. On the owner's explicit OK for that version, add its WebP source under `docs/art/sources/pages/replacements/` on this PR's branch. Change its Pending cell to a link to the accepted file. Use the accepted image itself for any companion piece. For the creator's note, request a photograph of the real prototype when that slot comes up.
+2. On the owner's explicit OK for that version, add its WebP source under `docs/art/sources/pages/replacements/` on this PR's branch. Change its Pending cell to a link to the accepted file. Use the accepted image itself for any companion piece.
 3. The second PR wires the approved sources into the screens. Update the relevant [journey briefs](journeys/README.md) and [picture declarations](page-pictures.json), derive responsive files with the [picture kit](page-pictures.md), and check the affected budgets. Review the actual crops at 320 and 390 px and on desktop, text contrast, Save-Data grounds and the offline plate in the service worker.
 
 ## Featured lobby painting
@@ -40,7 +40,7 @@ The current painting names below are from the [source register](sources/pages/sc
 | 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. The Deathstalker leaps at the Ethereal over the opening chasm. Use the featured lobby rule above. | [The Great Rupture](sources/pages/replacements/great-rupture.webp) |
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | [Waiting ripples](sources/pages/replacements/waiting-ripples.webp) |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | [After the impact](sources/pages/replacements/after-the-impact.webp) |
-| 12 | Showcase, creator's note | predator-at-rest | Owner's photograph of the actual paper prototype mid-game. Shoot at table height with played cards, tokens and the player screen in view. | Pending |
+| 12 | Showcase, creator's note | predator-at-rest | The owner started with the app. A physical prototype has yet to be built. Defer this replacement and keep the resting Predator here. | Keep existing |
 | 13 | Leaderboard heading | elemental-charge | A lone scarred survivor stands on a broken tier, framed on the right against a low eclipse. | Pending |
 | 14 | Statistics heading | ironhide-scar | A slate slab bears overlapping claw marks worn almost smooth. One fresh cut exposes pale stone. | Pending |
 | 15 | Rulebook heading | latch-under-the-arch | Overhead view of the tabletop opening position. Show two formations of three and the round marker on one. Use the real setup as the reference. | Pending |
