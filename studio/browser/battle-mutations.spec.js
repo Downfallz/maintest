@@ -516,6 +516,20 @@ test('the team\'s last pick, once the host accepts it, keeps its creature in its
   expect(h.state.errors).toEqual([]);
 });
 
+test('a reveal that comes later leaves the focus where the player went after the last pick', async ({ page }) => {
+  const h = await mount(page, { remaining: 1 });
+  h.state.next = view => ({ ...view, waitingFor: null, waitingAsked: null, options: {}, board: { ...view.board, evolutionChoices: [{ creature: 2, tier: 'root1' }] } });
+  await page.locator('#actor-layer [data-creature="2"]').click();
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toBeFocused();
+  // The player moves on while the friend picks: the reveal does not take the focus back.
+  await page.locator('#settings').focus();
+  h.state.view = revealed(h.state.view); await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#growth-receipt')).toBeVisible();
+  await expect(page.locator('#settings')).toBeFocused();
+  expect(h.state.errors).toEqual([]);
+});
 // Docked, the tree's tag stays on the creature it holds alone (#1000): the others' ◇ MUTATE are the sheet's tabs.
 test('a docked tree keeps the tag of the creature it holds, not of every creature offered', async ({ page }) => {
   const h = await mount(page, { open: '#actor-layer [data-creature="2"]' });

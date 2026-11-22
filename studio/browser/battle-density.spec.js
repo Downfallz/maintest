@@ -109,11 +109,15 @@ test('the match frame is written at 11 px at least and no two of its controls sh
   }
   // Under 360 px History is off the bar: its unread mark is a dot on Help, which opens it (#1000).
   const narrowBar = page.viewportSize().width < 360;
-  await page.evaluate(() => { const unread = document.getElementById('history-unread'); unread.dataset.count = '2'; unread.textContent = ' · 2 new'; });
-  const dot = () => page.locator('#help-open').evaluate(node => getComputedStyle(node, '::after').content);
-  expect(await dot()).toBe(narrowBar ? '""' : 'none');
-  await page.evaluate(() => { const unread = document.getElementById('history-unread'); unread.dataset.count = ''; unread.textContent = ''; });
-  expect(await dot()).toBe('none');
+  // The count is written as history.ts writes it, again on each read: a redraw of the journal may clear it between two.
+  const unread = count => page.locator('#help-open').evaluate((node, count) => {
+    const mark = document.getElementById('history-unread'); mark.dataset.count = count; mark.textContent = count ? ` · ${count} new` : '';
+    return getComputedStyle(node, '::after').content;
+  }, count);
+  await expect.poll(() => unread('2')).toBe(narrowBar ? '""' : 'none');
+  // The dot is drawn; the words are spoken: Help is described by History's unread count.
+  await expect(page.locator('#help-open')).toHaveAccessibleDescription(/2 new/);
+  await expect.poll(() => unread('')).toBe('none');
   // Under 360 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell").
   const narrow = page.viewportSize().width < 360;
   await expect(page.locator('#inbox-open')).toBeVisible({ visible: !narrow });

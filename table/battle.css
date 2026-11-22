@@ -1262,7 +1262,7 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .opponent-badge[hidden], .opponent-heart[hidden] { display: none; }
 .opponent-chip[data-kind="bot"] .opponent-badge { border-color: var(--muted); color: var(--ink); }
 /* A friend is said in a word (#1000): the set's heart is health, and health is not friendship. */
-.opponent-heart { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; background: color-mix(in srgb, var(--soot) 80%, transparent); color: var(--gold); font: 800 .6875rem/1.4 system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+.opponent-heart { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: var(--radius-sharp); background: color-mix(in srgb, var(--soot) 80%, transparent); color: var(--gold); font: 800 .6875rem/1.4 system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
 @container hud (max-width: 760px) {
   .opponent-chip { gap: 6px; margin-left: 10px; padding-right: 10px; }
   #opponent-name { max-width: 110px; font-size: 14px; }

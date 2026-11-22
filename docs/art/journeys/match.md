@@ -64,9 +64,9 @@ What holds for every screen of the journey:
   and its defense when above zero; initiative is in the order row above, and energy is the sheet's (the creature in
   hand's, in its head) and the inspection's. The tag shows on the creature in hand alone (`CHOOSING TEMPO`,
   `MUTATION TREE`, `ACTING`); the others' `TEMPO ?` and `◇ MUTATE` go, since the sheet's tabs say Not chosen (today
-  they stay, at both widths). Built that way: docked, only the creature the sheet holds keeps its tag (on the
-  mutation tree too since #1000, where every creature offered kept `◇ MUTATE`), which
-  also takes `ACTING` off Creature 5's `30/30` at 320 (`spell-choice`). `YOUR TEAM` is hidden docked;
+  they stay, at both widths). Built that way: docked, only the creature the sheet holds keeps its tag; since #1000
+  this holds on the Mutation Tree too, where every creature offered kept `◇ MUTATE`. This also takes `ACTING` off
+  Creature 5's `30/30` at 320 (`spell-choice`). `YOUR TEAM` is hidden docked;
   `OPPONENT · …` stays, since it names the opponent when the bar folds its chip to the medallion
   (`battle-live.spec.js`). Built: name, health and defense docked; no caption crosses the screen's edge at 320.
 - **Team labels.** `OPPONENT · MEDIUM` and `YOUR TEAM` at 11 px whenever the field is not docked (built at 390 by
@@ -116,10 +116,10 @@ What holds for every screen of the journey:
 - **The order row's side line under 360 px**: the side alone; tempo and initiative in `#order-why`.
 - **History under 360 px**: off the bar, opened from Help's window, the upkeep and the sheets. Its unread mark is a
   dot on Help (#1000).
-- **The round's end shifted the frame** 0.23 at 320 and 0.30 at 390 after UX11; #999 brings it to 0.07 and 0.06 summed
-  over the walk, under the aim of 0.1: the captions hang from their buttons by a translation, the dock's card fills
-  its row in one layout on a phone (its buttons stacked at its side, its words from its top, three lines on a tall
-  phone), the round's number holds two figures' room, and the order row starts at its left. What is left is the
+- **The round's end shifted the frame** by 0.23 at 320 and 0.30 at 390 after UX11; #999 brings it to 0.07 and 0.06
+  summed over the walk, under the aim of 0.1. Four changes did it. The captions follow their buttons by a translation.
+  On a phone the dock's card fills its row in one layout (buttons stacked at its side, words from its top, three
+  lines on a tall phone). The round's number keeps room for two figures. The order row starts at its left. What is left is the
   health bars inside the captions as a sheet docks (0.03 at 320) and the bar's tools moving 3 px with the round's
   phase word.
 - Built after UX11 (#1000): the word `Friend` in the opponent's badge in place of the ♥; the `NEW ROUND` toast not

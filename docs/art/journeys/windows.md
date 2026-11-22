@@ -373,13 +373,13 @@ What the build does, each read from what the host confirmed, never from a draft:
    draft. Its caption's tag reads **PICKED**. The opponent's view, a
    replay, the journal and the inspection never see it. A pick the host has not accepted draws nothing.
 3. **The last pick confirmed**: the sheet closes, as it did before, and the focus goes once to the reveal's receipt
-   (its See), the owner's answer on #1076. Until the host reveals (a friend still picking), it waits on the field's
+   (its See button), the owner's answer on #1076. Until the host reveals (a friend still picking), it waits on the field's
    button of the creature the last pick went to (`#actor-layer [data-creature]`); after Pass all remaining picks, on
    the team's first living creature. It moves on the host's acceptance of that pick, never on a later snapshot.
 4. **The reveal** (`PurchasesRevealed` on the stream): the receipt arrives ([A part that arrives by
    itself](../ux-craft.md#a-part-that-arrives-by-itself)) and the crests appear, as filmed; PICKED leaves
-   each creature whose `acquiredTiers` hold the tier, the form stays. The focus goes to the receipt only from the
-   creature it waited on (3 above); a player who went elsewhere keeps it. Team tempos is
+   each creature whose `acquiredTiers` hold the tier, the form stays. The focus moves to the receipt only if it is still
+   on the creature's button where step 3 left it; a player who moved elsewhere keeps the focus. Team tempos is
    the filled action and can be pressed as soon as the host asks; the receipt never hides it and need not be read first.
 5. **The new spell, where it is used and where it is inspected.** The spellbook marks it "New · Available" the first
    time the creature acts (`growth.highlights()`, filmed on `spell-choice`, kept). The inspection's Known spells write
@@ -460,8 +460,8 @@ The crests appear settled under less motion already.
 ### Left
 
 - The owner's answers (2026-11-22, #1076): with picks left the sheet stays open on the next creature, and the
-  picked form shows, tagged PICKED, before the reveal (both kept); the focus goes to the receipt, not to the creature
-  (changed, built).
+  picked form shows, tagged PICKED, before the reveal (both kept). Changed and built: the focus goes to the receipt,
+  not to the creature.
 - The receipt arrives by the book's [A part that arrives by itself](../ux-craft.md#a-part-that-arrives-by-itself)
   (#1077, built); not filmed yet: the walk's next pass reads it.
 - At 320 by 568 the team's crests stand over the opponent row's health, and the receipt over the field's top
@@ -1153,8 +1153,8 @@ battle's (`table/battle-timing.js`). The band does not move by itself.
 
 ### Left
 
-- The owner's answers (2026-11-22, #1076): the focus on the verdict, not on Rematch (changed, built); "your
-  opponent" in place of the friend's name (kept). The blow's line from the live feed (#1073, built).
+- The owner's answers (2026-11-22, #1076). Changed and built: the focus on the verdict, not on Rematch. Kept: "your
+  opponent" in place of the friend's name. The blow's line from the live feed (#1073, built).
 - A match ended by a blow and both results with their pictures hidden are not filmed: `battle-live.spec.js` holds
   them (a feed with the deciding blow; images refused). A walk that ends a match by a blow is a later walk's.
 - A defeat by an effect at a round's turn (a bleed) writes no line: the journal names it. Whether the host should

@@ -572,10 +572,11 @@ These come from decisions already taken. No pattern below is an exception to the
 ### A part that arrives by itself
 
 - **What**: a part of the frame that the host's news brings, unasked by the player (a receipt, a notice), enters
-  where it will stand, by a fade and, under full motion, a short rise, in an entry's duration on the decelerating
-  curve. It stands over the content or in room already held, so its arrival moves nothing. It does not take the
-  focus by itself: the focus goes to it only when it answers the player's own action. GOV.UK focuses a success
-  banner that follows what the user just did, and gives an important banner shown on its own no focus.
+  where it will stand, by a fade and, under full motion, a short rise, over `--motion-normal` on the decelerating
+  curve `--motion-enter`. It stands over the content or in room already held, so its arrival moves nothing. It does not take the
+  focus by itself: the focus goes to it only when it answers the player's own action. GOV.UK moves the focus to
+  a success banner that answers what the user just did; it leaves an important banner that appears on its own
+  unfocused.
 - **Source**: [Notification banner](https://design-system.service.gov.uk/components/notification-banner/), GOV.UK
   Design System; [Motion](https://github.com/material-components/material-components-android/blob/master/docs/theming/Motion.md),
   Material Components for Android, for the curve of what enters. The rise of 8 px is *house*.
@@ -583,7 +584,7 @@ These come from decisions already taken. No pattern below is an exception to the
   when the part's `hidden` goes and its `display` comes back; Chromium and Safari 18 have it, and a browser
   without it shows the part at once. The rise is `translate`, so it leaves alone a `transform` that places the part.
   The part is `position: absolute` over the field.
-- **Cost**: one composited layer for `--motion-normal`.
+- **Cost**: one composited layer, for the length of `--motion-normal`.
 - **Less motion and screen reader**: a fade alone. A `role="status"` region beside the part says what arrived, once,
   without moving the focus ([A status told without moving the focus](#a-status-told-without-moving-the-focus)).
 - **Here**: the reveal's receipt (`#growth-receipt`, `table/battle.html`) arrives on the host's `PurchasesRevealed`

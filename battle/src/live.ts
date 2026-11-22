@@ -160,16 +160,20 @@ const beforePlanning = () => {
 // The team's last pick followed back onto the field (UX12b, #1076): the focus on the reveal's receipt once it is on the
 // frame; until the host reveals (a friend still picking), on the creature the pick went to, else the team's first
 // living one. A reveal that comes later takes the focus from that creature only, never from where the player went.
-let receiptAwaited: string | null = null;
+// The wait belongs to its round: a reveal with no receipt (both teams passed) ends it when the round moves on.
+let receiptAwaited: string | null = null, receiptRound: number | null = null;
 const receiptOpen = () => $('growth-receipt').querySelector<HTMLElement>('[data-growth-open]');
+const shownRound = () => (view as { board?: { roundNumber?: number } } | null)?.board?.roundNumber ?? null;
 function followPick(creature: number | null) {
   const own = creature ?? creatures.find(one => !one.enemy && one.isAlive)?.id;
-  receiptAwaited = own == null ? '' : String(own);
+  receiptAwaited = own == null ? '' : String(own); receiptRound = shownRound();
   if (own != null) nodes.get(String(own))?.focus({ preventScroll: true });
   giveReceiptFocus();
 }
 function giveReceiptFocus() {
   if (receiptAwaited == null) return;
+  if (shownRound() !== receiptRound) { receiptAwaited = null; return; }
+  // The body counts as waiting: a creature's button disabled while the friend picks drops the focus there.
   const focused = document.activeElement as HTMLElement | null;
   const waiting = !focused || focused === document.body || (focused.dataset.creature === receiptAwaited && $('actor-layer').contains(focused));
   if (!waiting) { receiptAwaited = null; return; }
@@ -659,8 +663,10 @@ function render() {
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
   // The receipt floats over the top of the field: crests start below it rather than behind it.
-  const receiptBox = $('growth-receipt').getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
-  const inset = unlocks && stageBox && receiptBox.height ? Math.max(0, receiptBox.bottom - stageBox.top + 4) : 0;
+  // Its arrival's rise (`translate`, the kit's `.motion-arrive`) is taken out: the crests stand under where it settles.
+  const receiptNode = $('growth-receipt'), receiptBox = receiptNode.getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
+  const rising = Number.parseFloat(getComputedStyle(receiptNode).translate.split(' ')[1] ?? '0') || 0;
+  const inset = unlocks && stageBox && receiptBox.height ? Math.max(0, receiptBox.bottom - rising - stageBox.top + 4) : 0;
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
