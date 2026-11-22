@@ -291,6 +291,14 @@ test('inviting a friend leaves the friends window and selects that friend in the
   await expect(heading.locator('img[data-scene]')).toHaveAttribute('alt', '');
   await expect(page.getByRole('dialog', { name: 'Create a table' })).toBeVisible();
   await closeInTheFarCorner(page, heading, '#create-close');
+  // Cancelled and opened on the friend again, the head is the same: its words stay on the band.
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await openPanel(page, /^Friends/);
+  await page.locator('#friend-list').getByRole('button', { name: `Invite ${friend.username}` }).click();
+  await expect(page.locator('#create-dialog')).toBeVisible();
+  await expect(heading.locator('.scene-words')).toContainText('Create a table');
+  await expect(heading.locator('img[data-scene]')).toHaveCount(1);
+  await closeInTheFarCorner(page, heading, '#create-close');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   // New battle opens the window whole again, with its plain heading.
   await page.locator('#new-table').click();
@@ -365,7 +373,7 @@ async function closeInTheFarCorner(page, heading, close) {
 
 test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics and the ladder', async ({ page }) => {
   const state = await home(page);
-  for (const path of ['/table/lobby.html', '/table/stats.html', '/table/leaderboard.html']) {
+  for (const path of ['/table/lobby.html', '/table/stats.html', '/table/leaderboard.html', '/table/rules.html']) {
     if (path !== '/table/lobby.html') await page.goto(path);
     await openPanel(page, /^Friends/);
     const heading = page.locator('#friends-dialog > .dialog-heading');
@@ -390,7 +398,8 @@ test('an invitation\'s card lays its words on the pool, dimmed', async ({ page }
   const card = page.locator('#invitation-cards .invitation');
   await expect(card).toHaveClass(/scene-ground/);
   await expect(card.locator('img[data-scene]')).toHaveAttribute('loading', 'lazy');
-  await expect(card.locator('.scene-words')).toHaveCount(2);
+  await expect(card.locator('.scene-words')).toHaveCount(1);
+  await expect(card.locator('.scene-words')).toContainText(`${friend.username} invites you`);
   expect(state.errors).toEqual([]);
 });
 

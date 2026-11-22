@@ -151,11 +151,14 @@ export function sceneHtml(name, options = {}) {
 export function wearScene(doc, element, name, options = {}) {
   if (options.form === 'plate') throw new Error(`${name}: a plate is drawn by sceneElement, not worn`);
   if (options.form === 'head' && !options.words) throw new Error(`${name}: a head names the element that holds its words`);
+  const holders = [options.words ?? []].flat();
+  // A page that looks for its words after a first wear finds the painting that wear prepended.
+  if (holders.some(holder => holder.hasAttribute('data-scene'))) throw new Error(`${name}: its words are its own painting; find them before the first wear`);
   const scene = sceneOf(name, options);
   undressScene(element);
   element.classList.add(...scene.class.split(' '));
   for (const [attribute, value] of Object.entries(scene.attributes)) element.setAttribute(attribute, value);
-  for (const holder of [options.words ?? []].flat()) holder.classList.add('scene-words');
+  for (const holder of holders) holder.classList.add('scene-words');
   if (scene.drawn) {
     const image = pictureElement(doc, name, pictureOptions(options));
     image.setAttribute('data-scene', '');

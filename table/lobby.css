@@ -125,7 +125,7 @@
 .dialog-heading h2 { font: 400 28px var(--font-display); margin-top: 8px; }
 #create-help { margin-top: 18px; }
 /* Opened on a friend, the Create window's heading wears its head from edge to edge, over the window's padding. */
-#create-table > .dialog-heading.scene-head { margin: -28px -28px 18px; }
+#create-table > .dialog-heading.scene-head { margin: -28px -28px 18px; } /* the dialog's padding, .lobby-page dialog above */
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
 .lobby-page .problem { margin: 12px 0; }
 .account { position: relative; }

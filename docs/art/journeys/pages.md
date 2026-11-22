@@ -19,9 +19,9 @@ page is paired here with the same page filled. Two screens were added to the wal
 `statistics-ranked`. Before them, Walker and Rook play one ranked 3v3 game through its first round, and Walker
 concedes. Walker is then on the ladder, provisional after one game, with a record of 0–1–0.
 
-The scenes of S7 were written from the same walk on `main` at `2286924`,
-`node scripts/ux/journey.mjs pages --out <folder>`, both widths. It films one more screen, `home-invitation`, right after `friend-invited`: Rook opens the table
-for Walker, and Walker's home shows the card. At 390 the walk logged `after statistics: #settings could not be
+The scenes of S7 were written from the same walk on `main` at `2286924`, both widths
+(`node scripts/ux/journey.mjs pages --out <folder>`). It films one more screen, `home-invitation`, right after
+`friend-invited`: Rook opens the table for Walker, and Walker's home shows the card. At 390 the walk logged `after statistics: #settings could not be
 pressed` and still filmed every screen; no screen S7 draws comes after it.
 
 What holds for every screen of the journey:
@@ -101,21 +101,21 @@ cards already have Ask.
 | The scene as the window's head, its focus on the Deathstalker's bank: its back, its blades and its claws on the stones, its jaw at the water. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
 
 The head is the window's heading. The band takes the place of the heading's slate, from edge to edge, clipped by the
-window's cut corner. The heading's rune rule goes: the band's lower edge is the rule. It holds the eyebrow, Your circle, and the title, Friends, on
-its `start` side. The × sits in its top `end` corner, over the painting. The empty list says what fills it in words.
+window's cut corner. The heading's rune rule goes: the band's lower edge is the rule. The band holds the eyebrow,
+Your circle, and the title, Friends, on its `start` side. The × sits in its top `end` corner, over the painting. The empty list says what fills it in words.
 No painting answers "who could be my friend?", and none is drawn in the list: a friend is their initial.
 
 - **Focus `75% 35%`.** A 3:1 band cut from a 16:9 painting keeps the whole width and cuts the height, so only the
   second number moves it. 35% down keeps the Deathstalker whole in the band's end, the part the scrim leaves clear:
   at 390 the band shows the painting from 15% to 73% of its height; at 64 px on a short screen, from 22% to 60%, its
   back and blades. The first number serves a box narrower than 16:9, which no window draws.
-- **The `start` side** is the darker one, and it leaves the Deathstalker clear. Measured in this session with
-  Pillow, on the painting cut as the band cuts it (366 by 120 px, 296 by 64): under the column of words, the
-  brightest 5% of pixels are at 133 (of 255) at the start against 139 at the end at 390, and 136 against 142 at 320. The scrim is opaque to `--soot`
-  under the words on either side.
+- **The `start` side** is the darker one, and it leaves the Deathstalker clear. Measured with Pillow
+  on the painting cut as the band cuts it (366 by 120 px, 296 by 64). Under the column of words, the brightest 5% of
+  pixels are at 133 (of 255) at the start against 139 at the end at 390, and 136 against 142 at 320. The scrim is
+  opaque to `--soot` under the words on either side.
 - **The same head on the player's pages.** `table/navigation.js` mounts the window on every page with the header.
   The head is drawn on the home, the statistics, the ladder, the rules and the battle, each of which declares the
-  scene, lazy. The admin page (an operator's) and the classic table at /play (archived) keep the window's plain
+  scene as lazy. The admin page (an operator's) and the classic table at /play (archived) keep the window's plain
   heading. The painting is lazy inside a closed window, so it loads when the window first opens.
 - **Room**: at 320 by 568 the band is 64 px (a screen under 600 px tall), lower than today's heading, about 85 px on
   the sheet. The window is no taller than today, 409 px empty, and Ask → stays on the first screen. At 390 by 844 the
@@ -165,9 +165,9 @@ No painting answers "who could be my friend?", and none is drawn in the list: a 
 - **Bytes**: the head, lazy, loaded when the window opens. The window is `min(720px, 100vw - 24px)` wide, so
   `predator-and-deathstalker` is drawn 366 px wide at 390 and 296 at 320. The 732 px file goes to a phone at twice
   the density, 68,750 bytes; the 366 px file goes at the walk's density, 20,744 bytes (`table/page-art.js`). The same
-  file at both widths. On a wide screen the window is up to 720 px wide on the home and takes a larger file, which
-  the budget, counted at 390, does not see. The pages that draw the head raise their `all` by 68,750 bytes:
-  table/home, table/stats and table/battle. table/leaderboard and table/rules gain a budget of 68 KiB. The walk's
+  file at both widths. On a wide screen the window is up to 720 px wide and takes a larger file. The budget is
+  counted at 390, so it does not see that file. The pages that draw the head raise their `all` by 68,750 bytes:
+  table/home, table/stats and table/battle. table/leaderboard and table/rules gain a budget of 69,632 bytes (68 KiB). The walk's
   `pictures` count one more `img` and 0 oversized.
 - **Largest paint**: the page's own, not the window's; no paint was measured for the window.
 - **Shift**: 0.00 at both widths. The band holds its 3:1 room before the painting arrives, and the window is in the
@@ -411,14 +411,13 @@ painting with its own opaque fill.
   words are at 119 against 124 at 390 (358 by 119 px), 111 against 121 at 320 (288 by 64 px), measured as on
   Friends. The × keeps the top end corner, where every window has it. With the words at the end it would share their
   column: Create a table takes two lines at 320 and fills it.
-- **Not the band before it.** Invite closes Friends and opens Create: the same painting, its upper half and the
-  Deathstalker's back, then its lower half and the water. The two windows that follow each other are not the same
-  picture.
-- **Room**: at 320 by 568 the window is 716 px tall in this walk (679 in the build UX10 measured), and Create & play
-  → is below the first screen, as the **Left** below already says. The band is 64 px there, but the title wraps to
-  two lines, so the head is as tall as its words, about 98 px on the build's sheet. The build's film measured the
-  window at 708 px at 320 against 716: the head gives back 8 px, not the 35 read on the earlier sheet, and does not
-  make it worse. At 390 by 844 the window is 639 px against 592 (the 119 px band is 47 px taller than the heading it
+- **A different part of the painting.** Invite closes Friends and opens Create, so the two windows follow each
+  other. Friends shows the upper half and the Deathstalker's back; Create shows the lower half and the water. They are
+  not the same picture.
+- **Room**: at 320 by 568 the window is 716 px tall in this walk, and Create & play → is below the first screen, as
+  the **Left** below already says. The band is 64 px, but the title wraps to two lines, so the head is as tall as its
+  words, about 98 px. The film measured the window at 708 px against 716: the head gives back 8 px and does not make
+  it worse. At 390 by 844 the window is 639 px against 592 (the 119 px band is 47 px taller than the heading it
   replaced), and Create & play → stays in view.
 
 ### States
@@ -486,7 +485,7 @@ painting with its own opaque fill.
 
 The home is [the lobby's brief](lobby.md); this screen lives here because the walk that reaches it is this
 journey's. Rook opens the table of `friend-invited` for Walker, and Walker's home shows the card. The scenes' plan
-placed it in lobby.md.
+placed it in lobby.md; it is briefed here for that reason.
 
 ### Job
 
@@ -519,9 +518,9 @@ Rook invites you to a 3v3 battle                         [Invitation]
 The card is the ground: its whole box, inside its border, its gold top edge and its cut corner, which clip the
 painting. Its words sit on the ground's scrim, from 84% to 92% soot (`table/identity.css`), so the painting is the
 meeting felt behind the words, not a picture to read. The status tag and the two buttons keep their own fills; the
-walk's `contrast` reads the title (`h3`) and the game's line. The ground takes no focus of its own: the declaration's
+walk's `contrast` reads the title (`h3`) and the tag; the game's line is not shown on the home. The ground takes no focus of its own: the declaration's
 `50% 55%`. At 390 the card, about 358 by 200 px on the sheet, is close to 16:9 and shows nearly the whole painting.
-At 320, about 284 by 230, cover keeps the middle 69% of its width, both jaws at the water. It is the same file as
+At 320 the card is about 284 by 230 px, and `cover` keeps the middle 69% of the painting's width, both jaws at the water. It is the same file as
 the two windows' heads, so a home that opened either window sends nothing more.
 
 ### States
@@ -545,8 +544,8 @@ the two windows' heads, so a home that opened either window sends nothing more.
 | The press | A pointer down on Accept & play → or Decline. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
 The ground has no beat: it is under the card from the card's first frame, and lazy. The home's own ambience is the
-featured space's, which is the lobby's: the walk's `animating` is 1 at 390 and 0 at 320, where the walk brings the
-card into view and the featured space, out of view, stops.
+featured space's, which is the lobby's: the walk's `animating` is 1 at 390 and 0 at 320: there the walk scrolls the
+card into view, and the featured space, now out of view, stops.
 
 ### Less motion
 
@@ -575,9 +574,8 @@ card into view and the featured space, out of view, stops.
 
 ### Left
 
-- The walk films the card below the first screen at 320, and the walk's `contrast` reads only a scene in view (S6's
-  **Left**). At 320 it reads nothing on this screen unless the walk brings the card into view first. That change is
-  the walk's, `scripts/ux/journeys.mjs`.
+- The walk's `contrast` reads only a scene in view (S6's **Left**), and at 320 the card is below the first screen:
+  the walk scrolls it into view before the screen (`scripts/ux/journeys.mjs`).
 - The home redraws its cards when anything in its key changes, the minute included (`replaceChildren`), so the
   ground's image is made again each time, from the cache. If the sheet or a phone shows a blink, the build keys the
   card by its table's id, as the Friends window keys its rows.

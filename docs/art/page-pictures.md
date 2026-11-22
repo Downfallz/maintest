@@ -107,7 +107,8 @@ dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'tabl
   are: a window's `.dialog-heading` as a head (`words` is its child that holds the eyebrow and the title; the close
   sits in the band's top corner away from them, on its own fill), a card as a ground (`words` lists the children
   whose words lie on the painting, so the walk measures them). `undressScene` takes it off, for a window that wears
-  one in one state only: the Create window wears its head when opened on a friend.
+  one in one state only: the Create window wears its head when opened on a friend. Find `words` before the first
+  wear: after it, the heading's first child is the painting, which `wearScene` refuses.
 - Words on a head or a ground hold 4.5:1 against the lightest pixel under them. The journey walk measures it on
   every screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
 

@@ -223,9 +223,12 @@ test('a window\'s own heading wears a scene as its head, its words and its close
   assert.equal(image.attributes['data-focus-x'], '75');
   assert.deepEqual(heading.children.slice(1), [words, close], 'the words and the close stay in their order');
   assert.ok(words.classes.has('scene-words'));
-  // Worn twice, it is still one painting.
+  // Worn twice, it is still one painting, and its words still sit on it.
   wearScene(doc, heading, 'scene', { page: 'home', art: ART, form: 'head', words });
   assert.equal(heading.children.filter(child => child.tag === 'img').length, 1);
+  assert.ok(words.classes.has('scene-words'));
+  // A page that looks for its words after a first wear finds the painting first: that is refused, not worn.
+  assert.throws(() => wearScene(doc, heading, 'scene', { page: 'home', art: ART, form: 'head', words: heading.firstElementChild }), /its words are its own painting/);
   undressScene(heading);
   assert.deepEqual([...heading.classes], ['dialog-heading']);
   assert.deepEqual(heading.children, [words, close]);
