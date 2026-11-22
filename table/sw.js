@@ -16,9 +16,9 @@ const RULEBOOK_OWN = new Set([RULEBOOK, '/rules.js', '/rules.css', '/rules.json'
 // so that no other page is drawn with an older deploy's style.
 // The motion kit's module is one of them (ADR 0197): without it the account's less motion would not reach the book.
 const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/motion.js', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
-// What the offline page draws its plate with (docs/art/journeys/pages.md, the offline page): its script, the picture
-// kit and the sizes it derived, and the plate's own files, which page-art.js names. Kept as the shared files are: at
-// install and each time the network answers, given only when it cannot answer at all.
+// What the offline page draws its plate with (ADR 0200): its script, the picture kit and the sizes it derived, and the
+// plate's own files, which page-art.js names. Given only when the network cannot answer at all. The kit is refreshed
+// each time a page loads it; offline.js only when the worker installs again, since no page loads it online.
 const OFFLINE_SCRIPTS = ['/offline.js', '/picture.js', '/picture-focus.js', '/page-art.js'];
 const PAGE_ART = '/page-art.js';
 const PLATE = 'parasite-offline';

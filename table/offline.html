@@ -29,7 +29,8 @@
     <button id="offline-retry" type="button">Try again</button>
   </main>
   <script>
-    // Shown by the service worker when a page could not be loaded (ADR 0166). It goes back to the page asked for as
+    // Shown by the service worker when a page could not be loaded (ADR 0166), at that page's address: the page's own
+    // files are named from the root (ADR 0200). It goes back to the page asked for as
     // soon as the network is back, or when the player asks.
     const retry = () => { document.getElementById('offline-state').textContent = 'Reconnecting…'; location.reload(); };
     document.getElementById('offline-retry').addEventListener('click', retry);
@@ -37,6 +38,6 @@
     // The plate's room goes when its script never ran: a worker that could not keep it.
     addEventListener('load', () => { const room = document.getElementById('offline-plate'); if (room && !room.firstChild) room.remove(); });
   </script>
-  <script type="module" src="offline.js"></script>
+  <script type="module" src="/offline.js"></script>
 </body>
 </html>

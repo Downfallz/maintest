@@ -25,7 +25,7 @@ The scenes of S7 were written from the same walk on `main` at `2286924`, both wi
 `friend-invited`: Rook opens the table for Walker, and Walker's home shows the card. At 390 the walk logged `after statistics: #settings could not be
 pressed` and still filmed every screen; no screen S7 draws comes after it.
 
-The scenes of S10 were written from the same walk on `main` at `987374a`, both widths
+S10's scenes were written from the walk of `main` at `987374a`, at both widths
 (`node scripts/ux/journey.mjs pages --out <folder>`). It films two more screens after `statistics-ranked`: `rulebook`,
 the rulebook opened at /rules once the book is drawn, and `offline`, the offline page opened by its own address, online.
 Both are briefed below. The offline page is filmed as a navigation offline draws it; what the worker gives with no
@@ -1118,7 +1118,7 @@ that order. At 320 the band is 102 px tall in English, its eyebrow on two lines;
 - **Error**: the book could not be read: `#rules-problem` says so (alert); the head stays. Read, not seen.
 - **Offline**: the worker gives the copy this device kept, and `#rules-kept` says the table may play a newer one. The
   worker keeps `picture.js` and `page-art.js` (for the offline plate), but not the head's painting: the band is soot
-  with its words. That is acceptable: the rules are what the page is for. Read in `table/sw.js` and `table/rules.js`, not seen.
+  with its words. The rules are what the page is for. Read in `table/sw.js` and `table/rules.js`, not seen.
 
 ### Motion
 
@@ -1197,12 +1197,14 @@ A plate: a `figure`, the painting whole, above the title, centred, at most 358 p
   condition of the install: the offline page alone is. The page's script draws the plate with `sceneElement`, never a
   derived file's name. If the module or the file is missing, the figure is removed and the page is its words, as
   today.
-- **Its form.** The page cannot take `.scene-plate` from `identity.css`: its inline sheet writes the plate's two rules
-  (a block image, its width the figure's, its height following), as `identity.css` writes them.
+- **Its form.** The page loads no sheet of the table, so it cannot take `.scene-plate` from `identity.css`. Its inline
+  sheet writes the same rules: the room at 16:9, at most 358 px wide, and a block image at the figure's width, its
+  height following. It names its script from the root (`/offline.js`): the worker shows it at the address of the page
+  that failed (ADR 0200).
 
 ### States
 
-- **First paint**: the words, and the plate's room held by its `width` and `height` until the file is drawn.
+- **First paint**: the words, and the plate's room held by its box (`aspect-ratio: 16 / 9`, at most 358 px wide) until the file is drawn.
 - **Empty**: none: the page has one content.
 - **Loaded**: this screen.
 - **Waiting**: after Try again, or when the browser says it is online, the state line says "Reconnecting…" and the

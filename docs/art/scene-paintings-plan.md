@@ -305,14 +305,14 @@ result in `battle/src` with UX12.
     The rulebook loads the kit with a caught `import()`, so a book read offline still draws. The offline page draws
     the Parasite whole, a plate of its own declaration, `parasite-offline` (two files, 358 and 716 px), and its Try
     again takes the brand's gold. The service worker keeps `offline.js`, the picture kit and the plate's files, read off
-    `page-art.js`, and keeps them again when a fresh `page-art.js` names others. The walk gains `rulebook` and
+    `page-art.js`, and keeps them again when a fresh `page-art.js` names others (ADR 0200). The walk gains `rulebook` and
     `offline`, briefed in `pages.md`.
 
     The heads drawn 354 px on a phone add their 708 px file: `table/leaderboard` rose to 148 KiB (the charge, a 16:9 cut
-    to its band, is 79,800 bytes), `table/rules` to 96, `table/stats` to 780; `table/offline` has 24 KiB, its plate asked
-    for first. Each painting gains a 1280 px file for the band on a wide screen. The walk's `contrast` reads 7.27:1 at
-    the least, at both widths; at 320 the bands are 88, 120 and 102 px. Left: the rulebook's head painting is not kept
-    offline, so its band is soot there; the French rulebook's band was not filmed; the rulebook's own measures (words
+    to its band, is 79,800 bytes), `table/rules` to 96 KiB, `table/stats` to 780 KiB; `table/offline` is 24 KiB, its
+    plate asked for first. Each painting gains a 1280 px file for the band on a wide screen. The walk's `contrast` reads 7.27:1 at
+    the least, at both widths; at 320 the bands are 88, 120 and 102 px. Left: the worker keeps the kit but not the rulebook's head
+    painting, so its band is soot offline; the French rulebook's band was not filmed; the rulebook's own measures (words
     under 11 px, targets under 44) are its brief's **Left**.
 11. **S11, the Mutation Tree and the result.** The tree's head and its column heads, the result's head, with
     UX12's windows (its brief, `windows.md`). Tests: `battle-mutations.spec.js`, the battle's budget, the

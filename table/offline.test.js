@@ -49,6 +49,19 @@ test('the offline page holds the plate\'s room before its script, and lets it go
   const page = read('./offline.html');
   assert.match(page, /<main>\s*<div id="offline-plate" class="offline-plate"><\/div>\s*<h1>/);
   assert.match(page, /\.offline-plate \{[^}]*aspect-ratio: 16 \/ 9/);
-  assert.match(page, /<script type="module" src="offline.js"><\/script>/);
+  assert.match(page, /<script type="module" src="\/offline.js"><\/script>/);
   assert.match(page, /if \(room && !room\.firstChild\) room\.remove\(\)/);
+});
+
+test('the offline page names every file from the root: the worker shows it at the address of the navigation that failed', () => {
+  // On /session/<id>, a relative offline.js would be /session/offline.js, which the worker keeps nowhere (ADR 0200).
+  const named = [...read('./offline.html').matchAll(/\s(?:src|href)="([^"]+)"/g)].map(([, path]) => path);
+  assert.ok(named.length > 0);
+  for (const path of named) assert.match(path, /^\//, `${path} is named from the root`);
+});
+
+test('an older offline.js that meets a kit without its plate leaves the room as it was, for the page to take away', () => {
+  const doc = fakeDocument(), room = doc.element('div');
+  assert.throws(() => drawPlate({ ...doc, createElement: () => { throw new Error('a kit that changed'); } }, room));
+  assert.deepEqual(room.children, [], 'nothing drawn: the page\'s load handler removes the empty room');
 });
