@@ -501,9 +501,23 @@ internal sealed class AccountApi
 
     private async Task<StudioResponse> SignOutAsync(string body, AccountRequest request)
     {
-        if (Read<SignOutBody>(body)?.Everywhere == true && await WhoAsync(request) is { } who)
+        var asked = Read<SignOutBody>(body);
+        if (asked?.Everywhere == true && await WhoAsync(request) is { } who)
         {
             await SignOutEverywhereAsync(who.Account.Id);
+        }
+        else if (!string.IsNullOrWhiteSpace(asked?.Endpoint) && Devices is { } devices && await WhoAsync(request) is { } leaving)
+        {
+            // A browser signing out is no longer the account's device (ADR 0202): a borrowed one, whose seat switch
+            // made it one, is told nothing more of the account once its player has left it.
+            try
+            {
+                await devices.RemoveAsync(leaving.Account.Id, asked.Endpoint);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+            {
+                Console.WriteLine($"  Account {leaving.Account.Id}: a device signing out could not be forgotten: {HttpHost.OneLine(failure)}");
+            }
         }
 
         return Answer(new { signedOut = true }, AccountSessions.ClearCookie(request.Secure));
@@ -700,7 +714,7 @@ internal sealed class AccountApi
 
         var saved = await store.GetAsync(who.Account.Id);
         var tutorials = await store.GetTutorialsAsync(who.Account.Id);
-        var notices = await store.GetNoticesAsync(who.Account.Id);
+        var notices = await NoticesOrDefaultAsync(store, who.Account.Id);
         return Answer(new { preferences = DescribePreferences(saved ?? GamePreferences.Default), saved = saved is not null, tutorials = new { done = tutorials.Done, skipped = tutorials.Skipped }, notices = DescribeNotices(notices) }, who.Renewed);
     }
 
@@ -722,8 +736,32 @@ internal sealed class AccountApi
 
         var asked = Read<NoticePreferencesBody>(body);
         var chosen = new NoticePreferences(asked?.Turns ?? true, asked?.Invitations ?? true, asked?.Results ?? true);
-        await store.SaveNoticesAsync(who.Account.Id, chosen);
+        try
+        {
+            await store.SaveNoticesAsync(who.Account.Id, chosen);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            Console.WriteLine($"  Account {who.Account.Id}: what pops up could not be saved: {HttpHost.OneLine(failure)}");
+            return Problem(503, "Account.PreferencesUnavailable", "Your choices could not be saved just now. Try again.");
+        }
+
         return Answer(new { notices = DescribeNotices(chosen) }, who.Renewed);
+    }
+
+    // What pops up is a line of the settings' answer, never a reason to lose the rest of it: a store that fails reads
+    // as every kind, which is what the door does too when it cannot read them.
+    private static async Task<NoticePreferences> NoticesOrDefaultAsync(IPreferenceStore store, AccountId account)
+    {
+        try
+        {
+            return await store.GetNoticesAsync(account);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException)
+        {
+            Console.WriteLine($"  Account {account}: what pops up could not be read: {HttpHost.OneLine(failure)}");
+            return NoticePreferences.Default;
+        }
     }
 
     private static object DescribeNotices(NoticePreferences notices) => new { turns = notices.Turns, invitations = notices.Invitations, results = notices.Results };
@@ -808,7 +846,7 @@ internal sealed class AccountApi
 
     private sealed record RegisterBody(string? Ticket, string? Username);
 
-    private sealed record SignOutBody(bool? Everywhere);
+    private sealed record SignOutBody(bool? Everywhere, string? Endpoint);
 
     private sealed record ReadNoticesBody(long? UpTo);
 

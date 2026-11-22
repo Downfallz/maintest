@@ -527,14 +527,16 @@ With accounts on as well (ADR 0122), Settings, Notifications, says first that th
 **Pop-ups on this device** (ADR 0202): on, the browser's push subscription becomes one of the account's **devices**,
 kept beside the accounts (`devices/<accountId>.json`, five at most, the oldest replaced); off forgets the device and
 lets go of the subscription itself, so no page of this browser is told anything. **What pops up** chooses, for the
-account, *Your turn*, *Invitations and friends* and *Results*. A seat that belongs to an account is told its turn
-on the account's devices, as it chose, tagged with the table, and not on the seat's own subscription; its match
-settings' switch is the same one, since a signed-in seat's subscription is registered as one of its account's
-devices too, and its `DELETE` forgets it there. No device is told a signed-in seat's turn when the other seat is the
-same account's or the device is the other seat's subscription (hotseat, ADR 0120). **Send a test** sends one notice
+account, *Your turn* (the warning that a turn is about to time out among them), *Invitations and friends* and *Results*.
+
+A seat that belongs to an account is told its turn
+on the account's devices, as far as the account's choices allow, tagged with the table; the seat's own subscription
+is one of those devices. The seat's match settings' switch is the same one: a signed-in seat's subscription is
+registered as one of its account's devices too, and the seat's `DELETE /api/lobby/push` forgets it there. No device is told a signed-in seat's turn when the other seat is the
+same account's. Nor is the device that holds the other seat's subscription (hotseat, ADR 0120). **Send a test** sends one notice
 through the push service to this device. *Sign out everywhere* and
 deleting the account forget every device. The routes are `PUT`/`DELETE /api/account/push` and
-`POST /api/account/push/test`, all signed in; a host without push keys answers 404 and the lobby shows no panel.
+`POST /api/account/push/test`, all signed in; a host without push keys answers 404 and Settings show no pop-ups switch. Signing out on a browser forgets it as a device (`POST /api/account/signout` with its `endpoint`).
 The worker shows a notice unless a window on the page it opens is in front of somebody: a lobby notice over a
 game, a "your turn" over the lobby, neither over its own page; every open page is told a notice arrived, so a lobby
 reads its lists again at once.
@@ -768,6 +770,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations (a game waiting for the player carries its recap: the casts since the last visit); the eight latest opponents. |
 | `GET /api/lobby/finished/<bots\|players>/<page>` | account | Finished games, six at a time (ADR 0147). |
 | `POST /api/lobby/tables` | anyone, account | Opens a table: `opponent`, `friend`, `level` (ADR 0180), `ranked` (ADR 0155), `turnLimit` (ADR 0169), format. |
+| `GET`/`PUT`/`DELETE /api/lobby/push`, `POST /api/lobby/push/test` | anyone, seat | The host's public key (`GET`, anyone); this seat's subscription (ADR 0118), the seat's key and, for a seat that belongs to an account, its session: a signed-in seat's subscription is also one of its account's devices, and its `DELETE` forgets it there (ADR 0202). 410 for a subscription a push service said is gone. |
 | `POST /api/lobby/adopt` | account | Adopts the browser's saved seats into the account. |
 | `POST /api/lobby/invitations` | anyone holding the link's key | What the keys a link carries are: an invitation with its table described, a seat, or spent. Spends nothing (ADR 0116); a seat kept for a friend is spent to anyone else (ADR 0129). The table's page and the signed-out door ask it. |
 | `POST /api/lobby/claim` | account | Accepts the invitations a link carries; the first browser takes the seat (ADR 0116). |

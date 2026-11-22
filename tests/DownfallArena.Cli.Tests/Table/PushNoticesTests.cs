@@ -288,7 +288,7 @@ public sealed class PushNoticesTests : IDisposable
     }
 
     [Fact]
-    public async Task A_signed_in_seat_is_told_its_turn_on_its_account_s_devices_rather_than_the_seat_s_subscription()
+    public async Task A_signed_in_seat_is_told_its_turn_once_on_each_device_of_its_account_tagged_with_the_table()
     {
         var (table, notices) = await Seated();
         var account = AccountId.New();
@@ -301,14 +301,15 @@ public sealed class PushNoticesTests : IDisposable
         await Asked(table);
         _clock.Advance(Grace);
 
-        var (to, payload) = await _sender.Next();
-        to.Endpoint.ShouldBe("https://push.example/laptop");
+        var (first, payload) = await _sender.Next();
+        var (second, _) = await _sender.Next();
+        new[] { first.Endpoint, second.Endpoint }.ShouldBe(["https://push.example/laptop", Phone.Endpoint], ignoreOrder: true);
         var notice = JsonDocument.Parse(payload).RootElement;
         notice.GetProperty("title").GetString().ShouldBe("Your turn");
         notice.GetProperty("body").GetString().ShouldBe("Round 1: choose your mutations.");
         notice.GetProperty("tag").GetString().ShouldBe($"turn:{table.Id}");
         await Settled();
-        _sender.Sent.Count.ShouldBe(1, "the seat's own subscription is not told as well");
+        _sender.Sent.Count.ShouldBe(2, "the seat's browser is one of the account's devices, told once");
     }
 
     [Fact]
@@ -349,6 +350,45 @@ public sealed class PushNoticesTests : IDisposable
 
         await Settled();
         _sender.Sent.ShouldBeEmpty("the phone that holds the other seat is held by the other player");
+    }
+
+    [Fact]
+    public async Task One_account_in_both_seats_is_hotseat_and_none_of_its_devices_is_told()
+    {
+        var notices = new PushNotices(_sender, "BP8", _clock, Grace);
+        _hosted = new HostedTables(null, push: notices);
+        var table = await Added(HostedTables.TwoPeople);
+        var account = AccountId.New();
+        notices.Accounts = new AccountNotifier(log: null, new AccountNotices(_sender, await DevicesAsync(account, "https://push.example/laptop")));
+        table.Seats[0].Account = account;
+        table.Seats[1].Account = account;
+
+        await Arrive(table);
+        (await table.Api.HandleAsync("GET", "/api/seat/player2", "", table.Seats[1].Token)).Status.ShouldBe(200);
+        await Asked(table);
+        _clock.Advance(Grace);
+
+        await Settled();
+        _sender.Sent.ShouldBeEmpty("the account's player holds both seats: nobody is away to be told");
+    }
+
+    [Fact]
+    public async Task A_signed_in_seat_s_subscription_its_account_does_not_hold_yet_joins_its_devices_and_is_told()
+    {
+        var (table, notices) = await Seated();
+        var account = AccountId.New();
+        var devices = new AccountDevices(new InMemoryDeviceStore(), TimeProvider.System);
+        notices.Accounts = new AccountNotifier(log: null, new AccountNotices(_sender, devices));
+        table.Seats[0].Account = account;
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
+
+        var (to, _) = await _sender.Next();
+        to.Endpoint.ShouldBe(Phone.Endpoint);
+        (await devices.ListAsync(account, TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe(Phone.Endpoint);
     }
 
     private static async Task<AccountDevices> DevicesAsync(AccountId account, string endpoint)

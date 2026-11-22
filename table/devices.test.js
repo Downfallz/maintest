@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { deviceSwitch, kindsBody, KINDS, mountDevices, needsFreshSubscription, takeOldOptOut } from './devices.js';
+import { deviceSwitch, kindsBody, KINDS, mountDevices, needsFreshSubscription, oldOptOut, forgetOldOptOut } from './devices.js';
 
 const base = { supported: true, keyed: true, permission: 'default', subscribed: false, busy: false };
 const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -124,22 +124,43 @@ function kept(values = {}) {
   return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key), map };
 }
 
-test('a browser turned off under the old switch is read once, for its account only, and forgotten', () => {
+test('a browser turned off under the old switch is read for its account only, and forgotten on request', () => {
   const storage = kept({ 'downfall.table.device-opt-out': 'acct_mark' });
-  assert.equal(takeOldOptOut(storage, 'acct_bastien'), false, 'another account on the same browser');
-  assert.equal(takeOldOptOut(storage, 'acct_mark'), true);
-  assert.equal(takeOldOptOut(storage, 'acct_mark'), false, 'read once');
-  assert.equal(takeOldOptOut(null, 'acct_mark'), false, 'a browser that keeps nothing');
-  assert.equal(takeOldOptOut({ getItem() { throw new Error('blocked'); } }, 'acct_mark'), false);
+  assert.equal(oldOptOut(storage, 'acct_bastien'), false, 'another account on the same browser');
+  assert.equal(oldOptOut(storage, 'acct_mark'), true);
+  forgetOldOptOut(storage);
+  assert.equal(oldOptOut(storage, 'acct_mark'), false);
+  assert.equal(oldOptOut(null, 'acct_mark'), false, 'a browser that keeps nothing');
+  assert.equal(oldOptOut({ getItem() { throw new Error('blocked'); } }, 'acct_mark'), false);
+  assert.doesNotThrow(() => forgetOldOptOut({ removeItem() { throw new Error('blocked'); } }));
 });
 
-test('a browser turned off under the old switch lets go of its subscription instead of registering it again', async () => {
-  const h = harness({ storage: kept({ 'downfall.table.device-opt-out': 'acct_mark' }) });
+test('a browser turned off under the old switch is forgotten by the host, lets go of its subscription, then of the note', async () => {
+  const storage = kept({ 'downfall.table.device-opt-out': 'acct_mark' });
+  const h = harness({ storage });
 
   h.devices.setAccount({ id: 'acct_mark' });
   await settled();
 
-  assert.ok(h.calls.includes('unsubscribe'));
-  assert.ok(!h.calls.some(call => call.startsWith('PUT /api/account/push')));
+  assert.deepEqual(h.calls.filter(call => call.includes('/api/account/push') || call === 'unsubscribe'), ['DELETE /api/account/push {"endpoint":"https://push.example/laptop"}', 'unsubscribe']);
+  assert.equal(storage.map.size, 0);
   assert.equal(h.elements['device-toggle'].checked, false);
+});
+
+test('a box ticked while a save is on its way is kept as ticked and saved next', async () => {
+  const h = harness();
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  h.boxes.results.checked = false;
+  h.listeners['device-kinds:change']();
+  h.boxes.turns.checked = false;
+  h.listeners['device-kinds:change']();
+  await settled();
+
+  assert.deepEqual(h.calls.filter(call => call.startsWith('PUT /api/account/preferences/notices')), [
+    'PUT /api/account/preferences/notices {"turns":true,"invitations":true,"results":false}',
+    'PUT /api/account/preferences/notices {"turns":false,"invitations":true,"results":false}',
+  ]);
+  assert.deepEqual(KINDS.map(kind => h.boxes[kind].checked), [false, true, false]);
 });

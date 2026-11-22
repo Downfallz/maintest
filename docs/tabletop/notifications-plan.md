@@ -184,7 +184,11 @@ Jobs tab show the counts and the queue's length.
    and Settings' are one switch a device. Settings, Notifications: the line on the bell, **Pop-ups on this device** (a
    checkbox; off now lets go of the browser's subscription, and a browser turned off under the old switch lets go of
    its subscription once on its next visit), **Send a test**, and **What pops up**. The match settings say the switch
-   is the device's and where the rest is chosen. Left to N4: the offer.
+   is the device's and where the rest is chosen. A seat's subscription the account does not hold yet joins its
+   devices when its turn is sent; a subscription either sender heard is gone is answered 410 to the seat page; a
+   replaced one leaves the account; signing out on a browser forgets it as a device. Turning *Your turn* off also
+   silences the timeout warning. Left to N4: the offer. Left to #1109: a test that each process wires the choices
+   and the account's turn (`push.Accounts`, `Lobby.Devices`, `Preferences`), as for the door.
 4. **N4, the offer.** The journey's brief, `table/push-offer.js`, the card in the lobby and in the battle view,
    the three answers, the words by platform, Install on Android. The classic page's own offer is removed.
    Tests: `push-offer.test.js` (when it shows, each answer, each platform), the browser specs (`table.push.js`).

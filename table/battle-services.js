@@ -1,7 +1,7 @@
 import { keyBytes, sameKey, noticeButton, pushSupported, showOwnNotice, testReading, TAG } from './push.js';
 
 /** Where the rest of the notifications is chosen, said under the match settings' switch. */
-export const WHERE = 'This switch is this device\'s, for every game. Settings, Notifications, in the menu, chooses what pops up; the bell keeps everything.';
+export const WHERE = 'This switch is this device\'s, for every game. Signed in, Settings, Notifications, in the menu, chooses what pops up. The bell keeps everything.';
 
 // Optional notices use the existing seat endpoints, never the decision/acknowledgement path.
 // Each asynchronous continuation belongs to one selected seat and can only update that seat's UI.

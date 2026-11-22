@@ -166,6 +166,20 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Signing_out_on_one_browser_forgets_that_device_and_keeps_the_others()
+    {
+        var (api, devices, _) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        await devices.AddAsync(id, new PushDevice("https://push.example/laptop", "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A", "AAECAwQFBgcICQoLDA0ODw", default), TestContext.Current.CancellationToken);
+
+        (await api.HandleAsync("POST", "/api/account/signout", """{"endpoint":"https://push.example/phone"}""", Signed(session))).Status.ShouldBe(200);
+
+        (await devices.ListAsync(id, TestContext.Current.CancellationToken)).Select(device => device.Endpoint).ShouldBe(["https://push.example/laptop"]);
+    }
+
+    [Fact]
     public async Task A_session_a_day_old_is_issued_again_when_it_is_used()
     {
         var api = await ApiAsync(AccountsMode.Development);
@@ -555,6 +569,8 @@ public sealed class AccountApiTests : IDisposable
 
         (fresh.GetProperty("turns").GetBoolean(), fresh.GetProperty("invitations").GetBoolean(), fresh.GetProperty("results").GetBoolean()).ShouldBe((true, true, true));
         saved.Status.ShouldBe(200);
+        var answered = Json(saved).GetProperty("notices");
+        (answered.GetProperty("turns").GetBoolean(), answered.GetProperty("invitations").GetBoolean(), answered.GetProperty("results").GetBoolean()).ShouldBe((true, false, false));
         var read = Json(await api.HandleAsync("GET", "/api/account/preferences", "", Signed(session)));
         var notices = read.GetProperty("notices");
         (notices.GetProperty("turns").GetBoolean(), notices.GetProperty("invitations").GetBoolean(), notices.GetProperty("results").GetBoolean()).ShouldBe((true, false, false));

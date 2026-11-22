@@ -8,8 +8,8 @@ Rulebook: none
 
 Two switches governed a browser's pop-ups: Settings, Notifications, *Notify me on this device*, which made the
 browser one of the account's devices, and the match settings' *Turn notifications*, which bound the same
-subscription to one seat. Stopping one kept the other: a player who turned the first off still got turns, and the
-first, which only forgot the device, read as if it turned every notice off, the bell included. Nothing chose by
+subscription to one seat. Turning off the Settings switch still left the seat's turns on. And that switch, which
+only forgot the device, read as if it turned every notice off, the bell included. Nothing chose by
 kind. "Your turn" went only to the browser of the seat, never to the account's other devices
 (`docs/tabletop/notifications-plan.md`, questions 2 and 3).
 
@@ -22,14 +22,19 @@ kind. "Your turn" went only to the browser of the seat, never to the account's o
   registers it as one of that account's devices too (`PUT /api/lobby/push`), and its `DELETE` forgets it there.
 - **Three kinds an account.** *Your turn*, *Invitations and friends* (an invitation, a friend request, a request
   accepted, an invitation declined, the invited friend taking the seat) and *Results* (a match over or voided, the
-  other player leaving). They are kept beside the account's settings (`preferences/<accountId>.notices.json`), read
+  other player leaving). *Your turn* holds the warning that a turn is about to time out. They are kept beside the account's settings (`preferences/<accountId>.notices.json`), read
   with `GET /api/account/preferences` and saved with `PUT /api/account/preferences/notices`. An account that never
   chose gets every kind. The door (ADR 0201) reads them before each push in the API, the worker and the hourly job.
   A kind turned off is still kept in the bell when it is news. A choice that cannot be read lets the push go.
 - **"Your turn" reaches the account's devices.** A seat that belongs to an account is told its turn through the
   door, on every device of the account, tagged with the table (`turn:<table>`), so the warning that the same turn
   is about to time out replaces it. The seat's own subscription is not told as well. A seat without an account
-  keeps ADR 0118's subscription as it was.
+  keeps ADR 0118's subscription as it was. The seat's own subscription is one of the account's devices: one the
+  account does not hold yet (a seat bound before this change, or a joining that could not be written) joins them
+  when the turn is sent. A subscription a push service said is gone, to either sender, is answered 410 on the
+  seat's next `PUT /api/lobby/push`, so the page subscribes again.
+- **Signing out on a browser** forgets it as a device (`POST /api/account/signout` with its `endpoint`): a borrowed
+  browser, whose seat switch made it one of the account's devices, is told nothing more once its player leaves it.
 - **Hotseat stays silent.** No device is told a signed-in seat's turn when the other seat belongs to the same
   account, or when the device is the subscription the other seat's page bound: whoever holds it is the other player.
 
@@ -38,13 +43,12 @@ kind. "Your turn" went only to the browser of the seat, never to the account's o
 - Good: one switch says what it does, on both pages, and a player chooses what pops up without losing the bell.
 - Good: a signed-in player is told their turn on the phone in their pocket, not only on the browser they played in.
 - Bad: one more blob read for each push to an account, in the process that sends it, until the queue (stage N5).
-- Bad: turning pop-ups off on a browser also silences the seats that browser plays without an account: the switch
-  is the device's.
+- Bad: turning pop-ups off on a browser also silences seats played on that browser without an account. The switch
+  belongs to the device.
+- Bad: an account that turns *Your turn* off is not warned either that a turn is about to time out.
 - Neutral: a browser turned off under the old switch kept its subscription and a note of the account in its storage
   (`downfall.table.device-opt-out`). Its next page with the menu reads the note once, lets go of the subscription
   and forgets the note, so the choice holds.
-- Neutral: a seat page bound before this change has a subscription the account's devices may not hold yet; the
-  lobby's next visit registers it.
 
 ## Alternatives considered
 
@@ -57,5 +61,5 @@ kind. "Your turn" went only to the browser of the seat, never to the account's o
 ## Follow-up
 
 - `table/README.md#routes` and `docs/reference/commands.md` name the new route.
-- `docs/domain/glossary.md` gains *Pop-up choices*.
+- `docs/domain/glossary.md` gains *Notice preferences*.
 - N4 offers the switch (`table/push-offer.js`); N5 sends from a queue.

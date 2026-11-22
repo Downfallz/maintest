@@ -13,16 +13,23 @@ import { keyBytes, noticeButton, pushSupported, sameKey } from './push.js';
 const OptOutKey = 'downfall.table.device-opt-out';
 
 /**
- * Whether this browser was turned off for the account under the old switch, which kept the subscription: read once,
- * and forgotten, so the page lets go of the subscription as the new switch does and the choice holds.
+ * Whether this browser was turned off for the account under the old switch, which kept the subscription: the page
+ * then lets go of the subscription as the new switch does, and forgets the note only once that is done, so the choice holds.
  */
-export function takeOldOptOut(storage, accountId) {
+export function oldOptOut(storage, accountId) {
   try {
-    if (!accountId || storage?.getItem(OptOutKey) !== accountId) return false;
-    storage.removeItem(OptOutKey);
-    return true;
+    return Boolean(accountId) && storage?.getItem(OptOutKey) === accountId;
   } catch {
     return false;
+  }
+}
+
+/** The old note forgotten, once the subscription it stood for is let go of. */
+export function forgetOldOptOut(storage) {
+  try {
+    storage?.removeItem(OptOutKey);
+  } catch {
+    // A browser that keeps nothing reads no note either.
   }
 }
 
@@ -75,6 +82,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     registration: null,
     kinds: null,
     saving: false,
+    pending: false,
     ios: /iPhone|iPad|iPod/.test(nav?.userAgent ?? '') && !win.MSStream,
     secure: win.isSecureContext !== false,
   };
@@ -96,8 +104,10 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     const kinds = el('device-kinds');
     if (kinds) {
       kinds.hidden = !state.kinds;
-      kinds.disabled = state.saving;
-      for (const kind of KINDS) {
+      // Never disabled while saving: a box that holds the focus would lose it. A change during a save waits for it.
+      kinds.setAttribute?.('aria-busy', String(state.saving));
+      // While a save is on its way the boxes stay as the player left them: a tick made meanwhile is saved next.
+      for (const kind of state.saving ? [] : KINDS) {
         const box = kinds.querySelector(`[data-kind="${kind}"]`);
         if (box) box.checked = state.kinds?.[kind] !== false;
       }
@@ -115,7 +125,8 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
 
   async function saveKinds() {
     const kinds = el('device-kinds');
-    if (!kinds || state.saving || !state.kinds) return;
+    if (!kinds || !state.kinds) return;
+    if (state.saving) { state.pending = true; return; }
     const checked = Object.fromEntries(KINDS.map(kind => [kind, kinds.querySelector(`[data-kind="${kind}"]`)?.checked !== false]));
     const before = state.kinds;
     state.saving = true;
@@ -129,7 +140,12 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       problem(error.message || 'Could not reach the host. Try again.');
     } finally {
       state.saving = false;
-      render();
+      if (state.pending) {
+        state.pending = false;
+        void saveKinds();
+      } else {
+        render();
+      }
     }
   }
 
@@ -170,8 +186,12 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       await nav.serviceWorker.register('/sw.js');
       state.registration = await nav.serviceWorker.ready;
       const subscription = await current();
-      if (subscription && takeOldOptOut(storage, state.account.id)) await subscription.unsubscribe();
-      else if (subscription) {
+      if (subscription && oldOptOut(storage, state.account.id)) {
+        // A seat page may have registered it since: the host forgets it first, then the browser lets go of it.
+        await request('/api/account/push', { endpoint: subscription.endpoint }, undefined, 'DELETE');
+        await subscription.unsubscribe();
+        forgetOldOptOut(storage);
+      } else if (subscription) {
         try { await register(subscription); }
         catch (error) {
           if (!needsFreshSubscription(error)) throw error;

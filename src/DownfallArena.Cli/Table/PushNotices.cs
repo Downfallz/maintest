@@ -208,6 +208,19 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         }
 
         var except = others.Where(other => other.Push is not null).Select(other => other.Push!.Endpoint).ToList();
+        // Its joining is never a reason to lose the notice: a store that fails leaves the account's devices as they were.
+        if (seat.Push is { } own && !except.Contains(own.Endpoint, StringComparer.Ordinal) && door.Push is { } channel)
+        {
+            try
+            {
+                await channel.KeepAsync(account, own);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Console.WriteLine($"  Session {table.Id}: {seat.Name}'s browser could not join its account's devices: {HttpHost.OneLine(failure)}");
+            }
+        }
+
         var reached = await door.NotifyAsync(account, AccountNotice(question, round, table.Id, await CastsAsync(table, seat)), except);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"  Session {table.Id}: {seat.Name} notified of asking {question.Asked} on {reached} of its account's devices."));
     }

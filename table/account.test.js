@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accountRequest, accountState, nameProblem, nextPath, noticeText, signInPath } from './account.js';
+import { accountRequest, accountState, nameProblem, nextPath, noticeText, signInPath, signOutBody } from './account.js';
 
 test('a name the host could never take is said at once, without asking it', () => {
   for (const name of ['', 'ab', '7kodiak', '_mark', 'Mark F', 'Médéric', 'a23456789012345678901']) assert.notEqual(nameProblem(name), null, name);
@@ -107,4 +107,13 @@ test('a page that fails to say whether it leaves is told to whoever waits for it
   const state = await mountAccount(anyPage(), { readMe: async () => ({ accounts: 'dev', account: { username: 'ada' } }), onChange: async () => { throw new Error('lessons unread'); }, google: async () => ({}), session: null });
   assert.equal(state.account.username, 'ada');
   await assert.rejects(state.leaving, /lessons unread/);
+});
+
+test('a sign-out on this browser names the push endpoint it holds, and everywhere names none', async () => {
+  const nav = endpoint => ({ serviceWorker: { getRegistration: async () => ({ pushManager: { getSubscription: async () => (endpoint ? { endpoint } : null) } }) } });
+  assert.deepEqual(await signOutBody(false, nav('https://push.example/laptop')), { everywhere: false, endpoint: 'https://push.example/laptop' });
+  assert.deepEqual(await signOutBody(false, nav(null)), { everywhere: false });
+  assert.deepEqual(await signOutBody(false, {}), { everywhere: false }, 'a browser without a worker');
+  assert.deepEqual(await signOutBody(false, { serviceWorker: { getRegistration: async () => { throw new Error('blocked'); } } }), { everywhere: false });
+  assert.deepEqual(await signOutBody(true, nav('https://push.example/laptop')), { everywhere: true });
 });
