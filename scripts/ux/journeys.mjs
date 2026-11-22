@@ -333,9 +333,8 @@ async function friendInvites(walk, friend) {
   if (!made.ok()) throw new Error(`The host refused ${FRIEND}'s table for ${WALKER}: ${made.status()}`);
 }
 
-// A ranked 3v3 game between the walker and the friend: an open seat from the Create window, taken by the friend,
-// a first round played by both with the first choices offered, then conceded by the walker.
-async function rankedGame(walk, friend) {
+// A 3v3 game against a person, opened from the Create window, its open seat taken by the friend: both seats live.
+async function gameWithFriend(walk, friend) {
   const { page, set } = walk;
   await home(page, set.game);
   await page.locator('#new-table').click();
@@ -350,6 +349,13 @@ async function rankedGame(walk, friend) {
   if (!join) throw new Error('The waiting room names no link for its open seat.');
   await takeSeat(friend, `${set.game}${join}`);
   await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
+}
+
+// A ranked 3v3 game between the walker and the friend: a first round played by both with the first choices offered,
+// then conceded by the walker.
+async function rankedGame(walk, friend) {
+  const { page } = walk;
+  await gameWithFriend(walk, friend);
   const second = view => view.board.roundNumber > 1;
   await Promise.all([playUntil(page, second, { blocked: walk.blocked }), playUntil(friend, second, { blocked: walk.blocked })]);
   await concede(walk);
@@ -504,26 +510,13 @@ const windows = {
   },
 };
 
-// A 3v3 game against the friend, opened from the Create window and taken by the friend, who concedes as soon as it
-// is asked its first question: the walker's result is a win.
+// A game against the friend, who concedes as soon as it is asked its first question: the walker's result is a win.
 async function wonGame(walk) {
-  const { page, set } = walk;
+  const { page } = walk;
   const friend = await walk.person();
   await account(walk, friend, FRIEND);
   await page.locator('#match-dialog').evaluate(dialog => dialog.close());
-  await home(page, set.game);
-  await page.locator('#new-table').click();
-  await page.locator('#create-dialog[open]').waitFor();
-  await page.locator('#opponent').selectOption('person');
-  await page.locator('#create-submit').click();
-  await page.waitForURL(/\/(battle|play)/);
-  await page.locator('#battle[data-connection="live"], #waiting-room, [data-waiting]').first().waitFor({ timeout: 30000 });
-  const [seat, token] = [...new URL(page.url()).searchParams][0];
-  const room = await page.request.get(`${set.game}/api/seat/${seat}`, { headers: { 'X-Seat-Token': token } });
-  const join = (await room.json()).waiting?.seats?.[0]?.join;
-  if (!join) throw new Error('The waiting room names no link for its open seat.');
-  await takeSeat(friend, `${set.game}${join}`);
-  await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
+  await gameWithFriend(walk, friend);
   await readUntilAsked(friend);
   await choose(friend, '#settings', walk.blocked);
   await friend.locator('#concede-open').click();
