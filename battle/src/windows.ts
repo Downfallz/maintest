@@ -31,7 +31,10 @@ export function windowFamily(frame: Record<string, string[]>) {
       if (dialog.open) opened.push(dialog);
     }
   });
-  const topModal = () => opened.filter(one => one.open && one.matches(':modal')).at(-1) ?? null;
+  function topModal() {
+    for (let at = opened.length - 1; at >= 0; at--) if (opened[at].open && opened[at].matches(':modal')) return opened[at];
+    return null;
+  }
 
   document.addEventListener('keydown', event => {
     if (event.key !== 'Tab' || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -39,7 +42,7 @@ export function windowFamily(frame: Record<string, string[]>) {
     if (!dialog) return;
     const items = focusables(dialog), active = document.activeElement;
     if (!items.length) { event.preventDefault(); return; }
-    const first = items[0], last = items[items.length - 1];
+    const first = items[0], last = items.at(-1)!;
     const wrap = (to: HTMLElement) => { event.preventDefault(); to.focus(); };
     if (!dialog.contains(active)) wrap(event.shiftKey ? last : first);
     else if (event.shiftKey && active === first) wrap(last);
@@ -69,6 +72,8 @@ export function windowFamily(frame: Record<string, string[]>) {
   // A window a script adds later (the feedback sheet) is wired at its first opening or closing: a listener added to
   // it while the event is captured here still runs at it, after its own module's.
   for (const type of ['toggle', 'close']) {
-    document.addEventListener(type, event => { if (event.target instanceof HTMLDialogElement) wire(event.target); }, true);
+    document.addEventListener(type, event => {
+      if (event.target instanceof HTMLDialogElement) wire(event.target);
+    }, true);
   }
 }
