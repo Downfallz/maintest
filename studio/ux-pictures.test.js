@@ -118,16 +118,18 @@ test('every page of the declaration has a budget, and its pictures hold under it
   }
 });
 
-test('the battle page may load the 320 KiB the windows\' brief measured and the heads of its menu\'s windows, and none of it before any scroll', () => {
+test('the battle page may load the 320 KiB the windows\' brief measured, the heads of its menu\'s windows and of its own, and none of it before any scroll', () => {
   // docs/art/journeys/windows.md: 322,218 B with every portrait at 24 and 40 px and every form at 64 px; the Friends
   // window opened from the battle's menu adds its head, 68,750 B, to 382 KiB (docs/art/journeys/pages.md), and a sign
-  // out's confirmation its own, 20,646 B, to 402 KiB (docs/art/journeys/doors.md).
-  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 411648 });
+  // out's confirmation its own, 20,646 B, to 402 KiB (docs/art/journeys/doors.md). The Mutation Tree's band and its
+  // three family heads, and the result's band, add 108,598 B, to 512 KiB (docs/art/journeys/windows.md, S11).
+  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 524288 });
   const measured = budgetOf(PAGE_ART, 'table/battle', budget.density);
   assert.equal(measured.first, 0);
   // Without phone the page would count each portrait at 40 px alone and each form at the statistics' 144: phone
   // adds the 47 portraits' 48 px files, and counts the 21 forms at their 128 px files instead of the 288.
-  const bare = Object.fromEntries(Object.entries(PAGE_ART).map(([name, { phone, ...entry }]) => [name, entry]));
+  // The scenes keep theirs: only the portraits and the forms are compared.
+  const bare = Object.fromEntries(Object.entries(PAGE_ART).map(([name, { phone, ...entry }]) => [name, /^(spell|mutation)-/.test(name) ? entry : { ...entry, phone }]));
   const fileOf = (prefix, width) => Object.entries(PAGE_ART).filter(([name]) => name.startsWith(prefix))
     .reduce((total, [, entry]) => total + entry.sizes.find(size => size.width === width).bytes, 0);
   assert.equal(measured.all - budgetOf(bare, 'table/battle', budget.density).all, fileOf('spell-', 48) + fileOf('mutation-', 128) - fileOf('mutation-', 288));
@@ -141,7 +143,8 @@ test('the ladder, the statistics and the rulebook raise their budget by their he
   const headers = file('predator-and-deathstalker', 732) + file('predator-at-rest', 716);
   for (const [page, head] of [['table/leaderboard', 'elemental-charge'], ['table/rules', 'latch-under-the-arch']])
     assert.equal(budgetOf(PAGE_ART, page, budget.density).all, headers + file(head, 708), `${page}: the header's windows' heads and its own`);
-  assert.ok(budgetOf(PAGE_ART, 'table/stats', budget.density).all >= file('ironhide-scar', 708));
+  // The statistics' Ironhide shares the battle's 732 px file (S11: the Brute column is 366 px), within a tenth of 708.
+  assert.ok(budgetOf(PAGE_ART, 'table/stats', budget.density).all >= file('ironhide-scar', 732));
   // The offline page's one picture is asked for first, its 716 px file all it loads.
   assert.deepEqual(budgetOf(PAGE_ART, 'table/offline', budget.density), { first: file('parasite-offline', 716), all: file('parasite-offline', 716), largest: 1 });
 });

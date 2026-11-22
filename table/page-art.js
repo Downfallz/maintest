@@ -14,10 +14,12 @@ export const PAGE_ART = {
     ],
   },
   'brute-moult': {
-    from: '064e8da2d516cc2e', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"},
+    from: 'a82cf6d28963a2d6', frames: 1, drawn: [351,1250,390], pages: {"showcase/mutations":"lazy","table/battle":"lazy"}, phone: {"table/battle":[390]},
     sizes: [
       { file: 'brute-moult-351.6f8d3803.webp', width: 351, height: 117, bytes: 5594 },
+      { file: 'brute-moult-390.203c3600.webp', width: 390, height: 130, bytes: 6728 },
       { file: 'brute-moult-702.3c962d65.webp', width: 702, height: 234, bytes: 18096 },
+      { file: 'brute-moult-780.e6d9d975.webp', width: 780, height: 260, bytes: 21592 },
       { file: 'brute-moult-1250.0605382f.webp', width: 1250, height: 417, bytes: 49256 },
       { file: 'brute-moult-1536.b492f0b8.webp', width: 1536, height: 512, bytes: 71762 },
     ],
@@ -34,7 +36,7 @@ export const PAGE_ART = {
     ],
   },
   'warped-listening': {
-    from: '1723f536a43ae6cf', frames: 1, drawn: [351,1250,390,640,358,680], pages: {"showcase/mutations":"lazy","table/home":"lazy"}, phone: {"table/home":[390,358]}, focus: '50% 40%',
+    from: '1723f536a43ae6cf', frames: 1, drawn: [351,1250,390,640,358,680], pages: {"showcase/mutations":"lazy","table/home":"lazy","table/battle":"lazy"}, phone: {"table/home":[390,358],"table/battle":[390]}, focus: '50% 40%',
     sizes: [
       { file: 'warped-listening-390.dee74911.webp', width: 390, height: 219, bytes: 8304 },
       { file: 'warped-listening-780.5324000a.webp', width: 780, height: 439, bytes: 25278 },
@@ -43,31 +45,34 @@ export const PAGE_ART = {
     ],
   },
   'crushing-stomp-aftermath': {
-    from: '3a9100acf2c3841c', frames: 1, drawn: [358,1280], pages: {"table/home":"lazy"},
+    from: 'a915eb68c47ff9e3', frames: 1, drawn: [358,1280,620], pages: {"table/home":"lazy","table/battle":"lazy"}, phone: {"table/battle":[358]},
     sizes: [
       { file: 'crushing-stomp-aftermath-358.2616af1c.webp', width: 358, height: 119, bytes: 4946 },
+      { file: 'crushing-stomp-aftermath-620.9d401b3a.webp', width: 620, height: 207, bytes: 12598 },
       { file: 'crushing-stomp-aftermath-716.0ef50fe6.webp', width: 716, height: 239, bytes: 16084 },
       { file: 'crushing-stomp-aftermath-1280.0980e273.webp', width: 1280, height: 427, bytes: 43398 },
       { file: 'crushing-stomp-aftermath-1536.b57a85f1.webp', width: 1536, height: 512, bytes: 60076 },
     ],
   },
   'ironhide-scar': {
-    from: 'd0fb75e250b1d82d', frames: 1, drawn: [323,421,354,1280], pages: {"showcase/mutations":"lazy","table/stats":"lazy"}, phone: {"table/stats":[354]},
+    from: '7d9f8a92a0d73bc6', frames: 1, drawn: [323,421,354,1280,366], pages: {"showcase/mutations":"lazy","table/stats":"lazy","table/battle":"lazy"}, phone: {"table/stats":[354],"table/battle":[366]},
     sizes: [
-      { file: 'ironhide-scar-354.4f7367cc.webp', width: 354, height: 118, bytes: 5418 },
+      { file: 'ironhide-scar-366.c05ac51c.webp', width: 366, height: 122, bytes: 5674 },
       { file: 'ironhide-scar-421.9208ad44.webp', width: 421, height: 140, bytes: 7016 },
-      { file: 'ironhide-scar-708.221cf270.webp', width: 708, height: 236, bytes: 15592 },
+      { file: 'ironhide-scar-732.ef8d6c3d.webp', width: 732, height: 244, bytes: 16600 },
       { file: 'ironhide-scar-842.2025ca64.webp', width: 842, height: 281, bytes: 20714 },
       { file: 'ironhide-scar-1280.df972da0.webp', width: 1280, height: 427, bytes: 40386 },
       { file: 'ironhide-scar-1536.080ec7ff.webp', width: 1536, height: 512, bytes: 54686 },
     ],
   },
   'blightweaver-pressure-sac': {
-    from: 'b4a0d68b6a844b39', frames: 1, drawn: [323,421], pages: {"showcase/mutations":"lazy"},
+    from: 'b64bde59c32db886', frames: 1, drawn: [323,421,366], pages: {"showcase/mutations":"lazy","table/battle":"lazy"}, phone: {"table/battle":[366]},
     sizes: [
       { file: 'blightweaver-pressure-sac-323.a9ce9e0d.webp', width: 323, height: 108, bytes: 8150 },
+      { file: 'blightweaver-pressure-sac-366.7f9093bf.webp', width: 366, height: 122, bytes: 9922 },
       { file: 'blightweaver-pressure-sac-421.d43a5b40.webp', width: 421, height: 140, bytes: 12472 },
       { file: 'blightweaver-pressure-sac-646.2c7ea8f0.webp', width: 646, height: 215, bytes: 24212 },
+      { file: 'blightweaver-pressure-sac-732.a0fe51e2.webp', width: 732, height: 244, bytes: 29044 },
       { file: 'blightweaver-pressure-sac-842.9de45f01.webp', width: 842, height: 281, bytes: 36282 },
     ],
   },

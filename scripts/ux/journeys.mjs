@@ -416,16 +416,16 @@ async function openHistory(page, blocked) {
 
 // The match's windows whose pictures docs/art/ux12-pictures-plan.md settles: the pick and the Mutation Tree opened
 // from it, the Tempo sheet at its spell reference, the spellbook at its top and at its foot, the order of play once
-// a spell is turned face up, and the journal once a round is played. UX12 adds a creature inspected, the family's
-// centred window, opened from the order strip's card. The team's first creature plays at Instinct, so
-// its spellbook shows a crit chip that does not hold this turn (P8).
+// a spell is turned face up, the journal once a round is played, and the result once Walker concedes. UX12 adds a
+// creature inspected, the family's centred window, opened from the order strip's card. The team's first creature
+// plays at Instinct, so its spellbook shows a crit chip that does not hold this turn (P8).
 // A creature the order strip names, one already played, as a player taps it to read it.
 const INSPECTED = '#timeline li[data-state="Completed"] [data-order-creature]';
 
 const windows = {
   id: 'windows',
   title: "The match's windows",
-  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'inspect', 'history'],
+  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'inspect', 'history', 'match-result'],
   strips: {
     // The journal closed by its button: how a window leaves (UX12). The match's `settings-window` films one entering.
     'history-window': { at: 'history', act: ({ page }) => page.locator('#history-close').click() },
@@ -489,6 +489,10 @@ const windows = {
     await openHistory(page, walk.blocked);
     await page.locator('#history-dialog[open]').waitFor();
     await walk.screen('history');
+    // The result, on the ground the last blow left (S11 of docs/art/scene-paintings-plan.md): Walker concedes.
+    await page.locator('#history-close').click();
+    await concede(walk);
+    await walk.screen('match-result');
   },
 };
 
