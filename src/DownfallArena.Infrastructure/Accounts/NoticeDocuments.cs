@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DownfallArena.Application.Accounts;
 using DownfallArena.SharedKernel.Identifiers;
 
@@ -37,10 +38,10 @@ internal static class NoticeDocuments
 
         return record is null ? [] : [.. (record.Entries ?? [])
             .Where(entry => entry is { Title: not null, Body: not null, Url: not null, Tag: not null } && NoticeKinds.Parse(entry.Kind) is not null)
-            .Select(entry => new NoticeEntry(entry!.Id, NoticeKinds.Parse(entry.Kind)!.Value, entry.Title!, entry.Body!, entry.Url!, entry.Tag!, entry.At, entry.Read))];
+            .Select(entry => new NoticeEntry(entry!.Id, NoticeKinds.Parse(entry.Kind)!.Value, entry.Title!, entry.Body!, entry.Url!, entry.Tag!, entry.At, entry.Seen))];
     }
 
     private sealed record NoticesRecord(IReadOnlyList<EntryRecord?>? Entries);
 
-    private sealed record EntryRecord(long Id, string? Kind, string? Title, string? Body, string? Url, string? Tag, DateTimeOffset At, bool Read);
+    private sealed record EntryRecord(long Id, string? Kind, string? Title, string? Body, string? Url, string? Tag, DateTimeOffset At, [property: JsonPropertyName("read")] bool Seen);
 }

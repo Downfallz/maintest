@@ -148,7 +148,9 @@ Jobs tab show the counts and the queue's length.
    adapters (`ConditionalBlob`, `ConditionalFile`, shared with the notice stores). Left to N2: drawing the news,
    the privacy sentences (an entry keeps the other player's name for up to 90 days), the Settings line on what is
    kept, and a mark-read that tells the player's other tabs. Left to N5: the log's write leaves the lobby's claim
-   gate.
+   gate. Left to #1109: a test that each process wires the door. A device registered while its account signs out
+   everywhere is forgotten again (the route reads the session after the write), a fix that came after #1108
+   merged.
 
 2. **N2, the bell shows the news.** `table/inbox.js` gains News and the unread count; the window marks read;
    the privacy sentences. Tests: `inbox.test.js`, `terminology.test.js`, the lobby's browser spec with push off.
