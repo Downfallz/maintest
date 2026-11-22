@@ -182,11 +182,15 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
         const item = textNode('li', ''); item.dataset.side = cast.side; item.dataset.status = cast.status;
         // A cast opens its own record: the full facts and the battlefield before and after it.
         const line = textNode('button', '', 'summary-cast') as HTMLButtonElement; line.type = 'button'; line.dataset.sequence = String(cast.sequence);
-        line.setAttribute('aria-label', `${cast.caster} cast ${cast.spell}${SHORT_STATUS[cast.status] ? `, ${cast.status.toLowerCase()}` : ''}. Inspect event`);
         const portrait = spellPortrait(cast.portrait, 24);
         if (portrait) line.append(portrait);
-        line.append(textNode('span', cast.caster, 'summary-who'), textNode('span', cast.spell, 'summary-what'),
-          ...(SHORT_STATUS[cast.status] ? [textNode('span', SHORT_STATUS[cast.status], 'summary-status')] : []));
+        // Named by the words it shows (#1087): "Creature 4 → Strike · Crit" is heard as "Creature 4 cast Strike,
+        // critical. Inspect event"; the arrow and the chip are for the eye, their words for the ear.
+        const what = textNode('span', cast.spell, 'summary-what');
+        what.append(textNode('span', `${SHORT_STATUS[cast.status] ? `, ${cast.status.toLowerCase()}` : ''}. Inspect event`, 'unseen-inline'));
+        const status = SHORT_STATUS[cast.status] ? textNode('span', SHORT_STATUS[cast.status], 'summary-status') : null;
+        status?.setAttribute('aria-hidden', 'true');
+        line.append(textNode('span', cast.caster, 'summary-who'), textNode('span', ' cast ', 'unseen'), what, ...(status ? [status] : []));
         line.addEventListener('click', () => {
           // The summary lists every loaded round whatever All events filters; a filter that excludes this cast would
           // leave its inspection with nothing to select, so the filters are cleared first.

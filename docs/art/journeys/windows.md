@@ -227,6 +227,8 @@ None.
 - **Names**: each form's `alt` is empty: the mutation's button speaks its visible name first. axe finds 3
   `label-content-name-mismatch` at both widths: the buttons' `aria-label` ("Brute · Brute · Stage 1") does not
   begin with what they show ("Brute Pressure · Defense"). The name becomes the visible words, the stage after them.
+  Done (#1087): the button has no `aria-label`; it speaks its name, then its family and Stage
+  (written for the ear only), then the line it shows.
 - **Announced**: nothing new: a picture that arrives says nothing.
 - **Targets**: 24 controls at 390 and 19 at 320, none under 44 px. A face with its form stays 44 px tall at the least.
 
@@ -243,7 +245,9 @@ None.
 - At 320 by 568 today, before any picture, the three mutations' names are under the foot: only their sigils show
   above Close and Confirm choice. With a form of 64 px the faces are taller still. The rule: at 320 by 568 each
   mutation's form and name are in view above the foot when the sheet opens, the sentence hidden (above) and the
-  graph scrolled to the mutations if they still do not fit. Worth an issue on its own, pictures or not.
+  graph scrolled to the mutations if they still do not fit. Done (#1031): under 660 px tall the rule sentence is
+  hidden and stays the sheet's description (`aria-describedby`); the forms and names then fit without a scroll
+  (`battle-mutations.spec.js`). Its Rules link goes with it there; Help reaches the rulebook.
 - Done (#1022): the rule sentence's second half ("Later Mutation phases bring new picks for any of them") was a
   rule; the sentence now ends on a link to the rulebook's Mutations section (`table/battle-mutations.js`).
 
@@ -317,7 +321,8 @@ None.
   detail.
 - **Names**: the form's `alt` is empty: the detail's heading is the mutation's name. axe finds 8
   `label-content-name-mismatch` at both widths: the board's mutations speak "Brute · Stage 1 · Offered now" over
-  "I Brute OFFER". The name starts with the visible words.
+  "I Brute OFFER". The name starts with the visible words. Done (#1087): the numeral and the flag are not read; the
+  Stage and the status are written beside the name for the ear only. The button has no `aria-label`.
 - **Announced**: nothing new.
 - **Targets**: 31 controls, 3 under 44 px at both widths (the board's mutations and the detail's chips); none
   under 24.
@@ -557,7 +562,9 @@ None.
   the creature, its two tempos and the foot fill the docked sheet, and only the note's first line shows; no card and
   no portrait is in view. The same on `main`, before any portrait: the sheet's height at 320, not P7's. At 390
   Strike and Focus are in view (overlaps 1 at 390, 0 at 320). Worth an issue, not part A's: a short screen does not see
-  what the creature could cast while it chooses a tempo.
+  what the creature could cast while it chooses a tempo. Done (#1034, the owner's answer): under 660 px tall the
+  pinned head folds: the heading row shrinks to the height of its text, each tempo is a 44 px row of its mark and its
+  name (its line kept for the ear), and the first reference card's head shows under it (`battle-tempo.spec.js`).
 - Pummel's crit chip here keeps its hint written ("Precision · current"), where the spellbook's grey chip at
   Instinct writes the chance alone: two forms of one fact on two sheets. Whether the reference takes the
   spellbook's grey chip is a choice for the owner, not P7's.
@@ -686,7 +693,12 @@ None.
   captions moving down 120 px as the docked Tempo sheet closes and the field grows. Not a portrait, not the chip.
   `main` walked the same way shows the same 0.09 on one walk and none on the next: it counts only when the host's
   answer lands more than 0.5 s after the confirming tap. Holding the field still while a sheet closes is not part A's: the sheet now leaves at once, which does not
-  move the field less. A later pass's, with the field's resizing.
+  move the field less. A later pass's, with the field's resizing. Done (#1035, the owner's answer): the field keeps the
+  layout it had beside the sheet, then its figures ease into the room the sheet left over `RETURN_MS`
+  (`battle/src/scene.ts`); a caption and its tag hang from their button by a translation, so they move by a transform
+  and cause no layout shift. At 390, on a late answer, a shift of 0.013 remains: the caption's health bar changes rows
+  as the caption leaves its docked form (`battle-tempo.spec.js`). With reduced motion, the field is laid out at once.
+  Only a planning sheet that closes eases the field; the spell choice stepping aside for its targets does not.
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 
@@ -1025,7 +1037,10 @@ journal whole from its first frame; the strip after the change is the critique's
   the bar; opened from Help's window (under 360 px wide), it goes back to Help's History, Help still open; and if
   neither is left, to History on the bar, then to Help (the family, the opening).
 - **Names**: the portrait's `alt` is empty: the row speaks the actor and the spell. axe finds 6
-  `label-content-name-mismatch` at 390 and 3 at 320: the row's name begins with the visible words.
+  `label-content-name-mismatch` at 390 and 3 at 320: the row's name begins with the visible words. Done (#1087): a
+  cast line has no `aria-label`; "Creature 4 → Strike · Crit" is heard as "Creature 4 cast Strike, critical. Inspect
+  event", the arrow and the chip are not read; "cast" and "critical" are written for the
+  ear only.
 - **Announced**: a row added by Latest is said through the journal's region, as today; a picture says nothing.
 - **Targets**: 12 controls; 9 under 44 px at 390 and 7 at 320 (the revealed mutations' chips, a round's All
   events, Summary and All events); none under 24. Since #1029, the Summary and All events buttons, a round's All
@@ -1045,7 +1060,10 @@ journal whole from its first frame; the strip after the change is the critique's
 
 - One element animates at rest (`animating` 1 at both widths on UX12's walk, at 390 alone on P6's): the measure
   does not name it. The critique names it; until then it is not counted as the journal's. It is not the window's
-  entrance, which ends in `--motion-normal`.
+  entrance, which ends in `--motion-normal`. Done (#1087): it was the new round's announcement (`#round-toast`, 2.6 s)
+  playing on beneath the journal; a window over the field now stops it (the docked sheets and the turn order's reveal do not),
+  and it stays in the page for a screen reader. The journal's 9 and 7 targets under 44 px were already dealt with on
+  `main` (#1029), and its text is 11 px at the least.
 - **Shift on UX12's walk**: 0.39 at 390 and 0.11 at 320 on one walk, 0.30 and 0.19 on the other, summed over the
   walk. The window's rise is a `transform` and moves no layout, so it adds nothing to the measure.
 
