@@ -177,7 +177,7 @@ export const PAGE_ART = {
     ],
   },
   'battlefield-eclipse': {
-    from: 'a2ef07e324ce5e89', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"},
+    from: 'a2ef07e324ce5e89', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy","table/home":"wide"},
     sizes: [
       { file: 'battlefield-eclipse-351.4271a1a7.webp', width: 351, height: 198, bytes: 13142 },
       { file: 'battlefield-eclipse-702.a64d1cc6.webp', width: 702, height: 395, bytes: 42438 },
@@ -186,7 +186,7 @@ export const PAGE_ART = {
     ],
   },
   'battlefield-breach': {
-    from: 'a89ac3d4912a0ad8', frames: 1, drawn: [351,390,1250], pages: {"showcase/home":"lazy"},
+    from: 'a89ac3d4912a0ad8', frames: 1, drawn: [351,390,1250], pages: {"showcase/home":"lazy","table/home":"wide"},
     sizes: [
       { file: 'battlefield-breach-351.d8fab4dc.webp', width: 351, height: 198, bytes: 11412 },
       { file: 'battlefield-breach-390.9109b627.webp', width: 390, height: 219, bytes: 13642 },
@@ -206,7 +206,7 @@ export const PAGE_ART = {
     ],
   },
   'battlefield-sky': {
-    from: 'd31783f31db8f625', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy"},
+    from: 'd31783f31db8f625', frames: 1, drawn: [351,1250], pages: {"showcase/home":"lazy","table/home":"wide"},
     sizes: [
       { file: 'battlefield-sky-351.beaf4f34.webp', width: 351, height: 101, bytes: 8730 },
       { file: 'battlefield-sky-702.c38c3fc5.webp', width: 702, height: 202, bytes: 27088 },
@@ -269,30 +269,24 @@ export const PAGE_ART = {
     ],
   },
   'home-ground-eclipse': {
-    from: 'a2a31537b442b4d2', frames: 1, drawn: [390,640], pages: {"table/home":"largest"},
+    from: '4c0bc165590d63a6', frames: 1, drawn: [390,760], pages: {"table/home":"largest"},
     sizes: [
-      { file: 'home-ground-eclipse-390.4bd412a5.webp', width: 390, height: 219, bytes: 15656 },
-      { file: 'home-ground-eclipse-640.1f8d140c.webp', width: 640, height: 360, bytes: 35506 },
-      { file: 'home-ground-eclipse-780.b3af8028.webp', width: 780, height: 439, bytes: 51476 },
-      { file: 'home-ground-eclipse-1280.eba4bcaa.webp', width: 1280, height: 720, bytes: 114160 },
+      { file: 'home-ground-eclipse-390.25efd29d.webp', width: 390, height: 867, bytes: 42686 },
+      { file: 'home-ground-eclipse-841.372d3460.webp', width: 841, height: 1870, bytes: 147518 },
     ],
   },
   'home-ground-breach': {
-    from: '13d2503be7c20e11', frames: 1, drawn: [390,640], pages: {"table/home":"lazy"},
+    from: 'c1ca11240594db71', frames: 1, drawn: [390,760], pages: {"table/home":"lazy"},
     sizes: [
-      { file: 'home-ground-breach-390.9109b627.webp', width: 390, height: 219, bytes: 13642 },
-      { file: 'home-ground-breach-640.4a92f701.webp', width: 640, height: 360, bytes: 32404 },
-      { file: 'home-ground-breach-780.a5bf1677.webp', width: 780, height: 439, bytes: 45978 },
-      { file: 'home-ground-breach-1280.b33101b0.webp', width: 1280, height: 720, bytes: 103604 },
+      { file: 'home-ground-breach-390.23d28460.webp', width: 390, height: 867, bytes: 41192 },
+      { file: 'home-ground-breach-841.2b1dcbd8.webp', width: 841, height: 1870, bytes: 142908 },
     ],
   },
   'home-ground-sky': {
-    from: '2df05f959ee2e0cd', frames: 1, drawn: [390,640], pages: {"table/home":"lazy"},
+    from: 'd9a671919623e161', frames: 1, drawn: [390,760], pages: {"table/home":"lazy"},
     sizes: [
-      { file: 'home-ground-sky-390.63ae9416.webp', width: 390, height: 112, bytes: 9794 },
-      { file: 'home-ground-sky-640.1620eb02.webp', width: 640, height: 184, bytes: 23064 },
-      { file: 'home-ground-sky-780.01fd9c46.webp', width: 780, height: 224, bytes: 31930 },
-      { file: 'home-ground-sky-1280.6fa095b2.webp', width: 1280, height: 367, bytes: 67062 },
+      { file: 'home-ground-sky-390.c23b2806.webp', width: 390, height: 867, bytes: 76804 },
+      { file: 'home-ground-sky-841.80fa5945.webp', width: 841, height: 1870, bytes: 248768 },
     ],
   },
   'lesson-base': {

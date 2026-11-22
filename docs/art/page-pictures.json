@@ -132,13 +132,13 @@
       "name": "battlefield-eclipse",
       "source": "table/battle-art/eclipse-battle.webp",
       "drawn": [351, 1250],
-      "pages": { "showcase/home": "lazy" }
+      "pages": { "showcase/home": "lazy", "table/home": "wide" }
     },
     {
       "name": "battlefield-breach",
       "source": "table/battle-art/horizon/breach.webp",
       "drawn": [351, 390, 1250],
-      "pages": { "showcase/home": "lazy" }
+      "pages": { "showcase/home": "lazy", "table/home": "wide" }
     },
     {
       "name": "battlefield-broken",
@@ -150,7 +150,7 @@
       "name": "battlefield-sky",
       "source": "table/battle-art/horizon/shattered-sky.webp",
       "drawn": [351, 1250],
-      "pages": { "showcase/home": "lazy" }
+      "pages": { "showcase/home": "lazy", "table/home": "wide" }
     },
     {
       "name": "specimen-base-creature",
@@ -190,20 +190,20 @@
     },
     {
       "name": "home-ground-eclipse",
-      "source": "table/battle-art/eclipse-battle.webp",
-      "drawn": [390, 640],
+      "source": "docs/art/sources/pages/eclipse-portrait.webp",
+      "drawn": [390, 760],
       "pages": { "table/home": "largest" }
     },
     {
       "name": "home-ground-breach",
-      "source": "table/battle-art/horizon/breach.webp",
-      "drawn": [390, 640],
+      "source": "docs/art/sources/pages/breach-portrait.webp",
+      "drawn": [390, 760],
       "pages": { "table/home": "lazy" }
     },
     {
       "name": "home-ground-sky",
-      "source": "table/battle-art/horizon/shattered-sky.webp",
-      "drawn": [390, 640],
+      "source": "docs/art/sources/pages/sky-portrait.webp",
+      "drawn": [390, 760],
       "pages": { "table/home": "lazy" }
     },
     {
