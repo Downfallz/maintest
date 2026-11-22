@@ -64,7 +64,7 @@ export function inboxItems({ mine = [], invitations = [], friends = null, news =
     if (!Number.isFinite(entry?.id) || !entry.title) continue;
     const ago = entry.at ? sentAgo(entry.at, now) || 'just now' : '';
     items.push({ kind: 'news', key: `news:${entry.id}`, id: entry.id, title: entry.title, unread: entry.read !== true,
-      detail: [entry.body, ago].filter(Boolean).join(' · '), url: typeof entry.url === 'string' && entry.url.startsWith('/') ? entry.url : null });
+      detail: [entry.body, ago].filter(Boolean).join(' · '), url: typeof entry.url === 'string' && /^\/(?![/\\])/.test(entry.url) ? entry.url : null });
   }
   return items;
 }
@@ -101,7 +101,7 @@ export function bellLabel(waiting, unread = 0) {
  */
 export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, reopen = signedInChanged, fresh: freshFor = 5000, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
-  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, fed = 0, busy = false, drawn = '';
+  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, readThrough = 0, fed = 0, busy = false, drawn = '';
   // The news unread when the window showed it: marked new while the window stays open, though the host has it read.
   const shownNew = new Set();
   const dialog = () => doc.getElementById('inbox-dialog');
@@ -218,6 +218,7 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     try {
       await request('/api/account/notices/read', { upTo });
       if (account?.id !== reading) return;
+      readThrough = Math.max(readThrough, upTo);
       news = news.map(entry => (entry.id <= upTo ? { ...entry, read: true } : entry));
     } catch {
       // Unread still: the badge keeps counting it, and the window is not asked to tell it again until it is reopened.
@@ -233,8 +234,8 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     if (!keepsNews) return null;
     try { return (await request('/api/account/notices')).notices ?? []; }
     catch (error) {
-      if (error?.status === 404) keepsNews = false;
-      return null;
+      if (error?.status === 404) { keepsNews = false; return null; }
+      return { failed: true };
     }
   }
   async function refresh(force = false) {
@@ -245,9 +246,11 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
       if (account?.id !== reading) return;
       if (games) { mine = games.tables ?? []; invitations = games.invitations ?? []; }
       friends = list;
-      if (kept) news = kept;
+      // A list read before a mark the host confirmed may answer after it: what was marked stays read.
+      if (Array.isArray(kept)) news = kept.map(entry => (entry?.id <= readThrough ? { ...entry, read: true } : entry));
       render();
-      retry.answered();
+      // The lists answered and the news did not: read again shortly, as when the lists fail.
+      if (kept?.failed) retry.failed(); else retry.answered();
     } catch {
       // A bell that missed one read keeps what it last knew, and reads again shortly: the change it was told of
       // will not be told twice.
@@ -255,7 +258,12 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     }
   }
   const retry = backoff(() => void refresh(true), { schedule: (run, delay) => win.setTimeout(run, delay), cancel: id => win.clearTimeout(id) });
-  for (const opener of [el('inbox-open'), doc.getElementById('inbox-open-menu')].filter(Boolean)) opener.addEventListener('click', () => { problem(); refused = null; void refresh(true); });
+  for (const opener of [el('inbox-open'), doc.getElementById('inbox-open-menu')].filter(Boolean)) opener.addEventListener('click', () => {
+    problem(); refused = null;
+    // The news already drawn is read as the window opens, whether or not the read that follows answers.
+    void refresh(true);
+    if (account) void markRead(inboxItems({ mine, invitations, friends, news }));
+  });
   // Closing the window lets the news it showed as new be drawn as read.
   dialog()?.addEventListener('close', () => { refused = null; if (shownNew.size) { shownNew.clear(); render(); } });
   // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing,
@@ -270,7 +278,7 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;
-      account = next; mine = []; invitations = []; friends = null; news = []; keepsNews = true; fed = 0;
+      account = next; mine = []; invitations = []; friends = null; news = []; keepsNews = true; readThrough = 0; fed = 0;
       shownNew.clear();
       retry.stop();
       listen(Boolean(account));

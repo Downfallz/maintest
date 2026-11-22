@@ -105,6 +105,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (path === '/api/account/notices/read' && state.news) {
       const { upTo } = route.request().postDataJSON();
       state.readUpTo = [...(state.readUpTo ?? []), upTo];
+      if (state.refuseReads > 0) { state.refuseReads -= 1; return route.fulfill({ status: 503, json: { message: 'The notices could not be marked read.' } }); }
       state.news = state.news.map(one => (one.id <= upTo ? { ...one, read: true } : one));
       return json({ marked: 1 });
     }
@@ -1087,6 +1088,23 @@ test('with push off the bell still shows the news, counts it until the window is
   await expect(dialog.locator('.inbox-item.news')).toHaveCount(2);
   await expect(dialog.locator('.inbox-item.news.unread')).toHaveCount(0);
   expect(state.readUpTo).toEqual([42]);
+  expect(state.errors).toEqual([]);
+});
+
+test('a read the host refused keeps the news counted, and is asked again only when the window opens again', async ({ page }) => {
+  const news = [{ id: 7, kind: 'left', title: 'Bastien left the table', body: '', url: '/lobby', at: new Date().toISOString(), read: false }];
+  const state = await home(page, { incoming: [], games: [], news });
+  state.refuseReads = 1;
+  const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
+  await expect(badge).toHaveText('1');
+  await bell.click();
+  await expect(page.locator('#inbox-dialog .inbox-item.news.unread')).toHaveCount(1);
+  await expect.poll(() => state.readUpTo).toEqual([7]);
+  await expect(badge).toHaveText('1');
+  await page.keyboard.press('Escape');
+  await bell.click();
+  await expect.poll(() => state.readUpTo).toEqual([7, 7]);
+  await expect(badge).toBeHidden();
   expect(state.errors).toEqual([]);
 });
 

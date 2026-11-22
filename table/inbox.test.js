@@ -72,8 +72,8 @@ test('the news comes after what waits, newest first, each with what it said, whe
 });
 
 test('a news entry only links inside the site, and one without an id or a title is not drawn', () => {
-  const items = inboxItems({ news: [{ id: 1, title: 'Away', url: 'https://elsewhere.example/' }, { title: 'No id' }, { id: 2 }] });
-  assert.deepEqual(items.map(item => [item.key, item.url]), [['news:1', null]]);
+  const items = inboxItems({ news: [{ id: 1, title: 'Away', url: 'https://elsewhere.example/' }, { id: 3, title: 'Away', url: '//elsewhere.example/' }, { id: 4, title: 'Away', url: '/\\elsewhere.example/' }, { id: 5, title: 'Here', url: '/lobby' }, { title: 'No id' }, { id: 2 }] });
+  assert.deepEqual(items.map(item => [item.key, item.url]), [['news:1', null], ['news:3', null], ['news:4', null], ['news:5', '/lobby']]);
 });
 
 test('the bell counts what waits and the unread news, never the news already read', () => {

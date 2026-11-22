@@ -97,17 +97,22 @@ whatever the push does: a player who never turned pop-ups on reads it here.
 The bell sits outside the menu, so a phone sees its count without opening anything. One place has no room for it:
 the battle view's bar under 360 px, signed in (UX11, `docs/art/journeys/match.md`). There the bell joins the menu,
 as its Notifications entry, and its count is drawn on the menu's button, still seen without opening anything.
-Either badge counts what waits and the unread news, up to nine, then says 9+; the bell's name, and the menu
-button's description, say how much waits and how much news is new (`Notifications · 1 waiting · 2 new`). Opening the
-window marks the news read (`POST /api/account/notices/read`, up to the newest entry): the news it showed stays
-marked *New* until the window closes, and the host tells the player's other pages, whose badges drop too. A read
-the host refused leaves the news unread, counted until the next opening. Where the platform offers one, an installed app shows the same count on its icon (`navigator.setAppBadge`).
-Every action is the route the lobby or the Friends panel already uses; a request answered here is read again by the Friends panel, and the lobby reads its lists again. The bell
+Either badge counts what waits plus the unread news, up to nine, then says 9+. Where the platform offers one, an
+installed app shows the same count on its icon (`navigator.setAppBadge`). The bell's name, and the menu button's
+description, say how much waits and how much news is new (`Notifications · 1 waiting · 2 new`).
+
+Opening the window marks the news read (`POST /api/account/notices/read`, up to the newest entry). The news it
+showed stays marked *New* until the window closes. The host tells the player's other pages, and their badges drop
+too; that tells each of them to read its lists again, the bell's three reads and, on the lobby, the lobby's own. A
+read the host refused leaves the news unread, counted until the next opening.
+
+Every action is the route the lobby or the Friends panel already uses; a request answered here is read again by
+the Friends panel, and the lobby reads its lists again. The bell
 reads `GET /api/lobby/mine`, `GET /api/friends` and `GET /api/account/notices` (a host that keeps no notices answers
 404, and is not asked again) when it is opened, when who is signed in changes, and, while the
 page is in view, when the lobby's stream opens or says the player's own lists changed (ADR 0164). On the lobby,
 which reads the player's games itself, the bell takes that read and skips its own read of the games for five
-seconds. A read that fails is tried again a second later, then two, up to thirty. The pure part
+seconds. A read that fails, the news's included, is tried again a second later, then two, up to thirty. The pure part
 (`inboxItems`, `inboxCount`, `readUpTo`, `badgeText`, `bellLabel`) is `table/inbox.js`'s and has its own tests.
 
 ## Refresh and account transitions
