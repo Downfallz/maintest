@@ -38,7 +38,8 @@ test('every scene of the match is declared lazily for the battle page, drawn at 
 test('the windows hold the words their heads wear, and the sheet sets the bands', () => {
   const page = read('table/battle.html'), sheet = read('table/battle.css');
   assert.match(page, /<header class="atlas-header"><div class="atlas-band"><div class="atlas-words">.*?<\/div><button id="atlas-close"[^>]*>Close<\/button><\/div><select id="atlas-creature"/);
-  assert.match(page, /<header class="match-header"><span class="match-crest"[^>]*><\/span><div><p class="eyebrow" id="match-eyebrow">/);
+  assert.match(page, /<header class="match-header"><div><p class="eyebrow" id="match-eyebrow">/);
   assert.match(sheet, /#atlas-board \.atlas-family-head\.scene-head::after \{ aspect-ratio: auto; height: 48px; max-height: none; \}/);
-  assert.match(sheet, /#match-dialog \.match-header\.scene-head > \.match-crest \{ display: none; \}/);
+  // The result always wears its head since S11: the crest it replaced is gone, from the page and from the sheet (#1066).
+  assert.doesNotMatch(page, /match-crest/); assert.doesNotMatch(sheet, /match-crest/);
 });
