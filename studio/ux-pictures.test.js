@@ -54,6 +54,7 @@ test('a phone takes the smallest file that fills what it draws at its density', 
 test('a page counts the pictures asked for before any scroll, then all of them', () => {
   const art = {
     ground: { drawn: [400], frames: 1, pages: { home: 'largest' }, sizes: [{ width: 400, bytes: 20 }, { width: 800, bytes: 50 }] },
+    landscape: { drawn: [1200], frames: 1, pages: { home: 'wide' }, sizes: [{ width: 1200, bytes: 200 }] },
     beast: { drawn: [100], frames: 1, pages: { home: 'first', ladder: 'lazy' }, sizes: [{ width: 100, bytes: 5 }, { width: 200, bytes: 9 }] },
     round: { drawn: [100], frames: 1, pages: { home: 'lazy' }, sizes: [{ width: 200, bytes: 7 }] },
   };
@@ -152,7 +153,7 @@ test('the ladder, the statistics and the rulebook raise their budget by their he
 test('a declaration is refused when a role is unknown, a name is no file name, or a strip has one frame', () => {
   const list = () => readdirSync(new URL('table/page-art', root));
   const bad = change => check({ authored: { ...authored, pictures: [{ ...authored.pictures[0], ...change }, ...authored.pictures.slice(1)] }, art: PAGE_ART, read, list }).join('\n');
-  assert.match(bad({ pages: { 'showcase/home': 'soon' } }), /largest, first or lazy/);
+  assert.match(bad({ pages: { 'showcase/home': 'soon' } }), /largest, first, lazy or wide/);
   assert.match(bad({ name: 'Eclipse Ground' }), /lower case, digits and hyphens/);
   assert.match(bad({ source: undefined, frames: ['table/battle-art/eclipse-battle.webp'] }), /a strip has at least two frames/);
   assert.match(bad({ drawn: [] }), /the width it is drawn at/);

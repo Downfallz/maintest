@@ -21,8 +21,8 @@
       "all": 204800
     },
     "table/home": {
-      "first": 196608,
-      "all": 442368
+      "first": 294912,
+      "all": 851968
     },
     "table/stats": {
       "first": 0,

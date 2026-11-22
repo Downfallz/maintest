@@ -211,7 +211,7 @@ test('a lesson featured after the duel was asked for stands on the eclipse, and 
   assert.match(doc.ids['featured-art'].children[0].attributes.src, /mist-duel-/);
   featured.setGames([]); featured.setLessons(series('new'));
   assert.equal(doc.ids.featured.dataset.featured, 'lesson');
-  assert.match(doc.ids['featured-art'].children[0].attributes.src, /home-ground-eclipse-/);
+  assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /home-ground-eclipse-/);
   featured.setGames([game('g', { round: 2 })]);
   assert.equal(doc.ids['new-table'].textContent, '＋ New battle');
 });
@@ -321,7 +321,7 @@ test('a round the host could not read in time keeps the last one known for that 
   const later = game('g'); later.table.round = null;
   featured.setGames([later]);
   assert.equal(doc.ids.welcome.textContent, 'Round 7 against Rook');
-  assert.match(doc.ids['featured-art'].children[0].attributes.src, /home-ground-breach-/);
+  assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /home-ground-breach-/);
 });
 
 test('a cue left unread goes stale within the minute', () => {

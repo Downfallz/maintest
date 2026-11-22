@@ -1574,6 +1574,36 @@ for (const [width, height, density, file] of [[390, 844, 2, 950], [400, 900, 1, 
   });
 }
 
+// At phone density the selected file must fill the actual cover, and rotating must switch the painting in place.
+for (const [ground, round] of [['eclipse', null], ['breach', 6], ['sky', 10]]) {
+  test(`the featured ${ground} uses its full-screen portrait and switches to the landscape`, async ({ browser }, info) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+    const page = await context.newPage(), asked = [];
+    await page.route('**/page-art/*', route => {
+      const name = new URL(route.request().url()).pathname.split('/').pop();
+      asked.push(name);
+      return route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
+    });
+    const games = round ? [{ ...held, table: { ...battle, round } }] : [];
+    await home(page, { games, tutorials: series('skipped', 'new') });
+    const painting = page.locator('#featured img.featured-ground');
+    const selected = () => painting.evaluate(img => img.complete && img.naturalWidth > 0 ? img.currentSrc : '');
+    await expect.poll(selected).toContain(`/home-ground-${ground}-`);
+    const cover = await painting.evaluate(img => {
+      const { width, height } = img.getBoundingClientRect();
+      return Math.max(width, height * img.naturalWidth / img.naturalHeight) * devicePixelRatio;
+    });
+    const fileWidth = Number(/-(\d+)\./.exec(await selected())[1]);
+    expect(fileWidth).toBeGreaterThanOrEqual(cover - 1);
+    expect(asked.some(name => name.startsWith(`battlefield-${ground}-`))).toBe(false);
+    await expect(page.locator('#featured-action')).toBeInViewport();
+    await page.screenshot({ path: info.outputPath(`lobby-${ground}-portrait.jpg`), type: 'jpeg', quality: 90 });
+    await page.setViewportSize({ width: 740, height: 390 });
+    await expect.poll(selected).toContain(`/battlefield-${ground}-`);
+    await context.close();
+  });
+}
+
 test('on a phone, a host notice keeps the duel\'s links to the games on the first screen (#1072)', async ({ page }, info) => {
   await home(page, { games: [], tutorials: series('done', 'done'), notice: 'The table restarts at 22:00 for an update; your games are kept and wait where you left them.' });
   await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'new');
@@ -1651,7 +1681,7 @@ test('a featured game stays featured while several turns are the player\'s, and 
     const name = new URL(route.request().url()).pathname.split('/').pop();
     // The breach, a later round's ground, drawn once the lists are read: the eclipse before it is not held, or the
     // page would never finish loading.
-    if (name.startsWith('home-ground-breach-')) await held;
+    if (/^(home-ground|battlefield)-breach-/.test(name)) await held;
     await route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
   });
   const game = (id, round) => ({ table: { ...battle, id, round }, seats: [{ seat: 'player1', token: `${id}-token` }] });

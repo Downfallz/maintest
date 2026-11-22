@@ -14,7 +14,17 @@ button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to
 and sky take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
 appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint, sent at
 the width it covers: 475 px on a 390 by 844 phone (844 px tall times the painting's 0.5625 width-to-height ratio),
-950 px at 1280 px and wider (#1070). The first-paint budget of the home is 192 KiB (`docs/art/page-budget.json`).
+950 px at 1280 px and wider (#1070). The lesson, round 6 and round 10 have their own portrait paintings (#1081).
+On a 390 by 844 phone each fills the screen at 390 CSS pixels wide. The kit sends its 841 px WebP at 2×.
+On rotation or a wide screen the browser selects the existing battlefield landscape instead.
+The phone budget is 288 KiB before scroll and 832 KiB for all pictures across the home’s states.
+
+| Featured state | Portrait source |
+| --- | --- |
+| Lesson | `docs/art/sources/pages/eclipse-portrait.webp` |
+| Rounds 6–9 | `docs/art/sources/pages/breach-portrait.webp` |
+| Round 10 onward | `docs/art/sources/pages/sky-portrait.webp` |
+
 On a phone, the host notice lies under the header, over the painting's top, so the space keeps its full screen
 (#1072). Where this paragraph and the
 UX9 text below disagree, this paragraph holds; the measurements and storyboards below record the previous panel
