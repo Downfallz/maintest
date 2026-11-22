@@ -10,6 +10,8 @@ async function open(page) {
   await page.route('**/*.js', route => (KIT.some(name => new URL(route.request().url()).pathname.endsWith(name)) ? route.continue() : route.abort()));
   await page.route('**/api/**', route => route.fulfill({ status: 404, json: { message: 'Not here.' } }));
   await page.goto('/table/rules.html');
+  // The rulebook's own head (S10) is a scene: taken off, so the kit is tried on a page that holds none.
+  await page.evaluate(() => document.querySelector('.page-head')?.remove());
 }
 
 /** A strip of four frames, 80 px each, made in the page: no strip is committed until a journey films one. */
