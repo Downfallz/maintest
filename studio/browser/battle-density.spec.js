@@ -115,8 +115,7 @@ test('the match frame is written at 11 px at least and no two of its controls sh
     return getComputedStyle(node, '::after').content;
   }, count);
   await expect.poll(() => unread('2')).toBe(narrowBar ? '""' : 'none');
-  // The dot is drawn; the words are spoken: Help is described by History's unread count.
-  await expect(page.locator('#help-open')).toHaveAccessibleDescription(/2 new/);
+  // The dot is drawn; the words are spoken: Help is described by History's unread count (table/battle-frame.test.js).
   await expect.poll(() => unread('')).toBe('none');
   // Under 360 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell").
   const narrow = page.viewportSize().width < 360;

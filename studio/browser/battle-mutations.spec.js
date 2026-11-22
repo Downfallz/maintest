@@ -530,6 +530,25 @@ test('a reveal that comes later leaves the focus where the player went after the
   await expect(page.locator('#settings')).toBeFocused();
   expect(h.state.errors).toEqual([]);
 });
+test('a wait for the receipt ends with its round: a later round\'s reveal takes no focus', async ({ page }) => {
+  const h = await mount(page, { remaining: 1 });
+  h.state.next = view => ({ ...view, waitingFor: null, waitingAsked: null, options: {}, board: { ...view.board, evolutionChoices: [{ creature: 2, tier: 'root1' }] } });
+  await page.locator('#actor-layer [data-creature="2"]').click();
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toBeFocused();
+  // Both teams passed after all: no receipt, and the match goes on to its next round.
+  h.state.view = { ...h.state.view, board: { ...h.state.view.board, roundNumber: 2, subPhase: 'Speed', evolutionChoices: [] } };
+  await h.publish(); await page.clock.runFor(50);
+  // A later reveal, the focus still resting on the creature: the receipt arrives and leaves the focus alone.
+  await page.locator('#actor-layer [data-creature="2"]').focus();
+  h.state.view = { ...h.state.view, feedNext: 6, feed: [{ sequence: 5, round: 2, event: { kind: 'PurchasesRevealed', roundId: 2, choices: [{ creature: 2, tier: 'root1' }] } }],
+    board: { ...h.state.view.board, allies: h.state.view.board.allies.map(one => one.id === 2 ? { ...one, acquiredTiers: ['root1'], knownSpells: ['spell1'] } : one) } };
+  await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#growth-receipt')).toBeVisible();
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toBeFocused();
+  expect(h.state.errors).toEqual([]);
+});
 // Docked, the tree's tag stays on the creature it holds alone (#1000): the others' ◇ MUTATE are the sheet's tabs.
 test('a docked tree keeps the tag of the creature it holds, not of every creature offered', async ({ page }) => {
   const h = await mount(page, { open: '#actor-layer [data-creature="2"]' });
