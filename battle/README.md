@@ -1000,7 +1000,7 @@ plays them through the kit, `src/fx/`:
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
 | `shake` | Adds its `strength` to the view's trauma ("The movement"), on top of what the health lost adds. One a staging. The trauma's own fall sets how long the view moves, not `lasts`. | the view |
 | `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. On the acting figure its gold rim is quieted meanwhile, and on a figure lit blue its focus rim. Costly: see ADR 0196. | a figure |
-| `push` | The slow push on a capstone: the view moves in on the caster over the beat, holds, and lets go as the blow lands. In the windup only, one a staging, a Stage III spell's. | the view |
+| `push` | The slow push on a capstone: the view moves in on the caster over the beat, holds, and lets go as the blow lands. In the windup only, once a staging, and only on a Stage III spell. | the view |
 
 - The kit is a second bundle. `build.mjs` builds `fx.js` first, refuses it if it holds the engine or a
   laboratory module, and writes its hash into `game.js` and `live.js`, which fetch `fx.js?v=<hash>` once the

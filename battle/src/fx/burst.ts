@@ -9,6 +9,7 @@ type Flying = Phaser.GameObjects.Particles.Particle & { fxX: number; fxY: number
 // a little, since debris has weight. On the ground (the craft book, "A beat on the ground") a piece's travel
 // toward or away from the eye is shortened, and one thrown along it from the feet stays on it and does not fall.
 // Aimed `down`, the pieces drop off the figure and fall as far again: what a body sheds, not what a blow throws.
+// At the feet they lie on the ground already, and do not fall through it.
 export const burst: Primitive = (kit, play) => {
   const { beat, rate } = play, at = placed(play.at, beat.level);
   const count = kit.room(beat.count!);
@@ -18,9 +19,10 @@ export const burst: Primitive = (kit, play) => {
   const out = (t: number) => 1 - (1 - t) ** 3;
   const slant = grounded(beat) ? GROUND : 1;
   let fall = beat.level === 'feet' && beat.direction !== 'up' ? 0 : reach * .18;
-  if (beat.direction === 'down') fall = reach * .6;
-  // Each piece's heading is drawn where the engine places it, which it does before it asks any of the piece's
-  // values: its place and its turn then read the same heading, whatever order the engine asks them in (#936).
+  if (beat.direction === 'down' && beat.level !== 'feet') fall = reach * .6;
+  // Each piece's heading is drawn in its emit zone, which the engine asks before any of the piece's values: its
+  // `x` is added to the place the zone gives. Its place and its turn then read the same heading, in whichever order
+  // the engine asks for those two (#936). The browser spec that reads a spark's turn against its travel guards it.
   let drawn = { x: 0, y: 0, angle: 0 };
   const emitter = kit.emitter({ ...play, at }, count, {
     emitting: false, lifespan: { min: life * .6, max: life }, speed: 0,

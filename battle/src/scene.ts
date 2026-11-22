@@ -107,6 +107,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private halo: ActingHalo | null = null;
   // One blue halo per creature the turn order or a tie points at (SceneFrame.focus), made the first time it is lit.
   private readonly focusHalos = new Map<string, ActingHalo>();
+  // How many halos now playing quieted each blue rim: what each one's end gives back.
+  private readonly focusQuieted = new Map<string, number>();
   // Which creatures the blue focus lights now (`#battle[data-focus-lit]` for tests and tools).
   onFocus: (ids: string) => void = () => {};
   private focusLit = '';
@@ -169,11 +171,13 @@ export class BattleScene extends Phaser.Scene implements Restful {
         shake: strength => this.viewShake.add(strength),
         // A halo on the figure the gold rim lights quiets the rim while it plays; its end gives the rim back.
         // One that started on another figure is not counted, so its end gives nothing back.
-        // The blue halo the turn order or a tie lights is quieted the same way, counted on its own (#937).
+        // The blue halo the turn order or a tie lights is quieted the same way (#937). Its light can change while a
+        // halo swells, so what is given back is what was taken: a halo that started on an unlit figure gives nothing.
         quiet: (creature, on) => {
           if (creature === this.haloId) this.halo?.quieten(on);
-          const focus = this.focusHalos.get(creature);
-          if (focus?.visible) focus.quieten(on);
+          const focus = this.focusHalos.get(creature), taken = this.focusQuieted.get(creature) ?? 0;
+          if (on && focus?.visible) { focus.quieten(true); this.focusQuieted.set(creature, taken + 1); }
+          if (!on && taken > 0) { focus?.quieten(false); this.focusQuieted.set(creature, taken - 1); }
         },
         // The slow push on a capstone: the view moves in on the caster while the spell gathers (#950).
         push: (strength, lasts, at) => this.viewShake.push(strength, lasts, at),

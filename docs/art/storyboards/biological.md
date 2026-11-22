@@ -47,8 +47,8 @@ each its own change:
 - Built since (#942): under a strength of 0.2 a piece shrinks to a fifth of its base, and a burst aimed `down`
   drops its pieces off the figure. Toxic Mend's and Contagion's flakes of hide (the owner's word, 2026-11-19:
   fewer, smaller, darker, in `hide`) now fall in a fan of 120° under the body instead of being thrown out.
-- Built since (#942): the motif is drawn under the particles on its figure, so beads and motes on a body show
-  over the strokes.
+- Built since (#942): the motif is drawn under the particles on its figure, so beads and motes on a body are no
+  longer hidden by the strokes.
 - On the effects bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their
   reach, as in the physical family: the sheets show only that case.
 

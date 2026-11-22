@@ -54,9 +54,10 @@ motif run along the line of the blow and the `slash` strokes cut 60° across it,
 
 ## The battle's colours
 
-Besides each family's own colour (`LIGHT_COLOURS`, `table/battle-ground.js`), the battle names five colours, by
-which a beat is tinted (`tint`) and a motif is drawn. They are written once, in `table/battle-motion.js`, and
-`table/battle-motion.test.js` holds each to this table, and bone and soot to the palette (`docs/art/branding.css`).
+Besides each family's own colour (`LIGHT_COLOURS`, `table/battle-ground.js`), the battle names five colours. A beat
+is tinted with them (`tint`) and a motif is drawn in them. They are written once, in `table/battle-motion.js`, and
+`table/battle-motion.test.js` holds each to this table, and bone and soot also to the palette
+(`docs/art/branding.css`).
 
 | Name | Value | Where it comes from | What it is for |
 | --- | --- | --- | --- |

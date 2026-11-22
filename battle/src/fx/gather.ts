@@ -19,7 +19,7 @@ export const gather: Primitive = (kit, play) => {
   const life = beat.lasts! / rate, size = sized(beat, at.radius / 60, .35);
   const far = at.radius * beat.reach! / 100, ring = new kit.engine.Geom.Circle(0, 0, far);
   // How much of the way in a piece goes: from the ring to the outline. A ring drawn inside the outline closes to its centre.
-  const travel = Math.max(0, 1 - at.radius * LAND / far);
+  const travel = far > at.radius * LAND ? 1 - at.radius * LAND / far : 1;
   const emitter = kit.emitter({ ...play, at }, count, {
     emitting: false, lifespan: { min: life * .7, max: life }, speed: 0,
     emitZone: { type: 'random', source: { getRandomPoint: point => { ring.getPoint(Math.random(), point as Phaser.Math.Vector2); point.y *= slant; } } },

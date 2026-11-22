@@ -247,6 +247,18 @@ test('a pulse on the acting caster quiets its gold rim while it swells, and give
   await film(page, 'stop');
 });
 
+test('a pulse on a figure lit blue quiets its blue rim too, and gives it back (#937)', async ({ page }) => {
+  test.slow();
+  // Crushing Stomp's bone pulse on its caster, a1, which the film lights blue as the turn order would.
+  await film(page, 'start', { spell: 'spell:crushing_stomp:v1', actor: 'a1', targets: ['b1'], focus: ['a1'] });
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false, focusQuiet: [] });
+  await film(page, 'advance', 600);
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: true, focusQuiet: ['a1'] });
+  await film(page, 'advance', WINDUP_MS + IMPACT_MS - 600);
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false, focusQuiet: [] });
+  await film(page, 'stop');
+});
+
 test('a slash cuts across the blow, where an impact\'s strokes run along it', async ({ page }) => {
   const strokes = async spell => {
     await film(page, 'start', { spell, actor: 'a1', targets: ['b1'] });
@@ -278,7 +290,7 @@ test('a windup beat on a melee caster goes with its body when it leaves its plac
   await film(page, 'stop');
 });
 
-test('a spark points the way it flies, whatever order the engine reads a piece in (#936)', async ({ page }) => {
+test('a spark points the way it flies: a guard on the order the engine reads a piece in (#936)', async ({ page }) => {
   await film(page, 'start', { spell: 'kit:burst', actor: 'a1', targets: ['b1'] });
   // On a phone the blow runs up the field: the pieces' travel lies on the ground, shortened, so they are read a
   // little later than on a desktop.

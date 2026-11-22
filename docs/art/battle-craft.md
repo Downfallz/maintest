@@ -304,13 +304,13 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none to draw. The same reset as the punch zoom.
 - **Reduced motion**: nothing.
 - **Here**: the kit's `push` (`battle/src/fx/push.ts`), a beat of the windup only, once a staging, on a Stage III
-  spell only (the ladder). It hands the view its push: the scene lays it over the fitted camera with the tremor and
-  the punch (`battle/src/view-shake.ts`), builds it over the beat with a sine in and out to 6% closer at full
-  strength (*house*, `PUSH` in `table/battle-motion.js`), holds it, and lets it go over 240 ms (*house*) when the
-  blow lands. It is not `Phaser.Cameras.Scene2D.Camera#pan`: the scroll moves the field by the share the zoom
-  grew, so the caster stays where it stood on the screen while the field comes in around it. One capstone a
-  family has it, 0.5 strong from 200 ms to the contact, Crushing Stomp's 0.6: Crushing Stomp, Devour, Incinerate,
-  Void Pulse and Death Wail (#950).
+  spell only (the ladder). The kit hands the push to the view, which lays it over the fitted camera with the tremor
+  and the punch (`battle/src/view-shake.ts`). It builds the push over the beat with a sine in and out, to 6% closer
+  at full strength (*house*, `PUSH` in `table/battle-motion.js`), holds it, and lets it go over 240 ms (*house*)
+  when the blow lands. It is not `Phaser.Cameras.Scene2D.Camera#pan`: the scroll moves the field by the share the
+  zoom grew, so the caster stays where it stood on the screen. The view is then the fitted one scaled about the
+  caster, so no edge of the field comes into it. One capstone in each family has it, at strength 0.5 from 200 ms to
+  the contact (Crushing Stomp 0.6): Crushing Stomp, Devour, Incinerate, Void Pulse and Death Wail (#950).
 
 ## Particles
 
@@ -355,10 +355,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   BC4 built it could not be read: at a steady pace its pieces spent most of their life over the figure's own
   body, the colour of the motif. A piece now leaves fast and slows (cubic out), is clear of the body by the
   second frame, and falls a little; its size goes by the beat's `strength`, and a reach goes to 400 hundredths
-  of the figure's radius, since 200 ends inside the silhouette (*house*). A piece's heading is drawn where the
-  engine places it, before it asks for the piece's place or turn, so a spark points the way it flies whatever
-  order the engine asks them in (#936). Aimed `down`, the pieces drop off the figure and fall: what a body sheds,
-  such as a lowered defense's flakes of hide (#942). Under a `strength` of 0.2 a piece shrinks further, to a fifth
+  of the figure's radius, since 200 ends inside the silhouette (*house*). A piece's heading is drawn in its emit
+  zone, which the engine asks before any of the piece's values. Its place and its turn read that one heading, so a
+  spark points the way it flies in whichever order the engine asks for those two (#936). Aimed `down`, the pieces
+  drop off the figure and fall: what a body sheds, such as a lowered defense's flakes of hide (#942). At the feet
+  they lie on the ground already and do not fall. Under a `strength` of 0.2 a piece shrinks further, to a fifth
   of its base near 0, so a flake can be small on a small figure.
 
 ### Flow
@@ -475,7 +476,7 @@ bake the drawing to a texture first, or filter a container.
   apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
   A pulse on the acting figure was drowned out by the gold rim the scene draws around it: while one plays, the rim is
   quieted to a fifth (*house*) and given back when the beat ends or is cleared (#919). The blue rim the turn order
-  or a tie lights is quieted the same way, counted on its own (#937).
+  or a tie lights is quieted the same way, and each halo gives back only what it took (#937).
 
 ### Blur
 
@@ -711,7 +712,7 @@ bake the drawing to a texture first, or filter a container.
 - **Reduced motion**: the meaning stays in the result text and the frame after.
 - **Here**: 16 motifs for 44 spells, each family with its shapes (`docs/art/spell-vfx.md`). BC6 to BC8 give each
   spell its own staging; the motif stays the primary element, so a spell is still read as its family first. It
-  is drawn just under the kit's particles (depth 1999 against 2000 and 2001): its strokes are opaque on a dark
+  is drawn just under the kit's particles (depth 1999.5 against 2000 and 2001): its strokes are opaque on a dark
   edge, and beads or motes drawn under them showed only beside them (#942).
 
 ### Shape before colour

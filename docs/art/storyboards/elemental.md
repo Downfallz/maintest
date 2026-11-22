@@ -103,12 +103,12 @@ The sheets cannot show the stop, the flicker at full speed, or the sound.
 
 - The arc's own `trail` is not used: Stage I allows no windup beat, and a trail in the impact would only draw the arc
   twice. The arc is the motif.
-- The sparks off a1's head stand for "the fractured skull": a beat on a caster sits at its home ([biological.md](biological.md)'s
-  open point), so the sparks may show over the back rather than the skull. A point on the skull is a kit change.
+- The sparks off a1's head stand for "the fractured skull". A beat on a caster now goes with its body (#933), so the
+  sparks follow a1's cast load; a point on the skull itself would still be a kit change.
 - The crackle reads to 1260 ms, not to the arc's end: on the second film, at 10 sparks and strength 0.35, the last
   frames show one spark or none. A later pass: count 14, strength 0.45 (*house*), the film to check 1380 ms.
-- The craft book's chain entry is about an arc between targets; Shock uses its drawing for one jump only. No chain
-  to a second figure exists in the kit, and Shock strikes one.
+- Shock's arc is drawn for one jump only. No chain to a second figure exists in the kit, and Shock strikes one; the
+  owner chose not to build one, nor the arc's flicker, and the chain's entry left the craft book (#950).
 
 ## Ice Grip (`spell:frostbite:v1`)
 
@@ -275,8 +275,8 @@ The sheets cannot show the stop, the feel at full speed, or the sound.
   Bleed in every family. Ember motes stay the fire itself, so lingering embers would read as more burning damage. The
   owner may want a burn to look like a burn; then it is a new meaning to settle for every family, not this staging's.
 - The storm does not fall from above: no beat comes down from the sky, and the owner chose not to build a source
-  above the field (#950). A burst may now be aimed `down` (#942), but its pieces drop off the figure they play on,
-  which is not a storm falling onto it.
+  above the field (#950). A burst may now be aimed `down` (#942), but its pieces fall off the figure they play on,
+  not onto it.
 - The windup flow on a1 is ember sparks rising: in the biological family rising sparks are energy gained, but in its
   own green; here the tint, ember, says fire.
 

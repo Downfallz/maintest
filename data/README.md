@@ -35,11 +35,11 @@ Authoring format for the game resources (ADR 0009). One JSON file per item:
   beat has a `beat` kind (`motif`, `burst`, `flow`, `trail`, `gather`, `glow`, `flash`, `shake`, `pulse`, `push`), the
   millisecond it starts `at`, and named parameters (`on`, `lasts`, `count`, `shape`, `tint`, `blend`,
   `direction`, `spread`, `reach`, `strength`, `level`). The builder refuses an unknown beat, word or property, a beat
-  with no `at`, a beat that outlives its window, and a `push` outside the windup. Without a staging, the spell is
-  drawn as its motif.
+  with no `at`, a beat that outlives its window, and a `push` outside the windup. A shake and a push are the view's: they
+  play once a cast, whatever their `on`. Without a staging, the spell is drawn as its motif.
   A `reach` is a share of the figure's radius, up to 400 (300 clears its body); a `strength` is a light's
-  brightness, a shake's weight, a push's share of the camera's full push, or the size of a particle beat's pieces; a `level` (`feet`, `centre`, `head`) is
-  where on its figure the beat starts, and what starts at the feet lies on the ground (a motif, a flash, a shake,
+  brightness, a shake's weight, a push's share of the camera's full push, or the size of a particle beat's
+  pieces; a `level` (`feet`, `centre`, `head`) is where on its figure the beat starts, and what starts at the feet lies on the ground (a motif, a flash, a shake,
   a pulse and a shock ring, which always lies at the feet, have no level of their own). How much a spell may ask for goes by
   the Stage of the mutation that teaches it: the ladder of `docs/art/storyboards/README.md`, held by
   `studio/staging-ladder.test.js`. Every entry is staged (BC6 to BC8 of the battle's craft plan).
