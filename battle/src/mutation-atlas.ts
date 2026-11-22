@@ -104,14 +104,16 @@ export function atlasControls(onVisibility: () => void) {
     const tile = node('button', '', 'atlas-node') as HTMLButtonElement; tile.type = 'button';
     tile.dataset.package = pack.id; tile.dataset.status = pack.status;
     if (onPath) tile.dataset.path = 'true';
-    tile.setAttribute('aria-label', `${pack.name} · ${stageSpoken(pack.level)} · ${STATUS[pack.status] ?? pack.status}`);
     // Each mutation shows the form it leads to (64 px); a capstone, which names none, its portrait (24 px).
     const picture = mutationForm(pack.visual?.artwork) ?? spellPortrait(pack.visual?.portrait, 24);
     if (picture) tile.append(picture);
     // The badge shows the Stage as the progress line does, in Roman numerals; the label speaks its number (#769, #878).
-    tile.append(node('span', stageNumeral(pack.level), 'atlas-node-stage'), node('span', pack.name, 'atlas-node-name'));
-    if (pack.status === 'available') tile.append(node('span', 'Offer', 'atlas-node-flag'));
-    if (pack.status === 'picked') tile.append(node('span', 'Picked', 'atlas-node-flag'));
+    // Named by its words (#1087): the numeral and the flag are for the eye, their spoken forms for the ear.
+    const seen = (text: string, className: string) => { const one = node('span', text, className); one.setAttribute('aria-hidden', 'true'); return one; };
+    tile.append(seen(stageNumeral(pack.level), 'atlas-node-stage'), node('span', pack.name, 'atlas-node-name'),
+      node('span', ` · ${stageSpoken(pack.level)} · ${STATUS[pack.status] ?? pack.status}`, 'unseen'));
+    if (pack.status === 'available') tile.append(seen('Offer', 'atlas-node-flag'));
+    if (pack.status === 'picked') tile.append(seen('Picked', 'atlas-node-flag'));
     tile.addEventListener('click', () => show(pack.id));
     return tile;
   }

@@ -5,7 +5,7 @@ import { BattleGround } from './ground';
 import { DiceLayer } from './dice';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
-import { MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
+import { MOTION_SCALE, RETURN_MS, playbackRate } from '../../table/battle-timing.js';
 import { DEFEATED_ALPHA, WEIGHTS, blowWeight, breath, lossOf, punches, traumaOf } from '../../table/battle-motion.js';
 import { castRelease, castWindup, fall, meleeReturn, meleeWindup, struck, throwWindup } from './body-motion';
 import { ViewShake } from './view-shake';
@@ -64,6 +64,11 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private readonly falling = new Set<string>();
   private state!: SceneFrame;
   private reduced = false;
+  // The height the figures were last laid out on, and, while the field eases into the room a docked sheet left, the
+  // height they are laid out on now (#1035): the field keeps the layout it had beside the sheet, then eases.
+  private laidHeight = 0;
+  private easedHeight: number | null = null;
+  private easeFrom: { height: number; at: number } | null = null;
   private rate = 1;
   private previous = '';
   private ready = false;
@@ -160,7 +165,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
     this.scale.on('resize', () => {
       this.fitCamera();
       if (this.state && playing(this.state)) this.onResizeDuringPlayback();
-      this.arrange();
+      const before = this.laidHeight;
+      if (!this.easeIntoRoom()) { this.stopEase(); this.arrange(); this.resized = { from: before, at: this.time.now }; }
     });
     this.ready = true;
     this.onReady();
@@ -351,13 +357,15 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private arrange(resetPositions = false) {
     // The field is measured on the camera as it was fitted, not as a tremor or a punch of the zoom holds it now.
     this.viewShake.rest();
-    const { displayWidth: width, displayHeight: height } = this.cameras.main;
+    const { displayWidth: width, displayHeight: fitted } = this.cameras.main;
+    const height = this.easedHeight ?? fitted;
+    this.laidHeight = height;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
-      const factor = Math.max(width / source.width, height / source.height);
-      this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
-      this.horizon?.layout(width, height);
-      this.ground?.layout(width, height);
+      const factor = Math.max(width / source.width, fitted / source.height);
+      this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - fitted) * .35);
+      this.horizon?.layout(width, fitted);
+      this.ground?.layout(width, fitted);
     }
     if (!this.figures.size) {
       this.upkeepMarkers.present(this.state?.upkeep, new Map(), this.reduced);
@@ -545,6 +553,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private clearMotion() {
     this.onCancel();
     this.tweens.killAll();
+    // The field's ease out of a docked sheet goes with the other tweens: the field takes its whole room at once.
+    if (this.easedHeight !== null) { this.easedHeight = null; this.arrange(); }
     this.cameras.main.resetFX();
     this.viewShake.clear();
     this.ground?.clear();
@@ -574,6 +584,39 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const lit = ids.join(' ');
     if (lit !== this.focusLit) { this.focusLit = lit; this.onFocus(lit); }
   }
+
+  /** A docked sheet is leaving: the next resize eases the figures from the layout they had beside it (#1035). */
+  holdLayout() {
+    // The resize can reach the scene before the page says which sheet left: then the ease starts from the layout the
+    // field had before that resize.
+    const resized = this.resized; this.resized = null;
+    if (resized && this.time.now - resized.at < 300) { this.easeFrom = { height: resized.from, at: this.time.now }; this.easeIntoRoom(); return; }
+    if (this.laidHeight) this.easeFrom = { height: this.laidHeight, at: this.time.now };
+  }
+  private resized: { from: number; at: number } | null = null;
+
+  // The field grew because a docked sheet left: it keeps the layout it had beside the sheet, and its figures, with the
+  // captions that follow them by a translation, ease into the room the sheet left. With reduced motion, a cast being
+  // read, or a resize long after the sheet went (a rotation), the field is laid out at once; so is one whose size
+  // changes again, or whose cast starts, while it eases.
+  private easeIntoRoom() {
+    // A field still easing that the browser measures again, as large or larger, eases on from where it stands.
+    const easing = this.easedHeight;
+    const from = this.easeFrom ?? (easing !== null ? { height: easing, at: this.time.now } : null); this.easeFrom = null;
+    const to = this.cameras.main.displayHeight;
+    if (!from || this.time.now - from.at > 1000 || this.reduced || !this.state || playing(this.state) || to <= from.height) return false;
+    this.tweens.killTweensOf(this.layoutEase);
+    this.layoutEase.height = from.height; this.easedHeight = from.height; this.arrange();
+    this.tweens.add({ targets: this.layoutEase, height: to, duration: RETURN_MS, ease: 'Cubic.easeInOut',
+      onUpdate: () => {
+        if (this.state && playing(this.state)) { this.stopEase(); this.arrange(); return; }
+        this.easedHeight = this.layoutEase.height; this.arrange();
+      },
+      onComplete: () => { this.easedHeight = null; this.arrange(); } });
+    return true;
+  }
+  private readonly layoutEase = { height: 0 };
+  private stopEase() { this.tweens.killTweensOf(this.layoutEase); this.easedHeight = null; }
 
   /** Whether something on the field moves now, which keeps the field at its full rate (rest.ts); ambience does not. */
   busy() {

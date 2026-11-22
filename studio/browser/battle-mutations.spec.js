@@ -386,6 +386,23 @@ test('each offer of the pick shows the form it leads to at 64 px, named by its w
   expect(h.state.errors).toEqual([]);
 });
 
+// #1031: on a short phone the pick opens with each offer's form and name in view above its foot; the rule sentence
+// leaves the sight and stays the graph's description.
+test('at 320 by 568 each offer\'s form and name are in view above the foot when the pick opens', async ({ page }, info) => {
+  await page.setViewportSize({ width: 320, height: 568 }); const h = await mount(page);
+  const foot = await page.locator('.planning-footer').boundingBox();
+  for (const offer of await page.locator('[data-mutation]').all()) {
+    for (const part of [offer.locator('.mutation-name'), offer.locator('.mutation-form')]) {
+      await expect(part).toBeInViewport({ ratio: 1 });
+      const box = await part.boundingBox(); expect(box.y + box.height).toBeLessThanOrEqual(foot.y);
+    }
+  }
+  await expect(page.locator('#planning-pick-rule')).toBeHidden();
+  await expect(page.locator('#planning-dialog')).toHaveAccessibleDescription(/3 creatures can mutate, 2 picks left/);
+  await page.screenshot({ path: info.outputPath('mutation-pick-320.png') });
+  expect(h.state.errors).toEqual([]);
+});
+
 test('the phone tree shows each mutation\'s form on its board and in its detail, a capstone its portrait, none before it opens', async ({ page }, info) => {
   await page.setViewportSize({ width: 320, height: 568 });
   const asked = formsAsked(page); const h = await mount(page);

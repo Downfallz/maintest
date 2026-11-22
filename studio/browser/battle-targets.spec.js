@@ -104,6 +104,9 @@ test('a stunned legal target keeps its stun visible and spoken while targets are
   await expect(target(page, 5).locator('.creature-tag')).toHaveText('+ Stunned');
   await expect(target(page, 5)).toHaveAccessibleName(/Stunned\. Select a target\.$/);
   await expect(target(page, 4).locator('.creature-tag')).toHaveText('+ Select target');
+  // The pill stands just over its name, not over the figure's head (#1087's review).
+  const gap = await target(page, 4).evaluate(node => node.querySelector('.caption').getBoundingClientRect().top - node.querySelector('.creature-tag').getBoundingClientRect().bottom);
+  expect(gap).toBeGreaterThanOrEqual(0); expect(gap).toBeLessThan(12);
   await target(page, 5).click(); await expect(target(page, 5).locator('.creature-tag')).toHaveText('✓ Stunned');
   await expect(target(page, 5)).toHaveAttribute('data-target-state', 'selected');
   await fitsBattlefield(page); expect(h.writes).toEqual([]);
