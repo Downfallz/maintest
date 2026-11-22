@@ -102,6 +102,14 @@ test('a game waiting on someone else says whom, and opens the game', () => {
   assert.equal(view.action, 'Open the game →');
 });
 
+test('a game waiting on another player stands on the Warped listening, whatever its round; a bot\'s round in play keeps the ground by round', () => {
+  assert.equal(featuredView({ kind: 'waiting', entry: game('g', { mine: false, round: 7 }) }).ground, 'warped-listening');
+  const open = game('o', { against: { seat: 'player2', kind: 'open', name: null }, waiting: true, mine: false });
+  assert.equal(featuredView({ kind: 'waiting', entry: open }).ground, 'warped-listening', 'a seat not yet taken waits too');
+  assert.equal(featuredView({ kind: 'waiting', entry: game('b', { mine: false, against: bot, round: 7 }) }).ground, 'home-ground-breach');
+  assert.equal(featuredView({ kind: 'turn', entry: game('t', { round: 7 }) }).ground, 'home-ground-breach');
+});
+
 test('a bot is named as one, and a table still waiting for a player says so without a round', () => {
   assert.equal(featuredView({ kind: 'turn', entry: game('g', { against: bot }) }).title, 'Round 1 against Hard (bot)');
   const open = featuredView({ kind: 'waiting', entry: game('o', { against: { seat: 'player2', kind: 'open', name: null }, waiting: true, mine: false }) });

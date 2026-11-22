@@ -114,7 +114,10 @@ At 390 by 844:
 ## The lobby
 
 `home-turn-arrives`, a turn that arrives on the open home, was added by UX9: its line comes from UX9's walk of
-2026-11-20, not from the baseline, whose walk had no such screen.
+2026-11-20, not from the baseline, whose walk had no such screen. `home-ended-ground` and `home-waiting-ground`, the
+game that ended last and the table that waits, each scrolled into view on its ground, were added by S8 of the scenes'
+plan: their lines come from S8's walk of 2026-11-22, the first that has the screens, since `main` drew no such
+ground to scroll to. The walk read the words on those grounds at 7.61:1 at the least.
 
 At 320 by 568:
 
@@ -128,6 +131,8 @@ At 320 by 568:
 | waiting-room | 568 px | 72 | 0 | 3 background, the canvas | 8 px | 28 | 0 of 14 | 0 | 3 | 3 | 0.00 | label-content-name-mismatch (8), target-size (2) |
 | home-waiting | 2408 px | 209 | 7 | 11 background | 9 px | 12 | 5 of 17 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (2) |
 | home-game-ended | 2139 px | 193 | 5 | 10 background | 9 px | 13 | 6 of 16 | 2 | 0 | 0 | 0.00 | nothing |
+| home-ended-ground | 2611 px | 163 | 1 | 6 img, 10 background | 11 px | 0 | 0 of 18 | 0 | 0 | 0 | 0.00 | nothing |
+| home-waiting-ground | 2872 px | 178 | 1 | 6 img, 11 background | 11 px | 0 | 0 of 19 | 0 | 0 | 0 | 0.00 | nothing |
 | home-turn-arrives | 2611 px | 169 | 1 | 5 img, 10 background | 11 px | 0 | 2 of 18 | 0 | 0 | 0 | 0.00 | nothing |
 
 Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
@@ -146,6 +151,8 @@ At 390 by 844:
 | waiting-room | 844 px | 75 | 0 | 3 background, the canvas | 7 px | 31 | 0 of 14 | 0 | 0 | 3 | 0.00 | label-content-name-mismatch (8) |
 | home-waiting | 2383 px | 209 | 7 | 11 background | 9 px | 12 | 4 of 17 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (2) |
 | home-game-ended | 2099 px | 193 | 5 | 10 background | 9 px | 13 | 5 of 16 | 2 | 0 | 0 | 0.00 | nothing |
+| home-ended-ground | 2401 px | 163 | 1 | 6 img, 10 background | 11 px | 0 | 0 of 18 | 0 | 0 | 0 | 0.00 | nothing |
+| home-waiting-ground | 2677 px | 178 | 1 | 6 img, 11 background | 11 px | 0 | 0 of 19 | 0 | 0 | 0 | 0.00 | nothing |
 | home-turn-arrives | 2401 px | 169 | 1 | 5 img, 10 background | 11 px | 0 | 1 of 18 | 0 | 0 | 0 | 0.00 | nothing |
 
 ## The player's pages

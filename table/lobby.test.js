@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn } from './lobby.js';
+import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, latestFinished } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -129,6 +129,29 @@ test('games in progress are grouped by kind, each with the ones waiting for you 
 
   assert.deepEqual(ongoing.bots.map(entry => entry.table.id), ['c', 'a']);
   assert.deepEqual(ongoing.players.map(entry => entry.table.id), ['e', 'd']);
+});
+
+test('a game of mine waits on another when the player against it is asked to play, or its seat is still open', () => {
+  const theirs = game('d', { against: 'person' });
+  theirs.table.seats[1].turn = true;
+  assert.equal(waitsOnAnother(theirs), true);
+  assert.equal(waitsOnAnother(game('e', { against: 'person', turn: true })), false, 'my turn');
+  assert.equal(waitsOnAnother(game('a')), false, 'a bot answers at once: its round in play waits on nobody');
+  assert.equal(waitsOnAnother(game('r', { against: 'person' })), false, 'a round being played, nobody asked, waits on no one');
+  assert.equal(waitsOnAnother(game('b', { against: 'person', over: true })), false, 'over');
+  const open = { table: { id: 'o', waiting: true, openSeats: 1, format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'You', turn: false }, { seat: 'player2', kind: 'open' }] }, seats: [{ seat: 'player1' }] };
+  assert.equal(waitsOnAnother(open), true, 'a seat not yet taken');
+  assert.equal(waitsOnAnother(null), false, 'not one of mine');
+});
+
+test('the latest finished game is the one that ended last among the first game of each group\'s first page', () => {
+  const ended = (table, finishedAt) => ({ table, finishedAt });
+  assert.equal(latestFinished([ended('p1', '2026-11-05T20:00:00Z'), ended('b1', '2026-11-07T20:00:00Z')]), 'b1');
+  assert.equal(latestFinished([ended('p1', '2026-11-09T20:00:00Z'), ended('b1', '2026-11-07T20:00:00Z')]), 'p1');
+  assert.equal(latestFinished([null, ended('b1', '2026-11-07T20:00:00Z')]), 'b1', 'a group with no game, or not read yet');
+  assert.equal(latestFinished([ended('p1', null), ended('b1', null)]), null, 'without dates no game is the last');
+  assert.equal(latestFinished([ended(null, '2026-11-09T20:00:00Z'), ended('b1', '2026-11-07T20:00:00Z')]), 'b1', 'a result kept without its table is never chosen');
+  assert.equal(latestFinished([]), null);
 });
 
 test('a group in progress says how many of the most at once, and whether it is full', () => {
