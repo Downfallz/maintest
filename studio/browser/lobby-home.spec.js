@@ -287,7 +287,7 @@ test('inviting a friend leaves the friends window and selects that friend in the
   const heading = page.locator('#create-table > .dialog-heading');
   await expect(heading).toHaveClass(/scene-head/);
   await expect(heading).toHaveAttribute('data-side', 'start');
-  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-y', '75');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-y', '50');
   await expect(heading.locator('img[data-scene]')).toHaveAttribute('alt', '');
   await expect(page.getByRole('dialog', { name: 'Create a table' })).toBeVisible();
   await closeInTheFarCorner(page, heading, '#create-close');
