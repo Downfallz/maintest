@@ -1,12 +1,12 @@
 # Replacement art for repeated scenes
 
-The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Thirteen receive new art. The featured lobby game changes painting once, at round 6. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
+The [first scene plan](scene-paintings-plan.md) placed the original paintings. This pass reviews sixteen placements. Eleven have approved replacement paintings. Five keep their current art. The featured lobby game changes painting once, at round 6. The Brute and Predator columns keep their existing close-ups. The first three are moments players can see back to back.
 
 ## Review and delivery
 
 1. In the plan PR, show the owner one numbered candidate at a time. If the owner requests a change, revise that same image.
 2. On the owner's explicit OK for that version, add its WebP source under `docs/art/sources/pages/replacements/` on this PR's branch. Change its Pending cell to a link to the accepted file. Use the accepted image itself for any companion piece.
-3. The second PR wires the approved sources into the screens. Update the relevant [journey briefs](journeys/README.md) and [picture declarations](page-pictures.json), derive responsive files with the [picture kit](page-pictures.md), and check the affected budgets. Review the actual crops at 320 and 390 px and on desktop, text contrast, Save-Data grounds and the offline plate in the service worker.
+3. The second PR wires the approved sources into the screens. Update the relevant [journey briefs](journeys/README.md) and [picture declarations](page-pictures.json), derive responsive files with the [picture kit](page-pictures.md), and check the affected budgets. Review the actual crops at 320 and 390 px and on desktop, text contrast, and Save-Data grounds.
 
 ## Featured lobby painting
 
@@ -23,7 +23,7 @@ A new battle or a seat waiting before play begins uses the mist duel. Round 10 a
 
 **Implementation check for PR 2.** On a portrait phone, open a featured game at rounds 5, 6 and 10. Confirm the actual painting is visible above the action on both players' turns, including the reported round 6 game against a bot.
 
-## Review queue
+## Final selections
 
 The current painting names below are from the [source register](sources/pages/scenes/README.md). For creature anatomy, use the [battle forms](../../table/battle-art/evolutions/) as references. Keep the slate, soot, bone and restrained ember palette. Compose window heads for a shallow band with the title at the start.
 
@@ -42,8 +42,8 @@ The current painting names below are from the [source register](sources/pages/sc
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | [After the impact](sources/pages/replacements/after-the-impact.webp) |
 | 12 | Showcase, creator's note | predator-at-rest | The owner started with the app. A physical prototype has yet to be built. Defer this replacement and keep the resting Predator here. | Keep existing |
 | 13 | Leaderboard heading | elemental-charge | A scarlet-striated stage 3 Ravager stands on a broken tier, framed on the right against a low eclipse. | [Last one standing](sources/pages/replacements/last-one-standing.webp) |
-| 14 | Statistics heading | ironhide-scar | A slate slab bears overlapping claw marks worn almost smooth. One fresh cut exposes pale stone. | Pending |
-| 15 | Rulebook heading | latch-under-the-arch | Overhead view of the tabletop opening position. Show two formations of three and the round marker on one. Use the real setup as the reference. | Pending |
-| 16 | Offline page | parasite-under-slate (parasite-offline) | A slate causeway has fallen away. The far edge is just visible through fog above the retry action. | Pending |
+| 14 | Statistics heading | ironhide-scar | A slate slab bears overlapping claw marks worn almost smooth. One fresh cut exposes pale stone. | [Combat marks](sources/pages/replacements/combat-marks.webp) |
+| 15 | Rulebook heading | latch-under-the-arch | Keep the claws gripping the arch above the book. | Keep existing |
+| 16 | Offline page | parasite-under-slate (parasite-offline) | Keep the Parasite sheltering under the slab on the offline page. | Keep existing |
 
 The pool, moult, scar, sac, listening Warped and hidden Parasite keep their places in the field guide. The elemental charge stays in the showcase's modes section, Latch on the 404, and the fresh stomp on the match result. The mist duel continues to introduce both a new battle and the early rounds in the lobby.
