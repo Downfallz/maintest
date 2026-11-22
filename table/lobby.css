@@ -448,58 +448,73 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
 .feedback-dialog #feedback-note { margin: 14px 0 0; font-size: 13px; }
 .feedback-sent { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.6; }
 
-/* The featured space (UX9, docs/art/journeys/lobby.md): the game, the lesson or the new battle the player came for,
-   on its ground, with the one filled action of the home. Its room is held from the first paint: a band of fixed
-   height for the painting, the words under it, the actions last. A picture that arrives late fills the band and
-   moves nothing. The paintings are the kit's <img> (lobby-featured.js), two classes each to size them past `.picture`. */
-.home-page .featured { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px); align-items: stretch; gap: 0;
-  margin: 28px 0 30px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); overflow: hidden; }
-.featured-art { position: relative; grid-column: 2; grid-row: 1; min-height: 340px; overflow: hidden; background: var(--soot); }
-.featured-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, var(--panel), transparent 34%); pointer-events: none; }
-.featured .featured-ground { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 40%; }
-.featured .featured-creature { position: absolute; right: 6%; bottom: 8%; width: 150px; height: auto; filter: drop-shadow(0 10px 8px #000a); }
-.featured-text { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; min-width: 0; padding: 32px; }
-.home-page .featured h2 { margin: 0; overflow-wrap: anywhere; }
-.featured .eyebrow { align-self: flex-start; margin: 0; font-size: 11px; }
-.featured .hero-detail { margin: 0; }
-.featured-status { align-self: flex-start; margin: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius-sharp); color: var(--muted); font-size: 13px; font-weight: 650; }
-.featured[data-featured="turn"] .featured-status { color: var(--gold); border-color: var(--gold); }
-.featured-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-.featured-actions button { min-height: 48px; }
-/* One width for all its words, so the button under the player's finger keeps its size as its words change, whatever
-   the system's face (a phone's is the whole row's). */
-@media (min-width: 761px) { .featured-actions #featured-action { width: 16em; } }
+/* The lobby is a single scene. Keep the controls in the same lower row when the featured turn changes. */
+.home-page .featured {
+  position: relative; isolation: isolate; display: grid; grid-template: 1fr auto / minmax(0, 1fr);
+  min-height: clamp(450px, 77svh, 810px); gap: 0; align-items: end; justify-content: stretch;
+  margin: 0; padding: 0; overflow: hidden; color: var(--bone); background: var(--soot);
+}
+.featured-art { position: absolute; z-index: -1; inset: 0; overflow: hidden; }
+.featured .featured-ground { position: absolute; inset: 0 0 0 auto; width: 74%; height: 100%; max-width: none; object-fit: cover; object-position: 50% 45%; }
+.featured-art::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, var(--soot) 26%, color-mix(in srgb, var(--soot) 76%, transparent) 36%, transparent 68%),
+    linear-gradient(0deg, var(--soot), transparent 32%); }
+.featured-mist { position: absolute; inset: 42% -8% 25% 18%; pointer-events: none;
+  background: radial-gradient(ellipse at 45% 68%, rgba(173,193,202,.13), transparent 52%); }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes lobby-mist-drift { 50% { transform: translateX(4%); opacity: .35; } }
+  :root:not([data-motion="less"]) .featured-art .featured-mist.motion-breath {
+    animation: lobby-mist-drift calc(2 * var(--motion-breath)) ease-in-out infinite paused;
+  }
+  :root:not([data-motion="less"]) .featured-art .featured-mist[data-ambient="playing"] { animation-play-state: running; }
+}
+.featured .featured-creature { position: absolute; right: 10%; bottom: 26%; width: clamp(120px, 18vw, 240px); height: auto; }
+.featured-text { grid-area: 1 / 1; align-self: end; width: min(100%, 35rem); padding: 36px clamp(22px, 4vw, 64px); }
+.home-page .featured h2 { margin: 8px 0; font: 400 clamp(34px, 4.6vw, 70px)/1.03 var(--font-display); text-wrap: balance; overflow-wrap: anywhere; }
+.featured .eyebrow { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--gold); font-size: 11px; }
+.featured .eyebrow::before { content: ''; width: 26px; height: 1px; background: currentColor; }
+.featured .hero-detail,.featured-status { margin: 6px 0 0; color: var(--bone); font-size: 14px; line-height: 1.4; }
+.featured-status[data-empty="true"], .featured .hero-detail:empty { display: none; }
+.featured-actions { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; padding-top: 18px; }
+.featured-actions button { min-height: 48px; text-align: center; }
+.featured-actions button.secondary { background: color-mix(in srgb, var(--soot) 82%, transparent); border-color: color-mix(in srgb, var(--bone) 52%, transparent); }
 .featured-actions button[aria-busy="true"] { cursor: progress; }
-/* Every state keeps the same room: two lines of title and of detail, the status's line, two actions. An empty line
-   is unseen, never taken out, so nothing under the featured space moves as it fills, or as a turn arrives. Until the
-   host has said what to feature, the words and the actions wait in their room. */
-.featured :is(#welcome, #featured-detail) { min-height: 2lh; }
-.featured-status[data-empty="true"] { visibility: hidden; }
-/* An empty status keeps its one line, so nothing around it moves. */
-.featured-status:empty::before { content: "\00a0"; }
-/* What the region says when a turn arrives: heard, not seen, since the eyebrow and the status show it. */
+.featured-shortcuts { grid-area: 2 / 1; display: flex; align-items: center; gap: 28px; padding: 0 clamp(22px, 4vw, 64px);
+  border-block: 1px solid var(--line-soft); background: color-mix(in srgb, var(--soot) 75%, transparent); }
+.featured-shortcuts a { display: inline-flex; align-items: center; gap: 9px; min-height: 48px; color: var(--bone); text-decoration: none; font-size: 13px; }
+.featured-shortcuts a::after { content: ''; width: 6px; height: 6px; border: solid var(--gold); border-width: 0 1px 1px 0; transform: rotate(45deg); }
+.featured-shortcuts a:hover { text-decoration: underline; }
 .featured-said { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.featured[data-featured="loading"] :is(.featured-actions, #featured-detail, #featured-eyebrow, #welcome) { visibility: hidden; }
-/* The footer waits for the featured space too: the lists under it fill with it, and a footer in view would jump. */
-.home-page:has(.featured[data-featured="loading"]) .home-footer { visibility: hidden; }
+.featured[data-featured="loading"] .featured-text, .home-page:has(.featured[data-featured="loading"]) .home-footer { visibility: hidden; }
+#lobby-status:empty { min-height: 0; margin-bottom: 24px; }
+@media (max-width: 760px) {
+  body.home-page:has(#home-games:not([hidden])) { --lobby-gutter: max(18px, env(safe-area-inset-left), env(safe-area-inset-right)); padding-inline: var(--lobby-gutter); }
+  .home-page:has(#home-games:not([hidden])) > .home-header { min-height: 60px; height: auto; padding-block: 6px; flex-wrap: nowrap; }
+  .home-page:has(#home-games:not([hidden])) > .home-header .brand { display: flex; }
+  .home-page:has(#home-games:not([hidden])) > .home-header:has(+ .host-notice[hidden]) { margin-bottom: -60px; border: 0; }
+  .home-page .featured { margin-inline: calc(-1 * var(--lobby-gutter)); min-height: max(440px, 100svh); }
+  .featured-art::after { background: linear-gradient(to bottom, rgba(5,12,16,.88), transparent 18%),
+      linear-gradient(to top, var(--soot) 2%, rgba(7,14,19,.88) 15%, transparent 47%); }
+  .featured .featured-ground { width: 100%; object-position: 50% 44%; }
+  .featured .featured-creature { right: 12%; bottom: 46%; }
+  .featured-text { width: 100%; padding: 64px var(--lobby-gutter) 20px; }
+  .home-page .featured h2 { max-width: 16ch; font-size: clamp(32px, 9.7vw, 54px); }
+  .featured-actions button { min-width: 0; padding-inline: 8px; }
+  .featured-shortcuts { justify-content: space-between; padding: 0 var(--lobby-gutter) env(safe-area-inset-bottom); }
+}
+@media (max-height: 500px) and (min-width: 500px) {
+  .home-page .featured { min-height: 320px; }
+  .featured .featured-ground { width: 72%; object-position: 50% 50%; }
+  .featured-art::after { background: linear-gradient(90deg, var(--soot) 10%, transparent 75%); }
+  .featured-text { max-width: 50%; padding-block: 62px 12px; }
+  .home-page .featured h2 { font-size: 30px; }
+}
 /* A window's eyebrow and its close button follow the floor of text and of targets (UX9). */
 .lobby-page dialog .eyebrow { font-size: 11px; }
 .lobby-page .dialog-heading button[aria-label] { min-width: 44px; min-height: 44px; }
 /* An empty list teaches and links: its sentence, then one quiet button that fills it. */
 .empty-state p { margin: 0; }
 .empty-state button { margin-top: 14px; min-height: 44px; }
-@media (max-width: 760px) {
-  .home-page .featured { grid-template-columns: minmax(0, 1fr); margin: 16px 0 24px; }
-  .featured-art { grid-column: 1; min-height: 0; height: 150px; }
-  .featured-art::after { background: linear-gradient(180deg, transparent 55%, var(--panel)); }
-  .featured .featured-creature { right: 4%; bottom: 4px; width: 120px; }
-  /* Room for the longest state (two lines of title, of status and of detail): the actions stand at its foot, so a
-     status that wraps when a turn arrives takes the room left and moves no button. */
-  .featured-text { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 8px; min-height: 360px; padding: 14px 16px 18px; }
-  .home-page .featured h2 { font-size: clamp(26px, 8vw, 34px); line-height: 1.12; }
-  .featured-actions { flex-direction: column; margin-top: auto; padding-top: 6px; }
-  .featured-actions button { width: 100%; }
-}
 /* A player is their initial in the identity's square, beside their name (UX10, docs/art/journeys/pages.md). */
 :is(.friend-row, .create-friend, .ladder .player, .you-who) .account-initial { display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--bone) 26%, var(--line-soft)); color: var(--gold); font-family: var(--font-display); line-height: 1; }
 .friend-row .friend-initial { flex: none; }

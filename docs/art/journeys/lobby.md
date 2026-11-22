@@ -6,6 +6,12 @@ is open. UX9 of [the pages' craft plan](../ux-craft-plan.md) builds it, with its
 the place a player returns to" and its table of four states. A proposal until the owner has seen the journey's
 sheets.
 
+The returning player's first screen now carries the Deathstalker and Ethereal duel in the mist, edge to edge
+on a phone. The controls sit on the dark foreground, with a direct path to Your games below them. The two
+opponent choices open Solo or PvP in Create. The same duel leads into early rounds. Later rounds, games waiting
+on a player and lessons keep their contextual paintings. The UX9 measurements and storyboards below record the
+previous panel layout.
+
 Which sections the home has, and in what order, is `docs/tabletop/home-navigation.md`'s; who may play,
 `docs/tabletop/accounts-plan.md`'s; what a lesson teaches and when it is done, `docs/tabletop/onboarding-plan.md`'s
 (ADR 0187); the Learn to play section is [the lessons' brief](lessons.md#learn-to-play-home-after-the-lessons)'s,

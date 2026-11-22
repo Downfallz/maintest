@@ -13,6 +13,7 @@ file is a row and every size is the file's.
 
 | File | Size | What it shows | Content | Page |
 | --- | --- | --- | --- | --- |
+| `mist-duel.webp` | 2160 by 3840 | The Deathstalker meets an Ethereal in the mist under a broken arch. | `tier:deathstalker:v1`, `tier:shaman:v1` | The lobby opening and early rounds |
 | `elemental-charge.webp` | 1536 by 864 | The Cataclysm breathes Incinerate into the Colossus's shoulder; ice and lightning break around the Colossus, under an eclipse. | `tier:harbinger:v1`, `tier:dreadnought:v1`, `spell:engulfing_flames:v1` | `showcase/home`, who you play; the ladder's head |
 | `predator-at-rest.webp` | 1536 by 864 | The Predator lies at rest in a dark hall, embers in its shoulder. | `tier:prowler:v1` | `showcase/home`, the creator's note; the sign-out confirmation's head and the panel after it |
 | `brute-moult.webp` | 1536 by 512 | The Brute's shed shell, and the fresh print of what walked away. | `tier:brute:v1` | `showcase/mutations`, the Brute family's head; the Mutation Tree's head |

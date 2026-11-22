@@ -1475,13 +1475,32 @@ test('a new account is featured its first lesson on the ancestral creature, the 
   expect(state.errors).toEqual([]);
 });
 
-test('with nothing to resume or learn, the featured action plays a bot, and an empty list teaches and links', async ({ page }) => {
+test('with nothing to resume or learn, the duel opens Solo or multiplayer and links to the games', async ({ page }, info) => {
+  await page.route('**/page-art/*', route => {
+    const name = new URL(route.request().url()).pathname.split('/').pop();
+    return route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
+  });
+  for (const path of ['brand-mark.svg', 'fonts/marcellus-latin-400.woff2']) {
+    await page.route(`**/${path}`, route => route.fulfill({ path: fileURLToPath(new URL(`../../table/${path}`, import.meta.url)) }));
+  }
   await home(page, { games: [], tutorials: series('done', 'done') });
 
   await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'new');
   await expect(page.locator('#featured-action')).toHaveText('Play a bot →');
   await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
   await expect(filledOnTheHome(page)).toHaveCount(1);
+  const painting = page.locator('#featured img.featured-ground');
+  await expect(painting).toHaveAttribute('src', /mist-duel-/);
+  await expect.poll(() => painting.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('#new-table')).toHaveText('Multiplayer');
+  await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('link', { name: 'Your games', exact: true })).toBeInViewport({ ratio: 1 });
+  await noOverflow(page);
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({ path: info.outputPath('mist-duel-lobby.jpg'), type: 'jpeg', quality: 94 });
+  await page.locator('#new-table').click();
+  await expect(page.locator('#create-pvp')).toHaveAttribute('aria-selected', 'true');
+  await page.locator('#create-cancel').click();
   await page.locator('#featured-action').click();
   await expect(page.locator('#create-dialog')).toHaveJSProperty('open', true);
   await expect(page.locator('#create-solo')).toHaveAttribute('aria-selected', 'true');

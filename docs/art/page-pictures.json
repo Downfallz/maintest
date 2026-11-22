@@ -180,6 +180,12 @@
       "pages": { "showcase/home": "lazy" }
     },
     {
+      "name": "mist-duel",
+      "source": "docs/art/sources/pages/scenes/mist-duel.webp",
+      "drawn": [390, 900],
+      "pages": { "table/home": "largest" }
+    },
+    {
       "name": "home-ground-eclipse",
       "source": "table/battle-art/eclipse-battle.webp",
       "drawn": [390, 640],

@@ -14,8 +14,8 @@ const lesson = (order, { done = false, skipped = false } = {}) => ({ id: `t${ord
   done, skipped, next: false, tag: done ? 'Done' : skipped ? 'Skipped' : 'New', action: done ? 'Play again' : 'Play', link: `/battle?scenario=t${order}`, picture: ['lesson-base', 'lesson-brute', 'lesson-ironhide', 'lesson-colossus'][order - 1] });
 const series = (...states) => states.map((state, index) => lesson(index + 1, { done: state === 'done', skipped: state === 'skipped' }));
 
-test('the ground follows the round, as the battle lays its plates: the eclipse, then the breach from round 6, the sky from round 10', () => {
-  assert.deepEqual([1, 5, 6, 9, 10, 14, undefined].map(groundOf), ['home-ground-eclipse', 'home-ground-eclipse', 'home-ground-breach', 'home-ground-breach', 'home-ground-sky', 'home-ground-sky', 'home-ground-eclipse']);
+test('the ground follows the round, as the battle lays its plates: the duel, then the breach from round 6, the sky from round 10', () => {
+  assert.deepEqual([1, 5, 6, 9, 10, 14, undefined].map(groundOf), ['mist-duel', 'mist-duel', 'home-ground-breach', 'home-ground-breach', 'home-ground-sky', 'home-ground-sky', 'mist-duel']);
 });
 
 test('a game whose turn is the player\'s is featured first, a bot\'s included, before one waiting on someone else and before a lesson', () => {
@@ -127,10 +127,10 @@ test('a lesson\'s featured view is its place, its title and goal, its creature o
   assert.equal(featuredView({ kind: 'lesson', lesson: lesson(3) }, { started: true }).action, 'Continue →');
 });
 
-test('a new battle is the ancestral creature on the eclipse, and a bot to play at once', () => {
+test('a new battle is the duel in the mist, and a bot to play at once', () => {
   const view = featuredView({ kind: 'new' });
 
-  assert.deepEqual([view.title, view.action, view.ground, view.creature], ['Your next battle.', 'Play a bot →', 'home-ground-eclipse', 'home-ancestral']);
+  assert.deepEqual([view.title, view.action, view.ground, view.creature], ['Choose your opponent', 'Play a bot →', 'mist-duel', null]);
 });
 
 test('the arrival line is the featured game\'s, and the battle reads it once for that table only', () => {
@@ -214,12 +214,12 @@ test('the ground is drawn again only when it changes, so a repeated update leave
   assert.notEqual(doc.ids['featured-art'].children, drawn);
 });
 
-test('once someone can play, the eclipse is asked for before the lists are read, and kept when the choice stands on it', () => {
+test('once someone can play, the duel is asked for before the lists are read, and kept when the choice stands on it', () => {
   const doc = page();
   const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {} });
   featured.playable();
   const drawn = doc.ids['featured-art'].children;
-  assert.match(drawn[0].attributes.src, /home-ground-eclipse-/);
+  assert.match(drawn[0].attributes.src, /mist-duel-/);
   assert.equal(doc.ids.featured.dataset.featured, 'loading');
   featured.setGames([game('g', { round: 2 })]); featured.setLessons([]);
   assert.equal(doc.ids['featured-art'].children, drawn, 'the same ground, not drawn again');
