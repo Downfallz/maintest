@@ -553,6 +553,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
   private clearMotion() {
     this.onCancel();
     this.tweens.killAll();
+    // The field's ease out of a docked sheet goes with the other tweens: the field takes its whole room at once.
+    if (this.easedHeight !== null) { this.easedHeight = null; this.arrange(); }
     this.cameras.main.resetFX();
     this.viewShake.clear();
     this.ground?.clear();
