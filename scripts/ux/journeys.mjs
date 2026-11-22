@@ -418,8 +418,8 @@ const windows = {
   title: "The match's windows",
   screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'inspect', 'history'],
   strips: {
-    // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
-    'history-window': { at: 'history', act: async ({ page, blocked }) => { await page.locator('#history-close').click(); await openHistory(page, blocked); } },
+    // The journal closed by its button: how a window leaves (UX12). The match's `settings-window` films one entering.
+    'history-window': { at: 'history', act: ({ page }) => page.locator('#history-close').click() },
     // The inspection closed by Escape: it fades out faster than it came, and the focus is back on the card's Inspect
     // (UX12). Closed and opened again in one act, a frozen exit leaves nothing to fade in.
     'inspect-window': { at: 'inspect', act: ({ page }) => page.keyboard.press('Escape') },

@@ -93,10 +93,14 @@ const playWindows = (page, ids) => page.evaluate(async ids => {
     const enters = fades() && Number(getComputedStyle(dialog).opacity) < 1;
     await settled();
     const shown = getComputedStyle(dialog).opacity;
+    // A window keeps its layout while it fades out: what an `[open]` rule alone lays out falls apart for that time.
+    const layout = () => ['display', 'flexDirection', 'gridTemplateColumns'].map(name => getComputedStyle(dialog)[name]).join(' ');
+    const before = layout();
     dialog.close();
     const leaves = fades() && getComputedStyle(dialog).display !== 'none';
+    const kept = !leaves || layout() === before;
     await settled();
-    reads[id] = { enters, shown, leaves, gone: getComputedStyle(dialog).display };
+    reads[id] = { enters, shown, leaves, kept, gone: getComputedStyle(dialog).display };
   }
   return reads;
 }, ids);
@@ -111,7 +115,7 @@ for (const name of ['lobby.html', 'admin.html', 'battle.html']) {
       const ids = await page.locator(`${WINDOWS}:not(.docked-sheet)`).evaluateAll(all => all.map(one => one.id));
       expect(ids.length).toBeGreaterThan(name === 'battle.html' ? 14 : 0);
       const reads = await playWindows(page, ids);
-      for (const id of ids) expect(reads[id], id).toEqual({ enters: true, shown: '1', leaves: true, gone: 'none' });
+      for (const id of ids) expect(reads[id], id).toEqual({ enters: true, shown: '1', leaves: true, kept: true, gone: 'none' });
     });
   }
 }
@@ -125,7 +129,7 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     const ids = await page.locator('dialog.docked-sheet').evaluateAll(all => all.map(one => one.id));
     expect(ids.sort()).toEqual(['combat-dialog', 'planning-dialog', 'upkeep-dialog']);
     const reads = await playWindows(page, ids);
-    for (const id of ids) expect(reads[id], id).toEqual({ enters: true, shown: '1', leaves: false, gone: 'none' });
+    for (const id of ids) expect(reads[id], id).toEqual({ enters: true, shown: '1', leaves: false, kept: true, gone: 'none' });
     const travel = await page.evaluate(ids => ids.flatMap(id => {
       const dialog = document.getElementById(id); dialog.showModal();
       const moved = dialog.getAnimations().map(animation => animation.transitionProperty).filter(property => property !== 'opacity');
