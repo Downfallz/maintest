@@ -109,6 +109,8 @@ dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'tabl
   whose words lie on the painting, so the walk measures them). `undressScene` takes it off, for a window that wears
   one in one state only: the Create window wears its head when opened on a friend. Find `words` before the first
   wear: after it, the heading's first child is the painting, which `wearScene` refuses.
+- `confirmAction` of `table/account.js` takes a `head` (a scene's name, `wearScene`'s options and the page) for the
+  confirmation that wears one, a sign out's; any other confirmation takes it off. `account.js`'s `SIGN_OUT_HEAD` holds it.
 - Words on a head or a ground hold 4.5:1 against the lightest pixel under them. The journey walk measures it on
   every screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
 

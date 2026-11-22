@@ -27,30 +27,11 @@ scenes (the creator's note and who you play, the last two sections of a page 7,2
 not seen drawn, and the critique reads them on full-page shots, as S4's did. The 404 is a new screen, which S5
 adds to the walk: no film of it was read.
 
-What holds for every screen of the journey:
-
-- The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
-  on a centred window. No shade and no face is added. The showcase reads the same tokens through
-  `docs/art/branding.css`, which has held the motion tokens beside the palette since UX4 (ADR 0197).
-- Every beat moves `transform` or `opacity`, is written inside `prefers-reduced-motion: no-preference`, and
-  starts on a press, a navigation or the screen in view. Nothing starts on a clock.
-- The game's pages show what the host said: signed out, an invitation, a name taken. The page decides none of it.
-- No text under 11 px on these screens. The plan sets that floor for the match's frame; the doors have room for it.
-- The showcase speaks French and the game does not (ADR 0193): the French home shares the English one's brief.
-
-Screens of the walk this brief leaves out, and why:
-
-- `showcase-rules`: a reference page a visitor opens by choice, not a step on the way to play, and its words are
-  the rulebook's (`rules/`). UX6 fixed what its measures showed, with no staging: its pictures are sent at the
-  size they are drawn (2 were over twice it), its links inside a sentence are underlined and its table that
-  scrolls can take the focus. Its targets: 17 of 92 were under 44 px at 390, 11 on UX6's film; axe still found
-  the 12 `link-in-text-block` and the table on that film. The next walk confirms these. A brief of its own can
-  follow if the owner asks. The field guide, the other reference page, has its brief since the scene paintings'
-  S4 ([The mutation field guide](#the-mutation-field-guide-showcase-mutations)).
-- `first-lesson-brief`: the same window as `lesson-1-brief` of the lessons' journey, which UX8 briefs. What UX7
-  owns is the step into it, briefed as the last beat of the name window.
-
-## The showcase's home (`showcase-home`, `showcase-home-fr`)
+The scene paintings' S9 ([its plan](../scene-paintings-plan.md#stages)) was briefed on `987374a`: signing out, the
+confirmation and the panel it leaves. Both are screens of this walk, after `first-lesson-brief`: the walk skips the
+lesson's brief, opens the account menu and presses Sign out (`sign-out`), then the confirmation's Sign out
+(`signed-out-panel`). They follow S7's precedent: a screen is briefed in the journey whose walk reaches it, here the
+doors, not `lobby.md` as the plan's table said. Both were read on S9's walk at 320 and 390 px, with their measures.
 
 ### Job
 
@@ -632,6 +613,9 @@ It is [a page's picture](../page-pictures.md#a-picture-asked-of-the-owner): the 
 - **Offline**: the table's service worker shows `table/offline.html`, which goes back to the page when the
   network returns. Read, not seen.
 
+Right after a sign out on this browser, once, the panel has a state of its own, with its words and its plate:
+[The panel after a sign out](#the-panel-after-a-sign-out-signed-out-panel) (S9).
+
 ### Motion
 
 | Beat | When | Moves | Pattern | Token |
@@ -686,6 +670,242 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - Settled by the owner on 2026-11-20: the line on the game stays as written, not the showcase's kicker.
 - The account line reads "on every device" plain and "everywhere" invited, to keep the invited panel under its 45
   words.
+
+## Sign out, the confirmation (`sign-out`)
+
+### Job
+
+A signed-in player is leaving this browser, or every device, and is asked once. Sign out sits in the account menu
+of every page that wears the Friends head (`FRIENDS_HEAD_PAGES` of `table/navigation.js`: the home, the
+statistics, the ladder, the rulebook, the battle); Sign out everywhere sits in Settings, Account. Both open
+`#action-dialog` through `confirmAction` (`table/account.js`). For a sign out the window's title wears
+`predator-at-rest` as its head: I am leaving; the game rests. The same window confirms removing a friend, which
+keeps its plain heading, its words and its two outlined buttons. The admin page and the classic table keep the
+plain window.
+
+- **Filled action**: Sign out, or Sign out everywhere, by the window's own words. The player pressed Sign out on
+  purpose and is one sign-in away from undoing it, so the window's one action is the one they came for. The
+  other becomes Stay signed in, an outline, named by what it does, in place of Cancel. Escape does what it does.
+
+### Words
+
+- **Order**: the title on the band, the line under it, then Sign out, then Stay signed in.
+- **Budget**: 20 words, today 17 for either (title, line, Cancel and the action). No eyebrow joins the title: it
+  is already a question, and under 600 px tall the band is 64 px, room for the title alone. The words:
+
+On this device, from the account menu:
+
+```text
+Sign out on this device?
+You can sign in again to resume your games.
+[Sign out]  [Stay signed in]
+```
+
+Everywhere, from Settings, Account:
+
+```text
+Sign out everywhere?
+You will need to sign in again on every device.
+[Sign out everywhere]  [Stay signed in]
+```
+
+19 words each. The title and the line stay as they are; only Cancel changes.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The Predator at rest in its dark hall, as the head of the window: a 3:1 band across its top, edge to edge over the window's 28 px padding, as the Create window's head is. The title on the start side, over the painting's left half, which is dark hall; cut at `70% 45%`, the Predator's head and the ember on its shoulder right of centre. | 358 by 119 px | I am leaving; does the game wait for me? It rests. | `docs/art/sources/pages/scenes/predator-at-rest.webp` |
+
+At 320 px the window is 288 px wide and the band 288 by 96. Under 600 px tall it is 64 px, 288 by 64 at 320 by
+568. From 480 px wide the window stops growing and the band is 480 by 120, the cap. The painting is 16:9, so in
+every one of these boxes it is drawn at the box's width and only its top and bottom are cut: `45%` down keeps the
+spines and the claws, and `70%` across is named for a box that would cut the sides. The declaration gains the
+table's pages, drawn 358 and 480 wide, and the focus.
+
+### States
+
+- **First paint**: cannot be: the window opens on a press, on a page already drawn. Its band holds its 3:1 room
+  in `--soot` before the painting arrives, which loads when the window opens.
+- **Empty**: cannot be: the window always has its title, its line and its two buttons.
+- **Loaded**: the band with the title on its start side, the line, the two buttons; at 320 px they wrap to a row
+  each when they do not fit side by side (`table/lobby.css`).
+- **Waiting**: the window closes on the press, as a native form's dialog; Sign out is disabled in the menu (or in
+  Settings) until the host answers `/api/account/signout`. Nothing changes until the host has said the player is
+  signed out: then the home shows [the panel after a sign out](#the-panel-after-a-sign-out-signed-out-panel), and any other
+  page goes to the home (`table/navigation.js`). Read in code, not seen.
+- **Error**: a refused or failed sign out reopens the account menu with the problem in `#account-problem`, or
+  says it in `#app-settings-account-problem` for Sign out everywhere; the player is still signed in. Read, not seen.
+- **Offline**: the press reaches no host: the same error, the player still signed in. A page loaded offline is
+  `table/offline.html`. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The window | A press on Sign out or Sign out everywhere opens it; a press on either button or Escape closes it. Its band comes with it, nothing of its own. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-normal`, `--motion-enter` in; `--motion-fast` out |
+| The press | A pointer down on Sign out or Stay signed in. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+The band does not move by itself: no ambience on a window that asks for one press. On the battle page the window
+opens at once, as that page's windows do until UX12.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The window | A fade, no travel. |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: on Sign out, the filled action, when the window opens (today Cancel has `autofocus`); Tab reaches
+  Stay signed in. The window holds the focus while it is open. On the way out the focus goes back to the
+  account menu's summary, as today, or to Sign out everywhere in Settings.
+- **Names**: the window is named by its title (`aria-labelledby`) and described by its line. The band's painting
+  is a head's: no `alt`, the title says what the window is.
+- **Announced**: nothing beyond the window's name and description; an error through the problem line,
+  `role="alert"`, already in the HTML.
+- **Targets**: both buttons are 44 px tall (`table/table.css`); no control under 44 px. The window has no close
+  button: Stay signed in is the explicit way out.
+
+### Cost
+
+- **Bytes**: the painting at twice the density on a 390 px phone, a file about 716 px wide: about 20 KB (the
+  702 px file already derived for the showcase is 20,194 bytes). It loads when the window opens. Each page that
+  draws it raises its `all` budget in S9, since each is at its edge today (`node scripts/ux/pictures.mjs
+  --budget`): table/home 272,208 of 272,384, table/stats 779,606 of 780,288, table/battle 390,968 of
+  391,168, table/leaderboard and table/rules 68,750 of 69,632.
+- **Largest paint**: not a page's load: the window opens on a press, over a page already painted. The title is
+  text and shows at once; the band fills when its file arrives.
+- **Shift**: none: the band's 3:1 room, or its 64 px, is held before the painting comes, and the title sits on it
+  from the start. The words on it hold 4.5:1 against the lightest pixel under them, on the scrim to `--soot`. On
+  the file, the lightest pixel of the cut's left half is 105 of 255 in luminance before the scrim; the walk's
+  `contrast` measures the screenshot at both widths.
+
+### Left
+
+- The plan's table puts this screen in `lobby.md`; it is here, after S7's precedent, since the doors' walk reaches it.
+- Sign out filled and focused first is a choice the owner may refuse: [Undo, then one confirmation](../ux-craft.md#undo-then-one-confirmation)
+  keeps a window for what cannot be undone, and a sign out can be, so the safe default (Stay signed in focused)
+  weighs less here than [One dominant action](../ux-craft.md#one-dominant-action). Removing a friend keeps Cancel and
+  no fill: its brief is `pages.md`'s, if it gets one.
+- Whether a sign out on this device needs a window at all is the same entry's question; the flow is
+  `docs/tabletop/accounts-plan.md`'s, and this brief keeps the window.
+- On the battle page the window is drawn by the battle's sheets, and under 620 px a battle window loses its cut
+  corner (`table/identity.css`). S9 gives it the home's frame there, as S7 did for the header's windows. Read,
+  not seen.
+
+## The panel after a sign out (`signed-out-panel`)
+
+### Job
+
+The sign-in panel of `table/lobby.html`, right after the host has confirmed a sign out from this browser, on this
+device or everywhere. It says goodbye, says the games wait, and offers the way back in. It shows once: a reload
+shows the plain door again, and an invitation in the address outranks it (the invited door). A sign out made on
+another device, which this page learns from the host, shows the plain door: this player did not leave from here.
+
+- **Filled action**: the sign-in itself, as on the plain door: Google's button on the public host, which cannot be
+  gold; Sign in, filled gold, on a developer's host. Every other action is quiet.
+
+### Words
+
+- **Order**: the eyebrow, the title, the line on the games, the line on the account, the button. Privacy policy last.
+- **Budget**: 45 words, the panel's, today 35 on the plain door (the baseline's count; 41 on the developer's
+  sheet). The panel after a sign out shows 20 on the public host; the walk's sheet, the developer's form and the
+  header and footer included, counts 34:
+
+```text
+Signed out
+See you soon.
+Your games wait for you.
+Sign in again to resume them.
+[Continue with Google]
+Privacy policy
+```
+
+The line on the game goes: this player knows it, and the line on their games is what they need to hear. "Your
+games wait for you" is Settings' own line for Sign out everywhere; "resume" is the confirmation's word.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The Predator at rest, a plate in place of the ground and the Revenant, as the duel is for the invited friend: above the words under 1280 px, whole, never taller than half the screen; from 1280 px beside them, whole. No caption: the title under it is the plate's answer. | 358 by 201 px | See you soon: the game rests until I come back. | `docs/art/sources/pages/scenes/predator-at-rest.webp` |
+
+At 320 px the plate is 288 by 162. From 1280 px it is drawn 640 wide, the width the showcase already draws it at.
+The plate replaces both the eclipse ground and the Revenant: a plate is a picture on its own, and the panel holds
+one painting, as the invited door does. Its `alt`: "The Predator at rest in a dark hall, an ember on its
+shoulder." It is declared for table/sign-in as `first`: on the first screen, not lazy; the duel and the ground
+keep the page's two asked for first.
+
+### States
+
+- **First paint**: as the plain door: the panel stays `hidden` until `/api/me` answers. On the home where the sign
+  out was pressed there is no first paint: the page is drawn, and the panel replaces the home once the host says
+  nobody is signed in. From another page the home loads again, and its first paint is the plain door's.
+- **Empty**: cannot be: a signed-out visitor always has the panel.
+- **Loaded**: the plate, then the words under it, then the button, as under **Words**.
+- **Waiting**: as the plain door: the developer's Sign in disabled and saying Signing in…; Google's button in its
+  own popup.
+- **Error**: as the plain door: `#sign-in-problem` under the button; a host that cannot be reached offers no
+  sign-in and says so, in place of these words. Read in code, not seen.
+- **Offline**: as the plain door: `table/offline.html` from the service worker. Read, not seen.
+
+The page learns that the sign out was this browser's from its own press, after the host confirmed it, not from
+the address: a mark this tab keeps and the home reads and clears once. A reload finds no mark.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The press | A pointer down on Sign in (the developer's form; Google's button answers in its own way). | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms), [A button that says what it does](../ux-craft.md#a-button-that-says-what-it-does) | `--motion-fast`, `--motion-standard` |
+
+The panel appears at once in place of the home, as the plain door does (the sign-in panel's **Left**). No ambience:
+the Predator rests.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: on the home where the sign out was pressed, the focus goes to the panel's title, once, since the
+  account menu that held it is gone; from another page the home loads and the focus starts at its top. Then the
+  sign-in button, the privacy policy, the footer.
+- **Names**: the panel is a `section` named by its title, "See you soon.". The plate carries its `alt`, but the
+  panel's art holder stays `aria-hidden`, as for the duel: the title and the two lines say what it shows, and
+  the `alt` is what a broken image shows in its place.
+- **Announced**: the title, by the focus that lands on it; an error through `#sign-in-problem`, `role="alert"`.
+- **Targets**: as the plain door: every control reaches 44 px; Google's button is held at 44 px.
+
+### Cost
+
+- **Bytes**: the plate at twice the density on a 390 px phone, about 716 px wide: about 20 KB (the showcase's
+  702 px file is 20,194 bytes). A visit after a sign out loads it alone, no ground and no Revenant. The page's
+  budget counts every painting declared for it: table/sign-in read 181,176 of 196,608 bytes before S9, the plate
+  takes it to 201,822, and S9 raises it to 200 KiB (204,800), its reason the plate.
+- **Largest paint**: the plate, placed with the panel once the host says signed out, as the door's other
+  paintings are. Aimed at 2.5 s as the panel's; no paint run of this state was read.
+- **Shift**: none: the plate's 16:9 room is held by its `width` and `height` before it loads, and the words sit
+  under it from the start. At 320 by 568 the header, the plate's 162 px, the four lines and the button are read on
+  the first screen: the walk's sheet shows the sign-in in view, and `lobby-home.spec.js` holds it on a screen of
+  320 by 568.
+
+### Left
+
+- The plate in place of both the ground and the Revenant, not on the ground, is a choice the owner may refuse; it
+  follows the invited door's shape and keeps the panel to one painting.
+- No caption on the plate: "See you soon." is the title under it. The owner may want the plan's form whole (the
+  words as the plate's caption), which would move the title into the `figcaption`.
+- The `alt` written and the holder `aria-hidden`: kept so the panel reads as the plain door does. If the owner
+  wants the picture heard, the holder loses `aria-hidden` in this state only, and the title should then come first
+  in the reading order.
+- The mark that says "this browser signed out" lives in the tab, not the address, so a shared link never says
+  goodbye; it is shown only once the host has said nobody is signed in.
+- The plan's table names this panel's form a plate "in place of the Revenant"; this brief reads it as in place of
+  the Revenant and the ground, and amends the plan's row in S9.
 
 ## The name window (`name-window`)
 

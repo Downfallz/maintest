@@ -47,7 +47,7 @@ async function invitationFrom(walk, name) {
 const doors = {
   id: 'doors',
   title: 'The two doors',
-  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
+  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief', 'sign-out', 'signed-out-panel'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -100,6 +100,17 @@ const doors = {
     await page.goto(`${set.game}/`);
     await page.locator('#practice-brief[open]').waitFor({ timeout: 30000 });
     await walk.screen('first-lesson-brief');
+    // The way out: the lesson skipped, the player signs out from the account menu, and the panel says goodbye.
+    await page.locator('#practice-brief-skip').click();
+    await page.waitForURL(`${set.game}/`);
+    await home(page, set.game);
+    await page.locator('#account-menu summary').click();
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.locator('#action-dialog[open] #action-heading img[data-scene]').waitFor();
+    await walk.screen('sign-out');
+    await page.locator('#action-confirm').click();
+    await page.locator('#sign-in-panel[data-door="left"]').waitFor({ timeout: 30000 });
+    await walk.screen('signed-out-panel');
   },
 };
 

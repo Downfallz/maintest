@@ -17,28 +17,28 @@
       "all": 32768
     },
     "table/sign-in": {
-      "first": 196608,
-      "all": 196608
+      "first": 204800,
+      "all": 204800
     },
     "table/home": {
       "first": 81920,
-      "all": 272384
+      "all": 292864
     },
     "table/stats": {
       "first": 0,
-      "all": 780288
+      "all": 800768
     },
     "table/battle": {
       "first": 0,
-      "all": 391168
+      "all": 411648
     },
     "table/leaderboard": {
       "first": 0,
-      "all": 69632
+      "all": 90112
     },
     "table/rules": {
       "first": 0,
-      "all": 69632
+      "all": 90112
     }
   }
 }

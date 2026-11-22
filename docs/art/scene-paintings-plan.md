@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S7 are built; S8 is next.
+questions at the end). S1 to S7 and S9 are built; S8 is next.
 
 ## What the owner asked for
 
@@ -119,9 +119,9 @@ declares it once, at the size it draws it. In the app a scene takes one of three
 | A game that waits on the opponent (`home-waiting`, `lobby.md`) | `warped-listening` | ground, in place of the ground by round | I am waiting; something listens on the other side. |
 | A game that ended (`home-game-ended`, `lobby.md`) | `crushing-stomp-aftermath` | ground, in place of the ground by round | This one is over. |
 | The match's result (UX12, `windows.md`) | `crushing-stomp-aftermath` | head | How did it end? |
-| Sign out, the confirmation (`table/account.js`, a new screen in `lobby.md`) | `predator-at-rest` | head | I am leaving; the game rests. |
+| Sign out, the confirmation (`sign-out`, `doors.md`) | `predator-at-rest`, focus on its head and ember | head | I am leaving; the game rests. |
 | The sign-in panel an invitation opens (`invitation-sign-in`, `doors.md`) | `duel`, the eleventh painting | plate | What is this game, for someone who never saw the showcase? Two teams of three. |
-| The sign-in panel right after a sign out (`doors.md`, a new state) | `predator-at-rest`, in place of the Revenant | plate | See you soon. |
+| The sign-in panel right after a sign out (`signed-out-panel`, `doors.md`) | `predator-at-rest`, in place of the ground and the Revenant | plate | See you soon. |
 | The ladder, its top (`leaderboard`, `leaderboard-ranked`, `pages.md`) | `elemental-charge`, focus on the charge | head | This is where the fights are counted. |
 | The statistics, their top (`statistics`, `statistics-ranked`, `pages.md`) | `ironhide-scar` | head | What the games left on me. |
 | The Mutation Tree, its head (`mutation-tree`, `windows.md`) | `brute-moult` | head | Everything here is a shell to shed. |
@@ -295,6 +295,26 @@ result in `battle/src` with UX12.
    stays for a game in play. Tests: the lobby's specs, the budget, the measures.
 9. **S9, signing out.** The confirmation's head, the panel's state after a sign out. Tests: `table/account.test.js`,
    `lobby-home.spec.js`, the measures.
+
+   *Built (2026-11-22)*: a sign out's confirmation, on this device or everywhere, wears `predator-at-rest` as its head,
+   words on the start side, cut at `70% 45%` on the Predator's head and ember (`SIGN_OUT_HEAD` of `table/account.js`).
+   It does so on the pages whose header's windows wear a head, `HEADER_SCENE_PAGES` of `table/navigation.js` (S7's
+   `FRIENDS_HEAD_PAGES`, renamed). Sign out is now filled and focused first, and Cancel reads Stay signed in; removing a
+   friend, the same window, keeps its plain heading, Cancel and no fill. `#action-dialog` has the home's frame on every
+   page. Once the host confirms the sign out, the tab keeps a mark (`sessionStorage`), and the home's door reads it once:
+   the panel after a sign out says "Signed out / See you soon. / Your games wait for you. / Sign in again to resume
+   them.", draws the Predator at rest as a plate in place of the ground and the Revenant, laid out as the duel, and
+   gives its title the focus. A reload, or an invitation in the address, shows the door it would have shown. Both
+   screens are briefed in `journeys/doors.md`, not `lobby.md`, after S7's precedent: the doors' walk reaches them, as
+   `sign-out` and `signed-out-panel`.
+
+   One file of 20,646 bytes at twice the density on a phone serves both. `table/sign-in` rose to 200 KiB (201,822
+   measured), `table/home`, `table/stats` and `table/battle` raised their `all` to 286, 782 and 402 KiB, and
+   `table/leaderboard` and `table/rules` to 88 KiB. The walk's `contrast` reads 11.34:1 at the least on the
+   confirmation, at both widths; both screens are axe clean, with no target under 44 px. Left: the owner may refuse
+   the fill on Sign out, the plate in place of both paintings, and its holder kept `aria-hidden` (the brief's
+   **Left**). A sign out from another page reaches the home by `location.replace`, so that goodbye was read in code
+   and in the specs of the home, not filmed. The mock server does not serve `page-art/`, so its specs check the boxes.
 10. **S10, the ladder, the statistics, the rulebook and offline.** Their heads and the offline plate. Tests: the
    pages' specs, a budget for each new page, the measures.
 11. **S11, the Mutation Tree and the result.** The tree's head and its column heads, the result's head, with

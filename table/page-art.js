@@ -79,11 +79,14 @@ export const PAGE_ART = {
     ],
   },
   'predator-at-rest': {
-    from: '27f10c8f9c5ff2b0', frames: 1, drawn: [351,640], pages: {"showcase/home":"lazy"},
+    from: '82fd6321a88c3bed', frames: 1, drawn: [351,640,358,480,980], pages: {"showcase/home":"lazy","table/sign-in":"first","table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"}, phone: {"table/sign-in":[358],"table/home":[358],"table/stats":[358],"table/battle":[358],"table/leaderboard":[358],"table/rules":[358]},
     sizes: [
-      { file: 'predator-at-rest-351.ac7fe3f2.webp', width: 351, height: 197, bytes: 6606 },
-      { file: 'predator-at-rest-702.43329d14.webp', width: 702, height: 395, bytes: 20194 },
+      { file: 'predator-at-rest-358.d0e427da.webp', width: 358, height: 201, bytes: 7016 },
+      { file: 'predator-at-rest-480.abefbc56.webp', width: 480, height: 270, bytes: 10976 },
+      { file: 'predator-at-rest-716.7d247733.webp', width: 716, height: 403, bytes: 20646 },
+      { file: 'predator-at-rest-980.d8d01512.webp', width: 980, height: 551, bytes: 32996 },
       { file: 'predator-at-rest-1280.28addeed.webp', width: 1280, height: 720, bytes: 48202 },
+      { file: 'predator-at-rest-1536.5234934a.webp', width: 1536, height: 864, bytes: 63440 },
     ],
   },
   'latch-under-the-arch': {

@@ -80,8 +80,8 @@ const panels = `<div class="navigation-panels lobby-page home-page">
     </form>
   </dialog>
   <dialog id="action-dialog" aria-labelledby="action-title" aria-describedby="action-detail">
-    <form method="dialog"><h2 id="action-title" class="name-title"></h2><p id="action-detail" class="muted"></p>
-      <div class="dialog-actions"><button type="submit" value="cancel" autofocus>Cancel</button><button id="action-confirm" value="confirm">Confirm</button></div>
+    <form method="dialog"><div id="action-heading" class="action-heading"><h2 id="action-title" class="name-title"></h2></div><p id="action-detail" class="muted"></p>
+      <div class="dialog-actions"><button id="action-cancel" type="submit" value="cancel" autofocus>Cancel</button><button id="action-confirm" value="confirm">Confirm</button></div>
     </form>
   </dialog>
 </div>`;
@@ -207,16 +207,17 @@ function mountHomeNavigation(doc, win = globalThis) {
   };
 }
 
-// The pages whose header draws the Friends window's head, by their name in docs/art/page-budget.json. The admin page
-// (an operator's) and the archived classic table keep its plain heading (docs/art/journeys/pages.md).
-export const FRIENDS_HEAD_PAGES = { lobby: 'table/home', stats: 'table/stats', leaderboard: 'table/leaderboard', rules: 'table/rules', battle: 'table/battle' };
+// The pages whose header's windows wear a head, by their name in docs/art/page-budget.json: the Friends window
+// (docs/art/journeys/pages.md) and a sign out's confirmation (doors.md). The admin page (an operator's) and the
+// archived classic table keep their plain headings.
+export const HEADER_SCENE_PAGES = { lobby: 'table/home', stats: 'table/stats', leaderboard: 'table/leaderboard', rules: 'table/rules', battle: 'table/battle' };
 
 /** The Friends window's head: the Predator and the Deathstalker at one pool, the Deathstalker's bank kept in view. */
 export function wearFriendsHead(doc, page) {
   const heading = doc.querySelector('#friends-dialog > .dialog-heading');
-  if (!FRIENDS_HEAD_PAGES[page] || !heading) return;
+  if (!HEADER_SCENE_PAGES[page] || !heading) return;
   wearScene(doc, heading, 'predator-and-deathstalker', {
-    page: FRIENDS_HEAD_PAGES[page], form: 'head', side: 'start', words: heading.firstElementChild, focus: '75% 35%',
+    page: HEADER_SCENE_PAGES[page], form: 'head', side: 'start', words: heading.firstElementChild, focus: '75% 35%',
     sizes: '(min-width: 744px) 720px, calc(100vw - 24px)',
   });
 }
@@ -270,6 +271,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   el('code').addEventListener('input', () => { el('join-problem').hidden = true; });
   let previous = null;
   void mountAccount(doc, {
+    signOutPage: HEADER_SCENE_PAGES[page] ?? null,
     readMe: async () => {
       const token = operatorToken(storage);
       el('nav-admin-link').hidden = true;
