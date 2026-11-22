@@ -25,7 +25,7 @@ stands on `warped-listening` ([S8 of the first plan](scene-paintings-plan.md#sta
 
 **Approved painting (09, revision 3).** The Deathstalker leaps toward the Ethereal as the arch collapses. Behind the clouds, the sun is broken in three. Amber light shows in the cracks of the rock at the chasm's edge.
 
-**Landscape companion (09).** The approved source is a portrait, 941 by 1672. From 761 px up, and on a phone turned on its side, the featured space is a landscape box (up to 950 px wide, `table/lobby.css`) that would keep only a third of its height. The same duel has a dedicated wide composition for landscape screens; that source awaits owner review. From round 6, select the source by orientation on either player's turn: the landscape is the `wide` source of a `<picture>`, as #1090 does for the grounds today.
+**Landscape companion (09).** The approved portrait measures 941 by 1672. From 761 px up, and on a phone turned on its side, the featured space is a landscape box (up to 950 px wide, `table/lobby.css`) that would keep only a third of its height. The approved landscape composition measures 1672 by 941. From round 6, select the source by orientation on either player's turn: the landscape is the `wide` source of a `<picture>`, as #1090 does for the grounds today.
 
 **Implementation check for the second pull request.**
 
@@ -46,7 +46,7 @@ The current painting names below are from the [source register](sources/pages/sc
 | 06 | Mutation Tree, Brute column | ironhide-scar | Keep the Ironhide eye beneath its scarred plates. | Keep existing |
 | 07 | Mutation Tree, Predator column | blightweaver-pressure-sac | Keep the Blightweaver pressure sac and the eye visible through the gas. | Keep existing |
 | 08 | Mutation Tree, Warped column | warped-listening | Complete the three family close-ups with the Cataclysm's eye in three-quarter view. Keep the forked ivory brow, an ember iris with a cold violet reflection, and a thin veil of mist. Frame the eye for the 48 px band. | [Cataclysm eye](sources/pages/replacements/cataclysm-eye.webp) |
-| 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. The Deathstalker leaps toward the Ethereal over the opening chasm. Use the featured lobby rule above. | [The Great Rupture](sources/pages/replacements/great-rupture.webp) |
+| 09 | Lobby, featured game from round 6 onward | home-ground-breach, home-ground-sky or warped-listening, depending on the round and turn | The Great Rupture. The Deathstalker leaps toward the Ethereal over the opening chasm. Use the featured lobby rule above. | [Portrait](sources/pages/replacements/great-rupture.webp) and [landscape](sources/pages/replacements/great-rupture-landscape.webp) |
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | [Waiting ripples](sources/pages/replacements/waiting-ripples.webp) |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | [After the impact](sources/pages/replacements/after-the-impact.webp) |
 | 12 | Showcase, creator's note | predator-at-rest | Defer this replacement: the note speaks of a physical prototype, and the owner started with the app; none exists yet. Keep the resting Predator here. | Keep existing |

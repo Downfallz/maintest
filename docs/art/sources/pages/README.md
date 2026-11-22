@@ -11,5 +11,5 @@ The `scenes/` folder holds ten paintings made before any brief asked for them. I
 gives each one a page, chosen in [the scene paintings' plan](../../scene-paintings-plan.md). A brief draws a scene
 once it names it.
 
-The `replacements/` folder holds eleven paintings the owner approved for [the replacement plan](../../scene-replacement-plan.md),
+The `replacements/` folder holds twelve source paintings the owner approved for [the replacement plan](../../scene-replacement-plan.md),
 each replacing a scene that repeats; its [register](replacements/README.md) gives their sizes and what they show.
