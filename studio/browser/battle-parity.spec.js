@@ -99,7 +99,7 @@ test('keyboard journey reads energy, compares a mutation, edits every tempo and 
   await expect(page.locator('.mutation-preview .spell-chip-cost').first()).toHaveText('2 energy');
   await keyboardActivate(page, '#mutation-atlas-open'); await expect(page.locator('#atlas-dialog')).toBeVisible();
   // On a phone the first Escape folds the open card back into the tree, the next one closes it.
-  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').evaluate(dialog => dialog.open)) await page.keyboard.press('Escape');
   await expect(page.locator('#atlas-dialog')).toBeHidden(); await expect(page.locator('#mutation-atlas-open')).toBeFocused();
   await expect(page.locator('#planning-selection')).toHaveText('Creature 1 · Predator');
   expect(state.writes).toEqual([]); await keyboardActivate(page, '#planning-confirm');
