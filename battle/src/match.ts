@@ -193,11 +193,13 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
   picture.addEventListener('click', () => unzoom());
   result.addEventListener('cancel', event => { if (!zoom.hidden) { event.preventDefault(); unzoom(); } });
   result.addEventListener('close', () => unzoom(false));
-  // The result opens on the next action (UX12b): the filled way on, else the window's first control, the ×.
+  // The result opens on its heading, the verdict (#1076): a key held from the last OK lands on words, never on
+  // Rematch; Tab goes on to the filled way on.
+  const heading = el('match-title');
+  heading.tabIndex = -1;
   function show() {
     render(); result.showModal();
-    const next = [...result.querySelectorAll<HTMLElement>('.match-footer .primary')].find(one => !one.hidden && !(one as HTMLButtonElement).disabled);
-    next?.focus({ preventScroll: true });
+    heading.focus({ preventScroll: true });
   }
   el('match-open').addEventListener('click', () => { beforeOpen(); show(); });
   el('match-replay').addEventListener('click', async () => { beforeOpen(); await controller.replay(); if (controller.model().active) { result.close(); el('replay-next').focus(); } });

@@ -64,12 +64,14 @@ What holds for every screen of the journey:
   and its defense when above zero; initiative is in the order row above, and energy is the sheet's (the creature in
   hand's, in its head) and the inspection's. The tag shows on the creature in hand alone (`CHOOSING TEMPO`,
   `MUTATION TREE`, `ACTING`); the others' `TEMPO ?` and `◇ MUTATE` go, since the sheet's tabs say Not chosen (today
-  they stay, at both widths). Built that way: docked, only the creature the sheet holds keeps its tag, which
+  they stay, at both widths). Built that way: docked, only the creature the sheet holds keeps its tag (on the
+  mutation tree too since #1000, where every creature offered kept `◇ MUTATE`), which
   also takes `ACTING` off Creature 5's `30/30` at 320 (`spell-choice`). `YOUR TEAM` is hidden docked;
   `OPPONENT · …` stays, since it names the opponent when the bar folds its chip to the medallion
   (`battle-live.spec.js`). Built: name, health and defense docked; no caption crosses the screen's edge at 320.
 - **Team labels.** `OPPONENT · MEDIUM` and `YOUR TEAM` at 11 px whenever the field is not docked (built at 390 by
-  844; at 568 tall they stay hidden, under **Left**). A team is never told by colour alone: the label, the row and
+  844). At 568 tall `OPPONENT · …` shows too since #1000, and gives way while the upkeep's chips stand over the
+  creatures' heads; `YOUR TEAM` stays hidden there: mid-field, it lay under the tempo badges and those chips. A team is never told by colour alone: the label, the row and
   the order row's words say it.
 - **The order row.** Each entry: the place in its tempo's badge (`check` once played), the name at 12 px, and a
   side line at 11 px. At 390 the side line is `You · Precision · ⌃ 6` and `d20` when a roll placed it. Under
@@ -78,8 +80,10 @@ What holds for every screen of the journey:
   The strip's `⚡5` drew initiative with energy's glyph: it becomes `initiative`.
 - **Icons in place of glyphs**, from `table/icons.js`, inside a control that keeps its name: ⚙ (`#settings`) is
   `settings`; ↗ (`Order ↗`, `Inspect ↗`, `Last result ↗`, `#playback-result`) is `open`; × (`#order-why-close`,
-  `#combat-cancel`) is `close`; 💬 (`#reactions-open`) is `reaction`. History's clock, the order row's › and the
-  friend's ♥ are under **Left**. `?` stays a character: the set has no help drawing.
+  `#combat-cancel`) is `close`; 💬 (`#reactions-open`) is `reaction`; History's clock is `history` and the order
+  row's › is `next` (#1000, drawn as a mask of the set's path, `table/battle-frame.test.js`). The friend's ♥ is the
+  word `Friend` in the opponent's badge: the set's heart is `health`. `?` stays a character: the set has no help
+  drawing.
 - **Names.** A control's accessible name is its content: no `aria-label` over visible words. axe's
   `label-content-name-mismatch` (8 to 12 a screen) comes from `#recap-open` ("Where you are" over `ROUND 01
   COMBAT`), `#history-open` ("Open match history" over `History`), `#order-open` ("Inspect turn order" over
@@ -110,16 +114,19 @@ What holds for every screen of the journey:
 
 - **Docked captions**: name and health (and defense); initiative and energy dropped.
 - **The order row's side line under 360 px**: the side alone; tempo and initiative in `#order-why`.
-- **History under 360 px**: off the bar, opened from Help's window, the upkeep and the sheets. Its unread mark goes
-  with it: under 360 px nothing on the bar says an event is new.
-- **The round's end still shifts the frame**: 0.23 at 320 and 0.30 at 390 summed over the walk (0.47 and 0.44
-  before), against an aim of 0.1. The creatures' buttons now move by a translation; the rest is the dock's card and
-  the bar's tools moving as a sheet closes, for a later pass.
-- Not built in UX11, for a later pass: the word `Friend` in the opponent's badge in place of the ♥ (the set's
-  heart is `health`, and health is not friendship); the `NEW ROUND` toast not drawn under 620 px (its status saying
-  "Round 2" unseen); the team labels at 568 tall (hidden under 650 px tall today); History's clock as the set's
-  `history` and the order row's › as `next`; the words inside the docked sheets and the targets' dock (UX12, and
-  `targets` below). The sheets' text under 11 px (9.2 px, 26 elements on `tempo-sheet` and `second-round`; 10 px,
+- **History under 360 px**: off the bar, opened from Help's window, the upkeep and the sheets. Its unread mark is a
+  dot on Help (#1000).
+- **The round's end shifted the frame** 0.23 at 320 and 0.30 at 390 after UX11; #999 brings it to 0.07 and 0.06 summed
+  over the walk, under the aim of 0.1: the captions hang from their buttons by a translation, the dock's card fills
+  its row in one layout on a phone (its buttons stacked at its side, its words from its top, three lines on a tall
+  phone), the round's number holds two figures' room, and the order row starts at its left. What is left is the
+  health bars inside the captions as a sheet docks (0.03 at 320) and the bar's tools moving 3 px with the round's
+  phase word.
+- Built after UX11 (#1000): the word `Friend` in the opponent's badge in place of the ♥; the `NEW ROUND` toast not
+  drawn under 620 px (its status saying "Round 2" unseen); the opponent's label at 568 tall; History's clock as the set's
+  `history` and the order row's › as `next`; the docked tree's tag on the creature it holds alone; History's
+  unread mark on Help under 360 px. Not filmed yet: the next walk reads them. The words inside the docked sheets
+  and the targets' dock are UX12's and `targets` below. The sheets' text under 11 px (9.2 px, 26 elements on `tempo-sheet` and `second-round`; 10 px,
   3 on `spell-choice`) is theirs.
 - No floor below 11 px is accepted; Xbox's guideline asks 18 for a phone (the craft book, "Readable text").
 - The set lacks a help drawing and Instinct and Precision drawings: `?` stays a character, the tempos their words.
@@ -407,7 +414,7 @@ the sheet.
 
 - **Order**: the bar's `02` and `Command`; the order row's empty line; the docked captions; the sheet.
 - **Budget**: 110 words at 320 px (114 today, 133 before), 115 at 390 (116; 135 before): the `TEMPO ?` tags that
-  stay make the difference. The `NEW ROUND` toast still covers the upper captions at 320 (**Left**).
+  stay make the difference. The `NEW ROUND` toast is not drawn under 620 px (#1000): it covered the upper captions.
 
 ### Pictures
 
@@ -445,10 +452,9 @@ None: the field is the canvas.
 
 - **Bytes**: none.
 - **Largest paint**: not this screen's.
-- **Shift**: 0.25 summed at 320 by this screen (0.03 before the round's end), 0.30 at 390 (0.01); 0.47 and 0.44
-  before UX11. The round's end still moves the frame by 0.22 and 0.29. The source is not read on the sheet: the
-  build finds it, and holds the rows' heights; aim under 0.1.
+- **Shift**: 0.07 summed at 320 by this screen (0 before the round's end), 0.06 at 390 (0.01); 0.25 and 0.30 after
+  UX11, 0.47 and 0.44 before (#999, under the journey's **Left**).
 
 ### Left
 
-- The toast drawn on a wide screen only: a choice for the owner, not built in UX11.
+- The toast drawn on a wide screen only: built (#1000).

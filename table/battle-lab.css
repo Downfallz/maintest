@@ -116,6 +116,9 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 .creature-name { display: block; font: 16px var(--font-display); letter-spacing: .5px; }
 .creature-stats { display: block; font-size: 10px; color: #e2e8dc; margin-top: 3px; }
 .health-track { display: block; height: 4px; width: 74%; max-width: 110px; background: #172221; border: 1px solid #0d1715; margin: 5px auto 0; box-shadow: 0 1px 4px #000; }.health-fill { display: block; height: 100%; background: #8ebba6; } .creature.enemy .health-fill { background: #cf9886; }
+/* A placed button's caption hangs at its foot by a translation from the top (#999): a button whose height changes as a
+   sheet docks moves its caption without a layout shift. */
+[style*="--hit-height"] > .caption { top: 0; bottom: auto; translate: 0 calc(var(--hit-height) - 100%); }
 .creature-tag { position: absolute; bottom: 52px; left: -10px; right: -10px; text-align: center; color: #ffe0a5; font-size: 8px; font-weight: 700; letter-spacing: 1px; text-shadow: 0 1px 5px #000; pointer-events: none; }
 .creature.is-selected .caption { background: #5a48297d; box-shadow: 0 0 20px #eac88e26; border-bottom: 1px solid var(--gold); border-radius: var(--radius-sharp); }.creature.is-targetable { cursor: crosshair; }.creature.is-defeated .creature-name { color: #bac1b4; }
 .creature-result { position: absolute; left: 0; right: 0; top: 30%; font-size: 29px; font-weight: 700; color: #ffe2a9; text-shadow: 0 3px 12px #000; pointer-events: none; }

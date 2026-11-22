@@ -516,6 +516,43 @@ test('the team\'s last pick, once the host accepts it, keeps its creature in its
   expect(h.state.errors).toEqual([]);
 });
 
+// Docked, the tree's tag stays on the creature it holds alone (#1000): the others' ◇ MUTATE are the sheet's tabs.
+test('a docked tree keeps the tag of the creature it holds, not of every creature offered', async ({ page }) => {
+  const h = await mount(page, { open: '#actor-layer [data-creature="2"]' });
+  test.skip(await page.locator('#battle').getAttribute('data-docked') !== 'true', 'The tree docks on a phone.');
+  await expect(page.locator('#actor-layer [data-creature="2"] .creature-tag')).toBeVisible();
+  for (const other of ['1', '3']) await expect(page.locator(`#actor-layer [data-creature="${other}"] .creature-tag`)).toBeHidden();
+  expect(h.state.errors).toEqual([]);
+});
+// The owner's answer on #1076: after the team's last pick the focus goes to the reveal's receipt, once it is on the frame.
+const revealed = view => ({ ...view, waitingFor: null, waitingAsked: null, options: {}, feedNext: 6,
+  feed: [{ sequence: 5, round: 1, event: { kind: 'PurchasesRevealed', roundId: 1, choices: [{ creature: 2, tier: 'root1' }] } }],
+  board: { ...view.board, subPhase: 'Speed', evolutionChoices: [], allies: view.board.allies.map(one => one.id === 2 ? { ...one, acquiredTiers: ['root1'], knownSpells: ['spell1'] } : one) } });
+test('the team\'s last pick sends the focus to the reveal\'s receipt when the host reveals at once', async ({ page }) => {
+  const h = await mount(page, { remaining: 1 });
+  h.state.next = revealed;
+  await page.locator('#actor-layer [data-creature="2"]').click();
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(page.locator('#planning-dialog')).toBeHidden(); await page.clock.runFor(50);
+  await expect(page.locator('#growth-receipt')).toBeVisible();
+  await expect(page.locator('#growth-receipt [data-growth-open]')).toBeFocused();
+  expect(h.state.errors).toEqual([]);
+});
+test('a reveal that comes later takes the focus from the picked creature, never from where the player went', async ({ page }) => {
+  const h = await mount(page, { remaining: 1 });
+  h.state.next = view => ({ ...view, waitingFor: null, waitingAsked: null, options: {}, board: { ...view.board, evolutionChoices: [{ creature: 2, tier: 'root1' }] } });
+  await page.locator('#actor-layer [data-creature="2"]').click();
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  // The friend still picking: the receipt is not there, the focus waits on the creature the pick went to.
+  const two = page.locator('#actor-layer [data-creature="2"]');
+  await expect(two).toBeFocused();
+  h.state.view = revealed(h.state.view); await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#growth-receipt [data-growth-open]')).toBeFocused();
+  expect(h.state.errors).toEqual([]);
+});
+
 test('passing the team\'s picks sends the focus to its first living creature', async ({ page }) => {
   const h = await mount(page, { allies: [{ ...roster[0], isAlive: false }, roster[1], roster[2]] });
   await page.locator('#planning-pass').click(); await page.locator('#planning-confirm').click();

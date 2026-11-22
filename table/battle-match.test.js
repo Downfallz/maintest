@@ -107,3 +107,13 @@ test('full replay ends on the authoritative final battlefield and returns to its
   assert.equal(h.control.model().board.creatures[1].health, 0); assert.equal(h.control.model().result.title, 'Victory');
   h.control.move(-1); assert.equal(h.control.model().board.creatures.length, 0);
 });
+// The blow is written from the live feed (#1073): the line is there when the result opens, and nothing waits on the
+// seat's whole feed, which may answer after the window is open.
+test('the blow that ended a match is read from the live feed, before the whole feed answers', () => {
+  const cards = { packages: [], cards: [{ id: 'strike', name: 'Strike' }] };
+  const control = createBattleMatch({ connection: { history: () => new Promise(() => {}), concede: async () => ({ ok: true }) }, onChange: () => {} });
+  control.reset('player1'); control.receive(finished, cards);
+  assert.equal(control.model().blow, "Creature 1's Strike defeated Creature 4.");
+  control.receive({ ...finished, outcome: { winner: 'player1', reason: 'Concession' } }, cards);
+  assert.equal(control.model().blow, null, 'a concession writes none');
+});

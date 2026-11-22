@@ -157,10 +157,25 @@ const beforePlanning = () => {
   const receipt = growth.receipt() as { sequence: number } | null;
   if (receipt && planning.model().latest?.waitingFor === 'Speed') { revealRead = receipt.sequence; growth.dismiss(); }
 };
-// A pick followed back onto the field (UX12b): the focus on the creature it went to, else the team's first living one.
+// The team's last pick followed back onto the field (UX12b, #1076): the focus on the reveal's receipt once it is on the
+// frame; until the host reveals (a friend still picking), on the creature the pick went to, else the team's first
+// living one. A reveal that comes later takes the focus from that creature only, never from where the player went.
+let receiptAwaited: string | null = null;
+const receiptOpen = () => $('growth-receipt').querySelector<HTMLElement>('[data-growth-open]');
 function followPick(creature: number | null) {
   const own = creature ?? creatures.find(one => !one.enemy && one.isAlive)?.id;
+  receiptAwaited = own == null ? '' : String(own);
   if (own != null) nodes.get(String(own))?.focus({ preventScroll: true });
+  giveReceiptFocus();
+}
+function giveReceiptFocus() {
+  if (receiptAwaited == null) return;
+  const focused = document.activeElement as HTMLElement | null;
+  const waiting = !focused || focused === document.body || (focused.dataset.creature === receiptAwaited && $('actor-layer').contains(focused));
+  if (!waiting) { receiptAwaited = null; return; }
+  const see = receiptOpen();
+  if (!see?.getClientRects().length) return;
+  receiptAwaited = null; see.focus({ preventScroll: true });
 }
 const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI, followPick);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
@@ -342,8 +357,8 @@ function tagOf(one: Creature) {
 
 // The dock's heading: the match's end, the creature whose slot it is, or where the round stands.
 function headline(board: { turn: { slot: { creature: unknown } } | null; phase: string }) {
-  // The game the lobby opened names itself until its board arrives (UX9).
-  if (!view) return arriving ?? 'Battle view';
+  // The game the lobby opened names itself until its board arrives (UX9); with none, the dock names nothing (#984).
+  if (!view) return arriving ?? '';
   if (view.over) return 'Match complete';
   if (board.turn) return name(board.turn.slot.creature);
   return phaseLabel(board.phase) || 'Waiting room';
@@ -669,6 +684,7 @@ function render() {
     lastMutationReveal = reveal.sequence;
     if (!reduced()) scene.revealMutations(reveal.rows.map((row: {creature: number}) => String(row.creature)));
   }
+  giveReceiptFocus();
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, canAuto() && !roundHeld && !upkeep.model().pending, view?.waiting && !view.over ? null : board);
   // A tutorial's coach (ADR 0187): the step of the question asked, and its concept cards before the question's sheet.
   tutorialUI.render(rendererFailed ? null : view, { held: playbackState.active || replay.active, canAuto: canAuto() && !upkeep.model().pending && !orderReveal.model().pending });
