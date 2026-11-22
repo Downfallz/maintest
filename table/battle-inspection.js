@@ -75,3 +75,14 @@ export function spokenCues(...parts) {
   }
   return [...said.values()].join('. ');
 }
+
+// The whole sentence a creature's button speaks on the field (#1001): its side and numbers, the cues and tag said
+// once, then what a press does. While targets are chosen the tag already says the target state, so a press adds
+// nothing to it.
+export function creatureSpoken(creature, { cues = '', tag = '', offered = false, targeting = false } = {}) {
+  const initiative = creature.currentInitiative == null ? 'initiative not set yet' : `${creature.currentInitiative} initiative`;
+  const press = offered ? 'Choose a mutation for this creature' : targeting ? '' : 'Inspect creature';
+  const said = [spokenCues(cues, tag), press].filter(Boolean).join('. ');
+  return `${creature.enemy ? 'of the opponent' : 'of your team'}, ${creature.health} of ${creature.maxHealth} HP, ${creature.energy} energy, ` +
+    `${creature.totalDefense} defense, ${initiative}.${said ? ` ${said}.` : ''}`;
+}

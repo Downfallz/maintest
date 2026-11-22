@@ -162,7 +162,6 @@ function drawPlayers(doc, ladder) {
   el('ladder-empty').hidden = rows.length > 0;
   el('players-caption').hidden = rows.length === 0;
   el('players-count').textContent = ladder.players.length;
-  el('provisional-above').textContent = ladder.provisionalAbove;
 }
 
 /** The player's rating drawn among the ladder's: a band with a tick a player, theirs marked, and its two ends. */

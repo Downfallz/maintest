@@ -99,7 +99,7 @@ capstone names a `portrait` and no `artwork`: it keeps its portrait.
    (`battle/src/spellbook.ts`, `table/battle.css`). A card's face (`spellCard`'s `brief` form) holds the portrait and
    the whole name, the targeting, the cost and crit chips on their own row (the crit chip keeps its d20 face), the
    availability, and each effect line as its icon and numbers. The numbers are the host's: `CardMark` gains
-   `Figures` (for example `3`, `+1 · 3`, `+3 · perm.`, written by `EffectLine.Figures`), so the page never reads them from the words. A line
+   `Figures` (for example `3`, `+1 · 3 rds`, `+3 · perm.`, written by `EffectLine.Figures`), so the page never reads them from the words. A line
    without them, or whose kind has no stat icon, keeps its words. The words stay in the button's name. The chosen card in full (the lines in
    words, the crit chance and what it holds for, the crit note) is in the estimate above the foot
    (`src/target-preview.ts`), before Declare spell. The portrait is 40 px. Under 660 px tall in portrait it is 24 px,

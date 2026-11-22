@@ -187,6 +187,22 @@ public sealed class TutorialFileTests
         checkedLesson.Error.Code.ShouldBe("Tutorial.StepsOutOfOrder");
     }
 
+    /// <summary>
+    /// The lessons' brief (docs/art/journeys/lessons.md) gives a step's own lines 16 words at most: what a player
+    /// reads over the field before a choice (#977).
+    /// </summary>
+    [Fact]
+    public void Every_kept_tutorial_step_says_at_most_sixteen_words()
+    {
+        var over = System.IO.Directory.GetFiles(Directory, "*.json")
+            .SelectMany(file => ScenarioFile.Read(File.ReadAllText(file)).Tutorial.ShouldNotBeNull().Steps
+                .Select((step, index) => (Where: $"{Path.GetFileName(file)} step {index + 1}", Words: string.Join(' ', step.Says).Split(' ', StringSplitOptions.RemoveEmptyEntries).Length)))
+            .Where(one => one.Words > 16)
+            .Select(one => $"{one.Where}: {one.Words} words");
+
+        over.ShouldBeEmpty();
+    }
+
     /// <summary>Every tutorial the repository ships: its steps are all reached, in order, by its own recorded answers.</summary>
     [Fact]
     public async Task Every_kept_tutorial_reaches_each_of_its_steps_in_order()

@@ -977,11 +977,11 @@
             "id": "mutation",
             "title": "Mutation",
             "lines": [
-              "A mutation gives a creature new spells and an initiative bonus, for the rest of the match.",
-              "The last mutation of a family, its capstone, gives a passive in place of spells and an initiative bonus.",
-              "On a mutation round, the team shares its picks, and a creature takes at most one mutation."
+              "A mutation teaches a creature new spells and raises its initiative for good.",
+              "A family's last mutation, its capstone, gives a passive instead.",
+              "On a mutation round, your picks go to different creatures."
             ],
-            "example": "A creature at 5 base initiative acquires Brute, with a bonus of 1: it knows new spells and acts at 6."
+            "example": "A creature at 5 initiative acquires Brute (+1): new spells, and it acts at 6."
           }
         },
         {
@@ -2366,7 +2366,7 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "Every condition, every way a match ends, and every passive, in one place."
+              "text": "Every condition, every way a match ends, every passive, and the ladder, in one place."
             }
           ]
         }
@@ -2673,11 +2673,11 @@
             "id": "conditions",
             "title": "Conditions",
             "lines": [
-              "A condition is a lasting effect on a creature, with an amount and a number of rounds.",
-              "It counts down in the Aftermath of each round, and ends at zero.",
-              "A stunned creature sits out every round the stun lasts. After that, it cannot be stunned again for one round."
+              "A condition is a lasting effect: an amount, for a number of rounds.",
+              "It counts down each Aftermath, ending at zero.",
+              "A stunned creature sits out its Stun, then cannot be stunned for one round."
             ],
-            "example": "Latch's Bleed deals 2 at each Upkeep for the next 3 rounds, whatever the Defense."
+            "example": "Latch's Bleed deals 2 each Upkeep for the next 3 rounds, ignoring Defense."
           }
         },
         {
@@ -2872,6 +2872,50 @@
             "game-rules#implemented"
           ],
           "card": null
+        },
+        {
+          "id": "the-ladder",
+          "number": "5.4",
+          "title": "The ladder",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "The ladder ranks the players who have an account, each by a rating."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "After a ranked game, the ladder moves both players' ratings by how surprising the result was: beating a higher-rated player moves them more than beating a lower-rated one. A ranked game is a 3v3 game between two seats held by two different accounts. A game against a bot, on a shared device or opened unranked never counts."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Beside each rating, the ± says how sure the ladder is of it. While its ± is high, a rating is "
+                },
+                {
+                  "text": "provisional",
+                  "strong": true
+                },
+                {
+                  "text": ": the leaderboard lists it after the settled ones. A new player starts provisional. A player who stops playing keeps their rating, but its ± grows each day without a game, so it drifts back toward provisional."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0124",
+            "ADR 0155",
+            "ADR 0171"
+          ],
+          "card": null
         }
       ]
     }
@@ -2920,6 +2964,13 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-22",
+      "text": "The reference has a section on the ladder: what a ranked game is, what moves a rating, what the ± says and when a rating is provisional. The Mutation and Conditions cards are shorter, with no rule changed (ADR 0124).",
+      "adrs": [
+        "0124"
+      ]
+    },
     {
       "date": "2026-11-18",
       "text": "Three spells take their locked names: Whirlwind is Groundbreaker, Claim is Seize, Soul Feast is Devour. No rule moved.",

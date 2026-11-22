@@ -1,6 +1,6 @@
 # Reference {#reference}
 
-Every condition, every way a match ends, and every passive, in one place.
+Every condition, every way a match ends, every passive, and the ladder, in one place.
 
 ## The conditions {#conditions}
 
@@ -37,10 +37,10 @@ sources: ADR 0019, ADR 0020, ADR 0035, ADR 0036, ADR 0041, ADR 0072, ADR 0076, A
 ```card
 id: conditions
 title: Conditions
-A condition is a lasting effect on a creature, with an amount and a number of rounds.
-It counts down in the Aftermath of each round, and ends at zero.
-A stunned creature sits out every round the stun lasts. After that, it cannot be stunned again for one round.
-> Latch's Bleed deals {spell:latch:v1.bleed} at each Upkeep for the next {spell:latch:v1.bleed.durationRounds|round|rounds}, whatever the Defense.
+A condition is a lasting effect: an amount, for a number of rounds.
+It counts down each Aftermath, ending at zero.
+A stunned creature sits out its Stun, then cannot be stunned for one round.
+> Latch's Bleed deals {spell:latch:v1.bleed} each Upkeep for the next {spell:latch:v1.bleed.durationRounds|round|rounds}, ignoring Defense.
 ```
 
 ## The end of a match {#the-end-of-a-match}
@@ -81,3 +81,17 @@ Neither Titan's nor Apex's passive touches a Bleed, a heal, Energy or the caster
 A **hit** is the damage a spell deals a target. A Bleed is not one, and neither is the caster's own line.
 
 sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
+
+## The ladder {#the-ladder}
+
+The ladder ranks the players who have an account, each by a rating.
+
+After a ranked game, the ladder moves both players' ratings by how surprising the result was: beating a
+higher-rated player moves them more than beating a lower-rated one. A ranked game is a 3v3 game between two seats
+held by two different accounts. A game against a bot, on a shared device or opened unranked never counts.
+
+Beside each rating, the ± says how sure the ladder is of it. While its ± is high, a rating is **provisional**: the
+leaderboard lists it after the settled ones. A new player starts provisional. A player who
+stops playing keeps their rating, but its ± grows each day without a game, so it drifts back toward provisional.
+
+sources: ADR 0124, ADR 0155, ADR 0171

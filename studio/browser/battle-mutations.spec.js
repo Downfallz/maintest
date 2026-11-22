@@ -260,7 +260,8 @@ test('a pick that leaves team picks keeps the tree open on the next creature wit
   const pips = page.locator('#planning-pick-rule .pick-pip'), rule = page.locator('#planning-choices > #planning-pick-rule');
   await expect(pips).toHaveCount(2); await expect(page.locator('#planning-pick-rule .pick-pip[data-spent="true"]')).toHaveCount(0);
   await expect(rule).toBeVisible();
-  await expect(rule).toHaveText('3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Later Mutation phases bring new picks for any of them.');
+  await expect(rule).toHaveText('3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Rules');
+  await expect(rule.locator('a')).toHaveAttribute('href', '/rules#evolution');
   h.state.next = view => ({ ...view, waitingAsked: 12, board: { ...view.board, evolutionChoices: [{ creature: 1, tier: 'root0' }] },
     options: { evolution: { remainingPicks: 1, creatures: view.options.evolution.creatures.filter(one => one.creature !== 1) } } });
   await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();

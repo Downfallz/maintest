@@ -106,3 +106,14 @@ test('the page loads the book it is served beside, and goes on with no card when
   assert.equal(await loadConcepts(async () => { throw new Error('offline'); }), NO_CONCEPTS);
   assert.equal(await loadConcepts(async () => null), NO_CONCEPTS);
 });
+
+// The lessons' brief (docs/art/journeys/lessons.md) gives a card 60 words at 320 px, its title, eyebrow and link
+// included; the card's own words, the title, the lines and the example, keep 10 of them for that frame (#977).
+const CARD_WORDS = 50;
+const wordsOf = card => [card.title, ...card.lines, card.example].join(' ').trim().split(/\s+/).length;
+test('the cards a lesson opens first fit the brief\'s word budget', () => {
+  for (const id of ['mutation', 'conditions']) {
+    assert.ok(wordsOf(concepts.card(id)) <= CARD_WORDS, `${id}: ${wordsOf(concepts.card(id))} words`);
+  }
+  for (const card of concepts.all) assert.ok(wordsOf(card) <= 60, `${card.id}: ${wordsOf(card)} words`);
+});

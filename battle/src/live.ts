@@ -2,7 +2,7 @@ import { createBattleServices } from '../../table/battle-services.js';
 import { serviceControls } from './services';
 import { createBattleReactions } from '../../table/battle-reactions.js';
 import { reactionControls } from './reactions';
-import { creatureInspection, creatureCues, spokenCues } from '../../table/battle-inspection.js';
+import { creatureInspection, creatureCues, creatureSpoken } from '../../table/battle-inspection.js';
 import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
@@ -548,10 +548,7 @@ function render() {
     // The status tag stands above the whole caption, however many badge rows a narrow figure wraps it into.
     node.style.setProperty('--caption-height', `${node.querySelector<HTMLElement>('.caption')!.offsetHeight}px`);
     (node.querySelector('.health-fill') as HTMLElement).style.width = `${one.maxHealth > 0 ? Math.max(0, Math.min(100, 100 * one.health / one.maxHealth)) : 0}%`;
-    let pressAction = 'Inspect creature.';
-    if (offered) pressAction = 'Choose mutation for this creature.';
-    else if (targeting) pressAction = 'Target selection.';
-    speakCreature(node, `${one.enemy ? 'of the opponent' : 'of your team'}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), mutation.spoken(one.id) ?? targetTag?.spoken ?? condition), pressAction].filter(Boolean).join('. ')}`);
+    speakCreature(node, creatureSpoken(one, { cues: creatureCues(one), tag: mutation.spoken(one.id) ?? targetTag?.spoken ?? condition, offered, targeting }));
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));

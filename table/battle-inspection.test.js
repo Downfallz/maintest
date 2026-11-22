@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { creatureInspection, creatureCues, spokenCues } from './battle-inspection.js';
+import { creatureInspection, creatureCues, creatureSpoken, spokenCues } from './battle-inspection.js';
 const catalogue = { cards: [
   { id: 'strike', name: 'Strike', cost: 0, type: 'Offense', targeting: 'One enemy', effects: ['Damage 4'], casterEffects: ['Gain 1 energy'], critical: '20%', criticalThreshold: 17, criticalNote: 'Double damage' },
   { id: 'secret', name: 'Not known yet' },
@@ -53,7 +53,7 @@ test('a condition with several rounds left counts them in the plural', () => {
 });
 test('a stunned creature is said to be stunned once, whatever repeats it', () => {
   assert.equal(spokenCues('Stunned · Bleed 3', 'STUNNED'), 'Stunned. Bleed 3');
-  assert.equal(spokenCues('Stunned', 'Stunned. Select target'), 'Stunned. Select target');
+  assert.equal(spokenCues('Stunned', 'Stunned. Select a target'), 'Stunned. Select a target');
 });
 test('a creature with no cue and no tag adds nothing to what is spoken', () => {
   assert.equal(spokenCues('', ''), ''); assert.equal(spokenCues('', 'ACTING'), 'ACTING');
@@ -71,4 +71,20 @@ test('a defeated, immune creature wears both, and an unknown stat stays unknown 
   const model = creatureInspection({ id: 4, isAlive: false, isStunImmune: true }, [], catalogue);
   assert.deepEqual(model.statuses, [{ key: 'defeated', text: 'Defeated' }, { key: 'immune', text: 'Immune to stun' }]);
   assert.equal(model.sheet.health, null); assert.equal(model.conditionsRecorded, false);
+});
+
+// The sentence a creature's button speaks on the field (#1001): its side, its numbers, its cues, then what a press does.
+const fielded = { enemy: true, health: 9, maxHealth: 20, energy: 2, totalDefense: 4, currentInitiative: 7 };
+test('a creature says its numbers, its cues and that a press inspects it', () => {
+  assert.equal(creatureSpoken(fielded, { cues: 'Bleed 3' }), 'of the opponent, 9 of 20 HP, 2 energy, 4 defense, 7 initiative. Bleed 3. Inspect creature.');
+});
+test('a creature with no initiative yet says so in plain words', () => {
+  assert.equal(creatureSpoken({ ...fielded, enemy: false, currentInitiative: null }, {}), 'of your team, 9 of 20 HP, 2 energy, 4 defense, initiative not set yet. Inspect creature.');
+});
+test('a target says its target state once, not a second time as what a press does', () => {
+  assert.equal(creatureSpoken(fielded, { cues: 'Stunned', tag: 'Stunned. Select a target', targeting: true }),
+    'of the opponent, 9 of 20 HP, 2 energy, 4 defense, 7 initiative. Stunned. Select a target.');
+});
+test('a creature offered a mutation says a press chooses a mutation for it', () => {
+  assert.match(creatureSpoken(fielded, { offered: true }), / Choose a mutation for this creature\.$/);
 });

@@ -65,7 +65,12 @@ test('fewer picks than creatures that could mutate says the player chooses which
   const plan = pickPlan(fresh);
   assert.deepEqual([plan.spent, plan.left, plan.open], [0, 2, 3]);
   assert.equal(plan.budget, '2 team picks remaining');
-  assert.equal(plan.rule, '3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Later Mutation phases bring new picks for any of them.');
+  assert.equal(plan.rule, '3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each.');
+});
+test('the pick plan links what comes in later Mutation phases to the rulebook instead of stating it (#1022)', () => {
+  assert.equal(pickPlan(fresh).rules, '/rules#evolution');
+  assert.doesNotMatch(pickPlan(fresh).rule, /later/i);
+  assert.equal(pickPlan(view).rules, null);
 });
 test('a sent pick counts its creature as picked and the budget as one less before the host restates it', () => {
   const plan = pickPlan(fresh, { creature: 1, tier: 'root' });

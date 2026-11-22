@@ -379,7 +379,7 @@ public sealed class CatalogueProjectionTests
 
         var card = Card(spell);
 
-        card.Marks.ShouldNotBeNull().Select(mark => mark.Figures).ShouldBe(["1", "+2", "+1 · 3", "+3 · perm.", "4 · 2", "1"]);
+        card.Marks.ShouldNotBeNull().Select(mark => mark.Figures).ShouldBe(["1", "+2", "+1 · 3 rds", "+3 · perm.", "4/rd · 2 rds", "1 rd"]);
     }
 
     /// <summary>

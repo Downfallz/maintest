@@ -34,7 +34,7 @@
           "creature": 2
         },
         "says": [
-          "Bleed takes Health at each Upkeep, whatever the Defense.",
+          "Bleed takes Health each Upkeep, ignoring Defense.",
           "Watch for Stun: it costs a creature its turn."
         ],
         "concepts": [
@@ -48,7 +48,7 @@
         },
         "says": [
           "A stunned creature takes no tempo this round.",
-          "When the Stun ends, it cannot be stunned the next round."
+          "Then it cannot be stunned for a round."
         ],
         "concepts": [
           "conditions",
@@ -62,8 +62,8 @@
           "creature": 3
         },
         "says": [
-          "A match ends when a team has no creature standing.",
-          "After the last round, the team with the most Health left wins."
+          "A match ends when a team is defeated.",
+          "After the last round, most Health left wins."
         ],
         "concepts": [
           "health"

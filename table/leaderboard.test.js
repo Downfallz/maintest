@@ -51,3 +51,14 @@ test('the record names its parts in words, and a rating that moves while the pag
   assert.equal(statusText({ rating: 1338, rank: 3 }, { rating: 1338, rank: 2 }), 'Your place is now #2, from #3.', 'others\' games moved the place alone');
   assert.equal(statusText(null, { rating: 1338, rank: 2 }), 'Your rating is now 1338.');
 });
+
+// How the ladder counts is the rulebook's (ADR 0124, rules/): the page links its section and states none of it (#994).
+test('the page links the rulebook\'s ladder section instead of restating it', async () => {
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('./leaderboard.html', import.meta.url), 'utf8');
+  const book = JSON.parse(readFileSync(new URL('./rules.json', import.meta.url), 'utf8'));
+  const ids = book.parts.flatMap(part => part.sections.map(section => section.id));
+  const [, section] = /<a [^>]*href="\/rules#([a-z-]+)"[^>]*>[^<]*ladder/i.exec(page) ?? [];
+  assert.ok(section && ids.includes(section), `a link to a section of the book: ${section}`);
+  assert.doesNotMatch(page, /provisional-above|surprising the result/);
+});

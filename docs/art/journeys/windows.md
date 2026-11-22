@@ -175,8 +175,8 @@ answers "what will my creature become?" before the mutation's words.
 - **Order**: the sheet's title and the picks remaining; each mutation, its form, then its name and tags; the foot.
   The rule sentence comes last, under the mutations at 390 (it is above them today).
 - **Budget**: 86 words at 390 px (86 today), 53 at 320 by 568 (78 today).
-- **On a short screen**: under 660 px tall the sentence "3 creatures can mutate, 2 picks left: … Later Mutation phases bring new picks for
-  any of them." (25 words) is hidden from sight and kept as the graph's description; "2 team picks remaining" says
+- **On a short screen**: under 660 px tall the sentence "3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each." (16 words)
+  and its link to the rulebook are hidden from sight and kept as the graph's description; "2 team picks remaining" says
   the count.
 - **A person could disagree**: the sentence is the only place the screen says one pick goes to one creature; on a
   short screen the forms and the names come first.
@@ -244,8 +244,8 @@ None.
   above Close and Confirm choice. With a form of 64 px the faces are taller still. The rule: at 320 by 568 each
   mutation's form and name are in view above the foot when the sheet opens, the sentence hidden (above) and the
   graph scrolled to the mutations if they still do not fit. Worth an issue on its own, pictures or not.
-- The rule sentence is the page's own (`table/battle-mutations.js`): its second half ("Later Mutation phases bring
-  new picks for any of them") is a rule, and belongs in the rulebook with a link (`rulebook-writer`).
+- Done (#1022): the rule sentence's second half ("Later Mutation phases bring new picks for any of them") was a
+  rule; the sentence now ends on a link to the rulebook's Mutations section (`table/battle-mutations.js`).
 
 ## The Mutation Tree (`mutation-tree`)
 
@@ -583,7 +583,7 @@ knows before reading.
     before P8, but then a player choosing a tempo for a spell could not see what Precision would give it;
   - the availability ("Available", "New · Available", or why not);
   - each effect line as its icon and its numbers only (Strike: the Damage icon and 3; Brace: the Defense icon,
-    +1 and 3 rounds as "+1 · 3").
+    +1 and 3 rounds as "+1 · 3 rds"; a bleed of 4 a round for 2 rounds as "4/rd · 2 rds", a one-round stun as "1 rd", #1026).
 - **The full text**: it goes to the chosen card. A tap chooses a spell as a draft, as today (no second tap submits,
   AU9); the targets step then shows the chosen card in full above the foot, where AU10's summary sits: the effect
   lines in words, the crit note, "at this tempo", the host's text unchanged. Declare spell is the commitment.

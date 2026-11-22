@@ -615,7 +615,7 @@ what puts a player on it and opens the game that does.
 ### Words
 
 - **Order**: the eyebrow, The ladder., one line; Your place with the player's initial and name, the line, the
-  action; Players (0) and its empty line; How the ladder counts, closed.
+  action; Players (0) and its empty line; How the ladder counts, a link to the rulebook (#994).
 - **Budget**: 55 words, down from 204.
 
 ```text
@@ -740,8 +740,8 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
 
 ### Left
 
-- How the ladder counts restates ADR 0124 in 45 words: the rulebook has no section on the ladder. When the
-  `rulebook-writer` adds one, the disclosure becomes a link to it.
+- Done (#994): the rulebook has its ladder section (`/rules#the-ladder`), and How the ladder counts is now a link
+  to it in place of the disclosure; the page states no rule of the ladder.
 - Settled by the owner on 2026-11-20 on the sheets: the action is filled on an empty page, and it opens an open seat for another player, not a
   friend's invitation; the window lets a player choose A friend.
 - My choices for the head, which the owner may refuse on the sheets; they hold for the statistics and the rulebook:

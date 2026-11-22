@@ -5,12 +5,14 @@ import { effectText, chance, groupTargetLines } from './guidance.js';
 export function battleTargetState(model, id) {
   if (!model.opened || !model.target) return null;
   const legal = model.target.legalTargets, picked = model.picked.map(String);
-  const of = (state, mark, text, selectable) => ({ state, mark, text, label: `${mark} ${text}`, selectable });
+  // `spoken` is the state in a sentence: the tag is short (+ Select target), a screen reader says it in full.
+  const of = (state, mark, text, selectable, spoken = text) => ({ state, mark, text, label: `${mark} ${text}`, selectable, spoken });
   if (model.emptyCast) return of('unavailable', '—', 'Too few targets', false);
   if (picked.includes(String(id))) return of('selected', '✓', 'Selected', true);
   if (!legal.candidates.some(one => String(one) === String(id))) return of('unavailable', '—', 'Unavailable', false);
   if (legal.maxTargets > 1 && picked.length >= legal.maxTargets) return of('unavailable', '—', 'Selection full', false);
-  return of('legal', '+', picked.length && legal.maxTargets === 1 ? 'Change target' : 'Select target', true);
+  if (picked.length && legal.maxTargets === 1) return of('legal', '+', 'Change target', true);
+  return of('legal', '+', 'Select target', true, 'Select a target');
 }
 
 // What a creature's tag says while targets are chosen. A stun is the one condition only the tag shows, and
@@ -18,9 +20,9 @@ export function battleTargetState(model, id) {
 // and the spoken label still carry the state in full.
 export function battleTargetTag(state, creature) {
   if (!state) return null;
-  if (!creature.isAlive) return { tag: state.label, spoken: `Defeated. ${state.text}` };
-  if (creature.isStunned) return { tag: `${state.mark} Stunned`, spoken: `Stunned. ${state.text}` };
-  return { tag: state.label, spoken: state.text };
+  if (!creature.isAlive) return { tag: state.label, spoken: `Defeated. ${state.spoken}` };
+  if (creature.isStunned) return { tag: `${state.mark} Stunned`, spoken: `Stunned. ${state.spoken}` };
+  return { tag: state.label, spoken: state.spoken };
 }
 
 function criticalChance(guide, tempo) {

@@ -69,7 +69,7 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
     const next = model.over ? 'Match complete · no further mutation opportunities'
       : model.next == null ? '' : model.next === model.current ? `Mutation opportunity this round · Round ${model.next}` : `Next mutation opportunity · Round ${model.next}`;
     const held = heldLine(model.families);
-    return { title: subject ? `${subject.name}${subject.enemy ? ' · Opponent' : ''}` : 'Mutation tree', eyebrow: 'MUTATION TREE · PUBLIC GROWTH',
+    return { title: subject ? `${subject.name}${subject.enemy ? ' · Opponent' : ''}` : 'Mutation Tree', eyebrow: 'MUTATION TREE · PUBLIC GROWTH',
       progress: [held, next].filter(Boolean).join(' · '), packages: model.packages, creature: String(model.selected), focus,
       roster: model.roster.map(one => ({ id: String(one.id), name: `${one.enemy ? 'Opponent' : 'Your team'} · ${one.name}${one.alive ? '' : ' · Defeated'}` })) };
   }

@@ -31,8 +31,8 @@
           "round": 2
         },
         "says": [
-          "In a tempo, the higher initiative acts first. A tie with the enemy rolls a d20.",
-          "Two of yours are tied: choose which acts first."
+          "Within a tempo, higher initiative acts first.",
+          "Two of yours are tied: you choose their order."
         ],
         "concepts": [
           "initiative"
@@ -48,8 +48,8 @@
           "creature": 1
         },
         "says": [
-          "In Precision, Pummel rolls a d20 for a critical. Its other spells never roll.",
-          "A critical doubles the damage on its target."
+          "In Precision, Pummel rolls for a critical: double damage.",
+          "This creature's other spells never roll."
         ],
         "concepts": [
           "critical"

@@ -37,7 +37,8 @@ export function mutationChoices(view, catalogue, selectedId) {
 const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // The team's picks of this Mutation phase, spelled out for a first-time player: picks are the team's, each
 // creature takes one at most, and when there are fewer picks than creatures that could mutate, the player
-// chooses which ones do now; later Mutation phases bring new picks for any creature. `sent` is the pick the
+// chooses which ones do now. What later Mutation phases bring is the rulebook's to say: `rules` links its section
+// (#1022). `sent` is the pick the
 // seat sent that the host has not restated yet: its creature counts as picked and the budget as one less.
 export function pickPlan(view, sent = null) {
   const offer = view?.options?.evolution, offered = offer?.remainingPicks;
@@ -54,8 +55,7 @@ export function pickPlan(view, sent = null) {
   let rule = '';
   if (left > 0 && open > left) {
     const which = left === 1 ? 'one mutates' : `${left} mutate`;
-    rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${which} now, one pick each. ` +
-      'Later Mutation phases bring new picks for any of them.';
+    rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${which} now, one pick each.`;
   } else if (left > 1 && open > 1) rule = 'One pick per creature.';
-  return { spent, left, open, budget, rule };
+  return { spent, left, open, budget, rule, rules: rule ? '/rules#evolution' : null };
 }

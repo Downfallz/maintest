@@ -72,9 +72,10 @@ public static class EffectLine
     }
 
     /// <summary>
-    /// The line's numbers without its words, as a narrow face shows them beside the stat's icon: <c>Damage 7</c>
-    /// is <c>7</c>, <c>Defense +1, 3 rounds</c> is <c>+1 · 3</c>, <c>Bleed 4 a round, 2 rounds</c> is
-    /// <c>4 · 2</c>, <c>Defense +3, permanent</c> is <c>+3 · perm.</c>.
+    /// The line's numbers, as a narrow face shows them beside the stat's icon, with the field chips' words for the
+    /// rounds (<c>battle/src/target-preview.ts</c>) so that no number reads two ways (#1026): <c>Damage 7</c> is
+    /// <c>7</c>, <c>Defense +1, 3 rounds</c> is <c>+1 · 3 rds</c>, <c>Bleed 4 a round, 2 rounds</c> is
+    /// <c>4/rd · 2 rds</c>, <c>Stun, 1 round</c> is <c>1 rd</c>, <c>Defense +3, permanent</c> is <c>+3 · perm.</c>.
     /// </summary>
     public static string Figures(Effect effect)
     {
@@ -85,9 +86,9 @@ public static class EffectLine
             Heal heal => Number(heal.Amount),
             EnergyGain energy => $"+{Number(energy.Amount)}",
             EnergyDrain drain => $"-{Number(drain.Amount)}",
-            Bleed bleed => $"{Number(bleed.AmountPerRound)} · {Span(bleed.Duration)}",
-            Regeneration regeneration => $"{Number(regeneration.AmountPerRound)} · {Span(regeneration.Duration)}",
-            EnergyRegeneration energy => $"{Number(energy.AmountPerRound)} · {Span(energy.Duration)}",
+            Bleed bleed => $"{Number(bleed.AmountPerRound)}/rd · {Span(bleed.Duration)}",
+            Regeneration regeneration => $"{Number(regeneration.AmountPerRound)}/rd · {Span(regeneration.Duration)}",
+            EnergyRegeneration energy => $"{Number(energy.AmountPerRound)}/rd · {Span(energy.Duration)}",
             Stun stun => Span(stun.Duration),
             DefenseBuff buff => $"+{Number(buff.Amount)} · {Span(buff.Duration)}",
             DamageBuff buff => $"+{Number(buff.Amount)} · {Span(buff.Duration)}",
@@ -100,7 +101,12 @@ public static class EffectLine
 
     private static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 
-    private static string Span(Duration duration) => duration.Rounds is { } rounds ? Number(rounds) : "perm.";
+    private static string Span(Duration duration) => duration.Rounds switch
+    {
+        null => "perm.",
+        1 => "1 rd",
+        var rounds => $"{Number(rounds.Value)} rds",
+    };
 
     /// <summary>
     /// How long it lasts, as a card says it: <c>permanent</c>, <c>1 round</c>, <c>2 rounds</c>.

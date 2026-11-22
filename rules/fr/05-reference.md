@@ -1,6 +1,6 @@
 # Référence {#reference}
 
-Chaque état, chaque façon dont une partie se termine, et chaque passif, en un seul endroit.
+Chaque état, chaque façon dont une partie se termine, chaque passif, et le classement, en un seul endroit.
 
 ## Les états {#conditions}
 
@@ -38,10 +38,10 @@ sources: ADR 0019, ADR 0020, ADR 0035, ADR 0036, ADR 0041, ADR 0072, ADR 0076, A
 ```card
 id: conditions
 title: États
-Un état est un effet durable sur une créature, avec une valeur et un nombre de rounds.
-Il décompte pendant les Retombées de chaque round, et se termine à zéro.
-Une créature étourdie passe chaque round que dure le Stun. Ensuite, elle ne peut plus être étourdie pendant un round.
-> Le Bleed de Latch inflige {spell:latch:v1.bleed} à chaque Entretien pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, quelle que soit la Défense.
+Un état, effet durable, a une valeur et un nombre de rounds.
+Il décompte aux Retombées et finit à zéro.
+Une créature étourdie passe son Stun, puis ne peut plus l’être pendant un round.
+> Le Bleed de Latch inflige {spell:latch:v1.bleed} à chaque Entretien pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, malgré toute Défense.
 ```
 
 ## La fin d’une partie {#the-end-of-a-match}
@@ -86,3 +86,19 @@ Un **coup**, ce sont les dégâts qu’un sort inflige à une cible. Un Bleed n�
 plus.
 
 sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
+
+## Le classement {#the-ladder}
+
+Le classement range les joueurs qui ont un compte, chacun selon sa cote.
+
+Après une partie classée, le classement fait bouger les cotes des deux joueurs selon la surprise du résultat :
+battre un joueur mieux coté les fait bouger davantage que battre un joueur moins bien coté. Une partie classée est
+une partie en 3v3 entre deux places tenues par deux comptes différents. Une partie contre un bot, sur un appareil
+partagé ou ouverte hors classement ne compte jamais.
+
+À côté de chaque cote, le ± dit à quel point le classement en est sûr. Tant que son ± est élevé, une cote est
+**provisoire** : la page du classement la place après les cotes établies. Un nouveau joueur
+commence provisoire. Un joueur qui cesse de jouer garde sa cote, mais son ± grandit chaque jour sans partie : elle
+redevient peu à peu provisoire.
+
+sources: ADR 0124, ADR 0155, ADR 0171
