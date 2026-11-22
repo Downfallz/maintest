@@ -5,7 +5,8 @@
 
 import { gameKind, invitedState, tableState, waitingGames, waitsOnAnother, versus } from './lobby.js';
 import { sinceVisitLine, turnOf } from './players.js';
-import { pictureAttributes, pictureElement } from './picture.js';
+import { PAGE_ART } from './page-art.js';
+import { pictureElement, sourceAttributes } from './picture.js';
 import { writeArrival } from './arrival.js';
 
 /**
@@ -39,25 +40,33 @@ const creatureOf = picture => picture || 'lesson-base';
  */
 export const GROUND_SIZES = '(min-width: 1280px) 950px, (min-width: 761px) 74vw, max(100vw, 56.25svh)';
 
-// The lesson and later rounds have paintings composed for a tall phone. A native picture also
-// changes source when the phone turns, without fetching both paintings on its first draw.
+// The lesson and later rounds have paintings composed for a tall phone. A native picture changes source when the
+// phone turns, without fetching both paintings on its first draw. A portrait tablet keeps the portrait: the
+// landscape would be stretched to cover its tall box.
 const LANDSCAPES = new Map([
-  [LESSON_GROUND, ['battlefield-eclipse', 1672 / 941]],
-  ['home-ground-breach', ['battlefield-breach', 1672 / 941]],
-  ['home-ground-sky', ['battlefield-sky', 1672 / 480]],
+  [LESSON_GROUND, 'battlefield-eclipse'],
+  ['home-ground-breach', 'battlefield-breach'],
+  ['home-ground-sky', 'battlefield-sky'],
 ]);
+export const LANDSCAPE_MEDIA = '(orientation: landscape)';
+
+/** A landscape's width over its height, from its largest derived file (page-art.js), so a repaint carries over. */
+function ratioOf(name) {
+  const largest = PAGE_ART[name].sizes.at(-1);
+  return largest.width / largest.height;
+}
 
 function featuredGround(doc, name) {
   const options = { page: 'table/home', class: 'featured-ground' };
-  const landscape = LANDSCAPES.get(name);
-  if (!landscape) return pictureElement(doc, name, { ...options, sizes: GROUND_SIZES });
+  const wideName = LANDSCAPES.get(name);
+  if (!wideName) return pictureElement(doc, name, { ...options, sizes: GROUND_SIZES });
 
-  const [wideName, ratio] = landscape;
+  const ratio = ratioOf(wideName);
   const picture = doc.createElement('picture'), source = doc.createElement('source');
-  const { srcset } = pictureAttributes(wideName, options);
-  source.setAttribute('media', '(min-width: 761px), (orientation: landscape)');
-  source.setAttribute('srcset', srcset);
-  // object-fit: cover can make the painting wider than the box, especially the sky strip.
+  source.setAttribute('media', LANDSCAPE_MEDIA);
+  source.setAttribute('srcset', sourceAttributes(wideName, options).srcset);
+  // object-fit: cover can make the painting wider than the box, especially the sky strip. The 320 px is the
+  // featured space's least height on a short screen (lobby.css, `.home-page .featured`).
   const sizes = [
     `(max-height: 500px) and (min-width: 500px) max(min(72vw, 922px), ${Math.ceil(320 * ratio)}px)`,
     `(max-width: 760px) max(100vw, calc(max(440px, 100svh) * ${ratio}))`,

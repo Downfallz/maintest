@@ -1,0 +1,2 @@
+- A responsive `<picture>` whose source media is `(min-width: N), (orientation: landscape)` sends portrait tablets (768x1024) the landscape: probe currentSrc against the cover at a portrait tablet, not only phone and rotated phone; the PR's spec asserted only the name after rotation (#1090, table/lobby-featured.js, 2a99cb1).
+- A budget role that counts zero bytes (`wide`) is an escape hatch unless the kit refuses it on a plain `<img>`: check pictureAttributes honours the role it skips (#1090, scripts/ux/pictures.mjs budgetOf).

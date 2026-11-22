@@ -1589,17 +1589,28 @@ for (const [ground, round] of [['eclipse', null], ['breach', 6], ['sky', 10]]) {
     const painting = page.locator('#featured img.featured-ground');
     const selected = () => painting.evaluate(img => img.complete && img.naturalWidth > 0 ? img.currentSrc : '');
     await expect.poll(selected).toContain(`/home-ground-${ground}-`);
-    const cover = await painting.evaluate(img => {
-      const { width, height } = img.getBoundingClientRect();
-      return Math.max(width, height * img.naturalWidth / img.naturalHeight) * devicePixelRatio;
-    });
-    const fileWidth = Number(/-(\d+)\./.exec(await selected())[1]);
-    expect(fileWidth).toBeGreaterThanOrEqual(cover - 1);
+    // The width the painting is drawn at to cover its box, at the screen's density, against the file's width.
+    const covered = async () => {
+      const cover = await painting.evaluate(img => {
+        const { width, height } = img.getBoundingClientRect();
+        return Math.max(width, height * img.naturalWidth / img.naturalHeight) * devicePixelRatio;
+      });
+      return { cover, file: Number(/-(\d+)\./.exec(await selected())[1]) };
+    };
+    const portrait = await covered();
+    expect(portrait.file).toBeGreaterThanOrEqual(portrait.cover - 1);
     expect(asked.some(name => name.startsWith(`battlefield-${ground}-`))).toBe(false);
     await expect(page.locator('#featured-action')).toBeInViewport();
     await page.screenshot({ path: info.outputPath(`lobby-${ground}-portrait.jpg`), type: 'jpeg', quality: 90 });
     await page.setViewportSize({ width: 740, height: 390 });
     await expect.poll(selected).toContain(`/battlefield-${ground}-`);
+    await expect.poll(() => painting.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+    // The landscape's sizes send what covers the rotated box, or its largest file (1672 px) where none can: the sky.
+    const landscape = await covered();
+    expect(landscape.file).toBeGreaterThanOrEqual(Math.min(landscape.cover - 1, 1672));
+    // A portrait tablet keeps the portrait: the landscape would be stretched to cover its tall box.
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await expect.poll(selected).toContain(`/home-ground-${ground}-`);
     await context.close();
   });
 }

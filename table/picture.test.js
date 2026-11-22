@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from './page-art.js';
-import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sceneHtml, stripElement, stripHtml, undressScene, wearPageHead, wearScene } from './picture.js';
+import { FOCUS_STEP, PAGE_ART_BASE, SCENE_FORMS, STRIP_FRAMES, focusAttributes, pictureAttributes, pictureElement, pictureHtml, sceneElement, sourceAttributes, sceneHtml, stripElement, stripHtml, undressScene, wearPageHead, wearScene } from './picture.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root), 'utf8');
@@ -173,9 +173,22 @@ test('the sheet holds the three forms: a band of 3:1 no taller than 120 px, 64 o
 
 test('every picture of the kit is declared with the files a page is given', () => {
   for (const [name, entry] of Object.entries(PAGE_ART)) for (const page of Object.keys(entry.pages)) {
+    if (entry.pages[page] === 'wide') {
+      assert.ok(sourceAttributes(name, { page }).srcset.startsWith(PAGE_ART_BASE), `${name} on ${page}`);
+      continue;
+    }
     const attributes = pictureAttributes(name, { page });
     assert.ok(attributes.src.startsWith(PAGE_ART_BASE) && attributes.width > 0 && attributes.height > 0, `${name} on ${page}`);
   }
+});
+
+// The phone budget counts no bytes for a wide source (scripts/ux/pictures.mjs): an <img> of it would load uncounted.
+test('a wide source refuses to become an image and gives only its srcset', () => {
+  const art = { beast: { ...ART.beast, pages: { home: 'wide', ladder: 'lazy' } } };
+  assert.throws(() => pictureAttributes('beast', { page: 'home', art }), /wide source/);
+  assert.throws(() => pictureHtml('beast', { page: 'home', art }), /wide source/);
+  assert.deepEqual(Object.keys(sourceAttributes('beast', { page: 'home', art })), ['srcset']);
+  assert.throws(() => sourceAttributes('beast', { page: 'ladder', art }), /not a wide source/);
 });
 
 // What a page names: the pages of the table as they are served, and the showcase's as its build writes them.
