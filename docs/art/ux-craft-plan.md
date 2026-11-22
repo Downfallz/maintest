@@ -656,6 +656,17 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     The pictures of the spellbook, the journal and the Mutation Tree are planned apart, in
     [their own plan](ux12-pictures-plan.md); the brief it writes, `journeys/windows.md`, is the one UX12 extends.
 
+    Split by the owner on 2026-11-22: UX12 builds the windows as one family (how each enters, leaves and gives
+    the focus back, Escape, the sheets' text at 11 px). Following a mutation back onto the field and the result as
+    a moment, the two paragraphs above, are UX12b's.
+
+    **UX12b, a mutation followed back onto the field, and the result as a moment.** The second and third parts of
+    UX12 as written above: the pick confirmed, the tree closed, the creature in its new form and its new spell
+    found where the player can use or inspect them; the final exchange carried into the verdict and the next
+    action, a win and a loss reviewed, both read with the illustrations hidden. It extends `journeys/windows.md`.
+    Tests: a pick followed back to its creature and a cancelled pick back to its opener, in
+    `battle-mutations.spec.js`; the result's verdict and action in `battle-live.spec.js`; the journey's measures.
+
 13. **UX13, accessibility.** The checks the gate runs: axe on every screen and state of the five journeys (a
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
     one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
@@ -669,7 +680,7 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     joins the account. Tests: the host's routes for a guest and their limits; a guest reaches nothing but
     tutorial 1; the journey's measures. `security-reviewer` and `host-reviewer` read it.
 
-UX6 to UX12 and UX15 each end with the owner approving the journey's sheets before the pull request is reported
+UX6 to UX12b and UX15 each end with the owner approving the journey's sheets before the pull request is reported
 ready.
 
 **Evidence across UX7–UX12.** With each stage's existing journey sheets, include a short real-time phone-width

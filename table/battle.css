@@ -1956,25 +1956,6 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 }
 /* A short screen (a phone held sideways) scrolls the card, so its way back stays in reach. */
 #concept-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
-/* The lessons' two windows take the kit's form now (UX8; the match's other windows are UX12's): a fade, and under full
-   motion a short rise, as identity.css's window does on the other pages. */
-.battle-page :is(#practice-brief, #concept-dialog), .battle-page :is(#practice-brief, #concept-dialog)::backdrop {
-  opacity: 0; transition: opacity var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
-}
-.battle-page :is(#practice-brief, #concept-dialog)[open], .battle-page :is(#practice-brief, #concept-dialog)[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
-@starting-style {
-  .battle-page :is(#practice-brief, #concept-dialog)[open], .battle-page :is(#practice-brief, #concept-dialog)[open]::backdrop { opacity: 0; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog) {
-    translate: 0 8px;
-    transition: opacity var(--motion-fast) var(--motion-exit), translate var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
-  }
-  :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog)[open] { translate: 0 0; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
-  @starting-style {
-    :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog)[open] { translate: 0 8px; }
-  }
-}
 /* The coach arrives with its step (UX8): a fade, and under full motion a short rise. */
 .coach:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter); }
 @starting-style { .coach:not([hidden]) { opacity: 0; } }
@@ -2117,3 +2098,15 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle[data-docked="true"] .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag { display: none; }
 /* Under 360 px a creature's outcome stays in its own room: above its head it landed on the caption of the row above. */
 @media (max-width: 359px) { #battle .creature > .creature-effect { transform: translateY(-35%); } }
+
+/* The windows' floor (UX12): no word in a window or a docked sheet under 11 px (.6875rem), as in the frame. Labels
+   set in capitals keep their size and lose letter spacing where a phone's column is short. */
+.battle-page dialog :is(.eyebrow, h4, .inspect-tile-label, .atlas-node-stage, .atlas-node-flag, .atlas-card-family,
+  .reveal-stage, .tempo-reference-note, .match-mvp-eyebrow, .match-figure small, .match-fallen, .result-card-kind, #combat-help),
+.battle-page dialog .match-report-table thead th, .battle-page dialog .tempo-pinned .tempo-words span, .battle-page .spell-chip small,
+.battle-page #planning-dialog[data-kind="Speed"] #planning-creatures .tempo-tab-value {
+  font-size: .6875rem;
+}
+@media (max-width: 619px) {
+  .battle-page dialog .match-report-table thead th { letter-spacing: 0; }
+}
