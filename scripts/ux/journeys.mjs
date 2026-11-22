@@ -235,7 +235,7 @@ const lobby = {
 const pages = {
   id: 'pages',
   title: "The player's pages",
-  screens: ['friends-empty', 'friends-asked', 'friends-with-a-friend', 'friend-invited', 'home-invitation', 'leaderboard', 'statistics', 'leaderboard-ranked', 'statistics-ranked'],
+  screens: ['friends-empty', 'friends-asked', 'friends-with-a-friend', 'friend-invited', 'home-invitation', 'leaderboard', 'statistics', 'leaderboard-ranked', 'statistics-ranked', 'rulebook', 'offline'],
   strips: {
     // The window closed and opened again from the menu, which closes behind the window.
     'friends-window': { at: 'friends-empty', act: async ({ page }) => {
@@ -290,6 +290,15 @@ const pages = {
     await page.goto(`${set.game}/stats`);
     await page.locator('#stats-body:not([hidden])').waitFor();
     await walk.screen('statistics-ranked');
+    // The rulebook from the menu's Rules, read once the book is drawn.
+    await page.goto(`${set.game}/rules`);
+    await page.locator('#rules-book h2').first().waitFor({ timeout: 30000 });
+    await walk.screen('rulebook');
+    // The page the service worker shows when a page cannot be loaded at all, opened by its own address: online, so
+    // the walk reads it as a navigation offline draws it.
+    await page.goto(`${set.game}/offline.html`);
+    await page.locator('main').waitFor();
+    await walk.screen('offline');
   },
 };
 

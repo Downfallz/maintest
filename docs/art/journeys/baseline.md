@@ -153,7 +153,9 @@ At 390 by 844:
 `leaderboard-ranked` and `statistics-ranked`, the same pages after one ranked game, were added by UX10. Their lines
 come from UX10's walk of 2026-11-20, taken before UX10 changed the pages. `home-invitation`, the home with a friend's
 invitation, was added by S7 of the scenes' plan; its lines come from S7's walk of `main` at `2286924`, before S7 drew
-the card's ground. The baseline walk had no such screens.
+the card's ground. `rulebook` and `offline`, the rulebook and the table's offline page, were added by S10 of the same
+plan; their lines come from S10's walk of `main` at `987374a`, before S10 drew their scenes. The baseline walk had no
+such screens.
 
 At 320 by 568:
 
@@ -168,6 +170,8 @@ At 320 by 568:
 | statistics | 1230 px | 97 | 0 | 6 background | 10 px | 6 | 3 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | leaderboard-ranked | 1309 px | 187 | 0 | 5 background | 10 px | 12 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | statistics-ranked | 1239 px | 94 | 0 | 6 background | 10 px | 6 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
+| rulebook | 26331 px | 5868 | 0 | 2 background | 10 px | 3 | 12 of 86 | 10 | 0 | 0 | 0.00 | scrollable-region-focusable (1) |
+| offline | 568 px | 25 | 0 | none | 16 px | 0 | 0 of 1 | 0 | 0 | 0 | 0.00 | nothing |
 
 At 390 by 844:
 
@@ -182,6 +186,8 @@ At 390 by 844:
 | statistics | 1211 px | 97 | 0 | 6 background | 10 px | 6 | 2 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | leaderboard-ranked | 1251 px | 187 | 0 | 5 background | 10 px | 12 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | statistics-ranked | 1239 px | 94 | 0 | 6 background | 10 px | 6 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
+| rulebook | 22000 px | 5868 | 0 | 2 background | 10 px | 3 | 12 of 86 | 10 | 0 | 0 | 0.00 | nothing |
+| offline | 844 px | 25 | 0 | none | 16 px | 0 | 0 of 1 | 0 | 0 | 0 | 0.00 | nothing |
 
 ## The match
 
