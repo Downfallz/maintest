@@ -194,8 +194,8 @@ function restartTweenClock() {
   tweens.time = 0;
 }
 // A tick that is not drawn plays the scene's update alone, as Phaser's headless step does: a film reads the scene's
-// objects, and takes its picture on the frame it stops on, so the frames between cost no drawing. A frame of the
-// desktop's 1440 px field drawn in software is what ran a step of a few hundred ticks past a test's limit (#961).
+// objects, and takes its picture on the frame it stops on, so the frames between cost no drawing. Drawing the
+// desktop's 1440 px field in software is what ran a step of a few hundred ticks past a test's limit (#961).
 function tick(delta = FILM_TICK_MS, draw = true) {
   if (!film || !game) return;
   film.clock += delta;

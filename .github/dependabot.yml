@@ -26,11 +26,12 @@ updates:
     directory: /battle
     schedule:
       interval: weekly
-  # The browser suite's own packages (studio/browser/package.json). Playwright is moved by hand: its version is
-  # the browser the cloud sessions have installed, and the two move together (#941).
+  # The browser suite's own packages (studio/browser/package.json). A minor or major Playwright is moved by hand:
+  # it brings the browser the cloud sessions have installed, and the two move together (#941). Its patches come.
   - package-ecosystem: npm
     directory: /studio/browser
     schedule:
       interval: weekly
     ignore:
       - dependency-name: "@playwright/test"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

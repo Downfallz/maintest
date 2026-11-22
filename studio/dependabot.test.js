@@ -14,12 +14,12 @@ function entry(ecosystem, directory) {
   return blocks.find((block) => block.includes(`package-ecosystem: ${ecosystem}\n`) && block.includes(`directory: ${directory}\n`));
 }
 
-test("the browser suite's packages are watched weekly, all but Playwright, which moves the browser a session has", () => {
+test("the browser suite's packages are watched weekly, and Playwright's patches alone, as its minor moves the browser a session has", () => {
   const block = entry('npm', '/studio/browser');
   assert.ok(block, 'an npm entry for /studio/browser');
   assert.match(block, /^ {6}interval: weekly$/m);
   // Playwright's version is the browser the cloud sessions have installed: it is moved by hand, with them.
-  assert.match(block, /^ {6}- dependency-name: "@playwright\/test"$/m);
+  assert.match(block, /^ {6}- dependency-name: "@playwright\/test"\n {8}update-types: \["version-update:semver-major", "version-update:semver-minor"\]$/m);
   for (const name of Object.keys({ ...browser.dependencies, ...browser.devDependencies })) {
     if (name === '@playwright/test') continue;
     assert.doesNotMatch(block, new RegExp(`dependency-name: "${name}"`), `${name} is watched`);

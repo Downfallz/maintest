@@ -47,7 +47,7 @@ on:
 permissions:
   contents: read
 jobs:
-  # The mock-host journeys, one job per Playwright project, side by side. As one step they took thirty-five to
+  # The mock-host journeys, a job or two per Playwright project, side by side. As one step they took thirty-five to
   # forty-seven minutes after AU14 and #504 (the complete-match replay waiting out a hidden list, fixed in #503,
   # pushed them past sixty), with the real-engine journeys' eleven after them in a sixty-minute job. A project
   # takes about a quarter of that; tablet runs only table.ux.spec.js, so it shares the desktop job. Desktop runs the
@@ -60,6 +60,8 @@ jobs:
   # (docs/engineering/ci-minutes-plan.md, M3). A spec that grows that heavy joins the pattern. The jobs, their
   # arguments and the pattern are plan.js's (JOURNEY_JOBS), and CI starts only the jobs the planned specs play in
   # (journey-jobs, M4): a pull request that touches no heavy spec does not set up `desktop replays` to play nothing.
+  # Each phone plays in two halves too: on main from 2026-11-19 to 11-22 the phone's one job took 22 minutes at the
+  # median and hit its thirty 9 times in 53 runs, and the small phone's took up to 24 (#1003).
   journeys:
     name: journeys (${{ matrix.name }})
     # An empty list is no matrix at all, which GitHub refuses: the job is skipped first.
