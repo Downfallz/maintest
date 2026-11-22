@@ -33,6 +33,9 @@ internal static class TableWorker
 
         public IDeviceStore? Devices { get; init; }
 
+        /// <summary>Where each account's notice log is kept (ADR 0201): the bell's news of a match ended here.</summary>
+        public INoticeStore? Notices { get; init; }
+
         /// <summary>Where the content the tables began on is kept (ADR 0163), or nowhere.</summary>
         public IArtifactStore? Contents { get; init; }
     }
@@ -93,6 +96,7 @@ internal static class TableWorker
                     Accounts = await ArtifactStores.OpenAccountsAsync(target, stopping.Token),
                     Results = await ArtifactStores.OpenResultsAsync(target, stopping.Token),
                     Devices = await ArtifactStores.OpenDevicesAsync(target, stopping.Token),
+                    Notices = await ArtifactStores.OpenNoticesAsync(target, stopping.Token),
                 };
             }
 
@@ -142,9 +146,12 @@ internal static class TableWorker
         };
 
         // How a match ended, to each seat's account (ADR 0129, stage 4), when the turn that ended it is taken here.
-        if (over is { Accounts: { } accounts, Devices: { } devices } && sender is not null)
+        // The bell keeps it whether or not the worker can push (ADR 0201).
+        if (over is { Accounts: { } accounts } && (over.Notices is not null || (over.Devices is not null && sender is not null)))
         {
-            composer.Notices = new AccountNotices(sender, new AccountDevices(devices, clock));
+            composer.Notifier = new AccountNotifier(
+                over.Notices is { } notices ? new AccountNoticeLog(notices, clock) : null,
+                over.Devices is { } devices && sender is not null ? new AccountNotices(sender, new AccountDevices(devices, clock)) : null);
             composer.NameOf = async id => (await accounts.FindAsync(id, stopping))?.Username.Value;
         }
 
@@ -153,10 +160,11 @@ internal static class TableWorker
         var relay = WebPubSubRelay.FromEnvironment();
         composer.Relay = relay;
         composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
+        composer.Notifier?.Changes = composer.Lobby;
         Console.WriteLine(relay is null
             ? "  Relay: none. The host looks at the tables for what this worker wrote."
             : "  Relay: on. What this worker moves is said through Web PubSub, and what the host moves heard there.");
-        Console.WriteLine(composer.Notices is null
+        Console.WriteLine(composer.Notifier is not { Push: not null }
             ? "  Notices: off. How a match ended reaches nobody's devices from here (--accounts and --push-keys)."
             : "  Notices: on. Each seat's account is told how a match ended when its last turn is taken here.");
         using var registry = new TableRegistry(over.Index) { Loader = new TableLoader(new StoredSessions(over.Store), composer, clock), Basis = composer.Basis };

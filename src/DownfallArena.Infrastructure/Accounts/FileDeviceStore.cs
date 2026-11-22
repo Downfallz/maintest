@@ -6,7 +6,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 
 /// <summary>
 /// An account's devices as one file under the accounts' directory, for a laptop's table. Written beside its place
-/// and moved onto it, so a reader never sees half a list; an empty list is no file.
+/// and moved onto it, so a reader never sees half a list, and only over the version read (ADR 0201); an empty list
+/// is no file.
 /// </summary>
 public sealed class FileDeviceStore : IDeviceStore
 {
@@ -18,32 +19,19 @@ public sealed class FileDeviceStore : IDeviceStore
 
     public string RootDirectory { get; }
 
-    public async Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        (await ReadAsync(account, cancellationToken)).Devices;
+
+    public async Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            return DeviceDocuments.Read(await File.ReadAllTextAsync(FullPath(account), cancellationToken));
-        }
-        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
-        {
-            return [];
-        }
+        var (text, version) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
+        return new DeviceListRead(text is null ? [] : DeviceDocuments.Read(text), version);
     }
 
-    public async Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default)
+    public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(devices);
-        if (devices.Count == 0)
-        {
-            await ForgetAsync(account, cancellationToken);
-            return;
-        }
-
-        var path = FullPath(account);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var staged = $"{path}.{Guid.NewGuid():N}.tmp";
-        await File.WriteAllTextAsync(staged, DeviceDocuments.Write(devices), cancellationToken);
-        File.Move(staged, path, overwrite: true);
+        return ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices), version, cancellationToken);
     }
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)

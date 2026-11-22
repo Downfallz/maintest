@@ -79,10 +79,12 @@ internal static class TableTend
             };
             // A game it times out ends here (ADR 0169): its result is kept for the ladder and each seat's account is
             // told how it ended, as the worker does for a game its turn ends.
-            if (sender is not null && options.Accounts != AccountsMode.Off)
+            // The bell keeps the news whether or not the host can push (ADR 0201).
+            if (options.Accounts != AccountsMode.Off)
             {
                 var accounts = await ArtifactStores.OpenAccountsAsync(target);
-                composer.Notices = new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock));
+                var noticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(target), clock);
+                composer.Notifier = new AccountNotifier(noticeLog, sender is null ? null : new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock)));
                 composer.NameOf = async id => (await accounts.FindAsync(id))?.Username.Value;
             }
 
@@ -98,6 +100,7 @@ internal static class TableTend
             var relay = WebPubSubRelay.FromEnvironment();
             composer.Relay = relay;
             composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
+            composer.Notifier?.Changes = composer.Lobby;
             var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
             // The seats of the accounts suspended a day ago (ADR 0178), offered to other players.
             var suspended = options.Accounts == AccountsMode.Off

@@ -97,7 +97,7 @@ public sealed class OperatorVoidTests : IDisposable
     {
         var (id, _) = await OpenedAsync();
         await OwnedAsync(id);
-        _composer.Notices = new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System));
+        _composer.Notifier = new AccountNotifier(null, new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System)));
         _admin.Notes = new OperatorNotes(new OperatorActions(new OperatorLogOut(), TimeProvider.System)) { Said = _said.Add };
 
         (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
@@ -280,7 +280,9 @@ public sealed class OperatorVoidTests : IDisposable
     {
         public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
 
-        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+        public Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
+
+        public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
 
         public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The devices are out.");
     }

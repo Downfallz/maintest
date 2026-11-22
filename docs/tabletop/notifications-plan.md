@@ -1,7 +1,7 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). Nothing here is built yet; each stage
-below is one pull request.
+Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 is built; each stage below is one
+pull request.
 
 ## What the owner asked for
 
@@ -133,6 +133,19 @@ Jobs tab show the counts and the queue's length.
    Tests: Application tests on the log (the cut, the tag that replaces, read, two writers that both keep their
    entry), Cli tests on the routes and on each site writing its entry with push off, the storage test on
    Azurite.
+
+   *Built (2026-11-22)*: ADR 0201. `AccountNotifier` (Cli) is the door: news to the account's `AccountNoticeLog`
+   (Application, port `INoticeStore`; memory, file and blob adapters beside the devices), then the push through
+   `AccountNotices`, which stays the push channel and keeps its name (the log is `AccountNoticeLog`, not
+   `AccountNotices` as the shape above says). The seven sites call the door with a `NoticeKind`; each kind keeps the
+   push topic it had. The API, the worker and the hourly job build the door whether or not they hold push keys, so
+   the log is kept with push off; the hourly job's turn warning still goes only with push, as a turn is not news.
+   A kept entry says "your lists changed" on the account's stream. An id is past the newest entry and the time in
+   milliseconds, so a page's "read up to" never covers a later entry. The devices' list lost its process lock:
+   `IDeviceStore` reads a version and saves over it, and `AccountDevices` reads again on a conflict, in both
+   adapters (`ConditionalBlob`, `ConditionalFile`, shared with the notice stores). Left to N2: drawing the news,
+   the privacy sentences, and the Settings line on what is kept.
+
 2. **N2, the bell shows the news.** `table/inbox.js` gains News and the unread count; the window marks read;
    the privacy sentences. Tests: `inbox.test.js`, `terminology.test.js`, the lobby's browser spec with push off.
 3. **N3, one switch.** The account's notice preferences, "your turn" to the account's devices, Settings,

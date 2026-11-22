@@ -146,6 +146,7 @@ internal static class TableHost
             : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, stopping.Token);
         var accounts = opened?.Api;
         FriendsApi? friends = null;
+        AccountNotifier? notifier = null;
         Friends? friendships = null;
         PlayersApi? players = null;
         PlayerDirectory? directory = null;
@@ -156,9 +157,12 @@ internal static class TableHost
             var devices = new AccountDevices(await ArtifactStores.OpenDevicesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
             accounts.Devices = devices;
             accounts.Notices = sender is null ? null : new AccountNotices(sender, devices);
+            // The bell's news (ADR 0201), beside the accounts too, kept whether or not the host can push.
+            accounts.NoticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
+            notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices);
             // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
             friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
-            friends = new FriendsApi(friendships, accounts, accounts.Notices);
+            friends = new FriendsApi(friendships, accounts, notifier);
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
             // The settings every new game of the account starts from (ADR 0140), beside the accounts too.
             accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
@@ -185,9 +189,9 @@ internal static class TableHost
         admin.Lobby.Friends = friendships;
         // A host the hourly job tends lets no request do the job's work (ADR 0162).
         admin.Lobby.Tended = options.Tended;
-        admin.Lobby.Notices = accounts?.Notices;
+        admin.Lobby.Notifier = notifier;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
-        composer.Notices = accounts?.Notices;
+        composer.Notifier = notifier;
         // What the lobbies in view read on, instead of reading on a clock (ADR 0164).
         // With a relay (ADR 0165), what changed is also said to every page and process through it, whichever replica
         // they reach, and pages connect to it rather than to this process's streams.
@@ -201,6 +205,7 @@ internal static class TableHost
         admin.Lobby.Changes = lobbyChanges;
         admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
+        notifier?.Changes = lobbyChanges;
         // The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab.
         TurnQueues? queues = null;
         if (channels is not null && turns is not null)

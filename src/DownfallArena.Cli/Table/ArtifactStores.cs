@@ -257,6 +257,23 @@ internal static class ArtifactStores
         return await BlobDeviceStore.OpenAsync(container, cancellationToken);
     }
 
+    /// <summary>Where each account's notice log is kept (ADR 0201): beside the accounts, under <c>notices/</c>.</summary>
+    public static async Task<INoticeStore> OpenNoticesAsync(string target, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(target);
+        if (!IsContainerUrl(target))
+        {
+            var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return new FileNoticeStore(Path.Combine(Path.GetDirectoryName(runs) ?? runs, AccountsContainer));
+        }
+
+        var uri = AccountsUri(new Uri(target, UriKind.Absolute));
+        var container = IsEmulator(uri)
+            ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
+            : new BlobContainerClient(uri, new DefaultAzureCredential());
+        return await BlobNoticeStore.OpenAsync(container, cancellationToken);
+    }
+
     /// <summary>Where each account's game settings are kept (ADR 0140): beside the accounts, under <c>preferences/</c>.</summary>
     public static async Task<IPreferenceStore> OpenPreferencesAsync(string target, CancellationToken cancellationToken = default)
     {

@@ -652,7 +652,7 @@ public sealed class TableRestorerTests : IDisposable
             var devices = new AccountDevices(new FileDeviceStore(devicesRoot), TimeProvider.System);
             await devices.AddAsync(account, new PushDevice("https://push.example/player", DeviceKey, DeviceAuth, default), Cancel);
             var sender = new Sender();
-            _after.Composer.Notices = new AccountNotices(sender, devices);
+            _after.Composer.Notifier = new AccountNotifier(null, new AccountNotices(sender, devices));
             var later = await Restarted();
             using var another = _after.Registry();
 

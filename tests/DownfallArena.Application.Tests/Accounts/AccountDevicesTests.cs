@@ -89,6 +89,18 @@ public sealed class AccountDevicesTests
         (await _devices.ListAsync(other, Cancel)).ShouldHaveSingleItem();
     }
 
+    [Fact]
+    public async Task A_device_forgotten_by_another_process_while_one_registers_stays_forgotten_and_the_new_one_is_kept()
+    {
+        await _devices.AddAsync(_mark, Phone("dead"), Cancel);
+        // The worker forgets the dead device between this process's read and its write (ADR 0201).
+        _store.BeforeNextSave = () => new AccountDevices(_store, _clock).RemoveAsync(_mark, "https://push.example/dead", Cancel);
+
+        await _devices.AddAsync(_mark, Phone("new"), Cancel);
+
+        (await _devices.ListAsync(_mark, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/new"]);
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;
@@ -100,15 +112,32 @@ public sealed class AccountDevicesTests
 
     private sealed class InMemoryDevices : IDeviceStore
     {
-        private readonly Dictionary<AccountId, IReadOnlyList<PushDevice>> _held = [];
+        private readonly Dictionary<AccountId, (IReadOnlyList<PushDevice> Devices, string Version)> _held = [];
+        private long _written;
+
+        public Func<Task>? BeforeNextSave { get; set; }
 
         public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_held.TryGetValue(account, out var devices) ? devices : []);
+            Task.FromResult(_held.TryGetValue(account, out var held) ? held.Devices : []);
 
-        public Task SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, CancellationToken cancellationToken = default)
+        public Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) =>
+            Task.FromResult(_held.TryGetValue(account, out var held) ? new DeviceListRead(held.Devices, held.Version) : new DeviceListRead([], null));
+
+        public async Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
         {
-            _held[account] = [.. devices];
-            return Task.CompletedTask;
+            if (BeforeNextSave is { } before)
+            {
+                BeforeNextSave = null;
+                await before();
+            }
+
+            if ((_held.TryGetValue(account, out var held) ? held.Version : null) != version)
+            {
+                return false;
+            }
+
+            _held[account] = ([.. devices], $"{++_written}");
+            return true;
         }
 
         public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)

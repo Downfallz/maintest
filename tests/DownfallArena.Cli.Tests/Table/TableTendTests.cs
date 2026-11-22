@@ -306,7 +306,7 @@ public sealed class TableTendTests : IDisposable
             await devices.AddAsync(account, new PushDevice($"https://push.example/{account.Value}", InMemoryDeviceStore.Key, InMemoryDeviceStore.Auth, default), Cancel);
         }
 
-        _hosted.Composer.Notices = new AccountNotices(sent, devices);
+        _hosted.Composer.Notifier = new AccountNotifier(null, new AccountNotices(sent, devices));
         return (sent, late, answered);
     }
 

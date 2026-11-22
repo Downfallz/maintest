@@ -608,6 +608,11 @@ With push keys too, a signed-in player's lobby offers "Notify me on this device"
 accounts under `devices/` and forgotten with "sign out everywhere" and with the account, which is where a
 friend's request or an invitation reaches a player who holds no seat (docs/tabletop/friends-plan.md, stage 1).
 
+With accounts on, push keys or not, the news to an account (a friend accepted, the invited friend took the seat,
+the other player left, a match ended) is kept in its notice log under `notices/`, the 100 latest of the last 90
+days, forgotten with the account: `GET /api/account/notices` lists it newest first with the unread count, and
+`POST /api/account/notices/read` with `{"upTo": <id>}` marks it read up to that entry (ADR 0201).
+
 #### Accounts
 
 - `--accounts google|dev` signs players in on the home page (ADR 0122, docs/tabletop/accounts-plan.md): google
