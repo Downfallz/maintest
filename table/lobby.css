@@ -495,9 +495,9 @@ html[data-feedback-muted] [data-feedback-open] { display: none; }
 .featured[data-featured="loading"] .featured-text, .home-page:has(.featured[data-featured="loading"]) .home-footer { visibility: hidden; }
 @media (max-width: 760px) {
   body.home-page:has(#home-games:not([hidden])) { --lobby-gutter: max(18px, env(safe-area-inset-left), env(safe-area-inset-right)); --home-bar: 60px; padding-inline: var(--lobby-gutter); }
-  .home-page:has(#home-games:not([hidden])) > .home-header { min-height: var(--home-bar); height: auto; padding-block: 6px; flex-wrap: nowrap; }
+  /* The header lies over the featured space's top, always (#1072). */
+  .home-page:has(#home-games:not([hidden])) > .home-header { min-height: var(--home-bar); height: auto; padding-block: 6px; flex-wrap: nowrap; margin-bottom: calc(-1 * var(--home-bar)); border: 0; }
   .home-page:has(#home-games:not([hidden])) > .home-header .brand { display: flex; }
-  .home-page:has(#home-games:not([hidden])) > .home-header { margin-bottom: calc(-1 * var(--home-bar)); border: 0; }
   /* The operator's notice lies under the header, over the painting's top: the space keeps its full screen, its
      links to the games at its foot (#1072). Its ground is denser there, since a painting is under it. */
   .home-page:has(#home-games:not([hidden])) > .host-notice:not([hidden]) { position: absolute; z-index: 34; top: var(--home-bar); inset-inline: var(--lobby-gutter); margin: 0;
