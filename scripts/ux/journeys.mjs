@@ -416,16 +416,22 @@ async function openHistory(page, blocked) {
 
 // The match's windows whose pictures docs/art/ux12-pictures-plan.md settles: the pick and the Mutation Tree opened
 // from it, the Tempo sheet at its spell reference, the spellbook at its top and at its foot, the order of play once
-// a spell is turned face up, the journal once a round is played, and the result once Walker concedes. UX12 adds the
-// others. The team's first
-// creature plays at Instinct, so its spellbook shows a crit chip that does not hold this turn (P8).
+// a spell is turned face up, the journal once a round is played, and the result once Walker concedes. UX12 adds a
+// creature inspected, the family's centred window, opened from the order strip's card. The team's first creature
+// plays at Instinct, so its spellbook shows a crit chip that does not hold this turn (P8).
+// A creature the order strip names, one already played, as a player taps it to read it.
+const INSPECTED = '#timeline li[data-state="Completed"] [data-order-creature]';
+
 const windows = {
   id: 'windows',
   title: "The match's windows",
-  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'history', 'match-result'],
+  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'inspect', 'history', 'match-result'],
   strips: {
-    // The journal left and opened again from the field's header: how a window enters and leaves (UX12).
-    'history-window': { at: 'history', act: async ({ page, blocked }) => { await page.locator('#history-close').click(); await openHistory(page, blocked); } },
+    // The journal closed by its button: how a window leaves (UX12). The match's `settings-window` films one entering.
+    'history-window': { at: 'history', act: ({ page }) => page.locator('#history-close').click() },
+    // The inspection closed by Escape: it fades out faster than it came, and the focus is back on the card's Inspect
+    // (UX12). Closed and opened again in one act, a frozen exit leaves nothing to fade in.
+    'inspect-window': { at: 'inspect', act: ({ page }) => page.keyboard.press('Escape') },
   },
   async walk(walk) {
     const { page, set } = walk;
@@ -460,6 +466,14 @@ const windows = {
         && await page.locator('#timeline li[data-state="Completed"]').count()) {
         await page.locator('#timeline').evaluate(node => { node.scrollLeft = 0; });
         await walk.screen('order-revealed');
+        // A creature the strip names, read in its window: the family's centred window (UX12).
+        await choose(page, INSPECTED, walk.blocked);
+        await choose(page, '#order-why-inspect', walk.blocked);
+        await page.locator('#inspect-dialog[open]').waitFor();
+        await walk.screen('inspect');
+        await page.keyboard.press('Escape');
+        await page.locator('#inspect-dialog').waitFor({ state: 'hidden' });
+        await page.keyboard.press('Escape');
       }
       if (!walk.seen('spell-choice') && await page.locator('#combat-dialog').isVisible()) {
         await walk.screen('spell-choice');

@@ -563,11 +563,11 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Cost**: none.
 - **Less motion and screen reader**: `opacity` only. The window is a native `<dialog>` (see
   [A window that holds the focus](#a-window-that-holds-the-focus)).
-- **Here**: each `<dialog>` of the lobby and of the admin panel takes the form from `table/identity.css`: a fade in
-  `--motion-normal`, from 8 px below under full motion, and an exit in `--motion-fast`, inside `@supports`. Two
-  are left out: the classic table's mutation tree, always open and shown by `hidden`, and the battle page's 18
-  windows, which still open at once. A docked sheet there is part of the frame, and a test that asks whether it
-  is visible gets yes while it fades. UX12 stages the 18 as one family.
+- **Here**: each `<dialog>` of the lobby, the admin panel and the battle page takes the form from
+  `table/identity.css`: a fade in `--motion-normal`, from 8 px below under full motion, and an exit in
+  `--motion-fast`, inside `@supports`. The classic table's mutation tree is left out: always open, shown by
+  `hidden`. The battle's three docked sheets (`.docked-sheet`) are part of the frame: they fade in where they
+  stand and leave at once, so a closed sheet never stands over the field (UX12, `studio/browser/motion-kit.spec.js`).
 
 ### A page that changes
 
@@ -811,8 +811,9 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Cost**: none.
 - **Less motion and screen reader**: it enters by `opacity` alone (see
   [A window that enters and leaves](#a-window-that-enters-and-leaves)).
-- **Here**: `table/battle.html` has 18 windows. UX12 gives each one contract and tests it: the focus goes in,
-  stays in, comes back; Escape closes.
+- **Here**: `table/battle.html` has 18 windows, held to one contract (UX12): the focus goes in, stays in, comes back;
+  Escape closes. `battle/src/windows.ts` keeps Tab inside the top modal window and, when an opener is gone, gives
+  the focus to the frame's control that reaches the window again; `studio/browser/battle-windows.spec.js` tests it.
 
 ### A canvas a screen reader can reach
 

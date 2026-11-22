@@ -57,7 +57,8 @@ Every flag of `table` is in docs/reference/commands.md.
   comes from `icons.js`, inside a control that has a name; a new emoji or glyph as an icon is refused in review.
 - Motion comes from the kit: a token of `docs/art/branding.css`, never a number; `transform` and `opacity` only;
   travel under full motion alone. A `<dialog>` stays displayed while it fades after closing: test `open`, not `display`. The
-  match's windows are not in the kit yet (UX12).
+  match's windows are in the kit, its docked sheets (`.docked-sheet`) fade in and leave at once, and
+  `battle/src/windows.ts` holds their focus (UX12): a new window gets its frame control in the map `live.ts` gives it.
 - The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
   cannot pair a page with another deploy's bundle. A module another module imports keeps its bare name.
 - 320 px wide first, 44 px touch targets, no document scrolling in the battle view.

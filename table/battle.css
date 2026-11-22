@@ -15,8 +15,8 @@
 #timeline li > button { display: block; width: 100%; min-height: 44px; padding: 4px 8px; border: 0; background: transparent; color: inherit; text-align: left; font-size: inherit; }
 #timeline li > button > span { display: block; white-space: nowrap; }
 #timeline li[data-state="Completed"] { opacity: .7; }
-#order-dialog { padding: 0; width: min(780px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
-#order-dialog[open] { display: flex; flex-direction: column; }
+#order-dialog { padding: 0; width: min(780px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; flex-direction: column; }
+#order-dialog[open] { display: flex; }
 .order-header, .order-footer { flex: none; padding: 14px 18px; background: #14282c; }
 .order-header h2 { margin: 0 0 8px; font: 25px var(--font-display); color: var(--gold); }
 #order-summary { margin: 0; font-size: 13px; line-height: 1.5; }
@@ -178,7 +178,7 @@
 .playback-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 #planning-open, #match-open { flex: 1; }
-#planning-dialog { width: min(880px, calc(100vw - 24px)); }
+#planning-dialog { width: min(880px, calc(100vw - 24px)); flex-direction: column; }
 #planning-creatures, .replay-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
 #planning-creatures { position: sticky; top: -24px; padding: 12px 0; background: #142126; z-index: 2; }
 #planning-choices button { margin: 4px; min-height: 44px; }
@@ -279,8 +279,8 @@
 #history-open { width: 190px; min-width: 74px; display: grid; align-content: center; gap: 2px; text-align: left; font-size: 12px; }
 #history-preview { display: block; font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .history-reference { float: right; font-size: 12px; margin: 0 8px 6px; }
-#history-dialog { width: min(560px,calc(100vw - 24px)); height: min(760px,calc(100dvh - 32px)); max-height: calc(100dvh - 32px); padding: 0; margin: auto 16px auto auto; overflow: hidden; border: 1px solid #75867a; background: #101e24; color: #ece9dc; }
-#history-dialog[open] { display: flex; flex-direction: column; }
+#history-dialog { width: min(560px,calc(100vw - 24px)); height: min(760px,calc(100dvh - 32px)); max-height: calc(100dvh - 32px); padding: 0; margin: auto 16px auto auto; overflow: hidden; border: 1px solid #75867a; background: #101e24; color: #ece9dc; flex-direction: column; }
+#history-dialog[open] { display: flex; }
 .history-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px; border-bottom: 1px solid #52695e; flex: none; }
 #history-title { font: 28px var(--font-display); margin: 0; }
 #history-range { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
@@ -322,8 +322,8 @@
 /* Help uses a native modal, with the close control outside its scrollable explanation. */
 #help-open { flex: none; font-size: 12px; padding: 4px 10px; }
 #battle .timeline-wrap { min-height: 44px; }
-#help-dialog { padding: 0; width: min(680px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; border: 1px solid #75867a; }
-#help-dialog[open] { display: flex; flex-direction: column; }
+#help-dialog { padding: 0; width: min(680px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; border: 1px solid #75867a; flex-direction: column; }
+#help-dialog[open] { display: flex; }
 .help-header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; border-bottom: 1px solid #52695e; }
 #help-title { margin: 0; font: 26px var(--font-display); }
 #help-round { margin: 0 0 6px; }
@@ -370,9 +370,9 @@
 }
 
 /* Keep the scene legible while the player reads the AU receipt. Only its detail list scrolls. */
-#upkeep-dialog { inset: auto 0 max(8px,env(safe-area-inset-bottom)); margin: 0 auto; width: min(540px,calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow: hidden; padding: 0; border: 1px solid var(--line); border-top: 2px solid var(--gold); background: var(--panel); box-shadow: 0 4px 22px #0007; }
+#upkeep-dialog { inset: auto 0 max(8px,env(safe-area-inset-bottom)); margin: 0 auto; width: min(540px,calc(100vw - 16px)); max-height: calc(100dvh - 16px); overflow: hidden; padding: 0; border: 1px solid var(--line); border-top: 2px solid var(--gold); background: var(--panel); box-shadow: 0 4px 22px #0007; flex-direction: column; }
 #upkeep-dialog::backdrop { background: transparent; backdrop-filter: none; }
-#upkeep-dialog[open] { display: flex; flex-direction: column; }
+#upkeep-dialog[open] { display: flex; }
 .upkeep-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px 0; flex: none; }
 #upkeep-title { margin: 0; font: 22px var(--font-display); }
 #upkeep-intro { margin: 4px 0; font-size: 13px; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
@@ -444,7 +444,7 @@
 }
 /* Compare offered mutations without navigating the reference tree. Header and confirmation stay put. */
 #planning-dialog { padding: 0; width: min(1120px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
-#planning-dialog[open] { display: flex; flex-direction: column; }
+#planning-dialog[open] { display: flex; }
 .planning-header { flex: none; padding: 16px 20px 0; border-bottom: 1px solid #52695e; }
 #planning-heading { margin-bottom: 8px; }
 #planning-help { font-size: 13px; line-height: 1.45; margin: 6px 0; color: #bbcec5; }
@@ -484,8 +484,8 @@
 }
 
 /* The public tree can cover a command draft without changing it. Only its body scrolls. */
-#growth-dialog { padding: 0; width: min(1040px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; }
-#growth-dialog[open] { display: flex; flex-direction: column; }
+#growth-dialog { padding: 0; width: min(1040px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; flex-direction: column; }
+#growth-dialog[open] { display: flex; }
 .growth-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex: none; padding: 16px 20px; border-bottom: 1px solid #52695e; }
 .growth-header .eyebrow { margin: 0 0 5px; }
 #growth-title { margin: 0; font: 28px var(--font-display); }
@@ -596,8 +596,8 @@
    way the mutation tree and the spell choice show theirs: its figure and name, its stats as tiles with the field's
    icons, each condition as a card wearing its icon, and its known spells as the very cards the spell choice deals.
    It covers the field, full screen on a phone: nothing is chosen from it. */
-#inspect-dialog { padding: 0; width: min(940px, calc(100vw - 24px)); height: min(860px, calc(100dvh - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; border: 1px solid #52695e; border-radius: var(--radius-soft); background: #0e1b20; color: #ece9dc; }
-#inspect-dialog[open] { display: flex; flex-direction: column; }
+#inspect-dialog { padding: 0; width: min(940px, calc(100vw - 24px)); height: min(860px, calc(100dvh - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; border: 1px solid #52695e; border-radius: var(--radius-soft); background: #0e1b20; color: #ece9dc; flex-direction: column; }
+#inspect-dialog[open] { display: flex; }
 #inspect-dialog::backdrop { background: #050b0dcc; }
 .inspect-header { position: relative; flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 16px; padding: 16px 20px 14px; border-bottom: 1px solid #52695e; background: radial-gradient(120% 140% at 0% 100%, #2f5b5a66, transparent 60%), linear-gradient(180deg, #16303a, #12242a); }
 #inspect-dialog:has([data-side="enemy"]) .inspect-header { background: radial-gradient(120% 140% at 0% 100%, #a2533a55, transparent 60%), linear-gradient(180deg, #2a2522, #14232a); }
@@ -736,8 +736,8 @@
 }
 
 /* AU13: a final scorecard with independently scrolling detail and reachable actions. */
-#match-dialog { padding: 0; width: min(620px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; }
-#match-dialog[open] { display: flex; flex-direction: column; }
+#match-dialog { padding: 0; width: min(620px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; flex-direction: column; }
+#match-dialog[open] { display: flex; }
 .match-header { display: flex; justify-content: space-between; align-items: start; gap: 12px; padding: 20px; border-bottom: 1px solid #82958255; }
 .match-header h2 { font-size: clamp(28px,5vw,44px); margin: 0; }
 .match-header .eyebrow { margin: 0 0 8px; }
@@ -1037,8 +1037,8 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 /* The full mutation tree (mutation-atlas.ts): one screen on a phone, a large sheet on desktop. A column per
    family, a row per stage, the links behind; the card of the mutation in hand beside the tree on a wide
    screen, rising from the bottom on a narrow one. */
-#atlas-dialog { padding: 0; width: min(1240px, calc(100vw - 24px)); height: min(860px, calc(100dvh - 24px)); max-height: none; overflow: hidden; background: #0f1c21; border: 1px solid #5b7064; }
-#atlas-dialog[open] { display: flex; flex-direction: column; }
+#atlas-dialog { padding: 0; width: min(1240px, calc(100vw - 24px)); height: min(860px, calc(100dvh - 24px)); max-height: none; overflow: hidden; background: #0f1c21; border: 1px solid #5b7064; flex-direction: column; }
+#atlas-dialog[open] { display: flex; }
 .atlas-header { flex: none; border-bottom: 1px solid #3f554d; background: var(--soot); }
 .atlas-band { display: flex; align-items: center; gap: 12px; padding: 14px 18px; }
 .atlas-words { flex: 1; min-width: 0; }
@@ -1801,8 +1801,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 
 /* The last result is a sheet like the others: its eyebrow and title, the card, and the way into the journal. */
 #result-dialog { width: min(480px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 0; overflow: hidden; border: 0; border-top: 2px solid var(--gold);
-  border-radius: var(--radius-soft); background: var(--panel); box-shadow: 0 18px 60px #000a; }
-#result-dialog[open] { display: flex; flex-direction: column; }
+  border-radius: var(--radius-soft); background: var(--panel); box-shadow: 0 18px 60px #000a; flex-direction: column; }
+#result-dialog[open] { display: flex; }
 #result-dialog .result-header { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 18px 10px;
   background: radial-gradient(120% 140% at 0% 0%, #eac88e1f, transparent 60%); }
 #result-dialog .result-header .eyebrow { margin: 0 0 4px; color: var(--gold); letter-spacing: 2px; }
@@ -1987,25 +1987,6 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 }
 /* A short screen (a phone held sideways) scrolls the card, so its way back stays in reach. */
 #concept-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
-/* The lessons' two windows take the kit's form now (UX8; the match's other windows are UX12's): a fade, and under full
-   motion a short rise, as identity.css's window does on the other pages. */
-.battle-page :is(#practice-brief, #concept-dialog), .battle-page :is(#practice-brief, #concept-dialog)::backdrop {
-  opacity: 0; transition: opacity var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
-}
-.battle-page :is(#practice-brief, #concept-dialog)[open], .battle-page :is(#practice-brief, #concept-dialog)[open]::backdrop { opacity: 1; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
-@starting-style {
-  .battle-page :is(#practice-brief, #concept-dialog)[open], .battle-page :is(#practice-brief, #concept-dialog)[open]::backdrop { opacity: 0; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog) {
-    translate: 0 8px;
-    transition: opacity var(--motion-fast) var(--motion-exit), translate var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete, overlay var(--motion-fast) allow-discrete;
-  }
-  :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog)[open] { translate: 0 0; transition-duration: var(--motion-normal); transition-timing-function: var(--motion-enter); }
-  @starting-style {
-    :root:not([data-motion="less"]) .battle-page :is(#practice-brief, #concept-dialog)[open] { translate: 0 8px; }
-  }
-}
 /* The coach arrives with its step (UX8): a fade, and under full motion a short rise. */
 .coach:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter); }
 @starting-style { .coach:not([hidden]) { opacity: 0; } }
@@ -2148,3 +2129,19 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle[data-docked="true"] .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag { display: none; }
 /* Under 360 px a creature's outcome stays in its own room: above its head it landed on the caption of the row above. */
 @media (max-width: 359px) { #battle .creature > .creature-effect { transform: translateY(-35%); } }
+
+/* The windows' floor (UX12): no word in a window or a docked sheet under 11 px (.6875rem), as in the frame. Labels
+   set in capitals keep their size and lose letter spacing where a phone's column is short. */
+/* Only the rules under 11 px are listed: a heading set above it keeps its size. */
+.battle-page dialog :is(.eyebrow, .inspect-tile-label, .atlas-node-stage, .atlas-node-flag, .atlas-card-family,
+  .reveal-stage, .tempo-reference-note, .match-mvp-eyebrow, .match-figure small, .match-fallen, .result-card-kind),
+.battle-page dialog #atlas-detail-body h4, .battle-page dialog .match-report-table thead th, .battle-page dialog .tempo-pinned .tempo-words span, .battle-page .spell-chip small,
+.battle-page #planning-dialog[data-kind="Speed"] #planning-creatures .tempo-tab-value {
+  font-size: .6875rem;
+}
+@media (max-width: 619px) {
+  .battle-page dialog .match-report-table thead th { letter-spacing: 0; }
+}
+@media (max-height: 520px) {
+  .battle-page #combat-help { font-size: .6875rem; }
+}

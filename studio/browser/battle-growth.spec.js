@@ -152,7 +152,7 @@ test('a reveal reads as one line and crests on the field, opens on cards by side
   await page.locator('#atlas-close').click(); await page.locator('#growth-receipt [data-growth-open]').click();
   await page.locator('#growth-explore').click(); await expect(page.locator('#atlas-creature')).toHaveValue('1');
   await expect(tree.locator('[data-package="predator"]')).toHaveAttribute('data-path', 'true');
-  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').isVisible()) await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').evaluate(dialog => dialog.open)) await page.keyboard.press('Escape');
   await page.locator('#growth-dismiss').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', ''); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });

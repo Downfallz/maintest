@@ -79,53 +79,65 @@ for (const name of PAGES) {
   });
 }
 
-for (const name of ['lobby.html', 'admin.html']) {
+/** Opens and closes each window, and reads whether it faded in, how it stood, whether it faded out and where it went. */
+const playWindows = (page, ids) => page.evaluate(async ids => {
+  const reads = {};
+  for (const id of ids) {
+    const dialog = document.getElementById(id);
+    const settled = () => Promise.all(dialog.getAnimations().map(animation => animation.finished.catch(() => {})));
+    const fades = () => dialog.getAnimations().some(animation => animation.transitionProperty === 'opacity');
+    // One the page's own script would have closed starts closed here too.
+    dialog.close();
+    await settled();
+    dialog.showModal();
+    const enters = fades() && Number(getComputedStyle(dialog).opacity) < 1;
+    await settled();
+    const shown = getComputedStyle(dialog).opacity;
+    // A window keeps its layout while it fades out: what an `[open]` rule alone lays out falls apart for that time.
+    const layout = () => ['display', 'flexDirection', 'gridTemplateColumns'].map(name => getComputedStyle(dialog)[name]).join(' ');
+    const before = layout();
+    dialog.close();
+    const leaves = fades() && getComputedStyle(dialog).display !== 'none';
+    const kept = !leaves || layout() === before;
+    await settled();
+    reads[id] = { enters, shown, leaves, kept, gone: getComputedStyle(dialog).display };
+  }
+  return reads;
+}, ids);
+
+for (const name of ['lobby.html', 'admin.html', 'battle.html']) {
   for (const reducedMotion of ['no-preference', 'reduce']) {
     test(`${name}: every window enters and leaves (${reducedMotion})`, async ({ page }) => {
       await page.emulateMedia({ reducedMotion });
       await open(page, name);
       // The classic table's mutation tree, index.html's one dialog, is no window of the kit: always open, shown
-      // and put away by `hidden`.
-      const ids = await page.locator(WINDOWS).evaluateAll(all => all.map(one => one.id));
-      expect(ids.length).toBeGreaterThan(0);
-      for (const id of ids) {
-        const read = await page.evaluate(async id => {
-          const dialog = document.getElementById(id);
-          const settled = () => Promise.all(dialog.getAnimations().map(animation => animation.finished.catch(() => {})));
-          const fades = () => dialog.getAnimations().some(animation => animation.transitionProperty === 'opacity');
-          // One the page's own script would have closed starts closed here too.
-          dialog.close();
-          await settled();
-          dialog.showModal();
-          const enters = fades() && Number(getComputedStyle(dialog).opacity) < 1;
-          await settled();
-          const shown = getComputedStyle(dialog).opacity;
-          dialog.close();
-          const leaves = fades() && getComputedStyle(dialog).display !== 'none';
-          await settled();
-          return { enters, shown, leaves, gone: getComputedStyle(dialog).display };
-        }, id);
-        expect(read, id).toEqual({ enters: true, shown: '1', leaves: true, gone: 'none' });
-      }
+      // and put away by `hidden`. The match's docked sheets are read below.
+      const ids = await page.locator(`${WINDOWS}:not(.docked-sheet)`).evaluateAll(all => all.map(one => one.id));
+      expect(ids.length).toBeGreaterThan(name === 'battle.html' ? 14 : 0);
+      const reads = await playWindows(page, ids);
+      for (const id of ids) expect(reads[id], id).toEqual({ enters: true, shown: '1', leaves: true, kept: true, gone: 'none' });
     });
   }
 }
 
-test('the match\'s windows open and close at once, as before: they are staged as one family later', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await open(page, 'battle.html');
-  // The lessons' two windows, the briefing and the concept card, took the kit's form in UX8 (lessons.md).
-  const ids = await page.locator(`${WINDOWS}:not(#practice-brief, #concept-dialog)`).evaluateAll(all => all.map(one => one.id));
-  expect(ids.length).toBeGreaterThan(10);
-  const moved = await page.evaluate(ids => ids.filter(id => {
-    const dialog = document.getElementById(id);
-    dialog.showModal();
-    const entered = dialog.getAnimations().length > 0;
-    dialog.close();
-    return entered || getComputedStyle(dialog).display !== 'none';
-  }), ids);
-  expect(moved).toEqual([]);
-});
+// UX12: the match's 18 windows are one family. Its three docked sheets are part of the frame: they fade in where they
+// stand and leave at once, so a closed sheet never stands over the field the player goes back to.
+for (const reducedMotion of ['no-preference', 'reduce']) {
+  test(`battle.html: a docked sheet fades in without travel and leaves at once (${reducedMotion})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await open(page, 'battle.html');
+    const ids = await page.locator('dialog.docked-sheet').evaluateAll(all => all.map(one => one.id));
+    expect(ids.sort()).toEqual(['combat-dialog', 'planning-dialog', 'upkeep-dialog']);
+    const reads = await playWindows(page, ids);
+    for (const id of ids) expect(reads[id], id).toEqual({ enters: true, shown: '1', leaves: false, kept: true, gone: 'none' });
+    const travel = await page.evaluate(ids => ids.flatMap(id => {
+      const dialog = document.getElementById(id); dialog.showModal();
+      const moved = dialog.getAnimations().map(animation => animation.transitionProperty).filter(property => property !== 'opacity');
+      dialog.close(); return moved;
+    }), ids);
+    expect(travel).toEqual([]);
+  });
+}
 
 test('one ambience plays a screen, in view, and none under less motion', async ({ page }) => {
   const breaths = () => page.evaluate(() => [...document.querySelectorAll('.motion-breath')].map(one => getComputedStyle(one).animationName === 'none' ? 'still' : getComputedStyle(one).animationPlayState));
