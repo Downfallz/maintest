@@ -153,7 +153,7 @@ export function wearScene(doc, element, name, options = {}) {
   if (options.form === 'head' && !options.words) throw new Error(`${name}: a head names the element that holds its words`);
   const holders = [options.words ?? []].flat();
   // A page that looks for its words after a first wear finds the painting that wear prepended.
-  if (holders.some(holder => holder.hasAttribute('data-scene'))) throw new Error(`${name}: its words are its own painting; find them before the first wear`);
+  if (holders.some(holder => 'scene' in holder.dataset)) throw new Error(`${name}: its words are its own painting; find them before the first wear`);
   const scene = sceneOf(name, options);
   undressScene(element);
   element.classList.add(...scene.class.split(' '));
@@ -161,14 +161,14 @@ export function wearScene(doc, element, name, options = {}) {
   for (const holder of holders) holder.classList.add('scene-words');
   if (scene.drawn) {
     const image = pictureElement(doc, name, pictureOptions(options));
-    image.setAttribute('data-scene', '');
+    image.dataset.scene = '';
     element.prepend(image);
   }
 }
 
 /** Takes off a scene `wearScene` put on: the element is as it was, for a window that wears one in one state only. */
 export function undressScene(element) {
-  Array.from(element.children).find(child => child.hasAttribute('data-scene'))?.remove();
+  Array.from(element.children).find(child => 'scene' in child.dataset)?.remove();
   element.classList.remove('scene', ...SCENE_FORMS.map(form => `scene-${form}`));
   for (const attribute of ['data-side', 'data-saved']) element.removeAttribute(attribute);
   for (const child of element.children) child.classList?.remove('scene-words');

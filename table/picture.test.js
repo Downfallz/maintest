@@ -197,18 +197,17 @@ test('a page reaches a derived picture through the kit, never by its file name',
 // An element a page already holds, as the browser's DOM has it: enough of classList, attributes and children.
 function heldElement(tag, ...children) {
   const element = {
-    tag, attributes: {}, children: [], classes: new Set(),
+    tag, attributes: {}, dataset: {}, children: [], classes: new Set(),
     classList: { add: (...names) => names.forEach(name => element.classes.add(name)), remove: (...names) => names.forEach(name => element.classes.delete(name)) },
     setAttribute(name, value) { this.attributes[name] = value; },
     removeAttribute(name) { delete this.attributes[name]; },
-    hasAttribute(name) { return name in this.attributes; },
     prepend(node) { node.parentNode = this; this.children.unshift(node); },
     get firstElementChild() { return this.children[0]; },
   };
   for (const child of children) { child.parentNode = element; element.children.push(child); }
   return element;
 }
-const removable = doc => ({ ...doc, createElement: tag => ({ ...doc.createElement(tag), hasAttribute(name) { return name in this.attributes; }, remove() { this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); } }) });
+const removable = doc => ({ ...doc, createElement: tag => ({ ...doc.createElement(tag), dataset: {}, remove() { this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); } }) });
 
 test('a window\'s own heading wears a scene as its head, its words and its close where they were, and takes it off again', () => {
   const words = heldElement('div'), close = heldElement('button'), heading = heldElement('div', words, close);
