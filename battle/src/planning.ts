@@ -71,17 +71,15 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     const choices = mutationChoices(model.latest, catalogue, creature);
     creature = choices.selected;
     el('planning-creatures').replaceChildren(...choices.roster.map((one: { id: number; name: string; context: string }) => {
-      // Named by its words (#1087): the creature, then its state, written under it or kept for the ear.
+      // Named by the words it shows (#1087): the creature, and its state written under it; an offer's count, not
+      // written, is its description.
       const node = button(one.name, () => selectCreature(one.id));
-      const shown = !one.context.endsWith('available'), status = document.createElement(shown ? 'small' : 'span');
-      const gap = document.createElement('span'); gap.className = 'unseen'; gap.textContent = ' · ';
-      status.textContent = one.context; if (!shown) status.className = 'unseen'; node.append(gap, status);
+      if (!one.context.endsWith('available')) { const status = document.createElement('small'); status.textContent = one.context; node.append(status); }
+      else node.setAttribute('aria-description', one.context);
       node.dataset.creature = String(one.id); node.setAttribute('aria-pressed', String(one.id === creature)); return node;
     }));
     tree?.dispose();
     tree = mutationTree(choices, catalogue, tier => controller.choose({ creature, tier }));
-    // The rule sentence describes the graph, so it is still read where a short screen hides it (#1031).
-    tree.graph.setAttribute('aria-describedby', pickNote.id);
     el('planning-choices').replaceChildren(pickNote, tree.graph);
     el('mutation-preview-region').replaceChildren(tree.pane);
     // The whole tree opens full screen on the mutation in hand; an offer can be chosen from its card there.
@@ -259,6 +257,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     el<HTMLButtonElement>('planning-close').disabled = model.sending;
     if (!model.opened) { closeChoices(); return; }
     dialog.dataset.kind = model.latest.waitingFor;
+    // The pick's rule sentence describes its sheet, so it is still said where a short screen hides it (#1031).
+    if (model.latest.waitingFor === 'Evolution') dialog.setAttribute('aria-describedby', pickNote.id); else dialog.removeAttribute('aria-describedby');
     if (model.latest.waitingFor !== 'Evolution') el('planning-tools').replaceChildren();
     el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation Tree' : label;
     // The seat's next asking after a pick arrives in the open sheet: the creature that took the pick has nothing

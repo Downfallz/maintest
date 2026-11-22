@@ -165,7 +165,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
     this.scale.on('resize', () => {
       this.fitCamera();
       if (this.state && playing(this.state)) this.onResizeDuringPlayback();
-      if (!this.easeIntoRoom()) this.arrange();
+      const before = this.laidHeight;
+      if (!this.easeIntoRoom()) { this.stopEase(); this.arrange(); this.resized = { from: before, at: this.time.now }; }
     });
     this.ready = true;
     this.onReady();
@@ -583,23 +584,37 @@ export class BattleScene extends Phaser.Scene implements Restful {
   }
 
   /** A docked sheet is leaving: the next resize eases the figures from the layout they had beside it (#1035). */
-  holdLayout() { if (this.laidHeight) this.easeFrom = { height: this.laidHeight, at: this.time.now }; }
+  holdLayout() {
+    // The resize can reach the scene before the page says which sheet left: then the ease starts from the layout the
+    // field had before that resize.
+    const resized = this.resized; this.resized = null;
+    if (resized && this.time.now - resized.at < 300) { this.easeFrom = { height: resized.from, at: this.time.now }; this.easeIntoRoom(); return; }
+    if (this.laidHeight) this.easeFrom = { height: this.laidHeight, at: this.time.now };
+  }
+  private resized: { from: number; at: number } | null = null;
 
   // The field grew because a docked sheet left: it keeps the layout it had beside the sheet, and its figures, with the
-  // captions that follow them by a translation, ease into the room the sheet left. Less motion, a cast being read,
-  // or a resize long after the sheet went (a rotation) lays the field out at once.
+  // captions that follow them by a translation, ease into the room the sheet left. With reduced motion, a cast being
+  // read, or a resize long after the sheet went (a rotation), the field is laid out at once; so is one whose size
+  // changes again, or whose cast starts, while it eases.
   private easeIntoRoom() {
-    const from = this.easeFrom; this.easeFrom = null;
+    // A field still easing that the browser measures again, as large or larger, eases on from where it stands.
+    const easing = this.easedHeight;
+    const from = this.easeFrom ?? (easing !== null ? { height: easing, at: this.time.now } : null); this.easeFrom = null;
     const to = this.cameras.main.displayHeight;
     if (!from || this.time.now - from.at > 1000 || this.reduced || !this.state || playing(this.state) || to <= from.height) return false;
     this.tweens.killTweensOf(this.layoutEase);
     this.layoutEase.height = from.height; this.easedHeight = from.height; this.arrange();
     this.tweens.add({ targets: this.layoutEase, height: to, duration: RETURN_MS, ease: 'Cubic.easeInOut',
-      onUpdate: () => { this.easedHeight = this.layoutEase.height; this.arrange(); },
+      onUpdate: () => {
+        if (this.state && playing(this.state)) { this.stopEase(); this.arrange(); return; }
+        this.easedHeight = this.layoutEase.height; this.arrange();
+      },
       onComplete: () => { this.easedHeight = null; this.arrange(); } });
     return true;
   }
   private readonly layoutEase = { height: 0 };
+  private stopEase() { this.tweens.killTweensOf(this.layoutEase); this.easedHeight = null; }
 
   /** Whether something on the field moves now, which keeps the field at its full rate (rest.ts); ambience does not. */
   busy() {

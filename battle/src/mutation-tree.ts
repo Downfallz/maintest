@@ -77,8 +77,7 @@ export function mutationTree(model: Model, catalogue: Catalogue | null, choose: 
       // Named by its words (#1087): its name, its family and Stage kept for the ear, then the line it shows.
       label.append(node('span', ` · ${face.family} · ${stageSpoken(face.stage)} · `, 'unseen'));
       const line = face.tags.join(' · ') || face.spells[0]?.name || (face.missing ? 'Details unavailable' : 'Passive');
-      const spells = face.spells.map((spell: {name: string}) => spell.name).filter((name: string) => name !== line);
-      if (spells.length) button.setAttribute('aria-description', spells.join('. '));
+      button.setAttribute('aria-description', [face.tags.join(' · '), ...face.spells.map((spell: {name: string}) => spell.name)].filter(Boolean).join('. '));
       label.append(node('small', line, 'mutation-tags'));
       button.addEventListener('click', () => choose(id));
     } else label.append(node('small', pack!.status === 'picked' ? 'Picked privately' : 'Acquired', ''));

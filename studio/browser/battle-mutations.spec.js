@@ -398,7 +398,7 @@ test('at 320 by 568 each offer\'s form and name are in view above the foot when 
     }
   }
   await expect(page.locator('#planning-pick-rule')).toBeHidden();
-  await expect(page.locator('#planning-choices .mutation-graph')).toHaveAccessibleDescription(/3 creatures can mutate, 2 picks left/);
+  await expect(page.locator('#planning-dialog')).toHaveAccessibleDescription(/3 creatures can mutate, 2 picks left/);
   await page.screenshot({ path: info.outputPath('mutation-pick-320.png') });
   expect(h.state.errors).toEqual([]);
 });

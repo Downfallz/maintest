@@ -379,12 +379,23 @@ test('the pick, the Mutation Tree and the journal speak the words their controls
   expect(found).toEqual({ 'planning-dialog': [], 'atlas-dialog': [], 'history-dialog': [] });
 });
 
-// #1087: the journal opened as a new round is announced leaves nothing playing beneath it.
+// #1087: the journal opened as a new round is announced leaves nothing playing beneath it; the announcement stays in
+// the page for a screen reader.
 test('a window opened over a new round\'s announcement leaves nothing animating beneath it', async ({ page }) => {
   const state = await mount(page); await page.clock.resume();
   await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
   await expect(page.locator('#round-toast')).toHaveClass(/showing/);
   await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveJSProperty('open', true);
-  expect(await page.locator('#round-toast').evaluate(toast => toast.getAnimations().length)).toBe(0);
-  await expect(page.locator('#round-toast')).toBeHidden();
+  expect(await page.locator('#round-toast').evaluate(toast => [toast.getAnimations().length, getComputedStyle(toast).opacity])).toEqual([0, '0']);
+  await expect(page.locator('#round-toast')).toHaveText(/Round 3/);
+});
+
+// A round that opens on its upkeep: the docked receipt (shown modal, as battle/src/upkeep.ts shows it) leaves the top of
+// the field in view, so the announcement plays on.
+test('a new round announced while its upkeep sheet is open still plays at the top of the field', async ({ page }) => {
+  const state = await mount(page); await page.clock.resume();
+  await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
+  await expect(page.locator('#round-toast')).toHaveClass(/showing/);
+  await page.locator('#upkeep-dialog').evaluate(dialog => dialog.showModal());
+  expect(await page.locator('#round-toast').evaluate(toast => [toast.getAnimations().length, getComputedStyle(toast).opacity !== '0'])).toEqual([1, true]);
 });

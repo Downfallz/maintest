@@ -219,9 +219,11 @@ test('when the tempos close on a late answer the field keeps its layout, then ea
   await page.locator('#planning-confirm').click(); await expect(page.locator('#planning-dialog')).toBeHidden();
   await expect.poll(bottom).toBeGreaterThan(before + 150);
   await page.waitForTimeout(300);
-  const feet = await page.evaluate(() => window.feet);
-  const steps = feet.slice(1).map((one, index) => Math.abs(one - feet[index]));
-  expect(Math.max(...steps)).toBeLessThan(40);
+  // Read by the places it passes, not by its steps, which a loaded runner's frame rate sets: a jump goes from the sheet's
+  // layout to the field's in one frame, an ease passes through places between them, always downwards.
+  const feet = await page.evaluate(() => window.feet), end = await bottom();
+  expect(feet.filter(one => one > before + 20 && one < end - 20).length).toBeGreaterThanOrEqual(2);
+  expect(feet.every((one, index) => index === 0 || one >= feet[index - 1] - 1)).toBe(true);
   const shifts = await page.evaluate(() => window.shifts);
   expect(shifts.flatMap(one => one.sources).filter(name => /\b(caption|creature-tag|creature)\b/.test(name))).toEqual([]);
   expect(shifts.reduce((sum, one) => sum + one.value, 0)).toBeLessThan(0.02);
