@@ -396,6 +396,10 @@ test('a new round announced while its upkeep sheet is open still plays at the to
   const state = await mount(page); await page.clock.resume();
   await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
   await expect(page.locator('#round-toast')).toHaveClass(/showing/);
+  const played = () => page.locator('#round-toast').evaluate(toast => [toast.getAnimations().length, getComputedStyle(toast).opacity !== '0']);
+  // Under 620 px the toast is never drawn, so it never plays (table/battle.css, #1000): the sheet changes nothing there.
+  const wide = page.viewportSize().width >= 620;
+  expect(await played()).toEqual([wide ? 1 : 0, true]);
   await page.locator('#upkeep-dialog').evaluate(dialog => dialog.showModal());
-  expect(await page.locator('#round-toast').evaluate(toast => [toast.getAnimations().length, getComputedStyle(toast).opacity !== '0'])).toEqual([1, true]);
+  expect(await played()).toEqual([wide ? 1 : 0, true]);
 });
