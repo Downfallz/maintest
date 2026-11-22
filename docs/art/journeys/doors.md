@@ -780,7 +780,7 @@ opens at once, as that page's windows do until UX12.
 - **Shift**: none: the band's 3:1 room, or its 64 px, is held before the painting comes, and the title sits on it
   from the start. The words on it hold 4.5:1 against the lightest pixel under them, on the scrim to `--soot`. On
   the file, the lightest pixel of the cut's left half is 105 of 255 in luminance before the scrim; the walk's
-  `contrast` measures the screenshot at both widths.
+  `contrast` measures the screenshot at both widths: lowest 11.34:1 at 320 px, 11.6:1 at 390 px, none under.
 
 ### Left
 

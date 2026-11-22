@@ -171,6 +171,8 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
   .lobby-panel { padding: 20px; }
   .game-card { padding: 18px; }
   .dialog-actions { flex-wrap: wrap; } .dialog-actions button { flex: 1; }
+  /* A confirmation's labels stay on one line: when the two do not fit side by side, each takes a row. */
+  #action-dialog .dialog-actions button { flex: 1 0 auto; white-space: nowrap; text-align: center; }
 }
 
 
