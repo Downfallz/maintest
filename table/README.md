@@ -439,7 +439,7 @@ table that never began is closed after twenty hours nobody asked anything of it 
 The **featured space** opens the home with its one filled action, chosen from what the host says (UX9,
 `lobby-featured.js`, [the lobby's brief](../docs/art/journeys/lobby.md)): a turn of the player's, a person's before
 a bot's; then a game of theirs waiting on someone else; then the next lesson not done, unless it and every lesson
-after it were skipped; then Play a bot, with New battle quiet under it. The game on show stays while it is
+after it were skipped; then Play a bot on the duel in the mist, with Multiplayer quiet under it. The game on show stays while it is
 eligible within its group, and while its action has the focus; under a finger the space holds still, and a press
 opens what the finger came down on if it is still there. Its press says Opening… and hands the
 battle the game's line through the tab's session storage (`arrival.js`, key `downfall.arena.arrival.v1`, read once,

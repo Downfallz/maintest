@@ -190,16 +190,29 @@ test('the featured space waits for both the games and the lessons, then fills in
   assert.equal(readArrival(session, 'g'), 'Round 1 against Rook');
 });
 
-test('with nothing to resume or learn, the featured action plays a bot, and New battle is the quiet one under it', () => {
+test('with nothing to resume or learn, the featured action plays a bot, and Multiplayer is the quiet one under it', () => {
   const doc = page(), asked = [];
   const featured = mountFeatured(doc, { enter: () => {}, openCreate: one => asked.push(one), go: () => {}, session: null, ambience: () => {} });
 
   featured.setGames([]); featured.setLessons([]); featured.setDisabled(false);
   assert.equal(doc.ids.featured.dataset.featured, 'new');
   assert.equal(doc.ids['featured-action'].textContent, 'Play a bot →');
-  assert.equal(doc.ids['featured-status'].dataset.empty, 'true', 'its line kept, unseen');
+  assert.equal(doc.ids['featured-status'].dataset.empty, 'true', 'no status to show');
+  assert.equal(doc.ids['new-table'].textContent, 'Multiplayer');
   doc.ids['featured-action'].listeners.click();
   assert.deepEqual(asked, [{ opponent: 'bot' }]);
+});
+
+test('a lesson featured after the duel was asked for stands on the eclipse, and a game after it says New battle again', () => {
+  const doc = page();
+  const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {} });
+  featured.playable();
+  assert.match(doc.ids['featured-art'].children[0].attributes.src, /mist-duel-/);
+  featured.setGames([]); featured.setLessons(series('new'));
+  assert.equal(doc.ids.featured.dataset.featured, 'lesson');
+  assert.match(doc.ids['featured-art'].children[0].attributes.src, /home-ground-eclipse-/);
+  featured.setGames([game('g', { round: 2 })]);
+  assert.equal(doc.ids['new-table'].textContent, '＋ New battle');
 });
 
 test('the ground is drawn again only when it changes, so a repeated update leaves the picture settled', () => {
