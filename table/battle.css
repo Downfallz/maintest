@@ -1934,7 +1934,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle .hud-top > .practice-band { position: static; flex: 1 1 auto; display: flex; align-items: center; gap: 10px; width: auto; min-width: 0; margin: 0 0 0 8px; padding: 0 0 0 10px;
   border: 0; border-left: 2px solid var(--gold); border-radius: 0; background: none; box-shadow: none; }
 #battle .hud-top > .practice-band[hidden] { display: none; }
-#battle .hud-top > .practice-band .eyebrow { flex: none; white-space: nowrap; }
+/* The band's place in the series gives way before its ways out: it reads whole at our size (and at 390 px a step
+   above it), and past that (a much wider font, a reader's larger text) it is cut, so Restart the round and Leave keep their place,
+   clear of Settings (#1046). */
+#battle .hud-top > .practice-band .eyebrow { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #battle .hud-top > .practice-band strong, #battle .hud-top > .practice-band #practice-goal { display: none; }
 #battle .hud-top > .practice-band small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 #battle .hud-top > .practice-band .practice-actions { flex: none; margin: 0 0 0 auto; gap: 4px; }
@@ -1944,18 +1947,21 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
    out: the step is on the coach card, the title on the briefing, and Restart the round is its icon, named for whoever
    cannot see it. */
 @container hud (max-width: 640px) {
-  #battle .hud-top > .practice-band { gap: 4px; margin-left: 4px; padding-left: 8px; }
+  #battle .hud-top > .practice-band { gap: 4px; margin-left: 0; padding-left: 6px; }
   #battle .hud-top > .practice-band small, #battle .hud-top > .practice-band #practice-brief-open { display: none; }
-  #battle .hud-top > .practice-band .eyebrow { font-size: 9px; letter-spacing: 1px; }
+  /* "TUTORIAL 1 OF 4" on two lines, its column as wide as its longest word: on one line it pushed Leave over Settings. */
+  #battle .hud-top > .practice-band .eyebrow { width: min-content; line-height: 1.15; letter-spacing: 0; white-space: normal; }
   #battle .hud-top > .practice-band #practice-restart { width: 44px; padding: 0; border: 0; background: transparent; color: #d8dfd6; font-size: 0; }
   #battle .hud-top > .practice-band #practice-restart::before { content: '↻'; font-size: 22px; line-height: 1; }
-  #battle .hud-top > .practice-band #practice-leave { padding: 0 6px; }
+  #battle .hud-top > .practice-band #practice-leave { padding: 0 4px; }
 }
 /* A phone held upright folds the site's menu and the player's button into the header's right end: without the
    notifications, they take two buttons' width, and the band the rest. Where even that is short (a 320 px phone), its
    place in the series goes too: the briefing and the coach card say it. */
 @media (max-width: 619px) and (orientation: portrait) {
   .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) .hud-top { padding-right: 96px; }
+  /* Once the lesson is done the round says COMMAND, its longest phase, untracked here: the band needs the width. */
+  .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) #recap-open #round-phase { letter-spacing: 0; }
 }
 @container hud (max-width: 260px) { #battle .hud-top > .practice-band .eyebrow { display: none; } }
 /* Except on a phone held upright under 360 px, where a member's header is that short: there the band says it is a
@@ -1964,9 +1970,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
    Between two steps, while no card shows, there is no Restart; the next step's card brings it back. */
 #coach-restart { display: none; }
 @media (max-width: 359px) and (orientation: portrait) {
-  .battle-page[data-home="member"] #battle .hud-top > .practice-band { padding-left: 6px; }
-  .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { display: block; max-width: 52px; font-size: 9px; line-height: 1.15; letter-spacing: .3px; white-space: normal; }
-  .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-leave { padding: 0 4px; }
+  /* The header's spacing gives the band the width a finished lesson needs, so Leave stays clear of Settings (#1046). */
+  .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) .hud-top { gap: 2px; padding-left: 4px; }
+  .battle-page[data-home="member"] #battle .hud-top > .practice-band { gap: 2px; padding-left: 4px; }
+  .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { display: block; }
   .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-restart { display: none; }
   .battle-page[data-home="member"] .coach:not([data-done="true"]) #coach-restart { display: inline-flex; align-items: center; justify-self: start; min-height: 44px; padding: 4px 12px; font-size: 12px; }
   /* In a sheet the card takes one row for its step, its cards and Restart, an icon there, named by its words (UX8):
@@ -2079,8 +2086,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #battle .hud-top > .practice-band .eyebrow, .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow {
   font-size: .6875rem;
 }
-/* "TUTORIAL 1 OF 4" on two lines at 11 px: its column is as wide as its longest word. */
-.battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { max-width: none; width: min-content; letter-spacing: 0; }
+/* "TUTORIAL 1 OF 4" on two lines at 11 px, for a member at every width: its column is as wide as its longest word. */
+.battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { width: min-content; letter-spacing: 0; }
 
 /* The round's bar under 360 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
    drawn on the menu's button, and History leaves it, so the round, the opponent, Help and Settings keep their own

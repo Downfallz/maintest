@@ -383,7 +383,8 @@ const match = {
   title: 'The match',
   screens: [...SIGHTS.map(([name]) => name), 'second-round', 'settings', 'concede', 'match-result'],
   strips: {
-    'settings-window': { at: 'second-round', act: ({ page }) => page.locator('#settings').click() },
+    // Pressed as the walk presses it (#1021): where something covers Settings, the strip is still filmed and says so.
+    'settings-window': { at: 'second-round', act: ({ page, blocked }) => choose(page, '#settings', blocked) },
     // One exchange read across the field and the frame (UX11): the opponent's next action played from its OK, the
     // blow and the target's health on one beat, then the next actor. Film it with `--frames 24 --interval 120`.
     exchange: { at: 'result-read', act: ({ page }) => page.locator('#playback-next').click() },

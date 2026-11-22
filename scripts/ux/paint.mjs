@@ -26,11 +26,13 @@ function watchPaintInPage() {
   }).observe({ type: 'layout-shift', buffered: true });
 }
 
-function readPaintInPage() {
-  const first = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null;
+/** What the page painted, read in the page: no first paint is null, not zero. */
+export function readPaintInPage() {
+  // An entry list can be empty: its first entry is tested, not its time compared with null (Sonar S3403).
+  const firstPaint = performance.getEntriesByName('first-contentful-paint')[0];
   const pictures = performance.getEntriesByType('resource').filter(entry => /\.(webp|png|jpe?g|avif|svg)(\?|$)/.test(entry.name));
   return {
-    first: first === null ? null : Math.round(first),
+    first: firstPaint ? Math.round(firstPaint.startTime) : null,
     largest: globalThis.__journeyPaint.largest === null ? null : Math.round(globalThis.__journeyPaint.largest),
     element: globalThis.__journeyPaint.element,
     shift: Math.round(globalThis.__journeyPaint.shift * 100) / 100,

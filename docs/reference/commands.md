@@ -1153,7 +1153,8 @@ stopped.
 
 `--strip <interaction>` films one interaction across time instead: the walk stops at the strip's screen, stops
 the animations and holds the timers, makes the interaction and steps the page (`--frames`, 12 by default,
-`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. `--paint` loads the showcase's home,
+`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. A strip, like a walk,
+prints on standard error each control it had to press by script. `--paint` loads the showcase's home,
 the sign-in panel and a new player's home `--runs` times each (5 by default) with nothing cached, on a slow
 phone's network and processor, and writes the median, the fastest and the slowest of the first and the largest
 paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 when

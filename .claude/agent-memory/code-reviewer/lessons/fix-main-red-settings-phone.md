@@ -1,0 +1,6 @@
+# code-reviewer lessons (branch fix/main-red-settings-phone)
+- A layout fix that lets a label "give way" (`min-width: 0; overflow: hidden`) passes a spec that only checks what the label was in the way of: probe the label's own `scrollWidth > clientWidth` at each size the spec claims ("whatever the size of its text"); here TUTORIAL 1 OF 4 was cut to 40 of 68 px at 390 px, 20 px root, all green (f1b5e36).
+- `walkJourney` in strip mode returns only the frames: anything a strip's `act` reports through `blocked` is collected and dropped, so a strip "pressed as the walk does" names nothing (scripts/ux/journey.mjs:158, f1b5e36).
+- In `table/battle.css` the 11 px floor (`.6875rem`, ~line 2093) comes later than the practice band's phone rules with the same specificity: a `font-size` or `max-width` edited above it on `.practice-band .eyebrow` is dead (f1b5e36).
+- A label clipped with `overflow: hidden` on two lines can lose height as well as width: probe `scrollHeight > clientHeight` too; here the tutorial eyebrow is 26 of 25 px at 16 px root, both widths, and the spec checks only width (9f033d5).
+- A size table of exemptions in a spec (`whole` waived past 16/17 px) and the CSS comment that justifies it drift apart: read both against the probed numbers; battle.css claimed "a step above" at every width, the spec only at 390 px (9f033d5).

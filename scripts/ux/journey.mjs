@@ -157,13 +157,13 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
     }
     if (strip) {
       if (!shots) throw new Error(`The ${journey.id} journey never reached "${filmed.at}", where ${strip} is filmed.`);
-      return shots;
+      return walked(shots, blocks);
     }
     const missed = journey.screens.filter(name => !walk.seen(name));
     if (missed.length) throw new Error(`The ${journey.id} journey never reached: ${missed.join(', ')}.`);
     if (errors.length) throw new Error(`The ${journey.id} journey's page threw: ${errors.join(' | ')}`);
     // What the walk could not press rides on the screens: a walk with none is one a player can make.
-    return Object.assign(screens, { blocked: blocks });
+    return walked(screens, blocks);
   } finally {
     for (const context of contexts) await context.close().catch(() => {});
     await set.close();
@@ -216,6 +216,16 @@ for (const flag of ['--frames', '--interval', '--runs']) {
     if (!Number.isInteger(number) || number <= 0) throw new Error(`${flag} needs a positive whole number.`);
     options[flag.slice(2)] = number;
   };
+}
+
+/** A walk's screens or a strip's frames, carrying what it had to press by script (`blocked`). */
+export function walked(taken, blocks) {
+  return Object.assign(taken, { blocked: blocks });
+}
+
+/** What a walk or a strip had to press by script, a line each, named by its journey and its width. */
+export function blockedLines(id, viewport, taken) {
+  return taken.blocked.map(line => `${id} at ${viewport.width} px, ${line}`);
 }
 
 export function parseArguments(argv) {
@@ -273,6 +283,7 @@ async function main(argv) {
           await writeFile(path, await contactSheet(browser, shots.map(shot => ({ png: shot.png, caption: `${shot.ms} ms`, note: `${shot.animating} animating` })),
             { title: `${journey.title} · ${options.strip} · ${viewport.width} × ${viewport.height}`, columns: 6, width: viewport.width }));
           console.log(path);
+          for (const line of blockedLines(journey.id, viewport, shots)) console.error(line);
           continue;
         }
         const screens = await walkJourney(browser, journey, viewport, { showcase, axe });
@@ -280,7 +291,7 @@ async function main(argv) {
         await writeFile(sheet, await journeySheet(browser, journey, viewport, screens));
         await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), blocked: screens.blocked, screens }));
         console.log(sheet); console.log(measures);
-        for (const line of screens.blocked) console.error(`${journey.id} at ${viewport.width} px, ${line}`);
+        for (const line of blockedLines(journey.id, viewport, screens)) console.error(line);
       }
     }
     if (options.paint) {
