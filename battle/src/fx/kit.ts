@@ -23,12 +23,23 @@ export interface BeatPlay {
   /** The beat follows a projectile: its head keeps to the arc the projectile flies (`flightAt`). */
   flight?: boolean;
   figure?: Phaser.GameObjects.Image;
+  /**
+   * How far the figure's body stands from `at` now, when the action moves it: what is drawn on it goes with it
+   * (#933). `fromDrift` is the same for `from`, the caster a trail leaves.
+   */
+  drift?: () => { x: number; y: number };
+  fromDrift?: () => { x: number; y: number };
 }
 /**
- * What the kit asks of the scene's view: the trauma is the scene's, one value for every hit; and while a halo
- * swells on a figure the scene quiets the gold rim it draws around the acting one, so the halo is read.
+ * What the kit asks of the scene's view: the trauma is the scene's, one value for every hit; while a halo swells on
+ * a figure the scene quiets the rims it draws around it, so the halo is read; and the camera's push is the
+ * scene's too, which lets it go at the impact. `lasts` is on the action's clock, at 1×.
  */
-export interface KitView { shake(strength: number): void; quiet?(creature: string, on: boolean): void }
+export interface KitView {
+  shake(strength: number): void;
+  quiet?(creature: string, on: boolean): void;
+  push?(strength: number, lasts: number, at: { x: number; y: number }): void;
+}
 export type Primitive = (kit: KitContext, play: BeatPlay) => void;
 
 /** The kit's one texture: on a phone a batch holds one texture, so every shape is a frame of it. */
@@ -60,18 +71,21 @@ export function grounded(beat: StagedBeat) {
 /** A heading on the screen turned onto the ground: the angle a ring lying there opens around. */
 export const onGround = (heading: number) => Math.atan2(Math.sin(heading) / GROUND, Math.cos(heading));
 
-/** Where a beat heads, in radians: along the blow, back against it, or up. A blow with no direction heads up. */
+/** Where a beat heads, in radians: along the blow, back against it, up, or down. A blow with no direction heads up. */
 export function headingOf(direction: string | undefined, heading: number | null) {
   if (direction === 'along') return heading ?? UP;
   if (direction === 'back') return heading === null ? UP : heading + Math.PI;
+  if (direction === 'down') return -UP;
   return UP;
 }
 export const degrees = (radians: number) => radians * 180 / Math.PI;
 /**
  * How large a beat's particles are drawn, over their frame: by the figure they play on, never under `least`,
- * and by the beat's `strength` when its author gave one, from half as large again (1) down to half (near 0).
+ * and by the beat's `strength` when its author gave one, from half as large again (1) down to 0.7 at 0.2; under
+ * 0.2 it falls to a fifth near 0, so a flake of hide can be small on a small figure (#942).
  */
-export const sized = (beat: StagedBeat, base: number, least: number) => Math.max(least, base) * (.5 + (beat.strength ?? .5));
+export const sized = (beat: StagedBeat, base: number, least: number) => Math.max(least, base) * strengthScale(beat.strength ?? .5);
+const strengthScale = (strength: number) => strength >= .2 ? .5 + strength : .2 + strength * 2.5;
 
 type Emitter = Phaser.GameObjects.Particles.ParticleEmitter;
 type EmitterConfig = Phaser.Types.GameObjects.Particles.ParticleEmitterConfig;
@@ -132,7 +146,25 @@ export class KitContext {
     // Every lit object is drawn after every plain one, so a change of blend mode breaks the batch once.
     (object as unknown as Phaser.GameObjects.Components.Depth).setDepth(lit ? DEPTH + 1 : DEPTH);
     this.objects.add(object);
+    if (play.drift) this.carry(object, play.drift);
     return object;
+  }
+
+  /**
+   * An object drawn on a figure the action moves goes with its body, once the frame's tweens have moved it (#933). An
+   * emitter's pieces are drawn in its own space, so they go with it.
+   */
+  private carry(object: Owned, drift: () => { x: number; y: number }) {
+    const placed = object as unknown as { x: number; y: number };
+    const home = { x: placed.x, y: placed.y };
+    const follow = () => {
+      if (!object.active) return;
+      const now = drift();
+      placed.x = home.x + now.x; placed.y = home.y + now.y;
+    };
+    follow();
+    this.scene.events.on('postupdate', follow);
+    object.once('destroy', () => this.scene.events.off('postupdate', follow));
   }
 
   /** Destroy one object when its beat ends. */
@@ -209,12 +241,23 @@ export class KitContext {
     });
   }
 
-  /** Where each object alive stands, and what else it says of itself, for the bench and the browser specs. */
+  /**
+   * Where each object alive stands, its depth, and what else it says of itself, for the bench and the browser
+   * specs. An emitter lists its pieces alive, each where it is drawn on the field, its turn and its scale.
+   */
   places() {
     return [...this.objects].map(object => {
       // An emitter that follows a head stands where its head is: a trail's own place is the field's corner.
-      const { x, y, follow } = object as unknown as { x: number; y: number; follow?: { x: number; y: number } | null };
-      return { ...object.data.getAll() as { beat: string; creature: string }, x: x + (follow?.x ?? 0), y: y + (follow?.y ?? 0), kind: object.type };
+      const { x, y, follow, depth } = object as unknown as { x: number; y: number; depth: number; follow?: { x: number; y: number } | null };
+      const emitter = this.emitters.has(object as Emitter) ? object as Emitter : null;
+      let pieces: { x: number; y: number; angle: number; scale: number }[] | undefined;
+      if (emitter) {
+        const listed: { x: number; y: number; angle: number; scale: number }[] = [];
+        emitter.forEachAlive(piece => { listed.push({ x: x + piece.x, y: y + piece.y, angle: piece.angle, scale: piece.scaleX }); }, null);
+        pieces = listed;
+      }
+      return { ...object.data.getAll() as { beat: string; creature: string }, x: x + (follow?.x ?? 0), y: y + (follow?.y ?? 0), depth, kind: object.type,
+        ...(pieces ? { pieces } : {}) };
     });
   }
 

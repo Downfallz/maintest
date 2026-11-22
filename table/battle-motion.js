@@ -43,6 +43,14 @@ const RECOIL_OUT_MS = 280, TREMOR_SWING_MS = 30;
 // `--brand-bone`, never the target marker's gold, and a fallen figure drains toward `--brand-line`, a cold grey.
 export const BONE = 0xd8c7a7;
 export const DRAINED = 0x52636b;
+// The battle's own colours (docs/art/spell-vfx.md, "The battle's colours"), named once here. Soot is the palette's
+// `--brand-soot`, the edge a pale stroke is read against; the three others are the owner's choices: blood, a deep
+// brown red (#919), the ember, warm enough to read as fire (#934), and hide, bone in shadow, a flake of a figure's
+// own hide that must not read as the bright chip of a blow (#943).
+export const SOOT = 0x070d10;
+export const BLOOD = 0x9a3b34;
+export const EMBER = 0xe0763f;
+export const HIDE = 0x8c7f68;
 
 /**
  * The caster of a melee blow, in milliseconds from the start of the action: the draw back, the hold at its far
@@ -156,6 +164,26 @@ export function breath(ms, place = 0) {
 export const TRAUMA = Object.freeze({ defeat: .10, ceiling: .6, fall: .25 / 120, reach: .05 });
 /** A punch of the zoom, on a defeat or a critical hit. */
 export const PUNCH = Object.freeze({ amount: .03, lasts: 200 });
+/**
+ * The slow push on a capstone (the craft book): how much closer the view comes at a push of full strength, and how
+ * long it takes to let go once the impact lands. Both *house*: in more than the punch, since it builds over the
+ * windup, and back a little slower than the punch comes back.
+ */
+export const PUSH = Object.freeze({ amount: .06, release: 240 });
+
+/**
+ * How far in the view stands, as a share of its fitted zoom, `elapsed` ms into a push that builds over `lasts` ms
+ * to `strength` (Sine.InOut, then held); and, once `released` ms have passed since the impact let go of `from`,
+ * how far it still stands (Quad.Out back to the fitted zoom).
+ */
+export function pushOf(elapsed, lasts, strength) {
+  const share = Math.min(1, Math.max(0, elapsed / lasts));
+  return PUSH.amount * strength * (1 - Math.cos(Math.PI * share)) / 2;
+}
+export function releaseOf(from, released) {
+  const left = 1 - Math.min(1, Math.max(0, released / PUSH.release));
+  return from * left * left;
+}
 
 /**
  * What an action adds to the trauma: each creature other than the caster that lost health adds by its loss, and

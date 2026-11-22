@@ -7,8 +7,8 @@ import assert from 'node:assert/strict';
 import { DRAW_MS, STRIKE_MS, WINDUP_MS, IMPACT_MS, RETURN_MS, RETURN_DELAY_MS, playbackRate } from './battle-timing.js';
 import { readFileSync } from 'node:fs';
 
-import { ACTION_END_MS, BONE, BREATH, DRAINED, CAST, DEATH, FLASH_MS, FLIGHT, PUNCH, THROW, TRAUMA, WEIGHTS, blowWeight, breath, flightAt, lastBeat, lossOf,
-  meleeBeats, punches, reaction, shakeOf, traumaAfter, traumaOf, wander, weightOf } from './battle-motion.js';
+import { ACTION_END_MS, BLOOD, BONE, BREATH, EMBER, HIDE, SOOT, DRAINED, CAST, DEATH, FLASH_MS, FLIGHT, PUNCH, PUSH, THROW, TRAUMA, WEIGHTS, blowWeight, breath, flightAt, lastBeat, lossOf,
+  meleeBeats, punches, pushOf, reaction, releaseOf, shakeOf, traumaAfter, traumaOf, wander, weightOf } from './battle-motion.js';
 
 const cue = (changes, extra = {}) => ({ recipients: changes.map(one => one.creature), changes, ...extra });
 
@@ -80,6 +80,33 @@ test('the flash is the palette\'s bone and a fallen figure drains toward its lin
   assert.equal(BONE, colour('bone'));
   assert.equal(DRAINED, colour('line'));
   assert.notEqual(BONE, colour('gold'));
+});
+
+test('the battle\'s own colours are named once: soot is the palette\'s, and blood, ember and hide the art docs\' (#935)', () => {
+  const palette = readFileSync(new URL('../docs/art/branding.css', import.meta.url), 'utf8');
+  assert.equal(SOOT, Number.parseInt(/--brand-soot: #([0-9a-f]{6});/.exec(palette)[1], 16));
+  // docs/art/spell-vfx.md, "The battle's colours": each row names the colour and its value.
+  const doc = readFileSync(new URL('../docs/art/spell-vfx.md', import.meta.url), 'utf8');
+  const named = name => Number(new RegExp(`^\\| ${name} \\| \`(0x[0-9a-f]{6})\``, 'm').exec(doc)?.[1]);
+  assert.deepEqual([named('Bone'), named('Soot'), named('Blood'), named('Ember'), named('Hide')], [BONE, SOOT, BLOOD, EMBER, HIDE]);
+  // The spells' effects read them from here, never as numbers of their own.
+  const effects = readFileSync(new URL('../battle/src/spell-effects.ts', import.meta.url), 'utf8');
+  for (const value of [BLOOD, EMBER, HIDE, SOOT]) assert.ok(!effects.includes(`0x${value.toString(16).padStart(6, '0')}`), value.toString(16));
+});
+
+test('a push builds slowly over its beat to its strength, holds, and lets go fast at the impact', () => {
+  assert.equal(pushOf(0, 600, 1), 0);
+  // Sine.InOut: slow at both ends, half way at half its beat.
+  assert.ok(pushOf(60, 600, 1) < PUSH.amount * .05);
+  assert.ok(Math.abs(pushOf(300, 600, 1) - PUSH.amount / 2) < 1e-9);
+  assert.equal(pushOf(600, 600, .5), PUSH.amount * .5);
+  assert.equal(pushOf(900, 600, .5), PUSH.amount * .5);
+  // More than the punch, and still a few percent: the field never leaves the view.
+  assert.ok(PUSH.amount > PUNCH.amount && PUSH.amount <= .08);
+  const held = pushOf(600, 600, 1);
+  assert.equal(releaseOf(held, 0), held);
+  assert.ok(releaseOf(held, PUSH.release / 2) < held / 2);
+  assert.equal(releaseOf(held, PUSH.release), 0);
 });
 
 test('a struck figure flashes only when it lost health, and is thrown further the more it lost', () => {

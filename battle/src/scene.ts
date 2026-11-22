@@ -80,7 +80,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
   /** Where the kit's objects stand, each figure's centre, feet and head, and the acting rim: for the bench and the browser specs. */
   get effectsPlaces() { return this.spellEffects.places; }
   get anchors() { return [...this.figures.values()].map(figure => ({ id: figure.id, ...this.anchor(figure) })); }
-  get actingHalo() { return { id: this.haloId, quiet: this.halo?.quiet ?? false }; }
+  get actingHalo() {
+    return { id: this.haloId, quiet: this.halo?.quiet ?? false, focusQuiet: [...this.focusHalos].filter(([, halo]) => halo.quiet).map(([id]) => id) };
+  }
   /** How the figures and the view stand now, for the bench, its film and the browser specs. */
   get motion() {
     const round = (value: number) => Math.round(value * 1000) / 1000;
@@ -167,7 +169,14 @@ export class BattleScene extends Phaser.Scene implements Restful {
         shake: strength => this.viewShake.add(strength),
         // A halo on the figure the gold rim lights quiets the rim while it plays; its end gives the rim back.
         // One that started on another figure is not counted, so its end gives nothing back.
-        quiet: (creature, on) => { if (creature === this.haloId) this.halo?.quieten(on); },
+        // The blue halo the turn order or a tie lights is quieted the same way, counted on its own (#937).
+        quiet: (creature, on) => {
+          if (creature === this.haloId) this.halo?.quieten(on);
+          const focus = this.focusHalos.get(creature);
+          if (focus?.visible) focus.quieten(on);
+        },
+        // The slow push on a capstone: the view moves in on the caster while the spell gathers (#950).
+        push: (strength, lasts, at) => this.viewShake.push(strength, lasts, at),
       }));
       this.onKit(this.spellEffects.equipped);
     });
@@ -391,7 +400,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
     if (!actor) return;
     const cue = this.state.cue;
     if (cue) {
-      this.spellEffects.windup(cue.visual, this.effectFigure(this.state.actor!, actor), cue.contact.flatMap(id => {
+      // What the windup draws on its caster goes with the body: a lunge, a crouch or a throw carries it (#933).
+      this.spellEffects.windup(cue.visual, this.effectFigure(this.state.actor!, actor, true), cue.contact.flatMap(id => {
         const figure = this.figures.get(id);
         return figure ? [this.effectFigure(id, figure)] : [];
       }), this.rate);
@@ -418,7 +428,9 @@ export class BattleScene extends Phaser.Scene implements Restful {
     else if (actor) this.sampleImpact(actor, thrown);
     // A figure no blow threw (a caster felled by its own cost) only falls.
     for (const id of this.falling) if (!thrown.has(id)) this.fell(this.figures.get(id)!, null, false);
-    // The view trembles by the health lost, whatever the family; a defeat or a critical hit punches the zoom.
+    // A push the windup built lets go as the blow lands. The view trembles by the health lost, whatever the
+    // family; a defeat or a critical hit punches the zoom.
+    this.viewShake.release();
     this.viewShake.add(traumaOf(cue, this.state.actor));
     if (punches(cue, this.state.actor)) this.viewShake.punchIn();
     // The eclipse answers harm, by its weight, in the family's colour (the craft book, "A light that answers a cast").
@@ -447,7 +459,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     thrown.add(target.id);
     if (this.falling.has(target.id)) this.fell(target, line, true);
     else struck(this, target, line, { lost: 1, defeated: false }, true, this.rate);
-    this.spellEffects.impact(SAMPLE_HIT, this.effectFigure(target.id, target), this.rate, this.anchor(actor));
+    this.spellEffects.impact(SAMPLE_HIT, this.effectFigure(target.id, target), this.rate, this.effectFigure(actor.id, actor, true));
     this.viewShake.add(WEIGHTS.light.trauma);
   }
 
@@ -486,7 +498,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     }
     if (actor) {
       const first = cue.contact.map(id => this.figures.get(id)).find(Boolean);
-      this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor), this.rate, first && this.anchor(first));
+      this.spellEffects.cast(cue.visual, this.effectFigure(this.state.actor!, actor, true), this.rate, first && this.anchor(first));
     }
     const melee = cue.visual.delivery === 'melee';
     // One flash a figure an action: a staging that flashes its targets takes the place of the scene's own.
@@ -504,7 +516,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
       const tones = effects.filter(effect => !effect.wound).map(effect => effect.tone);
       const visual = self && cue.visual.delivery === 'melee'
         ? { family: cue.visual.family, motif: tones.includes('recovery') ? 'vital' : 'focus', delivery: 'cast' } : cue.visual;
-      this.spellEffects.impact(visual, this.effectFigure(id, target, self), this.rate, actor ? this.anchor(actor) : undefined);
+      this.spellEffects.impact(visual, this.effectFigure(id, target, self), this.rate, actor ? this.effectFigure(this.state.actor!, actor, true) : undefined);
       if (!self && actor) this.answer(cue, target, actor, melee, flashes, thrown);
     }
   }

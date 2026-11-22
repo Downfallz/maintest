@@ -55,7 +55,7 @@ Filmed at `fc3ec94`, 1×, a1 on b1, 4 health lost: a whole action and a contact.
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | The cast load ([movement.md](movement.md)): a1 squashes and rises where it stands. No staged beat: Stage I has none in the windup. | [Anticipation](../battle-craft.md#anticipation) |
-| 840 | 700 | impact | the effect | The `arc` motif from a1 to b1, gone by 1540 ms (shortened from today's 1680 ms to end inside the Stage I band). `motif at 840, lasts 700` | [Chain between targets](../battle-craft.md#chain-between-targets), [Shape before colour](../battle-craft.md#shape-before-colour) |
+| 840 | 700 | impact | the effect | The `arc` motif from a1 to b1, gone by 1540 ms (shortened from today's 1680 ms to end inside the Stage I band). `motif at 840, lasts 700` | [One effect, one meaning](../battle-craft.md#one-effect-one-meaning), [Shape before colour](../battle-craft.md#shape-before-colour) |
 | 840 | 590 | impact | the caster and the target | a1's release, b1's medium hit from a distance ([movement.md](movement.md)): its bone flash for 80 ms, its stop, its recoil away from a1. | [Hit flash](../battle-craft.md#hit-flash), [Recoil](../battle-craft.md#recoil) |
 | 840 | 240 | impact | the effect | The bolt leaves the skull: 6 blue sparks (*house*) thrown up off a1's head. `burst at 840, on caster, count 6, shape spark, tint family, direction up, spread 90, reach 160, strength 0.2, level head, lasts 240, blend add` | [Burst](../battle-craft.md#burst), [Additive light](../battle-craft.md#additive-light) |
 | 840 | 280 | impact | the effect | The discharge: 12 blue sparks (*house*) sprayed off b1 all around, clearing its body. `burst at 840, count 12, shape spark, tint family, direction out, spread 360, reach 260, strength 0.25, lasts 280, blend add` | [Burst](../battle-craft.md#burst), [Additive light](../battle-craft.md#additive-light) |
@@ -184,7 +184,8 @@ The sheets cannot show the stop, the feel at full speed, or the sound.
 ### Left
 
 - The slow is drawn as frost clinging low, chosen over a ring at the feet: the ring is the stun's in every family, and
-  initiative lowered is not a stun. The owner may refuse; a slow of its own (a look that drags) would be a kit change.
+  initiative lowered is not a stun. A slow with a look of its own (a look that drags) would be a kit change; the
+  owner chose not to build one (#950).
 - The shards spring up from the ground (*house*, `level feet`, `direction up`). The second film, at spread 100 and
   reach 200, still shows one clump a third of the ground ring wide, over the crystal's lower arm. A later pass:
   spread 160, reach 280 (*house*); if they still clump, a burst that starts from points across the ground ring is
@@ -273,8 +274,9 @@ The sheets cannot show the stop, the feel at full speed, or the sound.
 - The Bleed shows `blood`, not `ember`: the game names it Bleed and its chip is Bleed's, and deep red beads mean a
   Bleed in every family. Ember motes stay the fire itself, so lingering embers would read as more burning damage. The
   owner may want a burn to look like a burn; then it is a new meaning to settle for every family, not this staging's.
-- The storm does not fall from above: a burst cannot fall and no beat comes down from the sky. A falling storm is a
-  kit change (a direction `down`, or a source above the field).
+- The storm does not fall from above: no beat comes down from the sky, and the owner chose not to build a source
+  above the field (#950). A burst may now be aimed `down` (#942), but its pieces drop off the figure they play on,
+  which is not a storm falling onto it.
 - The windup flow on a1 is ember sparks rising: in the biological family rising sparks are energy gained, but in its
   own green; here the tint, ember, says fire.
 
@@ -303,6 +305,7 @@ Filmed at `fc3ec94`, 1×, a1 on b1, 10 health lost: a whole action and a contact
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | The cast load ([movement.md](movement.md)): a1 squashes and rises where it stands. | [Anticipation](../battle-craft.md#anticipation) |
+| 200 | 640 | windup | the camera | The slow push, the capstone's: the view moves in on a1 while it gathers, slowly at both ends, 3% closer by the contact (*house*), holding a1 where it stands on the screen; it lets go over 240 ms as the blow lands. Not under less motion. `push at 200, strength 0.5, lasts 640` | [Slow push on a capstone](../battle-craft.md#slow-push-on-a-capstone) |
 | 240 | 480 | windup | the effect | The heat drawn in: 18 ember motes (*house*) on a wide ring around a1 pulled onto it, gone by 720 ms. Motes, not sparks: on the first film 14 thin ember sparks did not show on a1's warm body, where Deep Freeze's shards did. `gather at 240, on caster, count 18, shape dot, tint ember, reach 300, strength 0.5, lasts 480, blend add` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Anticipation](../battle-craft.md#anticipation) |
 | 480 | 300 | windup | the effect | The charge: a warm light on a1, gone by 780 ms; additive and stronger than the first film's 0.5 in screen, which did not show. `glow at 480, on caster, tint ember, reach 180, strength 0.7, lasts 300, blend add` | [Glow](../battle-craft.md#glow), [Anticipation](../battle-craft.md#anticipation) |
 | 440 | 400 | windup | the effect | The fire sent: 20 ember dots (*house*) run from a1 to b1, gathering speed, the head arriving at the contact. Started earlier and longer than the first film's 240 ms from 600, where the head, easing in, never left a1's body before the flash. `trail at 440, count 20, shape dot, tint ember, strength 0.6, lasts 400, blend add` | [Trail](../battle-craft.md#trail) |
@@ -368,10 +371,9 @@ The sheets cannot show the stop, the weight of the shake, or the sound.
 - The gather draws motes, not sparks: the family's motes are heat, and heat drawn in is the charge. Chosen after the
   first film, where ember sparks were lost on a1's warm body; the owner may prefer sparks, then the kit's spark
   needs to be drawn larger.
-- The trail eases in, so its head crosses most of the gap in its last 150 ms. Started at 440 ms after the first
-  film, it now leaves a1's body by 780 ms, but its head is a quarter of the way to b1 there, and the flash hides
-  the rest. Starting it earlier again buys little: a later pass needs a trail that does not ease in (linear or
-  easing out), a kit change, then the film checks the head past the middle at 780 ms.
+- The trail eased in, so its head crossed most of the gap in its last 150 ms: at 780 ms it was a quarter of the way
+  to b1. Built since (#947): a trail goes at an even pace and its motes live 240 ms, so at 780 ms the head is past
+  the middle.
 
 ## Deep Freeze (`spell:ice_spear:v1`)
 

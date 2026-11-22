@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { IMPACT_MS, WINDUP_MS, VFX_MS, MOTION_SCALE } from '../../table/battle-timing.js';
-import { stagingBeats } from '../../table/battle-staging.js';
-import { BONE, FLIGHT, flightAt } from '../../table/battle-motion.js';
+import { STAGGER_MS, stagingBeats } from '../../table/battle-staging.js';
+import { BLOOD, BONE, EMBER, FLIGHT, HIDE, SOOT, flightAt } from '../../table/battle-motion.js';
 import { LIGHT_COLOURS } from '../../table/battle-ground.js';
 import type { SpellVisual } from './types';
 import type { EffectsKit, StagedBeat } from './fx';
@@ -10,16 +10,17 @@ import type { EffectsKit, StagedBeat } from './fx';
 export interface EffectAnchor { x: number; y: number; radius: number; feet?: number; head?: number }
 // The families' colours are named once, where the ground's light reads them too (`table/battle-ground.js`).
 const PALETTE: Record<string, number> = { ...LIGHT_COLOURS, neutral: 0xaab8c0 };
-// A motif that carries its own colour whatever the family: embers are warm, a wound is blood.
-// Blood is a deep brown red: the paler 0xb66f7e read pink over the sky (#919, the owner's choice).
-const MOTIF_COLOR: Record<string, number> = { fire: 0xe0763f, wound: 0x9a3b34 };
-// The colours a beat names (`table/battle-staging.js`): the palette's bone, which stays equal to `--brand-bone`
-// (docs/art/branding.css), and the two a motif already carries. The target marker's gold is not among them.
-// `hide` is bone in shadow: a flake of a figure's own hide, which must not read as the bright chip of a blow.
-const TINTS: Record<string, number> = { bone: BONE, ember: MOTIF_COLOR.fire, blood: MOTIF_COLOR.wound, hide: 0x8c7f68 };
-
-// Between two copies of one beat, at 1× (*house*, the craft book's 30 to 60 ms).
-const STAGGER_MS = 40;
+// A motif that carries its own colour whatever the family: embers are warm, a wound is blood. The battle's colours
+// are named once, in `table/battle-motion.js` (docs/art/spell-vfx.md, "The battle's colours").
+const MOTIF_COLOR: Record<string, number> = { fire: EMBER, wound: BLOOD };
+// The colours a beat names (`table/battle-staging.js`): the palette's bone, the two a motif already carries, and
+// hide, bone in shadow. The target marker's gold is not among them.
+const TINTS: Record<string, number> = { bone: BONE, ember: EMBER, blood: BLOOD, hide: HIDE };
+// The motif is drawn under the kit's particles on its figure (#942): its strokes are opaque on a dark edge, and
+// beads or motes drawn under them showed only beside them.
+const MOTIF_DEPTH = 1999;
+// The beats that are the view's and not a figure's: played once a cast, on the caster's side.
+const VIEW_BEATS = ['shake', 'push'];
 
 /**
  * Who a beat plays on: where it stands, which creature it is, and its picture when the scene has one. `drift` is
@@ -65,35 +66,38 @@ export class SpellEffects {
     return beats && beats.filter(beat => beat.window === window);
   }
 
-  private play(staged: StagedBeat, visual: SpellVisual, on: EffectFigure, rate: number, from?: EffectAnchor, toward?: EffectAnchor, copy = 0) {
+  private play(staged: StagedBeat, visual: SpellVisual, on: EffectFigure, rate: number, from?: EffectFigure, toward?: EffectAnchor, copy = 0) {
     // The same beat on several targets does not land on one frame (the craft book, "Stagger and overlap"): each
     // copy starts a little after the one before, as far as the beat's window leaves room.
     const end = staged.window === 'windup' ? WINDUP_MS : WINDUP_MS + IMPACT_MS;
     const late = Math.max(0, Math.min(copy * STAGGER_MS, end - staged.at - (staged.lasts ?? 0)));
     const beat = late ? { ...staged, delay: staged.delay + late } : staged;
-    const origin = from ?? on.anchor, aim = toward ?? on.anchor;
+    const origin = from?.anchor ?? on.anchor, aim = toward ?? on.anchor;
     const straight = origin.x === aim.x && origin.y === aim.y ? null : Math.atan2(aim.y - origin.y, aim.x - origin.x);
     // What a projectile knocks off its target goes on the way the projectile came in, down the end of its arc,
     // not along the straight line from its caster's centre.
-    const heading = from && straight !== null && visual.delivery === 'projectile' ? flightAt(from, on.anchor, 1).angle : straight;
+    const heading = from && straight !== null && visual.delivery === 'projectile' ? flightAt(from.anchor, on.anchor, 1).angle : straight;
     const color = TINTS[beat.tint ?? ''] ?? PALETTE[visual.family] ?? PALETTE.neutral;
     // A projectile's trail keeps to the arc its quill flies.
     const flight = beat.beat === 'trail' && visual.delivery === 'projectile';
-    this.kit!.play({ beat, at: on.anchor, creature: on.id, figure: on.image, color, rate, heading, from, flight });
+    // A beat drawn on a figure goes where its body is carried, and a trail leaves its caster where the caster stands
+    // when it starts (#933): the scene gives a drift only to a caster, whose body the action moves.
+    this.kit!.play({ beat, at: on.anchor, creature: on.id, figure: on.image, color, rate, heading, from: from?.anchor, flight,
+      drift: on.drift, fromDrift: from?.drift });
   }
 
-  /** The beats of a window that play once a cast: those on the caster, and the shake, which is the view's. */
+  /** The beats of a window that play once a cast: those on the caster, and the shake and the push, which are the view's. */
   private once(beats: StagedBeat[], visual: SpellVisual, actor: EffectFigure, rate: number, toward?: EffectAnchor) {
     for (const beat of beats) {
-      if (beat.beat !== 'motif' && beat.beat !== 'trail' && (beat.on === 'caster' || beat.beat === 'shake')) this.play(beat, visual, actor, rate, undefined, toward);
+      if (beat.beat !== 'motif' && beat.beat !== 'trail' && (beat.on === 'caster' || VIEW_BEATS.includes(beat.beat))) this.play(beat, visual, actor, rate, undefined, toward);
     }
   }
 
   /** The beats of a window that play on each target. A trail runs from the caster to it. */
-  private each(beats: StagedBeat[], visual: SpellVisual, target: EffectFigure, rate: number, origin?: EffectAnchor) {
+  private each(beats: StagedBeat[], visual: SpellVisual, target: EffectFigure, rate: number, origin?: EffectFigure) {
     const copy = this.copies++;
     for (const beat of beats) {
-      if (beat.beat === 'motif' || beat.beat === 'shake') continue;
+      if (beat.beat === 'motif' || VIEW_BEATS.includes(beat.beat)) continue;
       // A trail keeps to the quill it follows: it is not staggered.
       if (beat.beat === 'trail') this.play(beat, visual, target, rate, origin);
       else if (beat.on === 'target') this.play(beat, visual, target, rate, origin, undefined, copy);
@@ -108,7 +112,7 @@ export class SpellEffects {
   }
 
   private graphic(motif: string, creature: string, phase: string) {
-    const graphic = this.scene.add.graphics().setDepth(2000).setName('spell-vfx');
+    const graphic = this.scene.add.graphics().setDepth(MOTIF_DEPTH).setName('spell-vfx');
     graphic.setData({ motif, creature, phase });
     this.objects.add(graphic);
     return graphic;
@@ -128,7 +132,7 @@ export class SpellEffects {
     const beats = this.staged(visual, 'windup');
     if (beats) {
       this.once(beats, visual, caster, rate, destinations[0]?.anchor);
-      for (const destination of destinations) this.each(beats, visual, destination, rate, actor);
+      for (const destination of destinations) this.each(beats, visual, destination, rate, caster);
     }
     if (visual.delivery === 'projectile') {
       for (const { id, anchor } of destinations) {
@@ -178,12 +182,13 @@ export class SpellEffects {
     if (beats) this.once(beats, visual, caster, rate, toward);
   }
 
-  impact(visual: SpellVisual, recipient: EffectFigure, rate: number, origin?: EffectAnchor) {
+  impact(visual: SpellVisual, recipient: EffectFigure, rate: number, caster?: EffectFigure) {
     const beats = this.staged(visual, 'impact');
+    const origin = caster?.anchor;
     // A projectile's strokes run along the end of its arc: the motif is told it came from back along that line.
     const came = origin && visual.delivery === 'projectile' ? arrival(origin, recipient.anchor) : origin;
     if (!beats) { this.motif(visual, recipient.anchor, recipient.id, rate, came, VFX_MS, recipient.drift); return; }
-    this.each(beats, visual, recipient, rate, origin);
+    this.each(beats, visual, recipient, rate, caster);
     // The motif is one beat among the others: when the staging places it, for as long as it says.
     const motif = beats.find(beat => beat.beat === 'motif');
     if (motif) this.after(motif.delay / rate, () => this.motif(visual, recipient.anchor, recipient.id, rate, came, motif.lasts, recipient.drift));
@@ -236,8 +241,6 @@ const FADE_SCALE: Record<string, number> = { arc: 1, void: .55 };
 type Painter = (g: Phaser.GameObjects.Graphics, r: number, color: number, motif: string, from: { x: number; y: number } | null) => void;
 const vector = (x: number, y: number) => new Phaser.Math.Vector2(x, y);
 
-// The palette's soot (`--brand-soot`, docs/art/branding.css): the edge a pale stroke is read against on a pale hide.
-const SOOT = 0x070d10;
 // A blow has a direction, and its strokes run along it: from the caster's side of the figure to the far side
 // (the craft book, "An impact that keeps the direction"). A slash cuts across it instead, 60° off the blow, as a
 // claw rakes (#919, the owner's choice): with the blow vertical, the two motifs no longer read the same. With no

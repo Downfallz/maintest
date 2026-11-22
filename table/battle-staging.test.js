@@ -48,6 +48,20 @@ test('a ring aimed along the blow or back against it opens as an arc of 120° un
   assert.deepEqual([along.spread, back.spread, told.spread], [120, 120, 90]);
 });
 
+test('a push of the camera is the windup\'s, on its caster, and once a staging', () => {
+  // The craft book, "Slow push on a capstone": the view moves in while a great spell gathers, and lets go at the impact.
+  const [push] = stagingBeats(visual([{ beat: 'push', at: 120 }]));
+  assert.deepEqual([push.window, push.on, push.lasts, push.strength], ['windup', 'caster', 600, .5]);
+  assert.equal(stagingBeats(visual([{ beat: 'push', at: 120, lasts: 721 }])), null);
+  assert.equal(stagingBeats(visual([{ beat: 'push', at: WINDUP_MS }])), null);
+  assert.equal(stagingBeats(visual([{ beat: 'push', at: 0 }, { beat: 'push', at: 300 }])), null);
+});
+
+test('a burst may fall: its pieces drop off the figure', () => {
+  assert.ok(DIRECTIONS.includes('down'));
+  assert.equal(stagingBeats(visual([{ beat: 'burst', at: 900, direction: 'down' }]))[0].spread, 50);
+});
+
 test('a beat near the end of its window is shortened to end inside it', () => {
   assert.equal(stagingBeats(visual([{ beat: 'gather', at: 700 }]))[0].lasts, WINDUP_MS - 700);
   assert.equal(stagingBeats(visual([{ beat: 'flow', at: ACTION_MS - 100 }]))[0].lasts, 100);
@@ -91,7 +105,7 @@ test('the page and the builder hold one vocabulary', () => {
   assert.deepEqual(list('Blends'), [...BLENDS]);
   assert.deepEqual(list('Directions'), [...DIRECTIONS]);
   assert.deepEqual(list('Levels'), [...LEVELS]);
-  assert.deepEqual(list('Single'), ['motif', 'flash', 'shake']);
+  assert.deepEqual(list('Single'), ['motif', 'flash', 'shake', 'push']);
   assert.equal(number('WindupMs'), WINDUP_MS);
   assert.equal(number('ActionMs'), WINDUP_MS + IMPACT_MS);
   assert.equal(number('MaxBeats'), MAX_BEATS);

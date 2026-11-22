@@ -4,12 +4,12 @@
 import { IMPACT_MS, VFX_MS, WINDUP_MS } from './battle-timing.js';
 
 // The same words as `SpellArt` (src/DownfallArena.Infrastructure/Resources/SpellArt.cs); the test reads both.
-export const BEATS = Object.freeze(['motif', 'burst', 'flow', 'trail', 'gather', 'glow', 'flash', 'shake', 'pulse']);
+export const BEATS = Object.freeze(['motif', 'burst', 'flow', 'trail', 'gather', 'glow', 'flash', 'shake', 'pulse', 'push']);
 export const ANCHORS = Object.freeze(['caster', 'target']);
 export const SHAPES = Object.freeze(['dot', 'spark', 'shard', 'ring']);
 export const TINTS = Object.freeze(['family', 'bone', 'ember', 'blood', 'hide']);
 export const BLENDS = Object.freeze(['normal', 'add', 'screen']);
-export const DIRECTIONS = Object.freeze(['out', 'along', 'back', 'up']);
+export const DIRECTIONS = Object.freeze(['out', 'along', 'back', 'up', 'down']);
 // Where on its figure a beat starts (the craft book, "A beat on the ground"): what starts at the feet lies on the ground.
 export const LEVELS = Object.freeze(['feet', 'centre', 'head']);
 export const MAX_BEATS = 12;
@@ -17,6 +17,10 @@ export const MAX_PARTICLES = 24;
 // The most particles alive on the field at once, whatever the beats ask for (the craft book, "A budget of pixels").
 export const SCENE_PARTICLES = 150;
 export const ACTION_MS = WINDUP_MS + IMPACT_MS;
+// Between two copies of one beat on several targets, at 1× (*house*, the craft book's 30 to 60 ms, "Stagger and overlap").
+export const STAGGER_MS = 40;
+// The beats a staging holds once at most: the view has one motif a figure, one flash, one trauma and one zoom.
+export const SINGLE = Object.freeze(['motif', 'flash', 'shake', 'push']);
 
 // What a beat plays with when its author left a parameter out. `lasts` is at 1×; a beat near the end of its
 // window is shortened to end inside it.
@@ -30,6 +34,8 @@ const DEFAULTS = Object.freeze({
   flash: { on: 'target', lasts: 80, tint: 'bone' },
   shake: { on: 'target', lasts: 120, strength: .25 },
   pulse: { on: 'target', lasts: 300, tint: 'family', strength: .5 },
+  // The slow push (the craft book, "Slow push on a capstone"): the view moves in on its caster while the spell gathers.
+  push: { on: 'caster', lasts: 600, strength: .5 },
 });
 
 const WORDS = { on: ANCHORS, shape: SHAPES, tint: TINTS, blend: BLENDS, direction: DIRECTIONS, level: LEVELS };
@@ -39,12 +45,14 @@ const NUMBERS = { count: [1, MAX_PARTICLES], spread: [1, 360], reach: [1, MAX_RE
 const AIMED = Object.freeze(['along', 'back']);
 const given = value => value !== undefined && value !== null;
 
-// The beat's start and its window, or null when it starts outside the action, or a motif starts in the windup.
+// The beat's start and its window, or null when it starts outside the action, a motif starts in the windup, or
+// a push in the impact: the view lets go of a push at the impact.
 function timing(authored) {
   const { at } = authored;
   if (!Number.isInteger(at) || at < 0 || at >= ACTION_MS) return null;
   const window = at < WINDUP_MS ? 'windup' : 'impact';
   if (authored.beat === 'motif' && window !== 'impact') return null;
+  if (authored.beat === 'push' && window !== 'windup') return null;
   const [start, end] = window === 'windup' ? [0, WINDUP_MS] : [WINDUP_MS, ACTION_MS];
   return { at, window, delay: at - start, end };
 }
@@ -99,6 +107,6 @@ export function stagingBeats(visual, known = BEATS) {
   if (!Array.isArray(staging) || staging.length === 0 || staging.length > MAX_BEATS) return null;
   const beats = staging.map(authored => readBeat(authored, known));
   if (beats.includes(null)) return null;
-  for (const once of ['motif', 'flash', 'shake']) if (beats.filter(beat => beat.beat === once).length > 1) return null;
+  for (const once of SINGLE) if (beats.filter(beat => beat.beat === once).length > 1) return null;
   return beats;
 }

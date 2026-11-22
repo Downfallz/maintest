@@ -222,8 +222,8 @@ The sheets cannot show the feel at full speed, nor the sound.
   immediate damage told apart; then a1 needs a hit of its own, which the body does not give a cost.
 - The Bleed is shown at once, in red drops on the victims, though it bleeds them only on the coming rounds. The owner
   may want the targets to show only spirits; then the Bleed is the status chip's alone.
-- Spirits that circle a victim would say "feeding" better than dots flowing out and back: the kit's flow has no orbit,
-  and the book lacks the pattern.
+- Spirits that circle a victim would say "feeding" better than dots flowing out and back, but the kit's flow has no
+  orbit, and the owner chose not to build one (#950).
 
 ## Wraithguard (`spell:revenant_guards:v1`)
 
@@ -317,7 +317,8 @@ The sheets cannot show the feel at full speed, nor the sound.
   only the cost on a caster that received only the cost. The bench now gives such a caster the spell as well, as the
   host does for a ward cast on oneself ([spell-vfx.md](../spell-vfx.md)), and the second film shows a1's motif,
   ring, dots and light over its wound from 960 ms. Nothing is left for the scene.
-- The guard ring opens over its whole beat; a ring that opens fast and then stands is a pattern the book lacks.
+- The guard ring opens over its whole beat; a ring that opens fast and then stands is a pattern the owner chose not
+  to build (#950).
 - The trail on a1, its own ward, has no length: a1 is fed where it stands, and its drops stay at its own feet
   for the trail's time. The owner may want a1's ward told apart, which the kit cannot do by target.
 - The price is carried to the wards by a trail, the only blood that crosses the field in this family; the others
@@ -354,6 +355,7 @@ Filmed at `fc3ec94`, 390 by 844, 1×, a1 on b1, b2 and b3, 4 health lost each, a
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | A cast's load where it stands, then the rise ([movement.md](movement.md), `CAST`). No shared arc. | [Anticipation](../battle-craft.md#anticipation), [Squash and stretch](../battle-craft.md#squash-and-stretch) |
 | 160 | 440 | windup | the effect | The ritual opens: a deep red light swells on a1 and goes, gone by 600 ms. `glow at 160, on caster, tint blood, reach 200, strength 0.6, lasts 440, blend screen` | [Glow](../battle-craft.md#glow), [Anticipation](../battle-craft.md#anticipation) |
+| 200 | 640 | windup | the camera | The slow push, the capstone's: the view moves in on a1 while it gathers, slowly at both ends, 3% closer by the contact (*house*), holding a1 where it stands on the screen; it lets go over 240 ms as the blow lands. Not under less motion. `push at 200, strength 0.5, lasts 640` | [Slow push on a capstone](../battle-craft.md#slow-push-on-a-capstone) |
 | 360 | 340 | windup | the effect | The price, Bleed 4: 14 deep red drops (*house*) thrown up clear of a1's back in a 120° fan, gone by 700 ms. `burst at 360, on caster, count 14, shape dot, tint blood, direction up, spread 120, reach 280, strength 0.15, lasts 340, blend normal` | [Burst](../battle-craft.md#burst), [Anticipation](../battle-craft.md#anticipation) |
 | 480 | 360 | windup | the effect | The breath drawn: 16 blue-green sparks (*house*) on a wide ring around a1 drawn onto it by 840 ms. Wraithguard's are soft dots; these are sharp. At 12 and 0.25 none was seen on the first film. `gather at 480, on caster, count 16, shape spark, tint family, reach 300, strength 0.6, lasts 360, blend add` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Anticipation](../battle-craft.md#anticipation) |
 | 840 | 900 | impact | the effect | The `spirits` motif on each target, gone by 1740 ms. `motif at 840, lasts 900` | [Shape before colour](../battle-craft.md#shape-before-colour), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
@@ -415,7 +417,7 @@ The sheets cannot show the shake, the stop, the feel at full speed, nor the soun
 ### Left
 
 - The scream goes on beyond each foe, along its own line from a1: three arcs, not one wave crossing the three. One
-  wave through all three is a chain between targets, which the kit does not have.
+  wave through all three would be a chain between targets, which the owner chose not to build (#950).
 - The windup's sharp sparks drawn onto a1 say the breath drawn in; a person may read them as the dead called, as
   Wraithguard's dots are. They are told apart by shape only.
 - The red light on a1 at home starts at 1500 ms, after the scene's wound has faded (about 1440 ms on the film), so the

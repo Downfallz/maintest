@@ -39,13 +39,16 @@ sentences; they were made and the spells filmed a third time. The session looked
 did not read them. The coded rows below are the stagings as built. What is still open, for the kit or the scene,
 each its own change:
 
-- A beat on a caster stays at the caster's home while its body crouches or lunges: Blood Hunt's ring opens around
-  the crouched legs, Blood Price's red light sits above the crouched back, and Pursuit's streak runs under the body.
-- A gather lands on its figure's centre, not on its outline: Latch's hooks and Bite's swallow sink into the body.
-- A shard cannot be drawn smaller than about a fifth of a small figure, and a burst's pieces cannot fall: Toxic
-  Mend's and Contagion's flakes of hide read as a hit at 1440 ms; on the owner's word (2026-11-19) they are now
-  fewer, smaller and darker, in the kit's `hide` tint (0x8c7f68, bone in shadow).
-- A motif is drawn over the particles on its figure: beads and motes on a body show only beside the strokes.
+- Built since (#933): a beat on a caster goes with its body while it crouches or lunges: Blood Hunt's ring opens
+  under the crouched feet, Blood Price's red light sits on the crouched back, and Pursuit's streak leaves the body
+  where it stands when the streak starts.
+- Built since (#942): a gather closes on its figure's outline, at 0.6 of its radius, not on its centre: Latch's
+  hooks and Bite's swallow stop at the body's edge.
+- Built since (#942): under a strength of 0.2 a piece shrinks to a fifth of its base, and a burst aimed `down`
+  drops its pieces off the figure. Toxic Mend's and Contagion's flakes of hide (the owner's word, 2026-11-19:
+  fewer, smaller, darker, in `hide`) now fall in a fan of 120° under the body instead of being thrown out.
+- Built since (#942): the motif is drawn under the particles on its figure, so beads and motes on a body show
+  over the strokes.
 - On the effects bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their
   reach, as in the physical family: the sheets show only that case.
 
@@ -361,7 +364,7 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on a1, a2 and a3, nobody struck: a whol
 | 1160 | 580 | impact | the effect | The `spores` motif on each ally, once the drops have soaked in, so the soak and the motif are not one cloud; gone by 1740 ms. `motif at 1160, lasts 580` | [Shape before colour](../battle-craft.md#shape-before-colour), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 840 | 320 | impact | the effect | The secretion landing, the signature's first half: 12 round green drops (*house*) on a ring around each ally close on its centre by 1160 ms. Drops, opaque: what a gland makes. `gather at 840, on target, count 12, shape dot, tint family, reach 200, strength 0.8, lasts 320, blend normal` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1160 | 420 | impact | the effect | The mend, the one light: a soft green glow on each body, close to it, as the drops soak in, gone by 1580 ms. Not a ring: nothing struck the ground. `glow at 1160, tint family, reach 170, strength 0.55, lasts 420, blend screen` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
-| 1240 | 400 | impact | the effect | The price, the signature's second half: 6 small dark flakes (*house*), the ally's own hide loosened, bone in shadow, knocked off all round, short. Fewer, smaller and darker on the owner's word (2026-11-19), so they are not read as a hit. `burst at 1240, count 6, shape shard, tint hide, direction out, spread 360, reach 140, strength 0.05, lasts 400, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 1240 | 400 | impact | the effect | The price, the signature's second half: 6 small dark flakes (*house*), the ally's own hide loosened, bone in shadow, dropping off its body and falling in a fan under it, short. Fewer, smaller and darker on the owner's word (2026-11-19), so they are not read as a hit; falling since #942, where they were thrown out all round. `burst at 1240, count 6, shape shard, tint hide, direction down, spread 120, reach 140, strength 0.05, lasts 400, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1240 | 600 | impact | the effect | What clings for the round: 6 green beads alive at once on or just over each body (a reach of 60: at 120 they stood off it like Contagion's cloud), drift a little and shrink, gone by 1840 ms. `flow at 1240, count 6, shape dot, tint family, direction out, spread 360, reach 60, strength 0.5, lasts 600, blend normal` | [Flow](../battle-craft.md#flow), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 1840 | 700 | impact | the field | Nothing new. Every figure home, breathing. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
@@ -399,8 +402,8 @@ node scripts/battle/filmstrip.mjs spell:noxious_cure:v1 --actor a1 --targets a1,
 - 900 to 1080 ms: round green drops on a ring around each of a1, a2 and a3, closing on each body; the spore motif on
   each. Nothing over the heads, no ring on the ground.
 - 1200 to 1380 ms: the drops landed; a soft green light coming up on each body, close to it.
-- 1320 to 1380 ms: a few small dark flakes close to each outline (a burst cannot fall), none bright, no piece
-  that reads as a splinter of a hit; a few green beads on each body.
+- 1320 to 1380 ms: a few small dark flakes falling below each outline, none bright, no piece that reads as a
+  splinter of a hit; a few green beads on each body.
 - 1440 ms (whole): the light on each body, fading; a flake or two below each figure's middle; beads on each body.
 - 1680 ms (whole): a bead or two at most. 1920 ms (whole) and every frame after: no effect object on the field.
 - b1, b2 and b3 are not lit, moved or marked on any frame. Nothing in the effect is gold.
@@ -800,7 +803,7 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, b2 and b3, 2 health lost each: a
 | 840 | 360 | impact | the effect | The cloud lands: 14 green drops (*house*) puff out on every side of each target, past its outline. `burst at 840, count 14, shape dot, tint family, direction out, spread 360, reach 200, strength 0.5, lasts 360, blend screen` | [Burst](../battle-craft.md#burst), [Stagger and overlap](../battle-craft.md#stagger-and-overlap) |
 | 840 | 900 | impact | the effect | The haze, the impact's light and the signature's first half: a wide, faint green light hangs on each target and fades slowly, gone by 1740 ms. Faint, so three of them do not light the field. `glow at 840, tint family, reach 260, strength 0.35, lasts 900, blend screen` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
 | 900 | 1100 | impact | the effect | The cloud that hangs, the signature's second half: 14 large green drops (*house*) alive at once billow slowly off each target on every side, gone by 2000 ms. `flow at 900, count 14, shape dot, tint family, direction out, spread 360, reach 120, strength 0.7, lasts 1100, blend screen` | [Flow](../battle-craft.md#flow), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
-| 1200 | 500 | impact | the effect | The hide eaten: 5 small dark flakes (*house*) knocked off each target all round, short. Toxic Mend's reading: defense lowered. `burst at 1200, count 5, shape shard, tint hide, direction out, spread 360, reach 220, strength 0.05, lasts 500, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 1200 | 500 | impact | the effect | The hide eaten: 5 small dark flakes (*house*) dropping off each target and falling under it, short (#942). Toxic Mend's reading: defense lowered. `burst at 1200, count 5, shape shard, tint hide, direction down, spread 120, reach 220, strength 0.05, lasts 500, blend normal` | [Burst](../battle-craft.md#burst), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 1300 | 800 | impact | the effect | For good: 4 flakes alive at once keep crumbling off each target, gone by 2100 ms, after the cloud. Toxic Mend sheds once; Contagion goes on. `flow at 1300, count 4, shape shard, tint hide, direction out, spread 360, reach 70, strength 0.1, lasts 800, blend normal` | [Flow](../battle-craft.md#flow), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 2100 | 440 | impact | the field | Nothing new. Every figure home, breathing. The result is read here; the hold from 2400 ms is empty. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [Breath at rest](../battle-craft.md#breath-at-rest) |
 
@@ -842,7 +845,7 @@ node scripts/battle/filmstrip.mjs spell:infectious_blast:v1 --actor a1 --targets
   light on each.
 - 960 to 1140 ms: the spore motif on each; larger, slow green drops around each body, a cloud and not a line; the light
   still on each, fainter.
-- 1260 to 1380 ms: a few small dark flakes on every side of each outline, none bright; the drops still around
+- 1260 to 1380 ms: a few small dark flakes falling below each outline, none bright; the drops still around
   each body.
 - 1440 ms (whole): drops and a few flakes around each target; the light faint. 1680 ms (whole): the cloud thinning, a
   flake or two below each figure's middle. 1920 ms (whole): a last drop or flake at most.
@@ -1052,7 +1055,7 @@ The sheets cannot show the stop, the shake, the punch of a critical, or the feel
 ### Left
 
 - The pool is a `glow` ring in `blood` on a normal blend: it opens and fades, as every ring does; a pool that spreads
-  and stays is a scar (the craft book, "A scar that fades"), not built. If the film reads the ring as a ripple, a
+  and stays would be a scar, which the owner chose not to build (#954). If the film reads the ring as a ripple, a
   smaller reach first.
 - The hooks are torn out back toward a1, in bone: blood carried toward the caster says "drunk" in this family. The
   owner may want the rip to spray blood; then it is thrown `along`, away from a1, and joins Wild Swing's fan.
@@ -1147,10 +1150,9 @@ The sheets cannot show the stop, the shake, or the feel of the double strike at 
 
 ### Left
 
-- "Chain attack" in the approved execution: the kit has no beat that joins one target to the next. The craft book has
-  the entry ([Chain between targets](../battle-craft.md#chain-between-targets)), not built as a kit word; a streak
-  from b1 to b3 needs it, or a trail between two targets, each its own change. Until then both victims are struck in
-  one moment, and the arcs on a1's side say where the hunter came from.
+- "Chain attack" in the approved execution: the kit has no beat that joins one target to the next, and the owner
+  chose not to build one (#950): the chain between targets left the craft book. Both victims are struck in one
+  moment, and the arcs on a1's side say where the hunter came from.
 - No blood, by the family's rule: Blood Hunt neither bleeds nor drinks. Settled by the owner, 2026-11-19: blood for a
   Bleed or a drink only.
 - Green sparks drawn off toward the foe mean energy lost: a reading Stage III adds (the opening). The owner may refuse
@@ -1280,6 +1282,7 @@ Filmed at `28f2dc2`, 390 by 844, 1×, a1 on b1, 7 health lost: a whole action an
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | A heavy blow's draw back, hold and strike by the 7 health b1 lost ([movement.md](movement.md)). No shared arc. | [Anticipation](../battle-craft.md#anticipation), [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
 | 120 | 520 | windup | the effect | The jaws open: 14 bone shards (*house*), its teeth, on a ring around a1 drawn onto its body by 640 ms. `gather at 120, on caster, count 14, shape shard, tint bone, reach 240, strength 0.55, lasts 520, blend normal` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Anticipation](../battle-craft.md#anticipation) |
+| 200 | 640 | windup | the camera | The slow push, the capstone's: the view moves in on a1 while it gathers, slowly at both ends, 3% closer by the contact (*house*), holding a1 where it stands on the screen; it lets go over 240 ms as the blow lands. Not under less motion. `push at 200, strength 0.5, lasts 640` | [Slow push on a capstone](../battle-craft.md#slow-push-on-a-capstone) |
 | 300 | 400 | windup | the effect | The siphon organs light: a soft green glow on a1, gone by 700 ms. `glow at 300, on caster, tint family, reach 190, strength 0.5, lasts 400, blend screen` | [Glow](../battle-craft.md#glow), [Anticipation](../battle-craft.md#anticipation) |
 | 840 | 900 | impact | the effect | The `bite` motif on b1, gone by 1740 ms. `motif at 840, lasts 900` | [Shape before colour](../battle-craft.md#shape-before-colour), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
 | 840 | 900 | impact | the caster and the target | The heavy blow's hit stop (120 ms), b1's bone flash, its recoil of 26 px, a1's return, home by 1740 ms (all but home by about 1380 ms on the film) ([movement.md](movement.md)). | [Hit stop](../battle-craft.md#hit-stop), [Recoil](../battle-craft.md#recoil) |

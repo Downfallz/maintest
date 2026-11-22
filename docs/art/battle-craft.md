@@ -163,8 +163,10 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Cost**: none beyond the tweens.
 - **Reduced motion**: nothing.
 - **Here**: the three strokes of a slash and the five bones of a ward appear together today. The kit staggers
-  the copies of a beat, one a target, by 40 ms (*house*) when the beat's window has room
-  (`battle/src/spell-effects.ts`). The strokes of one motif still appear together.
+  the copies of a beat, one a target, by 40 ms (*house*, `STAGGER_MS` in `table/battle-staging.js`) when the
+  beat's window has room (`battle/src/spell-effects.ts`). The ladder's budget of particles counts the stagger: the
+  last copy of a beat on three targets is alive 80 ms longer than the first (#936). The strokes of one motif still
+  appear together.
 
 ## The body
 
@@ -301,7 +303,14 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   `Phaser.Cameras.Scene2D.Camera#pan` toward the caster.
 - **Cost**: none to draw. The same reset as the punch zoom.
 - **Reduced motion**: nothing.
-- **Here**: not built. BC8 staged the Stage III spells without it: a staging has no beat for the camera's zoom.
+- **Here**: the kit's `push` (`battle/src/fx/push.ts`), a beat of the windup only, once a staging, on a Stage III
+  spell only (the ladder). It hands the view its push: the scene lays it over the fitted camera with the tremor and
+  the punch (`battle/src/view-shake.ts`), builds it over the beat with a sine in and out to 6% closer at full
+  strength (*house*, `PUSH` in `table/battle-motion.js`), holds it, and lets it go over 240 ms (*house*) when the
+  blow lands. It is not `Phaser.Cameras.Scene2D.Camera#pan`: the scroll moves the field by the share the zoom
+  grew, so the caster stays where it stood on the screen while the field comes in around it. One capstone a
+  family has it, 0.5 strong from 200 ms to the contact, Crushing Stomp's 0.6: Crushing Stomp, Devour, Incinerate,
+  Void Pulse and Death Wail (#950).
 
 ## Particles
 
@@ -346,7 +355,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   BC4 built it could not be read: at a steady pace its pieces spent most of their life over the figure's own
   body, the colour of the motif. A piece now leaves fast and slows (cubic out), is clear of the body by the
   second frame, and falls a little; its size goes by the beat's `strength`, and a reach goes to 400 hundredths
-  of the figure's radius, since 200 ends inside the silhouette (*house*).
+  of the figure's radius, since 200 ends inside the silhouette (*house*). A piece's heading is drawn where the
+  engine places it, before it asks for the piece's place or turn, so a spark points the way it flies whatever
+  order the engine asks them in (#936). Aimed `down`, the pieces drop off the figure and fall: what a body sheds,
+  such as a lowered defense's flakes of hide (#942). Under a `strength` of 0.2 a piece shrinks further, to a fifth
+  of its base near 0, so a flake can be small on a small figure.
 
 ### Flow
 
@@ -374,9 +387,11 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Reduced motion**: nothing.
 - **Here**: the kit's `trail` (`battle/src/fx/trail.ts`). Behind a projectile its head is the quill's own place
   on its arc (`flightAt`), so it leaves with the quill and never runs ahead of it; Paralyzing Barb has one, and
-  Quill, a Stage I spell with no beat in its windup, flies bare. At the feet it is a crack: the head goes at an even pace
-  and what it leaves stays for the whole beat, since a head that eased in crossed the field between two frames
-  (#918, Groundbreaker).
+  Quill, a Stage I spell with no beat in its windup, flies bare. Every head goes at an even pace and its pieces live
+  240 ms (*house*): a head that eased in crossed the field in its last frames, and pieces that lived half a short
+  beat were gone before a film showed a line from a caster to its ally (#918, #947). At the feet it is a crack, and
+  what it leaves stays for the whole beat (Groundbreaker). A trail that is no quill's leaves its caster where the
+  caster's body stands when it starts (#933).
 
 ### Gravity well and convergence
 
@@ -392,7 +407,9 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
 - **Here**: the windup draws a ring that grows away from the caster. The kit's `gather` (`battle/src/fx/gather.ts`) draws particles
   in from a ring instead, for a spell whose staging asks. BC8 uses it too, for a charge, a freeze that closes in, the void and the spirits among others; the blood cost is drops leaving the caster.
   BC6 uses it first: Focus draws six motes in, Carapace and Brace draw bone shards onto the plates, and the
-  Stage III blows load their caster with it through the windup.
+  Stage III blows load their caster with it through the windup. Its pieces close on the figure's outline, at 0.6
+  of its radius (*house*), each on the side it came from: landed on the centre, hooks sank into the body and showed
+  only on their way in (#942). A gather on a caster goes with its body when the action carries it (#933).
 
 ### Additive light
 
@@ -457,7 +474,8 @@ bake the drawing to a texture first, or filter a container.
   ground under the figure, that opens to its reach over the whole beat and fades (*house*). Two of them 160 ms
   apart read as an aftershock. It is the strongest single beat the kit has, kept for Stage II and Stage III.
   A pulse on the acting figure was drowned out by the gold rim the scene draws around it: while one plays, the rim is
-  quieted to a fifth (*house*) and given back when the beat ends or is cleared (#919).
+  quieted to a fifth (*house*) and given back when the beat ends or is cleared (#919). The blue rim the turn order
+  or a tie lights is quieted the same way, counted on its own (#937).
 
 ### Blur
 
@@ -526,8 +544,8 @@ bake the drawing to a texture first, or filter a container.
   `Phaser.GameObjects.NoiseSimplex2D` and `Phaser.GameObjects.Gradient`.
 - **Cost**: one draw call each, and it breaks the batch. Its price is the pixels of its quad: keep the quad small.
 - **Reduced motion**: nothing during an action. A shader that is part of the ground shows one still frame.
-- **Here**: not used. The plan allows one for a hero effect. Candidates: the eclipse's corona (BC9), and the
-  void, which BC8 staged from the kit's beats and left without a dark of its own.
+- **Here**: not used. The plan allows one for a hero effect. The eclipse's corona (BC9) was drawn as a ring
+  instead, and the owner chose to give the void no dark of its own (#950).
 
 ## Projectiles
 
@@ -567,19 +585,6 @@ bake the drawing to a texture first, or filter a container.
 - **Reduced motion**: nothing.
 - **Here**: not built. The kit's trail is particles. The first spell that needs a ribbon chooses one of the
   two forms on the bench, by measure.
-
-### Chain between targets
-
-- **What**: a jagged line from one target to the next. Split each segment at its middle and move the middle
-  sideways; halve the move at each pass. Draw two bolts and move their points every frame, so it flickers. A
-  glow under the bright line gives it a core.
-- **Source**: [Lightning Bolts](https://www.drilian.com/posts/2009.02.25-lightning-bolts/), Josh Jersild, 2009.
-- **Phaser**: `Phaser.GameObjects.Graphics#strokePoints` on points built with `Phaser.Math.Vector2`; the offsets
-  come from a `Phaser.Math.RandomDataGenerator` with a seed, so a film strip repeats.
-- **Cost**: one `Graphics`. A redraw is a new path, not a new object.
-- **Reduced motion**: nothing. A flickering bolt is a flash: see "Flash limits".
-- **Here**: `lightning_bolt` draws one fixed nine-point arc from the caster to each recipient. BC8 staged Shock
-  around that arc and did not redraw it: the subdivision and the flicker are not built.
 
 ### An impact that keeps the direction
 
@@ -662,21 +667,6 @@ bake the drawing to a texture first, or filter a container.
   ward and a fizzle get nothing. The corona is a soft ring drawn at boot, additive, around a disc left dark: a
   `Phaser.GameObjects.PointLight` on the disc was filmed first, and read as a second sun.
 
-### A scar that fades
-
-- **What**: a mark left where the blow landed, which fades. For a few seconds the ground remembers
-  (*house*).
-- **Source**: [Phaser 4 Rendering Concepts](https://phaser.io/tutorials/phaser-4-rendering-concepts), Phaser
-  Studio, for what a render texture costs. No source read here describes the pattern or gives a duration.
-- **Phaser**: one image under the figure, blended with `Phaser.BlendModes.MULTIPLY`, its alpha tweened to 0. For
-  many marks, stamp them into a `Phaser.GameObjects.RenderTexture` with `Phaser.GameObjects.RenderTexture#stamp`,
-  then `Phaser.GameObjects.RenderTexture#render`: in Phaser 4 nothing is drawn until `render` is called.
-- **Cost**: an image is free. A render texture is a framebuffer.
-- **Reduced motion**: nothing: the settled frame has no scar.
-- **Here**: not built: BC9 staged the ground's air, its depth and its light, and no scar. A scar is decoration,
-  never state: a replay and a first load show none. Whoever builds it fades it inside the settle window, so no
-  frame the player can navigate to holds one.
-
 ### A beat on the ground
 
 - **What**: a beat says where it starts on its figure: at the feet, at the centre or at the head. What starts at
@@ -720,7 +710,9 @@ bake the drawing to a texture first, or filter a container.
 - **Cost**: none.
 - **Reduced motion**: the meaning stays in the result text and the frame after.
 - **Here**: 16 motifs for 44 spells, each family with its shapes (`docs/art/spell-vfx.md`). BC6 to BC8 give each
-  spell its own staging; the motif stays the primary element, so a spell is still read as its family first.
+  spell its own staging; the motif stays the primary element, so a spell is still read as its family first. It
+  is drawn just under the kit's particles (depth 1999 against 2000 and 2001): its strokes are opaque on a dark
+  edge, and beads or motes drawn under them showed only beside them (#942).
 
 ### Shape before colour
 
