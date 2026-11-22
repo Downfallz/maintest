@@ -14,7 +14,7 @@ The current painting names below are from the [source register](sources/pages/sc
 
 | # | Placement | Current image | New composition | Approved source |
 | --- | --- | --- | --- | --- |
-| 01 | Create a game with a selected friend | predator-and-deathstalker | The empty bank. From behind a six-legged Predator, look across still water to a gap in the mist. Keep the Predator on the right and a broken arch visible across the pool. | Pending |
+| 01 | Create a game with a selected friend | predator-and-deathstalker | The empty bank. From behind a six-legged Predator, look across still water to a gap in the mist. Keep the Predator on the right and a broken arch visible across the pool. | [Empty bank](sources/pages/replacements/empty-bank.webp) |
 | 02 | Received invitation card | predator-and-deathstalker | Reverse the view from 01. The recipient stands on the empty bank and sees the waiting Predator looking back. Match the arch, waterline and evening light to the accepted 01. Leave room for card text. | Pending |
 | 03 | Sign-out confirmation | predator-at-rest | One open amber eye beneath the Predator's armoured lid, on the right of the band. The panel after sign-out reveals the existing full painting of the resting creature. | Pending |
 | 04 | Friends window | predator-and-deathstalker | A reclining Brute and a watchful Predator share the shelter of one arch. Both look out in the same direction. Group their silhouettes on the right. | Pending |
