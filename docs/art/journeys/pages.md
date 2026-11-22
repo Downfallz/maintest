@@ -741,7 +741,8 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
 ### Left
 
 - Done (#994): the rulebook has its ladder section (`/rules#the-ladder`), and How the ladder counts is now a link
-  to it in place of the disclosure; the page states no rule of the ladder.
+  to it in place of the disclosure; the page states no rule of the ladder. The host's threshold stays beside the
+  link ("Provisional above ±110"), since the book cannot draw it.
 - Settled by the owner on 2026-11-20 on the sheets: the action is filled on an empty page, and it opens an open seat for another player, not a
   friend's invitation; the window lets a player choose A friend.
 - My choices for the head, which the owner may refuse on the sheets; they hold for the statistics and the rulebook:

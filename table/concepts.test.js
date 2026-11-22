@@ -108,7 +108,9 @@ test('the page loads the book it is served beside, and goes on with no card when
 });
 
 // The lessons' brief (docs/art/journeys/lessons.md) gives a card 60 words at 320 px, its title, eyebrow and link
-// included; the card's own words, the title, the lines and the example, keep 10 of them for that frame (#977).
+// included; the card's own words, the title, the lines and the example, keep 10 of them for that frame. #977 brought
+// Mutation and Conditions, the two its measure found over, to 50; the others are held at 60 of their own until a
+// follow-up brings them to 50 as well, the French edition with them.
 const CARD_WORDS = 50;
 const wordsOf = card => [card.title, ...card.lines, card.example].join(' ').trim().split(/\s+/).length;
 test('the cards a lesson opens first fit the brief\'s word budget', () => {

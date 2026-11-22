@@ -103,10 +103,10 @@ sources: ADR 0056, ADR 0057, ADR 0059, ADR 0066, ADR 0089, game-rules#round-sequ
 ```card
 id: mutation
 title: Mutation
-Une mutation apprend des sorts et élève l’initiative d’une créature pour la partie.
-La clé de voûte d’une famille donne un passif à la place{?tier:titan:v1.initiativeBonus = 0}{?tier:archmage:v1.initiativeBonus = 0}{?tier:apex:v1.initiativeBonus = 0}.
-Au round de mutation, vos choix vont à des créatures différentes.
-> Une créature à {creature.initiative} d’initiative acquiert Brute (+{tier:brute:v1.initiativeBonus}) : elle agit à {creature.initiative + tier:brute:v1.initiativeBonus}.
+Une mutation apprend de nouveaux sorts à une créature et élève son initiative pour la partie.
+Une clé de voûte ne donne qu’un passif{?tier:titan:v1.initiativeBonus = 0}{?tier:archmage:v1.initiativeBonus = 0}{?tier:apex:v1.initiativeBonus = 0}.
+À un round de mutation, votre équipe a {rules.evolutionPicksPerOpportunity|choix|choix}, un par créature.
+> Une créature à {creature.initiative} d’initiative acquiert Brute (+{tier:brute:v1.initiativeBonus}) et agit à {creature.initiative + tier:brute:v1.initiativeBonus}.
 ```
 
 ## Clés de voûte {#capstones}

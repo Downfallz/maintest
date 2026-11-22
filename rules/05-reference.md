@@ -39,7 +39,7 @@ id: conditions
 title: Conditions
 A condition is a lasting effect: an amount, for a number of rounds.
 It counts down each Aftermath, ending at zero.
-A stunned creature sits out its Stun, then cannot be stunned for one round.
+A stunned creature sits out the Stun, then cannot be stunned for one round.
 > Latch's Bleed deals {spell:latch:v1.bleed} each Upkeep for the next {spell:latch:v1.bleed.durationRounds|round|rounds}, ignoring Defense.
 ```
 
@@ -84,14 +84,17 @@ sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
 
 ## The ladder {#the-ladder}
 
-The ladder ranks the players who have an account, each by a rating.
+The ladder ranks the players who have played a ranked game, each by a rating.
 
 After a ranked game, the ladder moves both players' ratings by how surprising the result was: beating a
-higher-rated player moves them more than beating a lower-rated one. A ranked game is a 3v3 game between two seats
-held by two different accounts. A game against a bot, on a shared device or opened unranked never counts.
+higher-rated player moves the ratings more than beating a lower-rated one. A draw counts as half a win. The less
+sure the ladder is of a rating, the more one game moves it.
+
+A ranked game is a 3v3 game between two seats held by two different accounts. A game against a bot, on a shared
+device or opened unranked never counts. A game the table voids never counts either, even once it has finished.
 
 Beside each rating, the ± says how sure the ladder is of it. While its ± is high, a rating is **provisional**: the
 leaderboard lists it after the settled ones. A new player starts provisional. A player who
 stops playing keeps their rating, but its ± grows each day without a game, so it drifts back toward provisional.
 
-sources: ADR 0124, ADR 0155, ADR 0171
+sources: ADR 0124, ADR 0155, ADR 0171, ADR 0176

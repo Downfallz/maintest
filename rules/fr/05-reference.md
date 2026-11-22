@@ -40,7 +40,7 @@ id: conditions
 title: États
 Un état, effet durable, a une valeur et un nombre de rounds.
 Il décompte aux Retombées et finit à zéro.
-Une créature étourdie passe son Stun, puis ne peut plus l’être pendant un round.
+Une créature étourdie passe le Stun, puis ne peut pas l’être pendant un round.
 > Le Bleed de Latch inflige {spell:latch:v1.bleed} à chaque Entretien pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, malgré toute Défense.
 ```
 
@@ -89,16 +89,19 @@ sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
 
 ## Le classement {#the-ladder}
 
-Le classement range les joueurs qui ont un compte, chacun selon sa cote.
+Le classement ordonne les joueurs qui ont joué une partie classée, chacun selon sa cote.
 
-Après une partie classée, le classement fait bouger les cotes des deux joueurs selon la surprise du résultat :
-battre un joueur mieux coté les fait bouger davantage que battre un joueur moins bien coté. Une partie classée est
-une partie en 3v3 entre deux places tenues par deux comptes différents. Une partie contre un bot, sur un appareil
-partagé ou ouverte hors classement ne compte jamais.
+Après une partie classée, le classement fait bouger les cotes des deux joueurs selon le degré de surprise du
+résultat : battre un joueur mieux coté fait bouger les cotes davantage que battre un joueur moins bien coté. Une
+partie nulle compte pour une demi-victoire. Moins le classement est sûr d’une cote, plus une partie la fait bouger.
+
+Une partie classée est une partie en 3v3 entre deux places tenues par deux comptes différents. Une partie contre un
+bot, sur un appareil partagé ou ouverte hors classement ne compte jamais. Une partie que la table annule ne compte
+jamais non plus, même une fois terminée.
 
 À côté de chaque cote, le ± dit à quel point le classement en est sûr. Tant que son ± est élevé, une cote est
 **provisoire** : la page du classement la place après les cotes établies. Un nouveau joueur
-commence provisoire. Un joueur qui cesse de jouer garde sa cote, mais son ± grandit chaque jour sans partie : elle
-redevient peu à peu provisoire.
+commence provisoire. Un joueur qui cesse de jouer garde sa cote, mais son ± grandit chaque jour sans partie : sa
+cote redevient peu à peu provisoire.
 
-sources: ADR 0124, ADR 0155, ADR 0171
+sources: ADR 0124, ADR 0155, ADR 0171, ADR 0176

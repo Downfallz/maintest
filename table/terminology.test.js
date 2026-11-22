@@ -386,8 +386,13 @@ function miscased(files) {
   return found;
 }
 
-test('a name of several words keeps the capitals the EN column gives it', () => {
-  assert.deepEqual(miscased(sources()), []);
+// The public site says the names too (showcase/lore.mjs writes the field guide's words).
+const showcaseSources = () => readdirSync(join(root, 'showcase'))
+  .filter(name => name.endsWith('.mjs') && !name.endsWith('.test.mjs'))
+  .map(name => ({ path: `showcase/${name}`, texts: scriptText(read(`showcase/${name}`)) }));
+
+test('a name of several words in the EN column keeps its capitals in the table, the battle and the showcase', () => {
+  assert.deepEqual(miscased([...sources(), ...showcaseSources()]), []);
 });
 
 test('a name of several words written as a phrase is found, its capitals and an eyebrow are not', () => {

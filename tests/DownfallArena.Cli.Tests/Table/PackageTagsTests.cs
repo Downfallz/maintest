@@ -60,6 +60,7 @@ public sealed class PackageTagsTests : IDisposable
         var cards = JsonDocument.Parse(Encoding.UTF8.GetString(answer.Body)).RootElement.GetProperty("cards").EnumerateArray().ToList();
         cards.ShouldNotBeEmpty();
         var damage = 0;
+        var lasting = 0;
         foreach (var card in cards)
         {
             var lines = card.GetProperty("effects").EnumerateArray().Concat(card.GetProperty("casterEffects").EnumerateArray()).Select(line => line.GetString()!).ToList();
@@ -73,10 +74,34 @@ public sealed class PackageTagsTests : IDisposable
                     marks[index].GetProperty("figures").GetString().ShouldBe(lines[index]["Damage ".Length..]);
                     damage++;
                 }
+
+                // A lasting line's rounds carry the field chips' words, so no number reads two ways (#1026).
+                var figures = marks[index].GetProperty("figures").GetString()!;
+                if (lines[index].EndsWith(", 1 round", StringComparison.Ordinal))
+                {
+                    figures.ShouldEndWith("1 rd");
+                    lasting++;
+                }
+                else if (lines[index].EndsWith(" rounds", StringComparison.Ordinal))
+                {
+                    figures.ShouldEndWith(" rds");
+                    lasting++;
+                }
+                else if (lines[index].EndsWith(", permanent", StringComparison.Ordinal))
+                {
+                    figures.ShouldEndWith("perm.");
+                    lasting++;
+                }
+
+                if (lines[index].Contains(" a round, ", StringComparison.Ordinal))
+                {
+                    figures.ShouldContain("/rd · ");
+                }
             }
         }
 
         damage.ShouldBeGreaterThan(0);
+        lasting.ShouldBeGreaterThan(0);
     }
 
     /// <summary>The battle shows a package on the creature that bought it from what the package says (ADR 0133).</summary>

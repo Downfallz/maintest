@@ -3,6 +3,7 @@
 Date: 2026-11-03
 
 Status: Accepted. Builds on [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md).
+Rulebook: `the-ladder`
 
 ## Context
 

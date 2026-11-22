@@ -47,8 +47,8 @@
           "round": 8
         },
         "says": [
-          "A stunned creature takes no tempo this round.",
-          "Then it cannot be stunned for a round."
+          "A stunned creature takes no tempo.",
+          "After its Stun, it cannot be stunned for a round."
         ],
         "concepts": [
           "conditions",

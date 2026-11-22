@@ -53,6 +53,6 @@
 .record-drawn { background: color-mix(in srgb, var(--muted) 45%, transparent); }
 .page-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; font-weight: 650; text-decoration: none; }
 .page-action.button-link { border: 1px solid var(--line); border-radius: var(--radius-sharp); color: var(--gold); }
-.ladder-how { margin-top: 18px; }
-.ladder-how a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.ladder-how { margin-top: 18px; font-size: 13px; }
+.ladder-how a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--gold); text-underline-offset: 3px; }
 @media (max-width: 360px) { .ladder th, .ladder td { padding: 11px 7px; } .ladder .deviation { display: block; margin-left: 0; } }

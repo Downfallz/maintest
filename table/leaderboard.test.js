@@ -60,5 +60,7 @@ test('the page links the rulebook\'s ladder section instead of restating it', as
   const ids = book.parts.flatMap(part => part.sections.map(section => section.id));
   const [, section] = /<a [^>]*href="\/rules#([a-z-]+)"[^>]*>[^<]*ladder/i.exec(page) ?? [];
   assert.ok(section && ids.includes(section), `a link to a section of the book: ${section}`);
-  assert.doesNotMatch(page, /provisional-above|surprising the result/);
+  assert.doesNotMatch(page, /surprising the result|do not count/);
+  // The one number the book cannot draw stays the host's, beside the link.
+  assert.match(page, /Provisional above ±<span id="provisional-above">/);
 });

@@ -1,6 +1,6 @@
 # Ce qui a changé
 
-- 2026-11-22: La référence a une section sur le classement : ce qu’est une partie classée, ce qui fait bouger une cote, ce que dit le ± et quand une cote est provisoire. Les cartes Mutation et États sont plus courtes, sans qu’aucune règle ne change (ADR 0124).
+- 2026-11-22: La référence a une section sur le classement : ce qu’est une partie classée, ce qui fait bouger une cote et de combien, qu’une partie nulle compte pour une demi-victoire et qu’une partie annulée ne compte jamais, ce que dit le ± et quand une cote est provisoire. Les cartes Mutation et États sont plus courtes, sans qu’aucune règle ne change (ADR 0124, ADR 0176).
 - 2026-11-18: Trois sorts prennent leur nom définitif : Whirlwind devient Groundbreaker, Claim devient Seize, Soul Feast devient Devour. Aucune règle ne change.
 - 2026-11-18: La carte Mutation ne dit plus qu’une clé de voûte donne un bonus d’initiative : une clé de voûte donne un passif à la place de sorts et d’un bonus d’initiative (ADR 0101).
 - 2026-11-18: Les exemples disent les dégâts que Blood Price inflige à son propre lanceur (ADR 0031).

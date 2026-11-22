@@ -3,6 +3,7 @@
 Date: 2026-11-13
 
 Status: Accepted. Amends [0163](0163-keep-a-table-on-the-content-it-began-on-and-void-what-no-longer-replays.md) and [0168](0168-keep-match-results-in-azure-table-storage.md)
+Rulebook: `the-ladder`
 
 ## Context
 

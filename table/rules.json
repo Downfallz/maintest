@@ -978,10 +978,10 @@
             "title": "Mutation",
             "lines": [
               "A mutation teaches a creature new spells and raises its initiative for good.",
-              "A family's last mutation, its capstone, gives a passive instead.",
-              "On a mutation round, your picks go to different creatures."
+              "A capstone gives only a passive.",
+              "On a mutation round, your team has 2 picks, each for a different creature."
             ],
-            "example": "A creature at 5 initiative acquires Brute (+1): new spells, and it acts at 6."
+            "example": "A creature at 5 initiative acquires Brute (+1) and acts at 6."
           }
         },
         {
@@ -2675,7 +2675,7 @@
             "lines": [
               "A condition is a lasting effect: an amount, for a number of rounds.",
               "It counts down each Aftermath, ending at zero.",
-              "A stunned creature sits out its Stun, then cannot be stunned for one round."
+              "A stunned creature sits out the Stun, then cannot be stunned for one round."
             ],
             "example": "Latch's Bleed deals 2 each Upkeep for the next 3 rounds, ignoring Defense."
           }
@@ -2882,7 +2882,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "The ladder ranks the players who have an account, each by a rating."
+                  "text": "The ladder ranks the players who have played a ranked game, each by a rating."
                 }
               ]
             },
@@ -2890,7 +2890,15 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "After a ranked game, the ladder moves both players' ratings by how surprising the result was: beating a higher-rated player moves them more than beating a lower-rated one. A ranked game is a 3v3 game between two seats held by two different accounts. A game against a bot, on a shared device or opened unranked never counts."
+                  "text": "After a ranked game, the ladder moves both players' ratings by how surprising the result was: beating a higher-rated player moves the ratings more than beating a lower-rated one. A draw counts as half a win. The less sure the ladder is of a rating, the more one game moves it."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "A ranked game is a 3v3 game between two seats held by two different accounts. A game against a bot, on a shared device or opened unranked never counts. A game the table voids never counts either, even once it has finished."
                 }
               ]
             },
@@ -2913,7 +2921,8 @@
           "sources": [
             "ADR 0124",
             "ADR 0155",
-            "ADR 0171"
+            "ADR 0171",
+            "ADR 0176"
           ],
           "card": null
         }
@@ -2966,9 +2975,10 @@
   "changes": [
     {
       "date": "2026-11-22",
-      "text": "The reference has a section on the ladder: what a ranked game is, what moves a rating, what the ± says and when a rating is provisional. The Mutation and Conditions cards are shorter, with no rule changed (ADR 0124).",
+      "text": "The reference has a section on the ladder: what a ranked game is, what moves a rating and by how much, that a draw counts as half a win and a voided game never counts, what the ± says and when a rating is provisional. The Mutation and Conditions cards are shorter, with no rule changed (ADR 0124, ADR 0176).",
       "adrs": [
-        "0124"
+        "0124",
+        "0176"
       ]
     },
     {
