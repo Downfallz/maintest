@@ -244,11 +244,15 @@ function offlineWorker({ network, cached = 'offline page', kept = {} }) {
   const deleted = [];
   // A kept copy is an answer, as the Cache Storage gives one, read afresh each time it is matched.
   const store = new Map(Object.entries({ '/offline.html': cached, ...Object.fromEntries(Object.entries(kept).map(([path, body]) => [path, typeof body === 'string' ? new Response(body) : body])) }));
+  const match = async path => { const found = store.get(path); return found instanceof Response ? found.clone() : found; };
   const caches = {
-    match: async path => { const found = store.get(path); return found instanceof Response ? found.clone() : found; },
+    match,
     open: async () => ({
       add: async path => { store.set(path, `installed ${path}`); },
       put: async (path, response) => { store.set(path, response); },
+      match,
+      keys: async () => [...store.keys()].map(path => ({ url: `https://table.example${path}` })),
+      delete: async request => store.delete(new URL(request.url).pathname),
     }),
     keys: async () => ['downfall-offline-v0', 'downfall-offline-v1', 'downfall-offline-v2'],
     delete: async name => { deleted.push(name); return true; },
@@ -257,8 +261,9 @@ function offlineWorker({ network, cached = 'offline page', kept = {} }) {
   const self = { addEventListener: (kind, handler) => { handlers[kind] = handler; }, skipWaiting: async () => {},
     location: new URL('https://table.example/sw.js'),
     clients: { claim: async () => {} }, registration: { navigationPreload: { enable: async () => {} } } };
-  vm.runInContext(readFileSync(new URL('./sw.js', import.meta.url), 'utf8'), vm.createContext({ self, URL, caches, fetch: network, Headers, Response }));
-  return { handlers, deleted, store };
+  const context = vm.createContext({ self, URL, caches, fetch: network, Headers, Response });
+  vm.runInContext(readFileSync(new URL('./sw.js', import.meta.url), 'utf8'), context);
+  return { handlers, deleted, store, context };
 }
 
 async function install(w) {
@@ -313,6 +318,71 @@ test('installing keeps the offline page and the rulebook: the page, its script, 
   for (const path of ['/offline.html', '/rules', '/rules.js', '/rules.css', '/rules.json', '/rules.fr.json', '/identity.css', '/motion.js', '/brand-mark.svg']) {
     assert.ok(w.store.has(path), `${path} is kept`);
   }
+});
+
+// page-art.js as scripts/ux/pictures.mjs writes it, holding the offline plate's entry among others.
+const pageArtNaming = (...files) => [
+  "export const PAGE_ART = {",
+  "  'parasite-under-slate': {",
+  "    from: 'a', frames: 1, drawn: [323], pages: {\"showcase/mutations\":\"lazy\"},",
+  "    sizes: [\n      { file: 'parasite-under-slate-323.aaaaaaaa.webp', width: 323, height: 182, bytes: 1 },\n    ],",
+  "  },",
+  "  'parasite-offline': {",
+  "    from: 'b', frames: 1, drawn: [358], pages: {\"table/offline\":\"largest\"},",
+  `    sizes: [\n${files.map(file => `      { file: '${file}', width: 358, height: 201, bytes: 1 },`).join('\n')}\n    ],`,
+  "  },",
+  "};",
+].join('\n');
+
+test('the offline plate\'s files are the ones page-art.js names for it, and no other picture\'s', () => {
+  const w = offlineWorker({ network: async () => 'x' });
+  const real = readFileSync(new URL('./page-art.js', import.meta.url), 'utf8');
+  const files = [...w.context.plateFiles(real)];
+  assert.ok(files.length > 0, 'the real page-art.js declares the plate');
+  for (const file of files) {
+    assert.match(file, /^\/page-art\/parasite-offline-\d+\.[0-9a-f]{8}\.webp$/);
+    assert.ok(real.includes(`file: '${file.slice('/page-art/'.length)}'`));
+  }
+  assert.deepEqual([...w.context.plateFiles(pageArtNaming('parasite-offline-358.11111111.webp'))], ['/page-art/parasite-offline-358.11111111.webp']);
+});
+
+test('installing keeps the offline page\'s script, the picture kit and the plate page-art.js names', async () => {
+  const pageArt = pageArtNaming('parasite-offline-358.11111111.webp', 'parasite-offline-716.22222222.webp');
+  const w = offlineWorker({ network: async path => ({ ...answer(`installed ${path}`), text: async () => (path === '/page-art.js' ? pageArt : '') }) });
+
+  await install(w);
+
+  for (const path of ['/offline.js', '/picture.js', '/picture-focus.js', '/page-art.js', '/page-art/parasite-offline-358.11111111.webp', '/page-art/parasite-offline-716.22222222.webp']) {
+    assert.ok(w.store.has(path), `${path} is kept`);
+  }
+  assert.ok(!w.store.has('/page-art/parasite-under-slate-323.aaaaaaaa.webp'), 'only the plate is kept, not every picture');
+});
+
+test('a fresh page-art.js keeps the plate it names and lets go of the older derivation\'s', async () => {
+  const pageArt = pageArtNaming('parasite-offline-358.33333333.webp');
+  const w = offlineWorker({
+    network: async path => ({ ...answer(`fresh ${path}`), text: async () => pageArt }),
+    kept: { '/page-art.js': 'old', '/page-art/parasite-offline-358.11111111.webp': 'old plate' },
+  });
+  const f = fetched('cors', { url: 'https://table.example/page-art.js' });
+
+  w.handlers.fetch(f.event);
+  await f.answered();
+  await f.settled();
+
+  assert.ok(w.store.has('/page-art/parasite-offline-358.33333333.webp'));
+  assert.ok(!w.store.has('/page-art/parasite-offline-358.11111111.webp'));
+});
+
+test('the plate the network cannot load is its kept copy; another picture is the network\'s alone', async () => {
+  const w = offlineWorker({ network: async () => { throw new TypeError('offline'); }, kept: { '/page-art/parasite-offline-358.11111111.webp': 'the plate' } });
+  const plate = fetched('no-cors', { url: 'https://table.example/page-art/parasite-offline-358.11111111.webp' });
+  w.handlers.fetch(plate.event);
+  assert.equal(await bodyOf(plate.answered()), 'the plate');
+
+  const other = fetched('no-cors', { url: 'https://table.example/page-art/latch-under-the-arch-351.11111111.webp' });
+  w.handlers.fetch(other.event);
+  assert.equal(other.answered(), null);
 });
 
 test('a rulebook file the host cannot serve while the worker installs leaves the worker installed', async () => {

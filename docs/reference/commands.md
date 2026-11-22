@@ -562,7 +562,7 @@ The seat's view says the lesson under `practice.tutorial`:
 - `/play` serves the game.
 - The table's files are read once, sent compressed with an ETag and answered 304 when unchanged, pages and
   scripts revalidated on every load and pictures kept a day, and the service worker every page registers keeps
-  one page, `/offline.html`, shown when a page cannot be loaded at all (ADR 0166), and the rulebook (ADR 0191).
+  one page, `/offline.html`, shown when a page cannot be loaded at all (ADR 0166), with `/offline.js`, which draws its plate (ADR 0200), and the rulebook (ADR 0191).
 - `/rules` is the official rulebook (ADR 0188), open to anyone: `rules.html` reads `table/rules.json` and draws its
   contents, every part and section, the concept cards and What changed. `/rules#<id>` opens a section, a part, an
   id `rules/moved.json` redirects, or a concept card's section, at the top of the screen; the filter keeps the

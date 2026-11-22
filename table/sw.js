@@ -1,8 +1,8 @@
 // The table's service worker (ADR 0118): it shows the "your turn" the host pushes, and opens the game when
 // the notice is tapped. It serves no page of the table from a cache while the network answers -- a deploy must reach
 // every page on its next load, and a worker holding yesterday's page would stop that. What it keeps is the offline
-// page (ADR 0166), shown in place of the browser's own error when a page cannot be loaded at all, and the rulebook
-// (ADR 0191), given only when the network cannot answer.
+// page (ADR 0166), shown in place of the browser's own error when a page cannot be loaded at all, with what draws its
+// plate, and the rulebook (ADR 0191), given only when the network cannot answer.
 
 const OFFLINE = '/offline.html';
 const CACHE = 'downfall-offline-v2';
@@ -16,7 +16,21 @@ const RULEBOOK_OWN = new Set([RULEBOOK, '/rules.js', '/rules.css', '/rules.json'
 // so that no other page is drawn with an older deploy's style.
 // The motion kit's module is one of them (ADR 0197): without it the account's less motion would not reach the book.
 const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/motion.js', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
-const RULEBOOK_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED]);
+// What the offline page draws its plate with (ADR 0200): its script, the picture kit and the sizes it derived, and the
+// plate's own files, which page-art.js names. Given only when the network cannot answer at all. The kit is refreshed
+// each time a page loads it; offline.js only when the worker installs again, since no page loads it online.
+const OFFLINE_SCRIPTS = ['/offline.js', '/picture.js', '/picture-focus.js', '/page-art.js'];
+const PAGE_ART = '/page-art.js';
+const PLATE = 'parasite-offline';
+const KEPT_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED, ...OFFLINE_SCRIPTS]);
+
+// The plate's files, as page-art.js names them (scripts/ux/pictures.mjs writes one entry a picture, its sizes listed
+// under it): a worker cannot import a module, so it reads the text. A test reads the real file with it.
+function plateFiles(pageArt) {
+  const entry = pageArt.match(new RegExp(`'${PLATE}': \\{[\\s\\S]*?sizes: \\[([^\\]]*)\\]`));
+  return entry ? [...entry[1].matchAll(/file: '([^']+)'/g)].map(found => `/page-art/${found[1]}`) : [];
+}
+const isPlateFile = path => path.startsWith(`/page-art/${PLATE}-`);
 
 const ICON = '/icon-192.png';
 const BADGE = '/notification-badge.png';
@@ -123,11 +137,12 @@ function read(event) {
   }
 }
 
-// The path a request is kept under when it is one of the rulebook's, or null: same site, read, and named in the list.
-function rulebookPath(request) {
+// The path a request is kept under when it is one the worker keeps, or null: same site, read, and named in the list
+// or one of the offline plate's files.
+function keptPath(request) {
   if (request.method && request.method !== 'GET') return null;
   const url = new URL(request.url);
-  return url.origin === self.location.origin && RULEBOOK_FILES.has(url.pathname) ? url.pathname : null;
+  return url.origin === self.location.origin && (KEPT_FILES.has(url.pathname) || isPlateFile(url.pathname)) ? url.pathname : null;
 }
 
 // A successful answer is kept as the copy of its path; anything else is the network's to show, and never kept. A
@@ -151,17 +166,33 @@ async function copyOf(path) {
 async function keep(path, response) {
   if (!keepable(response)) return;
   try {
-    await (await caches.open(CACHE)).put(path, response);
+    const cache = await caches.open(CACHE);
+    // The sizes are read before the copy is put: a response's body is read once.
+    const plate = path === PAGE_ART ? plateFiles(await response.clone().text()) : null;
+    await cache.put(path, response);
+    if (plate) await keepPlate(cache, plate);
   } catch {
     // A full or refused cache keeps the copy it had: the page itself was answered.
   }
+}
+
+// The plate's files a fresh page-art.js names, kept when they are not yet, and the files of an older derivation let
+// go, so the copy of page-art.js and the plate it names stay one.
+async function keepPlate(cache, files) {
+  if (files.length === 0) return;
+  const named = new Set(files);
+  for (const request of await cache.keys()) {
+    const path = new URL(request.url ?? request, self.location.origin).pathname;
+    if (isPlateFile(path) && !named.has(path)) await cache.delete(request);
+  }
+  await Promise.allSettled(files.map(async path => { if (!(await cache.match(path))) { const response = await fetch(path); if (keepable(response)) await cache.put(path, response); } }));
 }
 
 // A navigation goes to the network as it always did -- through the preload the browser started while the worker woke,
 // when there is one -- and only a navigation that could not be answered at all is shown a kept page: the rulebook's
 // copy for the rulebook, the offline page for anything else.
 async function navigate(event) {
-  const path = rulebookPath(event.request);
+  const path = keptPath(event.request);
   try {
     const response = (await event.preloadResponse) ?? await fetch(event.request);
     if (path && keepable(response)) event.waitUntil(keep(path, response.clone()));
@@ -172,8 +203,8 @@ async function navigate(event) {
   }
 }
 
-// One of the rulebook's files: the network's answer, its copy refreshed, or the copy when the network cannot answer.
-async function rulebookFile(event, path) {
+// One of the files kept: the network's answer, its copy refreshed, or the copy when the network cannot answer.
+async function keptFile(event, path) {
   try {
     const response = await fetch(event.request);
     if (keepable(response)) event.waitUntil(keep(path, response.clone()));
@@ -184,12 +215,13 @@ async function rulebookFile(event, path) {
   }
 }
 
-// The offline page must be kept, or the worker does not install; the rulebook is kept as well as it can be, so a host
-// that cannot serve one of its files still has a worker that shows its notices.
+// The offline page must be kept, or the worker does not install; the rulebook and the offline plate are kept as well
+// as they can be, so a host that cannot serve one of their files still has a worker that shows its notices. The plate's
+// files are kept with page-art.js, which names them.
 async function install() {
   const cache = await caches.open(CACHE);
   await cache.add(OFFLINE);
-  await Promise.allSettled([...RULEBOOK_FILES].map(async path => keep(path, await fetch(path))));
+  await Promise.allSettled([...KEPT_FILES].map(async path => keep(path, await fetch(path))));
   await self.skipWaiting();
 }
 
@@ -207,8 +239,8 @@ self.addEventListener('fetch', event => {
     event.respondWith(navigate(event));
     return;
   }
-  const path = rulebookPath(event.request);
-  if (path) event.respondWith(rulebookFile(event, path));
+  const path = keptPath(event.request);
+  if (path) event.respondWith(keptFile(event, path));
 });
 self.addEventListener('push', event => event.waitUntil(onPush(read(event))));
 self.addEventListener('notificationclick', event => {

@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S9 are built; S10 is next.
+questions at the end). S1 to S10 are built; S11 is next.
 
 ## What the owner asked for
 
@@ -337,6 +337,23 @@ result in `battle/src` with UX12.
 
 10. **S10, the ladder, the statistics, the rulebook and offline.** Their heads and the offline plate. Tests: the
    pages' specs, a budget for each new page, the measures.
+
+    *Built (2026-11-22)*: the ladder, the statistics and the rulebook open on a head written in their HTML, its eyebrow
+    and title on the start side, the detail line and the rulebook's languages under it; `wearPageHead` of
+    `table/picture.js` adds the painting, lazy: the broken charge at `50% 45%`, the Ironhide's scar at `50% 65%`, the
+    claws on the arch at `50% 55%`. On a phone the title takes the windows' 28 px and the hero gives back half its top.
+    The rulebook loads the kit with a caught `import()`, so a book read offline still draws. The offline page draws
+    the Parasite whole, a plate of its own declaration, `parasite-offline` (two files, 358 and 716 px), and its Try
+    again takes the brand's gold. The service worker keeps `offline.js`, the picture kit and the plate's files, read off
+    `page-art.js`, and keeps them again when a fresh `page-art.js` names others (ADR 0200). The walk gains `rulebook` and
+    `offline`, briefed in `pages.md`.
+
+    The heads drawn 354 px on a phone add their 708 px file: `table/leaderboard` rose to 168 KiB (the charge, a 16:9 cut
+    to its band, is 79,800 bytes), `table/rules` to 116 KiB, `table/stats` to 800 KiB, each with S9's sign-out head; `table/offline` is 24 KiB, its
+    plate asked for first. Each painting gains a 1280 px file for the band on a wide screen. The walk's `contrast` reads 7.27:1 at
+    the least, at both widths; at 320 the bands are 88, 120 and 102 px. Left: the worker keeps the kit but not the rulebook's head
+    painting, so its band is soot offline; the French rulebook's band was not filmed; the rulebook's own measures (words
+    under 11 px, targets under 44) are its brief's **Left**.
 11. **S11, the Mutation Tree and the result.** The tree's head and its column heads, the result's head, with
     UX12's windows (its brief, `windows.md`). Tests: `battle-mutations.spec.js`, the battle's budget, the
     measures.

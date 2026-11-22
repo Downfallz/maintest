@@ -2,7 +2,7 @@
 
 Date: 2026-11-16
 
-Status: Accepted (settled by the owner in docs/tabletop/rulebook-plan.md, R3). Amends [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) (the worker keeps the rulebook too)
+Status: Accepted (settled by the owner in docs/tabletop/rulebook-plan.md, R3). Amends [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md) (the worker keeps the rulebook too). Amended by [0200](0200-keep-the-offline-page-s-plate-in-the-service-worker.md) (the worker keeps the offline page's plate)
 
 ## Context
 

@@ -546,6 +546,10 @@ service worker, which serves nothing from a cache but `offline.html`, shown when
 `rules.json` and `rules.fr.json`, the shared styles, the brand mark and the font are kept at install and refreshed whenever the network
 answers, and given only when it cannot answer; the rulebook's own files also when the host answers with a server
 error (a 52x from Cloudflare for a host that is down), never the shared ones, which other pages draw with.
+The worker also keeps the offline page's plate (ADR 0200): `offline.js`, the picture kit (`picture.js`,
+`picture-focus.js`, `page-art.js`) and the plate's two files, which it reads off `page-art.js`, and keeps them again
+when a fresh `page-art.js` names other files. The kit is refreshed whenever a page loads it; `offline.js` only when
+the worker installs again. The offline page names its files from the root: it is shown at the failed page's address.
 Offline, the rulebook draws without the menu, the brand alone leading home. A rulebook file given from its copy
 carries `X-Rulebook-Copy: kept`, and the page then says the book is the one this device last read (#698).
 
@@ -741,7 +745,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/session/<id>` | anyone | A finished recorded session in the viewer; 409 while it is played or when its record cannot be parsed. |
 | `/leaderboard`, `/stats` | anyone, account | The ladder (ADR 0124) and the player's own statistics (ADR 0168). |
 | `/rules`, `/rules.json`, `/rules.fr.json` | anyone | The official rulebook (ADR 0188) and the books it reads, English and French (ADR 0193); `/rules#<id>` opens a section, `?lang=fr` or `?lang=en` its language. |
-| `/offline.html` | anyone | The page the service worker keeps (ADR 0166). |
+| `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `DELETE /api/account` | account | Deletes the account. |
 | `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187). |

@@ -133,6 +133,19 @@ test('the battle page may load the 320 KiB the windows\' brief measured and the 
   assert.equal(measured.all - budgetOf(bare, 'table/battle', budget.density).all, fileOf('spell-', 48) + fileOf('mutation-', 128) - fileOf('mutation-', 288));
 });
 
+test('the ladder, the statistics and the rulebook raise their budget by their head, and the offline page holds its plate', () => {
+  // docs/art/journeys/pages.md (S10 of docs/art/scene-paintings-plan.md): each head is drawn 354 px wide on a phone, so
+  // a phone takes its 708 px file. The ladder's is a 16:9 painting cut to its band, the heaviest of the three.
+  const file = (name, width) => PAGE_ART[name].sizes.find(size => size.width === width).bytes;
+  // The header's windows add theirs: the Friends window's head (S7) and the sign out's (S9).
+  const headers = file('predator-and-deathstalker', 732) + file('predator-at-rest', 716);
+  for (const [page, head] of [['table/leaderboard', 'elemental-charge'], ['table/rules', 'latch-under-the-arch']])
+    assert.equal(budgetOf(PAGE_ART, page, budget.density).all, headers + file(head, 708), `${page}: the header's windows' heads and its own`);
+  assert.ok(budgetOf(PAGE_ART, 'table/stats', budget.density).all >= file('ironhide-scar', 708));
+  // The offline page's one picture is asked for first, its 716 px file all it loads.
+  assert.deepEqual(budgetOf(PAGE_ART, 'table/offline', budget.density), { first: file('parasite-offline', 716), all: file('parasite-offline', 716), largest: 1 });
+});
+
 test('a declaration is refused when a role is unknown, a name is no file name, or a strip has one frame', () => {
   const list = () => readdirSync(new URL('table/page-art', root));
   const bad = change => check({ authored: { ...authored, pictures: [{ ...authored.pictures[0], ...change }, ...authored.pictures.slice(1)] }, art: PAGE_ART, read, list }).join('\n');

@@ -166,6 +166,20 @@ export function wearScene(doc, element, name, options = {}) {
   }
 }
 
+/**
+ * A page's own head (docs/art/journeys/pages.md, the ladder): the band its HTML already holds (`.page-head`, with its
+ * `data-side` and its `.scene-words`, so its room and its words are there at first paint) takes its painting. The band
+ * spans the page's column, the lobby pages' 18 px gutters on a phone, up to 1280 px.
+ */
+export const PAGE_HEAD_SIZES = '(min-width: 1316px) 1280px, calc(100vw - 36px)';
+
+export function wearPageHead(doc, name, options = {}) {
+  const head = doc.querySelector('.page-head');
+  if (!head) return;
+  const words = head.querySelector(':scope > .scene-words');
+  wearScene(doc, head, name, { form: 'head', side: head.dataset.side ?? 'start', words, sizes: PAGE_HEAD_SIZES, ...options });
+}
+
 /** Takes off a scene `wearScene` put on: the element is as it was, for a window that wears one in one state only. */
 export function undressScene(element) {
   Array.from(element.children).find(child => 'scene' in child.dataset)?.remove();

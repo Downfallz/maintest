@@ -6,6 +6,10 @@
 .lobby-main { max-width: 1280px; margin: auto; }
 .lobby-hero { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 50px 0 28px; }
 .lobby-hero h2 { font: 400 clamp(36px, 5vw, 58px)/1.15 var(--font-display); margin: 12px 0; }
+/* A page's head (picture.js, wearPageHead): the band spans the hero's column with the eyebrow and the title on it; the
+   detail line, and the rulebook's languages, come under it. */
+.lobby-hero:has(> .page-head) { flex-wrap: wrap; }
+.lobby-hero > .page-head { flex: 1 0 100%; }
 .hero-detail { color: var(--muted); font-size: 15px; line-height: 1.65; }
 .lobby-page .primary { background: var(--gold); border-color: var(--gold); color: var(--accent-ink); font-weight: 700; text-align: center; padding: 14px 22px; }
 .lobby-status { display: block; min-height: 26px; margin-bottom: 24px; }
@@ -165,6 +169,9 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
   .lobby-header .brand { gap: 10px; }
   .lobby-hero { align-items: stretch; flex-direction: column; padding-top: 32px; gap: 20px; }
   .lobby-hero .primary { width: 100%; }
+  /* On a phone the band keeps near its 3:1: the title takes the windows' size, and the hero gives back half its top. */
+  .lobby-hero:has(> .page-head) { padding-top: 16px; gap: 12px; }
+  .lobby-hero > .page-head h2 { font-size: 28px; }
   .lobby-layout { display: flex; flex-direction: column; gap: 0; }
   .lobby-section .section-heading { align-items: flex-start; gap: 10px; }
   .lobby-section .section-heading > .muted { font-size: 11px; }

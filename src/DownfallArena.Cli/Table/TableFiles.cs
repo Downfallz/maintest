@@ -117,6 +117,7 @@ internal sealed partial class TableFiles
             // Android asks for.
             ["/sw.js"] = (Path.Combine(tableDirectory, "sw.js"), JavaScript),
             ["/offline.html"] = (Path.Combine(tableDirectory, "offline.html"), StudioResponse.Html),
+            ["/offline.js"] = (Path.Combine(tableDirectory, "offline.js"), JavaScript),
             ["/manifest.webmanifest"] = (Path.Combine(tableDirectory, "manifest.webmanifest"), Manifest),
             ["/icon.svg"] = (Path.Combine(tableDirectory, "icon.svg"), Svg),
             ["/brand-mark.svg"] = (Path.Combine(tableDirectory, "brand-mark.svg"), Svg),
