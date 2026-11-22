@@ -2111,12 +2111,16 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 
 /* The windows' floor (UX12): no word in a window or a docked sheet under 11 px (.6875rem), as in the frame. Labels
    set in capitals keep their size and lose letter spacing where a phone's column is short. */
-.battle-page dialog :is(.eyebrow, h4, .inspect-tile-label, .atlas-node-stage, .atlas-node-flag, .atlas-card-family,
-  .reveal-stage, .tempo-reference-note, .match-mvp-eyebrow, .match-figure small, .match-fallen, .result-card-kind, #combat-help),
-.battle-page dialog .match-report-table thead th, .battle-page dialog .tempo-pinned .tempo-words span, .battle-page .spell-chip small,
+/* Only the rules under 11 px are listed: a heading set above it keeps its size. */
+.battle-page dialog :is(.eyebrow, .inspect-tile-label, .atlas-node-stage, .atlas-node-flag, .atlas-card-family,
+  .reveal-stage, .tempo-reference-note, .match-mvp-eyebrow, .match-figure small, .match-fallen, .result-card-kind),
+.battle-page dialog #atlas-detail-body h4, .battle-page dialog .match-report-table thead th, .battle-page dialog .tempo-pinned .tempo-words span, .battle-page .spell-chip small,
 .battle-page #planning-dialog[data-kind="Speed"] #planning-creatures .tempo-tab-value {
   font-size: .6875rem;
 }
 @media (max-width: 619px) {
   .battle-page dialog .match-report-table thead th { letter-spacing: 0; }
+}
+@media (max-height: 520px) {
+  .battle-page #combat-help { font-size: .6875rem; }
 }

@@ -41,7 +41,9 @@ export function windowFamily(frame: Record<string, string[]>) {
     // Registered after each window's own module, so this runs once that module gave the focus back, or did not.
     dialog.addEventListener('close', () => {
       const active = document.activeElement;
-      if (usable(active) && !dialog.contains(active)) return;
+      // The page itself holding the focus is nothing having taken it.
+      const nowhere = !active || active === document.body || active === document.documentElement;
+      if (!nowhere && usable(active) && !dialog.contains(active)) return;
       // Another window opened as this one closed (Settings hands over to Concede): it holds the focus.
       const above = topModal();
       if (above && above !== dialog) { if (!above.contains(active)) focusables(above)[0]?.focus({ preventScroll: true }); return; }

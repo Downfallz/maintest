@@ -126,3 +126,16 @@ test('no word a window shows is under 11 px', async ({ page }) => {
   read['atlas-dialog'] = await under11(page, 'atlas-dialog');
   expect(read).toEqual({ 'help-dialog': [], 'history-dialog': [], 'settings-dialog': [], 'inspect-dialog': [], 'atlas-dialog': [] });
 });
+
+// The floor raises what was under 11 px and leaves alone what was above it: a heading of the journal or the recap
+// keeps its own size.
+test('the floor shrinks nothing that was above 11 px', async ({ page }) => {
+  await mount(page);
+  const sizes = await page.evaluate(() => [['history-detail', null], ['history-dialog', 'history-creature'], ['recap-dialog', 'recap-section']].map(([host, wrap]) => {
+    let parent = document.getElementById(host);
+    if (wrap) { const box = document.createElement('div'); box.className = wrap; parent.append(box); parent = box; }
+    const probe = document.createElement('h4'); probe.textContent = 'Probe'; parent.append(probe);
+    const size = getComputedStyle(probe).fontSize; (wrap ? parent : probe).remove(); return size;
+  }));
+  expect(sizes).toEqual(['14px', '13px', '12px']);
+});
