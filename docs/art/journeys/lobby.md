@@ -179,8 +179,8 @@ table → opens the Create window on Multiplayer, Play a bot → on Solo.
 | Ironhide, when tutorial 3 is next. | 120 by 80 px | What will I grow into? | `table/battle-art/evolutions/brute-stage2-ironhide.webp` |
 | The Colossus, when tutorial 4 is next. | 120 by 80 px | How far does the series go? | `table/battle-art/evolutions/brute-stage3-colossus.webp` |
 
-Each portrait ground is declared drawn at 390 (a phone's width) and 760 (the widest portrait screen before the
-landscape takes over), and its landscape is the battlefield's own declaration, `wide` on the home; the creature is 120 px
+Each portrait ground is declared drawn at 390 (a phone's width) and 760 (the widest it is drawn: 74% of a
+1024 px portrait tablet), and its landscape is the battlefield's own declaration, `wide` on the home; the creature is 120 px
 wide on a phone and 150 on a wide screen. Each is declared for the home's page (table/home) in
 `docs/art/page-pictures.json` and derived by `scripts/ux/pictures.mjs` at these sizes and twice them. The ground is
 the featured space's largest picture; one creature loads with it. Learn to play's four paintings stay lazy, below
