@@ -197,8 +197,9 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         }
     }
 
-    // A signed-in seat is told on its account's devices (ADR 0202), as the account chose, and never on a phone that
-    // holds the other seat: one account in both seats, or a device the other seat's page registered, is hotseat (ADR 0120).
+    // A signed-in seat is told on its account's devices (ADR 0202), as the account chose, and only those: a browser the
+    // account let go of (turned off, signed out) is not brought back by the seat subscription it once bound. Never on a
+    // phone that holds the other seat: one account in both seats, or a device the other seat's page registered, is hotseat (ADR 0120).
     private static async Task NoticeAccountAsync(AccountNotifier door, AccountId account, PlayedTable table, TableSeat seat, Asking question, int? round)
     {
         var others = table.Seats.Where(other => other != seat).ToList();
@@ -208,19 +209,6 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         }
 
         var except = others.Where(other => other.Push is not null).Select(other => other.Push!.Endpoint).ToList();
-        // Its joining is never a reason to lose the notice: a store that fails leaves the account's devices as they were.
-        if (seat.Push is { } own && !except.Contains(own.Endpoint, StringComparer.Ordinal) && door.Push is { } channel)
-        {
-            try
-            {
-                await channel.KeepAsync(account, own);
-            }
-            catch (Exception failure) when (TableRegistry.StoreFails(failure))
-            {
-                Console.WriteLine($"  Session {table.Id}: {seat.Name}'s browser could not join its account's devices: {HttpHost.OneLine(failure)}");
-            }
-        }
-
         var reached = await door.NotifyAsync(account, AccountNotice(question, round, table.Id, await CastsAsync(table, seat)), except);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"  Session {table.Id}: {seat.Name} notified of asking {question.Asked} on {reached} of its account's devices."));
     }

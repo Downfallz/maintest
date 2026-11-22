@@ -72,22 +72,6 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
     }
 
     /// <summary>
-    /// Makes the browser of a signed-in seat one of the account's devices when it is not one yet (ADR 0202): a seat
-    /// bound before its subscription joined the account, or whose joining could not be written, is still told its turn.
-    /// Nothing for an endpoint a push service said is gone.
-    /// </summary>
-    public async Task KeepAsync(AccountId account, PushSubscription subscription, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(subscription);
-        if (IsDead(subscription.Endpoint) || (await devices.ListAsync(account, cancellationToken)).Any(device => string.Equals(device.Endpoint, subscription.Endpoint, StringComparison.Ordinal)))
-        {
-            return;
-        }
-
-        await devices.AddAsync(account, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default), cancellationToken);
-    }
-
-    /// <summary>
     /// A notice to one of the account's devices now, on request, whatever its page is doing: what a player taps to
     /// see whether this browser can be reached at all, and what the push service answers when it cannot.
     /// </summary>

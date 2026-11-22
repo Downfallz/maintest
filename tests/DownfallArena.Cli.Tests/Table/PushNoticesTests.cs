@@ -288,7 +288,7 @@ public sealed class PushNoticesTests : IDisposable
     }
 
     [Fact]
-    public async Task A_signed_in_seat_is_told_its_turn_once_on_each_device_of_its_account_tagged_with_the_table()
+    public async Task A_signed_in_seat_is_told_its_turn_on_its_account_s_devices_tagged_with_the_table()
     {
         var (table, notices) = await Seated();
         var account = AccountId.New();
@@ -301,15 +301,14 @@ public sealed class PushNoticesTests : IDisposable
         await Asked(table);
         _clock.Advance(Grace);
 
-        var (first, payload) = await _sender.Next();
-        var (second, _) = await _sender.Next();
-        new[] { first.Endpoint, second.Endpoint }.ShouldBe(["https://push.example/laptop", Phone.Endpoint], ignoreOrder: true);
+        var (to, payload) = await _sender.Next();
+        to.Endpoint.ShouldBe("https://push.example/laptop");
         var notice = JsonDocument.Parse(payload).RootElement;
         notice.GetProperty("title").GetString().ShouldBe("Your turn");
         notice.GetProperty("body").GetString().ShouldBe("Round 1: choose your mutations.");
         notice.GetProperty("tag").GetString().ShouldBe($"turn:{table.Id}");
         await Settled();
-        _sender.Sent.Count.ShouldBe(2, "the seat's browser is one of the account's devices, told once");
+        _sender.Sent.Count.ShouldBe(1, "the seat's own subscription is told only while the account holds it as a device");
     }
 
     [Fact]
@@ -372,8 +371,9 @@ public sealed class PushNoticesTests : IDisposable
         _sender.Sent.ShouldBeEmpty("the account's player holds both seats: nobody is away to be told");
     }
 
+    /// <summary>A browser the account let go of, signed out or turned off, is not brought back by the seat subscription it once bound.</summary>
     [Fact]
-    public async Task A_signed_in_seat_s_subscription_its_account_does_not_hold_yet_joins_its_devices_and_is_told()
+    public async Task A_signed_in_seat_s_subscription_its_account_does_not_hold_is_not_told_nor_added_back()
     {
         var (table, notices) = await Seated();
         var account = AccountId.New();
@@ -386,9 +386,9 @@ public sealed class PushNoticesTests : IDisposable
         await Asked(table);
         _clock.Advance(Grace);
 
-        var (to, _) = await _sender.Next();
-        to.Endpoint.ShouldBe(Phone.Endpoint);
-        (await devices.ListAsync(account, TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe(Phone.Endpoint);
+        await Settled();
+        _sender.Sent.ShouldBeEmpty();
+        (await devices.ListAsync(account, TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 
     private static async Task<AccountDevices> DevicesAsync(AccountId account, string endpoint)

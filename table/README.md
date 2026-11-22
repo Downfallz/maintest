@@ -531,7 +531,7 @@ account, *Your turn* (the warning that a turn is about to time out among them), 
 
 A seat that belongs to an account is told its turn
 on the account's devices, as far as the account's choices allow, tagged with the table; the seat's own subscription
-is one of those devices. The seat's match settings' switch is the same one: a signed-in seat's subscription is
+is told only while the account holds it as a device, so a browser signed out or turned off is not brought back. The seat's match settings' switch is the same one: a signed-in seat's subscription is
 registered as one of its account's devices too, and the seat's `DELETE /api/lobby/push` forgets it there. No device is told a signed-in seat's turn when the other seat is the
 same account's. Nor is the device that holds the other seat's subscription (hotseat, ADR 0120). **Send a test** sends one notice
 through the push service to this device. *Sign out everywhere* and

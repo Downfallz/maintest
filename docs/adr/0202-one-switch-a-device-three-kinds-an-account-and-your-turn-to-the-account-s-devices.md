@@ -29,9 +29,9 @@ kind. "Your turn" went only to the browser of the seat, never to the account's o
 - **"Your turn" reaches the account's devices.** A seat that belongs to an account is told its turn through the
   door, on every device of the account, tagged with the table (`turn:<table>`), so the warning that the same turn
   is about to time out replaces it. The seat's own subscription is not told as well. A seat without an account
-  keeps ADR 0118's subscription as it was. The seat's own subscription is one of the account's devices: one the
-  account does not hold yet (a seat bound before this change, or a joining that could not be written) joins them
-  when the turn is sent. A subscription a push service said is gone, to either sender, is answered 410 on the
+  keeps ADR 0118's subscription as it was. The seat's own subscription is told only while the account holds it as
+  a device: a browser the account let go of (turned off, signed out) is never brought back by the seat it once
+  bound. The seat's page joins it again on each load, signed in. A subscription a push service said is gone, to either sender, is answered 410 on the
   seat's next `PUT /api/lobby/push`, so the page subscribes again.
 - **Signing out on a browser** forgets it as a device (`POST /api/account/signout` with its `endpoint`): a borrowed
   browser, whose seat switch made it one of the account's devices, is told nothing more once its player leaves it.
@@ -45,6 +45,8 @@ kind. "Your turn" went only to the browser of the seat, never to the account's o
 - Bad: one more blob read for each push to an account, in the process that sends it, until the queue (stage N5).
 - Bad: turning pop-ups off on a browser also silences seats played on that browser without an account. The switch
   belongs to the device.
+- Bad: a signed-in seat bound before this change, whose browser the account does not hold yet, is told its turn
+  only once its page loads again, signed in; in the meantime the turn waits in the lobby and the bell.
 - Bad: an account that turns *Your turn* off is not warned either that a turn is about to time out.
 - Neutral: a browser turned off under the old switch kept its subscription and a note of the account in its storage
   (`downfall.table.device-opt-out`). Its next page with the menu reads the note once, lets go of the subscription
