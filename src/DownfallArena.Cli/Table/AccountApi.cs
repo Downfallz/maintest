@@ -90,6 +90,9 @@ internal sealed class AccountApi
     /// </summary>
     public AccountNoticeLog? NoticeLog { get; set; }
 
+    /// <summary>What tells the account's other pages its notices were read, so their bells drop the count (ADR 0164); none where nobody listens.</summary>
+    public LobbyChanges? Changes { get; set; }
+
     /// <summary>What deleting an account does to its friendships (ADR 0129): no link to it left on anybody's list. Set by the host that keeps them.</summary>
     public Func<AccountId, Task>? ForgetFriends { get; set; }
 
@@ -654,7 +657,13 @@ internal sealed class AccountApi
 
         try
         {
-            return Answer(new { marked = await log.MarkReadAsync(who.Account.Id, upTo) }, who.Renewed);
+            var marked = await log.MarkReadAsync(who.Account.Id, upTo);
+            if (marked > 0)
+            {
+                Changes?.Account(who.Account.Id);
+            }
+
+            return Answer(new { marked }, who.Renewed);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
         {

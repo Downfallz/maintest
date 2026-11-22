@@ -283,6 +283,24 @@ public sealed class AccountApiTests : IDisposable
         Json(await api.HandleAsync("GET", "/api/account/notices", "", Signed(session))).GetProperty("unread").GetInt32().ShouldBe(1);
     }
 
+    [Fact]
+    public async Task Reading_the_notices_tells_the_player_s_other_pages_and_reading_nothing_new_tells_nobody()
+    {
+        var (api, log) = await KeepingNoticesAsync();
+        var changes = new LobbyChanges();
+        api.Changes = changes;
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var mark = await IdOf(api, session);
+        var first = await log.AddAsync(mark, Over("t1"), TestContext.Current.CancellationToken);
+
+        await api.HandleAsync("POST", "/api/account/notices/read", $$"""{"upTo":{{first.Id}}}""", Signed(session));
+        var told = changes.VersionOf(mark);
+        await api.HandleAsync("POST", "/api/account/notices/read", $$"""{"upTo":{{first.Id}}}""", Signed(session));
+
+        told.ShouldBe(1);
+        changes.VersionOf(mark).ShouldBe(1);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("{}")]

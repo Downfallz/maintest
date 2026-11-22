@@ -2,17 +2,21 @@ import { accountRequest } from './account.js';
 import { accountMoved, backoff, onLobbyChange, signedInChanged } from './changes.js';
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { sinceVisitLine, turnOf } from './players.js';
+import { sentAgo } from './battle-reactions.js';
 import { activateSeats } from './session.js';
 
 // What waits for a signed-in player, wherever they are in the app: the games against another person where it is their turn, the
 // invitations a friend sent them, the friend requests they were sent, and an invitation of theirs a friend
-// declined. One bell in the shared header counts them, and its window acts on each where it stands.
+// declined. Below them, the news the host kept in the account's notice log (ADR 0201): what happened and calls for
+// nothing, kept whatever the push does. One bell in the shared header counts what waits and the unread news, and its
+// window acts on each where it stands.
 
 const GROUPS = Object.freeze([
   { kind: 'turn', label: 'Your turn' },
   { kind: 'invitation', label: 'Invitations' },
   { kind: 'friend', label: 'Friend requests' },
   { kind: 'declined', label: 'Declined' },
+  { kind: 'news', label: 'News' },
 ]);
 
 /**
@@ -29,9 +33,10 @@ function personAgainst(table, held) {
 /**
  * The things waiting for this player, in the order the window lists them: the games against another person where it is their turn,
  * then the invitations they received, then the friend requests, then their own invitations a friend declined.
- * `mine` and `invitations` are `GET /api/lobby/mine`'s; `friends` is `GET /api/friends`'s.
+ * then the news, newest first. `mine` and `invitations` are `GET /api/lobby/mine`'s; `friends` is `GET /api/friends`'s;
+ * `news` is `GET /api/account/notices`'s `notices`.
  */
-export function inboxItems({ mine = [], invitations = [], friends = null } = {}, now = Date.now()) {
+export function inboxItems({ mine = [], invitations = [], friends = null, news = [] } = {}, now = Date.now()) {
   const items = [];
   for (const entry of mine) {
     const held = (entry.seats ?? []).map(seat => seat.seat), against = personAgainst(entry.table, held);
@@ -55,7 +60,25 @@ export function inboxItems({ mine = [], invitations = [], friends = null } = {},
         detail: `${entry.table.format ?? ''} battle · invite another friend or open the seat from the lobby`.trim() });
     }
   }
+  for (const entry of news ?? []) {
+    if (!Number.isFinite(entry?.id) || !entry.title) continue;
+    const ago = entry.at ? sentAgo(entry.at, now) || 'just now' : '';
+    items.push({ kind: 'news', key: `news:${entry.id}`, id: entry.id, title: entry.title, unread: entry.read !== true,
+      detail: [entry.body, ago].filter(Boolean).join(' · '), url: typeof entry.url === 'string' && entry.url.startsWith('/') ? entry.url : null });
+  }
   return items;
+}
+
+/** What the bell counts: what waits, and the news not read yet; the badge shows their sum. */
+export function inboxCount(items) {
+  const waiting = items.filter(item => item.kind !== 'news').length;
+  return { waiting, unread: items.filter(item => item.kind === 'news' && item.unread).length };
+}
+
+/** The newest news entry's id, which a "read up to" names; null when no news is unread. */
+export function readUpTo(items) {
+  const unread = items.filter(item => item.kind === 'news' && item.unread).map(item => item.id);
+  return unread.length ? Math.max(...items.filter(item => item.kind === 'news').map(item => item.id)) : null;
 }
 
 /** What the bell's badge says: nothing at zero, the count up to nine, then 9+. */
@@ -64,9 +87,11 @@ export function badgeText(count) {
   return count > 9 ? '9+' : String(count);
 }
 
-/** The bell's accessible name: what it opens and how much waits there. */
-export function bellLabel(count) {
-  return count > 0 ? `Notifications · ${count} waiting` : 'Notifications · nothing waiting';
+/** The bell's accessible name: what it opens, how much waits there, and how much news is unread. */
+export function bellLabel(waiting, unread = 0) {
+  const parts = [waiting > 0 ? `${waiting} waiting` : 'nothing waiting'];
+  if (unread > 0) parts.push(`${unread} new`);
+  return `Notifications · ${parts.join(' · ')}`;
 }
 
 /**
@@ -76,7 +101,10 @@ export function bellLabel(count) {
  */
 export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, reopen = signedInChanged, fresh: freshFor = 5000, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
-  let account = null, mine = [], invitations = [], friends = null, fed = 0, busy = false, drawn = '';
+  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, fed = 0, busy = false, drawn = '';
+  // The news unread when the window showed it: marked new while the window stays open, though the host has it read.
+  const shownNew = new Set();
+  const dialog = () => doc.getElementById('inbox-dialog');
   const problem = (text = '') => { el('inbox-problem').textContent = text; el('inbox-problem').hidden = !text; };
 
   function node(tag, text, className) {
@@ -114,6 +142,12 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
         action('Accept', 'primary', async () => { await request(`/api/friends/requests/${encodeURIComponent(item.account)}/accept`, {}); await refresh(true); onChange('friends'); }),
         action('Decline', 'secondary', async () => { await request(`/api/friends/requests/${encodeURIComponent(item.account)}`, {}, undefined, 'DELETE'); await refresh(true); onChange('friends'); }),
       ];
+      case 'news': {
+        if (!item.url) return [];
+        const link = node('a', 'Open →', 'button-link');
+        link.href = item.url;
+        return [link];
+      }
       default: {
         const link = node('a', 'Open the lobby →', 'button-link');
         link.href = '/lobby';
@@ -129,35 +163,39 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     pending?.catch?.(() => {});
   }
   function render() {
-    const items = account ? inboxItems({ mine, invitations, friends }) : [];
-    const key = JSON.stringify([account?.id ?? null, items.map(item => [item.key, item.title, item.detail])]);
+    const items = account ? inboxItems({ mine, invitations, friends, news }) : [];
+    const { waiting, unread } = inboxCount(items), count = waiting + unread;
+    if (dialog()?.open) void markRead(items);
+    const key = JSON.stringify([account?.id ?? null, items.map(item => [item.key, item.title, item.detail, item.unread || shownNew.has(item.key)]), unread]);
     if (key === drawn) return;
     drawn = key;
     const bell = el('inbox-open'), badge = el('inbox-badge');
     bell.hidden = !account;
-    badge.textContent = badgeText(items.length);
-    badge.hidden = items.length === 0;
-    bell.setAttribute('aria-label', bellLabel(items.length));
+    badge.textContent = badgeText(count);
+    badge.hidden = count === 0;
+    bell.setAttribute('aria-label', bellLabel(waiting, unread));
     // Where the bar has no room for the bell (the battle view under 360 px, battle.css), the menu holds it: the
     // same count on the menu's button, and an entry that opens the same window (home-navigation.md, "The bell").
     // The menu's button says the count too, as its description: its drawn badge is silent.
     const entry = doc.getElementById('inbox-open-menu');
     if (entry) entry.hidden = !account;
     for (const one of [doc.getElementById('inbox-menu-count'), doc.getElementById('menu-inbox-badge')].filter(Boolean)) {
-      one.textContent = badgeText(items.length); one.hidden = items.length === 0;
+      one.textContent = badgeText(count); one.hidden = count === 0;
     }
     const said = doc.getElementById('menu-inbox-said');
-    if (said) said.textContent = items.length ? bellLabel(items.length) : '';
-    appBadge(items.length);
+    if (said) said.textContent = count ? bellLabel(waiting, unread) : '';
+    appBadge(count);
     const groups = GROUPS.map(group => ({ label: group.label, list: items.filter(item => item.kind === group.kind) })).filter(group => group.list.length);
     el('inbox-list').replaceChildren(...(groups.length ? groups.map(({ label, list }) => {
       const section = node('section', '', 'inbox-group');
       section.append(node('h3', `${label} · ${list.length}`));
       const ul = node('ul', '', 'inbox-items');
       ul.append(...list.map(item => {
-        const li = node('li', '', `inbox-item ${item.kind}`);
+        const fresh = item.kind === 'news' && (item.unread || shownNew.has(item.key));
+        const li = node('li', '', `inbox-item ${item.kind}${fresh ? ' unread' : ''}`);
         li.dataset.key = item.key;
         const text = node('div', '', 'inbox-text');
+        if (fresh) text.append(node('span', 'New', 'inbox-new'));
         text.append(node('strong', item.title));
         if (item.detail) text.append(node('small', item.detail));
         const ways = node('div', '', 'inbox-actions');
@@ -167,16 +205,47 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
       }));
       section.append(ul);
       return section;
-    }) : [node('p', 'Nothing waits for you right now. Your turns, invitations and friend requests will show here.', 'muted inbox-empty')]));
+    }) : [node('p', 'Nothing waits for you right now. Your turns, invitations, friend requests and news will show here.', 'muted inbox-empty')]));
+  }
+  // The news shown in the open window is read: the host is told up to the newest entry, and tells the player's other
+  // pages through their stream. A refusal leaves it unread, to be told again at the next opening.
+  async function markRead(items) {
+    const upTo = readUpTo(items);
+    if (upTo === null || upTo === refused || marking || !account) return;
+    const reading = account.id;
+    marking = true;
+    for (const item of items) if (item.kind === 'news' && item.unread) shownNew.add(item.key);
+    try {
+      await request('/api/account/notices/read', { upTo });
+      if (account?.id !== reading) return;
+      news = news.map(entry => (entry.id <= upTo ? { ...entry, read: true } : entry));
+    } catch {
+      // Unread still: the badge keeps counting it, and the window is not asked to tell it again until it is reopened.
+      refused = upTo;
+    } finally {
+      marking = false;
+    }
+    render();
+  }
+  // The account's news, read beside its lists: a host that keeps none (404) is not asked again, and a read that
+  // failed keeps what the bell last knew.
+  async function readNews() {
+    if (!keepsNews) return null;
+    try { return (await request('/api/account/notices')).notices ?? []; }
+    catch (error) {
+      if (error?.status === 404) keepsNews = false;
+      return null;
+    }
   }
   async function refresh(force = false) {
     if (!account) { mine = []; invitations = []; friends = null; render(); return; }
     const reading = account.id, fresh = !force && Date.now() - fed < freshFor;
     try {
-      const [games, list] = await Promise.all([fresh ? null : request('/api/lobby/mine'), request('/api/friends')]);
+      const [games, list, kept] = await Promise.all([fresh ? null : request('/api/lobby/mine'), request('/api/friends'), readNews()]);
       if (account?.id !== reading) return;
       if (games) { mine = games.tables ?? []; invitations = games.invitations ?? []; }
       friends = list;
+      if (kept) news = kept;
       render();
       retry.answered();
     } catch {
@@ -186,7 +255,9 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     }
   }
   const retry = backoff(() => void refresh(true), { schedule: (run, delay) => win.setTimeout(run, delay), cancel: id => win.clearTimeout(id) });
-  for (const opener of [el('inbox-open'), doc.getElementById('inbox-open-menu')].filter(Boolean)) opener.addEventListener('click', () => { problem(); void refresh(true); });
+  for (const opener of [el('inbox-open'), doc.getElementById('inbox-open-menu')].filter(Boolean)) opener.addEventListener('click', () => { problem(); refused = null; void refresh(true); });
+  // Closing the window lets the news it showed as new be drawn as read.
+  dialog()?.addEventListener('close', () => { refused = null; if (shownNew.size) { shownNew.clear(); render(); } });
   // The lobby's stream opening (the page loaded, back in view, back online) and the player's own lists changing,
   // listened to while somebody is signed in: a page nobody signed in to has no bell to keep current.
   let unlisten = null;
@@ -199,7 +270,8 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(next) {
       if ((next?.id ?? null) === (account?.id ?? null)) return;
-      account = next; mine = []; invitations = []; friends = null; fed = 0;
+      account = next; mine = []; invitations = []; friends = null; news = []; keepsNews = true; fed = 0;
+      shownNew.clear();
       retry.stop();
       listen(Boolean(account));
       // The lobby's stream knows who is signed in from when it opened: it is opened again for whoever is now.

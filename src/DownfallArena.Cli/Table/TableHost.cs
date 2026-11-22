@@ -206,6 +206,7 @@ internal static class TableHost
         admin.Lobby.Relay = relay;
         friends?.Changes = lobbyChanges;
         notifier?.Changes = lobbyChanges;
+        accounts?.Changes = lobbyChanges;
         // The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab.
         TurnQueues? queues = null;
         if (channels is not null && turns is not null)

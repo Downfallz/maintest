@@ -10,8 +10,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false } = {}) {
-  const state = { holdInvitation, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null } = {}) {
+  const state = { holdInvitation, news, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -100,6 +100,14 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
     }
     if (path === '/api/lobby/push') return json({ publicKey: null });
+    // The account's notice log (ADR 0201), when the test keeps one: listed, then marked read up to an id.
+    if (path === '/api/account/notices' && state.news) { state.newsReads = (state.newsReads ?? 0) + 1; return json({ notices: state.news, unread: state.news.filter(one => !one.read).length }); }
+    if (path === '/api/account/notices/read' && state.news) {
+      const { upTo } = route.request().postDataJSON();
+      state.readUpTo = [...(state.readUpTo ?? []), upTo];
+      state.news = state.news.map(one => (one.id <= upTo ? { ...one, read: true } : one));
+      return json({ marked: 1 });
+    }
     if (path === '/api/scenarios' && scenarios) {
       state.scenarioReads = (state.scenarioReads ?? 0) + 1;
       return state.account ? json({ scenarios }) : route.fulfill({ status: 401, json: { message: 'Sign in to practise a scenario.' } });
@@ -1049,6 +1057,36 @@ test('the bell counts what waits for the player and acts on each: play a turn, a
   // The turn opens the game, in the battle view (ADR 0157), with the seat the player holds there.
   await dialog.locator('.inbox-item.turn').getByRole('button', { name: 'Play →' }).click();
   await page.waitForURL(/\/battle\?player1=seat-token$/);
+  expect(state.errors).toEqual([]);
+});
+
+test('with push off the bell still shows the news, counts it until the window is opened, and opening it marks it read', async ({ page }, info) => {
+  const news = [
+    { id: 42, kind: 'match-over', title: 'Victory', body: 'You won against Bastien.', url: '/battle?table=t2', at: new Date(Date.now() - 2 * 3600_000).toISOString(), read: false },
+    { id: 41, kind: 'friend-accepted', title: 'Alex accepted your request', body: '', url: '/lobby', at: new Date(Date.now() - 3 * 86400_000).toISOString(), read: true },
+  ];
+  const state = await home(page, { incoming: [], games: [], news });
+  const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
+  await expect(badge).toHaveText('1');
+  await expect(bell).toHaveAccessibleName('Notifications · nothing waiting · 1 new');
+  await bell.click();
+  const dialog = page.locator('#inbox-dialog');
+  await expect(dialog.locator('.inbox-group h3')).toHaveText(['News · 2']);
+  await expect(dialog.locator('.inbox-item.news.unread')).toContainText('Victory');
+  await expect(dialog.locator('.inbox-item.news.unread')).toContainText('You won against Bastien. · 2 h ago');
+  await expect(dialog.locator('.inbox-item.news').nth(1)).toContainText('3 d ago');
+  await expect(dialog.getByRole('link', { name: 'Open →' }).first()).toHaveAttribute('href', '/battle?table=t2');
+  await expect.poll(() => state.readUpTo).toEqual([42]);
+  await expect(badge).toBeHidden();
+  await expect(bell).toHaveAccessibleName('Notifications · nothing waiting');
+  await page.screenshot({ path: info.outputPath('inbox-news.png') });
+  // Still drawn new while the window stays open; read once it is closed and opened again.
+  await expect(dialog.locator('.inbox-item.news.unread')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await bell.click();
+  await expect(dialog.locator('.inbox-item.news')).toHaveCount(2);
+  await expect(dialog.locator('.inbox-item.news.unread')).toHaveCount(0);
+  expect(state.readUpTo).toEqual([42]);
   expect(state.errors).toEqual([]);
 });
 

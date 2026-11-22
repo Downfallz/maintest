@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { badgeText, bellLabel, inboxItems } from './inbox.js';
+import { badgeText, bellLabel, inboxCount, inboxItems, readUpTo } from './inbox.js';
 
 const table = (id, seats, extra = {}) => ({ id, format: '3v3', over: false, waiting: false, round: 4, seats, ...extra });
 const me = { seat: 'player1', kind: 'person', name: 'MarcF' };
@@ -51,6 +51,41 @@ test('the badge counts up to nine, then says 9+, and the bell says how much wait
   assert.equal(badgeText(12), '9+');
   assert.equal(bellLabel(2), 'Notifications · 2 waiting');
   assert.equal(bellLabel(0), 'Notifications · nothing waiting');
+  assert.equal(bellLabel(1, 2), 'Notifications · 1 waiting · 2 new');
+  assert.equal(bellLabel(0, 1), 'Notifications · nothing waiting · 1 new');
+});
+
+const news = [
+  { id: 30, kind: 'match-over', title: 'Victory', body: 'You won against Bastien.', url: '/battle?table=t2', at: '2026-11-17T11:00:00Z', read: false },
+  { id: 20, kind: 'friend-accepted', title: 'Julie accepted your request', body: '', url: '/lobby', at: '2026-11-15T12:00:00Z', read: true },
+];
+
+test('the news comes after what waits, newest first, each with what it said, when, and where a tap goes', () => {
+  const now = Date.parse('2026-11-17T12:00:00Z');
+  const items = inboxItems({ friends: { incoming: [{ id: 'acct_c', username: 'Julie' }] }, news }, now);
+
+  assert.deepEqual(items.map(item => item.kind), ['friend', 'news', 'news']);
+  assert.deepEqual(items.slice(1).map(item => [item.title, item.detail, item.url, item.unread]), [
+    ['Victory', 'You won against Bastien. · 1 h ago', '/battle?table=t2', true],
+    ['Julie accepted your request', '2 d ago', '/lobby', false],
+  ]);
+});
+
+test('a news entry only links inside the site, and one without an id or a title is not drawn', () => {
+  const items = inboxItems({ news: [{ id: 1, title: 'Away', url: 'https://elsewhere.example/' }, { title: 'No id' }, { id: 2 }] });
+  assert.deepEqual(items.map(item => [item.key, item.url]), [['news:1', null]]);
+});
+
+test('the bell counts what waits and the unread news, never the news already read', () => {
+  const mine = [{ table: table('a', [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name: 'Bastien' }]), seats: [{ seat: 'player1', token: 't1' }] }];
+  assert.deepEqual(inboxCount(inboxItems({ mine, news })), { waiting: 1, unread: 1 });
+  assert.deepEqual(inboxCount(inboxItems({ news: news.map(entry => ({ ...entry, read: true })) })), { waiting: 0, unread: 0 });
+});
+
+test('reading the news names the newest entry, and nothing once every entry is read', () => {
+  assert.equal(readUpTo(inboxItems({ news })), 30);
+  assert.equal(readUpTo(inboxItems({ news: [{ ...news[0], read: true }, news[1]] })), null);
+  assert.equal(readUpTo(inboxItems()), null);
 });
 
 test('a turn waiting says what happened since the last visit', () => {

@@ -611,7 +611,7 @@ friend's request or an invitation reaches a player who holds no seat (docs/table
 With accounts on, push keys or not, the news to an account (a friend accepted, the invited friend took the seat,
 the other player left, a match ended) is kept in its notice log under `notices/`, the 100 latest of the last 90
 days, forgotten with the account. `GET /api/account/notices` lists it, newest first, with the unread count.
-`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201).
+`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201); when it marked any, the account's lobby stream says its lists changed, so its other pages read the bell again.
 
 #### Accounts
 
