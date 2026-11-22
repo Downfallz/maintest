@@ -17,7 +17,9 @@ axe cannot read the text set over a picture or inside the canvas.
 
 `showcase-round`, the round seen played, was added by UX6: its line is UX6's walk of 2026-11-20, the first that
 has the screen, not the baseline's. `showcase-404` and `showcase-404-fr`, the 404 with its claw, were added by the
-scene paintings' S5: their lines are S5's walk of 2026-11-21.
+scene paintings' S5: their lines are S5's walk of 2026-11-21. `sign-out` and `signed-out-panel`, a sign out's
+confirmation and the panel after it, were added by S9: their lines are S9's walk of 2026-11-22, the first that has
+the screens. The confirmation's words on its head read 11.34:1 at 320, the lowest, and 11.6:1 at 390.
 
 At 320 by 568:
 
@@ -35,6 +37,8 @@ At 320 by 568:
 | name-window (staged) | 446 px, a window | 41 | 1 | 1 background | 10 px | 4 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
 | invitation-take-the-place | 568 px | 51 | 0 | 2 background | 10 px | 1 | 4 of 8 | 0 | 0 | 0 | 0.00 | nothing |
 | first-lesson-brief | 387 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
+| sign-out | 293 px, a window | 19 | 1 | 1 img, 1 background | 12 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.00 | nothing |
+| signed-out-panel | 705 px | 34 | 1 | 1 img, 2 background | 10 px | 2 | 0 of 7 | 0 | 0 | 0 | 0.00 | nothing |
 
 At 390 by 844:
 
@@ -52,6 +56,8 @@ At 390 by 844:
 | name-window (staged) | 410 px, a window | 41 | 1 | 1 background | 10 px | 4 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
 | invitation-take-the-place | 844 px | 51 | 0 | 2 background | 10 px | 1 | 3 of 8 | 0 | 0 | 0 | 0.00 | nothing |
 | first-lesson-brief | 348 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
+| sign-out | 256 px, a window | 19 | 1 | 1 img, 1 background | 12 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.00 | nothing |
+| signed-out-panel | 844 px | 34 | 1 | 1 img, 3 background | 10 px | 2 | 0 of 7 | 0 | 0 | 0 | 0.00 | nothing |
 
 ## The lessons
 

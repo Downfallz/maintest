@@ -132,7 +132,7 @@ html dialog { --cut: 16px; }
 /* Windows of the match share the lobby's: ember label, bone title, a fading bone hairline under the head. A sheet
    docked to an edge stays square. */
 .battle-page :is(#planning-dialog, #combat-dialog, #upkeep-dialog) { --cut: 0px; }
-@media (max-width: 619px) { .battle-page dialog:not(.home-dialog, #create-dialog, #name-dialog, #delete-dialog) { --cut: 0px; } }
+@media (max-width: 619px) { .battle-page dialog:not(.home-dialog, #create-dialog, #name-dialog, #delete-dialog, #action-dialog) { --cut: 0px; } }
 .battle-page dialog h2, .battle-page .order-header h2, .battle-page .inspect-header h2 { color: var(--bone); }
 .battle-page :is(.order-header, .history-header, .help-header, .growth-header, .atlas-header, .planning-header) {
   border-bottom: 1px solid; border-image: linear-gradient(90deg, color-mix(in srgb, var(--bone) 55%, transparent), transparent) 1;

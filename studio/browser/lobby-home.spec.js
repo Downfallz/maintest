@@ -309,6 +309,61 @@ test('inviting a friend leaves the friends window and selects that friend in the
   expect(state.errors).toEqual([]);
 });
 
+test('a sign out is asked under the Predator at rest, Sign out filled; the panel after it says goodbye once, and removing a friend keeps the plain window', async ({ page }) => {
+  const state = await home(page);
+  // Removing a friend first: the same window, its plain heading, Cancel and no fill.
+  await openPanel(page, /^Friends/);
+  await page.locator('#friend-list').getByRole('button', { name: /^Remove / }).first().click();
+  const heading = page.locator('#action-heading');
+  await expect(page.locator('#action-dialog')).toBeVisible();
+  await expect(heading).not.toHaveClass(/scene/);
+  await expect(page.locator('#action-cancel')).toHaveText('Cancel');
+  await expect(page.locator('#action-confirm')).not.toHaveClass(/primary/);
+  await page.locator('#action-cancel').click();
+  await page.keyboard.press('Escape');
+  // The sign out (docs/art/journeys/doors.md, Sign out, the confirmation): the head, its words on the start side.
+  await page.locator('#account-menu summary').click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Sign out on this device?' })).toBeVisible();
+  await expect(heading).toHaveClass(/scene-head/);
+  await expect(heading).toHaveAttribute('data-side', 'start');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('alt', '');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-x', '70');
+  await expect(heading.locator('.scene-words')).toHaveText('Sign out on this device?');
+  await expect(page.locator('#action-confirm')).toHaveClass(/primary/);
+  await expect(page.locator('#action-confirm')).toBeFocused();
+  await expect(page.locator('#action-cancel')).toHaveText('Stay signed in');
+  // The band runs from edge to edge, no taller than 120 px, and both buttons stay in view.
+  const [band, dialog] = await Promise.all([heading.boundingBox(), page.locator('#action-dialog').boundingBox()]);
+  expect(Math.abs(band.x - dialog.x)).toBeLessThanOrEqual(2);
+  expect(band.height).toBeLessThanOrEqual(121);
+  await expect(page.locator('#action-confirm')).toBeInViewport();
+  await page.locator('#action-confirm').click();
+  // The panel after a sign out: the Predator at rest alone, the goodbye's words, its title focused.
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  expect(state.signouts).toEqual([{ everywhere: false }]);
+  const panel = page.locator('#sign-in-panel');
+  await expect(panel).toHaveAttribute('data-door', 'left');
+  await expect(page.locator('#sign-in-eyebrow')).toHaveText('Signed out');
+  await expect(page.locator('#sign-in-heading')).toHaveText('See you soon.');
+  await expect(page.locator('#sign-in-game')).toHaveText('Your games wait for you.');
+  await expect(page.locator('#sign-in-account')).toHaveText('Sign in again to resume them.');
+  await expect(page.locator('#sign-in-heading')).toBeFocused();
+  await expect(page.locator('#sign-in-art figure.scene-plate img')).toHaveAttribute('alt', 'The Predator at rest in a dark hall, an ember on its shoulder.');
+  await expect(page.locator('#sign-in-art img')).toHaveCount(1);
+  await expect(page.locator('#sign-in-art')).toHaveAttribute('data-pictures', 'predator-at-rest');
+  await expect(page.getByLabel('Developer sign-in: any player name')).toBeInViewport();
+  // Its picture stays inside the panel at every width: whole above the words, beside them from 1280 px.
+  const [plate, room] = await Promise.all([page.locator('#sign-in-art img').boundingBox(), panel.boundingBox()]);
+  expect(plate.x + plate.width).toBeLessThanOrEqual(room.x + room.width + 1);
+  expect(plate.width).toBeLessThan(room.width + 1);
+  // Read once: a reload shows the plain door.
+  await page.reload();
+  await expect(panel).toHaveAttribute('data-door', 'plain');
+  await expect(page.locator('#sign-in-heading')).toHaveText('Sign in to play.');
+  expect(state.errors).toEqual([]);
+});
+
 test('joining validates the code inside its window and follows a valid invitation', async ({ page }) => {
   await home(page);
   await openPanel(page, 'Join with a code');
@@ -491,7 +546,7 @@ test('the account menu holds Settings, Report or suggest and Sign out; the accou
   await page.locator('#delete-cancel').click();
   await page.locator('#sign-out-everywhere').click();
   await expect(page.locator('#action-detail')).toContainText('every device');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Stay signed in', exact: true }).click();
   expect(state.signouts).toBeUndefined();
   await page.locator('#sign-out-everywhere').click();
   await page.locator('#action-confirm').click();

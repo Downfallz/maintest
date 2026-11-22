@@ -2,6 +2,8 @@
 // the name chosen at the first sign-in, and the account in the masthead. The host owns every rule; this page
 // only checks a name's shape before asking, so a keystroke that cannot be a name costs no request.
 
+import { undressScene, wearScene } from './picture.js';
+
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{2,19}$/;
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
 
@@ -72,15 +74,59 @@ export function loadGoogle(doc, win = globalThis) {
   });
 }
 
-export function confirmAction(doc, title, detail, label) {
+/**
+ * The scene a sign out's confirmation wears as its head (docs/art/journeys/doors.md, Sign out, the confirmation): the
+ * Predator at rest, its head and the ember on its shoulder kept in view, the title on the dark hall at its start.
+ */
+export const SIGN_OUT_HEAD = { name: 'predator-at-rest', form: 'head', side: 'start', focus: '70% 45%', sizes: '(min-width: 512px) 480px, calc(100vw - 32px)' };
+
+/** What a sign out's confirmation says, on this device or everywhere. The action is the filled one, Stay signed in the way back. */
+export function signOutWords(everywhere) {
+  return everywhere
+    ? { title: 'Sign out everywhere?', detail: 'You will need to sign in again on every device.', action: 'Sign out everywhere', keep: 'Stay signed in' }
+    : { title: 'Sign out on this device?', detail: 'You can sign in again to resume your games.', action: 'Sign out', keep: 'Stay signed in' };
+}
+
+// The tab's mark that this browser just signed out, read once by the home's door (door.js): a reload, or a link
+// passed on, never says goodbye.
+const SIGNED_OUT = 'downfall.signedOut';
+
+/** Marks the tab once the host has confirmed a sign out from it. A browser without storage says no goodbye. */
+export function markSignedOut(storage) {
+  try { storage?.setItem(SIGNED_OUT, '1'); } catch { /* The plain door then. */ }
+}
+
+/** Whether this tab just signed out, and forgets it: the goodbye shows once. */
+export function takeSignedOut(storage) {
+  try {
+    const marked = storage?.getItem(SIGNED_OUT) === '1';
+    storage?.removeItem(SIGNED_OUT);
+    return marked;
+  } catch { return false; }
+}
+
+/**
+ * Asks once, in the shared confirmation window. `filled` makes the action the window's one filled button, focused
+ * first, and `keep` names the way back; `head` dresses the title with a scene (wearScene's options and the page's
+ * name), which another confirmation, removing a friend, takes off again.
+ */
+export function confirmAction(doc, title, detail, label, { filled = false, keep = 'Cancel', head = null } = {}) {
   const dialog = doc.getElementById('action-dialog');
+  const heading = doc.getElementById('action-heading'), confirm = doc.getElementById('action-confirm'), cancel = doc.getElementById('action-cancel');
   doc.getElementById('action-title').textContent = title;
   doc.getElementById('action-detail').textContent = detail;
-  doc.getElementById('action-confirm').textContent = label;
+  confirm.textContent = label;
+  confirm.classList.toggle('primary', filled);
+  cancel.textContent = keep;
+  if (head?.page) {
+    const { name, ...options } = head;
+    wearScene(doc, heading, name, { ...options, words: doc.getElementById('action-title') });
+  } else undressScene(heading);
   dialog.returnValue = '';
   return new Promise(resolve => {
     dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
     dialog.showModal();
+    if (filled) confirm.focus();
   });
 }
 
@@ -183,11 +229,16 @@ function mountSignIn(doc, { request, google, refresh, say }) {
   return withGoogle;
 }
 
+function tabStorage() {
+  try { return globalThis.sessionStorage ?? null; } catch { return null; }
+}
+
 /**
  * Draws the account: the sign-in when nobody is signed in, the chip when somebody is, and the name dialog in
  * between. `onChange` is told the account (or null) whenever it changes, so the lobby can redraw what it shows.
+ * `signOutPage` is the page's name in docs/art/page-budget.json when its sign out's confirmation wears its head.
  */
-export function mountAccount(doc, { request = accountRequest, readMe = () => request('/api/me'), google = () => loadGoogle(doc), onChange = () => {} } = {}) {
+export function mountAccount(doc, { request = accountRequest, readMe = () => request('/api/me'), google = () => loadGoogle(doc), onChange = () => {}, signOutPage = null, session = tabStorage() } = {}) {
   const el = id => doc.getElementById(id);
   const say = (id, text = '') => { el(id).textContent = text; el(id).hidden = !text; };
   const signIn = el('sign-in-panel') ? mountSignIn(doc, { request, google, refresh, say }) : null;
@@ -203,6 +254,8 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       else if (el('sign-in-problem').textContent.startsWith('Could not reach the host to check')) say('sign-in-problem');
     }
     el('account').hidden = !state.account;
+    // Somebody is signed in: a mark left by an earlier sign out is no goodbye any more.
+    if (state.account) takeSignedOut(session);
     if (state.account) {
       el('account-name').textContent = state.account.username;
       el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);
@@ -225,14 +278,15 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
     const problemId = everywhere && el('app-settings-account-problem') ? 'app-settings-account-problem' : 'account-problem';
     el(id).addEventListener('click', async () => {
       say(problemId);
-      const title = everywhere ? 'Sign out everywhere?' : 'Sign out on this device?';
-      const detail = everywhere ? 'You will need to sign in again on every device.' : 'You can sign in again to resume your games.';
+      const words = signOutWords(everywhere);
       el('account-menu').open = false;
       if (!everywhere) el('account-menu').querySelector('summary').focus();
-      if (!await confirmAction(doc, title, detail, everywhere ? 'Sign out everywhere' : 'Sign out')) return;
+      const head = signOutPage ? { ...SIGN_OUT_HEAD, page: signOutPage } : null;
+      if (!await confirmAction(doc, words.title, words.detail, words.action, { filled: true, keep: words.keep, head })) return;
       el(id).disabled = true;
       try {
         await request('/api/account/signout', { everywhere });
+        markSignedOut(session);
         await refresh();
       } catch (error) {
         if (!everywhere) el('account-menu').open = true;

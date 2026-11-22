@@ -64,8 +64,9 @@
     {
       "name": "predator-at-rest",
       "source": "docs/art/sources/pages/scenes/predator-at-rest.webp",
-      "drawn": [351, 640],
-      "pages": { "showcase/home": "lazy" }
+      "drawn": [351, 640, 358, 480, 980],
+      "pages": { "showcase/home": "lazy", "table/sign-in": "first", "table/home": "lazy", "table/stats": "lazy", "table/battle": "lazy", "table/leaderboard": "lazy", "table/rules": "lazy" },
+      "phone": { "table/sign-in": [358], "table/home": [358], "table/stats": [358], "table/battle": [358], "table/leaderboard": [358], "table/rules": [358] }
     },
     {
       "name": "latch-under-the-arch",
