@@ -9,6 +9,10 @@ updates:
         patterns: ["Microsoft.Extensions.*"]
       testing:
         patterns: ["xunit*", "Microsoft.Testing.*", "Shouldly", "NSubstitute", "NetArchTest.*"]
+    # The projects target net10.0: Microsoft.Extensions 11 belongs with the move to .NET 11, not before (#765).
+    ignore:
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -22,3 +26,11 @@ updates:
     directory: /battle
     schedule:
       interval: weekly
+  # The browser suite's own packages (studio/browser/package.json). Playwright is moved by hand: its version is
+  # the browser the cloud sessions have installed, and the two move together (#941).
+  - package-ecosystem: npm
+    directory: /studio/browser
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "@playwright/test"

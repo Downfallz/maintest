@@ -128,6 +128,18 @@ test('a film refuses a speed the page does not offer, and leaves the bench runni
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved', { timeout: 15000 });
 });
 
+// A film steps the scene a tick at a time but draws only the frame it stops on: a frame drawn at 1440 px costs a
+// loaded runner enough that eight steps of 400 ms ran past a test's 30 s (#961, #976).
+test('a film plays every tick of a step and draws only the frame it stops on', async ({ page }) => {
+  await film(page, 'start', { spell: 'spell:pummel:v1', targets: ['b1'] });
+  expect(await film(page, 'drawn')).toBe(1);
+  expect(await film(page, 'advance', WINDUP_MS)).toEqual({ elapsed: WINDUP_MS, stage: 'impact' });
+  expect(await film(page, 'drawn')).toBe(2);
+  await film(page, 'advance', 20);
+  expect(await film(page, 'drawn')).toBe(3);
+  await film(page, 'stop');
+});
+
 test('less motion shows the settled frame and no effect', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   // Play only after the bench has rested on the media query's change: otherwise the rest undoes the play (#894).

@@ -43,7 +43,7 @@ let last = 0;
 let ready = false;
 let game: Phaser.Game | null = null;
 // While a film runs the game's loop is stopped: this clock is the only one, and it moves when it is told to.
-let film: { clock: number; played: number } | null = null;
+let film: { clock: number; played: number; drawn: number } | null = null;
 let stillFilm = false;
 let shownRound = 1;
 
@@ -193,11 +193,14 @@ function restartTweenClock() {
   tweens.nextTime = tweens.gap;
   tweens.time = 0;
 }
-function tick(delta = FILM_TICK_MS) {
+// A tick that is not drawn plays the scene's update alone, as Phaser's headless step does: a film reads the scene's
+// objects, and takes its picture on the frame it stops on, so the frames between cost no drawing. A frame of the
+// desktop's 1440 px field drawn in software is what ran a step of a few hundred ticks past a test's limit (#961).
+function tick(delta = FILM_TICK_MS, draw = true) {
   if (!film || !game) return;
   film.clock += delta;
   film.played += delta;
-  game.step(film.clock, delta);
+  if (draw) { game.step(film.clock, delta); film.drawn++; } else game.headlessStep(film.clock, delta);
   lab.dataset.film = String(film.played);
 }
 // The creatures a film lights in blue, as the turn order or a tie does (`SceneFrame.focus`): a film's choice only,
@@ -217,11 +220,11 @@ const filmClock = {
       if (select.value !== String(options.speed)) { select.value = '1'; throw new Error(`The bench has no speed ${options.speed}.`); }
     }
     game.loop.stop();
-    const clock = film = { clock: 0, played: 0 };
+    const clock = film = { clock: 0, played: 0, drawn: 0 };
     Date.now = () => clock.clock;
     restartTweenClock();
     rest();
-    for (let index = 0; index < SETTLE_TICKS; index++) tick();
+    for (let index = 0; index < SETTLE_TICKS; index++) tick(FILM_TICK_MS, false);
     // A film of the field at rest plays nothing: the ground alone, on the film's clock.
     stillFilm = options.still === true;
     if (!stillFilm) play();
@@ -231,9 +234,12 @@ const filmClock = {
   },
   advance(ms: number) {
     if (!film) throw new Error('No film is running.');
-    for (let index = 0; index < Math.round(ms / FILM_TICK_MS); index++) tick();
+    const ticks = Math.round(ms / FILM_TICK_MS);
+    for (let index = 0; index < ticks; index++) tick(FILM_TICK_MS, index === ticks - 1);
     return { elapsed: film.played, stage };
   },
+  /** How many frames the running film has drawn: one at its start, then one per step. */
+  drawn() { return film?.drawn ?? 0; },
   stop() {
     if (!film || !game) return;
     film = null;

@@ -214,7 +214,7 @@ test('the journey jobs are the ones the planned specs play in', () => {
   assert.deepEqual(journeyJobs('none'), []);
   assert.deepEqual(journeyJobs('admin.ux.spec.js studio.spec.js'), names.filter((name) => name !== replays));
   assert.deepEqual(journeyJobs('table.ux.spec.js'), names.filter((name) => name !== replays));
-  assert.deepEqual(journeyJobs('battle-live.spec.js'), ['small-phone', 'phone', replays]);
+  assert.deepEqual(journeyJobs('battle-live.spec.js'), [...names.filter((name) => name.includes('phone')), replays]);
   assert.deepEqual(journeyJobs('battle-live.spec.js battle-tutorial.spec.js'), names);
 });
 
@@ -326,11 +326,24 @@ function jobBlock(workflow, job) {
 // Desktop and tablet were two halves of 13 and 21 minutes: a shard splits by test count, and three specs hold a
 // third of the time. Those play in a job of their own, the rest in two halves without them. The plan holds the
 // jobs (M4), so that it can leave out a job with nothing to play.
-test('the heaviest desktop specs play in a job of their own, and the rest in two halves, each test once', () => {
-  assert.deepEqual(JOURNEY_JOBS.map((job) => job.name), ['small-phone', 'phone', 'desktop replays', 'desktop and tablet 1/2', 'desktop and tablet 2/2']);
-  assert.deepEqual(JOURNEY_JOBS.slice(0, 2).map((job) => job.arguments), [['--project=small-phone'], ['--project=phone']]);
+// Each phone project plays in two halves: one job for the phone ran past its 30 minutes (#1003), and the small
+// phone's took 24 of them on main.
+test('each phone project plays in two halves, each test once', () => {
+  const phones = JOURNEY_JOBS.slice(0, 4);
+  assert.deepEqual(phones.map((job) => job.name), ['small-phone 1/2', 'small-phone 2/2', 'phone 1/2', 'phone 2/2']);
+  assert.deepEqual(phones.map((job) => job.arguments), [
+    ['--project=small-phone', '--shard=1/2'],
+    ['--project=small-phone', '--shard=2/2'],
+    ['--project=phone', '--shard=1/2'],
+    ['--project=phone', '--shard=2/2'],
+  ]);
+  for (const spec of specs) assert.deepEqual(journeyJobs(spec).filter((name) => name.includes('phone')), phones.map((job) => job.name), spec);
+});
 
-  const [replays, ...halves] = JOURNEY_JOBS.slice(2);
+test('the heaviest desktop specs play in a job of their own, and the rest in two halves, each test once', () => {
+  assert.deepEqual(JOURNEY_JOBS.slice(4).map((job) => job.name), ['desktop replays', 'desktop and tablet 1/2', 'desktop and tablet 2/2']);
+
+  const [replays, ...halves] = JOURNEY_JOBS.slice(4);
   assert.equal(replays.arguments.length, 2);
   assert.equal(replays.arguments[0], '--project=desktop', 'the replays job plays the desktop project');
   const heavy = /^--grep=(\S+)$/.exec(replays.arguments[1]);
