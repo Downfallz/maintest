@@ -20,7 +20,7 @@ const TINTS: Record<string, number> = { bone: BONE, ember: EMBER, blood: BLOOD, 
 // beads or motes drawn under them showed only beside them. Over the dice's links (1999), under their boxes (2000).
 const MOTIF_DEPTH = 1999.5;
 // The beats that are the view's and not a figure's: played once a cast, on the caster's side.
-const VIEW_BEATS = ['shake', 'push'];
+const VIEW_BEATS = new Set(['shake', 'push']);
 
 /**
  * Who a beat plays on: where it stands, which creature it is, and its picture when the scene has one. `drift` is
@@ -89,7 +89,7 @@ export class SpellEffects {
   /** The beats of a window that play once a cast: those on the caster, and the shake and the push, which are the view's. */
   private once(beats: StagedBeat[], visual: SpellVisual, actor: EffectFigure, rate: number, toward?: EffectAnchor) {
     for (const beat of beats) {
-      if (beat.beat !== 'motif' && beat.beat !== 'trail' && (beat.on === 'caster' || VIEW_BEATS.includes(beat.beat))) this.play(beat, visual, actor, rate, undefined, toward);
+      if (beat.beat !== 'motif' && beat.beat !== 'trail' && (beat.on === 'caster' || VIEW_BEATS.has(beat.beat))) this.play(beat, visual, actor, rate, undefined, toward);
     }
   }
 
@@ -97,7 +97,7 @@ export class SpellEffects {
   private each(beats: StagedBeat[], visual: SpellVisual, target: EffectFigure, rate: number, origin?: EffectFigure) {
     const copy = this.copies++;
     for (const beat of beats) {
-      if (beat.beat === 'motif' || VIEW_BEATS.includes(beat.beat)) continue;
+      if (beat.beat === 'motif' || VIEW_BEATS.has(beat.beat)) continue;
       // A trail keeps to the quill it follows: it is not staggered.
       if (beat.beat === 'trail') this.play(beat, visual, target, rate, origin);
       else if (beat.on === 'target') this.play(beat, visual, target, rate, origin, undefined, copy);
