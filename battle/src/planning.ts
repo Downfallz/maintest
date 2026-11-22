@@ -88,13 +88,13 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       if (!now.opened || now.latest?.waitingFor !== 'Evolution') return null;
       const shown = mutationChoices(now.latest, catalogue, id);
       const subject = shown.roster.find((one: { id: number }) => one.id === shown.selected);
-      return { title: `${subject?.name ?? 'Creature'} · Mutation tree`, eyebrow: 'MUTATION TREE · YOUR PICK', packages: shown.packages,
+      return { title: `${subject?.name ?? 'Creature'} · Mutation Tree`, eyebrow: 'MUTATION TREE · YOUR PICK', packages: shown.packages,
         roster: shown.roster.map((one: { id: number; name: string; context: string }) => ({ id: String(one.id), name: `${one.name} · ${one.context}` })),
         creature: String(shown.selected), focus: now.choice?.creature === shown.selected ? now.choice?.tier ?? null : null,
         choose: now.available && !now.sending ? tier => { selectCreature(shown.selected); controller.choose({ creature: shown.selected, tier }); } : undefined };
     };
     // The sheet's own header holds what the whole pick is about: the full tree to read, and passing what is left.
-    const full = button('Full mutation tree', () => { const shown = view(creature); if (shown) atlas.open(shown, catalogue, full, next => view(Number(next))); }); full.id = 'mutation-atlas-open'; full.className = 'planning-action atlas-open';
+    const full = button('Full Mutation Tree', () => { const shown = view(creature); if (shown) atlas.open(shown, catalogue, full, next => view(Number(next))); }); full.id = 'mutation-atlas-open'; full.className = 'planning-action atlas-open';
     const pass = button('Pass remaining picks', () => controller.choose({ pass: true })); pass.id = 'planning-pass'; pass.className = 'planning-action';
     el('planning-tools').replaceChildren(full, pass);
     if (creature != null) {
@@ -213,8 +213,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   // The team's picks are the budget a player spends here. Between a sent pick and the next asking the count is
   // the one the host has not restated yet, so it says the pick went and what is left after it. The note at the
   // top of the tree spells the budget out: a token per pick of the phase, filled while unspent, and, when there
-  // are fewer picks than creatures that could take one, that the player chooses which mutate now and that later
-  // phases bring new picks. It scrolls with the tree, so it costs a short sheet none of the tree's fixed room.
+  // are fewer picks than creatures that could take one, that the player chooses which mutate now, with a link to the
+  // rulebook's section for what later phases bring. It scrolls with the tree, so it costs a short sheet none of the tree's fixed room.
   function pickBudget(model: ReturnType<Controller['model']>) {
     const sent = model.accepted && !model.available ? model.choice ?? {} : null;
     const plan = pickPlan(model.latest, sent);
@@ -225,7 +225,10 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     for (let index = 0; index < plan.spent + plan.left; index++) {
       const pip = document.createElement('span'); pip.className = 'pick-pip'; pip.dataset.spent = String(index < plan.spent); pips.append(pip);
     }
-    pickNote.replaceChildren(pips, document.createTextNode(plan.rule));
+    if (!plan.rules) { pickNote.replaceChildren(pips, document.createTextNode(plan.rule)); return; }
+    const rules = document.createElement('a'); rules.href = plan.rules; rules.target = '_blank'; rules.rel = 'noopener';
+    rules.textContent = 'Rules'; rules.setAttribute('aria-label', 'Rules, Mutations, opens in a new tab');
+    pickNote.replaceChildren(pips, document.createTextNode(`${plan.rule} `), rules);
   }
   // Where a keyboard starts in the mutation sheet: the recipient tab, or the tree when a short sheet hides them.
   function focusStart() {
@@ -245,7 +248,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   function render(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const label = headings[model.latest?.waitingFor as string] ?? 'Order ties';
     el('planning-order').hidden = !model.opened || model.latest?.waitingFor !== 'TieOrder';
-    el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = model.latest?.waitingFor === 'Evolution' ? 'Mutation tree ↗' : label;
+    el('planning-open').hidden = !model.available || model.opened; el('planning-open').textContent = model.latest?.waitingFor === 'Evolution' ? 'Mutation Tree ↗' : label;
     el<HTMLButtonElement>('planning-open').disabled = model.sending;
     el('planning-error').textContent = model.error; el('planning-error').hidden = !model.error || model.opened;
     el('planning-dialog-error').textContent = model.error;
@@ -253,7 +256,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (!model.opened) { closeChoices(); return; }
     dialog.dataset.kind = model.latest.waitingFor;
     if (model.latest.waitingFor !== 'Evolution') el('planning-tools').replaceChildren();
-    el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation tree' : label;
+    el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation Tree' : label;
     // The seat's next asking after a pick arrives in the open sheet: the creature that took the pick has nothing
     // left to offer, so the next creature with offers is shown, and a keyboard starts there again.
     const continued = dialog.open && question !== '' && model.question !== question && model.latest.waitingFor === 'Evolution';

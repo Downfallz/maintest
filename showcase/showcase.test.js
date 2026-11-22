@@ -517,7 +517,7 @@ test('the home\'s two scenes speak English and French, never the same words', ()
   }
 });
 
-for (const [lang, file, home, title] of [['en', '404.html', '/', 'Page not found.'], ['fr', 'fr/404.html', '/fr/', 'Page introuvable.']]) {
+for (const [lang, file, home, title, back] of [['en', '404.html', '/', 'Page not found.', 'Back to the home page'], ['fr', 'fr/404.html', '/fr/', 'Page introuvable.', 'Retour à l’accueil']]) {
   test(`${lang}: the 404 shows the claw on the arch, in its language, and leads home`, () => {
     const html = read(file);
     assert.match(html, new RegExp(`<html lang="${lang}">`));
@@ -528,6 +528,8 @@ for (const [lang, file, home, title] of [['en', '404.html', '/', 'Page not found
     assert.match(html, /<meta name="robots" content="noindex">/);
     assert.equal((html.match(/class="gold-button"/g) ?? []).length, 1, 'one filled action');
     assert.match(html, new RegExp(`<a class="gold-button" href="${home.replaceAll('/', '\\/')}">`));
+    // Its words say where it goes: the home page, the owner's choice (#1048).
+    assert.ok(html.includes(back), back);
     const claw = sceneTag(html, 'latch-under-the-arch');
     assert.ok(claw, 'the claw');
     assert.match(claw, /class="picture lost-scene"/);

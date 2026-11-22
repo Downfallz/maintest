@@ -35,8 +35,8 @@
           "creature": 3
         },
         "says": [
-          "A spell costs Energy. Shock costs 2.",
-          "Every living creature gains Energy at the start of a round."
+          "A spell costs Energy: Shock costs 2.",
+          "Every living creature gains Energy as a round starts."
         ],
         "concepts": [
           "energy"
@@ -52,8 +52,8 @@
           "creature": 1
         },
         "says": [
-          "Defense lowers the damage a creature takes. The wounded enemy has none.",
-          "Hit it again. At zero Health, a creature is defeated."
+          "Defense lowers damage; the wounded enemy has none.",
+          "Hit it again: zero Health defeats it."
         ],
         "concepts": [
           "defense",

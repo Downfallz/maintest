@@ -434,7 +434,7 @@ writes two from one module: `404.html` in English and `fr/404.html` in French, e
 `alt` and its way home (`/`, `/fr/`). Today it is one static page in English, with no picture, no header and no
 footer; a derived picture's file name carries its hash, so the page with the claw cannot be written by hand.
 
-- **Filled action**: Back to the game site → (Retour au site du jeu →), gold, as today. The header's Play now
+- **Filled action**: Back to the home page → (Retour à l’accueil →), gold. The header's Play now
   stays an outline; the language link and the footer's links stay quiet. The measure should read 1.
 
 ### Words
@@ -450,7 +450,7 @@ English:
 ```text
 Error 404
 Page not found.
-[Back to the game site →]
+[Back to the home page →]
 ```
 
 French:
@@ -458,7 +458,7 @@ French:
 ```text
 Erreur 404
 Page introuvable.
-[Retour au site du jeu →]
+[Retour à l’accueil →]
 ```
 
 The kicker "Downfall Instinct · 404" becomes "Error 404": the header's name now says Downfall Instinct. No line
@@ -501,7 +501,7 @@ claw sits between "Page not found." and the way out, where it answers the questi
 
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
-| The press | A pointer down on Back to the game site or the header's Play now. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+| The press | A pointer down on Back to the home page or the header's Play now. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
 No ambience: the claw is still, and the page does not load `motion.js`. The press is the kit's, already in
 `showcase/showcase.css`.
@@ -515,7 +515,7 @@ No ambience: the claw is still, and the page does not load `motion.js`. The pres
 ### Accessibility
 
 - **Focus**: the skip link to the main content, then the header (the name, the language, Play now), then Back to
-  the game site, then the footer's links.
+  the home page, then the footer's links.
 - **Names**: `<html lang="en">` and `lang="fr"`. The claw carries its `alt` as written under **Words**, in the
   page's language. The language link goes to the other language's home, since a 404 has no twin; it keeps the
   layout's name ("FR, read in French"). Landmarks: the header's `nav`, `main`, the footer, as every page of the
@@ -541,8 +541,8 @@ No ambience: the claw is still, and the page does not load `motion.js`. The pres
   keeps the site's whole way around (the field guide, the rules, Play now). The layout writes a page's
   `canonical` and `alternate` from its route; the 404 has none, so the build passes it without them. The owner
   may prefer the bare page of today, with the claw and the button alone.
-- The button's words stay "Back to the game site", today's. "Back to the home page" says more plainly where it
-  goes; the owner chooses.
+- Settled (#1048): the button reads "Back to the home page" (« Retour à l’accueil »), which says more plainly
+  where it goes than "Back to the game site". The two plates and the 404's header and footer stay as built.
 
 ## The sign-in panel (`sign-in-panel`, `invitation-sign-in`)
 

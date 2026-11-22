@@ -105,6 +105,20 @@ The recap a player reads on coming back to a game (docs/tabletop/async-recap-pla
 | Both sides match | **As many creatures standing, as much health** | **Autant de créatures debout, autant de santé** |
 | The recap's line on a Your turn card, in the inbox and in the notice | **3 casts since your last visit · last move 5 h ago** (**1 cast** for one) | **3 sorts lancés depuis votre dernière visite · dernier coup il y a 5 h** (**1 sort lancé**) |
 
+## The ladder
+
+The leaderboard and the rulebook's section on it (ADR 0124, `rules/05-reference.md`):
+
+| What the page shows | Player-facing EN | Player-facing FR |
+| --- | --- | --- |
+| The leaderboard (`/leaderboard`) | **Ladder** | **Classement** |
+| A player's Glicko-2 rating | **Rating** | **Cote** |
+| The rating's deviation | **±** | **±** |
+| A rating whose deviation is above the threshold | **Provisional** | **Provisoire** |
+| A rating whose deviation is at or below it | **Settled** | **Établie** |
+| A game that counts on the ladder (ADR 0155, ADR 0171) | **Ranked** | **Classée** (partie classée) |
+| A game opened not to count | **Unranked** | **Hors classement** |
+
 ## Presentation and identifiers
 
 These names are presentation only. Nothing below is renamed, and no game rule, balance value or simulation

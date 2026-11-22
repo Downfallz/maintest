@@ -162,6 +162,7 @@ function drawPlayers(doc, ladder) {
   el('ladder-empty').hidden = rows.length > 0;
   el('players-caption').hidden = rows.length === 0;
   el('players-count').textContent = ladder.players.length;
+  // The host's threshold, beside the link to the rulebook, which cannot draw it (#994).
   el('provisional-above').textContent = ladder.provisionalAbove;
 }
 

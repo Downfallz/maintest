@@ -199,7 +199,7 @@ test('the end card names the next lesson the host lists, and none after the last
 test('a hint names the control the step asks for, by its own words, and nothing without one', () => {
   assert.equal(coachHint('Choose spell'), 'Next: Choose spell.');
   assert.equal(coachHint('  Choose tempos  '), 'Next: Choose tempos.');
-  assert.equal(coachHint('Mutation tree ↗'), 'Next: Mutation tree.');
+  assert.equal(coachHint('Mutation Tree ↗'), 'Next: Mutation Tree.');
   assert.equal(coachHint(''), null);
   assert.equal(coachHint(null), null);
 });

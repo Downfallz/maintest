@@ -986,11 +986,11 @@
             "id": "mutation",
             "title": "Mutation",
             "lines": [
-              "Une mutation donne à une créature de nouveaux sorts et un bonus d’initiative, pour le reste de la partie.",
-              "La dernière mutation d’une famille, sa clé de voûte, donne un passif à la place de sorts et d’un bonus d’initiative.",
-              "À un round de mutation, l’équipe partage ses choix, et une créature prend au plus une mutation."
+              "Une mutation apprend de nouveaux sorts à une créature et élève son initiative pour la partie.",
+              "Une clé de voûte ne donne qu’un passif.",
+              "À un round de mutation, votre équipe a 2 choix, un par créature."
             ],
-            "example": "Une créature à une initiative de base de 5 acquiert Brute, au bonus de 1 : elle connaît de nouveaux sorts et agit à 6."
+            "example": "Une créature à 5 d’initiative acquiert Brute (+1) et agit à 6."
           }
         },
         {
@@ -2375,7 +2375,7 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "Chaque état, chaque façon dont une partie se termine, et chaque passif, en un seul endroit."
+              "text": "Chaque état, chaque façon dont une partie se termine, chaque passif, et le classement, en un seul endroit."
             }
           ]
         }
@@ -2691,11 +2691,11 @@
             "id": "conditions",
             "title": "États",
             "lines": [
-              "Un état est un effet durable sur une créature, avec une valeur et un nombre de rounds.",
-              "Il décompte pendant les Retombées de chaque round, et se termine à zéro.",
-              "Une créature étourdie passe chaque round que dure le Stun. Ensuite, elle ne peut plus être étourdie pendant un round."
+              "Un état, effet durable, a une valeur et un nombre de rounds.",
+              "Il décompte aux Retombées et finit à zéro.",
+              "Une créature étourdie passe le Stun, puis ne peut pas l’être pendant un round."
             ],
-            "example": "Le Bleed de Latch inflige 2 à chaque Entretien pendant 3 rounds, quelle que soit la Défense."
+            "example": "Le Bleed de Latch inflige 2 à chaque Entretien pendant 3 rounds, malgré toute Défense."
           }
         },
         {
@@ -2890,6 +2890,59 @@
             "game-rules#implemented"
           ],
           "card": null
+        },
+        {
+          "id": "the-ladder",
+          "number": "5.4",
+          "title": "Le classement",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Le classement ordonne les joueurs qui ont joué une partie classée, chacun selon sa cote."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Après une partie classée, le classement fait bouger les cotes des deux joueurs selon le degré de surprise du résultat : battre un joueur mieux coté fait bouger les cotes davantage que battre un joueur moins bien coté. Une partie nulle compte pour une demi-victoire. Moins le classement est sûr d’une cote, plus une partie la fait bouger."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "Une partie classée est une partie en 3v3 entre deux places tenues par deux comptes différents. Une partie contre un bot, sur un appareil partagé ou ouverte hors classement ne compte jamais. Une partie que la table annule ne compte jamais non plus, même une fois terminée."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "spans": [
+                {
+                  "text": "À côté de chaque cote, le ± dit à quel point le classement en est sûr. Tant que son ± est élevé, une cote est "
+                },
+                {
+                  "text": "provisoire",
+                  "strong": true
+                },
+                {
+                  "text": " : la page du classement la place après les cotes établies. Un nouveau joueur commence provisoire. Un joueur qui cesse de jouer garde sa cote, mais son ± grandit chaque jour sans partie : sa cote redevient peu à peu provisoire."
+                }
+              ]
+            }
+          ],
+          "sources": [
+            "ADR 0124",
+            "ADR 0155",
+            "ADR 0171",
+            "ADR 0176"
+          ],
+          "card": null
         }
       ]
     }
@@ -2938,6 +2991,14 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-22",
+      "text": "La référence a une section sur le classement : ce qu’est une partie classée, ce qui fait bouger une cote et de combien, qu’une partie nulle compte pour une demi-victoire et qu’une partie annulée ne compte jamais, ce que dit le ± et quand une cote est provisoire. Les cartes Mutation et États sont plus courtes, sans qu’aucune règle ne change (ADR 0124, ADR 0176).",
+      "adrs": [
+        "0124",
+        "0176"
+      ]
+    },
     {
       "date": "2026-11-18",
       "text": "Trois sorts prennent leur nom définitif : Whirlwind devient Groundbreaker, Claim devient Seize, Soul Feast devient Devour. Aucune règle ne change.",

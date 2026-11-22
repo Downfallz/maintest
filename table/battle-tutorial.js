@@ -69,7 +69,7 @@ export function nextLesson(answer, lesson) {
  * it, read from the page. The page names a button; it decides no move.
  */
 export function coachHint(label) {
-  // A control's words without the glyph some carry after them (Mutation tree ↗), which a screen reader would read.
+  // A control's words without the glyph some carry after them (Mutation Tree ↗), which a screen reader would read.
   const words = typeof label === 'string' ? label.replace(/[↗→↻]/g, '').trim() : '';
   return words ? `Next: ${words}.` : null;
 }

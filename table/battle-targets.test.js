@@ -78,12 +78,12 @@ test('closing the asking removes every preview and target state', () => {
 });
 test('a stunned target keeps its stun on the tag behind the selection mark', () => {
   const m = model(), stunned = { isAlive: true, isStunned: true };
-  assert.deepEqual(tag(state(m, 2), stunned), { tag: '+ Stunned', spoken: 'Stunned. Select target' });
+  assert.deepEqual(tag(state(m, 2), stunned), { tag: '+ Stunned', spoken: 'Stunned. Select a target' });
   assert.deepEqual(tag(state(m, 4), stunned), { tag: '✓ Stunned', spoken: 'Stunned. Selected' });
 });
 test('an unstunned target reads its selection state and speaks it without the mark', () => {
   const m = model(), ready = { isAlive: true, isStunned: false };
-  assert.deepEqual(tag(state(m, 2), ready), { tag: '+ Select target', spoken: 'Select target' });
+  assert.deepEqual(tag(state(m, 2), ready), { tag: '+ Select target', spoken: 'Select a target' });
   assert.deepEqual(tag(state(m, 99), ready), { tag: '— Unavailable', spoken: 'Unavailable' });
 });
 test('a defeated creature reads unavailable on its tag and says it is defeated', () => {

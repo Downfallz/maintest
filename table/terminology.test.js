@@ -368,3 +368,34 @@ test('identifiers, engine values, comments, regular expressions and everyday wor
   ].join('\n');
   assert.deepEqual(violations([{ path: 'script', texts: scriptText(script) }]), []);
 });
+
+// A name of more than one word is a proper name in the EN column (Mutation Tree): a page writes it with the
+// column's capitals, or all in capitals as an eyebrow does (MUTATION TREE), never as an ordinary phrase (#1022).
+function miscased(files) {
+  const names = [...new Set(rows().flatMap(({ en }) => [...en.matchAll(/\*\*(.+?)\*\*/g)].map(m => m[1])).filter(name => /\s/.test(name)))];
+  const found = [];
+  for (const { path, texts } of files) {
+    for (const text of texts) {
+      for (const name of names) {
+        for (const [written] of text.matchAll(new RegExp(`\\b${name.replace(/\s+/g, '\\s+')}\\b`, 'giu'))) {
+          if (written !== name && written !== written.toUpperCase()) found.push(`${path}: "${text.trim().slice(0, 100)}" writes ${written}`);
+        }
+      }
+    }
+  }
+  return found;
+}
+
+// The public site says the names too (showcase/lore.mjs writes the field guide's words).
+const showcaseSources = () => readdirSync(join(root, 'showcase'))
+  .filter(name => name.endsWith('.mjs') && !name.endsWith('.test.mjs'))
+  .map(name => ({ path: `showcase/${name}`, texts: scriptText(read(`showcase/${name}`)) }));
+
+test('a name of several words in the EN column keeps its capitals in the table, the battle and the showcase', () => {
+  assert.deepEqual(miscased([...sources(), ...showcaseSources()]), []);
+});
+
+test('a name of several words written as a phrase is found, its capitals and an eyebrow are not', () => {
+  const texts = scriptText("a.textContent = 'Full mutation tree'; b.title = 'Open the Mutation Tree'; c.textContent = 'MUTATION TREE · YOURS';");
+  assert.deepEqual(miscased([{ path: 'script', texts }]), ['script: "Full mutation tree" writes mutation tree']);
+});

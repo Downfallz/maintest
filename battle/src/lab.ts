@@ -61,7 +61,7 @@ function updateCreature(one: Creature) {
   node.classList.toggle('is-targetable', targetable);
   node.classList.toggle('is-defeated', !one.isAlive);
   node.setAttribute('aria-pressed', String(targetable ? selected : one.id === state.inspected));
-  speakCreature(node, `with ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${targetable ? 'Select target.' : 'Inspect creature.'}`);
+  speakCreature(node, `with ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense. ${targetable ? 'Select a target.' : 'Inspect creature.'}`);
   node.querySelector('.creature-name')!.textContent = one.name;
   node.querySelector('.creature-stats')!.textContent = `${one.health}/${one.maxHealth} HP`;
   (node.querySelector('.health-fill') as HTMLElement).style.width = `${100 * one.health / one.maxHealth}%`;

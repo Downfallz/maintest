@@ -948,6 +948,8 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
    then, when there are fewer picks than creatures, the line that says the picks are the team's to share. */
 #planning-pick-rule { margin: 0 0 10px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
 #planning-pick-rule[hidden] { display: none; }
+/* The rulebook's link takes a line of its own under the sentence: a 44 px target, not a word inside 11 px text. */
+#planning-pick-rule a { display: flex; width: fit-content; }
 .pick-pips { display: inline-flex; gap: 4px; margin-right: 6px; vertical-align: -1px; }
 .pick-pip { width: 10px; height: 10px; border: 1.5px solid var(--gold); border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px #f0c46b66; }
 .pick-pip[data-spent="true"] { background: transparent; box-shadow: none; opacity: .55; }
@@ -1886,8 +1888,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The card's eyebrow, title, lines and example are identity.css's .concept-card, shared with the rulebook (#699). */
 .concept-rulebook { margin: 0 0 8px; font-size: 12px; }
 /* The card's section in the rulebook, opened in a new tab so the battle stays on its question (rulebook-plan.md R4). */
-.concept-rulebook a, .help-rules a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold); text-underline-offset: 3px; }
-.concept-rulebook a:focus-visible, .help-rules a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.concept-rulebook a, .help-rules a, #planning-pick-rule a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold); text-underline-offset: 3px; }
+.concept-rulebook a:focus-visible, .help-rules a:focus-visible, #planning-pick-rule a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .help-rules { margin: 0; font-size: 13px; }
 .coach-end { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .coach-end[hidden] { display: none; }

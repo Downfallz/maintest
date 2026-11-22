@@ -14,7 +14,7 @@ export const lore = {
       ['Revenant', 'Spirits in the rib cage', 'Wraithguard calls the spirits out from between its ribs to shield its allies. With Death Wail, they scream through its jaws and leave the enemy creatures bleeding. Either spell costs the Revenant some of its own blood.'],
       ['Brute influence', 'Heavier foreclaws', 'With a Brute mutation, the Revenant grows heavier shoulders and thicker claws. It can still cast Wraithguard. Now it can also hit an enemy with Pummel.'],
     ],
-    invite: 'Explore the mutation tree', guideLink: 'Open the field guide',
+    invite: 'Explore the Mutation Tree', guideLink: 'Open the field guide',
     guideNote: 'The guide shows what each mutation requires and which spells it teaches.',
     base: 'Ancestral creature', guideTitle: 'The mutation field guide',
     guideIntro: 'Start at the bone mask and follow a branch down to its final form. You can also open another family on the same creature. The creature keeps the spells it has already learned.',
