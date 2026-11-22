@@ -1,0 +1,5 @@
+# host-reviewer lessons, notifications N3 PR (ADR 0202)
+
+- LobbyApi's `Claims` is one static SemaphoreSlim for every claim, leave, invitation and seat subscribe in the API; the battle page re-PUTs `/api/lobby/push` for each held seat on every load (battle-services.js refreshHeld), so any store write added inside SubscribeAsync's gate (N3: AccountDevices.AddAsync, read + conditional write, 8 tries) is paid by every claim in the process; ask for it after `Claims.Release()` (N3).
+- Once a signed-in seat's turn goes only to its account's devices (N3), a seat subscription the account does not hold (bound before the deploy, or a device write that only logged) is never sent to, while the seat's push test (`POST /api/lobby/push/test`, seat.Push) still says it works: check every "moved to another channel" change for what the old channel held and the test that still reads it (N3).
+- The `Turn` kind gates TurnTimeouts' "your turn is waiting, or the match is lost" warning too (same NoticeKind): a preference switch per kind reaches every send of that kind, check the hourly job's ones (N3).

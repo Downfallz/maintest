@@ -44,6 +44,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <summary>What tells a friend's devices of an invitation, and the inviter's of its answer; none without push keys.</summary>
     public AccountNotifier? Notifier { get; set; }
 
+    /// <summary>
+    /// The devices each account is told on (ADR 0202): a signed-in seat's subscription is its account's device too, so
+    /// the seat's switch and Settings' are one switch a device. None on a host without accounts.
+    /// </summary>
+    public AccountDevices? Devices { get; set; }
+
     /// <summary>What <c>GET /api/lobby/events</c> streams (ADR 0164); none on a host that streams no lobby.</summary>
     public LobbyChanges? Changes { get; set; }
 
@@ -1086,7 +1092,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 return Problem(400, "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16.");
             }
 
-            if (push.IsDead(subscription.Endpoint))
+            // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a
+            // push service say an endpoint is gone (ADR 0202): either one's word makes the page subscribe again.
+            if (push.IsDead(subscription.Endpoint) || Notifier?.Push?.IsDead(subscription.Endpoint) == true)
             {
                 return Problem(410, "This subscription is gone from its push service. Subscribe again.");
             }
@@ -1095,6 +1103,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // Under the claim gate, and the seat found under it: a leave, a claim or a new invitation replaces the
         // seat's keys, this subscription among them, and one landing between the lookup and the write would
         // hand the departed browser's phone to the next player's seat.
+        (AccountId Owner, PushSubscription? Before)? linked;
+        StudioResponse answer;
         await Claims.WaitAsync();
         try
         {
@@ -1117,11 +1127,45 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 throw;
             }
 
-            return Json(new { seat = seat.Name, notices = subscription is not null });
+            linked = seat.Account is { } owner && Devices is not null ? (owner, before) : null;
+            answer = Json(new { seat = seat.Name, notices = subscription is not null });
         }
         finally
         {
             Claims.Release();
+        }
+
+        // After the gate: every claim in the process waits on it, and the device list has its own conditional write.
+        if (linked is { } link)
+        {
+            await DeviceAsync(Devices!, link.Owner, subscription, link.Before);
+        }
+
+        return answer;
+    }
+
+    // The seat's subscription joins its account's devices, and leaves them with the seat's DELETE (ADR 0202). The
+    // seat's own record holds it already: a device list that cannot be written is a line, not a refused switch.
+    private static async Task DeviceAsync(AccountDevices devices, AccountId owner, PushSubscription? subscription, PushSubscription? before)
+    {
+        try
+        {
+            // A subscription that replaced another leaves the other off the account too: it would hold one of its
+            // five places until a push failed on it.
+            if (before is not null && !string.Equals(before.Endpoint, subscription?.Endpoint, StringComparison.Ordinal))
+            {
+                await devices.RemoveAsync(owner, before.Endpoint);
+            }
+
+            // A battle page sends its subscription on every load: written only when the account does not hold it as it is.
+            if (subscription is not null && !(await devices.ListAsync(owner)).Any(device => device.Endpoint == subscription.Endpoint && device.P256dh == subscription.P256dh && device.Auth == subscription.Auth))
+            {
+                await devices.AddAsync(owner, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));
+            }
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+        {
+            Console.WriteLine($"  Account {owner}: a seat's subscription could not be kept with its devices: {HttpHost.OneLine(failure)}");
         }
     }
 

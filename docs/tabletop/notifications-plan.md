@@ -1,7 +1,7 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 and N2 are built; each stage below is one
-pull request.
+Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1, N2 and N3 are built; each stage below is
+one pull request.
 
 ## What the owner asked for
 
@@ -171,6 +171,24 @@ Jobs tab show the counts and the queue's length.
    Notifications redrawn, the match settings' section pointing to it. ADR (amends ADR 0118
    and 0120: a device holding both seats still gets nothing). Tests: Cli tests on a kind turned off (the bell
    has it, the device does not), `devices.test.js`, `battle-services.test.js`.
+
+   *Built (2026-11-22)*: ADR 0202. The account's choices are `NoticePreferences` (turns, invitations and friends,
+   results; every kind until chosen), a third document beside its settings (`preferences/<id>.notices.json`, port
+   `IPreferenceStore`), read under `notices` by `GET /api/account/preferences` and saved by
+   `PUT /api/account/preferences/notices`. The door reads them before each push, in the API, the worker and the hourly
+   job; a kind turned off is still kept in the bell, and a choice that cannot be read lets the push go. A seat that
+   belongs to an account is told its turn through the door on every device of the account (`turn:<table>`, which the
+   timeout warning replaces), not on the seat's own subscription; no device is told when the other seat is the same
+   account's or the device is the other seat's subscription. A signed-in seat's `PUT /api/lobby/push` registers the
+   subscription as one of its account's devices too, and its `DELETE` forgets it there, so the match settings' switch
+   and Settings' are one switch a device. Settings, Notifications: the line on the bell, **Pop-ups on this device** (a
+   checkbox; off now lets go of the browser's subscription, and a browser turned off under the old switch lets go of
+   its subscription once on its next visit), **Send a test**, and **What pops up**. The match settings say the switch
+   is the device's and where the rest is chosen. A seat's subscription is told only while the account holds it
+   (Codex's review: joining it at send time would bring back a browser signed out); a subscription either sender heard is gone is answered 410 to the seat page; a
+   replaced one leaves the account; signing out on a browser forgets it as a device. Turning *Your turn* off also
+   silences the timeout warning. Left to N4: the offer. Left to #1109: a test that each process wires the choices
+   and the account's turn (`push.Accounts`, `Lobby.Devices`, `Preferences`), as for the door.
 4. **N4, the offer.** The journey's brief, `table/push-offer.js`, the card in the lobby and in the battle view,
    the three answers, the words by platform, Install on Android. The classic page's own offer is removed.
    Tests: `push-offer.test.js` (when it shows, each answer, each platform), the browser specs (`table.push.js`).

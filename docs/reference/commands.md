@@ -603,10 +603,19 @@ its page, a Web Push the page's service worker shows (ADR 0118; `push-keys` prin
 only; a device holding both seats is told nothing, ADR 0120). After a last visit, the notice says how many spells
 were cast since (`Round 4: choose a spell. 3 casts since your last visit.`).
 
-With push keys too, a signed-in player's lobby offers "Notify me on this device" (`PUT`/`DELETE /api/account/push`,
+With push keys too, Settings offer a signed-in player "Pop-ups on this device" (`PUT`/`DELETE /api/account/push`,
 `POST /api/account/push/test`): the browser becomes one of the account's devices, five at most, kept beside the
 accounts under `devices/` and forgotten with "sign out everywhere" and with the account, which is where a
 friend's request or an invitation reaches a player who holds no seat (docs/tabletop/friends-plan.md, stage 1).
+Off also lets go of the browser's subscription (ADR 0202).
+A signed-in seat's subscription (`PUT /api/lobby/push`) is registered as one of its account's devices too, and its
+`DELETE` forgets it there; a signed-in seat is told its turn on the account's devices, not on the seat's own
+subscription, and never on the device that holds the other seat. `PUT /api/account/preferences/notices` with
+`{"turns": true, "invitations": false, "results": true}` chooses what pops up on every device of the account; a
+choice left out is on, and `GET /api/account/preferences` says them under `notices`. The API, the worker and the
+hourly job read them before each push; the bell keeps the news whatever they say. Turning turns off also silences
+the warning that a turn is about to time out. `POST /api/account/signout` with `{"endpoint": ...}` forgets that
+browser as a device.
 
 With accounts on, push keys or not, the news to an account (a friend accepted, the invited friend took the seat,
 the other player left, a match ended) is kept in its notice log under `notices/`, the 100 latest of the last 90

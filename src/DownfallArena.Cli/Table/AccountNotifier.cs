@@ -1,4 +1,5 @@
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
@@ -26,11 +27,24 @@ internal sealed class AccountNotifier(AccountNoticeLog? log, AccountNotices? pus
     /// </summary>
     public Func<AccountId, CancellationToken, Task<bool>>? Exists { get; init; }
 
+    /// <summary>
+    /// What pops up on the account's devices (ADR 0202): a kind the account turned off is kept in the bell and not
+    /// pushed. None where every kind is pushed.
+    /// </summary>
+    public IPreferenceStore? Preferences { get; init; }
+
     /// <summary>Where a line about a notice the bell could not keep is said: the console, unless a test listens.</summary>
     public Action<string> Said { get; init; } = Console.WriteLine;
 
     /// <summary>The bell, then the push. How many devices took the push.</summary>
-    public async Task<int> NotifyAsync(AccountId to, Notice notice, CancellationToken cancellationToken = default)
+    public Task<int> NotifyAsync(AccountId to, Notice notice, CancellationToken cancellationToken = default) =>
+        NotifyAsync(to, notice, except: null, cancellationToken);
+
+    /// <summary>
+    /// The bell, then the push to every device of the account but the endpoints <paramref name="except" /> names: a
+    /// phone that holds the other seat of the table is hotseat, and is told nothing (ADR 0120). How many devices took the push.
+    /// </summary>
+    public async Task<int> NotifyAsync(AccountId to, Notice notice, IReadOnlyCollection<string>? except, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(notice);
         if (log is not null && NoticeKinds.IsNews(notice.Kind))
@@ -45,7 +59,31 @@ internal sealed class AccountNotifier(AccountNoticeLog? log, AccountNotices? pus
             }
         }
 
-        return push is null ? 0 : await push.SendAsync(to, AccountNotices.Payload(notice.Title, notice.Body, notice.Url, notice.Tag), TopicOf(notice.Kind), cancellationToken);
+        if (push is null || !await PopsAsync(to, notice.Kind, cancellationToken))
+        {
+            return 0;
+        }
+
+        return await push.SendAsync(to, AccountNotices.Payload(notice.Title, notice.Body, notice.Url, notice.Tag), TopicOf(notice.Kind), except, cancellationToken);
+    }
+
+    // A choice that cannot be read is no reason to keep a notice from the phone: it goes, as it did before the choice.
+    private async Task<bool> PopsAsync(AccountId to, NoticeKind kind, CancellationToken cancellationToken)
+    {
+        if (Preferences is not { } preferences)
+        {
+            return true;
+        }
+
+        try
+        {
+            return (await preferences.GetNoticesAsync(to, cancellationToken)).Pops(kind);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            Said($"  Account {to}: what pops up could not be read, so the notice is pushed: {Hosting.HttpHost.OneLine(failure)}");
+            return true;
+        }
     }
 
     private async Task KeepAsync(AccountNoticeLog kept, AccountId to, Notice notice, CancellationToken cancellationToken)

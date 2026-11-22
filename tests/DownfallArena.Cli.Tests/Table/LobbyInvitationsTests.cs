@@ -319,6 +319,58 @@ public sealed class LobbyInvitationsTests : IDisposable
         (await MineAsync(bastien)).GetProperty("invitations").GetArrayLength().ShouldBe(0);
     }
 
+    /// <summary>One switch a device (ADR 0202): a signed-in seat's subscription is its account's device too, and goes with the seat's DELETE.</summary>
+    [Fact]
+    public async Task A_signed_in_seat_s_subscription_joins_its_account_s_devices_and_leaves_them_with_the_seat()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var lobby = new LobbyApi(_registry, _hosted.Composer, _clock, new PushNotices(_sender, "BP8", _clock)) { Accounts = (await LobbyAsync()).Accounts, Devices = _devices };
+        var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
+        var table = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
+        var token = table.Seats[0].Token;
+        var browser = JsonSerializer.Serialize(new { endpoint = "https://push.example/laptop", keys = new { p256dh = Key, auth = Auth } });
+
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", browser, token, mark)).Status.ShouldBe(200);
+        var joined = (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ToList();
+        (await lobby.HandleAsync("DELETE", "/api/lobby/push", "", token, mark)).Status.ShouldBe(200);
+
+        joined.ShouldBe(["https://push.example/MarkF", "https://push.example/laptop"], ignoreOrder: true);
+        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+    }
+
+    [Fact]
+    public async Task A_signed_in_seat_s_new_subscription_takes_the_old_one_s_place_among_its_account_s_devices()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var lobby = new LobbyApi(_registry, _hosted.Composer, _clock, new PushNotices(_sender, "BP8", _clock)) { Accounts = (await LobbyAsync()).Accounts, Devices = _devices };
+        var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
+        var token = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!.Seats[0].Token;
+        static string Browser(string endpoint) => JsonSerializer.Serialize(new { endpoint, keys = new { p256dh = Key, auth = Auth } });
+
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://push.example/old"), token, mark)).Status.ShouldBe(200);
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://push.example/new"), token, mark)).Status.ShouldBe(200);
+
+        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/MarkF", "https://push.example/new"], ignoreOrder: true);
+    }
+
+    /// <summary>The account's sender heard the push service say the endpoint is gone: the seat's page is told 410 and subscribes again, rather than adding it back.</summary>
+    [Fact]
+    public async Task A_subscription_the_account_s_push_service_said_is_gone_is_refused_for_a_seat_too()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var door = new AccountNotifier(_log, new AccountNotices(_sender, _devices));
+        var lobby = new LobbyApi(_registry, _hosted.Composer, _clock, new PushNotices(_sender, "BP8", _clock)) { Accounts = (await LobbyAsync()).Accounts, Devices = _devices, Notifier = door };
+        var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
+        var token = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!.Seats[0].Token;
+        _sender.Gone.Add("https://push.example/MarkF");
+        await door.NotifyAsync(mark.Account.Id, new Notice(NoticeKind.Invitation, "An invitation", "bastien invites you.", "/lobby", "invite:t1"), Cancel);
+
+        var again = await lobby.HandleAsync("PUT", "/api/lobby/push", JsonSerializer.Serialize(new { endpoint = "https://push.example/MarkF", keys = new { p256dh = Key, auth = Auth } }), token, mark);
+
+        again.Status.ShouldBe(410);
+        (await _devices.ListAsync(mark.Account.Id, Cancel)).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_table_that_has_begun_is_not_closed_from_the_lobby()
     {
@@ -482,10 +534,13 @@ public sealed class LobbyInvitationsTests : IDisposable
     {
         public List<(string Endpoint, string Payload, string Topic)> Sent { get; } = [];
 
+        /// <summary>The endpoints a push service says are gone.</summary>
+        public HashSet<string> Gone { get; } = [];
+
         public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             Sent.Add((to.Endpoint, payload, topic));
-            return Task.FromResult(true);
+            return Task.FromResult(!Gone.Contains(to.Endpoint));
         }
     }
 

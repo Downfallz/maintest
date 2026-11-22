@@ -92,6 +92,21 @@ export function signOutWords(everywhere) {
 const SIGNED_OUT = 'downfall.signedOut';
 
 /** Marks the tab once the host has confirmed a sign out from it. A browser without storage says no goodbye. */
+/**
+ * What a sign-out tells the host (ADR 0202): everywhere, or this browser only, with the push endpoint it holds, so a
+ * borrowed browser is no longer one of the account's devices once its player leaves it.
+ */
+export async function signOutBody(everywhere, nav = globalThis.navigator) {
+  if (everywhere) return { everywhere: true };
+  try {
+    const registration = await nav?.serviceWorker?.getRegistration?.();
+    const endpoint = (await registration?.pushManager?.getSubscription())?.endpoint;
+    return endpoint ? { everywhere: false, endpoint } : { everywhere: false };
+  } catch {
+    return { everywhere: false };
+  }
+}
+
 export function markSignedOut(storage) {
   try { storage?.setItem(SIGNED_OUT, '1'); } catch { /* The plain door then. */ }
 }
@@ -288,7 +303,7 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       if (!await confirmAction(doc, words.title, words.detail, words.action, { filled: true, keep: words.keep, head })) return;
       el(id).disabled = true;
       try {
-        await request('/api/account/signout', { everywhere });
+        await request('/api/account/signout', await signOutBody(everywhere));
         markSignedOut(session);
         await refresh();
       } catch (error) {

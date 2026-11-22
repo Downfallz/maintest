@@ -55,3 +55,10 @@ test('the model names the seat it belongs to and says when its view has not arri
   control.receive({ recording: true, over: true }); assert.equal(control.model().loaded, true);
   control.reset(); assert.equal(control.model().owner, null);
 });
+test('the switch says it is this device\'s, for every game, and where what pops up is chosen', async () => {
+  const h = harness(); await tick();
+  assert.match(h.control.model().where, /this device's, for every game/);
+  assert.match(h.control.model().where, /Settings, Notifications/);
+  const both = harness({ hotseat: true }); await tick();
+  assert.equal(both.control.model().where, '', 'a page holding both seats offers no switch to explain');
+});

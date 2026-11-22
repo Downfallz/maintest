@@ -159,13 +159,20 @@ internal static class TableHost
             accounts.Notices = sender is null ? null : new AccountNotices(sender, devices);
             // The bell's news (ADR 0201), beside the accounts too, kept whether or not the host can push.
             accounts.NoticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
-            notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices) { Exists = async (id, token) => await opened!.Value.Store.FindAsync(id, token) is not null };
+            // The settings every new game of the account starts from (ADR 0140), beside the accounts too, with what pops
+            // up on its devices (ADR 0202), which the door reads before each push.
+            accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
+            notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices)
+            {
+                Exists = async (id, token) => await opened!.Value.Store.FindAsync(id, token) is not null,
+                Preferences = accounts.Preferences,
+            };
+            // A signed-in seat's "your turn" goes through the door, to its account's devices (ADR 0202).
+            push?.Accounts = notifier;
             // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
             friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
             friends = new FriendsApi(friendships, accounts, notifier);
             accounts.ForgetFriends = id => friendships.ForgetAsync(id);
-            // The settings every new game of the account starts from (ADR 0140), beside the accounts too.
-            accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
             // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
             // operator's list of players read from it, the accounts and the results.
             accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
@@ -190,6 +197,8 @@ internal static class TableHost
         // A host the hourly job tends lets no request do the job's work (ADR 0162).
         admin.Lobby.Tended = options.Tended;
         admin.Lobby.Notifier = notifier;
+        // A signed-in seat's subscription is its account's device too (ADR 0202).
+        admin.Lobby.Devices = accounts?.Devices;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
         composer.Notifier = notifier;
         // What the lobbies in view read on, instead of reading on a clock (ADR 0164).
@@ -327,7 +336,7 @@ internal static class TableHost
             ? $"  Notices: off. A phone is told \"your turn\" when the host has push keys: --push-keys <file>, or {PushKeys.Environment} (push-keys prints a pair)."
             : accounts is null
                 ? "  Notices: on. A seat's page offers \"Notify me when it's my turn\"."
-                : "  Notices: on. A seat's page offers \"Notify me when it's my turn\"; the lobby offers \"Notify me on this device\" to a signed-in player.");
+                : "  Notices: on. A seat's page offers \"Notify me when it's my turn\"; Settings offer \"Pop-ups on this device\" to a signed-in player.");
 
         Console.WriteLine(options.Tended
             ? "  Tending: by the hourly job (table-tend). Requests close no table that never began and let no invitation go (ADR 0162)."

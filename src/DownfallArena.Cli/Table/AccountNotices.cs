@@ -36,13 +36,22 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
     /// device that is gone is forgotten; a service that is out is a line on the console and a notice that did
     /// not arrive, never a reason to drop the device.
     /// </summary>
-    public async Task<int> SendAsync(AccountId to, string payload, string topic, CancellationToken cancellationToken = default)
+    public Task<int> SendAsync(AccountId to, string payload, string topic, CancellationToken cancellationToken = default) =>
+        SendAsync(to, payload, topic, except: null, cancellationToken);
+
+    /// <summary>As <see cref="SendAsync(AccountId, string, string, CancellationToken)" />, to every device but the endpoints <paramref name="except" /> names.</summary>
+    public async Task<int> SendAsync(AccountId to, string payload, string topic, IReadOnlyCollection<string>? except, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
         var reached = 0;
         foreach (var device in (await devices.ListAsync(to, cancellationToken)).DistinctBy(device => device.Endpoint, StringComparer.Ordinal))
         {
+            if (except is not null && except.Contains(device.Endpoint, StringComparer.Ordinal))
+            {
+                continue;
+            }
+
             try
             {
                 if (await sender.SendAsync(Subscription(device), payload, topic, cancellationToken))
@@ -71,7 +80,7 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
         var device = (await devices.ListAsync(account, cancellationToken)).FirstOrDefault(device => string.Equals(device.Endpoint, endpoint, StringComparison.Ordinal));
         if (device is null)
         {
-            return new PushTest(false, "This browser is not one of your devices: tap \"Notify me on this device\" first.");
+            return new PushTest(false, "This browser is not one of your devices: turn on \"Pop-ups on this device\" first.");
         }
 
         var payload = Payload("Notifications work", "This device is told about your friends, your invitations and your games.", "/lobby", "test:account", test: true);
@@ -84,7 +93,7 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             }
 
             await ForgetAsync(account, device.Endpoint, cancellationToken);
-            return new PushTest(false, "The push service says this subscription is gone. Tap \"Notify me on this device\" again.");
+            return new PushTest(false, "The push service says this subscription is gone. Turn \"Pop-ups on this device\" on again.");
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {

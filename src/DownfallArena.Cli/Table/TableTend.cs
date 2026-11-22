@@ -87,6 +87,7 @@ internal static class TableTend
                 composer.Notifier = new AccountNotifier(noticeLog, sender is null ? null : new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock)))
                 {
                     Exists = async (id, token) => await accounts.FindAsync(id, token) is not null,
+                    Preferences = await ArtifactStores.OpenPreferencesAsync(target),
                 };
                 composer.NameOf = async id => (await accounts.FindAsync(id))?.Username.Value;
             }
