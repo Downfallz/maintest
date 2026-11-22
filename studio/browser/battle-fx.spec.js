@@ -357,6 +357,9 @@ test('a trail from a caster to an ally goes at an even pace: half way at half it
 });
 
 test('a capstone pushes the view in while it gathers and lets go at the impact (#950)', async ({ page }) => {
+  // Crushing Stomp's windup holds its pulse, a filter a renderer with no graphics card draws slowly, and the test
+  // films it twice: on the desktop runner that took more than 30 s.
+  test.slow();
   // Crushing Stomp, Stage III: no defeat and no critical hit, so no punch of the zoom.
   await film(page, 'start', { spell: 'spell:crushing_stomp:v1', actor: 'a1', targets: ['b1'] });
   const zoom = async () => (await page.evaluate(() => window.battleBench.motion())).view.zoom;
