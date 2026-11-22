@@ -374,7 +374,7 @@ test.describe('without a service worker', () => {
       expect(tempos).toHaveLength(4); expect(tempos.filter(one => one.creature === first.waitingCreature)).toHaveLength(1);
       expect(privateSurface(await read(other, 'player2', secondTokens.player2))).toEqual(privateSurface(second));
       await page.locator('#settings').click(); await page.locator('#concede-open').click(); await page.locator('#concede-confirm').click();
-      await matchResult(other); await expect(other.locator('#match-outcome')).toHaveText('Player 1 conceded · you win.');
+      await matchResult(other); await expect(other.locator('#match-outcome')).toHaveText('Your opponent conceded · you win.');
       await other.screenshot({ path: info.outputPath('concession-result.jpg'), type: 'jpeg', quality: 85 }); expect(errors).toEqual([]);
     } finally { await otherContext.close(); await page.close(); await stopHost(hostInfo.host); }
   });
