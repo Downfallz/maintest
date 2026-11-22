@@ -483,10 +483,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       }
       root.append(ways);
     }
-    // A game of mine that waits on someone else lays its words on the Warped listening, dimmed; the one the featured
-    // space shows already stands on it there.
-    if (waitsOnAnother(entry) && featured?.shown() !== table.id) {
-      wearScene(doc, root, 'warped-listening', { page: 'table/home', form: 'ground', words: Array.from(root.children).filter(child => child.tagName !== 'BUTTON' && !child.classList.contains('card-ways')), sizes: CARD_SIZES });
+    // A game of mine that waits on someone else lays its words on three ripples breaking an arch's reflection, dimmed
+    // (docs/art/scene-replacement-plan.md, 10).
+    if (waitsOnAnother(entry)) {
+      wearScene(doc, root, 'waiting-ripples', { page: 'table/home', form: 'ground', words: Array.from(root.children).filter(child => child.tagName !== 'BUTTON' && !child.classList.contains('card-ways')), sizes: CARD_SIZES });
     }
     return root;
   }
@@ -508,9 +508,9 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     const top = node('div', '', 'game-card-top'), line = node('p', `${table.format} battle · ${table.id}`, 'game-id');
     top.append(node('h3', invitationLine(invitation)), node('span', 'Invitation', 'status-tag invited'));
     root.append(top, line);
-    // A friend kept a seat: the Predator and the Deathstalker at one pool, dimmed behind the card's words (the game's
-    // line is not shown on the home).
-    wearScene(doc, root, 'predator-and-deathstalker', { page: 'table/home', form: 'ground', words: [top], sizes: '(min-width: 744px) 400px, calc(100vw - 32px)' });
+    // A friend kept a seat: the Predator waits on the far bank, looking back, dimmed behind the card's words (the
+    // game's line is not shown on the home; docs/art/scene-replacement-plan.md, 02).
+    wearScene(doc, root, 'invitation-reverse', { page: 'table/home', form: 'ground', words: [top], sizes: '(min-width: 744px) 400px, calc(100vw - 32px)' });
     const ways = node('div', '', 'card-ways');
     // Quiet too: the bell counts it, and the featured space holds the home's one filled action.
     const accept = node('button', 'Accept & play →', 'secondary');
@@ -642,9 +642,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }],
       detail: [summary.voided, created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
-    // The game that ended last stands on the ground the stomp left, dimmed behind its words; the others keep their slate.
+    // The game that ended last stands on the stomp's marks hours later, dimmed behind its words; the others keep their
+    // slate (docs/art/scene-replacement-plan.md, 11).
     if (item.table && latestFinished(KINDS.map(([kind]) => finished[kind].first)) === item.table) {
-      wearScene(doc, line, 'crushing-stomp-aftermath', { page: 'table/home', form: 'ground', words: Array.from(line.children).filter(child => child !== action), sizes: ROW_SIZES });
+      wearScene(doc, line, 'after-the-impact', { page: 'table/home', form: 'ground', words: Array.from(line.children).filter(child => child !== action), sizes: ROW_SIZES });
     }
     return line;
   }
@@ -912,9 +913,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('create-friend').hidden = !chosen;
     for (const part of [el('create-tabs'), el('opponent'), dialog.querySelector('label[for="opponent"]')]) part.hidden = Boolean(chosen);
     showOpponent();
-    // Opened on a friend, the window's heading wears the pool: someone is asked to meet the player there.
-    if (chosen) wearScene(doc, createHeading, 'predator-and-deathstalker', {
-      page: 'table/home', form: 'head', side: 'start', words: createWords, focus: '50% 75%',
+    // Opened on a friend, the window's heading wears the empty bank: someone is asked to meet the player across the
+    // pool (docs/art/scene-replacement-plan.md, 01).
+    if (chosen) wearScene(doc, createHeading, 'empty-bank', {
+      page: 'table/home', form: 'head', side: 'start', words: createWords, focus: '70% 50%',
       sizes: '(min-width: 512px) 480px, calc(100vw - 32px)',
     });
     else undressScene(createHeading);

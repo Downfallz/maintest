@@ -451,16 +451,16 @@ test('a form that fails to load leaves no gap, and the mutation keeps its name',
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
 
-test('the tree opens on the moult behind its title, and each family column on its scene, loaded only when it opens', async ({ page }, info) => {
+test('the tree opens on the three trails behind its title, and each family column on its scene, loaded only when it opens', async ({ page }, info) => {
   const asked = [];
-  page.on('request', request => { const name = /\/page-art\/(brute-moult|ironhide-scar|blightweaver-pressure-sac|warped-listening)-/.exec(request.url()); if (name) asked.push(name[1]); });
+  page.on('request', request => { const name = /\/page-art\/(three-trails-in-ash|ironhide-scar|blightweaver-pressure-sac|cataclysm-eye)-/.exec(request.url()); if (name) asked.push(name[1]); });
   const h = await mount(page);
   // docs/art/scene-paintings-plan.md, S11: no scene of the tree loads with the pick.
   expect(asked).toEqual([]);
   await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
   const band = page.locator('#atlas-dialog .atlas-band');
   await expect(band).toHaveClass(/scene-head/); await expect(band).toHaveAttribute('data-side', 'start');
-  await expect(band.locator('img[data-scene]')).toHaveAttribute('src', /page-art\/brute-moult-/);
+  await expect(band.locator('img[data-scene]')).toHaveAttribute('src', /page-art\/three-trails-in-ash-/);
   await expect(band.locator('img[data-scene]')).toHaveAttribute('alt', '');
   await expect(band.locator('.atlas-words')).toHaveClass(/scene-words/);
   // The Close keeps its corner of the band; the creature's list sits under the band on a phone, in its lower corner on
@@ -478,7 +478,7 @@ test('the tree opens on the moult behind its title, and each family column on it
   const heads = page.locator('#atlas-board .atlas-family-head');
   await expect(heads).toHaveCount(3);
   const scenes = await heads.evaluateAll(all => all.map(head => head.querySelector('img[data-scene]')?.getAttribute('src')?.match(/page-art\/([a-z-]+?)-\d+\./)?.[1]));
-  expect(scenes).toEqual(['ironhide-scar', 'blightweaver-pressure-sac', 'warped-listening']);
+  expect(scenes).toEqual(['ironhide-scar', 'blightweaver-pressure-sac', 'cataclysm-eye']);
   for (const head of await heads.all()) {
     await expect(head).toHaveClass(/scene-head/);
     expect(Math.round((await head.boundingBox()).height)).toBe(48);
@@ -488,7 +488,7 @@ test('the tree opens on the moult behind its title, and each family column on it
     const width = Math.round((await head.boundingBox()).width);
     expect(Math.abs(width - Math.min(Math.round(page.viewportSize().width * 0.94), 400))).toBeLessThanOrEqual(12);
   }
-  await expect.poll(() => asked).toContain('brute-moult');
+  await expect.poll(() => asked).toContain('three-trails-in-ash');
   await page.screenshot({ path: info.outputPath('mutation-tree-heads.png') });
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });

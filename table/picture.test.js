@@ -286,8 +286,8 @@ test('a page\'s head is the band its HTML holds, dressed with its painting on th
 test('the ladder, the statistics and the rulebook hold their head in their HTML, its eyebrow and title on it, and wear their scene', () => {
   // docs/art/journeys/pages.md: the band's room and words are there at first paint; the script adds the painting.
   for (const [html, script, name, page, title] of [
-    ['table/leaderboard.html', 'table/leaderboard.js', 'elemental-charge', 'table/leaderboard', 'ladder-title'],
-    ['table/stats.html', 'table/stats.js', 'ironhide-scar', 'table/stats', 'stats-title'],
+    ['table/leaderboard.html', 'table/leaderboard.js', 'last-one-standing', 'table/leaderboard', 'ladder-title'],
+    ['table/stats.html', 'table/stats.js', 'combat-marks', 'table/stats', 'stats-title'],
     ['table/rules.html', 'table/rules.js', 'latch-under-the-arch', 'table/rules', 'rules-title'],
   ]) {
     const band = read(html).match(/<div class="scene scene-head page-head" data-side="start"><div class="scene-words">(.*?)<\/div><\/div>/);

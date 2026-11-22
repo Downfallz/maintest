@@ -7,7 +7,7 @@ import { wearScene } from './picture.js';
 export const BATTLE_PAGE = 'table/battle';
 
 /** The tree's band, across the whole window: the screen on a phone, at most 1240 px wide. Its words on the dark left. */
-export const TREE_HEAD = { name: 'brute-moult', side: 'start', sizes: '(min-width: 1264px) 1240px, (min-width: 820px) calc(100vw - 24px), 100vw' };
+export const TREE_HEAD = { name: 'three-trails-in-ash', side: 'start', sizes: '(min-width: 1264px) 1240px, (min-width: 820px) calc(100vw - 24px), 100vw' };
 
 /**
  * Each family's column opens on a band of 48 px, cut on what shows the family: the Ironhide's eye under its plates,
@@ -16,7 +16,7 @@ export const TREE_HEAD = { name: 'brute-moult', side: 'start', sizes: '(min-widt
 export const FAMILY_HEADS = {
   brute: { name: 'ironhide-scar', focus: '50% 75%' },
   predator: { name: 'blightweaver-pressure-sac', focus: '50% 50%' },
-  warped: { name: 'warped-listening', focus: '50% 40%' },
+  warped: { name: 'cataclysm-eye', focus: '50% 50%' },
 };
 export const FAMILY_HEAD_SIZES = '(max-width: 819px) min(94vw, 400px), 400px';
 

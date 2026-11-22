@@ -138,14 +138,13 @@ test('the battle page may load the 320 KiB the windows\' brief measured, the hea
 
 test('the ladder, the statistics and the rulebook raise their budget by their head, and the offline page holds its plate', () => {
   // docs/art/journeys/pages.md (S10 of docs/art/scene-paintings-plan.md): each head is drawn 354 px wide on a phone, so
-  // a phone takes its 708 px file. The ladder's is a 16:9 painting cut to its band, the heaviest of the three.
+  // a phone takes its 708 px file. The ladder's and the statistics' are the replacement plan's bands (13, 14).
   const file = (name, width) => PAGE_ART[name].sizes.find(size => size.width === width).bytes;
-  // The header's windows add theirs: the Friends window's head (S7) and the sign out's (S9).
-  const headers = file('predator-and-deathstalker', 732) + file('predator-at-rest', 716);
-  for (const [page, head] of [['table/leaderboard', 'elemental-charge'], ['table/rules', 'latch-under-the-arch']])
+  // The header's windows add theirs: the Friends window's head (04) and the sign out's (03).
+  const headers = file('under-one-arch', 732) + file('eye-still-open', 716);
+  for (const [page, head] of [['table/leaderboard', 'last-one-standing'], ['table/rules', 'latch-under-the-arch']])
     assert.equal(budgetOf(PAGE_ART, page, budget.density).all, headers + file(head, 708), `${page}: the header's windows' heads and its own`);
-  // The statistics' Ironhide shares the battle's 732 px file (S11: the Brute column is 366 px), within a tenth of 708.
-  assert.ok(budgetOf(PAGE_ART, 'table/stats', budget.density).all >= file('ironhide-scar', 732));
+  assert.ok(budgetOf(PAGE_ART, 'table/stats', budget.density).all >= headers + file('combat-marks', 708));
   // The offline page's one picture is asked for first, its 716 px file all it loads.
   assert.deepEqual(budgetOf(PAGE_ART, 'table/offline', budget.density), { first: file('parasite-offline', 716), all: file('parasite-offline', 716), largest: 1 });
 });

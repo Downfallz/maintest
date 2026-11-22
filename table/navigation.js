@@ -212,11 +212,11 @@ function mountHomeNavigation(doc, win = globalThis) {
 // archived classic table keep their plain headings.
 export const HEADER_SCENE_PAGES = { lobby: 'table/home', stats: 'table/stats', leaderboard: 'table/leaderboard', rules: 'table/rules', battle: 'table/battle' };
 
-/** The Friends window's head: the Predator and the Deathstalker at one pool, the Deathstalker's bank kept in view. */
+/** The Friends window's head: a Brute and a Predator under one arch (docs/art/scene-replacement-plan.md, 04). */
 export function wearFriendsHead(doc, page) {
   const heading = doc.querySelector('#friends-dialog > .dialog-heading');
   if (!HEADER_SCENE_PAGES[page] || !heading) return;
-  wearScene(doc, heading, 'predator-and-deathstalker', {
+  wearScene(doc, heading, 'under-one-arch', {
     page: HEADER_SCENE_PAGES[page], form: 'head', side: 'start', words: heading.firstElementChild, focus: '75% 35%',
     sizes: '(min-width: 744px) 720px, calc(100vw - 24px)',
   });
