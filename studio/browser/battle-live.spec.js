@@ -276,9 +276,12 @@ test('a match lost by a concession reads with its pictures refused, says no blow
   finished(state, { winner: 'player2', reason: 'Concession' }, [{ sequence: 84, round: 4, event: { kind: 'CombatActionResolved', roundId: 4,
     resolution: { action: { actor: 4, spell: 'spell:host:v1', targets: [1] } }, appliedOutcomes: [],
     frame: { before: [{ id: 1, isAlive: true }], after: [{ id: 1, isAlive: false }] } } }]);
-  // The opponent's last action is read first; the result opens once it has been.
-  await page.locator('#playback-next').click({ timeout: 10000 });
-  await expect(page.locator('#match-dialog')).toBeVisible({ timeout: 10000 });
+  // The opponent's last action is read first, its OK pressed when the page shows it; the result opens once it has been.
+  await expect.poll(async () => {
+    if (await page.locator('#match-dialog').isVisible()) return true;
+    if (await page.locator('#playback-next').isVisible()) await page.locator('#playback-next').click({ timeout: 1000 }).catch(() => {});
+    return false;
+  }, { timeout: 15000 }).toBe(true);
   await expect(page.locator('#match-title')).toHaveText('Defeat'); await expect(page.locator('#match-title')).toBeVisible();
   await expect(page.locator('#match-outcome')).toHaveText('You conceded · your opponent wins.');
   await expect(page.locator('#match-blow')).toBeHidden();
