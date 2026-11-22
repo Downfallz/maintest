@@ -704,7 +704,7 @@ None.
 - The shift at 320 (0.05) is summed over the walk; whether a reveal's widening moves the strip under the player's
   finger is read on a strip of the order, not on this sheet.
 
-## The inspection (`inspect`) (new)
+## The inspection (`inspect`)
 
 ### Job
 
@@ -727,8 +727,8 @@ on a phone, so it carries the family's contract where a player reaches it most.
   "Precision only · d20" on a known spell); the tiles' labels (HEALTH, ENERGY, DEFENSE, INITIATIVE, at 9 px in the
   sheet) and the side's eyebrow (10 px) are in the floor's block too. Built, none under 11 px
   (`studio/browser/battle-windows.spec.js`); the critique reads it on the film.
-- **The note under Known spells** ("Catalogue reference. Known spells do not reveal a planned spell or its
-  targets.") states what the window does not show, not a rule: it stays.
+- **The note**: the one under Known spells ("Catalogue reference. Known spells do not reveal a planned spell or
+  its targets.") states what the window does not show, not a rule: it stays.
 
 ### Pictures
 
