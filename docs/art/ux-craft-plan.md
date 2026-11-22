@@ -657,8 +657,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     [their own plan](ux12-pictures-plan.md); the brief it writes, `journeys/windows.md`, is the one UX12 extends.
 
     Split by the owner on 2026-11-22: UX12 builds the windows as one family (how each enters, leaves and gives
-    the focus back, Escape, the sheets' text at 11 px). Following a mutation back onto the field and the result as
-    a moment, the two paragraphs above, are UX12b's.
+    the focus back, Escape, the sheets' text at 11 px). Two parts of UX12 as written above are UX12b's: following a
+    mutation back onto the field, and the result as a moment.
 
     **UX12b, a mutation followed back onto the field, and the result as a moment.** The second and third parts of
     UX12 as written above: the pick confirmed, the tree closed, the creature in its new form and its new spell
@@ -677,8 +677,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     stand and leave at once, which answers what UX4 left: a closed sheet no longer stands over the field. The lessons'
     own copy of the form in `battle.css` went.
 
-    The `inspect-window` strip showed a window falling apart as it faded out: its `flex-direction` was set on `[open]`
-    alone, while `display` waits for the fade. Ten windows of the battle page and the lobby's own (since UX4) now keep
+    The `inspect-window` strip showed the layout breaking during the fade out. The window's `flex-direction` applied
+    only while `[open]` was set, but `display` stays until the fade ends. Ten windows of the battle page and the lobby's own (since UX4) now keep
     their layout off `[open]`.
 
     `battle/src/windows.ts` holds the focus for all of them. Tab and Shift+Tab go round the top modal window's own
@@ -689,8 +689,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     The windows' words are 11 px at least (`.6875rem`, a block at the foot of `battle.css`): eyebrows, the
     inspection's tile labels, the Mutation Tree's stage and flags, the Tempo sheet's lines, the result's table and a
     chip's `small`. Under 11 px, on the walk: 38 words to 0 on the Mutation Tree, 26 to 0 on the Tempo sheet, 20 to 0
-    on the result, 4 to 0 on a phase tip, 2 to 0 on the journal. Words, filled actions and targets did not move. The
-    designer's critique: `Verdict: agrees`.
+    on the result, 4 to 0 on a phase tip, 2 to 0 on the journal. Words, filled actions and targets did not move.
+    The designer's critique agrees.
 
     Tests:
     - `studio/browser/battle-windows.spec.js`, new: Settings, Help, History (from the bar and from Help), the

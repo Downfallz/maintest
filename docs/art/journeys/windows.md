@@ -114,7 +114,7 @@ below names only what differs. Two kinds:
   another gives the focus back inside the first, which stays open.
 - **The floor**: no word in a window or a docked sheet under 11 px, written `.6875rem` so the reader's own size
   applies ([Readable text](../ux-craft.md#readable-text)); a label set in capitals keeps its size, and the match
-  report's column heads lose their letter spacing under 620 px wide. Under it on the film before the floor: Help's
+  report's column heads lose their letter spacing under 620 px wide. Before the floor, the film showed text under 11 px in: Help's
   window (`phase-tip`) 9 px and 4 words, the match's report (`match-result`) 9 px and 20 words, the inspection 9.17 px
   and 4, the Mutation Tree 9.17 px and 2, the Tempo sheet 9.17 px and 12. Settings, Concede, the upkeep and the
   journal were at 11 px or more.
@@ -131,16 +131,12 @@ below names only what differs. Two kinds:
 - How each window enters, leaves and returns the focus is the family's (above), built by UX12's part A. The strips
   `history-window` and `inspect-window` (and the match's `settings-window`) are what the critique reads it on, frame
   by frame; how it feels at full speed no strip says.
-- **A choice the owner may refuse**: a docked sheet leaves at once while a window fades out. I chose it because a
-  sheet still fading stands over the field the player returns to; the cost is two forms of leaving in one match.
+- **A choice the owner may refuse**: a docked sheet leaves at once while a window fades out. A sheet still fading
+  would stand over the field the player returns to. The cost is two ways of leaving in one match.
 - **A choice the owner may refuse**: a docked sheet fades in without the 8 px rise, since the field above it
   resizes as it docks and a second movement would stack on the first.
 - The Command and Combat sheets do not hold Tab: they are not modal, so a keyboard player reaches the field and the
   bar past their last control. Holding Tab there would cut off the targets on the field.
-- The craft book is stale on three entries: "Here" of
-  [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) (the 18 "still open at once"),
-  of [A window that holds the focus](../ux-craft.md#a-window-that-holds-the-focus) and of
-  [Durations](../ux-craft.md#durations). Bringing them to the built form is the session's, in this change.
 - UX12b's (not briefed here): a mutation followed back onto the field, and the result as a moment.
 
 ## The pick (`mutation-pick`)
