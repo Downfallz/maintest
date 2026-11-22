@@ -19,10 +19,9 @@ cuts across the blow, a pulse quiets the caster's gold rim, blood is a deep red,
 body, and ember light is additive. The coded rows below are the stagings as built, and each **On the film strip**
 describes the last films of its spell. What is still open, for the kit or the scene, each its own change:
 
-- A windup beat on a melee caster stays where the caster stood: when the body leaves its ring at about 720 ms,
-  the last of a gather or a glow is left behind on the ground. The wound now goes with the body; a windup beat
-  does not yet. Dominate's windup ends by 720 ms to stay clear of it; Deranged Charge leaves a faint warm haze at
-  780 ms.
+- Built since (#933): a beat on the caster goes with its body, in the windup and the impact, as the wound does.
+  Deranged Charge's warm haze no longer stays on the ground at 780 ms. Dominate's windup still ends by 720 ms, as
+  it was staged.
 - On the effects bench every blow is struck up the field, so `along` and `back` are shortened to 0.42 of their reach: what
   is thrown along the blow stays on the target's body or just over it (Pummel's chips, Deranged Charge's cone),
   and what is drawn back does not cross the gap to the caster (Seize). A blow struck across the field throws
@@ -485,7 +484,8 @@ The sheets cannot show the stop, the shake, the punch zoom of a critical or the 
 ### Left
 
 - The stun is told by the motes for about a second; the round-long stun is the status chip's to say, not the effect's.
-- The motes rise; a daze could circle the head, which needs an orbit the kit has not (a book entry first).
+- The motes rise; a daze could circle the head, which needs an orbit the kit has not, and the owner chose not to
+  build one (#950).
 - The ring lies at b1's feet now, and the daze rises from its head (`level`).
 - The daze's strength went from 0.35 to 0.6 after the third films, where it was barely seen; on the fourth it is
   read on b1's head from 1140 ms.
@@ -832,6 +832,7 @@ Filmed at `15ee3b0`, 390 by 844, 1×, a1 on b1, 7 health lost: a whole action an
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | A heavy melee blow's draw back, hold and strike ([movement.md](movement.md)), scaled by the health lost. | [Anticipation](../battle-craft.md#anticipation), [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
 | 120 | 560 | windup | the effect | The weight gathered: 16 bone shards (*house*) start wide around a1 and land on its body. `gather at 120, on caster, count 16, shape shard, tint bone, reach 260, strength 0.75, lasts 560, blend normal` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Anticipation](../battle-craft.md#anticipation) |
+| 200 | 640 | windup | the camera | The slow push, the capstone's: the view moves in on a1 while it gathers, slowly at both ends, 3.6% closer by the contact (*house*), holding a1 where it stands on the screen; it lets go over 240 ms as the blow lands. Not under less motion. `push at 200, strength 0.6, lasts 640` | [Slow push on a capstone](../battle-craft.md#slow-push-on-a-capstone) |
 | 440 | 400 | windup | the caster | The halo, the one pulse: a bone glow on a1's outline as the foot rises, gone at contact. `pulse at 440, on caster, tint bone, strength 0.7, lasts 400` | [Glow](../battle-craft.md#glow), [Anticipation](../battle-craft.md#anticipation) |
 | 480 | 360 | windup | the effect | A bone light under the halo. `glow at 480, on caster, tint bone, reach 220, strength 0.3, lasts 360, blend screen` | [Glow](../battle-craft.md#glow), [Additive light](../battle-craft.md#additive-light) |
 | 840 | 900 | impact | the effect | The `impact` motif on b1, leaning along the blow on its dark edge, gone by 1740 ms. `motif at 840, lasts 900` | [An impact that keeps the direction](../battle-craft.md#an-impact-that-keeps-the-direction), [Shape before colour](../battle-craft.md#shape-before-colour) |

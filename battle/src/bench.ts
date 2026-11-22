@@ -11,7 +11,7 @@ import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, bench
 // host and no rule. Its film clock is what `scripts/battle/filmstrip.mjs` steps to draw a contact sheet.
 
 type Stage = 'decision' | 'windup' | 'impact' | 'resolved';
-interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean; damage?: number | null; defeat?: boolean; round?: number; still?: boolean }
+interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean; damage?: number | null; defeat?: boolean; round?: number; still?: boolean; focus?: string[] }
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function make<T extends HTMLElement = HTMLElement>(tag: string, properties: Record<string, unknown> = {}, ...children: (Node | string)[]) {
@@ -146,7 +146,8 @@ function show(next: Stage) {
   // giving way, a film that started one round on would catch the fall wherever the wall clock had left it.
   const moved = round !== shownRound;
   shownRound = round;
-  scene.present(benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round }) as SceneFrame, reduced(), speed(), moved);
+  const frame = benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round }) as SceneFrame;
+  scene.present(filmFocus.length ? { ...frame, focus: filmFocus } : frame, reduced(), speed(), moved);
 }
 const playing = () => stage === 'windup' || stage === 'impact';
 function describe(name: string) {
@@ -199,11 +200,15 @@ function tick(delta = FILM_TICK_MS) {
   game.step(film.clock, delta);
   lab.dataset.film = String(film.played);
 }
+// The creatures a film lights in blue, as the turn order or a tie does (`SceneFrame.focus`): a film's choice only,
+// with no control of its own, so a spec can play a halo on a figure lit blue (#937).
+let filmFocus: string[] = [];
 const filmClock = {
   // Stop the loop, pin the clocks, let the scene come to rest, then show the first frame of the play.
   start(options: FilmOptions = {}) {
     if (!ready || !game) throw new Error('The bench is not ready.');
     filmClock.stop();
+    filmFocus = options.focus ?? [];
     choose(options);
     if (options.speed !== undefined) {
       const select = $<HTMLSelectElement>('playback-speed');
@@ -233,6 +238,7 @@ const filmClock = {
     if (!film || !game) return;
     film = null;
     stillFilm = false;
+    filmFocus = [];
     Date.now = realNow;
     restartTweenClock();
     rest();
@@ -299,6 +305,6 @@ Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => s
   loading: () => scene.load.isLoading(), shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, groundObjects: () => scene.groundObjects, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   places: () => scene.effectsPlaces, anchors: () => scene.anchors, halo: () => scene.actingHalo,
   effects: () => scene.children.list.filter(child => child.name === 'spell-vfx').map(child => {
-    const { alpha, x, y, visible } = child as Phaser.GameObjects.Graphics;
-    return { ...child.data.getAll(), alpha, x, y, visible };
+    const { alpha, x, y, visible, depth } = child as Phaser.GameObjects.Graphics;
+    return { ...child.data.getAll(), alpha, x, y, visible, depth };
   }) } });

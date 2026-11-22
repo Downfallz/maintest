@@ -237,6 +237,8 @@ public sealed class SpellArtTests
     [InlineData("""{ "beat": "glow", "at": 0, "lasts": 840 }""")]
     [InlineData("""{ "beat": "glow", "at": 840, "lasts": 1700 }""")]
     [InlineData("""{ "beat": "burst", "at": 2539, "count": 24, "spread": 360, "reach": 400, "strength": 1 }""")]
+    [InlineData("""{ "beat": "push", "at": 0, "lasts": 840, "strength": 1 }""")]
+    [InlineData("""{ "beat": "burst", "at": 900, "direction": "down" }""")]
     public void A_beat_at_the_edge_of_its_limits_is_accepted(string beat)
     {
         using var content = new ContentDirectory().WithValidContent().WithFile("presentation/spell-art.json", Staged($"[ {beat} ]"));
@@ -253,6 +255,7 @@ public sealed class SpellArtTests
     [InlineData("motif")]
     [InlineData("flash")]
     [InlineData("shake")]
+    [InlineData("push")]
     public void A_beat_that_may_appear_only_once_is_refused_twice(string beat)
     {
         var problems = ProblemsOf(Staged($$"""[ { "beat": "{{beat}}", "at": 900 }, { "beat": "{{beat}}", "at": 1000 } ]"""));
@@ -266,6 +269,14 @@ public sealed class SpellArtTests
         var problems = ProblemsOf(Staged("""[ { "beat": "motif", "at": 839 } ]"""));
 
         problems.ShouldContain(problem => problem.Contains("'839'", StringComparison.Ordinal) && problem.Contains("'spell:guard:v1'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_push_of_the_camera_in_the_impact_window_is_refused()
+    {
+        var problems = ProblemsOf(Staged("""[ { "beat": "push", "at": 840 } ]"""));
+
+        problems.ShouldContain(problem => problem.Contains("'840'", StringComparison.Ordinal) && problem.Contains("windup", StringComparison.Ordinal));
     }
 
     [Fact]

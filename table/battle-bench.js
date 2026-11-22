@@ -71,6 +71,8 @@ export function benchSamples() {
     sample('flash', physical, [{ beat: 'flash', at: 840 }, { beat: 'motif', at: 840, lasts: 120 }]),
     sample('shake', physical, [{ beat: 'shake', at: 900, lasts: 240, strength: .5 }, { beat: 'motif', at: 840, lasts: 700 }]),
     sample('pulse', astral, [{ beat: 'pulse', at: 840, lasts: 600, strength: 1 }, { beat: 'motif', at: 840 }]),
+    // The view moves in on the caster over the windup and lets go as the blow lands.
+    sample('push', physical, [{ beat: 'push', at: 120, lasts: 600, strength: 1 }, { beat: 'motif', at: 840 }]),
     // More than the field may hold: seven streams of 24 start together on each target (#882). The kit gives
     // each only the room the streams before it left, so the field never holds more than its budget.
     sample('budget', elemental, [{ beat: 'motif', at: 840 },

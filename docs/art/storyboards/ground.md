@@ -446,6 +446,5 @@ tint is hard to see between two frames: read the record for the strength and the
   rise still lifts the outermost few pixels of the cracked halves' rim (at 1.2 to 1.33 × the disc's radius, by about
   50 levels at the 75th percentile); the rock's body holds. If the owner sees the rims lit, the shattered ring's clear
   radius goes from 1.35 to 1.45 × (*house*), its peak and its end with it.
-- Not staged: "A scar that fades". The craft book's entry names BC9, but the plan's line for BC9 does not, and a
-  scar is a mark under the target, the spell's place, not the ground's answer. It waits for its own pass; the book's
-  **Here** no longer names BC9 for it.
+- Not staged: a scar that fades. The owner chose not to build it, and its entry left the craft book: its duration
+  had no source (#954).

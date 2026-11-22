@@ -52,6 +52,23 @@ for goes by the Stage of the mutation that teaches the spell: [the ladder](story
 A base action is the quietest thing in the battle, a Stage III spell the loudest. The strokes of the `impact`
 motif run along the line of the blow and the `slash` strokes cut 60° across it, over a dark edge, staged or not.
 
+## The battle's colours
+
+Besides each family's own colour (`LIGHT_COLOURS`, `table/battle-ground.js`), the battle names five colours. A beat
+is tinted with them (`tint`) and a motif is drawn in them. They are written once, in `table/battle-motion.js`, and
+`table/battle-motion.test.js` holds each to this table, and bone and soot also to the palette
+(`docs/art/branding.css`).
+
+| Name | Value | Where it comes from | What it is for |
+| --- | --- | --- | --- |
+| Bone | `0xd8c7a7` | `--brand-bone` | The hit flash, the chips of a blow, the bone pieces. |
+| Soot | `0x070d10` | `--brand-soot` | The dark edge under the pale strokes of a motif. |
+| Blood | `0x9a3b34` | The owner's choice, #919: the paler `0xb66f7e` read pink over the sky. | A wound, a blood cost, the `blood` tint. |
+| Ember | `0xe0763f` | The owner's choice, #934: warmer, so fire reads as fire. | The `fire` motif, the `ember` tint. |
+| Hide | `0x8c7f68` | The owner's choice, #943: bone in shadow. | The flakes of a lowered defense, which must not read as the chips of a hit. |
+
+None of them is the target marker's gold.
+
 ## Timing and integrity
 
 - Use the existing 840 ms windup, 1700 ms impact frame and 500 ms settlement. A quill leaves its caster

@@ -1,13 +1,20 @@
 import type Phaser from 'phaser';
-import { PUNCH, TRAUMA, shakeOf, traumaAfter, wander } from '../../table/battle-motion.js';
+import { PUNCH, TRAUMA, pushOf, releaseOf, shakeOf, traumaAfter, wander } from '../../table/battle-motion.js';
 
 // The view's answer to a hit (the craft book, "Shake from trauma" and "Punch zoom"): one value, trauma, that a
 // loss of health adds to and that falls at a steady rate, and a short punch of the zoom on a defeat or a critical
 // hit. Both are laid over the camera as `fitCamera` placed it and never written into it: a resize, a skip or the
 // end of the tremor puts the camera back exactly. Nothing is drawn from `Math.random`: two films of one hit agree.
+// A capstone's slow push ("Slow push on a capstone") is laid the same way: the view moves in on its caster over
+// the windup, holds, and lets go as the blow lands.
 export class ViewShake {
   private trauma = 0;
   private punch = 0;
+  // The push: how far in it stands now, where it builds to and over how long, and the point it closes on.
+  private pushed = 0;
+  private pushing: { elapsed: number; lasts: number; strength: number } | null = null;
+  private letGo: { from: number; elapsed: number } | null = null;
+  private focus = { x: 0, y: 0 };
   private clock = 0;
   private laid = false;
   private fitted = { zoomX: 1, zoomY: 1, scrollX: 0, scrollY: 0, side: 0 };
@@ -35,7 +42,22 @@ export class ViewShake {
     this.punch = 1;
   }
 
-  get moving() { return this.trauma > 0 || this.punch > 0; }
+  /** A push starts: over `lasts` ms of the action's clock the view closes on `at` to `strength` of its full push. */
+  push(strength: number, lasts: number, at: { x: number; y: number }) {
+    if (!this.moving) this.clock = 0;
+    this.pushing = { elapsed: 0, lasts: Math.max(1, lasts), strength };
+    this.letGo = null;
+    this.focus = { x: at.x, y: at.y };
+  }
+
+  /** The blow lands: a push lets go, back to the fitted zoom. */
+  release() {
+    if (!this.pushing && !this.letGo) return;
+    this.pushing = null;
+    this.letGo = { from: this.pushed, elapsed: 0 };
+  }
+
+  get moving() { return this.trauma > 0 || this.punch > 0 || this.pushing !== null || this.letGo !== null; }
 
   /** What the view does now, for the bench and the browser specs: the trauma, the offset in pixels, the zoom over its fitted one. */
   get state() {
@@ -58,6 +80,14 @@ export class ViewShake {
     this.clock += delta;
     this.trauma = traumaAfter(this.trauma, delta);
     this.punch = Math.max(0, this.punch - delta / PUNCH.lasts);
+    if (this.pushing) {
+      this.pushing.elapsed += delta;
+      this.pushed = pushOf(this.pushing.elapsed, this.pushing.lasts, this.pushing.strength);
+    } else if (this.letGo) {
+      this.letGo.elapsed += delta;
+      this.pushed = releaseOf(this.letGo.from, this.letGo.elapsed);
+      if (this.pushed <= 0) { this.pushed = 0; this.letGo = null; }
+    }
     this.lay();
   }
 
@@ -72,6 +102,9 @@ export class ViewShake {
   clear() {
     this.trauma = 0;
     this.punch = 0;
+    this.pushed = 0;
+    this.pushing = null;
+    this.letGo = null;
     this.rest();
   }
 
@@ -80,9 +113,14 @@ export class ViewShake {
     const reach = shakeOf(this.trauma) * TRAUMA.reach * this.fitted.side;
     const { x, y } = wander(this.clock);
     // Quad.Out on the way back: fast at first, then gently to the fitted zoom.
-    const zoom = 1 + PUNCH.amount * this.punch * this.punch;
+    const zoom = 1 + PUNCH.amount * this.punch * this.punch + this.pushed;
+    // The push closes on its caster: the camera zooms about its own middle, so the scroll moves the field by the
+    // share the zoom grew, and the caster stays where it stood on the screen while the field comes in around it.
+    const camera = this.scene.cameras.main;
+    const middle = { x: this.fitted.scrollX + camera.width / 2, y: this.fitted.scrollY + camera.height / 2 };
+    const lean = this.pushed / (1 + this.pushed);
     this.laid = true;
-    this.scene.cameras.main.setZoom(this.fitted.zoomX * zoom, this.fitted.zoomY * zoom)
-      .setScroll(this.fitted.scrollX + x * reach, this.fitted.scrollY + y * reach);
+    camera.setZoom(this.fitted.zoomX * zoom, this.fitted.zoomY * zoom)
+      .setScroll(this.fitted.scrollX + x * reach + (this.focus.x - middle.x) * lean, this.fitted.scrollY + y * reach + (this.focus.y - middle.y) * lean);
   }
 }

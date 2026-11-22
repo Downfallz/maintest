@@ -992,14 +992,15 @@ plays them through the kit, `src/fx/`:
 | Beat | What plays | On |
 | --- | --- | --- |
 | `motif` | The spell's own motif, starting and lasting as the staging says. Drawn by `spell-effects.ts`. | each target |
-| `burst` | Particles at once from one point, in a fan: each leaves fast, slows, falls a little and fades. | a figure |
+| `burst` | Particles at once from one point, in a fan: each leaves fast, slows, falls a little and fades. Aimed `down`, they drop off the figure and fall. | a figure |
 | `flow` | A steady stream from all over a figure, for as long as the beat lasts. | a figure |
 | `trail` | Particles left behind a head that travels from the caster to a target. Behind a projectile, on its arc. At the feet, a crack along the ground. | caster to target |
-| `gather` | Particles that start on a ring around a figure and land on it. | a figure |
+| `gather` | Particles that start on a ring around a figure and close on its outline. | a figure |
 | `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. With `shape: ring`, a shock ring: a thin ring lying on the ground at the figure's feet, which opens to its `reach` over the whole beat and fades; aimed `along` or `back`, an arc on that side only, 120° unless its `spread` says. | a figure |
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |
 | `shake` | Adds its `strength` to the view's trauma ("The movement"), on top of what the health lost adds. One a staging. The trauma's own fall sets how long the view moves, not `lasts`. | the view |
-| `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. On the acting figure its gold rim is quieted meanwhile. Costly: see ADR 0196. | a figure |
+| `pulse` | A halo around the figure's own silhouette, by a filter, removed when the beat ends. On the acting figure its gold rim is quieted meanwhile, and on a figure lit blue its focus rim. Costly: see ADR 0196. | a figure |
+| `push` | The slow push on a capstone: the view moves in on the caster over the beat, holds, and lets go as the blow lands. In the windup only, once a staging, and only on a Stage III spell. | the view |
 
 - The kit is a second bundle. `build.mjs` builds `fx.js` first, refuses it if it holds the engine or a
   laboratory module, and writes its hash into `game.js` and `live.js`, which fetch `fx.js?v=<hash>` once the
@@ -1012,8 +1013,9 @@ plays them through the kit, `src/fx/`:
   just over the caster's head with the toss, at 240 ms, and lands on the contact, at an even pace whichever way it
   is thrown. Across the field it bows on a low arc; straight up or down the field its height lies along the line.
   What it knocks off its target, and its strokes, go on down the end of that arc. A `trail` on a projectile
-  follows the same curve; any other trail runs straight and eases in (#909).
-- Beats on the caster and the shake play once a cast; beats on a target play on each, 40 ms apart.
+  follows the same curve; any other trail runs straight, at an even pace, its pieces living 240 ms (#909, #947).
+- Beats on the caster, the shake and the push play once a cast; beats on a target play on each, 40 ms apart. A beat
+  on the caster goes with its body wherever the action carries it (#933).
 - Everything the kit makes ends with `SpellEffects.clear`: objects destroyed, a figure's tint and filter put
   back. Under reduced motion a primitive returns before it makes anything.
 - At most 24 particles a beat and 150 on the field, counted as what the living emitters may hold. The shapes

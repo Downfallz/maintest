@@ -8,11 +8,12 @@ import { glow } from './glow';
 import { flash } from './flash';
 import { shake } from './shake';
 import { pulse } from './pulse';
+import { push } from './push';
 
 export type { Anchor, BeatPlay, StagedBeat } from './kit';
 
 // One small file a primitive. A beat this table does not name is not the kit's: the staging falls back to the motif.
-const PRIMITIVES: Record<string, Primitive> = { burst, flow, trail, gather, glow, flash, shake, pulse };
+const PRIMITIVES: Record<string, Primitive> = { burst, flow, trail, gather, glow, flash, shake, pulse, push };
 
 export interface EffectsKit {
   /** The beats this kit plays. A staging that names another is drawn as its motif. */

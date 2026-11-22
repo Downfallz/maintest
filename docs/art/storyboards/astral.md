@@ -117,9 +117,9 @@ The sheets cannot show the feel of the pulse at full speed, nor the sound.
   rise off a1 piled into a white blot on its back, and a rise off a figure is the family's "health given now".
 - The trail is the family's "sent from a1 to a2", shared with Vital Echo and Renewal Burst: the three are told apart by
   what lands, not by what travels.
-- For a later pass. The trail does not play: at 360 ms and 8 motes no line shows on any frame, only one or two motes by
-  a2 at 1200 ms. Ask 14 motes at strength 0.7; if the kit's trail still drops its motes at its head, the kit's trail
-  needs its motes to live a fixed 240 ms, not half its length, before any storyboard can count on a line.
+- For a later pass. The trail did not play: at 360 ms and 8 motes no line showed on any frame, only one or two motes
+  by a2 at 1200 ms. Built since (#947): every trail's head goes at an even pace and its motes live a fixed 240 ms.
+  If the line is still faint on the next film, ask 14 motes at strength 0.7.
 - For a later pass. The fan off a1 still shows as a white spot at 900 to 1020 ms: its 6 motes leave together and add
   up. Ask `blend screen` and strength 0.3.
 - For a later pass. The rise turns white on its first frame (1260 ms): 14 add-blended motes start on one point. Ask
@@ -422,6 +422,7 @@ Filmed at `fc3ec94`, 390 by 844, 1×, a1 on b1, b2 and b3, 4 health lost each: a
 | --- | --- | --- | --- | --- | --- |
 | 0 | 840 | windup | the caster | A cast's load where it stands, then the rise ([movement.md](movement.md), `CAST`). No shared spiral. | [Anticipation](../battle-craft.md#anticipation), [Squash and stretch](../battle-craft.md#squash-and-stretch) |
 | 120 | 480 | windup | the effect | Space folds onto a1: 12 violet shards (*house*), dark-blended, on a wide ring around a1 drawn onto its body by 600 ms. The heals gather round motes; this gathers splinters. `gather at 120, on caster, count 12, shape shard, tint family, reach 260, strength 0.5, lasts 480, blend normal` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Anticipation](../battle-craft.md#anticipation) |
+| 200 | 640 | windup | the camera | The slow push, the capstone's: the view moves in on a1 while it gathers, slowly at both ends, 3% closer by the contact (*house*), holding a1 where it stands on the screen; it lets go over 240 ms as the blow lands. Not under less motion. `push at 200, strength 0.5, lasts 640` | [Slow push on a capstone](../battle-craft.md#slow-push-on-a-capstone) |
 | 360 | 360 | windup | the effect | a1 holds the fold: a dim violet light on it, gone by 720 ms. `glow at 360, on caster, tint family, reach 170, strength 0.35, lasts 360, blend screen` | [Glow](../battle-craft.md#glow), [Anticipation](../battle-craft.md#anticipation) |
 | 600 | 240 | windup | the effect | Space starts to pinch on each foe: 6 violet motes (*house*) from far round each target drawn toward its centre, gone at 840 ms. `gather at 600, on target, count 6, shape dot, tint family, reach 320, strength 0.55, lasts 240, blend normal` | [Gravity well and convergence](../battle-craft.md#gravity-well-and-convergence), [Anticipation](../battle-craft.md#anticipation) |
 | 840 | 360 | impact | the caster | The release, as a cast lets go ([movement.md](movement.md)). | [Contact and follow-through](../battle-craft.md#contact-and-follow-through) |
@@ -491,8 +492,8 @@ The sheets cannot show the stop, the feel of the two pulls at full speed, or the
 - The windup pinch on the foes, 600 to 840 ms, shows the confirmed recipients before contact (ADR 0131), as Vital
   Surge's wave does: it decides nothing.
 - No staged shake: three medium hits add their trauma already. The owner may want one; up to 0.35 is in the band.
-- A gather lands on a figure's centre, not on its outline (biological.md): the shards may sink into the body rather
-  than into the aperture.
+- Built since (#942): a gather closes on a figure's outline, not on its centre, so the shards stop at the
+  aperture's edge rather than sink into the body.
 - For a later pass. The fold onto a1 is lost from 360 ms in its own light: ask the windup gather strength 0.7 and the
   glow 0.25, so at least four shards count on each frame to 540 ms. The pinch on the foes at 720 ms is faint: ask its
   strength 0.7.

@@ -30,7 +30,8 @@ test('under reduced motion no primitive makes anything: the scene, the engine an
   const kit = createKit(untouchable('engine'), untouchable('scene'), () => true);
   for (const name of kit.beats) {
     for (const delay of [0, 200]) {
-      const [beat] = stagingBeats({ staging: [{ beat: name, at: 840 + delay }] });
+      // A push is the windup's (the craft book, "Slow push on a capstone"); every other beat is tried in the impact.
+      const [beat] = stagingBeats({ staging: [{ beat: name, at: (name === 'push' ? 0 : 840) + delay }] });
       assert.equal(beat.delay, delay);
       assert.doesNotThrow(() => kit.play(play(beat)), name);
     }

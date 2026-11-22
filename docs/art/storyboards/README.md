@@ -78,6 +78,7 @@ the bands on what `data/presentation/spell-art.json` carries. A spell two mutati
 | Light (`glow`) | none | none | one at least | two at least |
 | The halo on a figure's outline (`pulse`) | never | never | never | one at most, on one figure |
 | A staged `shake`, over the tremor of the health lost | none | none | up to 0.15 | up to 0.35 |
+| The slow push of the camera (`push`), in the windup | never | never | never | one at most: a family's capstone |
 | The last beat is gone by | 1540 ms | 1700 ms | 2000 ms | 2400 ms |
 
 All numbers are *house*. What the rule does not move: the windows of `table/battle-timing.js`, one flash a figure

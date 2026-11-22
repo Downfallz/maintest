@@ -39,7 +39,7 @@ public sealed class SpellArt
     /// The beats a staging is made of (ADR 0196): the motif itself, and the primitives of the effects kit. The page
     /// holds the same words in <c>table/battle-staging.js</c>, and its test reads this file against them.
     /// </summary>
-    public static readonly IReadOnlyList<string> Beats = ["motif", "burst", "flow", "trail", "gather", "glow", "flash", "shake", "pulse"];
+    public static readonly IReadOnlyList<string> Beats = ["motif", "burst", "flow", "trail", "gather", "glow", "flash", "shake", "pulse", "push"];
 
     /// <summary>Where a beat plays.</summary>
     public static readonly IReadOnlyList<string> Anchors = ["caster", "target"];
@@ -53,8 +53,8 @@ public sealed class SpellArt
     /// <summary>How a beat is blended over the field.</summary>
     public static readonly IReadOnlyList<string> Blends = ["normal", "add", "screen"];
 
-    /// <summary>Where a beat heads: all around, along the blow, back against it, or up.</summary>
-    public static readonly IReadOnlyList<string> Directions = ["out", "along", "back", "up"];
+    /// <summary>Where a beat heads: all around, along the blow, back against it, up, or down off its figure.</summary>
+    public static readonly IReadOnlyList<string> Directions = ["out", "along", "back", "up", "down"];
 
     /// <summary>Where on its figure a beat starts: at its feet, which lie on the ground, at its centre, or at its head.</summary>
     public static readonly IReadOnlyList<string> Levels = ["feet", "centre", "head"];
@@ -74,8 +74,8 @@ public sealed class SpellArt
     /// <summary>The farthest a beat reaches, in hundredths of its figure's radius: 300 clears the body.</summary>
     public const int MaxReach = 400;
 
-    /// <summary>The beats a staging holds once at most: the motif, and the two the flash limits count.</summary>
-    private static readonly IReadOnlyList<string> Single = ["motif", "flash", "shake"];
+    /// <summary>The beats a staging holds once at most: the motif, the two the flash limits count, and the push of the view.</summary>
+    private static readonly IReadOnlyList<string> Single = ["motif", "flash", "shake", "push"];
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -266,6 +266,10 @@ public sealed class SpellArt
         else if (beat.Beat == "motif" && at < WindupMs)
         {
             yield return $"{where} starts at '{Text(at)}': the motif is drawn in the impact, from {WindupMs} ms.";
+        }
+        else if (beat.Beat == "push" && at >= WindupMs)
+        {
+            yield return $"{where} starts at '{Text(at)}': the view is pushed in while the spell gathers, in the windup, before {WindupMs} ms.";
         }
 
         // Compared without adding the two: a huge `lasts` must not wrap around and pass.

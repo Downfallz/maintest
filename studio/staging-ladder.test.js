@@ -11,7 +11,8 @@ import { fileURLToPath } from 'node:url';
 
 import { benchSpells } from '../battle/bench-spells.mjs';
 import { FLIGHT } from '../table/battle-motion.js';
-import { SCENE_PARTICLES, stagingBeats } from '../table/battle-staging.js';
+import { ACTION_MS, SCENE_PARTICLES, STAGGER_MS, stagingBeats } from '../table/battle-staging.js';
+import { WINDUP_MS } from '../table/battle-timing.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = path => readFileSync(join(root, path), 'utf8');
@@ -28,10 +29,10 @@ const BASE_FILE = 'base-actions.md';
 
 // The bands, as the README's table writes them. `particles` is what one target is asked for, all beats together.
 export const LADDER = Object.freeze({
-  0: { name: 'a base action', beats: [1, 3], particles: 8, windup: [0, 0], glows: [0, 0], pulses: 0, shake: [0, 0], gone: 1540 },
-  1: { name: 'Stage I', beats: [4, 5], particles: 24, windup: [0, 0], glows: [0, 0], pulses: 0, shake: [0, 0], gone: 1700 },
-  2: { name: 'Stage II', beats: [6, 8], particles: 60, windup: [0, 1], glows: [1, 8], pulses: 0, shake: [0, .15], gone: 2000 },
-  3: { name: 'Stage III', beats: [9, 12], particles: 120, windup: [1, 12], glows: [2, 12], pulses: 1, shake: [0, .35], gone: 2400 },
+  0: { name: 'a base action', beats: [1, 3], particles: 8, windup: [0, 0], glows: [0, 0], pulses: 0, pushes: 0, shake: [0, 0], gone: 1540 },
+  1: { name: 'Stage I', beats: [4, 5], particles: 24, windup: [0, 0], glows: [0, 0], pulses: 0, pushes: 0, shake: [0, 0], gone: 1700 },
+  2: { name: 'Stage II', beats: [6, 8], particles: 60, windup: [0, 1], glows: [1, 8], pulses: 0, pushes: 0, shake: [0, .15], gone: 2000 },
+  3: { name: 'Stage III', beats: [9, 12], particles: 120, windup: [1, 12], glows: [2, 12], pulses: 1, pushes: 1, shake: [0, .35], gone: 2400 },
 });
 
 /** The rung a spell stands on: 0 for a spell a creature starts with, otherwise the lowest Stage that teaches it. */
@@ -41,6 +42,12 @@ export function rungOf(spell) {
 }
 
 const PARTICLE_BEATS = ['burst', 'flow', 'gather', 'trail'];
+
+/** How late the last of a beat's copies on `targets` figures starts, as `SpellEffects.play` places it. */
+export function staggered(beat, targets) {
+  const end = beat.at < WINDUP_MS ? WINDUP_MS : ACTION_MS;
+  return Math.max(0, Math.min((targets - 1) * STAGGER_MS, end - beat.at - beat.lasts));
+}
 
 /** What a staging spends, in the ladder's own measures. */
 export function spectacle(beats) {
@@ -52,6 +59,7 @@ export function spectacle(beats) {
     windup: beats.filter(beat => beat.window === 'windup').length,
     glows: of('glow').length,
     pulses: of('pulse').length,
+    pushes: of('push').length,
     shake: of('shake')[0]?.strength ?? 0,
     gone: Math.max(...beats.map(beat => beat.at + (beat.lasts ?? 0))),
   };
@@ -66,6 +74,8 @@ export function ladderProblems(beats, rung) {
   if (!within(spent.windup, band.windup)) problems.push(`${spent.windup} beats in the windup, where ${band.name} holds ${band.windup.join(' to ')}`);
   if (!within(spent.glows, band.glows)) problems.push(`${spent.glows} glows, where ${band.name} holds ${band.glows.join(' to ')}`);
   if (spent.pulses > band.pulses) problems.push(`${spent.pulses} pulses, more than ${band.pulses}`);
+  // The slow push is kept for the rare moment (the craft book, "Slow push on a capstone"): a Stage III spell's.
+  if (spent.pushes > band.pushes) problems.push(`${spent.pushes} pushes of the camera, more than ${band.pushes}`);
   if (!within(spent.shake, band.shake)) problems.push(`a shake of ${spent.shake}, where ${band.name} holds ${band.shake.join(' to ')}`);
   if (spent.gone > band.gone) problems.push(`its last beat ends at ${spent.gone} ms, after ${band.gone}`);
   return problems;
@@ -114,12 +124,22 @@ test('a spell that strikes several figures leaves each its share of the field\'s
     const targets = JSON.parse(read(spellFile(id))).targeting?.maxTargets ?? 1;
     const beats = stagingBeats(visual);
     // What may be alive at one moment: the beats on a target that overlap, on every target, and those on the caster.
+    // Each copy of a beat on a target starts a stagger after the one before (`SpellEffects.play`): the last copy
+    // is alive that much longer, as far as its window leaves room.
+    const ends = beat => beat.at + beat.lasts + (beat.on === 'target' && beat.beat !== 'trail' ? staggered(beat, targets) : 0);
     for (const moment of beats.map(beat => beat.at)) {
-      const alive = beats.filter(beat => PARTICLE_BEATS.includes(beat.beat) && beat.at <= moment && moment < beat.at + beat.lasts);
+      const alive = beats.filter(beat => PARTICLE_BEATS.includes(beat.beat) && beat.at <= moment && moment < ends(beat));
       const asked = alive.reduce((sum, beat) => sum + beat.count * (beat.on === 'caster' && beat.beat !== 'trail' ? 1 : targets), 0);
       assert.ok(asked <= SCENE_PARTICLES, `${id} asks for ${asked} particles at ${moment} ms on ${targets} targets, more than ${SCENE_PARTICLES}`);
     }
   }
+});
+
+test('the budget counts the stagger: a beat on three targets is alive until its third copy ends', () => {
+  const burst = { beat: 'burst', at: 840, lasts: 320, on: 'target' };
+  assert.equal(burst.at + burst.lasts + staggered(burst, 3), 840 + 320 + 2 * STAGGER_MS);
+  // Near its window's end a copy is not late by more than the window leaves.
+  assert.equal(staggered({ ...burst, at: 2200 }, 3), 2540 - 2200 - 320);
 });
 
 test('a halo on the outline is one figure\'s: a pulse is on the caster, or on a spell with one target', () => {

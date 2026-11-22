@@ -66,6 +66,9 @@ The patterns it must cover:
 - The ground: parallax, drifting fog and embers, a light that answers a cast, a scar that fades.
 - Reading: one effect one meaning, shape before colour, gold kept for the target marker (`docs/art/spell-vfx.md`).
 
+The chain between targets and the scar that fades were written, then removed from the book on the owner's word
+(#950, #954). Neither is built, and the scar's duration had no source.
+
 Phaser 4 renamed and replaced parts of Phaser 3, and most examples on the web are for Phaser 3. So a test reads the
 book: every engine symbol it names in backticks exists in the installed types (`battle/node_modules/phaser/types`).
 A pattern the book cannot tie to a real 4.2.1 API is not in the book.
@@ -416,6 +419,26 @@ that extends it.
    - BC9: the light answers in both places, on the eclipse and in a pool on the ground under each figure that lost
      health. The fog and the embers are a little stronger at round 1.
    - Not asked, and still as built: the depth, and the finer choices under BC8's three storyboards.
+
+   *Built later (2026-11-22)*: the limits of the kit BC6 to BC9 had left, and the owner's answers on the patterns
+   BC8 and BC9 had not built (#933, #935, #936, #937, #942, #947, #950, #954). Each spell it changes was filmed
+   before and after.
+
+   - A beat on the caster goes with its body, in the windup and the impact, and a trail leaves the caster where it
+     stands (#933): Deranged Charge's haze, Blood Hunt's ring, Blood Price's light, Pursuit's streak.
+   - A gather closes on its figure's outline, not its centre; a piece under a strength of 0.2 shrinks to a fifth;
+     a burst aimed `down` drops its pieces off the figure; the motif is drawn under the particles (#942). Toxic
+     Mend's and Contagion's flakes of hide now fall.
+   - A trail's head goes at an even pace and its pieces live 240 ms (#947): Revitalize, Vital Echo, Renewal Burst
+     and Incinerate draw a line.
+   - The slow push on a capstone is built, a `push` beat of the windup, on one Stage III spell in each family: Crushing
+     Stomp, Devour, Incinerate, Void Pulse and Death Wail (#950).
+   - Out of the book on the owner's word: the chain between targets with Shock's flicker, the void's dark of its
+     own, the ring that opens and stands, the orbit, the source above the field, the slow's own look (#950), and the
+     scar that fades (#954).
+   - Smaller: the battle's colours are named once and held to the art docs (#935), the ladder's budget counts the
+     stagger, a spark's turn no longer rests on the engine's order (#936), and the blue focus rim is quieted under
+     a pulse as the gold one is (#937).
 
 10. **BC10, acceptance.** Frame time under the browser's CPU throttle at phone size for every staging, the budgets,
     reduced motion across all 44, the gallery of film strips published. The record goes in `docs/art/`.

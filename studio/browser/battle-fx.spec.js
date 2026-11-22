@@ -45,6 +45,8 @@ for (const sample of primitives) {
     if (CHANGES.includes(name)) expect(playing.changes).toBe(1);
     // The shake is the view's: the kit adds to the scene's trauma and holds nothing of its own.
     else if (name === 'shake') expect(await shaking(page)).toBe(true);
+    // So is the push: the view has started to move in, and the kit holds nothing.
+    else if (name === 'push') expect((await page.evaluate(() => window.battleBench.motion())).view.zoom).toBeGreaterThan(1);
     // The glow's sample opens its light and an aimed ring on one beat: each of its objects is the beat's.
     else {
       expect(playing.objects.length).toBeGreaterThan(0);
@@ -57,6 +59,7 @@ for (const sample of primitives) {
     expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
     expect(await motifs(page)).toEqual([]);
     expect(await shaking(page)).toBe(false);
+    expect((await page.evaluate(() => window.battleBench.motion())).view.zoom).toBe(1);
     await film(page, 'stop');
   });
 
@@ -66,6 +69,7 @@ for (const sample of primitives) {
     await film(page, 'start', { spell: sample.id, actor: 'a1', targets: ['b1'] });
     await film(page, 'advance', WINDUP_MS + IMPACT_MS);
     expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
+    expect((await page.evaluate(() => window.battleBench.motion())).view.zoom).toBe(1);
     await film(page, 'stop');
   });
 }
@@ -235,11 +239,23 @@ test('a pulse on the acting caster quiets its gold rim while it swells, and give
   // Crushing Stomp's bone pulse on its caster, in the windup.
   test.slow();
   await film(page, 'start', { spell: 'spell:crushing_stomp:v1', actor: 'a1', targets: ['b1'] });
-  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false });
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false, focusQuiet: [] });
   await film(page, 'advance', 600);
-  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: true });
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: true, focusQuiet: [] });
   await film(page, 'advance', WINDUP_MS + IMPACT_MS - 600);
-  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false });
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false, focusQuiet: [] });
+  await film(page, 'stop');
+});
+
+test('a pulse on a figure lit blue quiets its blue rim too, and gives it back (#937)', async ({ page }) => {
+  test.slow();
+  // Crushing Stomp's bone pulse on its caster, a1, which the film lights blue as the turn order would.
+  await film(page, 'start', { spell: 'spell:crushing_stomp:v1', actor: 'a1', targets: ['b1'], focus: ['a1'] });
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false, focusQuiet: [] });
+  await film(page, 'advance', 600);
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: true, focusQuiet: ['a1'] });
+  await film(page, 'advance', WINDUP_MS + IMPACT_MS - 600);
+  expect(await page.evaluate(() => window.battleBench.halo())).toEqual({ id: 'a1', quiet: false, focusQuiet: [] });
   await film(page, 'stop');
 });
 
@@ -257,4 +273,107 @@ test('a slash cuts across the blow, where an impact\'s strokes run along it', as
   const apart = angle => { const turn = ((angle - blow) % 180 + 180) % 180; return Math.min(turn, 180 - turn); };
   expect(apart(await strokes('spell:pummel:v1'))).toBeLessThan(2);
   expect(apart(await strokes('spell:reckless_swing:v1'))).toBeGreaterThan(45);
+});
+
+// Where a figure's body has been carried from its home now, as the bench's motion reads it.
+const bodyOf = async (page, id) => (await page.evaluate(() => window.battleBench.motion())).figures.find(one => one.id === id);
+
+test('a windup beat on a melee caster goes with its body when it leaves its place (#933)', async ({ page }) => {
+  // Deranged Charge's ember light on its caster ends at 780 ms; the caster leaves its ring at about 720 ms.
+  await film(page, 'start', { spell: 'spell:psycho_rush:v1', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', 760);
+  const [light] = (await places(page)).filter(one => one.beat === 'glow' && one.creature === 'a1');
+  const [a1, body] = [await anchorOf(page, 'a1'), await bodyOf(page, 'a1')];
+  expect(Math.hypot(body.x, body.y)).toBeGreaterThan(20);
+  expect(light.x - a1.x).toBeCloseTo(body.x, 0);
+  expect(light.y - a1.y).toBeCloseTo(body.y, 0);
+  await film(page, 'stop');
+});
+
+test('a spark points the way it flies: a guard on the order the engine reads a piece in (#936)', async ({ page }) => {
+  await film(page, 'start', { spell: 'kit:burst', actor: 'a1', targets: ['b1'] });
+  // On a phone the blow runs up the field: the pieces' travel lies on the ground, shortened, so they are read a
+  // little later than on a desktop.
+  await film(page, 'advance', 960);
+  const [burst] = (await places(page)).filter(one => one.beat === 'burst');
+  const flying = burst.pieces.filter(piece => Math.hypot(piece.x - burst.x, piece.y - burst.y) > 4);
+  expect(flying.length).toBeGreaterThan(3);
+  for (const piece of flying) {
+    const travel = Math.atan2(piece.y - burst.y, piece.x - burst.x) * 180 / Math.PI;
+    expect(Math.abs(((piece.angle - travel) % 360 + 540) % 360 - 180)).toBeLessThan(12);
+  }
+  await film(page, 'stop');
+});
+
+test('a gather closes on its figure\'s outline, not on its centre (#942)', async ({ page }) => {
+  // Latch's six bone hooks land on b1 from 840 to 1140 ms.
+  await film(page, 'start', { spell: 'spell:latch:v1', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', 1120);
+  const [hooks] = (await places(page)).filter(one => one.beat === 'gather');
+  const b1 = await anchorOf(page, 'b1');
+  expect(hooks.pieces.length).toBeGreaterThan(0);
+  for (const piece of hooks.pieces) expect(Math.hypot(piece.x - b1.x, piece.y - b1.y)).toBeGreaterThan(b1.radius * .4);
+  await film(page, 'stop');
+});
+
+test('a lowered defense sheds small flakes of hide that fall, not chips thrown out like a hit (#942)', async ({ page }) => {
+  // Toxic Mend's flakes, from 1240 ms, on the small figures of its three allies.
+  await film(page, 'start', { spell: 'spell:noxious_cure:v1', actor: 'a1', targets: ['a1', 'a2', 'a3'] });
+  await film(page, 'advance', 1440);
+  const flakes = (await places(page)).filter(one => one.beat === 'burst');
+  expect(flakes.length).toBeGreaterThan(0);
+  for (const flake of flakes) {
+    const { radius } = await anchorOf(page, flake.creature);
+    for (const piece of flake.pieces) {
+      expect(piece.y).toBeGreaterThan(flake.y);
+      // A flake's frame is 32 px: drawn, it is well under half its figure's radius, a chip of hide and not a blow's.
+      expect(piece.scale * 32).toBeLessThan(radius * .4);
+    }
+  }
+  await film(page, 'stop');
+});
+
+test('the motif is drawn under the particles on its figure (#942)', async ({ page }) => {
+  // Venom Claw's beads on b1, over the claw marks.
+  await film(page, 'start', { spell: 'spell:poison_slash:v1', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', 1000);
+  const motif = (await page.evaluate(() => window.battleBench.effects())).find(one => one.phase === 'impact');
+  const kitObjects = await places(page);
+  expect(kitObjects.length).toBeGreaterThan(0);
+  for (const object of kitObjects) expect(object.depth).toBeGreaterThan(motif.depth);
+  await film(page, 'stop');
+});
+
+test('a trail from a caster to an ally goes at an even pace: half way at half its beat (#947)', async ({ page }) => {
+  // Revitalize's trail runs from a1 to a2 from 840 to 1200 ms.
+  await film(page, 'start', { spell: 'spell:rejuvenate:v1', actor: 'a1', targets: ['a2'] });
+  await film(page, 'advance', 1020);
+  const [trail] = (await places(page)).filter(one => one.beat === 'trail');
+  const [a1, a2] = [await anchorOf(page, 'a1'), await anchorOf(page, 'a2')];
+  const share = Math.hypot(trail.x - a1.x, trail.y - a1.y) / Math.hypot(a2.x - a1.x, a2.y - a1.y);
+  expect(share).toBeGreaterThan(.4);
+  expect(share).toBeLessThan(.6);
+  await film(page, 'stop');
+});
+
+test('a capstone pushes the view in while it gathers and lets go at the impact (#950)', async ({ page }) => {
+  // Crushing Stomp's windup holds its pulse, a filter a renderer with no graphics card draws slowly, and the test
+  // films it twice: on the desktop runner that took more than 30 s.
+  test.slow();
+  // Crushing Stomp, Stage III: no defeat and no critical hit, so no punch of the zoom.
+  await film(page, 'start', { spell: 'spell:crushing_stomp:v1', actor: 'a1', targets: ['b1'] });
+  const zoom = async () => (await page.evaluate(() => window.battleBench.motion())).view.zoom;
+  expect(await zoom()).toBe(1);
+  await film(page, 'advance', 760);
+  const pushed = await zoom();
+  expect(pushed).toBeGreaterThan(1.015);
+  await film(page, 'advance', 600);
+  expect(await zoom()).toBe(1);
+  // Skipped mid-push, the view is put back as it was fitted.
+  await film(page, 'stop');
+  await film(page, 'start', { spell: 'spell:crushing_stomp:v1', actor: 'a1', targets: ['b1'] });
+  await film(page, 'advance', 600);
+  await page.evaluate(() => window.battleBench.stop());
+  expect(await zoom()).toBe(1);
+  await film(page, 'stop');
 });
