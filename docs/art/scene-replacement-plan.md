@@ -25,11 +25,11 @@ stands on `warped-listening` ([S8 of the first plan](scene-paintings-plan.md#sta
 
 **Approved painting (09, revision 3).** The Deathstalker leaps toward the Ethereal as the arch collapses. Behind the clouds, the sun is broken in three. Amber light shows in the cracks of the rock at the chasm's edge.
 
-**A landscape cut is still to come.** The approved source is a portrait, 941 by 1672. From 761 px up, and on a phone turned on its side, the featured space is a landscape box (up to 950 px wide, `table/lobby.css`) that would keep only a third of its height. The owner asks for a landscape cut of 09 before the second pull request, which draws it as the `wide` source of a `<picture>`, as #1090 does for the grounds today.
+**Landscape companion (09).** The approved source is a portrait, 941 by 1672. From 761 px up, and on a phone turned on its side, the featured space is a landscape box (up to 950 px wide, `table/lobby.css`) that would keep only a third of its height. The same duel has a dedicated wide composition for landscape screens; that source awaits owner review. From round 6, select the source by orientation on either player's turn: the landscape is the `wide` source of a `<picture>`, as #1090 does for the grounds today.
 
 **Implementation check for the second pull request.**
 
-- On a portrait phone and on desktop, open a featured game at rounds 5, 6 and 10. Confirm the painting is visible above the action on both players' turns, including the round 6 game against a bot that showed the wrong painting (#1081).
+- In portrait and landscape, on a phone and on desktop, open a featured game at rounds 5, 6 and 10. Rotate the phone with round 6 on screen and check that the matching composition loads. Confirm the painting is visible above the action on both players' turns, including the round 6 game against a bot that showed the wrong painting (#1081).
 - Remove the declarations the rule leaves unused (`home-ground-breach`, `home-ground-sky`, and `warped-listening` on `table/home` if no card still draws it), and update `table/lobby-featured.test.js`, which holds rounds 6 to 14 to the breach and the sky.
 
 ## Final selections
