@@ -261,12 +261,11 @@ export const PAGE_ART = {
     ],
   },
   'mist-duel': {
-    from: '8d7d7cc5d8c3d5db', frames: 1, drawn: [390,900], pages: {"table/home":"largest"},
+    from: '6206808e977a3e78', frames: 1, drawn: [475,950], pages: {"table/home":"largest"},
     sizes: [
-      { file: 'mist-duel-390.a2aae5a3.webp', width: 390, height: 693, bytes: 26150 },
-      { file: 'mist-duel-780.4a415ea2.webp', width: 780, height: 1387, bytes: 87706 },
-      { file: 'mist-duel-900.e84f90a0.webp', width: 900, height: 1600, bytes: 108176 },
-      { file: 'mist-duel-1800.cec2f212.webp', width: 1800, height: 3200, bytes: 242200 },
+      { file: 'mist-duel-475.6a4ed1e7.webp', width: 475, height: 844, bytes: 37906 },
+      { file: 'mist-duel-950.7d4bb3b4.webp', width: 950, height: 1689, bytes: 116372 },
+      { file: 'mist-duel-1900.18bb9bf5.webp', width: 1900, height: 3378, bytes: 255884 },
     ],
   },
   'home-ground-eclipse': {
@@ -296,19 +295,10 @@ export const PAGE_ART = {
       { file: 'home-ground-sky-1280.6fa095b2.webp', width: 1280, height: 367, bytes: 67062 },
     ],
   },
-  'home-ancestral': {
-    from: '45fae4f3bda07c4f', frames: 1, drawn: [150], pages: {"table/home":"first"},
-    sizes: [
-      { file: 'home-ancestral-150.a8be6bd5.webp', width: 150, height: 100, bytes: 9598 },
-      { file: 'home-ancestral-300.bf5bdbef.webp', width: 300, height: 200, bytes: 24618 },
-    ],
-  },
   'lesson-base': {
-    from: 'fa26d4c30ae79f2c', frames: 1, drawn: [96,150], pages: {"table/home":"lazy"},
+    from: '33d73824c37aeec7', frames: 1, drawn: [150], pages: {"table/home":"first"},
     sizes: [
-      { file: 'lesson-base-96.27f6d709.webp', width: 96, height: 64, bytes: 5344 },
       { file: 'lesson-base-150.a8be6bd5.webp', width: 150, height: 100, bytes: 9598 },
-      { file: 'lesson-base-192.ec175d35.webp', width: 192, height: 128, bytes: 13466 },
       { file: 'lesson-base-300.bf5bdbef.webp', width: 300, height: 200, bytes: 24618 },
     ],
   },

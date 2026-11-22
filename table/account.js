@@ -267,8 +267,10 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
         el('app-settings-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
       }
     }
-    // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so.
-    state.leaving = Boolean(await Promise.resolve(onChange(state.account, state.mode)));
+    // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so, once it
+    // knows: `leaving` resolves then. The rest of the page is drawn without waiting for it (#972); only what must
+    // stay until the page leaves (the name window, the button that signed in) waits for it.
+    state.leaving = Promise.resolve(onChange(state.account, state.mode)).then(Boolean, () => false);
     return state;
   }
 

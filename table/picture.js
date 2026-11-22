@@ -28,9 +28,11 @@ function entryOf(name, page, art) {
  * declaration, which says whether the picture is asked for first. `sizes` is the width it is drawn at when the
  * page draws it at another than the declaration's first, and for a strip the width of all its frames, since its
  * file holds them side by side; `alt` is empty for decoration. `focus` is where a box that cuts the painting
- * centres the cut, when this box wants another than the declaration's: one scene in two boxes.
+ * centres the cut, when this box wants another than the declaration's: one scene in two boxes. `lazy` loads it when
+ * near even where its declaration's role is `first`: one painting drawn on the first screen and in a list below it
+ * is one declaration, so the page takes one file (#985).
  */
-export function pictureAttributes(name, { page, alt = '', sizes, focus, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
+export function pictureAttributes(name, { page, alt = '', sizes, focus, lazy = false, base = PAGE_ART_BASE, art = PAGE_ART } = {}) {
   const entry = entryOf(name, page, art), role = entry.pages[page], whole = entry.drawn[0] * entry.frames;
   const shown = entry.sizes.find(size => size.width >= whole) ?? entry.sizes.at(-1);
   const attributes = {
@@ -44,7 +46,7 @@ export function pictureAttributes(name, { page, alt = '', sizes, focus, base = P
   // The largest paint is asked for first and never lazy; what is below the first screen loads when near.
   if (role === 'largest') attributes.fetchpriority = 'high';
   else attributes.decoding = 'async';
-  if (role === 'lazy') attributes.loading = 'lazy';
+  if (role === 'lazy' || (lazy && role !== 'largest')) attributes.loading = 'lazy';
   const cut = focus === undefined ? entry.focus : focus;
   return cut === undefined ? attributes : { ...attributes, ...focusAttributes(cut) };
 }

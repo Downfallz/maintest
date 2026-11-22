@@ -28,11 +28,16 @@ const LISTENING = 'warped-listening';
 const LESSON_GROUND = 'home-ground-eclipse';
 
 /**
- * The ancestral creature: the first lesson's. The same painting as the first lesson's card, but
- * asked for with the featured space's ground, before Learn to play's lazy ones.
+ * A lesson's creature, the first lesson's when the host names none. The first lesson's is one declaration with its
+ * card in Learn to play, so a new account's home takes its file once (#985).
  */
-const ANCESTRAL = 'home-ancestral';
-const creatureOf = picture => !picture || picture === 'lesson-base' ? ANCESTRAL : picture;
+const creatureOf = picture => picture || 'lesson-base';
+
+/**
+ * The width the ground covers (lobby.css): on a phone the whole screen's height, a 0.5625 portrait cut to it (475 px
+ * on a 390 by 844 screen); 74% of the space in between; 950 px of the 1280 px column, at 1280 px and wider (#1070).
+ */
+export const GROUND_SIZES = '(min-width: 1280px) 950px, (min-width: 761px) 74vw, max(100vw, 56.25svh)';
 
 const held = entry => (entry?.seats ?? []).map(seat => seat.seat);
 const capital = text => (text ? text[0].toUpperCase() + text.slice(1) : '');
@@ -154,7 +159,7 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     drawnGround = view.ground; drawnCreature = view.creature;
     // Decoration: the title says what the game or the lesson is. Each holds its room by its width and height.
     // The painting stays still. Only the mist and a lesson's creature move, under the motion preferences, paused behind a window.
-    const pictures = [pictureElement(doc, view.ground, { page: 'table/home', class: 'featured-ground', sizes: '(min-width: 1280px) 900px, (min-width: 761px) 72vw, 100vw' })];
+    const pictures = [pictureElement(doc, view.ground, { page: 'table/home', class: 'featured-ground', sizes: GROUND_SIZES })];
     if (view.ground === DUEL) {
       const mist = doc.createElement('span');
       mist.className = 'featured-mist motion-breath';

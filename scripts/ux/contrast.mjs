@@ -105,10 +105,24 @@ export const SCENE_TEXT = `(${sceneTextInPage})({ cutBox: ${cutBox}, colourBytes
 
 const HIDDEN = 'ux-contrast-hidden';
 
-/** Runs in the page: hides the words on the scenes, keeping their room, or shows them again. */
+/**
+ * Runs in the page: hides the words on the scenes, keeping their room, or shows them again. While they are hidden,
+ * every endless animation is held where it is (a rate of 0), which Playwright's `animations: 'disabled'` leaves
+ * alone; it is given its rate back after. Otherwise Playwright resumes it with `play()`, and that takes it from the
+ * CSS that pauses it: motion.js's ambience went on behind a window (#1052).
+ */
 export function hideSceneWordsInPage({ hide, id }) {
   document.getElementById(id)?.remove();
+  const held = (globalThis.__uxContrastHeld ??= new Map());
+  for (const [animation, rate] of held) animation.playbackRate = rate;
+  held.clear();
   if (!hide) return;
+  for (const animation of document.getAnimations()) {
+    if (animation.playbackRate !== 0 && !Number.isFinite(animation.effect?.getComputedTiming().endTime)) {
+      held.set(animation, animation.playbackRate);
+      animation.playbackRate = 0;
+    }
+  }
   const style = Object.assign(document.createElement('style'), { id });
   style.textContent = '.scene-words, .scene-words * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; }';
   document.head.append(style);

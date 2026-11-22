@@ -54,6 +54,8 @@ variants into slate. Copper is a secondary decorative accent, not a new gameplay
   layout. Restyle a shared button, card, window or header there, not in a page sheet.
 - The font is `table/fonts/marcellus-latin-400.woff2` (SIL OFL 1.1, `table/fonts/OFL.txt`), served by the table and copied into the public showcase at build time. The studio and the viewer fall back to the serif named after it.
 - In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
+- The home's featured space (`.featured`, the design system's FeaturedSpace card) holds its room in every state:
+  a painting behind, the words anchored to its foot, the one filled action and a quiet one, then the shortcuts.
 
 ## Motion
 

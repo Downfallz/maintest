@@ -476,6 +476,10 @@ test('navigation and dialogs fit narrow, intermediate and short landscape screen
     await page.setViewportSize({ width, height });
     await noOverflow(page);
     await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
+    // The bell is a 44 px target at every width, 320 included, beside a 44 px menu (#974).
+    const bell = await page.locator('#inbox-open').boundingBox();
+    expect(Math.min(bell.width, bell.height)).toBeGreaterThanOrEqual(44);
+    await expect(page.locator('#inbox-open')).toBeInViewport({ ratio: 1 });
     if (width <= 1306) await expect(page.locator('#home-menu-toggle')).toBeVisible();
     else {
       await expect(page.locator('#home-menu-toggle')).toBeHidden();
@@ -887,14 +891,14 @@ test('your games are grouped against players and against bots, at most five of e
   // At five games against bots, a sixth is turned down before it is asked for.
   await page.locator('#new-table').click(); await page.getByRole('tab', { name: /^Solo/ }).click();
   await expect(page.locator('#create-help')).toContainText('the most at once'); await expect(page.locator('#create-submit')).toBeDisabled();
-  await page.getByRole('tab', { name: /^PvP/ }).click(); await expect(page.locator('#create-submit')).toBeEnabled();
+  await page.getByRole('tab', { name: /^Multiplayer/ }).click(); await expect(page.locator('#create-submit')).toBeEnabled();
   // A game against another player can be opened unranked (ADR 0155); a bot's never counts, so it has no switch.
   await expect(page.getByLabel(/^Ranked/)).toBeChecked();
   await page.getByRole('tab', { name: /^Solo/ }).click(); await expect(page.locator('#ranked-row')).toBeHidden();
   await expect(page.getByLabel('Bot difficulty')).toHaveValue('hard');
   // Nor a time to answer (ADR 0169): a bot always answers. Between players it is three days unless another is chosen.
   await expect(page.locator('#turn-limit-row')).toBeHidden();
-  await page.getByRole('tab', { name: /^PvP/ }).click(); await page.locator('#opponent').selectOption('person');
+  await page.getByRole('tab', { name: /^Multiplayer/ }).click(); await page.locator('#opponent').selectOption('person');
   await expect(page.getByLabel(/^Time to answer/)).toHaveValue('72'); await page.getByLabel(/^Time to answer/).selectOption('168');
   await page.getByLabel(/^Ranked/).uncheck();
   await page.locator('#create-submit').click();
@@ -1128,10 +1132,27 @@ test('a game between two players counts its time to answer down on the card, wit
   expect(state.errors).toEqual([]);
 });
 
-test('the create dialog plays Solo against a bot in any format, and PvP ranked in 3v3 or unranked in any format', async ({ page }, info) => {
+test('an invitation\'s card and its painted ground are kept when the cards are drawn again each minute (#1053)', async ({ page }) => {
+  const now = new Date('2026-11-12T12:00:00Z');
+  await page.clock.install({ time: now });
+  const answerBy = new Date(now.getTime() + 62.5 * 60000).toISOString();
+  const state = await home(page, { games: [{ ...held, table: { ...battle, answerBy } }], invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username } }] });
+  const card = page.locator('#invitation-cards .invitation');
+  await expect(card).toHaveCount(1);
+  await card.evaluate(node => { node.dataset.drawnBefore = 'yes'; node.querySelector('img').dataset.drawnBefore = 'yes'; });
+
+  await page.clock.fastForward('03:00');
+
+  await expect(page.locator('.mine-group.players .game-turn')).toHaveText(/^5\d min left · Round 3$/);
+  await expect(card).toHaveAttribute('data-drawn-before', 'yes');
+  await expect(card.locator('img')).toHaveAttribute('data-drawn-before', 'yes');
+  expect(state.errors).toEqual([]);
+});
+
+test('the create dialog plays Solo against a bot in any format, and Multiplayer ranked in 3v3 or unranked in any format', async ({ page }, info) => {
   const state = await home(page);
   await page.locator('#new-table').click();
-  const solo = page.getByRole('tab', { name: /^Solo/ }), pvp = page.getByRole('tab', { name: /^PvP/ }), format = page.getByLabel(/^Creatures per side/);
+  const solo = page.getByRole('tab', { name: /^Solo/ }), pvp = page.getByRole('tab', { name: /^Multiplayer/ }), format = page.getByLabel(/^Creatures per side/);
   await expect(pvp).toHaveAttribute('aria-selected', 'true');
   // Ranked is 3v3 (ADR 0171): the format is fixed and says why.
   await expect(format).toHaveValue('3v3'); await expect(format).toBeDisabled(); await expect(page.locator('#format-note')).toBeVisible();
@@ -1154,8 +1175,8 @@ test('the create dialog plays Solo against a bot in any format, and PvP ranked i
   await page.locator('#create-dialog').screenshot({ path: info.outputPath('create-solo.png') });
   await page.locator('#create-submit').click();
   await expect.poll(() => state.created).toEqual({ opponent: 'bot', format: '2v2', level: 'easy' });
-  // PvP comes first, Solo beside it; the arrow keys move between the two tabs.
-  await expect(page.getByRole('tab')).toHaveText([/^PvP/, /^Solo/]);
+  // Multiplayer comes first, Solo beside it; the arrow keys move between the two tabs.
+  await expect(page.getByRole('tab')).toHaveText([/^Multiplayer/, /^Solo/]);
   await solo.focus(); await page.keyboard.press('ArrowLeft'); await expect(pvp).toBeFocused(); await expect(pvp).toHaveAttribute('aria-selected', 'true');
   await noOverflow(page);
   expect(state.errors).toEqual([]);
@@ -1177,6 +1198,26 @@ test('a first sign-in while registration is closed is told so, and the operator\
 const firstTutorial = { id: 'sc-repo-tutorial-your-first-combat', order: 1, of: 4, title: 'Your first combat', goal: 'Cast a spell with each of your creatures.', round: 2, seat: 'player1', format: '3v3', link: '/battle?scenario=sc-repo-tutorial-your-first-combat' };
 const secondTutorial = { id: 'sc-repo-tutorial-who-acts-first', order: 2, of: 4, title: 'Who acts first', goal: 'Choose a tempo.', round: 2, seat: 'player1', format: '3v3', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' };
 const series = (first, second = 'new') => ({ opens: first === 'new' ? firstTutorial.link : null, tutorials: [{ ...firstTutorial, state: first }, { ...secondTutorial, state: second }] });
+
+test('a lesson\'s creature breathes on the home, and is still behind the Friends window while its rows change (#1052)', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const state = await home(page, { games: [], tutorials: series('done', 'new'), incoming: [], opponents: [{ id: 'acct_dddddddddddddddd', name: 'Rook', lastPlayedAt: '2026-11-09T20:00:00Z', games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false }] });
+  const creature = page.locator('#featured img.featured-creature');
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'lesson');
+  const running = () => creature.evaluate(img => img.getAnimations().filter(one => one.playState === 'running').length);
+  await expect.poll(running).toBe(1);
+  await openPanel(page, /^Friends/);
+  await expect(page.locator('#friends-dialog')).toHaveJSProperty('open', true);
+  await expect.poll(running).toBe(0);
+  // The player asks a friend and the window draws its row, as the pages' walk does: what is behind it stays still.
+  await page.locator('#friend-username').fill('Rook');
+  await page.locator('#friend-ask-submit').click();
+  for (let frame = 0; frame < 5; frame++) {
+    expect(await running()).toBe(0);
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+  }
+  expect(state.errors).toEqual([]);
+});
 
 test('a new account\'s first visit opens tutorial 1, and the home page is its own again on the way back', async ({ page }) => {
   const state = await home(page, { tutorials: series('new'), opensTutorial: true });
@@ -1463,7 +1504,7 @@ test('a new account is featured its first lesson on the ancestral creature, the 
   await expect(page.locator('#welcome')).toHaveText('Your first combat');
   await expect(page.locator('#featured-action')).toHaveText('Play →');
   await expect(featured.locator('img.featured-ground')).toHaveAttribute('fetchpriority', 'high');
-  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/home-ancestral-/);
+  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/lesson-base-/);
   await expect(filledOnTheHome(page)).toHaveCount(1);
   await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
   await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });
@@ -1509,6 +1550,45 @@ test('with nothing to resume or learn, the duel opens Solo or multiplayer and li
   await expect(page.locator('#my-tables .empty-state')).toContainText('against a bot');
   await page.locator('#my-tables .empty-state button').click();
   await expect(page.locator('#create-dialog')).toHaveJSProperty('open', true);
+});
+
+// The duel is asked for at the width it covers (#1070): a phone's screen height cut to a 0.5625 portrait, 950 px wide.
+for (const [width, height, density, file] of [[390, 844, 2, 950], [320, 568, 1, 475], [1440, 1000, 1, 950]]) {
+  test(`the duel is taken at the width it is drawn, ${width} by ${height} at ${density}x`, async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: density });
+    const page = await context.newPage();
+    await page.route('**/page-art/*', route => {
+      const name = new URL(route.request().url()).pathname.split('/').pop();
+      return route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
+    });
+    await home(page, { games: [], tutorials: series('done', 'done') });
+    const painting = page.locator('#featured img.featured-ground');
+    await expect.poll(() => painting.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+    const drawn = await painting.evaluate(img => ({ src: img.currentSrc, covers: img.getBoundingClientRect().height * img.naturalWidth / img.naturalHeight, box: img.getBoundingClientRect().width }));
+    expect(drawn.src).toMatch(new RegExp(`/mist-duel-${file}\\.`));
+    // The file is at least as wide as the painting is drawn: what covers the box, at the screen's density.
+    expect(file).toBeGreaterThanOrEqual(Math.max(drawn.covers, drawn.box) * density * 0.98);
+    await context.close();
+  });
+}
+
+test('on a phone, a host notice keeps the duel\'s links to the games on the first screen (#1072)', async ({ page }, info) => {
+  await home(page, { games: [], tutorials: series('done', 'done'), notice: 'The table restarts at 22:00 for an update; your games are kept and wait where you left them.' });
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'new');
+  const notice = page.locator('#host-notice');
+  await expect(notice).toBeVisible();
+  for (const [width, height] of [[320, 568], [390, 844]]) {
+    await page.setViewportSize({ width, height });
+    await expect(notice).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('link', { name: 'Your games', exact: true })).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole('link', { name: 'Open seats', exact: true })).toBeInViewport({ ratio: 1 });
+    // The notice lies over the painting's top, never over the title or the actions.
+    const said = await notice.boundingBox(), title = await page.locator('#featured-eyebrow').boundingBox();
+    expect(said.y + said.height).toBeLessThanOrEqual(title.y);
+    await noOverflow(page);
+    await page.screenshot({ path: info.outputPath(`notice-${width}.png`) });
+  }
 });
 
 test('a game waiting on the other player is featured, and when its turn arrives its status and action change together, under the same focus', async ({ page }, info) => {

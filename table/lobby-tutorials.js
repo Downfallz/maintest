@@ -114,7 +114,7 @@ export function mountTutorials(doc, { request = fetched, session = null, go = li
       const root = made(doc, 'article', undefined, 'game-card practice tutorial-card motion-arrive');
       root.dataset.tutorial = card.id;
       // The painting is decoration: the title says the lesson. It holds its room by its width and height.
-      if (card.picture) root.append(pictureElement(doc, card.picture, { page: 'table/home', class: 'tutorial-picture' }));
+      if (card.picture) root.append(pictureElement(doc, card.picture, { page: 'table/home', class: 'tutorial-picture', sizes: '96px', lazy: true }));
       const top = made(doc, 'div', undefined, 'game-card-top');
       top.append(made(doc, 'h3', card.title), made(doc, 'span', card.tag, card.done ? 'status-tag outcome won' : 'status-tag invited'));
       root.append(top);

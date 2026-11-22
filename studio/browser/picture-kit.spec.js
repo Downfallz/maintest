@@ -171,6 +171,27 @@ test('the measure finds words on a painting with no scrim, and says nothing of a
   expect(contrast.lowest).toBeLessThan(2);
 });
 
+test('the measure leaves the page\'s motion as it found it: an ambience paused behind a window stays paused (#1052)', async ({ page }) => {
+  const { measureContrast } = await import('../../scripts/ux/contrast.mjs');
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await open(page);
+  await addScene(page, 'head');
+  const playState = () => page.evaluate(() => {
+    let breath = document.getElementById('probe-breath');
+    if (!breath) {
+      breath = Object.assign(document.createElement('span'), { id: 'probe-breath', className: 'motion-breath', textContent: 'breath' });
+      document.body.append(breath);
+    }
+    return breath.getAnimations().map(one => one.playState);
+  });
+  expect(await playState()).toEqual(['paused']);
+  expect((await measureContrast(page)).under).toBe(0);
+  expect(await playState()).toEqual(['paused']);
+  // And the page still decides: motion.js's word plays it.
+  await page.evaluate(() => { document.getElementById('probe-breath').dataset.ambient = 'playing'; });
+  expect(await playState()).toEqual(['running']);
+});
+
 test('on a short screen a head shrinks to 64 px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await open(page);

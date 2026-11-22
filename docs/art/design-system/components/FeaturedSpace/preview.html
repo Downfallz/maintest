@@ -1,0 +1,27 @@
+<!-- @dsCard group="Surfaces" height=480 subtitle="The home's first screen: one game, lesson or new battle, its actions at its foot" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Featured space</title>
+<style>
+.wrap{padding:24px}
+.featured{position:relative;isolation:isolate;display:grid;grid-template:1fr auto/minmax(0,1fr);min-height:420px;overflow:hidden;color:var(--bone);background:var(--soot)}
+.featured-art{position:absolute;inset:0;z-index:-1}
+.featured-art::before{content:'';position:absolute;inset:0 0 0 auto;width:74%;background:radial-gradient(55% 70% at 60% 45%,var(--bone) 0,var(--brand-ember) 30%,var(--raised) 70%),var(--panel)}
+.featured-art::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--soot) 26%,transparent 68%),linear-gradient(0deg,var(--soot),transparent 32%)}
+.featured-text{grid-area:1/1;align-self:end;width:min(100%,30rem);padding:28px 32px}
+.featured .eyebrow{display:flex;align-items:center;gap:10px;margin:0;font-size:11px}
+.featured .eyebrow::before{content:'';width:26px;height:1px;background:currentColor}
+.featured h2{margin:8px 0;font:400 44px/1.03 var(--font-display)}
+.featured-status{margin:6px 0 0;color:var(--gold);font-size:14px;font-weight:650}
+.featured-actions{display:grid;grid-template-columns:1.2fr 1fr;gap:10px;padding-top:18px}
+.featured-actions button{min-height:48px}
+.featured-shortcuts{grid-area:2/1;display:flex;gap:28px;padding:0 32px;border-block:1px solid var(--line-soft)}
+.featured-shortcuts a{display:inline-flex;align-items:center;min-height:48px;color:var(--bone);text-decoration:none;font-size:13px}
+</style></head>
+<body><div class="wrap">
+<section class="featured" aria-labelledby="featured-title">
+<div class="featured-art" aria-hidden="true"></div>
+<div class="featured-text"><p class="eyebrow">Your turn</p><h2 id="featured-title">Round 3 against Mira</h2><p class="featured-status">1 h left</p>
+<div class="featured-actions"><button class="primary" type="button">Play your turn →</button><button class="secondary" type="button">＋ New battle</button></div></div>
+<nav class="featured-shortcuts" aria-label="Lobby sections"><a href="#games">Your games</a><a href="#seats">Open seats</a></nav>
+</section>
+</div></body></html>

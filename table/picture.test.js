@@ -286,3 +286,9 @@ test('the ladder, the statistics and the rulebook hold their head in their HTML,
     assert.equal(PAGE_ART[name].pages[page], 'lazy', `${name} is lazy on ${page}: these pages are not doors`);
   }
 });
+
+test('a use below the first screen of a picture declared first loads when near; the largest paint never does (#985)', () => {
+  assert.equal(pictureAttributes('beast', { page: 'door', art: ART, lazy: true }).loading, 'lazy');
+  assert.equal(pictureAttributes('beast', { page: 'door', art: ART }).loading, undefined);
+  assert.equal(pictureAttributes('beast', { page: 'home', art: ART, lazy: true }).loading, undefined);
+});

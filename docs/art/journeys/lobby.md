@@ -10,10 +10,12 @@ The returning player's first screen now shows the Deathstalker and Ethereal duel
 phone. The two buttons sit over the dark foreground, at the foot of the space; links to Your games and Open seats
 sit below them. With nothing to resume or learn, the eyebrow is `NEW BATTLE · BETA`, the title "Choose your
 opponent" and there is no detail: **Play a bot →** opens the Create window on Solo, and Multiplayer, the quiet
-button, opens it on PvP. The same duel stays behind a game's rounds 1 to 5; from round 6 the battle's breach and sky
-take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
-appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint: the
-first-paint budget of the home rises to 164 KiB (`docs/art/page-budget.json`). Where this paragraph and the
+button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to 5; from round 6 the battle's breach
+and sky take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
+appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint, sent at
+the width it covers: 475 px on a 390 by 844 phone (the screen's height times the painting's 0.5625), 950 px at
+1280 px and wider (#1070). The first-paint budget of the home is 192 KiB (`docs/art/page-budget.json`). A host
+notice lies under the header, over the painting's top, so the space keeps its full screen on a phone (#1072). Where this paragraph and the
 UX9 text below disagree, this paragraph holds; the measurements and storyboards below record the previous panel
 layout.
 
@@ -149,7 +151,7 @@ The action says `Continue →` once one lesson of the series is done (the series
 the host keeps no place inside a lesson, so "Continue" can only mean the series. Today's Your games empty line
 ("Create a table, take an open seat or enter an invitation code", 15 words) names three ways and offers none; Find
 an opponent's (16) points at two. Each now says what fills the list and offers one quiet button that does it. Open a
-table → opens the Create window on PvP, Play a bot → on Solo.
+table → opens the Create window on Multiplayer, Play a bot → on Solo.
 
 ### Pictures
 
@@ -304,7 +306,7 @@ covers it (out of view).
 
 ### Job
 
-Where a battle is set up: against a player (PvP) or a bot (Solo), with its options. Opened from New battle, Open a
+Where a battle is set up: against a player (Multiplayer) or a bot (Solo), with its options. Opened from New battle, Open a
 table, Play a bot, a Challenge or a rematch.
 
 - **Filled action**: Create & play →. Cancel and the × stay quiet; the two tabs are a selection, marked, not filled.
@@ -313,7 +315,7 @@ table, Play a bot, a Challenge or a rematch.
 
 - **Order**: the eyebrow and the title, the two tabs, the options of the tab chosen, the line on what happens, Cancel,
   Create & play →.
-- **Budget**: 66 words on PvP, 80 today; 38 on Solo, 38 today. Ranked's line keeps what a player decides on and drops
+- **Budget**: 66 words on Multiplayer, 80 today; 38 on Solo, 38 today. Ranked's line keeps what a player decides on and drops
   what the format note already says: "Counts on the leaderboard and in your statistics." (8 words, where "Counts on
   the leaderboard and in your statistics, always 3v3. Turn it off for a friendly or practice game in any format."
   is 22). "Ranked games are 3v3." stays beside Creatures per side while Ranked is on.
@@ -324,11 +326,11 @@ None: a form. A picture would push Create & play → further below the first scr
 
 ### States
 
-- **First paint**: the window opens once the friends' list is read (`loadFriends`), on PvP or on what a rematch
+- **First paint**: the window opens once the friends' list is read (`loadFriends`), on Multiplayer or on what a rematch
   asks.
 - **Empty**: no friend yet, with A friend chosen: the line says to ask a player from the Friends panel first, and
   Create & play → is disabled (today's behaviour).
-- **Loaded**: PvP or Solo, as filmed.
+- **Loaded**: Multiplayer or Solo, as filmed.
 - **Waiting**: after Create & play →: the action is disabled until the host answers, then the battle page opens. It
   could say `Creating…` as the featured action says `Opening…`; asked under **Left**.
 - **Error**: the host refuses: the window's own alert says why (`#create-problem`), the window stays open. At the most
@@ -360,7 +362,7 @@ pauses while it is open: the creature is under the backdrop, out of view as ambi
   arrow keys (today's behaviour).
 - **Names**: the window is a `<dialog>` named by its title; the × is named "Close new table".
 - **Announced**: the problem through its alert.
-- **Targets**: 2 of 8 under 44 px on PvP, 1 under 24 (the Ranked box, its row is the target); 1 of 7 on Solo (the ×).
+- **Targets**: 2 of 8 under 44 px on Multiplayer, 1 under 24 (the Ranked box, its row is the target); 1 of 7 on Solo (the ×).
   The × reaches 44; the Ranked box is 24 px, the floor of WCAG 2.5.8, its whole row the target.
 
 ### Cost
@@ -371,7 +373,7 @@ pauses while it is open: the creature is under the backdrop, out of view as ambi
 
 ### Left
 
-- At 320 by 568, on PvP, the window is 791 px tall (827 before) and Create & play → is below its first screen: the player scrolls
+- At 320 by 568, on Multiplayer, the window is 791 px tall (827 before) and Create & play → is below its first screen: the player scrolls
   inside the window to reach it. Holding Cancel and Create & play → at the window's foot is beyond this stage's build;
   asked for UX9's next round or UX12's family of windows.
 - `Creating…` on the press, as `Opening…`, is beyond the build.

@@ -490,6 +490,17 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     }
     return root;
   }
+  // The invitations' cards drawn, by their table: one that has not changed is kept when the lists are drawn again
+  // (each minute while a time to answer counts down), with its painted ground, as the Friends window keeps its rows.
+  let invitationCards = new Map();
+  function keptInvitationCards() {
+    const next = new Map(invitations.map(invitation => {
+      const key = JSON.stringify(invitation), kept = invitationCards.get(invitation.table.id);
+      return [invitation.table.id, kept?.key === key ? kept : { key, card: invitationCard(invitation) }];
+    }));
+    invitationCards = next;
+    return [...next.values()].map(one => one.card);
+  }
   // A table waiting for this player (ADR 0129): who asks, and the two answers.
   function invitationCard(invitation) {
     const table = invitation.table;
@@ -685,7 +696,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     const shownTables = publicTables.data, available = shownTables ? visibleTables(shownTables.items, mine, showAll) : null;
     el('invitations').hidden = invitations.length === 0;
     el('invitations-count').textContent = invitations.length || '';
-    el('invitation-cards').replaceChildren(...invitations.map(invitationCard));
+    el('invitation-cards').replaceChildren(...keptInvitationCards());
     el('opponents').hidden = signInFirst() || !account || opponents.length === 0;
     el('opponents-count').textContent = opponents.length || '';
     el('opponent-cards').replaceChildren(...opponentOrder(opponents).map(opponentCard));
@@ -813,7 +824,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   }
   let wanted = null;
   let chosenFriend = null;
-  // Solo plays a bot; PvP another player, a friend, or a second player on this device.
+  // Solo plays a bot; Multiplayer another player, a friend, or a second player on this device.
   let kind = 'pvp';
   const opponentOf = () => kind === 'solo' ? 'bot' : el('opponent').value;
   function choose(next) {
