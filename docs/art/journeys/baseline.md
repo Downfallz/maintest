@@ -246,7 +246,7 @@ At 390 by 844:
 
 ## The match's windows
 
-Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk.
+Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk. `match-result` was added by S11 of [the scene paintings' plan](../scene-paintings-plan.md), walked on its branch with the result's head and the Mutation Tree's built, 2026-11-22. It has no earlier walk here; the match journey films the same window (below). The words on the heads measure at least 7.69:1 on `mutation-tree` and 9.06:1 on `match-result`, at both widths.
 
 At 320 by 568:
 
@@ -259,6 +259,7 @@ At 320 by 568:
 | spell-choice-foot | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 18 | 0 | 0.03 | nothing |
 | order-revealed | 568 px | 91 | 0 | 8 img, 2 background, the canvas | 11 px | 0 | 0 of 25 | 0 | 0 | 0 | 0.05 | nothing |
 | history | 534 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 7 of 12 | 0 | 2 | 1 | 0.24 | label-content-name-mismatch (3) |
+| match-result | 542 px, a window | 112 | 1 | 2 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 2 | 0 | 0.25 | nothing |
 
 At 390 by 844:
 
@@ -271,6 +272,7 @@ At 390 by 844:
 | spell-choice-foot | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 5 | 0 | 0.01 | nothing |
 | order-revealed | 844 px | 105 | 0 | 8 img, 2 background, the canvas | 11 px | 0 | 0 of 27 | 0 | 0 | 0 | 0.01 | nothing |
 | history | 698 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 9 of 12 | 0 | 2 | 1 | 0.30 | label-content-name-mismatch (6) |
+| match-result | 818 px, a window | 112 | 1 | 2 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 5 | 0 | 0.30 | nothing |
 
 ## The first paints, on a slow phone
 

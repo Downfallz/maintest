@@ -241,7 +241,7 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
    view; words that wrap make it taller rather than being cut. The scrim is opaque under the whole column of words
    and fades out beyond it. */
 .scene-head { display: grid; background-color: var(--soot); }
-.scene-head::after { content: ""; grid-area: 1 / 1; aspect-ratio: 3 / 1; max-height: 120px; }
+.scene-head::after { content: ""; grid-area: 1 / 1; aspect-ratio: 3 / 1; max-height: 120px; pointer-events: none; }
 .scene-head > .scene-words { grid-area: 1 / 1; align-self: end; max-width: 60%; padding: 10px 16px; }
 .scene-head[data-side="end"] > .scene-words { justify-self: end; text-align: end; }
 .scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 90%, transparent) 62%, transparent 100%); }

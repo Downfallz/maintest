@@ -1,6 +1,7 @@
 import { cardsById } from '../../table/card.js';
 import { classColour, familyRoot, requirementLine, stageRows, talentPalette } from '../../table/mat.js';
 import { stageLabel, stageNumeral, stageSpoken } from '../../table/terms.js';
+import { wearFamilyHead, wearTreeHead } from '../../table/battle-scenes.js';
 import { iconElement } from './condition-icons';
 import { onNextFrame } from './next-frame';
 import { mutationForm, spellPortrait } from './spell-portrait';
@@ -46,6 +47,8 @@ export function sigil(family: string) {
 // mutation's path, lit from its family's root. Reading it never spends a pick.
 export function atlasControls(onVisibility: () => void) {
   const dialog = el<HTMLDialogElement>('atlas-dialog');
+  // The tree opens on the Brute's moult, its band behind the title (S11); the painting loads when the window opens.
+  wearTreeHead(document);
   let view: AtlasView | null = null, catalogue: Catalogue | null = null, selected: string | null = null, opener: HTMLElement | null = null;
   let anchors = new Map<string, HTMLElement>(), columns: HTMLElement[] = [];
   let request: ((creature: string) => AtlasView | null) | null = null;
@@ -137,8 +140,12 @@ export function atlasControls(onVisibility: () => void) {
       const column = node('section', '', 'atlas-family'); column.style.setProperty('--mutation-colour', colour);
       column.dataset.family = rootId; columns.push(column);
       const held = members.filter(pack => pack.status === 'known').reduce((top, pack) => Math.max(top, pack.level), 0);
-      const head = node('header', '', 'atlas-family-head');
-      head.append(sigil(root.visual?.family ?? root.name.toLowerCase()), node('strong', root.name), node('small', held ? `${stageLabel(held)} held` : 'Not started'));
+      const head = node('header', '', 'atlas-family-head'), words = node('div', '', 'atlas-family-words');
+      const family = root.visual?.family ?? root.name.toLowerCase();
+      words.append(sigil(family), node('strong', root.name), node('small', held ? `${stageLabel(held)} held` : 'Not started'));
+      head.append(words);
+      // The column opens on its family's scene, a band of 48 px under its name (docs/art/scene-paintings-plan.md, S11).
+      wearFamilyHead(document, head, family, words);
       const links = document.createElementNS(svgNS, 'svg'); links.classList.add('atlas-links'); links.setAttribute('aria-hidden', 'true');
       column.append(links, head);
       // One line per stage, each mutation under the ones it grows from, so its links run straight down.
