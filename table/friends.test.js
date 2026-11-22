@@ -51,8 +51,8 @@ test('only a row the window had not drawn arrives, never on the first draw', () 
 });
 
 test('the Friends window wears its head on the player\'s pages, each declared for it, and not on the admin page or the classic table', async () => {
-  const { FRIENDS_HEAD_PAGES } = await import('./navigation.js');
+  const { HEADER_SCENE_PAGES } = await import('./navigation.js');
   const { PAGE_ART } = await import('./page-art.js');
-  assert.deepEqual(Object.keys(FRIENDS_HEAD_PAGES).sort(), ['battle', 'leaderboard', 'lobby', 'rules', 'stats']);
-  for (const page of Object.values(FRIENDS_HEAD_PAGES)) assert.equal(PAGE_ART['predator-and-deathstalker'].pages[page], 'lazy', page);
+  assert.deepEqual(Object.keys(HEADER_SCENE_PAGES).sort(), ['battle', 'leaderboard', 'lobby', 'rules', 'stats']);
+  for (const page of Object.values(HEADER_SCENE_PAGES)) assert.equal(PAGE_ART['predator-and-deathstalker'].pages[page], 'lazy', page);
 });

@@ -118,10 +118,11 @@ test('every page of the declaration has a budget, and its pictures hold under it
   }
 });
 
-test('the battle page may load the 320 KiB the windows\' brief measured and the Friends window\'s head, and none of it before any scroll', () => {
+test('the battle page may load the 320 KiB the windows\' brief measured and the heads of its menu\'s windows, and none of it before any scroll', () => {
   // docs/art/journeys/windows.md: 322,218 B with every portrait at 24 and 40 px and every form at 64 px; the Friends
-  // window opened from the battle's menu adds its head, 68,750 B, to 382 KiB (docs/art/journeys/pages.md).
-  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 391168 });
+  // window opened from the battle's menu adds its head, 68,750 B, to 382 KiB (docs/art/journeys/pages.md), and a sign
+  // out's confirmation its own, 20,646 B, to 402 KiB (docs/art/journeys/doors.md).
+  assert.deepEqual(budget.pages['table/battle'], { first: 0, all: 411648 });
   const measured = budgetOf(PAGE_ART, 'table/battle', budget.density);
   assert.equal(measured.first, 0);
   // Without phone the page would count each portrait at 40 px alone and each form at the statistics' 144: phone
@@ -136,9 +137,10 @@ test('the ladder, the statistics and the rulebook raise their budget by their he
   // docs/art/journeys/pages.md (S10 of docs/art/scene-paintings-plan.md): each head is drawn 354 px wide on a phone, so
   // a phone takes its 708 px file. The ladder's is a 16:9 painting cut to its band, the heaviest of the three.
   const file = (name, width) => PAGE_ART[name].sizes.find(size => size.width === width).bytes;
-  const friendsHead = file('predator-and-deathstalker', 732);
+  // The header's windows add theirs: the Friends window's head (S7) and the sign out's (S9).
+  const headers = file('predator-and-deathstalker', 732) + file('predator-at-rest', 716);
   for (const [page, head] of [['table/leaderboard', 'elemental-charge'], ['table/rules', 'latch-under-the-arch']])
-    assert.equal(budgetOf(PAGE_ART, page, budget.density).all, friendsHead + file(head, 708), `${page}: the Friends window's head and its own`);
+    assert.equal(budgetOf(PAGE_ART, page, budget.density).all, headers + file(head, 708), `${page}: the header's windows' heads and its own`);
   assert.ok(budgetOf(PAGE_ART, 'table/stats', budget.density).all >= file('ironhide-scar', 708));
   // The offline page's one picture is asked for first, its 716 px file all it loads.
   assert.deepEqual(budgetOf(PAGE_ART, 'table/offline', budget.density), { first: file('parasite-offline', 716), all: file('parasite-offline', 716), largest: 1 });

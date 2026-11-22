@@ -70,3 +70,18 @@ test('the panel an invitation opens shows the duel, two teams of three, in place
   assert.deepEqual(doorPictures(invitationOf(offered(bastiens))), ['duel']);
   assert.deepEqual(doorPictures({ spent: true }), ['duel'], 'a spent link still came from a friend who never saw the showcase');
 });
+
+test('a player who just signed out here is told goodbye and that their games wait, and an invitation outranks it', () => {
+  assert.deepEqual(doorWords(null, { left: true }), {
+    eyebrow: 'Signed out',
+    title: 'See you soon.',
+    game: 'Your games wait for you.',
+    account: 'Sign in again to resume them.',
+  });
+  assert.equal(doorWords(invitationOf(offered(bastiens)), { left: true }).title, 'bastien invited you to a 3v3 battle.');
+});
+
+test('the panel after a sign out shows the Predator at rest alone, in place of the ground and the Revenant', () => {
+  assert.deepEqual(doorPictures(null, { left: true }), ['predator-at-rest']);
+  assert.deepEqual(doorPictures({}, { left: true }), ['duel'], 'an invitation outranks the goodbye');
+});

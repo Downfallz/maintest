@@ -4,7 +4,8 @@
 // the table's page asks before a seat is taken (`/api/lobby/invitations`, ADR 0116), which needs the link's key and
 // no account, spends nothing, and answers a seat kept for a friend as spent to anybody else (ADR 0129).
 import { inviterOf, seatLabel } from './invitation.js';
-import { pictureElement } from './picture.js';
+import { takeSignedOut } from './account.js';
+import { pictureElement, sceneElement } from './picture.js';
 import { seatsFromLocation } from './session.js';
 
 const COUNTS = { 1: null, 2: 'two', 3: 'three' };
@@ -23,7 +24,11 @@ function gameLine(format) {
  * What the panel says. `invitation` is null for a plain visit; an object for an invitation, holding `inviter` and
  * `format` once the host has described it, and nothing while it has not or cannot.
  */
-export function doorWords(invitation) {
+export function doorWords(invitation, { left = false } = {}) {
+  // An invitation outranks the goodbye: it says why the visitor is here.
+  if (!invitation && left) {
+    return { eyebrow: 'Signed out', title: 'See you soon.', game: 'Your games wait for you.', account: 'Sign in again to resume them.' };
+  }
   if (!invitation) {
     return { eyebrow: 'Beta', title: 'Sign in to play.', game: gameLine('3v3'), account: 'Your games follow you on every device.' };
   }
@@ -43,9 +48,12 @@ export function doorWords(invitation) {
  * The paintings the panel draws (docs/art/journeys/doors.md, the sign-in panel). The plain door repeats the
  * showcase's ground and a creature; a friend who came by an invitation never saw the showcase, so the duel shows
  * them the game at once: two teams of three facing across the ground. A spent link came from a friend all the same.
+ * A player who just signed out here sees the Predator at rest, alone: the game waits for them (the panel after a
+ * sign out).
  */
-export function doorPictures(invitation) {
-  return invitation ? ['duel'] : ['eclipse-ground', 'revenant'];
+export function doorPictures(invitation, { left = false } = {}) {
+  if (invitation) return ['duel'];
+  return left ? ['predator-at-rest'] : ['eclipse-ground', 'revenant'];
 }
 
 // The duel's steps follow table/lobby.css: beside the words from 1280 px, its file drawn about 980 px wide at the
@@ -54,6 +62,18 @@ const PICTURES = {
   'eclipse-ground': { class: 'sign-in-ground', sizes: '(min-width: 701px) 100vw, 533px' },
   revenant: { class: 'sign-in-creature', sizes: '(min-width: 701px) 550px, 107px' },
   duel: { class: 'sign-in-ground sign-in-duel', sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)' },
+  // Laid out as the duel is, a plate of its own: whole above the words, beside them from 1280 px.
+  'predator-at-rest': {
+    class: 'sign-in-ground sign-in-duel', form: 'plate', alt: 'The Predator at rest in a dark hall, an ember on its shoulder.',
+    sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)',
+  },
+};
+
+const drawn = (doc, name) => {
+  const { form, ...options } = PICTURES[name];
+  return form === 'plate'
+    ? sceneElement(doc, name, { page: 'table/sign-in', form, ...options })
+    : pictureElement(doc, name, { page: 'table/sign-in', ...options });
 };
 
 /** The keys an invitation carries in the page a visitor is sent back to after signing in, and only this host's. */
@@ -86,6 +106,10 @@ export function nameNext({ invitation, lesson } = {}) {
   return null;
 }
 
+function tabStorage() {
+  try { return globalThis.sessionStorage ?? null; } catch { return null; }
+}
+
 const asked = tokens => globalThis.fetch('/api/lobby/invitations', {
   method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tokens }),
 }).then(response => (response.ok ? response.json() : null));
@@ -96,26 +120,28 @@ const asked = tokens => globalThis.fetch('/api/lobby/invitations', {
  * loads them; and `lesson(card)`, which the lobby calls when the first tutorial is about to open, to say so in the
  * name window.
  */
-export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask = asked } = {}) {
+export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask = asked, session = tabStorage() } = {}) {
   const el = id => doc.getElementById(id);
 
   let invitation = null;
   let signedOut = false;
+  // This tab just signed out (account.js marks it once the host confirmed): the goodbye, once.
+  let left = false;
   // The paintings follow the door: a link the host answers as the visitor's own seat turns the panel plain.
   const place = () => {
     const art = el('sign-in-art');
-    const names = doorPictures(invitation);
+    const names = doorPictures(invitation, { left });
     if (!art || !signedOut || art.dataset.pictures === names.join(' ')) return;
     art.dataset.pictures = names.join(' ');
-    art.replaceChildren(...names.map(name => pictureElement(doc, name, { page: 'table/sign-in', ...PICTURES[name] })));
+    art.replaceChildren(...names.map(name => drawn(doc, name)));
   };
   const draw = () => {
-    const words = doorWords(invitation);
+    const words = doorWords(invitation, { left });
     el('sign-in-eyebrow').textContent = words.eyebrow;
     el('sign-in-heading').textContent = words.title;
     el('sign-in-game').textContent = words.game;
     el('sign-in-account').textContent = words.account;
-    el('sign-in-panel').dataset.door = invitation ? 'invited' : 'plain';
+    el('sign-in-panel').dataset.door = invitation ? 'invited' : left ? 'left' : 'plain';
     const next = nameNext({ invitation });
     // Never hidden, only empty: a live region shown and filled in one step is often not announced.
     el('name-next').textContent = next ?? '';
@@ -133,6 +159,13 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
   return {
     signedOut() {
       signedOut = true;
+      if (takeSignedOut(session)) {
+        left = true;
+        draw();
+        // The account menu that held the focus is gone: the goodbye's title takes it, once.
+        if (!invitation) el('sign-in-heading').focus({ preventScroll: true });
+        return;
+      }
       place();
     },
     lesson(card) {

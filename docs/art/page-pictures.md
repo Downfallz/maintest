@@ -112,6 +112,8 @@ dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'tabl
 - `wearPageHead(doc, name, options)` dresses a page's own head: the `.page-head` its HTML holds, with its `data-side`
   and its `.scene-words`, so the band's room and words are there before any script (the ladder, the statistics and
   the rulebook). It is drawn across the page's column (`PAGE_HEAD_SIZES`).
+- `confirmAction` of `table/account.js` takes a `head` (a scene's name, `wearScene`'s options and the page) for the
+  confirmation that wears one, a sign out's; any other confirmation takes it off. `account.js`'s `SIGN_OUT_HEAD` holds it.
 - Words on a head or a ground hold 4.5:1 against the lightest pixel under them. The journey walk measures it on
   every screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
 

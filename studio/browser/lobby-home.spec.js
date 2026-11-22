@@ -309,6 +309,61 @@ test('inviting a friend leaves the friends window and selects that friend in the
   expect(state.errors).toEqual([]);
 });
 
+test('a sign out is asked under the Predator at rest, Sign out filled; the panel after it says goodbye once, and removing a friend keeps the plain window', async ({ page }) => {
+  const state = await home(page);
+  // Removing a friend first: the same window, its plain heading, Cancel and no fill.
+  await openPanel(page, /^Friends/);
+  await page.locator('#friend-list').getByRole('button', { name: /^Remove / }).first().click();
+  const heading = page.locator('#action-heading');
+  await expect(page.locator('#action-dialog')).toBeVisible();
+  await expect(heading).not.toHaveClass(/scene/);
+  await expect(page.locator('#action-cancel')).toHaveText('Cancel');
+  await expect(page.locator('#action-confirm')).not.toHaveClass(/primary/);
+  await page.locator('#action-cancel').click();
+  await page.keyboard.press('Escape');
+  // The sign out (docs/art/journeys/doors.md, Sign out, the confirmation): the head, its words on the start side.
+  await page.locator('#account-menu summary').click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Sign out on this device?' })).toBeVisible();
+  await expect(heading).toHaveClass(/scene-head/);
+  await expect(heading).toHaveAttribute('data-side', 'start');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('alt', '');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-x', '70');
+  await expect(heading.locator('.scene-words')).toHaveText('Sign out on this device?');
+  await expect(page.locator('#action-confirm')).toHaveClass(/primary/);
+  await expect(page.locator('#action-confirm')).toBeFocused();
+  await expect(page.locator('#action-cancel')).toHaveText('Stay signed in');
+  // The band runs from edge to edge, no taller than 120 px, and both buttons stay in view.
+  const [band, dialog] = await Promise.all([heading.boundingBox(), page.locator('#action-dialog').boundingBox()]);
+  expect(Math.abs(band.x - dialog.x)).toBeLessThanOrEqual(2);
+  expect(band.height).toBeLessThanOrEqual(121);
+  await expect(page.locator('#action-confirm')).toBeInViewport();
+  await page.locator('#action-confirm').click();
+  // The panel after a sign out: the Predator at rest alone, the goodbye's words, its title focused.
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  expect(state.signouts).toEqual([{ everywhere: false }]);
+  const panel = page.locator('#sign-in-panel');
+  await expect(panel).toHaveAttribute('data-door', 'left');
+  await expect(page.locator('#sign-in-eyebrow')).toHaveText('Signed out');
+  await expect(page.locator('#sign-in-heading')).toHaveText('See you soon.');
+  await expect(page.locator('#sign-in-game')).toHaveText('Your games wait for you.');
+  await expect(page.locator('#sign-in-account')).toHaveText('Sign in again to resume them.');
+  await expect(page.locator('#sign-in-heading')).toBeFocused();
+  await expect(page.locator('#sign-in-art figure.scene-plate img')).toHaveAttribute('alt', 'The Predator at rest in a dark hall, an ember on its shoulder.');
+  await expect(page.locator('#sign-in-art img')).toHaveCount(1);
+  await expect(page.locator('#sign-in-art')).toHaveAttribute('data-pictures', 'predator-at-rest');
+  await expect(page.getByLabel('Developer sign-in: any player name')).toBeInViewport();
+  // Its picture stays inside the panel at every width: whole above the words, beside them from 1280 px.
+  const [plate, room] = await Promise.all([page.locator('#sign-in-art img').boundingBox(), panel.boundingBox()]);
+  expect(plate.x + plate.width).toBeLessThanOrEqual(room.x + room.width + 1);
+  expect(plate.width).toBeLessThan(room.width + 1);
+  // Read once: a reload shows the plain door.
+  await page.reload();
+  await expect(panel).toHaveAttribute('data-door', 'plain');
+  await expect(page.locator('#sign-in-heading')).toHaveText('Sign in to play.');
+  expect(state.errors).toEqual([]);
+});
+
 test('joining validates the code inside its window and follows a valid invitation', async ({ page }) => {
   await home(page);
   await openPanel(page, 'Join with a code');
@@ -491,7 +546,7 @@ test('the account menu holds Settings, Report or suggest and Sign out; the accou
   await page.locator('#delete-cancel').click();
   await page.locator('#sign-out-everywhere').click();
   await expect(page.locator('#action-detail')).toContainText('every device');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Stay signed in', exact: true }).click();
   expect(state.signouts).toBeUndefined();
   await page.locator('#sign-out-everywhere').click();
   await page.locator('#action-confirm').click();
@@ -775,7 +830,7 @@ test('nothing waiting for the player shows no Your turn at all', async ({ page }
 test('your games are grouped against players and against bots, at most five of each in progress, finished ones read a page at a time', async ({ page }, info) => {
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
   const game = (id, { turn = false, against = 'bot' } = {}) => ({ table: { ...battle, id, over: false,
-    seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: false }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
+    seats: [{ ...battle.seats[0], turn }, against === 'bot' ? bot : { ...battle.seats[1], turn: !turn }] }, seats: [{ seat: 'player1', token: `${id}-token` }] });
   const games = [game('waiting-on-them', { against: 'person' }), ...Array.from({ length: 4 }, (_, index) => game(`bot-${index}`)), game('your-move', { turn: true })];
   const result = (index, outcome, opponent) => ({ match: `m${index}`, table: `t${index}`, finishedAt: `2026-11-0${1 + (index % 7)}T20:00:00Z`, format: '3v3', rounds: 9,
     outcome, you: ['player1'], opponent, seats: null, replay: `/battle?replay=t${index}&seat=player1`,
@@ -792,6 +847,16 @@ test('your games are grouped against players and against bots, at most five of e
   await expect(bots.locator('.mine-group-head .lobby-count')).toHaveText('5 / 5'); await expect(bots.locator('.mine-limit')).toBeVisible();
   await expect(page.locator('#ongoing-count')).toHaveText('· 6'); await expect(page.locator('#finished-count')).toHaveText('· 9');
   expect(state.finishedReads.sort()).toEqual(['bots/1', 'players/1']);
+  // The game that waits on the other player lays its words on the Warped listening (S8); a bot's game, whose round a
+  // bot answers at once, and the turn on show keep their slate.
+  const listening = players.locator('.game-card');
+  await expect(listening).toHaveClass(/scene-ground/);
+  await expect(listening.locator('img[data-scene]')).toHaveAttribute('src', /warped-listening-/);
+  await expect(listening.locator('img[data-scene]')).toHaveAttribute('loading', 'lazy');
+  await expect(listening.locator('img[data-scene]')).toHaveAttribute('alt', '');
+  await expect(listening.locator('.scene-words').first()).toContainText('3v3 battle');
+  await expect(listening.locator('button.scene-words')).toHaveCount(0);
+  await expect(bots.locator('.game-card.scene')).toHaveCount(0);
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-ongoing.png') });
 
   await page.locator('#mine-finished').click();
@@ -805,9 +870,16 @@ test('your games are grouped against players and against bots, at most five of e
   await expect(players.locator('.casual-tag.ranked')).toHaveText('Ranked');
   await expect(bots.locator('.game-row').first().locator('.casual-tag')).toHaveText('Unranked');
   await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
+  // The game that ended last, against bastien on the 7th, alone stands on the stomp's aftermath (S8).
+  await expect(players.locator('.game-row')).toHaveClass(/scene-ground/);
+  await expect(players.locator('.game-row img[data-scene]')).toHaveAttribute('src', /crushing-stomp-aftermath-/);
+  await expect(page.locator('#my-tables .game-row.scene')).toHaveCount(1);
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
   await bots.getByRole('button', { name: 'Next →' }).click();
   await expect(bots.locator('.game-row')).toHaveCount(2); await expect(bots.locator('.lobby-pages span')).toHaveText('Page 2 of 2');
+  // An older page of the bots' games holds no latest one; bastien's game keeps its ground.
+  await expect(bots.locator('.game-row.scene')).toHaveCount(0);
+  await expect(players.locator('.game-row')).toHaveClass(/scene-ground/);
   await expect(bots.getByRole('button', { name: 'Next →' })).toBeDisabled();
   expect(state.finishedReads.filter(read => read.startsWith('players'))).toEqual(['players/1']);
   await noOverflow(page);
@@ -1429,8 +1501,12 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   await expect(page.locator('#welcome')).toHaveText('Round 7 against Bastien');
   await expect(page.locator('#featured-status')).toHaveText("Bastien's turn");
   await expect(action).toHaveText('Open the game →');
-  // Round 7 is played on the breach, as the battle lays its plates.
-  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /home-ground-breach-/);
+  // While it waits on Bastien it stands on the Warped listening, not on its round's ground (S8); its card below keeps
+  // its slate, since the featured space already shows it.
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /warped-listening-/);
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('alt', '');
+  await expect(page.locator('.mine-group.players .game-card')).toHaveCount(1);
+  await expect(page.locator('.mine-group.players .game-card.scene')).toHaveCount(0);
   await action.focus();
   const before = await action.boundingBox();
 
@@ -1443,6 +1519,8 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   await expect(action).toHaveText('Play your turn →');
   await expect(action).toBeFocused();
   expect(await action.boundingBox()).toEqual(before);
+  // Its turn: round 7 is played on the breach, as the battle lays its plates.
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /home-ground-breach-/);
   await expect(filledOnTheHome(page)).toHaveCount(1);
   await page.screenshot({ path: info.outputPath('lobby-featured-turn.png') });
 

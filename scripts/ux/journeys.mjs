@@ -47,7 +47,7 @@ async function invitationFrom(walk, name) {
 const doors = {
   id: 'doors',
   title: 'The two doors',
-  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief'],
+  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief', 'sign-out', 'signed-out-panel'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -100,6 +100,17 @@ const doors = {
     await page.goto(`${set.game}/`);
     await page.locator('#practice-brief[open]').waitFor({ timeout: 30000 });
     await walk.screen('first-lesson-brief');
+    // The way out: the lesson skipped, the player signs out from the account menu, and the panel says goodbye.
+    await page.locator('#practice-brief-skip').click();
+    await page.waitForURL(`${set.game}/`);
+    await home(page, set.game);
+    await page.locator('#account-menu summary').click();
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.locator('#action-dialog[open] #action-heading img[data-scene]').waitFor();
+    await walk.screen('sign-out');
+    await page.locator('#action-confirm').click();
+    await page.locator('#sign-in-panel[data-door="left"]').waitFor({ timeout: 30000 });
+    await walk.screen('signed-out-panel');
   },
 };
 
@@ -163,7 +174,7 @@ async function friendTakesTheSeat(walk) {
 const lobby = {
   id: 'lobby',
   title: 'The lobby',
-  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended', 'home-turn-arrives'],
+  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended', 'home-ended-ground', 'home-waiting-ground', 'home-turn-arrives'],
   strips: {
     // The turn that arrives: the friend takes the open seat while the walker's home is open, a bot's turn on show.
     'turn-arrives': { at: 'home-game-ended', act: walk => friendTakesTheSeat(walk) },
@@ -222,6 +233,16 @@ const lobby = {
     await home(page, set.game);
     await page.locator('#mine-finished').click();
     await walk.screen('home-game-ended');
+    // In view, so the walk's contrast reads the words on each ground (S8 of docs/art/scene-paintings-plan.md): the game
+    // that ended last on the stomp's aftermath, then the table that waits for a player on the Warped listening.
+    await page.locator('#my-tables .game-row.scene-ground').first().scrollIntoViewIfNeeded({ timeout: 30000 });
+    await walk.screen('home-ended-ground');
+    await page.locator('#mine-ongoing').click();
+    await page.locator('#my-tables .game-card.scene-ground').first().scrollIntoViewIfNeeded({ timeout: 30000 });
+    await walk.screen('home-waiting-ground');
+    // Back as home-game-ended left it: Finished pressed, the featured space in view.
+    await page.locator('#mine-finished').click();
+    await page.evaluate(() => window.scrollTo(0, 0));
     // The friend takes the open seat: a person's turn arrives on the open home, and outranks the bot's on show.
     await friendTakesTheSeat(walk);
     await page.locator('#welcome', { hasText: FRIEND }).waitFor({ timeout: 30000 });

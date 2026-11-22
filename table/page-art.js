@@ -34,12 +34,21 @@ export const PAGE_ART = {
     ],
   },
   'warped-listening': {
-    from: 'a905ad6d4315f7c3', frames: 1, drawn: [351,1250], pages: {"showcase/mutations":"lazy"}, focus: '50% 40%',
+    from: '1723f536a43ae6cf', frames: 1, drawn: [351,1250,390,640,358,680], pages: {"showcase/mutations":"lazy","table/home":"lazy"}, phone: {"table/home":[390,358]}, focus: '50% 40%',
     sizes: [
-      { file: 'warped-listening-351.26058703.webp', width: 351, height: 197, bytes: 7086 },
-      { file: 'warped-listening-702.82c3d3ff.webp', width: 702, height: 395, bytes: 21104 },
-      { file: 'warped-listening-1250.f589c2db.webp', width: 1250, height: 703, bytes: 49654 },
+      { file: 'warped-listening-390.dee74911.webp', width: 390, height: 219, bytes: 8304 },
+      { file: 'warped-listening-780.5324000a.webp', width: 780, height: 439, bytes: 25278 },
+      { file: 'warped-listening-1360.3e4d2917.webp', width: 1360, height: 765, bytes: 55636 },
       { file: 'warped-listening-1536.4cbd321c.webp', width: 1536, height: 864, bytes: 66628 },
+    ],
+  },
+  'crushing-stomp-aftermath': {
+    from: '3a9100acf2c3841c', frames: 1, drawn: [358,1280], pages: {"table/home":"lazy"},
+    sizes: [
+      { file: 'crushing-stomp-aftermath-358.2616af1c.webp', width: 358, height: 119, bytes: 4946 },
+      { file: 'crushing-stomp-aftermath-716.0ef50fe6.webp', width: 716, height: 239, bytes: 16084 },
+      { file: 'crushing-stomp-aftermath-1280.0980e273.webp', width: 1280, height: 427, bytes: 43398 },
+      { file: 'crushing-stomp-aftermath-1536.b57a85f1.webp', width: 1536, height: 512, bytes: 60076 },
     ],
   },
   'ironhide-scar': {
@@ -81,11 +90,14 @@ export const PAGE_ART = {
     ],
   },
   'predator-at-rest': {
-    from: '27f10c8f9c5ff2b0', frames: 1, drawn: [351,640], pages: {"showcase/home":"lazy"},
+    from: '82fd6321a88c3bed', frames: 1, drawn: [351,640,358,480,980], pages: {"showcase/home":"lazy","table/sign-in":"first","table/home":"lazy","table/stats":"lazy","table/battle":"lazy","table/leaderboard":"lazy","table/rules":"lazy"}, phone: {"table/sign-in":[358],"table/home":[358],"table/stats":[358],"table/battle":[358],"table/leaderboard":[358],"table/rules":[358]},
     sizes: [
-      { file: 'predator-at-rest-351.ac7fe3f2.webp', width: 351, height: 197, bytes: 6606 },
-      { file: 'predator-at-rest-702.43329d14.webp', width: 702, height: 395, bytes: 20194 },
+      { file: 'predator-at-rest-358.d0e427da.webp', width: 358, height: 201, bytes: 7016 },
+      { file: 'predator-at-rest-480.abefbc56.webp', width: 480, height: 270, bytes: 10976 },
+      { file: 'predator-at-rest-716.7d247733.webp', width: 716, height: 403, bytes: 20646 },
+      { file: 'predator-at-rest-980.d8d01512.webp', width: 980, height: 551, bytes: 32996 },
       { file: 'predator-at-rest-1280.28addeed.webp', width: 1280, height: 720, bytes: 48202 },
+      { file: 'predator-at-rest-1536.5234934a.webp', width: 1536, height: 864, bytes: 63440 },
     ],
   },
   'latch-under-the-arch': {

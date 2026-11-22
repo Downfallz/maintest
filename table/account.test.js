@@ -52,3 +52,32 @@ test('the operator\'s notice shows on every page but the game itself, and an emp
   assert.equal(noticeText({ notice: '   ' }, 'lobby'), null);
   assert.equal(noticeText({}, 'lobby'), null, 'a host before ADR 0177 says no notice');
 });
+
+test('a sign out is asked with its own words, the action filled and the way back named Stay signed in', async () => {
+  const { signOutWords } = await import('./account.js');
+  assert.deepEqual(signOutWords(false), { title: 'Sign out on this device?', detail: 'You can sign in again to resume your games.', action: 'Sign out', keep: 'Stay signed in' });
+  assert.deepEqual(signOutWords(true), { title: 'Sign out everywhere?', detail: 'You will need to sign in again on every device.', action: 'Sign out everywhere', keep: 'Stay signed in' });
+});
+
+test('a sign out\'s confirmation wears the Predator at rest as its head, on each page that declares it, its head and ember in view', async () => {
+  const { SIGN_OUT_HEAD } = await import('./account.js');
+  const { HEADER_SCENE_PAGES } = await import('./navigation.js');
+  const { PAGE_ART } = await import('./page-art.js');
+  assert.deepEqual({ name: SIGN_OUT_HEAD.name, form: SIGN_OUT_HEAD.form, side: SIGN_OUT_HEAD.side, focus: SIGN_OUT_HEAD.focus },
+    { name: 'predator-at-rest', form: 'head', side: 'start', focus: '70% 45%' });
+  for (const page of Object.values(HEADER_SCENE_PAGES)) assert.equal(PAGE_ART['predator-at-rest'].pages[page], 'lazy', page);
+});
+
+test('the tab remembers a sign out once: the next read says goodbye, the one after does not', async () => {
+  const { markSignedOut, takeSignedOut } = await import('./account.js');
+  const store = new Map();
+  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) };
+  assert.equal(takeSignedOut(storage), false, 'a tab that signed nobody out');
+  markSignedOut(storage);
+  assert.equal(takeSignedOut(storage), true);
+  assert.equal(takeSignedOut(storage), false, 'a reload shows the plain door');
+  const refusing = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() {} };
+  markSignedOut(refusing);
+  assert.equal(takeSignedOut(refusing), false, 'a browser without storage says no goodbye');
+  assert.equal(takeSignedOut(null), false);
+});
