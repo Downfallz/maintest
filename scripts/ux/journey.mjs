@@ -157,7 +157,7 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
     }
     if (strip) {
       if (!shots) throw new Error(`The ${journey.id} journey never reached "${filmed.at}", where ${strip} is filmed.`);
-      return shots;
+      return Object.assign(shots, { blocked: blocks });
     }
     const missed = journey.screens.filter(name => !walk.seen(name));
     if (missed.length) throw new Error(`The ${journey.id} journey never reached: ${missed.join(', ')}.`);
@@ -218,6 +218,11 @@ for (const flag of ['--frames', '--interval', '--runs']) {
   };
 }
 
+/** What a walk or a strip had to press by script, a line each, named by its journey and its width. */
+export function blockedLines(id, viewport, walked) {
+  return walked.blocked.map(line => `${id} at ${viewport.width} px, ${line}`);
+}
+
 export function parseArguments(argv) {
   const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, runs: PAINT_RUNS };
   for (let index = 0; index < argv.length; index++) {
@@ -273,6 +278,7 @@ async function main(argv) {
           await writeFile(path, await contactSheet(browser, shots.map(shot => ({ png: shot.png, caption: `${shot.ms} ms`, note: `${shot.animating} animating` })),
             { title: `${journey.title} · ${options.strip} · ${viewport.width} × ${viewport.height}`, columns: 6, width: viewport.width }));
           console.log(path);
+          for (const line of blockedLines(journey.id, viewport, shots)) console.error(line);
           continue;
         }
         const screens = await walkJourney(browser, journey, viewport, { showcase, axe });
@@ -280,7 +286,7 @@ async function main(argv) {
         await writeFile(sheet, await journeySheet(browser, journey, viewport, screens));
         await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), blocked: screens.blocked, screens }));
         console.log(sheet); console.log(measures);
-        for (const line of screens.blocked) console.error(`${journey.id} at ${viewport.width} px, ${line}`);
+        for (const line of blockedLines(journey.id, viewport, screens)) console.error(line);
       }
     }
     if (options.paint) {
