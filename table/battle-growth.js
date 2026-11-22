@@ -102,5 +102,8 @@ export function createBattleGrowth() {
     if (shown.ids.size) presented.set(action.actor, shown);
     return [...shown.ids];
   }
-  return { receive, reset, highlights, receipt: () => receipt, dismiss: () => { receipt = null; } };
+  // The spells a reveal granted a creature of the seat that its spellbook has not shown yet (UX12b): the inspection
+  // marks them New, and reading them there does not spend the mark.
+  const fresh = creature => [...(pending.get(Number(creature)) ?? [])];
+  return { receive, reset, highlights, fresh, receipt: () => receipt, dismiss: () => { receipt = null; } };
 }

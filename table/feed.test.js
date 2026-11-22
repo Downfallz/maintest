@@ -388,3 +388,18 @@ test('a resolved action carries the d20 face its critical roll showed, and a fiz
   const fizzled = { sequence: 3, round: 2, event: { ...resolved, roundId: 2, resolution: { ...resolved.resolution, fizzled: true, criticalRoll: 7 } } };
   assert.equal(lastResolved([fizzled], board, cards).criticalRoll, null);
 });
+
+// The blow that ended a match (UX12b): the last resolved action whose frame shows a creature alive before it and
+// defeated after it, named as the journal names them; none when a bleed came after it or nothing fell to it.
+test('the final blow names its caster, its spell and every creature it defeated', async () => {
+  const { finalBlow } = await import('./feed.js');
+  const board = { allies: [{ id: 1 }, { id: 2 }], enemies: [{ id: 4 }, { id: 5 }] };
+  const blow = (sequence, actor, targets, fallen) => ({ sequence, round: 3, event: { kind: 'CombatActionResolved', roundId: 3,
+    resolution: { action: { actor, spell: 'spell:throwing_star:v1', targets } }, appliedOutcomes: [],
+    frame: { before: targets.map(id => ({ id, isAlive: true })), after: targets.map(id => ({ id, isAlive: !fallen.includes(id) })) } } });
+  assert.equal(finalBlow([blow(1, 4, [1], []), blow(2, 5, [2], [2])], board, cards), "Creature 5's Throwing Star defeated Creature 2.");
+  assert.equal(finalBlow([blow(2, 1, [4, 5], [4, 5])], board, cards), "Creature 1's Throwing Star defeated Creature 4 and Creature 5.");
+  assert.equal(finalBlow([blow(2, 5, [2], [])], board, cards), null, 'the last action defeated nobody');
+  assert.equal(finalBlow([blow(2, 5, [2], [2]), { sequence: 3, round: 4, event: { kind: 'OngoingEffectsApplied', roundId: 4 } }], board, cards), null, 'an upkeep came after it');
+  assert.equal(finalBlow([], board, cards), null);
+});

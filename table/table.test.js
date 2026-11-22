@@ -785,7 +785,7 @@ test('Concede asks for a confirmation, posts once confirmed, and the end screen 
   await p.nodes['concede-yes'].click();
   assert.equal(conceded, 1);
   p.draw();
-  assert.equal(p.nodes.asking.textContent, 'You conceded · Player 2 wins.');
+  assert.equal(p.nodes.asking.textContent, 'You conceded · your opponent wins.');
   assert.equal(p.nodes['decision-state'].textContent, 'Finished');
   assert.equal(p.nodes['match-tools'].hidden, true, 'a finished match has nothing to give up');
 });
@@ -806,8 +806,8 @@ test('the end screen names the winner and the reason for every way a match ends'
   const said = outcome => { p.view.outcome = outcome; p.state.rendered = null; p.draw(); return p.nodes.asking.textContent; };
   assert.equal(said(undefined), 'The match is over.');
   assert.equal(said({ winner: 'player1', reason: 'Elimination' }), 'You win · the last team standing.');
-  assert.equal(said({ winner: 'player2', reason: 'RoundCap' }), 'Player 2 wins · more health at the round cap.');
-  assert.equal(said({ winner: 'player1', reason: 'Concession' }), 'Player 2 conceded · you win.');
+  assert.equal(said({ winner: 'player2', reason: 'RoundCap' }), 'Your opponent wins · more health at the round cap.');
+  assert.equal(said({ winner: 'player1', reason: 'Concession' }), 'Your opponent conceded · you win.');
   assert.equal(said({ winner: null, reason: 'Elimination' }), 'The match is a draw · neither team survived.');
   assert.equal(p.nodes.phase.textContent, 'The match is a draw · neither team survived.');
 });

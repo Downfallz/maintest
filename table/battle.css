@@ -1413,7 +1413,8 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #match-dialog[data-tone="defeat"] .match-crest::before { content: '✕'; }
 #match-dialog .match-header h2 { font: clamp(30px, 7vw, 42px)/1.05 var(--font-display); color: var(--tone); }
 #match-dialog .match-header .eyebrow { margin: 0 0 4px; color: color-mix(in srgb, var(--tone) 75%, var(--ink)); letter-spacing: 2px; }
-#match-outcome { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+#match-outcome, #match-blow { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
+#match-blow { margin-top: 2px; }
 /* The result opens on the ground the last blow left (S11): the verdict on the band's dark right, the close in the
    other corner on its own fill. The band says how it ended in place of the crest. */
 #match-dialog .match-header.scene-head { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: normal; align-items: normal; gap: 0; padding: 0; background: var(--soot); }

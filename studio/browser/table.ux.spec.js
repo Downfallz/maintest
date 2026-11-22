@@ -508,7 +508,7 @@ test('Concede opens in view under the dock, asks twice, and the end screen says 
   await page.route('**/api/seat/player1/concede', route => { conceded += 1; return route.fulfill({ json: ended.outcome }); });
   await page.locator('#concede-yes').click();
   await expect.poll(() => conceded).toBe(1);
-  await expect(page.locator('#asking')).toHaveText('You conceded · Player 2 wins.');
+  await expect(page.locator('#asking')).toHaveText('You conceded · your opponent wins.');
   await expect(page.locator('#match-tools')).toBeHidden();
 });
 

@@ -23,13 +23,13 @@ function view(seat = 'player1', size = 3) {
     timeline: [...own.map(one => ({ creature: one.id, owner: 'Player1', speed: 'Quick' })), ...foes.map(one => ({ creature: one.id, owner: 'Player2', speed: 'Standard' }))] },
     waitingFor: 'Action', waitingAsked: 11, feedNext: 83, feed: [{ sequence: 72 }], over: false };
 }
-async function mount(page, { size = 3, saved = true, search = '', resumeStatus = 200, invitation = false } = {}) {
+async function mount(page, { size = 3, saved = true, search = '', resumeStatus = 200, invitation = false, tableSeats = null } = {}) {
   const state = { first: view('player1', size), second: view('player2', size), status: 200, requests: [], resumeStatus };
   if (saved) await page.addInitScript(() => localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'first', player2: 'second' })));
   await page.route('**/api/**', route => {
     const request = route.request(); const url = new URL(request.url());
     state.requests.push({ path: url.pathname, query: url.search, method: request.method(), token: request.headers()['x-seat-token'] });
-    if (url.pathname === '/api/lobby/resume') return route.fulfill({ status: state.resumeStatus, json: { tables: invitation ? [] : [{ table: { id: 'table-a', format: '3v3' }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } });
+    if (url.pathname === '/api/lobby/resume') return route.fulfill({ status: state.resumeStatus, json: { tables: invitation ? [] : [{ table: { id: 'table-a', format: '3v3', ...(tableSeats ? { seats: tableSeats } : {}) }, seats: [{ seat: 'player1', token: 'first' }, { seat: 'player2', token: 'second' }] }] } });
     if (url.pathname === '/api/lobby/invitations') return route.fulfill({ json: { invitations: invitation ? [{ kind: 'invitation' }] : [] } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { cards: [{ id: 'spell:host:v1', name: 'Host spell name' }], packages: [...packages.values()] } });
     if (url.pathname.endsWith('/events')) return route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'event: ready\ndata: 0\n\n' });
@@ -243,6 +243,47 @@ test('a finished match reads as complete, polled from the host\'s own cursor', a
   state.first.over = true; state.first.outcome = { winner: 'Player1' };
   await expect(page.locator('#actor-name')).toHaveText('Match complete', { timeout: 10000 });
   expect(state.requests.some(one => one.query === '?since=83')).toBe(true);
+});
+// The result as a moment (UX12b, docs/art/journeys/windows.md, `match-result` and `match-won`).
+const people = [{ seat: 'player1', kind: 'person', name: 'Ash' }, { seat: 'player2', kind: 'person', name: 'Bram' }];
+function finished(state, outcome, feed = []) {
+  state.first = { ...state.first, over: true, waitingFor: null, waitingAsked: null, outcome, feed, feedNext: 90 };
+}
+test('a match won by a blow says the blow under its verdict, and the result opens on the next action', async ({ page }) => {
+  const state = await mount(page, { tableSeats: people }); await choose(page);
+  const fallen = { ...creature(6), health: 0, isAlive: false };
+  state.first.board = { ...state.first.board, enemies: [creature(4, { health: 0, isAlive: false }), creature(5, { health: 0, isAlive: false }), fallen] };
+  finished(state, { winner: 'player1', reason: 'Elimination' }, [{ sequence: 84, round: 4, event: { kind: 'CombatActionResolved', roundId: 4,
+    resolution: { action: { actor: 1, spell: 'spell:host:v1', targets: [6] } }, appliedOutcomes: [],
+    frame: { before: [{ id: 6, isAlive: true }], after: [{ id: 6, isAlive: false }] } } }]);
+  const result = page.locator('#match-dialog');
+  await expect(result).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#match-title')).toHaveText('Victory');
+  await expect(page.locator('#match-outcome')).toHaveText('You win · the last team standing.');
+  await expect(page.locator('#match-blow')).toHaveText("Creature 1's Host spell name defeated Creature 6.");
+  await expect(result).toHaveAccessibleDescription("You win · the last team standing. Creature 1's Host spell name defeated Creature 6.");
+  await expect(page.locator('#match-rematch')).toBeFocused();
+  // Closed, it does not open again on a snapshot; Match result opens it on the same action.
+  await page.keyboard.press('Escape'); await expect(result).toBeHidden();
+  await page.waitForTimeout(1500); await expect(result).toBeHidden();
+  await page.locator('#match-open').click(); await expect(page.locator('#match-rematch')).toBeFocused();
+});
+test('a match lost by a concession reads with its pictures refused, says no blow, and names the other seat the opponent', async ({ page }) => {
+  // The page's paintings refused, and every picture of the window hidden: its words carry the verdict alone.
+  await page.route('**/page-art/**', route => route.abort());
+  const state = await mount(page, { tableSeats: people }); await choose(page);
+  await page.addStyleTag({ content: '#match-dialog img { visibility: hidden !important; } #match-dialog, #match-dialog * { background-image: none !important; }' });
+  finished(state, { winner: 'player2', reason: 'Concession' }, [{ sequence: 84, round: 4, event: { kind: 'CombatActionResolved', roundId: 4,
+    resolution: { action: { actor: 4, spell: 'spell:host:v1', targets: [1] } }, appliedOutcomes: [],
+    frame: { before: [{ id: 1, isAlive: true }], after: [{ id: 1, isAlive: false }] } } }]);
+  // The opponent's last action is read first; the result opens once it has been.
+  await page.locator('#playback-next').click({ timeout: 10000 });
+  await expect(page.locator('#match-dialog')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#match-title')).toHaveText('Defeat'); await expect(page.locator('#match-title')).toBeVisible();
+  await expect(page.locator('#match-outcome')).toHaveText('You conceded · your opponent wins.');
+  await expect(page.locator('#match-blow')).toBeHidden();
+  await expect(page.locator('#match-rematch')).toBeVisible(); await expect(page.locator('#match-rematch')).toBeFocused();
+  await expect(page.locator('#match-dialog')).toHaveAccessibleDescription('You conceded · your opponent wins.');
 });
 for (const size of [1, 2]) test(`${size}v${size} keeps opponents across the field after rotation`, async ({ page }) => {
   await mount(page, { size }); await choose(page); await expect(page.locator('.creature')).toHaveCount(size * 2); await fits(page);

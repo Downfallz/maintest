@@ -107,9 +107,9 @@ test('a game that ended while the player was away says how it ended and asks not
   const recap = at('end', 520, { over: true, outcome: { winner: 'player2', reason: 'Elimination' }, waitingFor: null, answerBy: null });
 
   assert.equal(recap.where.over, true);
-  assert.equal(recap.where.result, 'Player 2 wins · the last team standing.');
+  assert.equal(recap.where.result, 'Your opponent wins · the last team standing.');
   assert.deepEqual(rounds(recap), [16, 17]);
-  assert.deepEqual(recap.rounds.at(-1).result, { text: 'Player 2 wins · the last team standing.', unseen: true });
+  assert.deepEqual(recap.rounds.at(-1).result, { text: 'Your opponent wins · the last team standing.', unseen: true });
   assert.equal(recap.rounds.at(-1).state, 'completed');
   assert.ok(recap.teams.you.every(one => one.defeated));
   assert.equal(recap.asked.question, null);
