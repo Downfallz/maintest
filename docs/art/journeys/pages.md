@@ -30,7 +30,8 @@ The scenes of S10 were written from the same walk on `main` at `987374a`, both w
 the rulebook opened at /rules once the book is drawn, and `offline`, the offline page opened by its own address, online.
 Both are briefed below. The offline page is filmed as a navigation offline draws it; what the worker gives with no
 network was read in `table/sw.js`, not seen. The heads' heights were measured on a mock in the walk's browser: the
-page's three sheets, the display face, the painting cut by its focus, the words of each page. Not on a build.
+page's three sheets, the display face, the painting cut by its focus, the words of each page. The critique then read
+them on the film of the build (S10's branch, both widths), and the numbers below are the film's where the two differ.
 
 What holds for every screen of the journey:
 
@@ -656,16 +657,19 @@ are drawn in CSS. What follows holds for the head of the statistics and of the r
   changes.
 - **The title takes 28 px on the band** under 700 px wide, the windows' title size (`.dialog-heading h2`); from 700 px
   it keeps the hero's clamp, up to 58 px. The words keep to 60% of the band's width, so at the clamp's 36 px they
-  wrap. Heights on the mock, with 28 px and with 36: at 390 by 844, 118 px for all three pages (3:1), against 129 for
-  the ladder at 36 px, its eyebrow on two lines. At 320 by 568 the band's cap is 64 px, but words that wrap make it
-  taller: 82 px on the ladder (its eyebrow on three lines), 90 on the statistics (the title on two), 70 on the
-  rulebook, against 133, 109 and 121 at 36 px. 28 px keeps the band near its 3:1.
-- **Room.** At 320 the band and its words take 5 px more than today's eyebrow and title on the ladder, 13 more on the
-  statistics, 7 fewer on the rulebook; at 390, 41 px more on each. The hero over a head takes 16 px above it in place
-  of 32 under 700 px wide. On today's sheet at 320 the foot of Open a ranked table → is 4 px below the first screen;
-  with the 16 px given back it comes inside it.
+  wrap. On the film, at 390 by 844 the band is 118 px on all three pages (3:1); the mock put the ladder's at 129 with
+  a 36 px title. At 320 by 568 the band's cap is 64 px, but words that wrap make it taller: 88 px on the ladder (its
+  eyebrow on three lines), 120 on the statistics (its eyebrow and its title on two lines each), 102 on the rulebook
+  (its eyebrow on two). The eyebrow wraps more than the mock said (82, 90 and 70 px there). At 36 px the title would
+  add a line to each.
+- **Room.** The hero over a head takes 16 px above it in place of 32 under 700 px wide, and 12 px between the band
+  and the detail line in place of the hero's 20. On the film before that gap, the pages measure: at 320, the ladder
+  856 px against 857, the statistics 616 against 571, the rulebook 29 px taller; at 390, the ladder 866 against 844,
+  the ladder and the statistics after a ranked game 45 px taller. At 320 the foot of Open a ranked table → was 4 px
+  below the first screen before the build and is 3 px below it after; the 8 px of the gap bring it inside. The
+  statistics' action ends about 541 px down at 320, inside the first screen.
 - **Focus `50% 45%`**, the declaration's, where the showcase cuts it. At 390 the band shows the painting from 18% to
-  77% of its height, the breath across its middle; at 320, from 22% to 73%; on a wide screen, 120 px tall, from 38%
+  77% of its height, the breath across its middle; at 320, 88 px tall, from 20% to 75%; on a wide screen, 120 px tall, from 38%
   to 54%, the line of the flame.
 - **The `start` side.** The scrim is opaque under the words and fades from 62% of the band's width, so the end third
   is what shows. At the start, the words leave the Cataclysm in view, its breath running toward them. At the end,
@@ -736,8 +740,10 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
   friend's invitation; the window lets a player choose A friend.
 - My choices for the head, which the owner may refuse on the sheets; they hold for the statistics and the rulebook:
   - The eyebrow and the title on the band, the detail line under it.
-  - The title at 28 px on a phone, smaller than the hero's 36, so the band stays near 3:1.
-  - The hero's top room cut from 32 to 16 px over a head.
+  - The title at 28 px on a phone, smaller than the hero's 36: the band is 3:1 at 390, and at 320 no taller than its
+    words. The statistics' band is 120 px there, its eyebrow on two lines in the kit's 60% column; the kit's column
+    stays, since its scrim is drawn for it.
+  - The hero's top room cut from 32 to 16 px over a head, and its gap under the band from 20 to 12 px.
   - `lazy` and not `first`. If `--paint` finds the band the largest paint and late, the remedy is `first`.
   - On the ladder, the `start` side, though it is a little brighter than the end: it keeps the Cataclysm and its
     breath in view. The kit names the darker side as its default (page-pictures.md).
@@ -891,8 +897,9 @@ The head is the ladder's form ([the ladder before a ranked game](#the-ladder-bef
 eyebrow, Your ranked games, and the title, Your statistics., on the band, at 28 px on a phone; the detail line under
 it. No mutation has been acquired, so no evolution is drawn; the empty state is words and one action.
 
-- **Whole on a phone.** A 3:1 painting in a 3:1 band: at 390 nothing is cut. At 320 the band is 90 px tall (the title
-  on two lines) on 284, and cover cuts 5 px of it.
+- **Whole at 390.** A 3:1 painting in a 3:1 band: at 390 nothing is cut. At 320 the band is 120 px tall on 284 (its
+  eyebrow and its title on two lines each), and cover cuts its width: it shows 10% to 90% of it, the eye still in
+  view.
 - **Focus `50% 65%`**, passed by the page (`focus`), not the declaration's: the showcase draws the painting whole in
   the Ironbound entry, and its sheet copies only the focus rules it draws. Only a band wider than 3:1 cuts the
   painting: on a wide screen, 120 px tall, it shows 47% to 75% of its height, the eye.
@@ -1009,8 +1016,8 @@ Each evolution the mapping names is declared in `docs/art/page-pictures.json` as
 page table/stats, `lazy`, drawn 144 px wide (`mutation-brute-base` in the walk); the page draws the one the host's
 `artwork` names, with `alt=""`: the name beside it says the mutation. Its room is held at 3:2. 144 px, beside the
 name rather than across the card, keeps Record and Most acquired together on the first screen at 390. The head adds
-25 px there (41 px of band less the 16 px the hero gives back); on today's sheet Most acquired ends about 665 px down,
-so it stays on the first screen of 844.
+45 px there on the film; on the sheet before, Most acquired ended about 665 px down, so it stays on the first screen
+of 844.
 
 ### States
 
@@ -1087,18 +1094,19 @@ last read (ADR 0191).
 
 The head is the ladder's form ([the ladder before a ranked game](#the-ladder-before-a-ranked-game-leaderboard)): the
 eyebrow and the title on the band, at 28 px on a phone. The detail line and the languages stay under the band, in
-that order. At 320 the band is 70 px tall in English; the French eyebrow is longer, and its height was not measured.
+that order. At 320 the band is 102 px tall in English, its eyebrow on two lines; the French eyebrow is longer, and its height was not measured.
 
 - **Focus `50% 55%`**, passed by the page, not the declaration's: the showcase's 404 draws the painting whole. At 390
-  the band shows the painting from 22% to 82% of its height, the eye and the claws' tips in the stone; at 320, 70 px
-  tall, from 31% to 75%; on a wide screen, 120 px tall, about 46% to 62%, the tips gripping the arch.
+  the band shows the painting from 22% to 82% of its height, the eye and the claws' tips in the stone; at 320, 102 px
+  tall, from 20% to 84%; on a wide screen, 120 px tall, about 46% to 62%, the tips gripping the arch.
 - **The `start` side.** It leaves the eye and the right claw in view at the band's end; the end side would leave one
   claw and the sky. The start is the brighter side: the brightest 5% of pixels under the column of words are at 164
   against 150 at 390, 154 against 149 at 320, measured as on the ladder. The scrim makes the contrast.
 - **Lazy**, as on the ladder.
-- **Offline.** `rules.js` imports nothing today, and the worker keeps only the book's files. It must not import
-  `picture.js` statically, or a book read offline would not draw. It loads it with a dynamic `import()` whose failure
-  is caught. The band's markup is in `rules.html`, so with no network it is soot with its words.
+- **Offline.** `rules.js` imports nothing of its own today. It loads `picture.js` with a dynamic `import()` whose failure
+  is caught, so a book read offline draws whatever is kept. The worker keeps `picture.js`, `picture-focus.js` and
+  `page-art.js` for the offline plate, so the module loads; the head's painting is not kept, and its empty `alt` shows
+  nothing. The band's markup is in `rules.html`: with no network it is soot with its words.
 
 ### States
 
@@ -1109,8 +1117,8 @@ that order. At 320 the band is 70 px tall in English; the French eyebrow is long
 - **Waiting**: none: a language is drawn from the book already read, or read once.
 - **Error**: the book could not be read: `#rules-problem` says so (alert); the head stays. Read, not seen.
 - **Offline**: the worker gives the copy this device kept, and `#rules-kept` says the table may play a newer one. The
-  worker does not keep the head's painting, nor `picture.js` and `page-art.js`: the band is soot with its words. That
-  is acceptable: the rules are what the page is for. Read in `table/sw.js` and `table/rules.js`, not seen.
+  worker keeps `picture.js` and `page-art.js` (for the offline plate), but not the head's painting: the band is soot
+  with its words. That is acceptable: the rules are what the page is for. Read in `table/sw.js` and `table/rules.js`, not seen.
 
 ### Motion
 
@@ -1150,8 +1158,8 @@ The head has no beat. The contents' disclosures open at once.
 - Not this stage: the page's 3 words at 10 px, its 12 targets under 44 px (10 under 24), and axe's
   `scrollable-region-focusable` at 320. They belong to a pass on the rulebook's page.
 - The head's choices are the ladder's. Here too the `start` side is the brighter one, chosen for the eye.
-- With no network the band is soot. The worker could keep the painting's file and the two modules with the book; this
-  brief does not ask it.
+- With no network the band is soot. The worker could keep the painting's file with the book; this brief does not ask
+  it.
 
 ## The offline page (`offline`)
 

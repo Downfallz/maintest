@@ -167,7 +167,7 @@
   .lobby-hero { align-items: stretch; flex-direction: column; padding-top: 32px; gap: 20px; }
   .lobby-hero .primary { width: 100%; }
   /* On a phone the band keeps near its 3:1: the title takes the windows' size, and the hero gives back half its top. */
-  .lobby-hero:has(> .page-head) { padding-top: 16px; }
+  .lobby-hero:has(> .page-head) { padding-top: 16px; gap: 12px; }
   .lobby-hero > .page-head h2 { font-size: 28px; }
   .lobby-layout { display: flex; flex-direction: column; gap: 0; }
   .lobby-section .section-heading { align-items: flex-start; gap: 10px; }
