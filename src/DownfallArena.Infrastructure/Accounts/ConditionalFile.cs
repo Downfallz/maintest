@@ -49,6 +49,22 @@ internal static class ConditionalFile
     }
 
     /// <summary>
+    /// Deletes the file under the directory's lock, whatever its version, so a write that passed its check cannot move
+    /// its file back in after; a file or a directory that is not there is nothing to delete.
+    /// </summary>
+    public static async Task DeleteAsync(string path, CancellationToken cancellationToken)
+    {
+        var directory = Path.GetDirectoryName(path)!;
+        if (!Directory.Exists(directory))
+        {
+            return;
+        }
+
+        await using var held = await LockedAsync(directory, cancellationToken);
+        File.Delete(path);
+    }
+
+    /// <summary>
     /// The directory's lock file, held alone; it is left in place, since a file deleted while another process waits on
     /// it would let two writers each hold a lock of their own.
     /// </summary>

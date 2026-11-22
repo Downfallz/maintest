@@ -34,11 +34,8 @@ public sealed class FileDeviceStore : IDeviceStore
         return ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices), version, cancellationToken);
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-    {
-        File.Delete(FullPath(account));
-        return Task.CompletedTask;
-    }
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, DeviceDocuments.PathOf(account));
 }

@@ -151,7 +151,10 @@ internal static class TableWorker
         {
             composer.Notifier = new AccountNotifier(
                 over.Notices is { } notices ? new AccountNoticeLog(notices, clock) : null,
-                over.Devices is { } devices && sender is not null ? new AccountNotices(sender, new AccountDevices(devices, clock)) : null);
+                over.Devices is { } devices && sender is not null ? new AccountNotices(sender, new AccountDevices(devices, clock)) : null)
+            {
+                Exists = async (id, token) => await accounts.FindAsync(id, token) is not null,
+            };
             composer.NameOf = async id => (await accounts.FindAsync(id, stopping))?.Username.Value;
         }
 

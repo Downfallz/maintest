@@ -298,7 +298,16 @@ internal sealed class AccountApi
 
         if (NoticeLog is { } log)
         {
-            await log.ForgetAsync(id, cancellationToken);
+            // After the account: a notice on its way reads the account gone and forgets what it wrote. A log that
+            // cannot be forgotten now does not stop the rest of the deletion, which a retry could not finish.
+            try
+            {
+                await log.ForgetAsync(id, cancellationToken);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Console.WriteLine($"  Account {id}: its notices could not be forgotten with it: {HttpHost.OneLine(failure)}");
+            }
         }
 
         if (ForgetFriends is { } forget)

@@ -30,11 +30,8 @@ public sealed class FileNoticeStore : INoticeStore
         return ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries), version, cancellationToken);
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-    {
-        File.Delete(FullPath(account));
-        return Task.CompletedTask;
-    }
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, NoticeDocuments.PathOf(account));
 }

@@ -87,6 +87,29 @@ public sealed class AccountNotifierTests
         said.ShouldHaveSingleItem().ShouldContain("could not be kept in its bell");
     }
 
+    [Fact]
+    public async Task An_account_that_is_gone_gets_no_bell()
+    {
+        var notifier = new AccountNotifier(_log, push: null) { Exists = (_, _) => Task.FromResult(false) };
+
+        await notifier.NotifyAsync(_mark, Over, Cancel);
+
+        (await _log.ListAsync(_mark, Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_log_written_while_its_account_was_being_deleted_is_forgotten_again()
+    {
+        var asked = 0;
+        var changes = new LobbyChanges();
+        var notifier = new AccountNotifier(_log, push: null) { Exists = (_, _) => Task.FromResult(++asked == 1), Changes = changes };
+
+        await notifier.NotifyAsync(_mark, Over, Cancel);
+
+        (await _log.ListAsync(_mark, Cancel)).ShouldBeEmpty();
+        changes.VersionOf(_mark).ShouldBe(0);
+    }
+
     [Theory]
     [InlineData(NoticeKind.Turn, "turn")]
     [InlineData(NoticeKind.FriendRequest, "friend")]

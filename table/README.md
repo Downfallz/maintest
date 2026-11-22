@@ -538,10 +538,11 @@ reads its lists again at once.
 
 Every notice to an account goes through one door (ADR 0201): a notice that is news (a friend accepted, the
 invited friend took the seat, the other player left, a match ended) is kept first in the account's **notice log**
-(`notices/<accountId>.json`, the 100 latest of the last 90 days, a notice of the same tag replacing its entry), push
-keys or not, and then pushed to the account's devices. What waits (a turn, an invitation, a friend request, a
-decline) is not kept: the bell lists it while it waits. The log and the devices are written only over the version
-read, since the API, the worker and the hourly job all write them.
+(`notices/<accountId>.json`, the 100 latest of the last 90 days, a notice with the same tag replacing that entry),
+push keys or not, and then pushed to the account's devices. What waits (a turn, an invitation, a friend request, a
+declined invitation) is not kept: the bell lists it while it waits. The log and the devices are written only if
+the version read is unchanged, since the API, the worker and the hourly job all write them. No log is kept for an
+account that is gone.
 
 ## Loading and offline (ADR 0166)
 

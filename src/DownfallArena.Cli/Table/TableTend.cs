@@ -84,7 +84,10 @@ internal static class TableTend
             {
                 var accounts = await ArtifactStores.OpenAccountsAsync(target);
                 var noticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(target), clock);
-                composer.Notifier = new AccountNotifier(noticeLog, sender is null ? null : new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock)));
+                composer.Notifier = new AccountNotifier(noticeLog, sender is null ? null : new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock)))
+                {
+                    Exists = async (id, token) => await accounts.FindAsync(id, token) is not null,
+                };
                 composer.NameOf = async id => (await accounts.FindAsync(id))?.Username.Value;
             }
 
@@ -101,7 +104,7 @@ internal static class TableTend
             composer.Relay = relay;
             composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
             composer.Notifier?.Changes = composer.Lobby;
-            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby };
+            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby, Notifier = composer.Notifier };
             // The seats of the accounts suspended a day ago (ADR 0178), offered to other players.
             var suspended = options.Accounts == AccountsMode.Off
                 ? null

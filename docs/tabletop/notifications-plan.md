@@ -137,14 +137,18 @@ Jobs tab show the counts and the queue's length.
    *Built (2026-11-22)*: ADR 0201. `AccountNotifier` (Cli) is the door: news to the account's `AccountNoticeLog`
    (Application, port `INoticeStore`; memory, file and blob adapters beside the devices), then the push through
    `AccountNotices`, which stays the push channel and keeps its name (the log is `AccountNoticeLog`, not
-   `AccountNotices` as the shape above says). The seven sites call the door with a `NoticeKind`; each kind keeps the
-   push topic it had. The API, the worker and the hourly job build the door whether or not they hold push keys, so
-   the log is kept with push off; the hourly job's turn warning still goes only with push, as a turn is not news.
-   A kept entry says "your lists changed" on the account's stream. An id is past the newest entry and the time in
-   milliseconds, so a page's "read up to" never covers a later entry. The devices' list lost its process lock:
-   `IDeviceStore` reads a version and saves over it, and `AccountDevices` reads again on a conflict, in both
+   `AccountNotices` as the shape above says). The seven sites call the door with a `NoticeKind`; each kind keeps
+   the push topic it had. The API, the worker and the hourly job (its lobby too, for a suspended player's seat)
+   build the door whether or not they hold push keys, so the log is kept with push off; the hourly job's turn
+   warning still goes only when push is on, because a turn is not news. Keeping an entry also sends "your lists
+   changed" on the account's stream. An id is greater than both the newest entry's id and the current time in
+   milliseconds, so a page's "read up to" never covers a later entry. The door checks that the account exists
+   before and after the write, so a deleted account's log does not come back. The devices' list lost its process
+   lock: `IDeviceStore` reads a version and saves over it, and `AccountDevices` reads again on a conflict, in both
    adapters (`ConditionalBlob`, `ConditionalFile`, shared with the notice stores). Left to N2: drawing the news,
-   the privacy sentences, and the Settings line on what is kept.
+   the privacy sentences (an entry keeps the other player's name for up to 90 days), the Settings line on what is
+   kept, and a mark-read that tells the player's other tabs. Left to N5: the log's write leaves the lobby's claim
+   gate.
 
 2. **N2, the bell shows the news.** `table/inbox.js` gains News and the unread count; the window marks read;
    the privacy sentences. Tests: `inbox.test.js`, `terminology.test.js`, the lobby's browser spec with push off.

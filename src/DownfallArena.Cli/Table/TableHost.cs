@@ -159,7 +159,7 @@ internal static class TableHost
             accounts.Notices = sender is null ? null : new AccountNotices(sender, devices);
             // The bell's news (ADR 0201), beside the accounts too, kept whether or not the host can push.
             accounts.NoticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), clock);
-            notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices);
+            notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices) { Exists = async (id, token) => await opened!.Value.Store.FindAsync(id, token) is not null };
             // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
             friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token), opened!.Value.Store, clock);
             friends = new FriendsApi(friendships, accounts, notifier);

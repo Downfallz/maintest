@@ -93,4 +93,42 @@ public abstract class NoticeStoreContract
 
         (await store.ReadAsync(bastien, Cancel)).Entries.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task Emptying_a_log_over_a_version_another_write_replaced_is_refused_and_leaves_that_write()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.WriteAsync(account, [Entry(1)], null, Cancel);
+        var stale = (await store.ReadAsync(account, Cancel)).Version;
+        await store.WriteAsync(account, [Entry(2), Entry(1)], stale, Cancel);
+
+        var written = await store.WriteAsync(account, [], stale, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.ReadAsync(account, Cancel)).Entries.ShouldBe([Entry(2), Entry(1)]);
+    }
+
+    [Fact]
+    public async Task Emptying_a_log_read_as_absent_is_refused_once_another_write_made_it()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        await store.WriteAsync(account, [Entry(1)], null, Cancel);
+
+        var written = await store.WriteAsync(account, [], null, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.ReadAsync(account, Cancel)).Entries.ShouldBe([Entry(1)]);
+    }
+
+    [Fact]
+    public async Task Forgetting_an_account_on_a_store_that_never_wrote_anything_is_fine()
+    {
+        var store = await StoreAsync();
+
+        await store.ForgetAsync(AccountId.New(), Cancel);
+
+        (await store.ReadAsync(AccountId.New(), Cancel)).Entries.ShouldBeEmpty();
+    }
 }

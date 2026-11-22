@@ -25,7 +25,7 @@ The work is smaller on the engine's side than "a match lives in memory" suggests
 | A change notice with a version | `TableChanges`, `GET /api/seat/{seat}/events` | Done. Counted in memory |
 | The lobby's change notice (ADR 0164) | `LobbyChanges`, `GET /api/lobby/events` | Done. Counted in memory, one replica's |
 | What moved, across processes (ADR 0165) | `IChangeRelay`, `WebPubSubRelay`, `RelayListener`, `GET /api/seat/{seat}/negotiate`, `GET /api/lobby/negotiate` | Done, opted into. Held by Web PubSub; without it, the rows above |
-| Accounts, friends, devices, preferences, results | Blob, beside the recordings | Done. Already outside the process |
+| Accounts, friends, devices, notice logs, preferences, results | Blob, beside the recordings | Done. Already outside the process; devices and notice logs written over their ETag (ADR 0201) |
 | The session-signing key | `store.SessionKeyAsync` | Done. Read from the store, so replicas agree |
 
 ## What held a table in one process
