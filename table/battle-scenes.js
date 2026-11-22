@@ -11,7 +11,7 @@ export const TREE_HEAD = { name: 'brute-moult', side: 'start', sizes: '(min-widt
 
 /**
  * Each family's column opens on a band of 48 px, cut on what shows the family: the Ironhide's eye under its plates,
- * the Blightweaver's sac, the Warped leaning over the water. A family the list does not name keeps its plain head.
+ * the Blightweaver's sac, the Warped listening over the water. A family the list does not name keeps its plain head.
  */
 export const FAMILY_HEADS = {
   brute: { name: 'ironhide-scar', focus: '50% 75%' },
@@ -20,8 +20,12 @@ export const FAMILY_HEADS = {
 };
 export const FAMILY_HEAD_SIZES = '(max-width: 819px) min(94vw, 400px), 400px';
 
-/** The result's band, above the verdict: the slab and the three marks on the left, the words on the dark right. */
-export const RESULT_HEAD = { name: 'crushing-stomp-aftermath', side: 'end', sizes: '(min-width: 644px) 620px, calc(100vw - 24px)' };
+/**
+ * The result's band, above the verdict: the slab and the three marks on the left, the words on the dark right. The
+ * window is `min(620px, 100vw - 24px)`, held under the browser's own `max-width: calc(100% - 2em - 6px)` for a dialog:
+ * 352 px on a 390 px phone.
+ */
+export const RESULT_HEAD = { name: 'crushing-stomp-aftermath', side: 'end', sizes: '(min-width: 658px) 620px, calc(100vw - 38px)' };
 
 const worn = (doc, element, { name, ...options }, words) =>
   wearScene(doc, element, name, { page: BATTLE_PAGE, form: 'head', side: 'start', words, ...options });
@@ -35,7 +39,7 @@ export function wearTreeHead(doc) {
 /** A family column's head, built by the tree: `words` holds its sigil, its name and how far the creature is. */
 export function wearFamilyHead(doc, head, family, words) {
   const scene = FAMILY_HEADS[family];
-  if (scene) worn(doc, head, scene, words);
+  if (scene) worn(doc, head, { ...scene, sizes: FAMILY_HEAD_SIZES }, words);
 }
 
 /** The match's result: its header keeps its verdict and its close; the crest gives way to the band. */

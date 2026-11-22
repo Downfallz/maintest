@@ -246,7 +246,7 @@ At 390 by 844:
 
 ## The match's windows
 
-Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk. `match-result` was added by S11 of [the scene paintings' plan](../scene-paintings-plan.md), walked on its branch with the result's head and the Mutation Tree's built, 2026-11-22: it has no earlier walk in this journey (the match journey films the same window, below). The walk measures the words on those heads at 7.69:1 at the least on `mutation-tree` and 9.06:1 on `match-result`, at both widths.
+Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk. `match-result` was added by S11 of [the scene paintings' plan](../scene-paintings-plan.md), walked on its branch with the result's head and the Mutation Tree's built, 2026-11-22. It has no earlier walk here; the match journey films the same window (below). The words on the heads measure at least 7.69:1 on `mutation-tree` and 9.06:1 on `match-result`, at both widths.
 
 At 320 by 568:
 

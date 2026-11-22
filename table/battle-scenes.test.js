@@ -30,6 +30,9 @@ test('every scene of the match is declared lazily for the battle page, drawn at 
     assert.ok(entry.sizes.some(size => size.width === entry.phone[BATTLE_PAGE][0] * 2), `${name} is sent at twice its phone width`);
   }
   assert.match(FAMILY_HEAD_SIZES, /min\(94vw, 400px\)/, 'a column is min(94vw, 400px) wide on a phone (table/battle.css)');
+  // A 390 px phone draws a column 366 px wide, the result 352 (a dialog keeps 2em and 6 px from the screen's edges).
+  for (const { name } of Object.values(FAMILY_HEADS)) assert.ok(PAGE_ART[name].phone[BATTLE_PAGE][0] >= 366, name);
+  assert.match(RESULT_HEAD.sizes, /calc\(100vw - 38px\)$/);
 });
 
 test('the windows hold the words their heads wear, and the sheet sets the bands', () => {

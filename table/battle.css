@@ -1051,10 +1051,17 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) { display: grid; }
   #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) > :is(.atlas-band, #atlas-creature) { grid-area: 1 / 1; }
   #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) > #atlas-creature { position: relative; z-index: 1; align-self: end; justify-self: end; margin: 0 8px 8px; }
+  #atlas-dialog .atlas-header:has(> #atlas-creature:not([hidden])) > .atlas-band.scene-head > .scene-words { max-width: 54%; }
+}
+/* A wide, short screen (a phone on its side): the band is 64 px, too short for both, so the list stands beside it. */
+@media (min-width: 820px) and (max-height: 600px) {
+  #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) > #atlas-creature { margin: 0 12px; }
 }
 .atlas-header .eyebrow { margin: 0 0 4px; }
 #atlas-title { margin: 0; font: 24px/1.2 var(--font-display); }
 #atlas-progress { margin: 4px 0 0; color: #c9b88f; font-size: 12px; }
+#atlas-creature[hidden] { display: none; }
 #atlas-creature { display: block; max-width: 42%; margin: 8px 18px 10px auto; min-height: 44px; padding: 8px 10px; background: #192b30; color: #edf0e8; border: 1px solid #7d9689; border-radius: var(--radius-soft); }
 #atlas-close { min-height: 44px; }
 .atlas-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; position: relative; }
@@ -1412,7 +1419,7 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #match-dialog .match-header.scene-head { display: grid; grid-template-columns: minmax(0, 1fr); justify-content: normal; align-items: normal; gap: 0; padding: 0; background: var(--soot); }
 #match-dialog .match-header.scene-head > .match-crest { display: none; }
 #match-dialog .match-header.scene-head > form { grid-area: 1 / 1; justify-self: start; align-self: start; margin: 4px; }
-#match-dialog .match-header.scene-head .match-close { border-radius: 50%; background: var(--soot); }
+#match-dialog .match-header.scene-head .match-close { border-radius: var(--radius-sharp); background: var(--soot); }
 #match-dialog .match-close { align-self: start; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 24px; }
 #match-dialog .match-body { padding: 4px 18px 14px; }
 #match-stats { gap: 10px; }

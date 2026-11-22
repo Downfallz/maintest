@@ -16,11 +16,11 @@ name is its journey's: the `match` journey films the same Evolution sheet as `mu
 `mutation-pick`, and `mutation-tree` is the Mutation Tree window opened from it.
 
 S11 of [the scene paintings' plan](../scene-paintings-plan.md) gives the Mutation Tree its heads and adds the
-result, `match-result`, filmed as Walker concedes after the journal: the walk films eight screens. Both sheets were
-read on its branch at 320 and 390, with their measures.
+result, `match-result`, filmed as Walker concedes after the journal: the walk films eight screens. The Mutation Tree
+and the result were read on its branch at 320 and 390, with their measures.
 
 P6 walked the journey again on its branch, with P7 and P8 built (on `55731bb`), and read both sheets screen by
-screen with their measures. The walk now films seven screens: `mutation-pick`, `mutation-tree`, `tempo-reference`,
+screen with their measures. At P6 the walk filmed seven screens: `mutation-pick`, `mutation-tree`, `tempo-reference`,
 `spell-choice`, `spell-choice-foot`, `order-revealed`, `history`. The team's first creature plays at Instinct, so
 `spell-choice` and `spell-choice-foot` are filmed at Instinct; the Precision state of the crit chip is read on
 `order-revealed`, where Creature 2's spellbook is docked at Precision. P6's critique read this walk on the branch
@@ -204,7 +204,7 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 | A capstone's portrait beside its name in the detail, in place of a form it does not have (Apex, Archmage, Titan; not on this screen). | 24 by 24 px | Which capstone is this? | `docs/art/spell-portraits/apex.webp`, `archmage.webp`, `titan.webp`, the capstone's `portrait` |
 | Pummel's portrait on its card in the detail. | 40 by 40 px | Which spell is this, before its words? | `docs/art/spell-portraits/pummel.webp` |
 | Brace's portrait on its card in the detail. | 40 by 40 px | The same, for Brace. | `docs/art/spell-portraits/brace.webp` |
-| The Brute's moult as the window's head: a 3:1 band across its top, behind the eyebrow, the title and the progress line on the start side, which is dark ground; the shell and the print lie right. Close keeps the band's top end corner on its own fill. | 390 by 120 px | Everything here is a shell to shed. | `docs/art/sources/pages/scenes/brute-moult.webp` |
+| The Brute's moult as the window's head: a 3:1 band across its top, behind the eyebrow, the title and the progress line on the start side, which is dark ground; the shell and its print lie on the right. Close keeps the band's top end corner on its own fill. | 390 by 120 px | Everything here is a shell to shed. | `docs/art/sources/pages/scenes/brute-moult.webp` |
 | The Ironhide's scar as the Brute column's head: a band of 48 px across the column under its coloured rule, the sigil, the family and how far the creature is on the start side, cut at `50% 75%` on the eye under the plates. | 366 by 48 px | Which family is this column? The plated one. | `docs/art/sources/pages/scenes/ironhide-scar.webp` |
 | The Blightweaver's pressure sac as the Predator column's head, cut at `50% 50%` on the sac and the eye in the gas. | 366 by 48 px | The same: the one that carries and spreads. | `docs/art/sources/pages/scenes/blightweaver-pressure-sac.webp` |
 | The Warped listening as the Warped column's head, cut at `50% 40%` on its head and its lowered claw. | 366 by 48 px | The same: the one that listens before it strikes. | `docs/art/sources/pages/scenes/warped-listening.webp` |
@@ -215,8 +215,8 @@ they draw today. The two spell portraits are drawn today, at the same size.
 The four scenes are S11 of [the scene paintings' plan](../scene-paintings-plan.md#the-app): a head on the window and
 one on each family's column, no painting behind the board (the owner's question 8). The window's band is the
 screen's width on a phone, 3:1 under the cap of 120 px from 360 px wide, 64 px under 600 px tall, taller when its
-words wrap. On a phone the creature's list sits under the band, on soot, across the window; from 820 px wide and
-601 px tall it takes the band's lower end corner, under Close. A column is `min(94vw, 400px)` wide on a phone and
+words wrap. On a phone the list of creatures sits under the band, on soot, across the window; from 820 px wide and
+601 px tall it takes the band's lower end corner, under Close, and on a wider, shorter screen it stands beside the band. A column is `min(94vw, 400px)` wide on a phone and
 about 390 px on a wide screen; its band is 48 px tall at every width, so each painting is cut to a strip and the
 focus names what stays. The Brute's band is drawn from the Ironhide's painting: the family's first stage has no
 scene of its own, and the plated eye says what the family becomes.
@@ -255,8 +255,8 @@ None.
   forms of the board from their 128 px files (184,400 B; Brute's, Warped's and Predator's are the pick's files,
   already taken), the 3 capstones' portraits from their 48 px files (2,966 B) and the two spell portraits from
   their 80 px files (5,232 B). The detail alone would take 5,232 B. Every form is lazy: none loads before the
-  window opens. The four scenes add 91,506 B on a phone, at twice the density: the moult's 780 px file (21,592 B),
-  the Ironhide's 708 (15,592 B), the Blightweaver's 732 (29,044 B) and the Warped's 780 (25,278 B). They are lazy
+  window opens. The four scenes add 92,514 B on a phone, at twice the density: the moult's 780 px file (21,592 B),
+  the Ironhide's 732 (16,600 B, shared with the statistics' head), the Blightweaver's 732 (29,044 B) and the Warped's 780 (25,278 B). They are lazy
   too: none loads with the pick (`battle-mutations.spec.js`), and a column's band loads as the column scrolls near.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
 - **Shift**: 0 at 390 and 0.03 at 320 today. The form's room is held: Choose Brute does not move when it arrives.
@@ -748,11 +748,11 @@ after Crushing Stomp, above the verdict. The walk reaches it as Walker concedes 
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The ground after Crushing Stomp as the window's head: a 3:1 band across its top, edge to edge, the slab and the three marks on the left, the eyebrow, the verdict and its reason on the end side, which is dark plain. The × keeps the start corner on its own soot fill. The crest gives way to the band. | 366 by 122 px | How did it end? The ground the last blow left. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp` |
+| The ground after Crushing Stomp as the window's head: a 3:1 band across its top, edge to edge, the slab and the three marks on the left, the eyebrow, the verdict and its reason on the end side, which is dark plain. The × keeps the start corner on its own soot fill, over the slab, so the verdict keeps the dark end to itself; the tree's Close sits at the end because its words sit at the start. The crest gives way to the band. | 352 by 117 px | How did it end? The ground the last blow left. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp` |
 | The creature of the match in the battle report, as today: the illustration its mutations gave it, or its form's figure. | 64 by 64 px | Who carried the match? | `table/battle-art/base-creature.webp`, or the creature's own illustration under `table/battle-art/` |
 
-The window is `min(620px, 100vw - 24px)` wide: the band is 296 by 99 at 320, 366 by 120 (the cap) at 390 and 620 by
-120 from 644 px. The verdict's 30 to 42 px wraps its reason onto a second line on a phone, and the band grows to
+The window is `min(620px, 100vw - 24px)` wide, held by the browser 2em and 6 px inside the screen: the band is 282 by
+94 at 320, 352 by 117 at 390 and 620 by 120 (the cap) from 658 px, taller when its words wrap. The verdict's 30 to 42 px wraps its reason onto a second line on a phone, and the band grows to
 hold them rather than cut them. The painting is 3:1, so the band cuts only its top and bottom, centred.
 
 ### States
@@ -785,11 +785,12 @@ None.
 
 ### Cost
 
-- **Bytes**: 16,084 B on a phone, the 716 px file at twice the density; 12,598 B or 43,398 B from 644 px, by the
-  screen's density. Lazy: nothing loads before the window opens.
+- **Bytes**: 16,084 B on a phone, the 716 px file at twice the density; 12,598 B or 43,398 B from 658 px, by the
+  screen's density. The band's `sizes` is the window's real width, so a phone never takes the wide screen's file
+  (`battle-services.spec.js`). Lazy: nothing loads before the window opens.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
-- **Shift**: 0.25 at 320 and 0.30 at 390, as the match journey filmed before the head (0.32 and 0.22): the band
-  holds its room before the painting arrives, so it adds none.
+- **Shift**: 0.25 at 320 and 0.30 at 390. The match journey filmed 0.32 and 0.22 before the head. The band holds its
+  room before the painting arrives, so it adds none.
 
 ### Left
 

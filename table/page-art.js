@@ -55,11 +55,11 @@ export const PAGE_ART = {
     ],
   },
   'ironhide-scar': {
-    from: 'd0fb75e250b1d82d', frames: 1, drawn: [323,421,354,1280], pages: {"showcase/mutations":"lazy","table/stats":"lazy","table/battle":"lazy"}, phone: {"table/stats":[354],"table/battle":[354]},
+    from: '7d9f8a92a0d73bc6', frames: 1, drawn: [323,421,354,1280,366], pages: {"showcase/mutations":"lazy","table/stats":"lazy","table/battle":"lazy"}, phone: {"table/stats":[354],"table/battle":[366]},
     sizes: [
-      { file: 'ironhide-scar-354.4f7367cc.webp', width: 354, height: 118, bytes: 5418 },
+      { file: 'ironhide-scar-366.c05ac51c.webp', width: 366, height: 122, bytes: 5674 },
       { file: 'ironhide-scar-421.9208ad44.webp', width: 421, height: 140, bytes: 7016 },
-      { file: 'ironhide-scar-708.221cf270.webp', width: 708, height: 236, bytes: 15592 },
+      { file: 'ironhide-scar-732.ef8d6c3d.webp', width: 732, height: 244, bytes: 16600 },
       { file: 'ironhide-scar-842.2025ca64.webp', width: 842, height: 281, bytes: 20714 },
       { file: 'ironhide-scar-1280.df972da0.webp', width: 1280, height: 427, bytes: 40386 },
       { file: 'ironhide-scar-1536.080ec7ff.webp', width: 1536, height: 512, bytes: 54686 },

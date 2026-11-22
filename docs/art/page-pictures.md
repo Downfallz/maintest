@@ -116,6 +116,9 @@ dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'tabl
   confirmation that wears one, a sign out's; any other confirmation takes it off. `account.js`'s `SIGN_OUT_HEAD` holds it.
 - `table/battle-scenes.js` holds the match's: the Mutation Tree's band (`wearTreeHead`), each family column's band of
   48 px (`wearFamilyHead`, `FAMILY_HEADS`) and the result's band (`wearResultHead`).
+- A window's `sizes` is its drawn width: a `<dialog>` is held `2em` and 6 px inside the screen by the browser
+  (`max-width: calc(100% - 2em - 6px)`), so the result, `min(620px, 100vw - 24px)`, is `calc(100vw - 38px)` on a
+  phone. A width too large asks for a file the budget does not count.
 - A head's room is its `::after`, a box in the cell its words and its controls share; it takes no pointer, so a
   control laid in that cell takes its own taps.
 - Words on a head or a ground hold 4.5:1 against the lightest pixel under them. The journey walk measures it on

@@ -41,9 +41,9 @@
     {
       "name": "ironhide-scar",
       "source": "docs/art/sources/pages/scenes/ironhide-scar.webp",
-      "drawn": [323, 421, 354, 1280],
+      "drawn": [323, 421, 354, 1280, 366],
       "pages": { "showcase/mutations": "lazy", "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/stats": [354], "table/battle": [354] }
+      "phone": { "table/stats": [354], "table/battle": [366] }
     },
     {
       "name": "blightweaver-pressure-sac",

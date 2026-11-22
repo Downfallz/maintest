@@ -465,8 +465,24 @@ test('the tree opens on the moult behind its title, and each family column on it
     await expect(head).toHaveClass(/scene-head/);
     expect(Math.round((await head.boundingBox()).height)).toBe(48);
     await expect(head.locator('.atlas-family-words')).toHaveClass(/scene-words/);
+    // Drawn at the column's width, not the showcase's: the phone takes its twice-dense file.
+    await expect(head.locator('img[data-scene]')).toHaveAttribute('sizes', '(max-width: 819px) min(94vw, 400px), 400px');
+    const width = Math.round((await head.boundingBox()).width);
+    expect(Math.abs(width - Math.min(Math.round(page.viewportSize().width * 0.94), 400))).toBeLessThanOrEqual(12);
   }
   await expect.poll(() => asked).toContain('brute-moult');
   await page.screenshot({ path: info.outputPath('mutation-tree-heads.png') });
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('on a phone on its side the creature list stands beside the tree\'s band, not under it', async ({ page }) => {
+  test.skip(page.viewportSize().width < 820, 'a wide, short screen');
+  await page.setViewportSize({ width: 844, height: 390 });
+  const h = await mount(page); await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  const [band, list, close] = await Promise.all(['#atlas-dialog .atlas-band', '#atlas-creature', '#atlas-close'].map(one => page.locator(one).boundingBox()));
+  expect(list.x).toBeGreaterThanOrEqual(band.x + band.width - 1);
+  expect(list.y).toBeLessThan(band.y + band.height);
+  expect(close.x + close.width).toBeLessThanOrEqual(band.x + band.width + 1);
+  await fitsViewport(page, '#atlas-close, #atlas-creature');
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
