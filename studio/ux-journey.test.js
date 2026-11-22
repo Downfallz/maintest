@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { JOURNEYS } from '../scripts/ux/journeys.mjs';
 import { VIEWPORTS, listing, parseArguments } from '../scripts/ux/journey.mjs';
 import { differences, measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
-import { spread, summary } from '../scripts/ux/paint.mjs';
+import { readPaintInPage, spread, summary } from '../scripts/ux/paint.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const script = new URL('../scripts/ux/journey.mjs', import.meta.url).pathname;
@@ -30,6 +30,18 @@ test('a strip is filmed at a screen its journey names', () => {
       assert.equal(typeof strip.act, 'function');
     }
   }
+});
+
+// A control the walk could not press at 320 px is pressed by script and named as blocked (play.mjs, choose): a strip
+// that presses Settings bare timed out there instead of being filmed (#1021).
+test('the match\'s settings-window strip presses Settings as the walk does, so a covered button is named, not a timeout', async () => {
+  const pressed = [], blocked = [];
+  const covered = { first: () => covered, click: async () => { throw new Error('locator.click: Timeout 5000ms exceeded.'); }, dispatchEvent: async kind => { pressed.push(kind); } };
+  const page = { locator: selector => { assert.equal(selector, '#settings'); return covered; } };
+  const match = JOURNEYS.find(journey => journey.id === 'match');
+  await match.strips['settings-window'].act({ page, blocked: async selector => { blocked.push(selector); } });
+  assert.deepEqual(blocked, ['#settings']);
+  assert.deepEqual(pressed, ['click']);
 });
 
 test('the walk is at 320 by 568 and 390 by 844', () => {
@@ -89,6 +101,25 @@ test('two walks differ by the screens they reach and by any measure, however dee
   // The lines of a measures file compare as the walk's own screens do.
   const written = parseMeasures(measuresLines({ journey: 'doors', viewport: VIEWPORTS[1], axe: true, screens: [screen('one', 12)] })).screens;
   assert.deepEqual(differences(written, written), []);
+});
+
+test('a page read before its first paint reports none, and a paint in whole milliseconds', () => {
+  const kept = globalThis.__journeyPaint, timing = Object.getOwnPropertyDescriptor(globalThis, 'performance');
+  const read = (entries, largest) => {
+    globalThis.__journeyPaint = { largest, element: 'text', shift: 0.123 };
+    Object.defineProperty(globalThis, 'performance', { configurable: true, value: {
+      getEntriesByName: name => (name === 'first-contentful-paint' ? entries : []),
+      getEntriesByType: () => [{ name: '/a.webp', encodedBodySize: 300 }, { name: '/a.js', encodedBodySize: 900 }],
+    } });
+    return readPaintInPage();
+  };
+  try {
+    assert.deepEqual(read([], null), { first: null, largest: null, element: 'text', shift: 0.12, pictureBytes: 300 });
+    assert.deepEqual(read([{ startTime: 812.6 }], 1204.4), { first: 813, largest: 1204, element: 'text', shift: 0.12, pictureBytes: 300 });
+  } finally {
+    globalThis.__journeyPaint = kept;
+    Object.defineProperty(globalThis, 'performance', timing);
+  }
 });
 
 test('a paint is reported as its median with the fastest and the slowest run', () => {

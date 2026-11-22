@@ -248,6 +248,40 @@ test('on a 320 px phone the header still says Tutorial n of 4, and the coach car
   await expect.poll(() => state.opened).toBeGreaterThan(opened);
 });
 
+// On a phone the band's place in the series and its two ways out share the header with Settings: whatever the
+// fonts, and with a reader's larger text, the band stays in its own box, and a tap on Settings reaches Settings. On
+// the runner's fonts the band's Leave lay over Settings at 390 px, and the tests below timed out on it (#1046).
+test('on a phone the tutorial band never covers Settings, whatever the size of its text', async ({ page }) => {
+  test.skip(!['phone', 'small-phone'].includes(test.info().project.name), 'The header is short on a phone held upright.');
+  test.setTimeout(120000);
+  const state = await mount(page);
+  await page.locator('#practice-brief-begin').click();
+  const clear = async moment => {
+    for (const size of ['16px', '18px', '20px']) {
+      await page.evaluate(one => { document.documentElement.style.fontSize = one; }, size);
+      const read = await page.evaluate(() => {
+        const box = one => document.querySelector(one).getBoundingClientRect(), band = document.getElementById('practice-band');
+        const settings = box('#settings'), hit = document.elementFromPoint(settings.left + settings.width / 2, settings.top + settings.height / 2);
+        const shown = [...band.querySelectorAll('.practice-actions > *, .eyebrow')].filter(node => node.getClientRects().length && getComputedStyle(node).display !== 'none');
+        return { reached: hit?.closest('#settings') !== null, inside: shown.every(node => node.getBoundingClientRect().right <= box('#practice-band').right + 1),
+          clear: box('#practice-leave').right <= settings.left + 1, fits: band.scrollWidth <= band.clientWidth + 1 };
+      });
+      expect(read, `${moment} at ${size}`).toEqual({ reached: true, inside: true, clear: true, fits: true });
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  };
+  state.holdEnd = true;
+  for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
+  await clear('the last step played');
+  state.held = null;
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#coach-step')).toHaveText('TUTORIAL 1 OF 4 · COMPLETE');
+  await clear('the lesson done');
+  await page.locator('#settings').click({ timeout: 5000 });
+  await expect(page.locator('#settings-dialog')).toBeVisible();
+  expect(state.errors).toEqual([]);
+});
+
 test('a tutorial done opens nothing over its end card: the next round\'s upkeep waits, and Leave answers', async ({ page }) => {
   // The view that says the lesson is done brings the next round's upkeep. It arrives under Settings, so its results
   // settle unplayed and the upkeep is left to its own notice, as on a busy machine (#771): closing Settings must
