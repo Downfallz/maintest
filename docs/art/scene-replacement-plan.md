@@ -41,7 +41,7 @@ The current painting names below are from the [source register](sources/pages/sc
 | 10 | Lobby, another waiting game's card | warped-listening | At water level, three ripples break the reflection of an arch. Let them read behind the card's text. | [Waiting ripples](sources/pages/replacements/waiting-ripples.webp) |
 | 11 | Lobby, most recently finished game's row | crushing-stomp-aftermath | Revisit the result painting's three impact marks a few hours later. Dust has settled and water has collected in the cuts. | [After the impact](sources/pages/replacements/after-the-impact.webp) |
 | 12 | Showcase, creator's note | predator-at-rest | The owner started with the app. A physical prototype has yet to be built. Defer this replacement and keep the resting Predator here. | Keep existing |
-| 13 | Leaderboard heading | elemental-charge | A lone scarred survivor stands on a broken tier, framed on the right against a low eclipse. | Pending |
+| 13 | Leaderboard heading | elemental-charge | A scarlet-striated stage 3 Ravager stands on a broken tier, framed on the right against a low eclipse. | [Last one standing](sources/pages/replacements/last-one-standing.webp) |
 | 14 | Statistics heading | ironhide-scar | A slate slab bears overlapping claw marks worn almost smooth. One fresh cut exposes pale stone. | Pending |
 | 15 | Rulebook heading | latch-under-the-arch | Overhead view of the tabletop opening position. Show two formations of three and the round marker on one. Use the real setup as the reference. | Pending |
 | 16 | Offline page | parasite-under-slate (parasite-offline) | A slate causeway has fallen away. The far edge is just visible through fog above the retry action. | Pending |
