@@ -124,6 +124,8 @@
 .dialog-heading { display: flex; justify-content: space-between; gap: 18px; align-items: center; }
 .dialog-heading h2 { font: 400 28px var(--font-display); margin-top: 8px; }
 #create-help { margin-top: 18px; }
+/* Opened on a friend, the Create window's heading wears its head from edge to edge, over the window's padding. */
+#create-table > .dialog-heading.scene-head { margin: -28px -28px 18px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
 .lobby-page .problem { margin: 12px 0; }
 .account { position: relative; }
@@ -269,8 +271,9 @@
 .home-footer span:first-child { color: var(--gold); letter-spacing: .8px; }
 .home-footer-links { display: flex; align-items: center; gap: 18px; }
 .home-footer-links a { display: inline-flex; align-items: center; min-height: 44px; }
-.home-page .home-dialog { width: min(640px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
-.home-page #friends-dialog { width: min(720px, calc(100vw - 24px)); }
+/* The header's windows have one frame on every page that has the header, the home's (a scene's head runs edge to edge). */
+html .home-dialog { width: min(640px, calc(100vw - 24px)); padding: 0; overflow: hidden; }
+html #friends-dialog { width: min(720px, calc(100vw - 24px)); }
 .home-dialog[open] { display: flex; flex-direction: column; }
 .home-dialog > .dialog-heading { flex: none; margin: 0; padding: 20px 24px; border-bottom: 1px solid var(--line); background: var(--raised); }
 .home-dialog .dialog-heading h2 { margin: 5px 0 0; font-size: 28px; }

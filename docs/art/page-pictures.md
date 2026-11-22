@@ -103,6 +103,11 @@ dialog.prepend(sceneElement(document, 'predator-and-deathstalker', { page: 'tabl
 - A head's and a ground's painting is a decoration: it takes no `alt`, its words say what the screen is. The
   other options are `pictureElement`'s. `sceneHtml` returns the same scene as an HTML string; its `words` are then
   HTML too.
+- `wearScene(doc, element, name, options)` dresses an element the page already holds, its children left where they
+  are: a window's `.dialog-heading` as a head (`words` is its child that holds the eyebrow and the title; the close
+  sits in the band's top corner away from them, on its own fill), a card as a ground (`words` lists the children
+  whose words lie on the painting, so the walk measures them). `undressScene` takes it off, for a window that wears
+  one in one state only: the Create window wears its head when opened on a friend.
 - Words on a head or a ground hold 4.5:1 against the lightest pixel under them. The journey walk measures it on
   every screen that lays some (`contrast` in its measures, `scripts/ux/contrast.mjs`).
 

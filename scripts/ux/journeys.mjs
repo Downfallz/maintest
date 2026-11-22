@@ -272,7 +272,8 @@ const pages = {
     await page.keyboard.press('Escape');
     await friendInvites(walk, friend);
     await home(page, set.game);
-    await page.locator('#invitation-cards .invitation').first().waitFor({ timeout: 30000 });
+    // In view, so the walk's contrast reads the card's words on its ground: at 320 it is below the first screen.
+    await page.locator('#invitation-cards .invitation').first().scrollIntoViewIfNeeded({ timeout: 30000 });
     await walk.screen('home-invitation');
     await page.goto(`${set.game}/leaderboard`);
     await page.locator('main').waitFor();

@@ -1,8 +1,10 @@
 # The player's pages
 
-The brief of a signed-in player's own pages: the Friends window, the Create window it opens on a friend, the ladder
-and the statistics, each seen empty and then filled. UX10 of [the pages' craft plan](../ux-craft-plan.md) builds it,
-with its paragraph "Give each player page a reason to look". The owner approves it on the journey's sheets.
+The brief of a signed-in player's own pages: the Friends window, the Create window it opens on a friend, the
+invitation's card that window sends to the friend's home, the ladder and the statistics, each seen empty and then
+filled. UX10 of [the pages' craft plan](../ux-craft-plan.md) builds it, with its paragraph "Give each player page a
+reason to look". S7 of [the scenes' plan](../scene-paintings-plan.md) adds a scene to the first three. The owner
+approves it on the journey's sheets.
 
 Who may play and what a ranked game is are `docs/tabletop/accounts-plan.md`'s; how a rating is computed and when it is
 provisional, ADR 0124's; what the statistics count, ADR 0168's and ADR 0171's; where Friends, the Leaderboard and Your
@@ -17,12 +19,25 @@ page is paired here with the same page filled. Two screens were added to the wal
 `statistics-ranked`. Before them, Walker and Rook play one ranked 3v3 game through its first round, and Walker
 concedes. Walker is then on the ladder, provisional after one game, with a record of 0–1–0.
 
+The scenes of S7 were written from the same walk on `main` at `2286924`,
+`node scripts/ux/journey.mjs pages --out <folder>`, both widths. It films one more screen, `home-invitation`, right after `friend-invited`: Rook opens the table
+for Walker, and Walker's home shows the card. At 390 the walk logged `after statistics: #settings could not be
+pressed` and still filmed every screen; no screen S7 draws comes after it.
+
 What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one filled action, the cut corner. No shade and no face
   is added. Every beat moves `transform` or `opacity`, from the kit of `table/identity.css` (a window, a thing that
   arrives `.motion-arrive`, a value that changes `.motion-number`, the press) and the tokens of
-  `docs/art/branding.css`. No ambience: nothing on these pages moves unasked.
+  `docs/art/branding.css`. No ambience: nothing on these pages moves unasked. The home behind `home-invitation` keeps
+  its own, which is [the lobby's](lobby.md).
+- **A scene where there is room.** One painting of the scenes' library, `predator-and-deathstalker` (the Predator and
+  its stage 3, the Deathstalker, drinking at one pool), in the kit's forms
+  ([a scene in one of three forms](../page-pictures.md#a-scene-in-one-of-three-forms)): a head on the Friends window
+  and on the Create window opened on a friend, a ground on the invitation's card. The words on it are the ones the
+  screen already had, on its scrim, at 4.5:1 or more by the walk's `contrast`. Its painting takes no `alt`. It never
+  pushes a window's filled action off a 320 by 568 screen. A player is still their initial: the painting shows two
+  creatures, not a player.
 - The host decides; the page shows. The friends, the ladder and the statistics are what `GET /api/friends`,
   `GET /api/leaderboard` and `GET /api/stats` say, read when the stream says they changed (`table/changes.js`), on
   the page's return to view and back online; never on a clock (ADR 0164). A row is updated in place, keyed by its
@@ -81,13 +96,36 @@ cards already have Ask.
 
 ### Pictures
 
-None: the empty list says what fills it in words, and no painting answers "who could be my friend?". A friend is
-their initial once there is one.
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The scene as the window's head, its focus on the Deathstalker's bank: its back, its blades and its claws on the stones, its jaw at the water. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+
+The head is the window's heading. The band takes the place of the heading's slate, from edge to edge, clipped by the
+window's cut corner. The heading's rune rule goes: the band's lower edge is the rule. It holds the eyebrow, Your circle, and the title, Friends, on
+its `start` side. The × sits in its top `end` corner, over the painting. The empty list says what fills it in words.
+No painting answers "who could be my friend?", and none is drawn in the list: a friend is their initial.
+
+- **Focus `75% 35%`.** A 3:1 band cut from a 16:9 painting keeps the whole width and cuts the height, so only the
+  second number moves it. 35% down keeps the Deathstalker whole in the band's end, the part the scrim leaves clear:
+  at 390 the band shows the painting from 15% to 73% of its height; at 64 px on a short screen, from 22% to 60%, its
+  back and blades. The first number serves a box narrower than 16:9, which no window draws.
+- **The `start` side** is the darker one, and it leaves the Deathstalker clear. Measured in this session with
+  Pillow, on the painting cut as the band cuts it (366 by 120 px, 296 by 64): under the column of words, the
+  brightest 5% of pixels are at 133 (of 255) at the start against 139 at the end at 390, and 136 against 142 at 320. The scrim is opaque to `--soot`
+  under the words on either side.
+- **The same head on the player's pages.** `table/navigation.js` mounts the window on every page with the header.
+  The head is drawn on the home, the statistics, the ladder, the rules and the battle, each of which declares the
+  scene, lazy. The admin page (an operator's) and the classic table at /play (archived) keep the window's plain
+  heading. The painting is lazy inside a closed window, so it loads when the window first opens.
+- **Room**: at 320 by 568 the band is 64 px (a screen under 600 px tall), lower than today's heading, about 85 px on
+  the sheet. The window is no taller than today, 409 px empty, and Ask → stays on the first screen. At 390 by 844 the
+  band is 120 px, its 3:1 of 122 capped; the window grows by the difference and stays inside the screen.
 
 ### States
 
 - **First paint**: the window opens over the page with "Finding your friends…" in the list (`friends.js`), the field
-  and Ask → there.
+  and Ask → there. The head's words are on its soot band before the painting has loaded. Under less data
+  (`Save-Data`) the head stays, since only a ground goes; on a screen under 600 px tall it is 64 px.
 - **Empty**: this screen.
 - **Loaded**: see the window with a friend.
 - **Waiting**: after Ask →, the button is disabled until the host answers; the field keeps its text.
@@ -113,22 +151,43 @@ their initial once there is one.
 
 - **Focus**: into the window on its first control; the order is ×, the field, Ask →. Back to the menu's toggle when
   it closes (the native dialog).
-- **Names**: the window is named by its title, Friends. The empty line is the list's only item.
+- **Names**: the window is named by its title, Friends, as today (`aria-labelledby`), which now sits on the head. The
+  head's painting is a decoration and takes no `alt`. The empty line is the list's only item.
 - **Announced**: the result of an ask through `#friend-note` (`role="status"`); a refusal through `#friend-problem`
   (`role="alert"`).
-- **Targets**: 0 of 3 under 44 px at both widths. Ask → stays 44 px when filled.
+- **Targets**: 0 of 3 under 44 px at both widths. Ask → stays 44 px when filled. The × stays a 44 px square in the
+  head's top end corner, apart from the words, which keep to the start's 60%. Its own fill holds its contrast: the
+  button keeps its opaque `--raised` and its `--ink` ×, as today, whatever the painting under it. The walk's
+  `contrast` reads only the head's words, so the × is read on the sheet.
 
 ### Cost
 
-- **Bytes**: no picture; the window's slate is the identity's background, as today (3 background pictures measured,
-  the home behind it).
+- **Bytes**: the head, lazy, loaded when the window opens. The window is `min(720px, 100vw - 24px)` wide, so
+  `predator-and-deathstalker` is drawn 366 px wide at 390 and 296 at 320. The 732 px file goes to a phone at twice
+  the density, 68,750 bytes; the 366 px file goes at the walk's density, 20,744 bytes (`table/page-art.js`). The same
+  file at both widths. On a wide screen the window is up to 720 px wide on the home and takes a larger file, which
+  the budget, counted at 390, does not see. The pages that draw the head raise their `all` by 68,750 bytes:
+  table/home, table/stats and table/battle. table/leaderboard and table/rules gain a budget of 68 KiB. The walk's
+  `pictures` count one more `img` and 0 oversized.
 - **Largest paint**: the page's own, not the window's; no paint was measured for the window.
-- **Shift**: 0.00 at both widths; the window is in the top layer and moves nothing behind it.
+- **Shift**: 0.00 at both widths. The band holds its 3:1 room before the painting arrives, and the window is in the
+  top layer, so it moves nothing behind it.
 
 ### Left
 
 - Settled by the owner on 2026-11-20 on the sheets: Ask → is filled only while the window holds no friend and no request; once a friend is there the window
   has no filled action.
+- My choices, which the owner may refuse on the sheets:
+  - The words on the start and the Deathstalker at the end, uncovered. The Predator, under the scrim, is a shadow.
+  - The × over the painting, in the top end corner where every window of the table has it, rather than on the
+    scrim's side.
+  - The head on the battle page. A window opened in a match is the place a painting is least needed; the head could
+    be left out there, where the header is a match's.
+- The painting has no beat of its own. It enters with the window, and until it loads the band's soot holds its
+  room. If the sheet or a phone shows it pop in after the window has entered, the remedy is the statistics' fade
+  ([Room held while it loads](../ux-craft.md#room-held-while-it-loads)), not a new beat.
+- The walk's `contrast` does not read the × (it reads `.scene-words`). A × that lost its fill would not be caught
+  by a measure.
 
 ## The Friends window, a request sent (`friends-asked`)
 
@@ -158,11 +217,18 @@ Asked. Rook will see your request.
 
 ### Pictures
 
-None: Rook is their initial in the identity's square, drawn in CSS, not a picture.
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The head of the empty window, unchanged, focus `75% 35%`, its words on its `start` side. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+
+Rook is their initial in the identity's square, drawn in CSS, not a picture. At 320 by 568 the window is at its
+greatest height today, 486 px: `#friends-dialog` is no taller than the screen less its margin, 488 px here, and its
+body scrolls; the sheet cuts its last line. The 64 px band is lower than the heading it replaces, so it gives back
+about 20 px, and Ask → stays on the first screen. A head any taller would push Ask → toward the window's foot.
 
 ### States
 
-- **First paint**: as on the empty window.
+- **First paint**: as on the empty window, the head included.
 - **Empty**: no request is waiting: the section Waiting for an answer is hidden, as on the empty window.
 - **Loaded**: this screen. Several requests sent are several rows, in the host's order.
 - **Waiting**: after Withdraw, the button is disabled until the host answers and the list is read again.
@@ -188,11 +254,11 @@ None: Rook is their initial in the identity's square, drawn in CSS, not a pictur
 - **Focus**: stays on Ask → after the answer; after Withdraw, on the field (the row it was in is gone).
 - **Names**: Withdraw is named "Withdraw request to Rook": its visible word first.
 - **Announced**: "Asked. Rook will see your request." once, through `#friend-note`.
-- **Targets**: 0 of 4 under 44 px at both widths.
+- **Targets**: 0 of 4 under 44 px at both widths. The × as on the empty window.
 
 ### Cost
 
-- **Bytes**: no picture.
+- **Bytes**: the head, already loaded by the window's first opening: no byte more.
 - **Largest paint**: not the window's.
 - **Shift**: 0.00 at both widths. The row arrives inside the window, which grows at its foot; nothing behind moves.
 
@@ -200,6 +266,7 @@ None: Rook is their initial in the identity's square, drawn in CSS, not a pictur
 
 - The window today redraws every list on every read (`replaceChildren` in `friends.js`): the build keys the rows by
   the player's id so only a new one arrives. If that is more than a few lines, the arrival is dropped, not faked.
+- The head's choices are the empty window's.
 
 ## The Friends window with a friend (`friends-with-a-friend`)
 
@@ -231,11 +298,16 @@ says why, in place of today's `title`: "One invitation at a time: Invite returns
 
 ### Pictures
 
-None: each friend is their initial in the identity's square.
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The head of the empty window, unchanged, focus `75% 35%`, its words on its `start` side. | 366 by 120 px | These are the players I meet. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+
+Each friend is their initial in the identity's square. The head is the window's on every state: these are the
+players I meet, whether there are none yet or one. At 320 by 568 the window is no taller than today, 414 px.
 
 ### States
 
-- **First paint**: as on the empty window.
+- **First paint**: as on the empty window, the head included.
 - **Empty**: the empty window.
 - **Loaded**: this screen: the friends in the host's order, then a request received at the top (Accept quiet,
   Decline quiet: the bell counts it), then those sent.
@@ -267,21 +339,22 @@ None: each friend is their initial in the identity's square.
 - **Names**: Invite is named "Invite Rook", Remove "Remove Rook": the visible word first, then the friend.
 - **Announced**: "Rook is your friend now." once, through `#friend-note`, when an arrival makes a friend of a
   request the player sent.
-- **Targets**: 0 of 5 under 44 px at both widths.
+- **Targets**: 0 of 5 under 44 px at both widths. The × as on the empty window.
 
 ### Cost
 
-- **Bytes**: no picture.
+- **Bytes**: the head, already loaded: no byte more.
 - **Largest paint**: not the window's.
 - **Shift**: 0.12 at 320 and 0.05 at 390 before the build, 0.06 and 0.02 after, summed since the home loaded. The
   window, centred, rose when Rook's row arrived; it is now held near the top (`#friends-dialog`), so it grows at its
-  foot. Budget 0.1.
+  foot. Budget 0.1. The head adds none: it holds its room before its painting.
 
 ### Left
 
 - Settled by the owner on 2026-11-20 on the sheets: no filled action on the window once a friend is there; Invite stays quiet.
 - The friend's row says nothing of whether they are playing now: the host does not send it, and this brief adds no
   route.
+- The head's choices are the empty window's.
 
 ## The Create window opened on a friend (`friend-invited`)
 
@@ -319,13 +392,42 @@ place.
 
 ### Pictures
 
-None: Rook is their initial in the identity's square, 44 px here, the size of the controls under it.
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The scene as the window's head, its focus on the pool: the water both creatures drink from, the Deathstalker's blade-tail dipped in it, their reflections. | 358 by 119 px | I am asking someone to meet me. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+
+Rook is their initial in the identity's square, 44 px here, the size of the controls under it, right under the head.
+The head is drawn only when the window is opened on a friend, with the friend's line: in every other state the
+Create window keeps its plain heading ([the lobby's brief](lobby.md#the-create-window-create-window-create-window-bot)).
+It is the window's heading, as on Friends: from edge to edge over the window's padding, clipped by the cut corner,
+the eyebrow, A new battle, and the title, Create a table, on its `start` side, the × in its top `end` corner over the
+painting with its own opaque fill.
+
+- **Focus `50% 75%`.** The pool lies from about 60% to 95% of the painting's height, across its middle. 75% down
+  shows the painting from 31% to 90% at 390, both jaws at the water and the pool under them; at 64 px, from 46% to
+  85%, the water's surface alone, where the two drink. The band's clear end holds the Deathstalker's tail in the
+  water and its ripples. Across, 50%: no window narrower than 16:9 cuts it.
+- **The `start` side**, as on Friends, and the darker one here too: the brightest 5% of pixels under the column of
+  words are at 119 against 124 at 390 (358 by 119 px), 111 against 121 at 320 (288 by 64 px), measured as on
+  Friends. The × keeps the top end corner, where every window has it. With the words at the end it would share their
+  column: Create a table takes two lines at 320 and fills it.
+- **Not the band before it.** Invite closes Friends and opens Create: the same painting, its upper half and the
+  Deathstalker's back, then its lower half and the water. The two windows that follow each other are not the same
+  picture.
+- **Room**: at 320 by 568 the window is 716 px tall in this walk (679 in the build UX10 measured), and Create & play
+  → is below the first screen, as the **Left** below already says. The band is 64 px there, but the title wraps to
+  two lines, so the head is as tall as its words, about 98 px on the build's sheet. The build's film measured the
+  window at 708 px at 320 against 716: the head gives back 8 px, not the 35 read on the earlier sheet, and does not
+  make it worse. At 390 by 844 the window is 639 px against 592 (the 119 px band is 47 px taller than the heading it
+  replaced), and Create & play → stays in view.
 
 ### States
 
-- **First paint**: the window opens once the friends are read (`openCreate`, as today), on the friend's line.
-- **Empty**: a friend no longer in the list (removed meanwhile): the line is not drawn, the selects come back, and the
-  help says "That player is not in your friends yet." as today.
+- **First paint**: the window opens once the friends are read (`openCreate`, as today), on the friend's line and the
+  head. The head's words are on its soot band before the painting arrives; from Invite, the Friends window has
+  already loaded it. Under less data the head stays; on a screen under 600 px tall it is 64 px.
+- **Empty**: a friend no longer in the list (removed meanwhile): the line is not drawn, nor the head; the selects
+  come back, and the help says "That player is not in your friends yet." as today.
 - **Loaded**: this screen.
 - **Waiting**: after Create & play →, the lobby's brief: the action says what it does and waits.
 - **Error**: the host's refusal in `#create-problem`, the window kept. Read, not seen.
@@ -350,16 +452,23 @@ None: Rook is their initial in the identity's square, 44 px here, the size of th
 - **Focus**: into the window on Ranked, the first control left, since the friend is chosen; back to the menu's toggle
   when it closes.
 - **Names**: the friend's line is the window's description (`aria-describedby`): "A seat kept for your friend Rook."
-  The initial is `aria-hidden`.
+  The initial is `aria-hidden`. The window is named by its title, Create a table, on the head; the head's painting
+  is a decoration and takes no `alt`.
 - **Announced**: nothing: the window is the page as it opens.
 - **Targets**: 1 of 5 under 44 px at both widths (9 before the tabs and the selects went), the Ranked box (24 px), its
-  whole row the target, as UX9 left it.
+  whole row the target, as UX9 left it. The × stays a 44 px square in the head's top end corner, with the fill and
+  the contrast of the Friends window's.
 
 ### Cost
 
-- **Bytes**: one background picture measured, the window's slate; none added.
+- **Bytes**: the head, lazy, loaded when the window opens. The window is `min(480px, 100% - 32px)` wide, so the
+  painting is drawn 358 px wide at 390 and 288 at 320. 358 is within a tenth of the Friends window's 366, so the
+  kit sends one file for both: the 732 px file at twice the density, 68,750 bytes, already loaded when Create opens
+  from Invite. Opened from a Challenge or a Rematch link, it loads with the window. The Create window is the home's
+  alone: table/home counts the painting once for its three uses.
 - **Largest paint**: not the window's.
-- **Shift**: carried from the screen before (0.06 at 320, 0.02 at 390 in the build); the window adds none.
+- **Shift**: carried from the screen before (0.06 at 320, 0.02 at 390 in the build). The window adds none: the band
+  holds its room before its painting.
 
 ### Left
 
@@ -368,6 +477,115 @@ None: Rook is their initial in the identity's square, 44 px here, the size of th
   travel would need its entry first.
 - At 320 by 568 the window is 899 px tall today and Create & play → is below its first screen (the lobby's
   **Left**); without the tabs and the two selects it is 679 px at 320 and 609 at 390, still not inside 568.
+  The head does not mend it. It only gives back the heading's room it takes.
+- My choices, which the owner may refuse on the sheets: the head only on a window opened on a friend, and gone with
+  the friend's line; the words at the start, leaving the Deathstalker's side of the pool in view rather than the
+  Predator's; the pool at 75% down.
+
+## An invitation on the home (`home-invitation`)
+
+The home is [the lobby's brief](lobby.md); this screen lives here because the walk that reaches it is this
+journey's. Rook opens the table of `friend-invited` for Walker, and Walker's home shows the card. The scenes' plan
+placed it in lobby.md.
+
+### Job
+
+Walker opens the home with an invitation waiting. The Invitations section, under the featured space, holds Rook's
+card. The card says who kept a seat, and lets the player accept or decline.
+
+- **Filled action**: Play →, in the featured space, as the lobby's brief holds it (Your first combat, for a player
+  with no game). On the card, Accept & play → and Decline are quiet.
+
+### Words
+
+- **Order**: Invitations (1) and its line, A friend kept a seat for you; on the card, Rook invites you to a 3v3
+  battle and its tag, Invitation; then Accept & play → and Decline.
+- **Budget**: 179 words, as today at both widths: the walk counts the whole home. No word of the card changes.
+
+```text
+Invitations (1)                              A friend kept a seat for you
+[the painting under soot, the card's whole box]
+Rook invites you to a 3v3 battle                         [Invitation]
+[Accept & play →]
+[Decline]
+```
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The scene as the card's ground, dimmed under `--soot`: the Predator and the Deathstalker drinking at one pool. | 358 by 200 px | Someone asked me to meet them. | `docs/art/sources/pages/scenes/predator-and-deathstalker.webp`, declared as `predator-and-deathstalker` |
+
+The card is the ground: its whole box, inside its border, its gold top edge and its cut corner, which clip the
+painting. Its words sit on the ground's scrim, from 84% to 92% soot (`table/identity.css`), so the painting is the
+meeting felt behind the words, not a picture to read. The status tag and the two buttons keep their own fills; the
+walk's `contrast` reads the title (`h3`) and the game's line. The ground takes no focus of its own: the declaration's
+`50% 55%`. At 390 the card, about 358 by 200 px on the sheet, is close to 16:9 and shows nearly the whole painting.
+At 320, about 284 by 230, cover keeps the middle 69% of its width, both jaws at the water. It is the same file as
+the two windows' heads, so a home that opened either window sends nothing more.
+
+### States
+
+- **First paint**: the section is hidden until the host's read holds an invitation (`#invitations`). The card
+  arrives with the lists, its words on its slate, and the painting under them once loaded.
+- **Empty**: no invitation: the section is hidden, and no ground is drawn.
+- **Loaded**: this screen. Several invitations make a card each, each on its ground from the one file. Under less
+  data (`Save-Data`) the ground is not drawn and the card keeps its slate (`.game-card`'s panel), its words as today.
+- **Waiting**: after Accept & play →, the button is disabled until the host answers (`act` in `table/lobby.js`), then
+  the battle opens. After Decline, the card leaves on the next read.
+- **Error**: a refusal is said in the home's problem line, as for every other action of the home, and the card is
+  kept. Read, not seen.
+- **Offline**: the home keeps its last read and its card. Accept & play → fails as an error; back online, the
+  stream's first event reads again. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The press | A pointer down on Accept & play → or Decline. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+The ground has no beat: it is under the card from the card's first frame, and lazy. The home's own ambience is the
+featured space's, which is the lobby's: the walk's `animating` is 1 at 390 and 0 at 320, where the walk brings the
+card into view and the featured space, out of view, stops.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: not moved on load. After the featured action, the Invitations section comes first, as the lobby's
+  brief orders it: Accept & play →, then Decline.
+- **Names**: the card is an `article` under the section's heading, Invitations. The ground's painting is a decoration
+  and takes no `alt`: the title says who invites.
+- **Announced**: nothing on load; the bell counts the invitation, as the lobby's brief says.
+- **Targets**: 0 of 20 under 44 px at both widths, as today.
+
+### Cost
+
+- **Bytes**: the ground, lazy: at 320 the card is below the first screen, and at 390 it begins at its foot. It is
+  drawn with `sizes` of the declaration's phone width at every width, so the home takes one file for the card and
+  both heads: the 732 px file at twice the density, 68,750 bytes, counted once in table/home's `all`. At 320 the
+  card draws it about 409 px wide (230 px tall at 16:9), under twice the density, which a ground under 84% soot
+  does not show.
+- **Largest paint**: the featured space's, the lobby's; the ground is lazy and never the largest.
+- **Shift**: 0.00 at both widths today. The ground lies inside the card and adds no height, so it can move nothing.
+
+### Left
+
+- The walk films the card below the first screen at 320, and the walk's `contrast` reads only a scene in view (S6's
+  **Left**). At 320 it reads nothing on this screen unless the walk brings the card into view first. That change is
+  the walk's, `scripts/ux/journeys.mjs`.
+- The home redraws its cards when anything in its key changes, the minute included (`replaceChildren`), so the
+  ground's image is made again each time, from the cache. If the sheet or a phone shows a blink, the build keys the
+  card by its table's id, as the Friends window keys its rows.
+- My choices, which the owner may refuse on the sheets: a ground and not a head, since a card has no heading band;
+  no focus of its own; a second painting on the home's first screens at 390, under the featured space's ground and
+  creature.
+- Whether an invitation should itself take the featured space, and so the filled action, is the lobby's **Left**,
+  not changed here.
 
 ## The ladder before a ranked game (`leaderboard`)
 

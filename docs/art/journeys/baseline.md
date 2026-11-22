@@ -151,7 +151,9 @@ At 390 by 844:
 ## The player's pages
 
 `leaderboard-ranked` and `statistics-ranked`, the same pages after one ranked game, were added by UX10. Their lines
-come from UX10's walk of 2026-11-20, taken before UX10 changed the pages. The baseline walk had no such screens.
+come from UX10's walk of 2026-11-20, taken before UX10 changed the pages. `home-invitation`, the home with a friend's
+invitation, was added by S7 of the scenes' plan; its lines come from S7's walk of `main` at `2286924`, before S7 drew
+the card's ground. The baseline walk had no such screens.
 
 At 320 by 568:
 
@@ -161,6 +163,7 @@ At 320 by 568:
 | friends-asked | 514 px, a window | 58 | 0 | 3 background | 10 px | 2 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | friends-with-a-friend | 412 px, a window | 44 | 1 | 3 background | 10 px | 2 | 0 of 5 | 0 | 0 | 0 | 0.12 | nothing |
 | friend-invited | 933 px, a window | 96 | 1 | 1 background | 10 px | 3 | 2 of 9 | 1 | 0 | 0 | 0.12 | nothing |
+| home-invitation | 2830 px | 179 | 1 | 6 img, 11 background | 11 px | 0 | 0 of 20 | 0 | 0 | 1 | 0.00 | nothing |
 | leaderboard | 1298 px | 204 | 0 | 5 background | 10 px | 10 | 3 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | statistics | 1230 px | 97 | 0 | 6 background | 10 px | 6 | 3 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | leaderboard-ranked | 1309 px | 187 | 0 | 5 background | 10 px | 12 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
@@ -174,6 +177,7 @@ At 390 by 844:
 | friends-asked | 492 px, a window | 58 | 0 | 3 background | 10 px | 2 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | friends-with-a-friend | 390 px, a window | 44 | 1 | 3 background | 10 px | 2 | 0 of 5 | 0 | 0 | 0 | 0.05 | nothing |
 | friend-invited | 831 px, a window | 96 | 1 | 1 background | 10 px | 3 | 2 of 9 | 1 | 0 | 0 | 0.05 | nothing |
+| home-invitation | 2583 px | 179 | 1 | 6 img, 11 background | 11 px | 0 | 0 of 20 | 0 | 0 | 1 | 0.00 | nothing |
 | leaderboard | 1195 px | 204 | 0 | 5 background | 10 px | 10 | 2 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | statistics | 1211 px | 97 | 0 | 6 background | 10 px | 6 | 2 of 4 | 0 | 0 | 0 | 0.00 | nothing |
 | leaderboard-ranked | 1251 px | 187 | 0 | 5 background | 10 px | 12 | 0 of 4 | 0 | 0 | 0 | 0.00 | nothing |

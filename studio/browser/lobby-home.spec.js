@@ -282,11 +282,22 @@ test('inviting a friend leaves the friends window and selects that friend in the
   await expect(page.locator('#create-dialog')).toHaveAttribute('aria-describedby', 'create-friend');
   await expect(page.locator('dialog[open]')).toHaveCount(1);
   await expect(page.locator('#create-submit')).toBeEnabled();
+  // Opened on a friend, the heading wears the pool as its head (docs/art/journeys/pages.md): its words on the start,
+  // the close in the far corner, the painting a decoration.
+  const heading = page.locator('#create-table > .dialog-heading');
+  await expect(heading).toHaveClass(/scene-head/);
+  await expect(heading).toHaveAttribute('data-side', 'start');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-y', '75');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('alt', '');
+  await expect(page.getByRole('dialog', { name: 'Create a table' })).toBeVisible();
+  await closeInTheFarCorner(page, heading, '#create-close');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  // New battle opens the window whole again.
+  // New battle opens the window whole again, with its plain heading.
   await page.locator('#new-table').click();
   await expect(page.locator('#create-tabs')).toBeVisible();
   await expect(page.locator('#create-friend')).toBeHidden();
+  await expect(heading).not.toHaveClass(/scene/);
+  await expect(heading.locator('img')).toHaveCount(0);
   expect(state.errors).toEqual([]);
 });
 
@@ -340,6 +351,56 @@ test('local hosts still resume games and reconnect automatically without a refre
   await expect(page.locator('#create-dialog')).toBeVisible();
   await expect(page.locator('#opponent option[value="friend"]')).toBeHidden();
   expect(state.errors).toEqual([]);
+});
+
+// A head's close sits in its top end corner, apart from the words, and stays a 44 px target.
+async function closeInTheFarCorner(page, heading, close) {
+  const band = await heading.boundingBox(), button = await page.locator(close).boundingBox();
+  const words = await heading.locator('.scene-words').boundingBox();
+  expect(band.x + band.width - (button.x + button.width)).toBeLessThanOrEqual(12);
+  expect(button.y - band.y).toBeLessThanOrEqual(12);
+  expect(button.x).toBeGreaterThanOrEqual(words.x + words.width);
+  expect(band.height).toBeLessThanOrEqual(page.viewportSize().height < 600 ? 64 + 1 : 120 + 1);
+}
+
+test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics and the ladder', async ({ page }) => {
+  const state = await home(page);
+  for (const path of ['/table/lobby.html', '/table/stats.html', '/table/leaderboard.html']) {
+    if (path !== '/table/lobby.html') await page.goto(path);
+    await openPanel(page, /^Friends/);
+    const heading = page.locator('#friends-dialog > .dialog-heading');
+    await expect(page.getByRole('dialog', { name: 'Friends', exact: true })).toBeVisible();
+    await expect(heading).toHaveClass(/scene-head/);
+    await expect(heading).toHaveAttribute('data-side', 'start');
+    await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-x', '75');
+    await expect(heading.locator('img[data-scene]')).toHaveAttribute('loading', 'lazy');
+    // One frame on every page: the band runs from edge to edge of the window.
+    const [band, frame] = [await heading.boundingBox(), await page.locator('#friends-dialog').boundingBox()];
+    expect(Math.abs(band.x - frame.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(band.width - frame.width)).toBeLessThanOrEqual(2);
+    await closeInTheFarCorner(page, heading, '#friends-dialog [data-home-close]');
+    await page.keyboard.press('Escape');
+  }
+  expect(state.errors).toEqual([]);
+});
+
+test('an invitation\'s card lays its words on the pool, dimmed', async ({ page }) => {
+  const invitations = [{ table: { id: 'invited', format: '3v3' }, from: { id: friend.id, username: friend.username } }];
+  const state = await home(page, { invitations });
+  const card = page.locator('#invitation-cards .invitation');
+  await expect(card).toHaveClass(/scene-ground/);
+  await expect(card.locator('img[data-scene]')).toHaveAttribute('loading', 'lazy');
+  await expect(card.locator('.scene-words')).toHaveCount(2);
+  expect(state.errors).toEqual([]);
+});
+
+test('under less data an invitation\'s card draws no painting', async ({ page }) => {
+  await page.addInitScript(() => Object.defineProperty(navigator, 'connection', { value: { saveData: true } }));
+  const invitations = [{ table: { id: 'invited', format: '3v3' }, from: { id: friend.id, username: friend.username } }];
+  await home(page, { invitations });
+  const card = page.locator('#invitation-cards .invitation');
+  await expect(card).toHaveAttribute('data-saved', '');
+  await expect(card.locator('img')).toHaveCount(0);
 });
 
 test('navigation and dialogs fit narrow, intermediate and short landscape screens', async ({ page }) => {
