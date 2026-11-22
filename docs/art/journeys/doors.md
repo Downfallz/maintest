@@ -1106,7 +1106,7 @@ None. The friend has just seen the sign-in panel's pictures; the battle view com
   invitation should open on the lobby instead is `docs/tabletop/home-navigation.md`'s; this brief stages it as it is.
 - The inviter is named on the standing line ("bastien's 3v3 table, waiting for you."), from the same answer as
   the panel's.
-- The cue stops at the battle view: its first frames say Loading the match, with no inviter and no seat. Naming
+- The cue stops at the battle view: its first frame names nothing (#984), with no inviter and no seat. Naming
   them there is the match's frame, UX11's, read from the seat the host gives.
 - On a slow network the classic table's page says Connecting… for seconds before its question. Its room and a
   line saying which invitation it reads are this page's to add when the invitation moves to the lobby, or before.

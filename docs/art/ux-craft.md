@@ -569,6 +569,30 @@ These come from decisions already taken. No pattern below is an exception to the
   `hidden`. The battle's three docked sheets (`.docked-sheet`) are part of the frame: they fade in where they
   stand and leave at once, so a closed sheet never stands over the field (UX12, `studio/browser/motion-kit.spec.js`).
 
+### A part that arrives by itself
+
+- **What**: a part of the frame that the host's news brings, unasked by the player (a receipt, a notice), enters
+  where it will stand, by a fade and, under full motion, a short rise, over `--motion-normal` on the decelerating
+  curve `--motion-enter`. It stands over the content or in room already held, so its arrival moves nothing. It does not take the
+  focus by itself: the focus goes to it only when it answers the player's own action. GOV.UK moves the focus to
+  a success banner that answers what the user just did; it leaves an important banner that appears on its own
+  unfocused.
+- **Source**: [Notification banner](https://design-system.service.gov.uk/components/notification-banner/), GOV.UK
+  Design System; [Motion](https://github.com/material-components/material-components-android/blob/master/docs/theming/Motion.md),
+  Material Components for Android, for the curve of what enters. The rise of 8 px is *house*.
+- **Pages**: the kit's `.motion-arrive` (`table/identity.css`), a transition from `@starting-style`, which plays
+  when the part's `hidden` goes and its `display` comes back; Chromium and Safari 18 have it, and a browser
+  without it shows the part at once. The rise is `translate`, so it leaves alone a `transform` that places the part.
+  The part is `position: absolute` over the field.
+- **Cost**: one composited layer, for the length of `--motion-normal`.
+- **Less motion and screen reader**: a fade alone. A `role="status"` region beside the part says what arrived, once,
+  without moving the focus ([A status told without moving the focus](#a-status-told-without-moving-the-focus)).
+- **Here**: the reveal's receipt (`#growth-receipt`, `table/battle.html`) arrives on the host's `PurchasesRevealed`
+  in `--motion-normal` and `--motion-enter`; `#growth-announcement` says it. After the team's last pick the focus
+  goes to its See, the player's confirm answered (`battle/src/live.ts`, #1076); a reveal the player did not wait on
+  leaves the focus where it is. Under 420 px its line wraps instead of being cut (#1077). `#round-toast` keeps its own
+  keyframes, and is not drawn under 620 px.
+
 ### A page that changes
 
 - **What**: a navigation between two pages of one origin can cross-fade, or move a named part from one page to

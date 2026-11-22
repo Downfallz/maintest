@@ -308,6 +308,10 @@ test('the field draws a stun over the head and the one body condition that matte
 test('a new round is announced at the top of the field, then fades; opening the page is not a new round', async ({ page }) => {
   const h = await mount(page); await expect(page.locator('#round-toast')).toBeHidden();
   h.view.board.roundNumber = 4; await h.publish();
-  await expect(page.locator('#round-toast')).toBeVisible(); await expect(page.locator('#round-toast')).toContainText('Round 4');
+  await expect(page.locator('#round-toast')).toContainText('Round 4');
+  // Under 620 px wide it is not drawn, where it covered the upper captions; its status still says the round (#1000).
+  const drawn = await page.locator('#round-toast').evaluate(node => node.getBoundingClientRect().width > 1);
+  expect(drawn).toBe(page.viewportSize().width >= 620);
+  await expect(page.locator('#round-toast')).toHaveAttribute('role', 'status');
   await page.clock.runFor(2700); await expect(page.locator('#round-toast')).toBeHidden(); expect(h.errors).toEqual([]);
 });

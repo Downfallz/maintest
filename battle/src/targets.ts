@@ -35,7 +35,10 @@ export function placeHitTargets(buttons: HTMLButtonElement[], positions: Placeme
     node.style.left = '0'; node.style.top = '0';
     node.style.transform = `translate(${position.x - position.hitWidth / 2}px, ${Math.max(0, position.y - position.size)}px)`;
     node.style.width = `${position.hitWidth}px`;
-    node.style.height = `${Math.max(44, position.size + (position.caption ?? 42))}px`;
+    const height = Math.max(44, position.size + (position.caption ?? 42));
+    node.style.height = `${height}px`;
+    // The caption hangs from this by a translation (battle-lab.css): a height that changes moves no layout.
+    node.style.setProperty('--hit-height', `${height}px`);
     node.style.zIndex = String(Math.round(position.y));
   }
 }

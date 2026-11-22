@@ -323,6 +323,8 @@
 /* Help uses a native modal, with the close control outside its scrollable explanation. */
 #help-open { flex: none; font-size: 12px; padding: 4px 10px; }
 #battle .timeline-wrap { min-height: 44px; }
+/* On a phone the order row starts at its left: centred, Order moved as the row emptied at the round's end (#999). */
+@media (max-width: 619px) { #battle .timeline-wrap { justify-content: flex-start; } }
 #help-dialog { padding: 0; width: min(680px,calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: hidden; background: #101e24; border: 1px solid #75867a; flex-direction: column; }
 #help-dialog[open] { display: flex; }
 .help-header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; border-bottom: 1px solid #52695e; }
@@ -501,6 +503,10 @@
 .growth-receipt-text { margin: 0; display: grid; min-width: 0; line-height: 1.25; }
 .growth-receipt-text strong { font: 15px var(--font-display); color: #f1d7a2; }
 #growth-receipt-summary { font-size: 12px; color: #c7d5cd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* On a phone the line wraps rather than cuts ("You 2 · Oppone…" at 320 px, #1077): the receipt stands over the field,
+   so a second line moves nothing. It arrives by the kit's `.motion-arrive` (ux-craft.md, "A part that arrives by
+   itself"), its `translate` beside the `transform` that centres it. */
+@media (max-width: 419px) { #growth-receipt-summary { white-space: normal; text-wrap: balance; } }
 #growth-receipt [data-growth-open] { min-height: 44px; padding: 0 16px; border: 1px solid #b79868; border-radius: var(--radius-soft); background: #2a3b33; color: #f1d7a2; font-weight: 600; }
 #growth-dismiss { min-width: 44px; min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: #c7d5cd; font-size: 13px; font-weight: 600; }
 #growth-announcement { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -784,7 +790,7 @@
 }
 
 /* A phone held upright has room for one header: the round's. The site's menu and the player's own button fold into
-   its right end, where the lobby keeps them, and History becomes a clock with its count of new entries. */
+   its right end, where the lobby keeps them, and History becomes the set's history drawing with its mark of new entries. */
 @media (max-width: 619px) and (orientation: portrait) {
   .battle-page[data-home="member"] .home-header {
     position: absolute; z-index: 6; top: env(safe-area-inset-top); left: auto; right: 4px; width: auto; height: 48px; min-height: 0;
@@ -802,8 +808,8 @@
   #battle #history-open { position: relative; width: 44px; min-width: 44px; padding: 0; display: grid; place-items: center; border: 0; background: transparent; color: #d8dfd6; font-size: 0; }
   #battle #history-open::before {
     content: ''; width: 22px; height: 22px; background: currentColor;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v4h4'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
-            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v4h4'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4.5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 8v4.5l3 2'/%3E%3C/svg%3E") center / contain no-repeat;
   }
   #battle #history-open > span { position: absolute; top: 4px; right: 2px; font-size: 0; }
   /* A dot, not a count: two rounds hold fifty events, and a number that large says nothing a reader acts on. */
@@ -820,6 +826,9 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 #battle { grid-template-rows: 74px 56px minmax(0,1fr) 132px; }
 #battle .round { display: flex; align-items: baseline; justify-content: center; gap: 8px; white-space: nowrap; min-width: 0; overflow: hidden; }
 #battle .round small { display: inline; margin: 0; font-size: 9px; letter-spacing: 2px; }
+/* The round's end moved the bar sideways (#999): the round's number changed the round's width, and the opponent and
+   the tools with it. The number holds the room of two figures. */
+#battle #round-number { display: inline-block; min-width: 1.6em; text-align: center; font-variant-numeric: tabular-nums; }
 #battle .tools { align-items: center; }
 #battle #help-open, #battle #settings { min-width: 44px; min-height: 44px; font-size: 20px; padding: 4px 9px; }
 @media (max-width: 900px) { #battle { grid-template-rows: 60px 48px minmax(0,1fr) 118px; } }
@@ -836,7 +845,10 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 /* While results are read, the dock is a single card: whose action it was, what came of it, and the OK beside
    it. It takes the dock's own row, which keeps its height: resizing the field would cancel the animation. */
 #battle[data-reading="true"] .command-dock > :is(.actor-summary, .live-status, .battle-actions) { display: none; }
-#playback-pacing { grid-column: 1 / -1; grid-row: 1 / -1; align-self: center; display: flex; align-items: center; gap: 16px; min-width: 0;
+/* The card fills the dock's row, whatever it holds (#999): centred, it grew and moved as its lines came and went.
+   The dock's tracks stretch to its height while the card is the dock, so the card's box stays put. */
+#battle:is([data-reading="true"], [data-order-reading="true"], [data-awaiting="action"], [data-awaiting="choice"], [data-awaiting="seats"]) .command-dock { align-content: stretch; }
+#playback-pacing { grid-column: 1 / -1; grid-row: 1 / -1; align-self: stretch; display: flex; align-items: center; gap: 16px; min-width: 0;
   padding: 12px 16px 12px 18px; border: 1px solid #4f6459; border-left: 3px solid var(--reading-accent, #8cb4a0); border-radius: var(--radius-soft);
   background: linear-gradient(90deg, #1b2b30, #142126); box-shadow: 0 6px 18px #0006; }
 #playback-pacing[data-kind="incoming"] { --reading-accent: #d98b6f; }
@@ -876,18 +888,25 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 #playback-next[aria-disabled="true"] { opacity: .45; cursor: default; }
 #playback-skip { min-height: 44px; padding: 8px 12px; border: 1px solid #607568; border-radius: var(--radius-soft); background: transparent; color: #c4d0c7; font-size: 12px; white-space: nowrap; }
 @media (max-width: 619px) {
-  #playback-pacing { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px 12px 10px 14px; }
+  /* One layout for every card on a phone, its buttons stacked at its side and its words from its top: a card that
+     changed from buttons under to buttons beside moved the dock at the round's end (#999). */
+  #playback-pacing { flex-direction: row; align-items: center; gap: 8px; padding: 10px 12px 10px 14px; }
+  #playback-pacing > .reading-text { align-self: flex-start; }
   #reading-title { font-size: 17px; }
   #reading-detail { font-size: 12px; }
-  .reading-buttons { gap: 8px; }
-  #playback-next, #order-continue { flex: 1; min-height: 46px; }
+  .reading-buttons { flex-direction: column; align-items: stretch; gap: 6px; min-width: 88px; }
+  #playback-next, #order-continue { flex: none; min-width: 88px; min-height: 46px; padding: 6px 14px; }
 }
+/* A tall phone's dock has room for a third line beside the buttons, which the words lost to their side (#999). */
+@media (max-width: 619px) and (min-height: 651px) { #reading-detail:not(:has(.reading-group)) { -webkit-line-clamp: 3; line-clamp: 3; } }
 /* A result read target by target needs the card's height for its lines: on a phone its OK (and Skip) stand at
    its side, stacked, instead of under it, so three targets fit in the dock's fixed row. At 320 px a wide sans
    (DejaVu, Ubuntu's default) breaks each target's name onto a second line: the cap leaves room for three of
    those, 104 px as on a wider screen, and only a result on more creatures than a team scrolls. */
 @media (max-width: 619px) {
   #playback-pacing:has(.reading-group) { flex-direction: row; align-items: center; gap: 8px; }
+  /* Its words start at the card's top, as above its buttons: centred, they moved as the card changed layout (#999). */
+  #playback-pacing:has(.reading-group) > .reading-text { align-self: flex-start; }
   #playback-pacing:has(.reading-group) .reading-buttons { flex-direction: column; align-items: stretch; gap: 6px; }
   #playback-pacing:has(.reading-group) :is(#playback-next, #order-continue) { flex: none; min-width: 72px; padding: 6px 12px; }
   #playback-pacing:has(.reading-group) #playback-skip { padding: 6px 8px; font-size: 11px; }
@@ -897,6 +916,7 @@ body:has(#upkeep-dialog[open]) #battle { background: var(--paper); }
 }
 @media (max-height: 520px) and (min-width: 620px), (max-height: 650px) and (max-width: 619px) {
   #playback-pacing { flex-direction: row; align-items: center; padding: 6px 10px; gap: 10px; }
+  #playback-pacing > .reading-text { align-self: flex-start; }
   #reading-kind { font-size: 9px; } #reading-title { font-size: 15px; margin-top: 1px; } #reading-detail { font-size: 11px; margin-top: 1px; }
   #playback-next, #order-continue { flex: none; min-width: 88px; min-height: 44px; padding: 6px 14px; }
 }
@@ -1029,6 +1049,11 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
   box-shadow: 0 10px 28px #0008; pointer-events: none; text-align: center;
 }
 #round-toast[hidden] { display: none; }
+/* Under 620 px wide the toast is not drawn: it covered the upper captions (#1000). Its status still says the round,
+   unseen, and the bar's number says it in sight. */
+@media (max-width: 619px) {
+  #battle #round-toast { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; animation: none; }
+}
 #round-toast .eyebrow { margin: 0; font-size: 10px; letter-spacing: .2em; color: var(--muted); }
 #round-toast strong { font: 26px var(--font-display); color: #f1d7a2; letter-spacing: .04em; }
 @media (prefers-reduced-motion: no-preference) {
@@ -1238,19 +1263,20 @@ body:has(#planning-dialog:is([data-kind="Evolution"],[data-kind="Speed"],[data-k
 .opponent-badge { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: 999px; background: color-mix(in srgb, var(--soot) 80%, transparent); color: var(--ink); font: 800 10px/1.5 system-ui, sans-serif; }
 .opponent-badge[hidden], .opponent-heart[hidden] { display: none; }
 .opponent-chip[data-kind="bot"] .opponent-badge { border-color: var(--muted); color: var(--ink); }
-.opponent-heart { flex: none; color: var(--gold); font-size: 15px; line-height: 1; text-shadow: 0 0 6px color-mix(in srgb, var(--gold) 40%, transparent); }
+/* A friend is said in a word (#1000): the set's heart is health, and health is not friendship. */
+.opponent-heart { flex: none; padding: 1px 7px; border: 1px solid var(--gold); border-radius: var(--radius-sharp); background: color-mix(in srgb, var(--soot) 80%, transparent); color: var(--gold); font: 800 .6875rem/1.4 system-ui, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
 @container hud (max-width: 760px) {
   .opponent-chip { gap: 6px; margin-left: 10px; padding-right: 10px; }
   #opponent-name { max-width: 110px; font-size: 14px; }
 }
 @container hud (max-width: 560px) {
-  /* The medallion alone, the rank pinned under it and the heart on its shoulder. */
+  /* The medallion alone, the rank pinned under it and Friend over it. */
   .opponent-chip { justify-content: center; gap: 0; min-width: 44px; min-height: 44px; margin-left: 6px; padding: 0; border: 0; background: none; }
   .opponent-chip:hover { background: none; }
   .opponent-text { display: none; }
   .opponent-avatar { width: 30px; height: 30px; font-size: 14px; }
   .opponent-badge { position: absolute; left: 50%; bottom: -3px; transform: translateX(-50%); padding: 0 5px; font-size: 8px; line-height: 1.4; white-space: nowrap; }
-  .opponent-heart { position: absolute; top: 1px; right: -1px; font-size: 12px; }
+  .opponent-heart { position: absolute; left: 50%; top: 0; transform: translateX(-50%); padding: 0 4px; line-height: 1.3; white-space: nowrap; }
 }
 @container hud (max-width: 340px) {
   /* The smallest phones keep the round's number whole; the phase is still named in the command dock below. */
@@ -1374,6 +1400,9 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
 #battle #perspective { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #battle .actor-summary > div { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; min-width: 0; }
 #battle .actor-summary h1 { margin: 0; font: 21px var(--font-display); color: var(--ink); }
+/* The first frame names nothing (#984): the heading keeps its line, its one word unseen ("Match", for a screen
+   reader), until the game or the board names it. */
+#battle .actor-summary h1:has(> .unseen:only-child) { min-height: 1lh; }
 #battle #actor-meta { margin: 0; padding: 3px 10px; border: 1px solid #c7a96b66; border-radius: var(--radius-sharp); color: var(--gold); font-size: 11px; font-weight: 600; letter-spacing: .4px; }
 #battle #actor-meta:empty { display: none; }
 #battle[data-connection="live"] .actor-summary > div::before {
@@ -1408,6 +1437,7 @@ body:has(#combat-dialog[open]) #battle :is(.command-dock, #playback-pacing, foot
   background: radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 60%); }
 #match-dialog .match-header > div { flex: 1; min-width: 0; }
 #match-dialog .match-header h2 { font: clamp(30px, 7vw, 42px)/1.05 var(--font-display); color: var(--tone); }
+#match-dialog #match-title:focus { outline: none; }
 #match-dialog .match-header .eyebrow { margin: 0 0 4px; color: color-mix(in srgb, var(--tone) 75%, var(--ink)); letter-spacing: 2px; }
 #match-outcome, #match-blow { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
 #match-blow { margin-top: 2px; }
@@ -1475,7 +1505,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #timeline li > button > .timeline-rank[data-tempo="Quick"] { background: #eac88e; }
 #timeline li[data-state="Completed"] > button > .timeline-rank { background: transparent; color: #b8c9bd; box-shadow: inset 0 0 0 1.5px #b8c9bd88; }
 #battle #timeline li { display: flex; align-items: center; }
-#battle #timeline li + li::before { content: '›'; flex: none; padding: 0 2px; color: #b8c9bd88; font-size: 16px; }
+/* Between two entries, the set's next (#1000), in the separator's quiet colour. */
+#battle #timeline li + li::before { content: ''; flex: none; align-self: center; width: 12px; height: 12px; margin: 0 2px; background: #b8c9bd88;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M9.5 5l7 7-7 7'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M9.5 5l7 7-7 7'/%3E%3C/svg%3E") center / contain no-repeat; }
 
 /* The order sheet reads like the other sheets: an eyebrow over the round, each tempo band a chip, each creature a card
    with its place as the tempo's badge, its state as a chip, its facts as chips and its d20 roll in gold. */
@@ -2091,6 +2124,14 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* "TUTORIAL 1 OF 4" on two lines at 11 px, for a member at every width: its column is as wide as its longest word. */
 .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { width: min-content; letter-spacing: 0; }
 
+/* The opponent's label at 568 px tall too (#1000): it names the opponent when the bar folds its chip to the medallion.
+   The lab hides both labels under 650 px tall. YOUR TEAM stays hidden there: mid-field, it lay under the tempo badges
+   and the upkeep's chips. The opponent's yields to the chips over the creatures' heads, which reach the field's top. */
+@media (max-height: 650px) and (max-width: 619px) {
+  #battle .team-label.enemy { display: block; }
+  #battle:has(.creature-effect:not([hidden])) .team-label.enemy { visibility: hidden; }
+}
+
 /* The round's bar under 360 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
    drawn on the menu's button, and History leaves it, so the round, the opponent, Help and Settings keep their own
    place and nothing covers them. */
@@ -2104,6 +2145,11 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
   .battle-page[data-home="member"] #battle .hud-top { padding-right: 96px; }
   /* History leaves the bar too (the owner's choice): Help's window, the upkeep and the sheets still open it. */
   .battle-page[data-home="member"] #battle #history-open { display: none; }
+  /* Its unread mark goes to Help, whose window opens History (#1000). */
+  .battle-page[data-home="member"] #battle #help-open { position: relative; }
+  .battle-page[data-home="member"] #battle:has(#history-unread[data-count]:not([data-count=""])) #help-open::after {
+    content: ''; position: absolute; top: 6px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px #142126;
+  }
 }
 
 /* Docked, a caption keeps the creature's name, its health and its defense: two rows of captions over a sheet at
@@ -2128,8 +2174,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 }
 /* Docked, only the creature the sheet holds keeps its tag (the opponent's label stays: it names the opponent
    when the bar folds its chip to the medallion): the others' TEMPO ? and
-   MUTATE are the sheet's tabs, and an ACTING over the row above covered its health at 320 px. */
-#battle[data-docked="true"] .creature:not([data-sheet-focus="true"], [data-mutation-recipient="true"]) .creature-tag { display: none; }
+   MUTATE are the sheet's tabs (on the tree, only the creature it holds keeps ◇ MUTATE, #1000), and an ACTING over the row above covered its health at 320 px. */
+#battle[data-docked="true"] .creature:not([data-sheet-focus="true"], [data-mutation-focus="true"]) .creature-tag { display: none; }
 /* Under 360 px a creature's outcome stays in its own room: above its head it landed on the caption of the row above. */
 @media (max-width: 359px) { #battle .creature > .creature-effect { transform: translateY(-35%); } }
 

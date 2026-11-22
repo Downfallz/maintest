@@ -126,6 +126,11 @@ test('inspection selects the opponent and reveals its progress only after public
 test('a reveal reads as one line and crests on the field, opens on cards by side, and each card leads to its path', async ({ page }, info) => {
   const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); await h.publish();
   await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1 · Round 3');
+  // A part that arrives by itself (#1077, docs/art/ux-craft.md): it enters by the kit's arrival, and its line is
+  // read whole at 320 px, where it was cut to "You 1 · Oppone…".
+  await expect(page.locator('#growth-receipt')).toHaveClass(/motion-arrive/);
+  expect(await page.locator('#growth-receipt-summary').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
   await expect(page.locator('#growth-announcement')).toHaveText(/First, your team: Predator, Stage 1, new Devour\. Rival, opponent: Brute, Stage 1\./);
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', '1 3');
   await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');

@@ -76,7 +76,8 @@ What holds for every screen of the journey:
   against Rook") to the battle page through the tab's session storage, keyed by the table and the seat tokens, read
   once. The battle page names the game in its headline (`#actor-name`) and says "Opening the game…" as its
   instruction (`#instruction`) until the board arrives, from the start of the seats' discovery; the frame the
-  page paints before its script runs still says Battle view (under **Left**). The cue is stale after a minute, and
+  page paints before its script runs names nothing (#984, the owner's choice), so the game's line reads as an
+  arrival. The cue is stale after a minute, and
   a page brought back from the back-forward cache gives the action back. Session storage, not the address: a link
   shared or kept would carry a round that is no longer true.
 - **One filled action a screen.** Every other action of the home is quiet (an outline): a game card's Resume game,

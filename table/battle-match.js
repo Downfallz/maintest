@@ -85,7 +85,7 @@ export function createBattleMatch({ connection, onChange }) {
   let latest = null, catalogue = null, seat = null, entries = [], actions = [], index = -1, stage = 'before';
   let generation = 0, busy = false, error = '', cached = null, conceded = false;
   // The battle report of a finished match (scoreboard.js), read once off the seat's whole feed: a replay's view
-  // carries it already, a live seat asks for it the way the replay does.
+  // carries it already, a live seat asks for it the way the replay does. The blow is the live feed's.
   let report = null, blow = null, reporting = false;
   // The replay reads the seat's whole feed again; its reveals say when each creature bought what it shows.
   const purchases = purchaseLog();
@@ -94,7 +94,12 @@ export function createBattleMatch({ connection, onChange }) {
   function receive(view, cards) {
     latest = view; catalogue = cards;
     if (!view) { reset(seat); return; }
-    entries = retainRoundEvents(entries, view.feed, view.board?.roundNumber); emit();
+    entries = retainRoundEvents(entries, view.feed, view.board?.roundNumber);
+    // The blow that ended it, carried into the verdict (UX12b), from the live feed, which holds the match's last
+    // round (#1073): the line is written before the result opens. Only a match won by the last team standing has one.
+    blow = view.over && view.outcome?.reason === 'Elimination'
+      ? finalBlow(entries, view.board, new Map((cards?.cards ?? []).map(card => [card.id, card]))) : null;
+    emit();
     if (view.over && !report && !reporting) void readReport(view);
   }
   async function readReport(view) {
@@ -105,9 +110,6 @@ export function createBattleMatch({ connection, onChange }) {
       const whole = view.replay ? view : answer?.ok ? answer.body : null;
       if (context !== generation || !whole?.over) return;
       report = matchScoreboard(whole.feed ?? [], whole.board ?? view.board, packagesOf(catalogue));
-      // The blow that ended it, carried into the verdict (UX12b): only a match won by the last team standing has one.
-      blow = whole.outcome?.reason === 'Elimination' || view.outcome?.reason === 'Elimination'
-        ? finalBlow(whole.feed ?? [], whole.board ?? view.board, new Map((catalogue?.cards ?? []).map(card => [card.id, card]))) : null;
       emit();
     } catch { /* The result stands without its report; the next view that is over asks again. */ }
     finally { if (context === generation) reporting = false; }
