@@ -21,6 +21,7 @@ import { pathToFileURL } from 'node:url';
 import { JOURNEYS } from './journeys.mjs';
 import { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage, measuresLines, watchShiftInPage } from './measures.mjs';
 import { PAINT_RUNS, paints } from './paint.mjs';
+import { measureContrast } from './contrast.mjs';
 import { installSeatViews } from '../../studio/browser/seat-views.js';
 import { buildShowcase, missing, raiseSet, root } from './set.mjs';
 
@@ -140,6 +141,9 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
           shots = await film(on, () => filmed.act({ ...walk, page: on }), { frames, interval });
           throw STOP;
         }
+        // Words on a painting hold 4.5:1 against its lightest pixel under them (contrast.mjs): on every screen that lays some.
+        const contrast = await measureContrast(on);
+        if (contrast) measures.contrast = contrast;
         if (axe) {
           await on.evaluate(axe);
           measures.axe = await on.evaluate(axeInPage, AXE_TAGS);

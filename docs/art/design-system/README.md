@@ -73,6 +73,10 @@ Downfall Instinct is a two-player tactical board game played online at a shared 
 - `notification-badge.svg` is the white silhouette Android masks into the status bar.
 - The interface has one icon set (`icons.js` of the table, ADR 0198): twenty drawings in strokes of 1.75 on a grid of 24, square ends, mitred corners, no fill, in `currentColor` at 1.25em. An icon sits beside a label or inside a control that has a name. It never replaces the words of an action, and a screen reader skips it.
 - A painting on a page is an `<img>` with its width and height, sent at the size it is drawn, at one and at two times the density. A picture that moves breathes, or is a strip of frames stepped by `translate`; both are ambience and are still under less motion.
+- A scene, a painting of the library in the table, takes one of three forms (`sceneElement` of `picture.js`). Words on a head or a ground hold 4.5:1 against the lightest pixel under them.
+  - **Head**: a 3:1 band, at most 120px tall (64px on a screen under 600px tall), behind a window's eyebrow and title. The words sit on the band's darker side, over a scrim to `soot`.
+  - **Ground**: a card's painting, dimmed under `soot`. It is not drawn under less data.
+  - **Plate**: the painting whole, with its words under it in `muted`.
 
 ## Where it applies
 
