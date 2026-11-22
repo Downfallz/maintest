@@ -32,7 +32,9 @@ export function windowFamily(frame: Record<string, string[]>) {
     }
   });
   function topModal() {
-    for (let at = opened.length - 1; at >= 0; at--) if (opened[at].open && opened[at].matches(':modal')) return opened[at];
+    for (let at = opened.length - 1; at >= 0; at--) {
+      if (opened[at].open && opened[at].matches(':modal')) return opened[at];
+    }
     return null;
   }
 
@@ -63,7 +65,10 @@ export function windowFamily(frame: Record<string, string[]>) {
       if (!nowhere && usable(active) && !dialog.contains(active)) return;
       // Another window opened as this one closed (Settings hands over to Concede), or stays under it: it holds the focus.
       const above = topModal();
-      if (above && above !== dialog) { if (!above.contains(active)) focusables(above)[0]?.focus({ preventScroll: true }); return; }
+      if (above && above !== dialog) {
+        if (!above.contains(active)) focusables(above)[0]?.focus({ preventScroll: true });
+        return;
+      }
       const to = (frame[dialog.id] ?? []).map(selector => document.querySelector(selector)).find(usable);
       to?.focus({ preventScroll: true });
     });
