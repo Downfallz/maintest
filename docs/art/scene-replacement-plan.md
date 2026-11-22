@@ -21,7 +21,9 @@ A new battle or a seat waiting before play begins uses the mist duel. Round 10 a
 
 **Approved painting (09, revision 3).** The Deathstalker leaps toward the Ethereal as the arch collapses. Mist veils the three fragments of the sun. Amber light rises from the chasm beneath the duel.
 
-**Implementation check for PR 2.** On a portrait phone, open a featured game at rounds 5, 6 and 10. Confirm the actual painting is visible above the action on both players' turns, including the reported round 6 game against a bot.
+**Landscape companion (09).** The same duel has a dedicated wide composition for landscape screens. The landscape source awaits owner review. From round 6, select the source by orientation on either player's turn.
+
+**Implementation check for PR 2.** In portrait and landscape, open a featured game at rounds 5, 6 and 10. Rotate the phone with round 6 on screen and check that the matching composition loads. Confirm the actual painting is visible above the action on both players' turns, including the reported round 6 game against a bot.
 
 ## Final selections
 
