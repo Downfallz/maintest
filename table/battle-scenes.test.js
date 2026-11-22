@@ -10,13 +10,13 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 const families = new Set(Object.values(JSON.parse(read('data/presentation/mutation-art.json'))).map(visual => visual.family));
 const scenes = [TREE_HEAD, RESULT_HEAD, ...Object.values(FAMILY_HEADS)];
 
-test('the tree opens on the moult, each family column on its scene, and the result on the ground after Crushing Stomp', () => {
-  assert.equal(TREE_HEAD.name, 'brute-moult');
+test('the tree opens on the three trails, each family column on its scene, and the result on the ground after Crushing Stomp', () => {
+  assert.equal(TREE_HEAD.name, 'three-trails-in-ash');
   assert.equal(RESULT_HEAD.name, 'crushing-stomp-aftermath');
   assert.deepEqual(Object.fromEntries(Object.entries(FAMILY_HEADS).map(([family, { name }]) => [family, name])),
-    { brute: 'ironhide-scar', predator: 'blightweaver-pressure-sac', warped: 'warped-listening' });
+    { brute: 'ironhide-scar', predator: 'blightweaver-pressure-sac', warped: 'cataclysm-eye' });
   assert.deepEqual([...families].sort((a, b) => a.localeCompare(b)), Object.keys(FAMILY_HEADS).sort((a, b) => a.localeCompare(b)), 'a family the data names has its head');
-  // The words sit on the darker side: the moult's shell and print lie right, the stomp's slab and marks left.
+  // The words sit on the darker side: the trails part to the right, the stomp's slab and marks lie left.
   assert.equal(TREE_HEAD.side, 'start');
   assert.equal(RESULT_HEAD.side, 'end');
 });

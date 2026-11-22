@@ -302,7 +302,7 @@ test('inviting a friend leaves the friends window and selects that friend in the
   const heading = page.locator('#create-table > .dialog-heading');
   await expect(heading).toHaveClass(/scene-head/);
   await expect(heading).toHaveAttribute('data-side', 'start');
-  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-y', '75');
+  await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-y', '50');
   await expect(heading.locator('img[data-scene]')).toHaveAttribute('alt', '');
   await expect(page.getByRole('dialog', { name: 'Create a table' })).toBeVisible();
   await closeInTheFarCorner(page, heading, '#create-close');
@@ -866,11 +866,11 @@ test('your games are grouped against players and against bots, at most five of e
   await expect(bots.locator('.mine-group-head .lobby-count')).toHaveText('5 / 5'); await expect(bots.locator('.mine-limit')).toBeVisible();
   await expect(page.locator('#ongoing-count')).toHaveText('· 6'); await expect(page.locator('#finished-count')).toHaveText('· 9');
   expect(state.finishedReads.sort()).toEqual(['bots/1', 'players/1']);
-  // The game that waits on the other player lays its words on the Warped listening (S8); a bot's game, whose round a
-  // bot answers at once, and the turn on show keep their slate.
+  // The game that waits on the other player lays its words on the waiting ripples (replacement plan, 10); a bot's
+  // game, whose round a bot answers at once, and the turn on show keep their slate.
   const listening = players.locator('.game-card');
   await expect(listening).toHaveClass(/scene-ground/);
-  await expect(listening.locator('img[data-scene]')).toHaveAttribute('src', /warped-listening-/);
+  await expect(listening.locator('img[data-scene]')).toHaveAttribute('src', /waiting-ripples-/);
   await expect(listening.locator('img[data-scene]')).toHaveAttribute('loading', 'lazy');
   await expect(listening.locator('img[data-scene]')).toHaveAttribute('alt', '');
   await expect(listening.locator('.scene-words').first()).toContainText('3v3 battle');
@@ -889,9 +889,9 @@ test('your games are grouped against players and against bots, at most five of e
   await expect(players.locator('.casual-tag.ranked')).toHaveText('Ranked');
   await expect(bots.locator('.game-row').first().locator('.casual-tag')).toHaveText('Unranked');
   await expect(bots.locator('.lobby-pages span')).toHaveText('Page 1 of 2');
-  // The game that ended last, against bastien on the 7th, alone stands on the stomp's aftermath (S8).
+  // The game that ended last, against bastien on the 7th, alone stands on the stomp's marks hours later (11).
   await expect(players.locator('.game-row')).toHaveClass(/scene-ground/);
-  await expect(players.locator('.game-row img[data-scene]')).toHaveAttribute('src', /crushing-stomp-aftermath-/);
+  await expect(players.locator('.game-row img[data-scene]')).toHaveAttribute('src', /after-the-impact-/);
   await expect(page.locator('#my-tables .game-row.scene')).toHaveCount(1);
   await page.locator('#my-games-section').screenshot({ path: info.outputPath('lobby-finished.png') });
   await bots.getByRole('button', { name: 'Next →' }).click();
@@ -1656,7 +1656,8 @@ for (const [width, height, density, file] of [[390, 844, 2, 950], [400, 900, 1, 
 }
 
 // At phone density the selected file must fill the actual cover, and rotating must switch the painting in place.
-for (const [ground, round] of [['eclipse', null], ['breach', 6], ['sky', 10]]) {
+// Each row: the state, its round, the portrait and its largest file, the landscape.
+for (const [ground, round, portraitName, largest, landscapeName] of [['eclipse', null, 'home-ground-eclipse', 841, 'battlefield-eclipse'], ['rupture at round 6', 6, 'great-rupture', 941, 'great-rupture-landscape'], ['rupture at round 10', 10, 'great-rupture', 941, 'great-rupture-landscape']]) {
   test(`the featured ${ground} uses its full-screen portrait and switches to the landscape`, async ({ browser }, info) => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
     const page = await context.newPage(), asked = [];
@@ -1669,7 +1670,7 @@ for (const [ground, round] of [['eclipse', null], ['breach', 6], ['sky', 10]]) {
     await home(page, { games, tutorials: series('skipped', 'new') });
     const painting = page.locator('#featured img.featured-ground');
     const selected = () => painting.evaluate(img => img.complete && img.naturalWidth > 0 ? img.currentSrc : '');
-    await expect.poll(selected).toContain(`/home-ground-${ground}-`);
+    await expect.poll(selected).toMatch(new RegExp(`/${portraitName}-\\d+\\.`));
     // The width the painting is drawn at to cover its box, at the screen's density, against the file's width.
     const covered = async () => {
       const cover = await painting.evaluate(img => {
@@ -1679,19 +1680,19 @@ for (const [ground, round] of [['eclipse', null], ['breach', 6], ['sky', 10]]) {
       return { cover, file: Number(/-(\d+)\./.exec(await selected())[1]) };
     };
     const portrait = await covered();
-    expect(portrait.file).toBeGreaterThanOrEqual(portrait.cover - 1);
-    expect(asked.some(name => name.startsWith(`battlefield-${ground}-`))).toBe(false);
+    expect(portrait.file).toBeGreaterThanOrEqual(Math.min(portrait.cover - 1, largest));
+    expect(asked.some(name => name.startsWith(`${landscapeName}-`))).toBe(false);
     await expect(page.locator('#featured-action')).toBeInViewport();
-    await page.screenshot({ path: info.outputPath(`lobby-${ground}-portrait.jpg`), type: 'jpeg', quality: 90 });
+    await page.screenshot({ path: info.outputPath(`lobby-${portraitName}-${round ?? 0}-portrait.jpg`), type: 'jpeg', quality: 90 });
     await page.setViewportSize({ width: 740, height: 390 });
-    await expect.poll(selected).toContain(`/battlefield-${ground}-`);
+    await expect.poll(selected).toContain(`/${landscapeName}-`);
     await expect.poll(() => painting.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
-    // The landscape's sizes send what covers the rotated box, or its largest file (1672 px) where none can: the sky.
+    // The landscape's sizes send what covers the rotated box, or its largest file (1672 px) where none can.
     const landscape = await covered();
     expect(landscape.file).toBeGreaterThanOrEqual(Math.min(landscape.cover - 1, 1672));
     // A portrait tablet keeps the portrait: the landscape would be stretched to cover its tall box.
     await page.setViewportSize({ width: 768, height: 1024 });
-    await expect.poll(selected).toContain(`/home-ground-${ground}-`);
+    await expect.poll(selected).toMatch(new RegExp(`/${portraitName}-\\d+\\.`));
     await context.close();
   });
 }
@@ -1724,12 +1725,12 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   await expect(page.locator('#welcome')).toHaveText('Round 7 against Bastien');
   await expect(page.locator('#featured-status')).toHaveText("Bastien's turn");
   await expect(action).toHaveText('Open the game →');
-  // While it waits on Bastien it stands on the Warped listening, not on its round's ground (S8); its card below keeps
-  // its slate, since the featured space already shows it.
-  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /warped-listening-/);
+  // While it waits on Bastien it stands on its round's ground, the Great Rupture from round 6 on either player's turn
+  // (docs/art/scene-replacement-plan.md); its card below lays its words on the waiting ripples.
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /great-rupture-/);
   await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('alt', '');
   await expect(page.locator('.mine-group.players .game-card')).toHaveCount(1);
-  await expect(page.locator('.mine-group.players .game-card.scene')).toHaveCount(0);
+  await expect(page.locator('.mine-group.players .game-card.scene img[data-scene]')).toHaveAttribute('src', /waiting-ripples-/);
   await action.focus();
   const before = await action.boundingBox();
 
@@ -1742,8 +1743,8 @@ test('a game waiting on the other player is featured, and when its turn arrives 
   await expect(action).toHaveText('Play your turn →');
   await expect(action).toBeFocused();
   expect(await action.boundingBox()).toEqual(before);
-  // Its turn: round 7 is played on the breach, as the battle lays its plates.
-  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /home-ground-breach-/);
+  // Its turn: round 7 stays on the Great Rupture.
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /great-rupture-/);
   await expect(filledOnTheHome(page)).toHaveCount(1);
   await page.screenshot({ path: info.outputPath('lobby-featured-turn.png') });
 
@@ -1771,9 +1772,9 @@ test('a featured game stays featured while several turns are the player\'s, and 
   // The static server serves the kit's files under /table/: each is answered from the folder, the ground held back.
   await page.route('**/page-art/*', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
-    // The breach, a later round's ground, drawn once the lists are read: the eclipse before it is not held, or the
+    // The Great Rupture, a later round's ground, drawn once the lists are read: the duel before it is not held, or the
     // page would never finish loading.
-    if (/^(home-ground|battlefield)-breach-/.test(name)) await held;
+    if (/^great-rupture-/.test(name)) await held;
     await route.fulfill({ path: fileURLToPath(new URL(`../../table/page-art/${name}`, import.meta.url)), contentType: 'image/webp' });
   });
   const game = (id, round) => ({ table: { ...battle, id, round }, seats: [{ seat: 'player1', token: `${id}-token` }] });
@@ -1784,7 +1785,7 @@ test('a featured game stays featured while several turns are the player\'s, and 
   const before = await action.boundingBox();
 
   release();
-  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /home-ground-breach-/);
+  await expect(page.locator('#featured img.featured-ground')).toHaveAttribute('src', /great-rupture-/);
   await expect.poll(() => page.locator('#featured img.featured-ground').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
   expect(await action.boundingBox()).toEqual(before);
   // The host lists them the other way round: the one on show stays.

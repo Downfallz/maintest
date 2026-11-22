@@ -78,7 +78,7 @@ export function loadGoogle(doc, win = globalThis) {
  * The scene a sign out's confirmation wears as its head (docs/art/journeys/doors.md, Sign out, the confirmation): the
  * Predator at rest, its head and the ember on its shoulder kept in view, the title on the dark hall at its start.
  */
-export const SIGN_OUT_HEAD = { name: 'predator-at-rest', form: 'head', side: 'start', focus: '70% 45%', sizes: '(min-width: 512px) 480px, calc(100vw - 32px)' };
+export const SIGN_OUT_HEAD = { name: 'eye-still-open', form: 'head', side: 'start', focus: '70% 45%', sizes: '(min-width: 512px) 480px, calc(100vw - 32px)' };
 
 /** What a sign out's confirmation says, on this device or everywhere. The action is the filled one, Stay signed in the way back. */
 export function signOutWords(everywhere) {

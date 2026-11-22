@@ -299,7 +299,7 @@ async function load(doc) {
 if (typeof document !== 'undefined' && document.getElementById('ladder-rows')) {
   focusableScrolls(document);
   // The broken charge: where the fights are counted (docs/art/journeys/pages.md), cut on the flame.
-  wearPageHead(document, 'elemental-charge', { page: 'table/leaderboard' });
+  wearPageHead(document, 'last-one-standing', { page: 'table/leaderboard' });
   // Read when a game ends or begins somewhere (the lobby's public changes, ADR 0164) and when the stream opens --
   // the page loaded, back in view -- rather than on a clock. A ladder moves only when a ranked game ends.
   onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('lobby'))) void load(document); });

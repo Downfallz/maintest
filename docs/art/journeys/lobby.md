@@ -10,23 +10,24 @@ The returning player's first screen now shows the Deathstalker and Ethereal duel
 phone. The two buttons sit over the dark foreground, at the foot of the space; links to Your games and Open seats
 sit below them. With nothing to resume or learn, the eyebrow is `NEW BATTLE · BETA`, the title "Choose your
 opponent" and there is no detail: **Play a bot →** opens the Create window on Solo, and Multiplayer, the quiet
-button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to 5; from round 6 the battle's breach
-and sky take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
+button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to 5; from round 6 the Great Rupture
+takes over, on either player's turn ([the replacement plan](../scene-replacement-plan.md#featured-lobby-painting)),
+and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
 appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint, sent at
 the width it covers: 475 px on a 390 by 844 phone (844 px tall times the painting's 0.5625 width-to-height ratio),
-950 px at 1280 px and wider (#1070). The lesson, rounds 6 to 9 and round 10 onward each have their own portrait
-painting (#1081). On a 390 by 844 phone each is 390 CSS pixels wide and fills the screen; at 2× the browser
+950 px at 1280 px and wider (#1070). The lesson and the Great Rupture each have their own portrait painting
+(#1081). On a 390 by 844 phone each is 390 CSS pixels wide and fills the screen; at 2× the browser
 requests the 841 px WebP. When the screen is wider than it is tall (a phone turned, a desktop), the browser loads
-the existing battlefield landscape instead; a portrait tablet keeps the portrait, which its tall box stretches less
+the landscape instead (the battlefield's eclipse for a lesson, the Rupture's own wide composition from round 6); a
+portrait tablet keeps the portrait, which its tall box stretches less
 than it would the landscape. The 841 px file is the largest there is, so a 3× phone or a portrait tablet draws it
-somewhat stretched. The home's first-paint budget is 288 KiB, and 832 KiB for all its pictures across every state
+somewhat stretched. The Rupture's portrait is 941 px wide, its 2× file that width. The home's first-paint budget is 288 KiB, and 832 KiB for all its pictures across every state
 (`docs/art/page-budget.json`).
 
 | Featured state | Portrait source |
 | --- | --- |
 | Lesson | `docs/art/sources/pages/eclipse-portrait.webp` |
-| Rounds 6 to 9 | `docs/art/sources/pages/breach-portrait.webp` |
-| Round 10 onward | `docs/art/sources/pages/sky-portrait.webp` |
+| From round 6 | `docs/art/sources/pages/replacements/great-rupture.webp` (landscape: `docs/art/sources/pages/replacements/great-rupture-landscape.webp`) |
 
 On a phone, the host notice lies under the header, over the painting's top, so the space keeps its full screen
 (#1072). Where this paragraph and the
@@ -173,8 +174,7 @@ table → opens the Create window on Multiplayer, Play a bot → on Solo.
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
 | The eclipse ground, the field a lesson stands on, the whole featured space on a phone. | 390 by 844 px | Where will I play? | `docs/art/sources/pages/eclipse-portrait.webp` |
-| The breach, from a game's round 6. | 390 by 844 px | How far along is this game? | `docs/art/sources/pages/breach-portrait.webp` |
-| The shattered sky, from a game's round 10. | 390 by 844 px | How far along is this game? | `docs/art/sources/pages/sky-portrait.webp` |
+| The Great Rupture, from a game's round 6, on either player's turn: the Deathstalker leaps at the Ethereal as the arch collapses. | 390 by 844 px | How far along is this game? | `docs/art/sources/pages/replacements/great-rupture.webp` |
 | The base creature, the form a lesson's team starts from, standing on the ground (tutorial 1). | 120 by 80 px | Who do I play? | `table/battle-art/evolutions/base-creature.webp` |
 | A Brute, in place of the base creature when tutorial 2 is the next lesson. | 120 by 80 px | Which lesson is this, before reading? | `table/battle-art/evolutions/brute-base.webp` |
 | Ironhide, when tutorial 3 is next. | 120 by 80 px | What will I grow into? | `table/battle-art/evolutions/brute-stage2-ironhide.webp` |
@@ -439,14 +439,12 @@ announces keeps "Your turn". A number stays with its unit on one line ("2 d", "2
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
 | The eclipse ground, for a game in rounds 1 to 5. | 390 by 150 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
-| The breach, for a game in rounds 6 to 9. | 390 by 150 px | How far along is this game? | `table/battle-art/horizon/breach.webp` |
-| The shattered sky, for a game in round 10 and after. | 390 by 150 px | How far along is this game? | `table/battle-art/horizon/shattered-sky.webp` |
-| The Warped listening, for a featured game that waits on another player (`THEIR TURN`, `YOUR TABLE`), whatever its round. | 390 by 150 px | I am waiting; something listens on the other side. | `docs/art/sources/pages/scenes/warped-listening.webp`, declared as `warped-listening` |
+| The Great Rupture, for a game from round 6, on either player's turn. | 390 by 150 px | How far along is this game? | `docs/art/sources/pages/replacements/great-rupture.webp`, declared as `great-rupture` |
 
 One loads, chosen by the round the host gives (`table.round`), following the plates `battle/src/battle-horizon.ts`
 lays: the field the player will land on. No creature: the lobby lacks a creature's confirmed form, and the ground
-alone stands until a summary the seat may see supplies it. Declared drawn at 390 and 640, the breach and the sky
-lazy, for the home's page as above.
+alone stands until a summary the seat may see supplies it. The [replacement plan](../scene-replacement-plan.md)
+gave the rounds from 6 one painting, the Great Rupture, and ended the Warped listening for a waiting game (S8).
 
 ### States
 
@@ -654,8 +652,8 @@ list keeps its line: "No finished games against players yet."
 ## A game's ground in Your games (`home-ended-ground`, `home-waiting-ground`)
 
 S8 of [the scenes' plan](../scene-paintings-plan.md) gives two of the home's games a scene as their ground: the
-game that ended last stands on the ground Crushing Stomp left, and a game of the player's that waits on someone else
-on the Warped listening at the edge of the dark. The walk scrolls each into view after `home-game-ended`, so its
+game that ended last stands on Crushing Stomp's marks hours later, and a game of the player's that waits on someone
+else on three ripples breaking an arch's reflection ([the replacement plan](../scene-replacement-plan.md), 10 and 11). The walk scrolls each into view after `home-game-ended`, so its
 `contrast` reads the words on them: the finished row on Finished (`home-ended-ground`), then the table that waits
 for a player on Ongoing (`home-waiting-ground`). It then goes back to Finished and the top for `home-turn-arrives`.
 At 320 px the finished row is already in view on `home-game-ended`, so `home-ended-ground` films it again.
@@ -687,8 +685,8 @@ Created Nov 22, 2026 · Finished Nov 22, 2026 · 1 round      [View game →]
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The scene as the ground of the finished game that ended last, dimmed under `--soot`: three marks, a slab shedding dust. | 358 by 119 px | This one is over. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp`, declared as `crushing-stomp-aftermath` |
-| The scene as the ground of a card of the player's game that waits on another player, dimmed under `--soot`: the Warped leans over dark water. | 358 by 182 px | I am waiting; something listens on the other side. | `docs/art/sources/pages/scenes/warped-listening.webp`, declared as `warped-listening` |
+| The scene as the ground of the finished game that ended last, dimmed under `--soot`: the stomp's three marks hours later, water in the cuts. | 358 by 119 px | This one is over. | `docs/art/sources/pages/replacements/after-the-impact.webp`, declared as `after-the-impact` |
+| The scene as the ground of a card of the player's game that waits on another player, dimmed under `--soot`: three ripples break an arch's reflection. | 358 by 182 px | I am waiting; something stirs on the other side. | `docs/art/sources/pages/replacements/waiting-ripples.webp`, declared as `waiting-ripples` |
 
 A game waits on another when the player against it is asked to play, or when its seat is not yet taken
 (`waitsOnAnother` in `table/lobby.js`). A round being played, where nobody is asked, waits on no one, and a game

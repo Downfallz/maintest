@@ -15,8 +15,8 @@ const lesson = (order, { done = false, skipped = false } = {}) => ({ id: `t${ord
   done, skipped, next: false, tag: done ? 'Done' : skipped ? 'Skipped' : 'New', action: done ? 'Play again' : 'Play', link: `/battle?scenario=t${order}`, picture: ['lesson-base', 'lesson-brute', 'lesson-ironhide', 'lesson-colossus'][order - 1] });
 const series = (...states) => states.map((state, index) => lesson(index + 1, { done: state === 'done', skipped: state === 'skipped' }));
 
-test('the ground follows the round, as the battle lays its plates: the duel, then the breach from round 6, the sky from round 10', () => {
-  assert.deepEqual([1, 5, 6, 9, 10, 14, undefined].map(groundOf), ['mist-duel', 'mist-duel', 'home-ground-breach', 'home-ground-breach', 'home-ground-sky', 'home-ground-sky', 'mist-duel']);
+test('the ground follows the round: the duel to round 5, then the Great Rupture from round 6 (docs/art/scene-replacement-plan.md)', () => {
+  assert.deepEqual([1, 5, 6, 9, 10, 14, undefined].map(groundOf), ['mist-duel', 'mist-duel', 'great-rupture', 'great-rupture', 'great-rupture', 'great-rupture', 'mist-duel']);
 });
 
 test('a game whose turn is the player\'s is featured first, a bot\'s included, before one waiting on someone else and before a lesson', () => {
@@ -81,7 +81,7 @@ test('a game\'s featured view names the round and whom it is against, whose turn
   assert.equal(view.detail, '2 casts since your last visit');
   assert.equal(view.action, 'Play your turn →');
   assert.equal(view.label, 'Play your turn: round 7 against Rook');
-  assert.equal(view.ground, 'home-ground-breach');
+  assert.equal(view.ground, 'great-rupture');
   assert.equal(view.creature, null);
   assert.equal(view.id, 'g');
 });
@@ -103,12 +103,13 @@ test('a game waiting on someone else says whom, and opens the game', () => {
   assert.equal(view.action, 'Open the game →');
 });
 
-test('a game waiting on another player stands on the Warped listening, whatever its round; a bot\'s round in play keeps the ground by round', () => {
-  assert.equal(featuredView({ kind: 'waiting', entry: game('g', { mine: false, round: 7 }) }).ground, 'warped-listening');
+test('a game stands on its round\'s ground on either player\'s turn, a seat not yet taken on the duel', () => {
+  assert.equal(featuredView({ kind: 'waiting', entry: game('g', { mine: false, round: 7 }) }).ground, 'great-rupture');
   const open = game('o', { against: { seat: 'player2', kind: 'open', name: null }, waiting: true, mine: false });
-  assert.equal(featuredView({ kind: 'waiting', entry: open }).ground, 'warped-listening', 'a seat not yet taken waits too');
-  assert.equal(featuredView({ kind: 'waiting', entry: game('b', { mine: false, against: bot, round: 7 }) }).ground, 'home-ground-breach');
-  assert.equal(featuredView({ kind: 'turn', entry: game('t', { round: 7 }) }).ground, 'home-ground-breach');
+  assert.equal(featuredView({ kind: 'waiting', entry: open }).ground, 'mist-duel', 'a seat not yet taken stands before play begins');
+  assert.equal(featuredView({ kind: 'waiting', entry: game('b', { mine: false, against: bot, round: 7 }) }).ground, 'great-rupture');
+  assert.equal(featuredView({ kind: 'turn', entry: game('t', { round: 7 }) }).ground, 'great-rupture');
+  assert.equal(featuredView({ kind: 'turn', entry: game('f', { round: 5 }) }).ground, 'mist-duel');
 });
 
 test('a bot is named as one, and a table still waiting for a player says so without a round', () => {
@@ -216,7 +217,7 @@ test('a lesson featured after the duel was asked for stands on the eclipse, and 
   assert.equal(doc.ids['new-table'].textContent, '＋ New battle');
 });
 
-test('a portrait ground is a picture whose landscape source is the battlefield, and the duel stays a bare image', () => {
+test('the Great Rupture is a picture whose landscape source is its own wide composition, and the duel stays a bare image', () => {
   const doc = page();
   const featured = mountFeatured(doc, { enter: () => {}, openCreate: () => {}, go: () => {}, session: null, ambience: () => {} });
   featured.playable();
@@ -226,9 +227,9 @@ test('a portrait ground is a picture whose landscape source is the battlefield, 
   const [source, image] = picture.children;
   assert.deepEqual([picture.tag, source.tag, image.tag], ['picture', 'source', 'img']);
   assert.equal(source.attributes.media, LANDSCAPE_MEDIA);
-  assert.match(source.attributes.srcset, /^\/page-art\/battlefield-sky-/);
-  assert.match(source.attributes.sizes, /\* 3\.48/, 'the sky strip\'s ratio comes from its derived file');
-  assert.match(image.attributes.src, /home-ground-sky-/);
+  assert.match(source.attributes.srcset, /^\/page-art\/great-rupture-landscape-/);
+  assert.match(source.attributes.sizes, /\* 1\.77/, 'the landscape\'s ratio comes from its derived file');
+  assert.match(image.attributes.src, /great-rupture-/);
 });
 
 test('the ground is drawn again only when it changes, so a repeated update leaves the picture settled', () => {
@@ -336,7 +337,7 @@ test('a round the host could not read in time keeps the last one known for that 
   const later = game('g'); later.table.round = null;
   featured.setGames([later]);
   assert.equal(doc.ids.welcome.textContent, 'Round 7 against Rook');
-  assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /home-ground-breach-/);
+  assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /great-rupture-/);
 });
 
 test('a cue left unread goes stale within the minute', () => {

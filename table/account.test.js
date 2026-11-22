@@ -59,13 +59,13 @@ test('a sign out is asked with its own words, the action filled and the way back
   assert.deepEqual(signOutWords(true), { title: 'Sign out everywhere?', detail: 'You will need to sign in again on every device.', action: 'Sign out everywhere', keep: 'Stay signed in' });
 });
 
-test('a sign out\'s confirmation wears the Predator at rest as its head, on each page that declares it, its head and ember in view', async () => {
+test('a sign out\'s confirmation wears the eye still open as its head, on each page that declares it, the eye in view', async () => {
   const { SIGN_OUT_HEAD } = await import('./account.js');
   const { HEADER_SCENE_PAGES } = await import('./navigation.js');
   const { PAGE_ART } = await import('./page-art.js');
   assert.deepEqual({ name: SIGN_OUT_HEAD.name, form: SIGN_OUT_HEAD.form, side: SIGN_OUT_HEAD.side, focus: SIGN_OUT_HEAD.focus },
-    { name: 'predator-at-rest', form: 'head', side: 'start', focus: '70% 45%' });
-  for (const page of Object.values(HEADER_SCENE_PAGES)) assert.equal(PAGE_ART['predator-at-rest'].pages[page], 'lazy', page);
+    { name: 'eye-still-open', form: 'head', side: 'start', focus: '70% 45%' });
+  for (const page of Object.values(HEADER_SCENE_PAGES)) assert.equal(PAGE_ART['eye-still-open'].pages[page], 'lazy', page);
 });
 
 test('the tab remembers a sign out once: the next read says goodbye, the one after does not', async () => {
