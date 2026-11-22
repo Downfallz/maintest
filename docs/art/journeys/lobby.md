@@ -410,6 +410,7 @@ announces keeps "Your turn". A number stays with its unit on one line ("2 d", "2
 | The eclipse ground, for a game in rounds 1 to 5. | 390 by 150 px | How far along is this game? | `table/battle-art/eclipse-battle.webp` |
 | The breach, for a game in rounds 6 to 9. | 390 by 150 px | How far along is this game? | `table/battle-art/horizon/breach.webp` |
 | The shattered sky, for a game in round 10 and after. | 390 by 150 px | How far along is this game? | `table/battle-art/horizon/shattered-sky.webp` |
+| The Warped listening, for a featured game that waits on another player (`THEIR TURN`, `YOUR TABLE`), whatever its round. | 390 by 150 px | I am waiting; something listens on the other side. | `docs/art/sources/pages/scenes/warped-listening.webp`, declared as `warped-listening` |
 
 One loads, chosen by the round the host gives (`table.round`), following the plates `battle/src/battle-horizon.ts`
 lays: the field the player will land on. No creature: the lobby lacks a creature's confirmed form, and the ground
@@ -618,6 +619,104 @@ list keeps its line: "No finished games against players yet."
 ### Left
 
 - The walk lands on Finished because it presses it; a player who returns lands on Ongoing.
+
+## A game's ground in Your games (`home-ended-ground`, `home-waiting-ground`)
+
+S8 of [the scenes' plan](../scene-paintings-plan.md) gives two of the home's games a scene as their ground: the
+game that ended last stands on the ground Crushing Stomp left, and a game of the player's that waits on someone else
+on the Warped listening at the edge of the dark. The walk scrolls each into view after `home-game-ended`, so its
+`contrast` reads the words on them: the finished row on Finished (`home-ended-ground`), then the table that waits
+for a player on Ongoing (`home-waiting-ground`). It then goes back to Finished and the top for `home-turn-arrives`.
+
+### Job
+
+The player looks down their games. The one that ended last and the ones that wait on another player are told apart
+from the rest by what they stand on: this one is over; on that one, something on the other side is still deciding.
+The featured space and the list keep their order and their words.
+
+- **Filled action**: Play your turn →, in the featured space, as on `home-game-ended`, out of view here. On the
+  grounds, View game → and Resume game → stay outlines with their own fill.
+
+### Words
+
+- **Order**: as on `home-game-ended`, scrolled: Your games, its tabs, the groups and their rows or cards.
+- **Budget**: 163 words on `home-ended-ground` and 178 on `home-waiting-ground`, at both widths: the walk counts the
+  whole home. No word changes.
+
+```text
+Against bots (1)
+[the stomp's aftermath under soot, the row's whole box]
+3v3 battle  [UNRANKED]  [Defeat]
+vs Hard  [BOT]
+Created Nov 22, 2026 · Finished Nov 22, 2026 · 1 round      [View game →]
+```
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The scene as the ground of the finished game that ended last, dimmed under `--soot`: three marks, a slab shedding dust. | 358 by 119 px | This one is over. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp`, declared as `crushing-stomp-aftermath` |
+| The scene as the ground of a card of the player's game that waits on another player, dimmed under `--soot`: the Warped leans over dark water. | 358 by 182 px | I am waiting; something listens on the other side. | `docs/art/sources/pages/scenes/warped-listening.webp`, declared as `warped-listening` |
+
+A game waits on another when it is against a player and not the player's turn, or when its seat is not yet taken
+(`waitsOnAnother` in `table/lobby.js`). A game against a bot never does: a bot answers at once, and its round in
+play would flicker a painting on and off. The game the featured space shows keeps its slate in the list: it already
+stands on the same painting there (**A turn that waits**). The game that ended last is the first row of the groups
+on their first page, by the time it finished (`latestFinished`); a group turned to an older page offers none. One row
+on a page, not each: a list of six does not repeat one painting six times (the owner's choice, 2026-11-22).
+
+The row and the card are the ground, their whole box: their words sit on the scrim, from 84% to 92% soot, so the
+painting is felt behind them. At 390 the row is about 354 by 119 px, a 3:1 band as the painting, and the card about
+354 by 182 px; at 320 the row is 284 by 134 px and `cover` keeps the middle 75% of the band's width, the three marks
+in it.
+
+### States
+
+- **First paint**: the rows and the cards arrive with the lists, their words on their slate, the painting under them
+  once loaded.
+- **Empty**: no finished game, or none that waits: no ground is drawn.
+- **Loaded**: these screens. Under less data (`Save-Data`) neither ground is drawn and the row or card keeps its
+  slate.
+- **Waiting**: after View game → or Resume game →, the battle opens, as today.
+- **Error**: a read that fails keeps the lists as last read, grounds included. Read, not seen.
+- **Offline**: as on a turn that waits. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The press | A pointer down on View game → or Resume game →. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+The grounds have no beat: each is under its row or card from the first frame, and lazy.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: not moved; the order of focus is the list's, unchanged.
+- **Names**: the paintings are decoration, `alt=""`; the rows and cards keep their headings and their actions'
+  names.
+- **Announced**: nothing.
+- **Targets**: none of 18 and none of 19 under 44 px at either width. axe finds nothing.
+
+### Cost
+
+- **Bytes**: the home's `all` (its budget in `docs/art/page-budget.json`) rises by 41,362 bytes at twice the density
+  on a phone: the Warped at 780 px, 25,278 bytes, for the featured space and the cards, and the aftermath at 716 px,
+  16,084 bytes. From 266 to 308 KiB; its `first` holds. Both lazy.
+- **Largest paint**: unchanged: the featured space's ground, before any scroll.
+- **Shift**: 0.00 at both widths on the walk; the grounds take no room of their own.
+
+### Left
+
+- The finished game's ground follows the rows on show, not the account's history: on an older page of one group, the
+  other group's first row may stand on it though a newer game sits on the page the player turned away from.
+- On the walk the finished row is already in view at 320 px on `home-game-ended`, so `home-ended-ground` films the
+  same screen there.
 
 ## The turn arrives (`home-turn-arrives`)
 

@@ -92,6 +92,28 @@ export function gameKind(table) {
 }
 
 /**
+ * A game of mine that waits on someone else: against a player and not my turn, or its seat not yet taken. A bot's
+ * round in play waits on nobody (a bot answers at once). Such a game stands on the Warped listening
+ * (docs/art/scene-paintings-plan.md, S8).
+ */
+export function waitsOnAnother(entry) {
+  if (!entry || entry.table.over) return false;
+  if (entry.table.waiting || entry.table.openSeats > 0) return true;
+  return gameKind(entry.table) === 'players' && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine !== true;
+}
+
+/**
+ * The finished game that ended last, among the groups on their first page (each lists its most recent first): a group
+ * turned to an older page offers none. It alone stands on the stomp's aftermath: a list does not repeat one painting.
+ */
+export function latestFinished(pages) {
+  const firsts = pages.filter(shown => shown?.page === 1).map(shown => shown.items?.[0]).filter(Boolean);
+  if (!firsts.length) return null;
+  const at = item => (item.finishedAt ? Date.parse(item.finishedAt) : -Infinity);
+  return firsts.reduce((best, item) => (at(item) > at(best) ? item : best)).table;
+}
+
+/**
  * The player's games in progress, by kind: in each, the ones waiting for this player first, the most pressing first as
  * "Your turn" lists them, then the others in the host's order.
  */
@@ -262,6 +284,11 @@ export function challengeRequest(opponent) {
 function statusText(state) {
   return state.recording ? '' : 'This host is not saving games. New tables are unavailable until recording is enabled.';
 }
+
+// The widths a card's and a finished row's ground are drawn at, as table/lobby.css lays Your games: one card a row up
+// to 760 px and two or three above, the rows across the whole column, at most 1280 px.
+const CARD_SIZES = '(min-width: 761px) 50vw, calc(100vw - 36px)';
+const ROW_SIZES = '(min-width: 1344px) 1280px, calc(100vw - 36px)';
 
 export function mountLobby(doc, location, storage, { changes = onLobbyChange, featured = null } = {}) {
   const el = id => doc.getElementById(id);
@@ -453,6 +480,11 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       }
       root.append(ways);
     }
+    // A game of mine that waits on someone else lays its words on the Warped listening, dimmed; the one the featured
+    // space shows already stands on it there.
+    if (waitsOnAnother(entry) && featured?.shown() !== table.id) {
+      wearScene(doc, root, 'warped-listening', { page: 'table/home', form: 'ground', words: Array.from(root.children).filter(child => child.tagName !== 'BUTTON' && !child.classList.contains('card-ways')), sizes: CARD_SIZES });
+    }
     return root;
   }
   // A table waiting for this player (ADR 0129): who asks, and the two answers.
@@ -592,10 +624,15 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     }
     // Created and finished, labelled, since a card carries both: a game against a player can last days (ADR 0169).
     const standing = { true: 'ranked', false: 'unranked' }[String(summary.ranked)];
-    return row({ heading: summary.title, casual: summary.casual, standing, tag: summary.tag, tone: `outcome ${summary.tone}`,
+    const line = row({ heading: summary.title, casual: summary.casual, standing, tag: summary.tag, tone: `outcome ${summary.tone}`,
       sides: [{ name: `vs ${summary.against}`, kind: item.opponent?.kind ?? 'person' }],
       detail: [summary.voided, created && `Created ${created}`, when && `Finished ${when}`, summary.detail].filter(Boolean).join(' · '), action,
       className: `finished ${summary.tone}` });
+    // The game that ended last stands on the ground the stomp left, dimmed behind its words; the others keep their slate.
+    if (item.table && latestFinished(KINDS.map(([kind]) => finished[kind].data)) === item.table) {
+      wearScene(doc, line, 'crushing-stomp-aftermath', { page: 'table/home', form: 'ground', words: Array.from(line.children).filter(child => child !== action), sizes: ROW_SIZES });
+    }
+    return line;
   }
   // A kind's finished games, a page at a time from the host, with that kind's own pages.
   function finishedGroup(kind, label) {

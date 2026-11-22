@@ -1,7 +1,7 @@
 # Plan: the ten scene paintings, from a placement guide to pictures a brief asks for
 
 Status: accepted, 2026-11-21; amended the same day to bring the scenes into the app (the owner settled the
-questions at the end). S1 to S7 are built; S8 is next.
+questions at the end). S1 to S8 are built; S9 is next.
 
 ## What the owner asked for
 
@@ -293,6 +293,20 @@ result in `battle/src` with UX12.
 
 8. **S8, the lobby's games.** The waiting game and the ended game take their ground; the brief's ground by round
    stays for a game in play. Tests: the lobby's specs, the budget, the measures.
+
+   *Built (2026-11-22)*: a game of the player's waits on someone else when it is against a player and not their
+   turn, or its seat is not yet taken (`waitsOnAnother` of `table/lobby.js`); a bot's game never does, since a bot
+   answers at once. Such a game stands on `warped-listening` in both places the owner chose: the featured space draws
+   it in place of the ground by round (`THEIR TURN`, `YOUR TABLE`), and its card in Your games wears it as its ground,
+   except the game the featured space already shows. A turn keeps the ground by round. The finished game that ended
+   last, among the groups on their first page (`latestFinished`), wears `crushing-stomp-aftermath` as its row's ground;
+   the other rows keep their slate (the owner chose one row, not each). Both lazy, not drawn under `Save-Data`.
+   `table/home`'s `all` rose from 266 to 308 KiB (313,570 bytes measured, 41,362 more); its `first` holds. Sharing
+   widths with the home moved the field guide's Warped to the 390 px file, 4,174 bytes more on `showcase/mutations`,
+   inside its budget. The walk gains `home-ended-ground` and `home-waiting-ground`, each ground scrolled into view and
+   briefed in `journeys/lobby.md`; `contrast` reads 7.61:1 at the least, at both widths, axe clean, no target under
+   44 px. Left: the mock server does not serve `page-art/`, so the specs check the boxes and the files named, not the
+   pixels. At 320 px the finished row is already in view on `home-game-ended`, so `home-ended-ground` films it again.
 9. **S9, signing out.** The confirmation's head, the panel's state after a sign out. Tests: `table/account.test.js`,
    `lobby-home.spec.js`, the measures.
 10. **S10, the ladder, the statistics, the rulebook and offline.** Their heads and the offline plate. Tests: the

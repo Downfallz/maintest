@@ -163,7 +163,7 @@ async function friendTakesTheSeat(walk) {
 const lobby = {
   id: 'lobby',
   title: 'The lobby',
-  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended', 'home-turn-arrives'],
+  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended', 'home-ended-ground', 'home-waiting-ground', 'home-turn-arrives'],
   strips: {
     // The turn that arrives: the friend takes the open seat while the walker's home is open, a bot's turn on show.
     'turn-arrives': { at: 'home-game-ended', act: walk => friendTakesTheSeat(walk) },
@@ -222,6 +222,16 @@ const lobby = {
     await home(page, set.game);
     await page.locator('#mine-finished').click();
     await walk.screen('home-game-ended');
+    // In view, so the walk's contrast reads the words on each ground (S8 of docs/art/scene-paintings-plan.md): the game
+    // that ended last on the stomp's aftermath, then the table that waits for a player on the Warped listening.
+    await page.locator('#my-tables .game-row.scene-ground').first().scrollIntoViewIfNeeded({ timeout: 30000 });
+    await walk.screen('home-ended-ground');
+    await page.locator('#mine-ongoing').click();
+    await page.locator('#my-tables .game-card.scene-ground').first().scrollIntoViewIfNeeded({ timeout: 30000 });
+    await walk.screen('home-waiting-ground');
+    // Back as home-game-ended left it: Finished pressed, the featured space in view.
+    await page.locator('#mine-finished').click();
+    await page.evaluate(() => window.scrollTo(0, 0));
     // The friend takes the open seat: a person's turn arrives on the open home, and outranks the bot's on show.
     await friendTakesTheSeat(walk);
     await page.locator('#welcome', { hasText: FRIEND }).waitFor({ timeout: 30000 });
