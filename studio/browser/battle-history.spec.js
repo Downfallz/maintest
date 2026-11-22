@@ -393,3 +393,26 @@ test('a covered question stays unacknowledged while an event is inspected and ea
   await h.publish([], { waitingAsked: 12 }); await page.clock.runFor(200);
   await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+
+// Every control a player taps in the journal holds 44 px (.claude/rules/pages.md, #1029): Summary / All events, a
+// round's All events, a cast line, and the controls of All events with a row opened. The footer stays in reach.
+test('every control of the journal is at least 44 px, and its footer stays in reach', async ({ page }) => {
+  await page.addInitScript(() => localStorage.removeItem('downfall.battle.history-view.v1'));
+  const h = await mount(page, [{ sequence: 9, event: { kind: 'PurchasesRevealed', roundId: 2, choices: [{ creature: 1, tier: 'root' }, { creature: 4, tier: 'root' }] } },
+    entry(10)]);
+  await page.locator('#history-open').click();
+  await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
+  await expect(page.locator('.summary-mutations li')).toHaveCount(2);
+  const small = () => page.evaluate(() => [...document.querySelectorAll('#history-dialog :is(button, a[href], select, input, summary)')]
+    .filter(one => one.checkVisibility({ visibilityProperty: true }) && !one.closest('[hidden]'))
+    .map(one => [one.getAttribute('aria-label') || one.textContent.trim() || one.id, one.getBoundingClientRect()])
+    .filter(([, box]) => box.width > 1 && (box.height < 44 || box.width < 44)).map(([name, box]) => `${name} ${Math.round(box.width)}×${Math.round(box.height)}`));
+  expect(await small(), 'the summary').toEqual([]);
+  await fitsViewport(page, '#history-close');
+  await page.locator('#history-mode-events').click();
+  await page.locator('#history-filters > summary').click();
+  await page.locator('#history-list details summary').first().click();
+  expect(await small(), 'All events').toEqual([]);
+  await fitsViewport(page, '#history-close');
+  expect(h.state.errors).toEqual([]);
+});

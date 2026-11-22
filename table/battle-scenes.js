@@ -42,7 +42,7 @@ export function wearFamilyHead(doc, head, family, words) {
   if (scene) worn(doc, head, { ...scene, sizes: FAMILY_HEAD_SIZES }, words);
 }
 
-/** The match's result: its header keeps its verdict and its close; the crest gives way to the band. */
+/** The match's result: its header keeps its verdict and its close, and the band heads the verdict. */
 export function wearResultHead(doc) {
   const header = doc.querySelector('#match-dialog > .match-header');
   if (header && !header.classList.contains('scene')) worn(doc, header, RESULT_HEAD, header.querySelector(':scope > div'));

@@ -96,7 +96,7 @@ test('the result opens on the ground the last blow left, the verdict on its dark
   const drawn = await picture.evaluate(image => [image.getBoundingClientRect().width, Number(/-(\d+)\.[0-9a-f]+\.webp$/.exec(image.currentSrc)[1]), devicePixelRatio]);
   expect(drawn[1]).toBeGreaterThanOrEqual(Math.round(drawn[0] * drawn[2] * 0.9));
   expect(drawn[1]).toBeLessThanOrEqual(Math.max(drawn[0] * drawn[2] * 1.25, 620));
-  await expect(header.locator('.match-crest')).toBeHidden(); await expect(page.locator('#match-title')).toHaveText('Victory');
+  await expect(page.locator('.match-crest')).toHaveCount(0); await expect(page.locator('#match-title')).toHaveText('Victory');
   const [close, title] = await Promise.all([page.locator('#match-dialog .match-close').boundingBox(), page.locator('#match-title').boundingBox()]);
   expect(close.x + close.width).toBeLessThanOrEqual(title.x);
   expect(await page.locator('#match-dialog .match-close').evaluate(one => { const box = one.getBoundingClientRect(); return document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) === one; })).toBe(true);

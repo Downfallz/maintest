@@ -1023,7 +1023,9 @@ journal whole from its first frame; the strip after the change is the critique's
   `label-content-name-mismatch` at 390 and 3 at 320: the row's name begins with the visible words.
 - **Announced**: a row added by Latest is said through the journal's region, as today; a picture says nothing.
 - **Targets**: 12 controls; 9 under 44 px at 390 and 7 at 320 (the revealed mutations' chips, a round's All
-  events, Summary and All events); none under 24.
+  events, Summary and All events); none under 24. Since #1029, the Summary and All events buttons, a round's All
+  events button and a cast line are at least 44 px tall, at 320 and 390 (`battle-history.spec.js`). A revealed mutation is a line of
+  text, not a control: it takes no tap.
 
 ### Cost
 
@@ -1039,7 +1041,6 @@ journal whole from its first frame; the strip after the change is the critique's
 - One element animates at rest (`animating` 1 at both widths on UX12's walk, at 390 alone on P6's): the measure
   does not name it. The critique names it; until then it is not counted as the journal's. It is not the window's
   entrance, which ends in `--motion-normal`.
-- The revealed mutations' chips under 44 px (9 at 390, 7 at 320): not part A's; for the targets' pass (UX13).
 - **Shift on UX12's walk**: 0.39 at 390 and 0.11 at 320 on one walk, 0.30 and 0.19 on the other, summed over the
   walk. The window's rise is a `transform` and moves no layout, so it adds nothing to the measure.
 

@@ -137,7 +137,7 @@ const RULES = [
   { matches: (path) => path.startsWith('data/'), calls: () => ({ journeys: anySpec, realEngine: true, release: 'main' }) },
   // The tutorial journey plays the lesson of the tutorial files themselves, and the real-engine journey
   // (battle.tutorials.js) plays each file to its end.
-  { matches: (path) => path.startsWith('scenarios/tutorials/'), calls: () => ({ journeys: (spec) => spec === 'battle-tutorial.spec.js', realEngine: true }) },
+  { matches: (path) => path.startsWith('scenarios/tutorials/'), calls: () => ({ journeys: (spec) => ['battle-tutorial.spec.js', 'battle-windows.spec.js'].includes(spec), realEngine: true }) },
   { matches: (path) => CONSOLE_ONLY.has(path), calls: () => ({}) },
   {
     matches: (path) => path.startsWith('src/') || path.startsWith('tools/') || BUILD_FILES.has(path),

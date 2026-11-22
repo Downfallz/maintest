@@ -1608,3 +1608,57 @@ test('creation waits for the host: a first read that failed leaves Play a bot an
   await page.locator('#featured-action').click();
   await expect(page.locator('#create-dialog')).toHaveJSProperty('open', true);
 });
+
+// The lobby's windows take the match's floor (#1068, the owner's answer of 2026-11-22): no word a window shows under
+// 11 px. The studio, a tool, keeps its sizes.
+const under11 = page => page.evaluate(() => {
+  const found = new Set();
+  for (const dialog of document.querySelectorAll('dialog[open]')) {
+    const walker = document.createTreeWalker(dialog, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const text = walker.currentNode, parent = text.parentElement;
+      if (!text.textContent.trim() || !parent.checkVisibility({ visibilityProperty: true }) || parent.getBoundingClientRect().width <= 1) continue;
+      if (parseFloat(getComputedStyle(parent).fontSize) < 11) found.add(`${dialog.id}: ${text.textContent.trim()}`);
+    }
+  }
+  return [...found];
+});
+test('no word a lobby window shows is under 11 px', async ({ page }) => {
+  // A turn, an invitation and a friend request wait, so the notifications hold one item of each.
+  const state = await home(page, { invitations: [{ table: { id: 'invited', format: '1v1' }, from: { id: friend.id, username: friend.username }, sentAt: '2026-11-09T20:00:00Z' }] });
+  const read = [];
+  const close = async id => { await page.keyboard.press('Escape'); await expect(page.locator(`#${id}`)).toBeHidden(); };
+  for (const [name, id] of [[/^Friends/, 'friends-dialog'], ['Join with a code', 'join-dialog']]) {
+    await openPanel(page, name); await expect(page.locator(`#${id}`)).toBeVisible(); read.push(...await under11(page)); await close(id);
+  }
+  await page.locator('#inbox-open').click(); await expect(page.locator('#inbox-dialog .inbox-item')).toHaveCount(3);
+  read.push(...await under11(page)); await close('inbox-dialog');
+  for (const tab of ['Game', 'Privacy', 'Account']) {
+    const dialog = await openAccountSettings(page, tab); read.push(...await under11(page));
+    await dialog.getByRole('button', { name: 'Close settings' }).click(); await expect(dialog).toBeHidden();
+  }
+  // Deleting the account asks in a window of its own, from Settings, Account; removing a friend and signing out
+  // ask in the confirmation window.
+  await openAccountSettings(page, 'Account'); await page.locator('#delete-account').click();
+  await expect(page.locator('#delete-dialog')).toBeVisible(); read.push(...await under11(page));
+  await page.keyboard.press('Escape'); await expect(page.locator('#delete-dialog')).toBeHidden();
+  if (await page.locator('#app-settings-dialog').isVisible()) await close('app-settings-dialog');
+  await openPanel(page, /^Friends/); await page.locator('#friend-list').getByRole('button', { name: /^Remove / }).first().click();
+  await expect(page.locator('#action-dialog')).toBeVisible(); read.push(...await under11(page));
+  await page.locator('#action-cancel').click(); await expect(page.locator('#action-dialog')).toBeHidden();
+  if (await page.locator('#friends-dialog').isVisible()) await close('friends-dialog');
+  await page.locator('#account-menu summary').click(); await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.locator('#action-dialog')).toBeVisible(); read.push(...await under11(page));
+  await page.locator('#action-cancel').click(); await expect(page.locator('#action-dialog')).toBeHidden();
+  await page.locator('#new-table').click(); await expect(page.locator('#create-dialog')).toBeVisible();
+  read.push(...await under11(page)); await close('create-dialog');
+  await page.locator('#account-menu summary').click(); await page.locator('#account-menu').getByRole('button', { name: 'Report or suggest…' }).click();
+  await expect(page.locator('#feedback-dialog')).toBeVisible(); read.push(...await under11(page));
+  expect(read).toEqual([]); expect(state.errors).toEqual([]);
+});
+test('the window that names a new account has no word under 11 px', async ({ page }) => {
+  const state = await home(page, { account: null, mode: 'google', newAccount: true });
+  await page.evaluate(() => window.googleSignIn({ credential: 'a-token-google-signed' }));
+  await expect(page.locator('#name-dialog')).toBeVisible();
+  expect(await under11(page)).toEqual([]); expect(state.errors).toEqual([]);
+});
