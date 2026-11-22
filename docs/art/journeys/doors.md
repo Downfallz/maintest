@@ -33,6 +33,31 @@ lesson's brief, opens the account menu and presses Sign out (`sign-out`), then t
 (`signed-out-panel`). They follow S7's precedent: a screen is briefed in the journey whose walk reaches it, here the
 doors, not `lobby.md` as the plan's table said. Both were read on S9's walk at 320 and 390 px, with their measures.
 
+What holds for every screen of the journey:
+
+- The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
+  on a centred window. No shade and no face is added. The showcase reads the same tokens through
+  `docs/art/branding.css`, which has held the motion tokens beside the palette since UX4 (ADR 0197).
+- Every beat moves `transform` or `opacity`, is written inside `prefers-reduced-motion: no-preference`, and
+  starts on a press, a navigation or the screen in view. Nothing starts on a clock.
+- The game's pages show what the host said: signed out, an invitation, a name taken. The page decides none of it.
+- No text under 11 px on these screens. The plan sets that floor for the match's frame; the doors have room for it.
+- The showcase speaks French and the game does not (ADR 0193): the French home shares the English one's brief.
+
+Screens of the walk this brief leaves out, and why:
+
+- `showcase-rules`: a reference page a visitor opens by choice, not a step on the way to play, and its words are
+  the rulebook's (`rules/`). UX6 fixed what its measures showed, with no staging: its pictures are sent at the
+  size they are drawn (2 were over twice it), its links inside a sentence are underlined and its table that
+  scrolls can take the focus. Its targets: 17 of 92 were under 44 px at 390, 11 on UX6's film; axe still found
+  the 12 `link-in-text-block` and the table on that film. The next walk confirms these. A brief of its own can
+  follow if the owner asks. The field guide, the other reference page, has its brief since the scene paintings'
+  S4 ([The mutation field guide](#the-mutation-field-guide-showcase-mutations)).
+- `first-lesson-brief`: the same window as `lesson-1-brief` of the lessons' journey, which UX8 briefs. What UX7
+  owns is the step into it, briefed as the last beat of the name window.
+
+## The showcase's home (`showcase-home`, `showcase-home-fr`)
+
 ### Job
 
 The first door. A visitor who knows nothing arrives from a link or a search, learns what the game is, and leaves
@@ -676,7 +701,7 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 ### Job
 
 A signed-in player is leaving this browser, or every device, and is asked once. Sign out sits in the account menu
-of every page that wears the Friends head (`FRIENDS_HEAD_PAGES` of `table/navigation.js`: the home, the
+of every page whose header's windows wear a head (`HEADER_SCENE_PAGES` of `table/navigation.js`: the home, the
 statistics, the ladder, the rulebook, the battle); Sign out everywhere sits in Settings, Account. Both open
 `#action-dialog` through `confirmAction` (`table/account.js`). For a sign out the window's title wears
 `predator-at-rest` as its head: I am leaving; the game rests. The same window confirms removing a friend, which
