@@ -101,3 +101,10 @@ test('a refresh of the account does not wait for the page to know whether it lea
   answer(true);
   assert.equal(await (await mounted).leaving, true);
 });
+
+test('a page that fails to say whether it leaves is told to whoever waits for it, and the page is still drawn', async () => {
+  const { mountAccount } = await import('./account.js');
+  const state = await mountAccount(anyPage(), { readMe: async () => ({ accounts: 'dev', account: { username: 'ada' } }), onChange: async () => { throw new Error('lessons unread'); }, google: async () => ({}), session: null });
+  assert.equal(state.account.username, 'ada');
+  await assert.rejects(state.leaving, /lessons unread/);
+});

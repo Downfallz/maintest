@@ -72,10 +72,11 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 
 - `page` is required and must be in the picture's `pages`: that is what the budget counts.
 - `focus` gives this box its own cut when one picture is drawn in two boxes that cut it differently; without it, the
-  box uses the declaration's.
-- `lazy` loads it when near even where the page declares it `first`: one painting drawn on the first screen and in a
-  list below it is one declaration, so the page takes one file. The home's first lesson creature is the featured
-  space's and Learn to play's first card's (#985). A page sheet that sets `object-position` itself wins over both.
+  box uses the declaration's. A page sheet that sets `object-position` itself wins over both.
+- `lazy` loads the picture when it is near the screen, even where the page declares it `first`. A painting used on
+  the first screen and in a list below it is then one declaration, so the page fetches one file. The home's first
+  lesson creature is drawn by the featured space and by Learn to play's first card (#985). The card, 96 px wide,
+  takes the 150 or 300 px file: a little more than it draws when the featured space shows something else.
 - `alt` says what is shown; leave it out for decoration. `sizes` says the width it is drawn at when it is not
   the declaration's first; for a strip it is the width of all its frames. `class` goes on the image.
 - `pictureHtml` and `stripHtml` write the same as text, for a page built before it is served. The showcase's

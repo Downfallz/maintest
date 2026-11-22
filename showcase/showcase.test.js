@@ -94,8 +94,8 @@ for (const [file, free, advertising, inbox, tabletop] of [
 }
 
 for (const [file, titles, rating, privateStats] of [
-  ['index.html', ['Solo against a bot', 'Friendly PvP', 'Ranked PvP'], /public rating/, /private stats.*mutations.*spells/],
-  ['fr/index.html', ['Solo contre un bot', 'PvP amical', 'PvP classé'], /cote publique/, /stats privées.*mutations.*sorts/],
+  ['index.html', ['Solo against a bot', 'Friendly multiplayer', 'Ranked multiplayer'], /public rating/, /private stats.*mutations.*spells/],
+  ['fr/index.html', ['Solo contre un bot', 'Multijoueur amical', 'Multijoueur classé'], /cote publique/, /stats privées.*mutations.*sorts/],
 ]) {
   test(`${file} explains all three ways to play and links to the public ladder without sign-in`, () => {
     const html = read(file);

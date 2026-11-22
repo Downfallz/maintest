@@ -46,8 +46,8 @@ export const english = {
   modesNav: 'Modes', modesTitle: 'Who will you play?',
   modes: [
     ['Solo against a bot', 'Choose Easy, Medium or Hard and try a mutation on your own time. The bot waits for your next move. Your record against each difficulty is kept separately.'],
-    ['Friendly PvP', 'Invite a friend to an unranked duel. Pick one, two or three creatures per side and take turns when it suits you both. Your ratings stay the same.'],
-    ['Ranked PvP', 'Play another commander in 3v3. Each result updates your public rating. Your private stats show your wins, losses and draws, the mutations you picked and the spells you cast.'],
+    ['Friendly multiplayer', 'Invite a friend to an unranked duel. Pick one, two or three creatures per side and take turns when it suits you both. Your ratings stay the same.'],
+    ['Ranked multiplayer', 'Play another commander in 3v3. Each result updates your public rating. Your private stats show your wins, losses and draws, the mutations you picked and the spells you cast.'],
   ],
   leaderboardLink: 'See the leaderboard', platform: 'Play in your browser', footerTop: 'Back to top',
   // The home's scenes (docs/art/scene-paintings-plan.md, S5), and the 404's.
@@ -105,8 +105,8 @@ export const french = {
   modesNav: 'Modes', modesTitle: 'Avec qui veux-tu jouer ?',
   modes: [
     ['Solo contre un bot', 'Essaie une mutation à ton rythme contre un bot facile, moyen ou difficile. Le bot attend ton prochain coup. Tu peux suivre ton bilan pour chaque difficulté.'],
-    ['PvP amical', 'Invite un ami à un duel hors classement. Choisissez une, deux ou trois créatures par camp et jouez chacun votre tour, quand ça vous convient. Vos cotes restent les mêmes.'],
-    ['PvP classé', 'Affronte un autre joueur en 3 contre 3. Chaque résultat met à jour ta cote publique. Tes stats privées montrent tes victoires, tes défaites, tes nulles, les mutations choisies et les sorts lancés.'],
+    ['Multijoueur amical', 'Invite un ami à un duel hors classement. Choisissez une, deux ou trois créatures par camp et jouez chacun votre tour, quand ça vous convient. Vos cotes restent les mêmes.'],
+    ['Multijoueur classé', 'Affronte un autre joueur en 3 contre 3. Chaque résultat met à jour ta cote publique. Tes stats privées montrent tes victoires, tes défaites, tes nulles, les mutations choisies et les sorts lancés.'],
   ],
   leaderboardLink: 'Voir le classement', platform: 'Joue dans ton navigateur', footerTop: 'Haut de page',
   scenes: {

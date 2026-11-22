@@ -162,7 +162,7 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .concept-card .concept-example:last-child { margin-bottom: 0; }
 
 /* The operator's notice (ADR 0177): one line under the header, bone on soot with a gold rule at its left, never over
-   the board. */
+   the board. On a phone's home it lies over the featured space's painting, on a denser ground (lobby.css). */
 .host-notice {
   max-width: 1500px; margin: 10px auto 0; padding: 8px 14px; border-left: 2px solid var(--gold);
   background: color-mix(in srgb, var(--panel) 70%, transparent); color: var(--bone); font-size: 14px; line-height: 1.4;

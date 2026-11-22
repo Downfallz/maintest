@@ -200,8 +200,8 @@ No painting answers "who could be my friend?", and none is drawn in the list: a 
   ([Room held while it loads](../ux-craft.md#room-held-while-it-loads)), not a new beat.
 - Named in #1052: the one animation the walk counted on `friends-asked`, `friends-with-a-friend` and
   `friend-invited` after S7 was the featured lesson creature's breath, behind the window. The head's painting made
-  the walk measure its contrast, and that measure's still picture resumed every endless animation with `play()`,
-  which takes it from the CSS that pauses it behind a window. The measure now holds those animations still and gives
+  the walk measure its contrast. That measure's still picture resumed every endless animation with `play()`, which
+  takes the animation out of the control of the CSS that pauses it behind a window. The measure now holds those animations still and gives
   them back (`scripts/ux/contrast.mjs`); the walk reads 0 on every screen of the window, at both widths.
 - The walk's `contrast` does not read the × (it reads `.scene-words`). A × that lost its fill would not be caught
   by a measure.

@@ -13,9 +13,10 @@ opponent" and there is no detail: **Play a bot →** opens the Create window on 
 button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to 5; from round 6 the battle's breach
 and sky take over, and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
 appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint, sent at
-the width it covers: 475 px on a 390 by 844 phone (the screen's height times the painting's 0.5625), 950 px at
-1280 px and wider (#1070). The first-paint budget of the home is 192 KiB (`docs/art/page-budget.json`). A host
-notice lies under the header, over the painting's top, so the space keeps its full screen on a phone (#1072). Where this paragraph and the
+the width it covers: 475 px on a 390 by 844 phone (844 px tall times the painting's 0.5625 width-to-height ratio),
+950 px at 1280 px and wider (#1070). The first-paint budget of the home is 192 KiB (`docs/art/page-budget.json`).
+On a phone, the host notice lies under the header, over the painting's top, so the space keeps its full screen
+(#1072). Where this paragraph and the
 UX9 text below disagree, this paragraph holds; the measurements and storyboards below record the previous panel
 layout.
 

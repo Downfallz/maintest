@@ -476,7 +476,7 @@ test('navigation and dialogs fit narrow, intermediate and short landscape screen
     await page.setViewportSize({ width, height });
     await noOverflow(page);
     await expect(page.locator('#account-menu summary')).toBeInViewport({ ratio: 1 });
-    // The bell is a 44 px target at every width, 320 included, beside a 44 px menu (#974).
+    // The bell is a 44 px target at every width, 320 included, beside a 44 px menu (held since #974 was raised).
     const bell = await page.locator('#inbox-open').boundingBox();
     expect(Math.min(bell.width, bell.height)).toBeGreaterThanOrEqual(44);
     await expect(page.locator('#inbox-open')).toBeInViewport({ ratio: 1 });
@@ -1199,7 +1199,8 @@ const firstTutorial = { id: 'sc-repo-tutorial-your-first-combat', order: 1, of: 
 const secondTutorial = { id: 'sc-repo-tutorial-who-acts-first', order: 2, of: 4, title: 'Who acts first', goal: 'Choose a tempo.', round: 2, seat: 'player1', format: '3v3', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' };
 const series = (first, second = 'new') => ({ opens: first === 'new' ? firstTutorial.link : null, tutorials: [{ ...firstTutorial, state: first }, { ...secondTutorial, state: second }] });
 
-test('a lesson\'s creature breathes on the home, and is still behind the Friends window while its rows change (#1052)', async ({ page }) => {
+// Coverage of the page's side of #1052; the measure's own regression test is in picture-kit.spec.js.
+test('a lesson\'s creature breathes on the home, and is still behind the Friends window while its rows change', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   const state = await home(page, { games: [], tutorials: series('done', 'new'), incoming: [], opponents: [{ id: 'acct_dddddddddddddddd', name: 'Rook', lastPlayedAt: '2026-11-09T20:00:00Z', games: 1, won: 0, lost: 1, drawn: 0, format: '3v3', casual: false }] });
   const creature = page.locator('#featured img.featured-creature');
@@ -1553,7 +1554,8 @@ test('with nothing to resume or learn, the duel opens Solo or multiplayer and li
 });
 
 // The duel is asked for at the width it covers (#1070): a phone's screen height cut to a 0.5625 portrait, 950 px wide.
-for (const [width, height, density, file] of [[390, 844, 2, 950], [320, 568, 1, 475], [1440, 1000, 1, 950]]) {
+// At 400 by 900, 1x, the old `100vw` asked for the 475 file and the cover is 506 px wide: that row tells them apart.
+for (const [width, height, density, file] of [[390, 844, 2, 950], [400, 900, 1, 950], [320, 568, 1, 475], [1440, 1000, 1, 950]]) {
   test(`the duel is taken at the width it is drawn, ${width} by ${height} at ${density}x`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: density });
     const page = await context.newPage();

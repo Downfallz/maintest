@@ -14,4 +14,4 @@ gradient where the painting goes.
 - `.featured-status`: what follows the eyebrow, in `bone`; in `gold` and semibold when it is the player's turn.
 - `.featured-actions`: two buttons side by side, the filled `primary` and a quiet `secondary`, each 48px tall.
 - `.featured-shortcuts`: the links to Your games and Open seats on a band of `soot` at the very foot, 48px tall.
-- A host notice lies under the header, over the painting's top, on a phone.
+- On a phone, the host notice (the operator's line, HostNotice) lies under the header, over the top of the painting.
