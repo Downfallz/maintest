@@ -61,6 +61,11 @@ const WINDOWS = [
     return page.locator('#help-dialog').getByRole('button', { name: 'History', exact: true });
   }, back: '#help-dialog [data-history-open]', still: 'help-dialog' },
   { id: 'inspect-dialog', open: async page => page.locator('#actor-layer [data-creature="4"]'), back: '#actor-layer [data-creature="4"]' },
+  // The Mutation Tree opened from the inspection: the window on top comes later in the page than the one under it.
+  { id: 'atlas-dialog', from: 'inspection', open: async page => {
+    await page.locator('#actor-layer [data-creature="4"]').click(); await expect(page.locator('#inspect-dialog')).toHaveJSProperty('open', true);
+    return page.locator('#inspect-growth');
+  }, back: '#inspect-growth', still: 'inspect-dialog' },
   { id: 'atlas-dialog', open: async page => {
     await page.locator('#planning-open').click(); await expect(page.locator('#planning-dialog')).toHaveJSProperty('open', true);
     return page.locator('#mutation-atlas-open');
@@ -75,10 +80,27 @@ for (const window of WINDOWS) {
     const dialog = page.locator(`#${window.id}`);
     await expect(dialog).toHaveJSProperty('open', true);
     await expect.poll(() => focusedIn(page, window.id), 'the focus goes in').toBe(true);
-    for (let step = 0; step < 14; step++) {
-      await page.keyboard.press(step % 3 === 2 ? 'Shift+Tab' : 'Tab');
+    // Tab once round the window's controls comes back to the first; Shift+Tab from the first goes to the last.
+    const ends = () => page.evaluate(id => {
+      const all = [...document.getElementById(id).querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]')]
+        .filter(one => one.tabIndex >= 0 && !one.matches(':disabled') && one.checkVisibility({ visibilityProperty: true }));
+      return { count: all.length, first: all[0] === document.activeElement };
+    }, window.id);
+    await page.evaluate(id => [...document.getElementById(id).querySelectorAll('button, [href], input, select, textarea, summary, [tabindex]')]
+      .find(one => one.tabIndex >= 0 && !one.matches(':disabled') && one.checkVisibility({ visibilityProperty: true })).focus(), window.id);
+    const { count } = await ends();
+    expect(count).toBeGreaterThan(0);
+    const seen = new Set();
+    for (let step = 0; step < count; step++) {
+      await page.keyboard.press('Tab');
       expect(await focusedIn(page, window.id), `the focus stays in after ${step + 1} presses`).toBe(true);
+      seen.add(await page.evaluate(() => document.activeElement.outerHTML.slice(0, 120)));
     }
+    expect(seen.size, 'each Tab moves the focus to another control').toBe(count);
+    expect((await ends()).first, 'Tab past the last control comes back to the first').toBe(true);
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    expect((await ends()).first, 'Shift+Tab from the first goes to the last').toBe(true);
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveJSProperty('open', false);
     await expect(page.locator(window.back), 'the focus comes back').toBeFocused();
