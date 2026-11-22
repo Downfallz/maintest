@@ -22,15 +22,33 @@ function line(value: string) { const node = document.createElement('p'); node.te
 const docked = (kind: string | undefined) => kind === 'Evolution' || kind === 'Speed' || kind === 'TieOrder';
 
 export function planningControls(controller: Controller, name: (id: unknown) => string, beforeOpen: () => void, inspect: (id: string) => void,
-  atlas: ReturnType<typeof atlasControls>) {
+  atlas: ReturnType<typeof atlasControls>, follow: (creature: number | null) => void = () => {}) {
   const dialog = el<HTMLDialogElement>('planning-dialog');
   let tree: ReturnType<typeof mutationTree> | null = null;
   const tempos = tempoControls(controller, name);
   let creature: number | null = null, rendered = '', lastCatalogue: Catalogue | null = null, question = '';
-  el('planning-open').addEventListener('click', () => { beforeOpen(); controller.open(); });
-  el('planning-close').addEventListener('click', () => controller.close());
-  el('planning-confirm').addEventListener('click', () => { void controller.submit(); });
-  dialog.addEventListener('cancel', event => { event.preventDefault(); controller.close(); });
+  // What opened the sheet, for the focus when it closes without a pick (UX12b): the command, or a creature on the field.
+  let opener: HTMLElement | null = null;
+  el('planning-open').addEventListener('click', () => { opener = el('planning-open'); beforeOpen(); controller.open(); });
+  // Closed without a confirm: the draft goes, and the focus goes back to its opener, else to the command that reopens it.
+  function dismiss() {
+    const kind = controller.model().latest?.waitingFor;
+    controller.close();
+    if (kind !== 'Evolution' || controller.model().opened) return;
+    const back = opener?.isConnected && opener.getClientRects().length && !(opener as HTMLButtonElement).disabled ? opener : el('planning-open');
+    opener = null;
+    if (!back.hidden) back.focus({ preventScroll: true });
+  }
+  el('planning-close').addEventListener('click', dismiss);
+  // The team's last pick accepted by the host closes the sheet: the focus goes once to the creature it went to, or after
+  // a pass to the team's first living creature (UX12b). A pick with picks left keeps the sheet on the next creature.
+  el('planning-confirm').addEventListener('click', async () => {
+    const before = controller.model(), pick = before.latest?.waitingFor === 'Evolution' ? before.choice : null;
+    await controller.submit();
+    const after = controller.model();
+    if (pick && after.accepted && !after.opened) { opener = null; follow(pick.pass ? null : pick.creature); }
+  });
+  dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(); });
 
   function selectCreature(id: number) {
     if (id === creature) return;
@@ -39,13 +57,13 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   // A creature tapped while the draft cannot change (sending, or a failed acknowledgement)
   // is inspected instead: the tap never does nothing, and never drops the draft being sent.
   function openCreature(id: number) {
-    if (!controller.model().opened) { beforeOpen(); controller.open(); }
+    if (!controller.model().opened) { opener = document.querySelector<HTMLElement>(`#actor-layer [data-creature="${id}"]`); beforeOpen(); controller.open(); }
     if (controller.model().canEdit) selectCreature(id);
     else inspect(String(id));
   }
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && dialog.open && docked(dialog.dataset.kind) && !document.querySelector('dialog:modal')) {
-      event.preventDefault(); controller.close();
+      event.preventDefault(); dismiss();
     }
   });
   const pickNote = document.createElement('p'); pickNote.id = 'planning-pick-rule'; pickNote.hidden = true;

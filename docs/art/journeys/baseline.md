@@ -246,7 +246,7 @@ At 390 by 844:
 
 ## The match's windows
 
-Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk. `match-result` was added by S11 of [the scene paintings' plan](../scene-paintings-plan.md), walked on its branch with the result's head and the Mutation Tree's built, 2026-11-22. It has no earlier walk here; the match journey films the same window (below). The words on the heads measure at least 7.69:1 on `mutation-tree` and 9.06:1 on `match-result`, at both widths. `inspect` was added by UX12, walked on its branch with the windows' family built, 2026-11-22: it has no earlier walk.
+Added with the journey by P1 of [the windows' pictures plan](../ux12-pictures-plan.md), walked the same way on `main` at `74506ea`, 2026-11-20. `tempo-reference` and `order-revealed` were added by its P6, walked on its branch with P7 and P8 built, 2026-11-21: they have no earlier walk. `match-result` was added by S11 of [the scene paintings' plan](../scene-paintings-plan.md), walked on its branch with the result's head and the Mutation Tree's built, 2026-11-22. It has no earlier walk here; the match journey films the same window (below). The words on the heads measure at least 7.69:1 on `mutation-tree` and 9.06:1 on `match-result`, at both widths. `inspect` was added by UX12, walked on its branch with the windows' family built, 2026-11-22: it has no earlier walk. `mutation-followed` (the team's last pick confirmed, the field after it) and `match-won` (a game the friend concedes) were added by UX12b, walked on its branch with it built, 2026-11-22: they have no earlier walk here.
 
 At 320 by 568:
 
@@ -254,6 +254,7 @@ At 320 by 568:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | mutation-pick | 568 px | 78 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 19 | 0 | 1 | 0 | 0.03 | label-content-name-mismatch (3) |
 | mutation-tree | 568 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 4 | 0 | 0.03 | label-content-name-mismatch (8) |
+| mutation-followed | 568 px | 66 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 16 | 0 | 2 | 0 | 0.03 | nothing |
 | tempo-reference | 568 px | 107 | 0 | 4 img, 4 background, the canvas | 9.16667 px | 26 | 0 of 19 | 0 | 3 | 0 | 0.02 | nothing |
 | spell-choice | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 1 | 0 | 0.03 | nothing |
 | spell-choice-foot | 568 px | 117 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 25 | 0 | 18 | 0 | 0.03 | nothing |
@@ -261,6 +262,7 @@ At 320 by 568:
 | inspect | 1271 px, a window | 155 | 0 | 4 img, 2 background | 11 px | 0 | 0 of 5 | 0 | 0 | 0 | 0.06 | nothing |
 | history | 534 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 7 of 12 | 0 | 2 | 1 | 0.24 | label-content-name-mismatch (3) |
 | match-result | 542 px, a window | 112 | 1 | 2 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 2 | 0 | 0.25 | nothing |
+| match-won | 480 px, a window | 35 | 1 | 1 img, 2 background | 11 px | 0 | 0 of 5 | 0 | 0 | 0 | 0.02 | nothing |
 
 At 390 by 844:
 
@@ -268,6 +270,7 @@ At 390 by 844:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | mutation-pick | 844 px | 86 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 24 | 0 | 1 | 0 | 0.01 | label-content-name-mismatch (3) |
 | mutation-tree | 844 px, a window | 119 | 1 | 2 img, 3 background | 9 px | 38 | 3 of 31 | 0 | 2 | 0 | 0.01 | label-content-name-mismatch (8) |
+| mutation-followed | 844 px | 70 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 18 | 0 | 1 | 0 | 0.00 | nothing |
 | tempo-reference | 844 px | 109 | 0 | 4 img, 4 background, the canvas | 9.16667 px | 26 | 0 of 21 | 0 | 4 | 0 | 0.00 | nothing |
 | spell-choice | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 1 | 0 | 0.01 | nothing |
 | spell-choice-foot | 844 px | 131 | 0 | 4 img, 2 background, the canvas | 10 px | 3 | 0 of 27 | 0 | 5 | 0 | 0.01 | nothing |
@@ -275,6 +278,7 @@ At 390 by 844:
 | inspect | 1130 px, a window | 155 | 0 | 4 img, 2 background | 11 px | 0 | 0 of 5 | 0 | 0 | 0 | 0.02 | nothing |
 | history | 698 px, a window | 114 | 0 | 6 img, 2 background | 9 px | 2 | 9 of 12 | 0 | 2 | 1 | 0.30 | label-content-name-mismatch (6) |
 | match-result | 818 px, a window | 112 | 1 | 2 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 5 | 0 | 0.30 | nothing |
+| match-won | 475 px, a window | 35 | 1 | 1 img, 2 background | 11 px | 0 | 0 of 5 | 0 | 0 | 0 | 0.01 | nothing |
 
 ## The first paints, on a slow phone
 

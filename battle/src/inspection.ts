@@ -76,7 +76,7 @@ export function inspectionControls() {
     delete el('inspect-sheet').dataset.content;
     el('inspect-history').hidden = true; el('inspect-growth').hidden = true;
   }
-  function render(model: Inspection | null, context: string, historical: boolean, lastAction: string, catalogue: SpellCatalogue | null = null) {
+  function render(model: Inspection | null, context: string, historical: boolean, lastAction: string, catalogue: SpellCatalogue | null = null, fresh: string[] = []) {
     if (!model) { clear(); return; }
     if (identity !== model.id) { mutationsKey = ''; spellsKey = ''; conditionsKey = ''; el('inspect-body').scrollTop = 0; identity = model.id; }
     const cues: Cue[] = catalogue?.effects ?? [];
@@ -141,7 +141,7 @@ export function inspectionControls() {
     }
     // Known spells are the same cards as the spell choice and the mutation tree: name, cost and crit chips, who
     // it hits, its effect lines with their icons, then the mutation that taught it.
-    const nextSpells = JSON.stringify([model.spells, model.spellsRecorded, cues.length]);
+    const nextSpells = JSON.stringify([model.spells, model.spellsRecorded, cues.length, fresh]);
     if (nextSpells !== spellsKey) {
       const cards = cardsById(catalogue);
       const list = el('inspect-spells');
@@ -152,7 +152,11 @@ export function inspectionControls() {
         const face = spellCard(cards.get(String(spell.id)), String(spell.id), cues, { crit: spell.crit });
         // The spell choice answers [data-spell]; a reference card in a closed dialog must not.
         delete face.dataset.spell;
-        item.append(face, node('p', spell.sources.length ? `Learned from ${spell.sources.join(', ')}` : 'Known spell · no acquired mutation source recorded.', 'inspect-spell-source'));
+        // A spell a reveal just granted reads New before its source, as the spellbook's card does (UX12b).
+        const source = spell.sources.length ? `Learned from ${spell.sources.join(', ')}` : 'Known spell · no acquired mutation source recorded.';
+        const isNew = fresh.includes(String(spell.id));
+        if (isNew) item.dataset.fresh = 'true';
+        item.append(face, node('p', isNew ? `New · ${source}` : source, 'inspect-spell-source'));
         return item;
       }));
       if (!model.spells.length) list.append(node('p', model.spellsRecorded ? 'No known spells.' : 'Known spells not recorded.', 'inspect-empty'));

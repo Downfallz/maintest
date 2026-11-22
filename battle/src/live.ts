@@ -157,7 +157,12 @@ const beforePlanning = () => {
   const receipt = growth.receipt() as { sequence: number } | null;
   if (receipt && planning.model().latest?.waitingFor === 'Speed') { revealRead = receipt.sequence; growth.dismiss(); }
 };
-const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI);
+// A pick followed back onto the field (UX12b): the focus on the creature it went to, else the team's first living one.
+function followPick(creature: number | null) {
+  const own = creature ?? creatures.find(one => !one.enemy && one.isAlive)?.id;
+  if (own != null) nodes.get(String(own))?.focus({ preventScroll: true });
+}
+const planningUI = planningControls(planning, name, beforePlanning, inspectCreature, atlasUI, followPick);
 // The round review is read-only: it covers a draft without dropping it, the way the inspection does.
 // The end card plays the same game again (ADR 0153): against this table's opponent, with the seats this browser holds
 // at it. A recording is nobody's game to play again.
@@ -320,7 +325,7 @@ function renderInspection() {
   const model = creatureInspection(one, creatures, catalogue);
   inspectionSnapshot = model ? { model, context, action } : null;
   inspectionUI.render(model, context.label, context.historical,
-    action ? `Round ${action.round} · ${action.summary}` : '', catalogue);
+    action ? `Round ${action.round} · ${action.summary}` : '', catalogue, one && !context.historical ? growth.fresh(one.id) : []);
 }
 $('inspect-history').addEventListener('click', () => {
   const action = inspectionSnapshot?.action;
@@ -501,6 +506,7 @@ function render() {
     if (badge) { badge.hidden = !mark?.badge; badge.textContent = mark?.badge ?? ''; }
     if (mutation.recipient === one.id && mutation.previewForm) node.dataset.previewForm = mutation.previewForm;
     else delete node.dataset.previewForm;
+    if (mutation.picked.has(one.id)) node.dataset.picked = mutation.picked.get(one.id)!.tier; else delete node.dataset.picked;
     node.dataset.form = one.form;
     // The illustration and capstone effects the creature's purchases resolve to (ADR 0151); the scene says which
     // image it actually draws in data-artwork-shown, the audited sprite until the illustration has loaded.
@@ -545,7 +551,7 @@ function render() {
     let pressAction = 'Inspect creature.';
     if (offered) pressAction = 'Choose mutation for this creature.';
     else if (targeting) pressAction = 'Target selection.';
-    speakCreature(node, `${one.enemy ? 'of the opponent' : 'of your team'}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), targetTag?.spoken ?? condition), pressAction].filter(Boolean).join('. ')}`);
+    speakCreature(node, `${one.enemy ? 'of the opponent' : 'of your team'}, ${one.health} of ${one.maxHealth} HP, ${one.energy} energy, ${one.totalDefense} defense, ${one.currentInitiative ?? 'unrecorded'} initiative. ${[spokenCues(creatureCues(one), mutation.spoken(one.id) ?? targetTag?.spoken ?? condition), pressAction].filter(Boolean).join('. ')}`);
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));

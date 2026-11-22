@@ -119,9 +119,9 @@ test('a skipped turn names who lost it and why', () => {
 test('the outcome is read for this seat although the feed names slots the way the engine does', () => {
   const ended = winner => entry(2, 'MatchEnded', { outcome: { winner, reason: 'Elimination' } });
   assert.match(text(historyEntry(ended('Player1'), board, catalogue)), /You win · the last team standing/);
-  assert.match(text(historyEntry(ended('Player2'), board, catalogue)), /Player 2 wins · the last team standing/);
+  assert.match(text(historyEntry(ended('Player2'), board, catalogue)), /Your opponent wins · the last team standing/);
   assert.match(text(historyEntry(ended(null), board, catalogue)), /draw/);
-  assert.match(text(historyEntry(ended('Player1'), { ...board, slot: 'Player2' }, catalogue)), /Player 1 wins/);
+  assert.match(text(historyEntry(ended('Player1'), { ...board, slot: 'Player2' }, catalogue)), /Your opponent wins/);
 });
 test('creatures are named the way the scene names them: the id only tells namesakes apart', () => {
   const row = historyEntry(cast(1, { resolution: { action: { actor: 1, spell: 'hit', targets: [2, 3] } } }), board, catalogue);

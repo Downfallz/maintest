@@ -333,9 +333,8 @@ async function friendInvites(walk, friend) {
   if (!made.ok()) throw new Error(`The host refused ${FRIEND}'s table for ${WALKER}: ${made.status()}`);
 }
 
-// A ranked 3v3 game between the walker and the friend: an open seat from the Create window, taken by the friend,
-// a first round played by both with the first choices offered, then conceded by the walker.
-async function rankedGame(walk, friend) {
+// A 3v3 game against a person, opened from the Create window, its open seat taken by the friend: both seats live.
+async function gameWithFriend(walk, friend) {
   const { page, set } = walk;
   await home(page, set.game);
   await page.locator('#new-table').click();
@@ -350,6 +349,13 @@ async function rankedGame(walk, friend) {
   if (!join) throw new Error('The waiting room names no link for its open seat.');
   await takeSeat(friend, `${set.game}${join}`);
   await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
+}
+
+// A ranked 3v3 game between the walker and the friend: a first round played by both with the first choices offered,
+// then conceded by the walker.
+async function rankedGame(walk, friend) {
+  const { page } = walk;
+  await gameWithFriend(walk, friend);
   const second = view => view.board.roundNumber > 1;
   await Promise.all([playUntil(page, second, { blocked: walk.blocked }), playUntil(friend, second, { blocked: walk.blocked })]);
   await concede(walk);
@@ -425,13 +431,15 @@ const INSPECTED = '#timeline li[data-state="Completed"] [data-order-creature]';
 const windows = {
   id: 'windows',
   title: "The match's windows",
-  screens: ['mutation-pick', 'mutation-tree', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'inspect', 'history', 'match-result'],
+  screens: ['mutation-pick', 'mutation-tree', 'mutation-followed', 'tempo-reference', 'spell-choice', 'spell-choice-foot', 'order-revealed', 'inspect', 'history', 'match-result', 'match-won'],
   strips: {
     // The journal closed by its button: how a window leaves (UX12). The match's `settings-window` films one entering.
     'history-window': { at: 'history', act: ({ page }) => page.locator('#history-close').click() },
     // The inspection closed by Escape: it fades out faster than it came, and the focus is back on the card's Inspect
     // (UX12). Closed and opened again in one act, a frozen exit leaves nothing to fade in.
     'inspect-window': { at: 'inspect', act: ({ page }) => page.keyboard.press('Escape') },
+    // A pick confirmed: the sheet goes on to the next creature, and the field answers on the one that took it (UX12b).
+    'pick-confirmed': { at: 'mutation-pick', act: async ({ page }) => { await page.locator('[data-mutation]').first().click(); await page.locator('#planning-confirm').click(); } },
   },
   async walk(walk) {
     const { page, set } = walk;
@@ -449,6 +457,9 @@ const windows = {
         await page.locator('#atlas-close').click();
         await page.locator('#atlas-dialog').waitFor({ state: 'hidden' });
       }
+      // The team's last pick confirmed, the sheet closed: the field, where the picks are followed back (UX12b).
+      if (walk.seen('mutation-tree') && !walk.seen('mutation-followed') && await page.locator('#growth-receipt').isVisible()
+        && !await page.locator('#planning-dialog').isVisible()) await walk.screen('mutation-followed');
       if (!walk.seen('tempo-reference') && await page.locator('#planning-dialog[data-kind="Speed"]').isVisible()) {
         // The sheet's spell reference, under the pinned creature and its two tempos.
         // The creature and its tempos stay pinned: the reference is brought just under them, as a thumb leaves it.
@@ -493,7 +504,26 @@ const windows = {
     await page.locator('#history-close').click();
     await concede(walk);
     await walk.screen('match-result');
+    // A match won (UX12b): a game against the friend, who concedes it once the first round is asked.
+    await wonGame(walk);
+    await walk.screen('match-won');
   },
 };
+
+// A game against the friend, who concedes as soon as it is asked its first question: the walker's result is a win.
+async function wonGame(walk) {
+  const { page } = walk;
+  const friend = await walk.person();
+  await account(walk, friend, FRIEND);
+  await page.locator('#match-dialog').evaluate(dialog => dialog.close());
+  await gameWithFriend(walk, friend);
+  await readUntilAsked(friend);
+  await choose(friend, '#settings', walk.blocked);
+  await friend.locator('#concede-open').click();
+  await friend.locator('#concede-confirm').click();
+  // The walker reads what the round showed so far (its upkeep), and the result opens by itself.
+  await readUntilAsked(page);
+  await page.locator('#match-dialog[open]').waitFor({ timeout: 30000 });
+}
 
 export const JOURNEYS = [doors, theLessons, lobby, pages, match, windows];

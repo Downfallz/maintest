@@ -161,6 +161,24 @@ export function roundRecap(entries, board, cards) {
   return { round, actions };
 }
 
+// The blow that ended a match (UX12b): the last resolved action, when its frame shows a creature alive before it and
+// defeated after it, and no upkeep came after it (a bleed that ends a match is the journal's to name). The words are
+// the journal's: "Creature 5's Strike defeated Creature 3." The page never infers it from health.
+export function finalBlow(entries, board, cards) {
+  const ordered = [...(entries ?? [])].filter(entry => Number.isInteger(entry?.sequence)).sort((left, right) => left.sequence - right.sequence);
+  const index = ordered.findLastIndex(entry => entry.event?.kind === 'CombatActionResolved');
+  if (index < 0 || ordered.slice(index + 1).some(entry => entry.event?.kind === 'OngoingEffectsApplied')) return null;
+  const entry = ordered[index], before = new Map((entry.event.frame?.before ?? []).map(one => [one.id, one]));
+  const fallen = (entry.event.frame?.after ?? []).filter(one => one.isAlive === false && before.get(one.id)?.isAlive !== false);
+  if (!fallen.length) return null;
+  // A spell the catalogue does not name writes no line: a player never reads an id.
+  if (!cards?.get?.(entry.event.resolution?.action?.spell)?.name) return null;
+  const action = recapAction(entry, board, cards);
+  const names = fallen.map(one => recapCreature(one.id, board).label);
+  const listed = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+  return `${action.actor.label}'s ${action.spell} defeated ${listed}.`;
+}
+
 // The action the round resolved last, while its combat is still running. An action resolves the moment its
 // targets are confirmed (ADR 0083), so the table shows each one as it happens rather than replaying the round
 // at its end; the replay stays in the recap, on demand. Outside Activation the round has moved on to cleanup

@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX12 are built; UX12b is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX12b are built; UX13 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -667,6 +667,37 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     Tests: a pick followed back to its creature and a cancelled pick back to its opener, in
     `battle-mutations.spec.js`; the result's verdict and action in `battle-live.spec.js`; the journey's measures.
 
+    *Built (2026-11-22)*: UX12b. [The brief](journeys/windows.md) gained "A mutation followed back onto the field"
+    (`mutation-followed`) and the result as a moment (`match-result`, a loss, and `match-won`, a win). The
+    `ux-designer` wrote it from the walk. The walk films the field once the team's last pick is confirmed, and a second
+    game that the friend concedes. A strip, `pick-confirmed`, films the step before.
+
+    A pick the host accepted keeps its creature in the form it leads to until the reveal applies it, tagged PICKED and
+    spoken "picked Brute, hidden until reveal", read from the seat's own `board.evolutionChoices`, never from a draft
+    (`battle/src/mutation-scene.ts`). The team's last pick accepted closes the sheet and sends the focus once to that
+    creature on the field, or after a pass to the team's first living creature; a pick with picks left keeps the sheet
+    on the next creature. A pick closed without a confirm drops its draft and gives the focus back to the creature or
+    the command that opened the sheet. The inspection writes "New · Learned from Brute" on each spell a reveal granted
+    that the spellbook has not shown yet (`growth.fresh`); the spellbook keeps its New. A reveal shows once, as before.
+
+    The result opens on its next action, the filled way on (Rematch, Invite to rematch, Play again or Leave the
+    tutorial), else the ×. A match won by the last team standing says the blow that ended it under the reason, from the
+    host's feed ("Creature 5's Strike defeated Creature 3.", `finalBlow` in `table/feed.js`); a concession, a timeout or
+    the round cap says none. The window is described by the reason and that line. In a seat's own view the other seat
+    is "your opponent" (`table/outcome.js`, the classic table's too); a replay keeps the seats' names.
+
+    Tests: four in `battle-mutations.spec.js` (the last pick followed with PICKED until the reveal, a pass, a pick
+    closed without a confirm, the inspection's New and a reveal shown once) and two in `battle-live.spec.js` (a win by a
+    blow, a loss by a concession read with its pictures refused); `finalBlow` in `table/feed.test.js`. Each of the six
+    browser tests fails without the change.
+
+    Left:
+    - The owner's choices under the brief's **Left**: the sheet kept open while picks are left, PICKED before the
+      reveal, the focus on the creature, the result's focus on Rematch, "your opponent" rather than the friend's name.
+    - No walk ends a match by a blow or shows PICKED (the bot's reveal follows at once): the specs hold both.
+    - A defeat by a bleed at the upkeep writes no blow line.
+    - The craft book has no entry for a part of the frame that arrives by itself (the receipt).
+
     *Built (2026-11-22)*: UX12, the windows as one family. [The brief](journeys/windows.md) gained "The windows'
     family", written by the designer from the walk, and a screen for a creature inspected, `inspect`, which the walk's
     `windows` journey now films from the order strip's card, with a strip `inspect-window`.
@@ -709,7 +740,7 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     - A strip films a window entering (`settings-window`) or leaving (`history-window`, `inspect-window`), never
       both in one act: a frozen exit has nothing to fade back from.
     - The craft book's word on how it feels at full speed waits for the owner's clip and UX14's phone.
-    - Following a mutation back onto the field and the result as a moment are UX12b's.
+    - Following a mutation back onto the field and the result as a moment are UX12b's, built (above).
 
 13. **UX13, accessibility.** The checks the gate runs: axe on every screen and state of the five journeys (a
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in

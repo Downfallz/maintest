@@ -49,19 +49,13 @@ export function outcomeText(view, seat) {
   const because = { Elimination: outcome.winner ? 'the last team standing' : 'neither team survived', RoundCap: outcome.winner ? 'more health at the round cap' : 'equal health at the round cap', Concession: 'a concession', TimedOut: outcome.winner ? 'the time to answer ran out' : 'both players let the time to answer run out' }[outcome.reason] ?? outcome.reason ?? 'reason not recorded';
   if (!outcome.winner) return `The match is a draw · ${because}.`;
   const won = outcome.winner === seat;
-  const winner = seatLabel(outcome.winner);
   // A replay opened from the admin panel is nobody's seat: it names the winner rather than saying "you".
-  if (view.replay) return `${winner} wins · ${because}.`;
+  if (view.replay) return `${seatLabel(outcome.winner)} wins · ${because}.`;
+  // In a seat's own view the other seat is its opponent, never a seat's number (UX12b).
   // A timeout (ADR 0169) says whose time ran out, from this seat's side, as a concession does.
-  if (outcome.reason === 'TimedOut') {
-    const other = seatLabel(seat === 'player1' ? 'player2' : 'player1');
-    return won ? `${other} let their time to answer run out · you win.` : `Your time to answer ran out · ${winner} wins.`;
-  }
-  if (outcome.reason === 'Concession') {
-    const other = seatLabel(seat === 'player1' ? 'player2' : 'player1');
-    return won ? `${other} conceded · you win.` : `You conceded · ${winner} wins.`;
-  }
-  return won ? `You win · ${because}.` : `${winner} wins · ${because}.`;
+  if (outcome.reason === 'TimedOut') return won ? 'Your opponent let their time to answer run out · you win.' : 'Your time to answer ran out · your opponent wins.';
+  if (outcome.reason === 'Concession') return won ? 'Your opponent conceded · you win.' : 'You conceded · your opponent wins.';
+  return won ? `You win · ${because}.` : `Your opponent wins · ${because}.`;
 }
 
 function resultHeading(view, seat) {

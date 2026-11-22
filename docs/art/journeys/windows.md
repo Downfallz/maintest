@@ -4,8 +4,9 @@ The brief of the match's windows, the pictures first. Stage P1 of [the pictures 
 wrote its first five screens, and P6 adds two (`tempo-reference` and `order-revealed`, the screens of P7). UX12 of
 [the pages' craft plan](../ux-craft-plan.md), as the owner scoped it on 2026-11-22, adds part A: the match's 18
 windows as one family (how each enters, leaves and gives the focus back; Escape; Tab held in a modal window; the
-11 px floor), with the screen `inspect`. A mutation followed back onto the field and the result as a moment are
-UX12b's, and are not briefed here. What a phase asks and in what order is `docs/tabletop/battle-ux-parity-plan.md`'s; the
+11 px floor), with the screen `inspect`. UX12b adds the last two parts: a mutation followed back onto the field
+(`mutation-followed`, new on the walk) and the result as a moment (`match-result`, a loss, and `match-won`, new on the
+walk, a win), briefed below. What a phase asks and in what order is `docs/tabletop/battle-ux-parity-plan.md`'s; the
 frame around a docked sheet is [the match's brief](match.md); inside the canvas is the battle craft's. Still a
 proposal: the owner has not yet seen the journey's sheets.
 
@@ -36,6 +37,18 @@ on every screen but the summed shift), the match journey's at both widths for it
 `settings`, `concede`, `match-result`, briefed in [the match's brief](match.md)), and the three strips before the
 change, where each window is whole from the first frame. "UX12's walk" below is the branch's film. The strips after
 the change are the critique's to read.
+
+UX12b walked the journey on `main` at `e81ec0a` with the walk's three additions (`scripts/ux/journeys.mjs`, journey
+`windows`): `node scripts/ux/journey.mjs windows --out <folder>`, then `--strip pick-confirmed` into the same folder.
+The walk now films eleven screens. `mutation-followed` is the field once the team's last pick is confirmed and the
+sheet has closed, the bot's picks in at once: the receipt "Mutations revealed" with See and Continue, a crest over each
+creature that mutated. `match-result` is the loss (Walker concedes, round 2); `match-won` is a second game, against the
+friend, who concedes when the first round asks: a win in round 1. The strip `pick-confirmed` presses the first
+mutation offered and Confirm choice, picks left. Both sheets and the strip were read screen by screen and frame by
+frame at 320 by 568 and 390 by 844, with their measures. At 390 the walk logged one block after `match-result`: it could
+not press `#settings`. `match-won` was filmed after it, at both widths. "UX12b's walk" below is this film. No walk
+films a match ended by a blow, nor the two results with their pictures hidden: they are read in the code, and held by
+`studio/browser/battle-live.spec.js` (the result's screen, below).
 
 The pictures counted on each screen (the same walk, read in the page, alike at both widths): the spellbook holds 4
 spells (Strike, Pummel, Focus, Brace) and 4 portraits, 2 in view at its top at 390 and 4 at its foot; the pick 3
@@ -141,7 +154,9 @@ below names only what differs. Two kinds:
   resizes as it docks and a second movement would stack on the first.
 - The Command and Combat sheets do not hold Tab: they are not modal, so a keyboard player reaches the field and the
   bar past their last control. Holding Tab there would cut off the targets on the field.
-- UX12b's (not briefed here): a mutation followed back onto the field, and the result as a moment.
+- UX12b's, briefed below: a mutation followed back onto the field (`mutation-followed`), and the result as a moment
+  (`match-result`, `match-won`). The focus after a pick and after the result are the family's contract extended, not
+  a second one: a window's focus still goes in, stays in and comes back as above.
 
 ## The pick (`mutation-pick`)
 
@@ -197,7 +212,9 @@ their text only, as today.
 ### Motion
 
 None of its own: a form appears in its held room when it arrives. The sheet docks by the family's form (the
-opening: a fade where it stands); how a confirmed choice is followed back onto the field is UX12b's.
+opening: a fade where it stands); how a confirmed choice is followed back onto the field is
+the brief of [A mutation followed back onto the field](#a-mutation-followed-back-onto-the-field-mutation-followed)
+(UX12b), and so is a pick closed without a confirm.
 
 ### Less motion
 
@@ -329,6 +346,124 @@ None.
 - The board's forms, built by P5 (2026-11-21): each mutation of the board shows its form above its stage numeral and
   name, in columns of `min(94vw, 400px)`; three mutations of a stage still share one line at 320. P5's test shows
   that no form of the board loads before the window opens. The critique (P6) reads it at 320.
+
+## A mutation followed back onto the field (`mutation-followed`)
+
+### Job
+
+The team's last pick of the Mutation phase is confirmed: the Evolution sheet has closed and the player is back on the
+field. Against the bot the host records both teams' picks at once (`PurchasesRevealed`), so the walk films the public
+reveal: the receipt "Mutations revealed" over the field's top, a crest over each creature that mutated, the dock asking
+the team's tempos. The screen answers, in order: which of my creatures took the pick, what it became, where its new
+spell is. The strip `pick-confirmed` films the step before it: a pick confirmed with picks left.
+
+- **Filled action**: Team tempos, in the dock, the host's next asking. The receipt's See and Continue are quiet: the
+  reveal is read, not answered. The measure reads filled 0 at both widths, as for Confirm choice on the pick: the
+  dock's gold is a gradient it does not match (**Left**); the sheet shows Team tempos gold and nothing else.
+
+What the build does, each read from what the host confirmed, never from a draft:
+
+1. **A pick confirmed, picks left** (kept): the sheet stays on the next creature with an offer, the focus on its first
+   offered mutation. The strip shows it from 80 ms: "1 team pick remaining", the tab "Picked · hidden until reveal".
+2. **Between the confirm and the reveal, the creature keeps its new form.** Before UX12b the would-be form was drawn
+   from the draft alone, gone once sent. The walk cannot film the gap: against the bot the host applies the pick at
+   once, and the strip shows Creature 1 as Brute from 80 ms, before and after the build alike;
+   `battle-mutations.spec.js` holds the form, the tag and the spoken name. A creature of the player's team that has a
+   pick in `board.evolutionChoices` is drawn in the form that pick leads to, as `battle/src/mutation-scene.ts` draws a
+   draft. Its caption's tag reads **PICKED**. The opponent's view, a
+   replay, the journal and the inspection never see it. A pick the host has not accepted draws nothing.
+3. **The last pick confirmed**: the sheet closes, as it did before, and the focus goes once to the field's button of the
+   creature the last pick went to (`#actor-layer [data-creature]`); after Pass all remaining picks, to the team's
+   first living creature. It moves on the host's acceptance of that pick, never on a later snapshot.
+4. **The reveal** (`PurchasesRevealed` on the stream): the receipt and the crests appear, as filmed; PICKED leaves
+   each creature whose `acquiredTiers` hold the tier, the form stays. The focus does not move. Team tempos is
+   the filled action and can be pressed as soon as the host asks; the receipt never hides it and need not be read first.
+5. **The new spell, where it is used and where it is inspected.** The spellbook marks it "New · Available" the first
+   time the creature acts (`growth.highlights()`, filmed on `spell-choice`, kept). The inspection's Known spells write
+   **New** before the source line ("New · Learned from Brute") on each spell the reveal granted that creature and its
+   spellbook has not yet shown: the same set `table/battle-growth.js` holds. The inspection does not spend the mark.
+   A press on the creature the focus is on opens that inspection.
+6. **Once per reveal.** The receipt and the crests belong to one `PurchasesRevealed` sequence: Continue, See then
+   Close, or Team tempos read it, and a repeated snapshot does not bring it back; a reload takes the board as its
+   baseline and shows none (`createBattleGrowth`, as today). Every reveal stays in History.
+
+### Words
+
+- **Order**: the receipt (Mutations revealed, "You 2 · Opponent 2 · Round 1", See, Continue); the field, each crest
+  and each creature's caption; the dock: Command · Tempo, its line, Team tempos.
+- **Budget**: 70 words at 390 px (70 today), 66 at 320 (66 today). PICKED replaces a tag ("◇ MUTATE") between the
+  confirm and the reveal and is gone here. "New ·" adds one word to an inspected spell while the mark stands; the
+  walk's `inspect` comes after Creature 1 acted, so its 155 do not move.
+- **The words**: **PICKED**, in capitals as its neighbours MUTATE and MUTATION TREE; spoken "picked Brute, hidden
+  until reveal", the tab's own words. **New** is the spellbook's and the recap's word
+  (`docs/domain/player-terminology.md`).
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The creature that took the pick, on the field in the form it leads to, from the confirm on (Creature 1 and 2 as Brute on the walk). | 110 by 75 px at 390, about, read on the sheet; the canvas sizes it | Which of my creatures mutated, and into what? | `table/battle-art/evolutions/brute-base.webp`, the `artwork` of `tier:brute:v1` (ADR 0151) |
+
+No new picture: the build keeps drawn between the confirm and the reveal the file the field draws during a draft and
+after the reveal. The crest is the canvas's text.
+
+### States
+
+- **First paint**: not reached: the screen follows a confirm.
+- **Empty**: the team passed every pick: nothing is PICKED, the focus goes to its first living creature, and the
+  receipt reads "Opponent 2 · Round 1" (read in the code, not seen).
+- **Loaded**: as filmed; built, the focus on Creature 2's button, the last pick's creature (no ring after a click,
+  which is not `:focus-visible`; held by the spec).
+- **Waiting**: a friend still picking, between the last confirm and the reveal: the sheet closed, the picked
+  creatures in their new form, tagged PICKED, no receipt (read in the code, not seen: the bot answers at once).
+- **Error**: a refused confirm keeps the sheet open on `#planning-dialog-error`, the focus in it; nothing is PICKED.
+- **Offline**: `#connection` and the field dimmed; forms and tags as the last snapshot held them.
+
+### Motion
+
+None of the page's own. The sheet leaves at once, as every docked sheet (the opening); a focus moved is not a
+movement. The receipt appears at once, as today: the book has no entry for a part arriving on the frame by itself
+(**Left**). The crests' entrance and the form changing are the canvas's (`battle/src/mutation-reveal.ts`), not timed
+here.
+
+### Less motion
+
+None: the page moves nothing; the crests appear settled under less motion already.
+
+### Accessibility
+
+- **Focus**: as Job's 1 and 3. **A pick closed without a confirm** (Close or Escape): the draft and its PRIVATE
+  PREVIEW go, and the focus goes back to its opener: the field's creature tapped, or "Mutation tree ↗"
+  (`#planning-open`); a sheet the phase opened by itself goes to `#planning-open`, which reaches it again.
+- **Names**: the field's button speaks its creature, then "picked Brute, hidden until reveal" while PICKED shows
+  (`speakCreature`); the tag is hidden from a screen reader, as every tag. axe finds nothing at either width.
+- **Announced**: the reveal, once, through `#growth-announcement` (`role="status"`, today's sentence), the focus
+  unmoved; a confirm says "Pick sent" in the picks line, as today.
+- **Targets**: 18 controls at 390 and 16 at 320, none under 44 px. Overlaps 1 at 390, 2 at 320 (**Left**).
+
+### Cost
+
+- **Bytes**: 0 before any scroll; the kept form is a file already taken.
+- **Largest paint**: not this screen's.
+- **Shift**: 0 at 390 and 0.03 at 320, summed over the walk; the field's buttons follow their figures by a
+  `transform`, the receipt stands over the field.
+
+### Left
+
+- **A choice the owner may refuse**: with picks left the sheet stays open on the next creature, where the plan says
+  "on confirmation, close the tree". Closing would send the player to the field and back for a pick still to spend.
+- **A choice the owner may refuse**: the field shows the picked form, tagged PICKED, before the reveal: the seat's own
+  view, as PRIVATE PREVIEW is, but the player's field differs from the opponent's until then.
+- **A choice the owner may refuse**: the focus goes to the creature, not to the receipt or Team tempos: the creature
+  is what the plan returns attention to and it opens the inspection; moving the focus on the host's reveal would take
+  it from a player who was elsewhere.
+- **A pattern the book lacks**: a part of the frame that arrives by itself (the receipt). It appears at once until
+  the book gains the entry, with its source, in its own change.
+- At 320 by 568 the team's crests stand over the opponent row's health, and the receipt over the field's top
+  (overlaps 2): where the crests stand is the `battle-designer`'s to decide.
+- At 320 the receipt's line is cut ("You 2 · Oppone…"), as before UX12b: the receipt's own pass.
+- The measure counts no filled action where the gold is a gradient (`scripts/ux/measures.mjs`): Team tempos here,
+  Confirm choice on the pick. The measure's fix, not the page's.
 
 ## The Tempo sheet's spell reference (`tempo-reference`)
 
@@ -908,77 +1043,114 @@ journal whole from its first frame; the strip after the change is the critique's
 - **Shift on UX12's walk**: 0.39 at 390 and 0.11 at 320 on one walk, 0.30 and 0.19 on the other, summed over the
   walk. The window's rise is a `transform` and moves no layout, so it adds nothing to the measure.
 
-## The match's result (`match-result`)
+
+## The match's result (`match-result`, `match-won`)
 
 ### Job
 
-The match is over: the result opens by itself once (ADR 0145), over the field, or from Match result in the field's
-foot. It says how the match ended, the verdict and its reason, then each team's standing, the battle report, and
-the ways on. S11 of [the scene paintings' plan](../scene-paintings-plan.md#the-app) gives it a head: the ground
-after Crushing Stomp, above the verdict. The walk reaches it as Walker concedes after the journal.
+The match is over: the result opens by itself once (ADR 0145), when the last result has been read, over the field,
+or from Match result in the dock. It says how the match ended, the verdict, its reason and (UX12b) the blow that ended
+it, then each team's standing, the battle report, and the ways on. S11 gives it a head: the ground after Crushing
+Stomp. `match-result` is a loss: Walker concedes in round 2 against the bot. `match-won` is a win: the friend concedes
+in round 1, so no battle report shows.
 
-- **Filled action**: Rematch, under the report (filled 1 at both widths); a tutorial's end fills Play again or
-  Leave the tutorial instead. Replay the match, Lobby, Report or suggest and the × are quiet.
+- **Filled action**: Rematch against a bot (the loss), Invite to rematch against a friend (the win); a tutorial's end
+  fills Play again or Leave the tutorial instead. Filled 1 on both screens at both widths. Replay the match, Lobby,
+  Report or suggest and the × are quiet.
+
+What UX12b adds, from what the host recorded:
+
+1. **The focus goes to the next action.** On every opening, by itself or from Match result, the focus goes to the
+   filled action; with none (a replay, no seat to rematch), to the × as today. Tab goes on to Replay the match, Lobby,
+   Report or suggest, then round to the × and the report (the family). Closed, the focus goes back to Match result.
+2. **The blow carried into the verdict.** A match ended by elimination writes one line under the reason, from the
+   host's feed: the last `CombatActionResolved` before `MatchEnded` whose changes mark a creature defeated, named as
+   the journal names them: "Creature 5's Strike defeated Creature 3." (two defeated: "… defeated Creature 3 and
+   Creature 2."). A concession, a timeout or the round cap writes none: the reason says who conceded or why. A feed
+   that does not hold that entry writes none; the page never infers it from health.
+3. **Who conceded, in a player's words.** In a seat's own view the other seat is "your opponent", never "Player 2"
+   (`table/outcome.js`, which the classic table shares): "Your opponent conceded · you win." and "You conceded ·
+   your opponent wins."; a replay keeps the seats' names.
+4. **Read with the pictures hidden.** The verdict, the reason, the blow's line and the filled action are text on the
+   band's soot room, readable at 4.5:1 at the least with no painting; the tone is never the only sign (the verdict is
+   the word). The dialog is described by the reason and the blow's line (`aria-describedby`).
+5. **Once.** A repeated snapshot does not open the result again once closed (today's `open()`), nor rewrite the blow's
+   line.
 
 ### Words
 
-- **Order**: the eyebrow (MATCH COMPLETE and the round), the verdict, its reason; each team's standing and health;
-  the battle report; Rematch, Replay the match, Lobby, Report or suggest.
-- **Budget**: 112 words at both widths, as filmed (112 in the match journey before the head). The head adds no word.
+- **Order**: the eyebrow (MATCH COMPLETE · ROUND 2), the verdict, its reason, the blow's line; each team's standing;
+  the battle report; the filled action, Replay the match, Lobby, Report or suggest.
+- **Budget**: 112 words at both widths for the loss (112 today), 35 for the win (35 today): "Player 2" becomes "your
+  opponent", word for word. A match ended by a blow adds its line, at most 9 words; not filmed.
+- **The words**: as in 2 and 3 above. "Defeated" is the journal's word; no rule is restated.
 
 ### Pictures
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The ground after Crushing Stomp as the window's head: a 3:1 band across its top, edge to edge, the slab and the three marks on the left, the eyebrow, the verdict and its reason on the end side, which is dark plain. The × keeps the start corner on its own soot fill, over the slab, so the verdict keeps the dark end to itself; the tree's Close sits at the end because its words sit at the start. The crest gives way to the band. | 352 by 117 px | How did it end? The ground the last blow left. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp` |
-| The creature of the match in the battle report, as today: the illustration its mutations gave it, or its form's figure. | 64 by 64 px | Who carried the match? | `table/battle-art/base-creature.webp`, or the creature's own illustration under `table/battle-art/` |
+| The ground after Crushing Stomp as the window's head, the verdict on its dark end, as S11 built it (both screens). | 352 by 117 px | How did it end? The ground the last blow left. | `docs/art/sources/pages/scenes/crushing-stomp-aftermath.webp` |
+| The creature of the match in the battle report (the loss only; the win has none, nothing was cast). | 64 by 64 px | Who carried the match? | `table/battle-art/base-creature.webp`, or the creature's own illustration under `table/battle-art/` |
 
-The window is `min(620px, 100vw - 24px)` wide, held by the browser 2em and 6 px inside the screen: the band is 282 by
-94 at 320, 352 by 117 at 390 and 620 by 120 (the cap) from 658 px, taller when its words wrap. The verdict's 30 to 42 px wraps its reason onto a second line on a phone, and the band grows to
-hold them rather than cut them. The painting is 3:1, so the band cuts only its top and bottom, centred.
+The band is 282 by 94 at 320, 352 by 117 at 390, and holds its room in `--soot` with or without the painting. No new
+picture; every fact stays written beside its picture, and both `alt` are empty.
 
 ### States
 
-- **First paint**: not reached: the window opens over a field already drawn. The band holds its room in `--soot`
-  until the painting arrives; it loads when the window opens.
-- **Empty**: cannot be: a finished match always has its verdict and its two teams.
-- **Loaded**: the band with the verdict, the two teams, the report and the ways on, as filmed.
-- **Waiting**: Rematch, once pressed, waits on the host and says so on its own button (`match.ts`); the band does not
-  change.
-- **Error**: a refused rematch says why under the ways on; the band and the verdict stay (read in the code, not seen).
-- **Offline**: the window stays open on what it holds; a band not yet loaded keeps its soot room.
+- **First paint**: not reached: the window opens over a field already drawn.
+- **Empty**: cannot be: a finished match always has its verdict and its two teams. A win in round 1 has no report,
+  as filmed.
+- **Loaded**: as filmed: Defeat, "You conceded · …", 3/3 and 3/3, the report, Rematch; Victory, "… conceded · you
+  win.", Invite to rematch. Built, the focus on the filled action instead of the ×: its ring shows on the win, not on
+  the loss, which opens after a click on Concede (held by `battle-live.spec.js`).
+- **Waiting**: the filled action, once pressed, says Starting… on itself (`battle/src/match.ts`); the focus stays on it.
+- **Error**: a refused rematch says why under the ways on; the verdict stays (read in the code, not seen).
+- **Offline**: the window stays open on what it holds.
 
 ### Motion
 
-None: the match's windows open at once until UX12 gives them the kit's entrance. The band does not move by itself.
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The result enters | The match is over and its last result read (the host's stream), or a press on Match result; the page calls `showModal()`. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves), [Little victories](../ux-craft.md#little-victories) | `--motion-normal`, `--motion-enter` |
+| The result leaves | The ×, Escape with no zoom open, or a way on. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-fast`, `--motion-exit` |
+
+The family's form, built by UX12; UX12b adds no beat. The last blow itself plays on the field before the window, the
+battle's (`table/battle-timing.js`). The band does not move by itself.
 
 ### Less motion
 
-None.
+| Beat | Form |
+| --- | --- |
+| The result enters | A fade over `--motion-normal`, no rise. |
+| The result leaves | A fade over `--motion-fast`, no fall. |
 
 ### Accessibility
 
-- **Focus**: as today, on the window's first control, the ×; the band holds no control.
-- **Names**: the painting's `alt` is empty: the verdict is the window's name (`aria-labelledby="match-title"`).
-  axe finds nothing at either width.
-- **Announced**: nothing new.
-- **Targets**: 12 controls, 6 under 44 px at both widths, as the match journey filmed before the head;
-  none under 24. The × takes its own taps over the band (`battle-services.spec.js`).
+- **Focus**: on the filled action (1 above); held by Tab; Escape closes the report's zoom first, then the window;
+  back on Match result.
+- **Names**: the window is named by the verdict (`aria-labelledby="match-title"`) and described by the reason and the
+  blow's line, so a screen reader landing on Rematch hears "Defeat, You conceded · your opponent wins." first. axe
+  finds nothing at either width.
+- **Announced**: nothing more: the window is read where the focus lands.
+- **Targets**: 12 controls, 6 under 44 px on the loss (the report's rows), 5 and none under 44 on the win; none under
+  24. Overlaps 3 at 320 and 4 at 390 on the loss, 0 on the win.
 
 ### Cost
 
-- **Bytes**: 16,084 B on a phone, the 716 px file at twice the density; 12,598 B or 43,398 B from 658 px, by the
-  screen's density. The band's `sizes` is the window's real width, so a phone never takes the wide screen's file
-  (`battle-services.spec.js`). Lazy: nothing loads before the window opens.
+- **Bytes**: the band's 716 px file on a phone (16,084 B), lazy; the loss's report creature as before.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
-- **Shift**: 0.25 at 320 and 0.30 at 390. The match journey filmed 0.32 and 0.22 before the head. The band holds its
-  room before the painting arrives, so it adds none.
+- **Shift**: 0.25 at 320 and 0.29 at 390 on the loss, 0.02 and 0.01 on the win, summed over the walk. The blow's line
+  is written before the window opens, so it moves nothing in it.
 
 ### Left
 
-- The report's creature is the battle's own file, sent whole: the one picture the walk counts as sent over twice its
-  size, as before the head. Its intake is the battle's ([asset-intake.md](../asset-intake.md)), not the kit's.
-- The words under 11 px (20 at both widths on S11's walk) are raised to 11 px by the windows' family (UX12). The
-  targets under 44 px still wait, as on every window of the match.
-- The verdict's colour on the band is the tone's (`--tone`), measured at 9.06:1 at the least against the scrim; the
-  crest that carried the tone is gone, so the tone is in the title and the top rule alone.
+- **A choice the owner may refuse**: the focus lands on Rematch, the next action ([One dominant
+  action](../ux-craft.md#one-dominant-action): the filled action comes first). The cost: a key held from the last OK
+  could start a rematch against the bot at once. The other choice is the ×, as today.
+- **A choice the owner may refuse**: "your opponent" in place of "Player 2". The friend's name would read better (the
+  recap writes "Mara has"), but the result's teams already say Opponent, and a name needs the host's seat names here.
+- A match ended by a blow and both results with their pictures hidden are not filmed: `battle-live.spec.js` holds
+  them (a feed with the deciding blow; images refused). A walk that ends a match by a blow is a later walk's.
+- A defeat by an effect at a round's turn (a bleed) writes no line: the journal names it. Whether the host should
+  name the deciding entry in its outcome is the host's (`docs/tabletop/battle-ux-parity-plan.md`).
+- The report's creature is sent over twice its size (oversized 1 on the loss), as before: the battle's intake.

@@ -193,11 +193,17 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
   picture.addEventListener('click', () => unzoom());
   result.addEventListener('cancel', event => { if (!zoom.hidden) { event.preventDefault(); unzoom(); } });
   result.addEventListener('close', () => unzoom(false));
-  el('match-open').addEventListener('click', () => { beforeOpen(); result.showModal(); });
+  // The result opens on the next action (UX12b): the filled way on, else the window's first control, the ×.
+  function show() {
+    render(); result.showModal();
+    const next = [...result.querySelectorAll<HTMLElement>('.match-footer .primary')].find(one => !one.hidden && !(one as HTMLButtonElement).disabled);
+    next?.focus({ preventScroll: true });
+  }
+  el('match-open').addEventListener('click', () => { beforeOpen(); show(); });
   el('match-replay').addEventListener('click', async () => { beforeOpen(); await controller.replay(); if (controller.model().active) { result.close(); el('replay-next').focus(); } });
   el('replay-previous').addEventListener('click', () => controller.move(-1));
   el('replay-next').addEventListener('click', () => controller.move(1));
-  el('replay-close').addEventListener('click', () => { controller.closeReplay(); result.showModal(); });
+  el('replay-close').addEventListener('click', () => { controller.closeReplay(); show(); });
   el('replay-round').addEventListener('change', () => controller.jump(Number(el<HTMLSelectElement>('replay-round').value)));
   el('concede-open').addEventListener('click', () => { el<HTMLDialogElement>('settings-dialog').close(); beforeOpen(); concede.showModal(); });
   el('concede-confirm').addEventListener('click', () => { void controller.concede(); });
@@ -232,7 +238,8 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
       el('match-report-sides').replaceChildren(...(report?.sides ?? []).map((side, index) =>
         sideTable(side, model.result?.teams?.[index]?.label ?? (index === 0 ? 'Your team' : 'Opponent'), report as Report, index)));
     }
-    text('match-outcome', model.outcome); text('concede-error', model.error); text('match-error', model.error);
+    text('match-outcome', model.outcome);
+    text('match-blow', model.blow ?? ''); el('match-blow').hidden = !model.blow; text('concede-error', model.error); text('match-error', model.error);
     el('match-error').hidden = !model.error; el('replay-controls').hidden = !model.active;
     el('battle').dataset.replay = String(model.active);
     text('replay-text', model.summary); text('replay-note', model.note);
@@ -252,6 +259,6 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
     el<HTMLSelectElement>('replay-round').value = String(model.round);
   }
   // The result, once: when the match ends and its last result has been read.
-  function open() { if (controller.model().over && !result.open) result.showModal(); }
+  function open() { if (controller.model().over && !result.open) show(); }
   return { render, open };
 }

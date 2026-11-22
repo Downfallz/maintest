@@ -17,27 +17,40 @@ export function mutationScene(plan: Planning, catalogue: Catalogue | null, selec
   }
   const recipient = available && plan.opened && selected != null ? String(selected) : null;
   const draft = plan.choice;
+  const packs = new Map(catalogue?.packages?.map(pack => [pack.id, pack]));
+  // The creature drawn as the mutation would make it, the mutation counted as its latest purchase (ADR 0151).
+  function wear(id: string, tier: string) {
+    const own = plan.latest?.board?.allies?.find((one: {id: number}) => String(one.id) === id);
+    if (!own || !packs.get(tier)?.visual) return undefined;
+    const acquiredTiers = [...(own.acquiredTiers ?? []), tier];
+    const preview = creatureAppearance({ acquiredTiers }, packs);
+    const evolution = resolveEvolution({ id, acquiredTiers }, packs, { log: { order: (one: string) => [...(purchases?.order(one) ?? []), tier] } });
+    frame = { ...frame, creatures: frame.creatures.map(one => one.id === id ? { ...one, ...preview, evolution } : one) };
+    return preview.form as string;
+  }
+  // A pick the host accepted keeps its creature in the form it leads to until the reveal applies it (UX12b): the
+  // seat's own picks, which the host holds privately, never a draft. Read only on the seat's live field.
+  const picked = new Map<string, { tier: string; name: string; form?: string }>();
+  if (live && plan.latest && !plan.latest.replay && !plan.latest.over) {
+    for (const pick of plan.latest.board?.evolutionChoices ?? []) {
+      const id = String(pick.creature), own = plan.latest.board.allies?.find((one: {id: number}) => String(one.id) === id);
+      if (!own || !pick.tier || (own.acquiredTiers ?? []).includes(pick.tier)) continue;
+      picked.set(id, { tier: pick.tier, name: packs.get(pick.tier)?.name ?? pick.tier, form: wear(id, pick.tier) });
+    }
+  }
   let previewForm: string | undefined;
   if (recipient) {
     frame = { ...frame, mutationFocus: recipient };
-    if (draft?.tier && draft.creature === selected && eligible.has(recipient)) {
-      const own = plan.latest.board.allies.find((one: {id: number}) => one.id === selected);
-      const packs = new Map(catalogue?.packages?.map(pack => [pack.id, pack]));
-      if (own && packs.get(draft.tier)?.visual) {
-        const acquiredTiers = [...(own.acquiredTiers ?? []), draft.tier];
-        const preview = creatureAppearance({ acquiredTiers }, packs);
-        // The illustration the creature would show, the drafted mutation counted as its latest purchase (ADR 0151).
-        const evolution = resolveEvolution({ id: recipient, acquiredTiers }, packs, { log: { order: (id: string) => [...(purchases?.order(id) ?? []), draft.tier] } });
-        previewForm = preview.form;
-        frame.creatures = frame.creatures.map(one => one.id === recipient ? { ...one, ...preview, evolution } : one);
-      }
-    }
+    if (draft?.tier && draft.creature === selected && eligible.has(recipient)) previewForm = wear(recipient, draft.tier);
   }
   const prompt = available && !plan.opened && eligible.size ? 'Choose a creature on the battlefield to explore its mutations.' : null;
   function tag(id: string) {
+    if (picked.has(id)) return 'PICKED';
     if (!eligible.has(id)) return null;
     if (id !== recipient) return '◇ MUTATE';
     return draft?.tier ? 'PRIVATE PREVIEW' : 'MUTATION TREE';
   }
-  return { frame, eligible, recipient, previewForm, tag, prompt, available };
+  // What a screen reader hears in place of PICKED: the tab's own words.
+  const spoken = (id: string) => picked.has(id) ? `picked ${picked.get(id)!.name}, hidden until reveal` : null;
+  return { frame, eligible, recipient, previewForm, picked, tag, spoken, prompt, available };
 }

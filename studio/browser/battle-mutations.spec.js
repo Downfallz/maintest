@@ -486,3 +486,76 @@ test('on a phone on its side the creature list stands beside the tree\'s band, n
   await fitsViewport(page, '#atlas-close, #atlas-creature');
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+
+// A mutation followed back onto the field (UX12b, docs/art/journeys/windows.md, `mutation-followed`).
+test('the team\'s last pick, once the host accepts it, keeps its creature in its new form, tagged PICKED, and the focus follows it', async ({ page }) => {
+  const h = await mount(page, { remaining: 1 });
+  h.state.next = view => ({ ...view, waitingFor: null, waitingAsked: null, options: {}, board: { ...view.board, evolutionChoices: [{ creature: 2, tier: 'root1' }] } });
+  await page.locator('#actor-layer [data-creature="2"]').click();
+  await page.locator('[data-mutation="root1"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes).toEqual([{ kind: 'Evolution', creature: 2, tier: 'root1', asked: 11 }]);
+  await expect(page.locator('#planning-dialog')).toBeHidden();
+  const two = page.locator('#actor-layer [data-creature="2"]');
+  await expect(two).toBeFocused();
+  // Read from the pick the host holds, not from the draft: the draft is gone, the form stays until the reveal.
+  await expect(two).toHaveAttribute('data-picked', 'root1'); await expect(two).toHaveAttribute('data-form', 'base-creature');
+  await page.clock.runFor(200); await expect(two).toHaveAttribute('data-artwork-shown', 'predator-base');
+  await expect(two.locator('.creature-tag')).toHaveText('PICKED');
+  await expect(two).toHaveAccessibleName(/picked Predator, hidden until reveal/);
+  await expect(page.locator('#actor-layer [data-creature="1"] .creature-tag')).not.toHaveText('PICKED');
+  // A repeated snapshot keeps the mark and never moves the focus again.
+  await page.locator('#settings').focus(); await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#settings')).toBeFocused(); await expect(two).toHaveAttribute('data-picked', 'root1');
+  // The reveal applies the pick: PICKED goes, the form stays.
+  h.state.view = { ...h.state.view, board: { ...h.state.view.board, subPhase: 'Speed', evolutionChoices: [],
+    allies: h.state.view.board.allies.map(one => one.id === 2 ? { ...one, acquiredTiers: ['root1'], knownSpells: ['spell1'] } : one) } };
+  await h.publish(); await page.clock.runFor(50);
+  await expect(two).not.toHaveAttribute('data-picked'); await expect(two).toHaveAttribute('data-form', 'predator');
+  await expect(two).toHaveAttribute('data-artwork-shown', 'predator-base');
+  await expect(two.locator('.creature-tag')).not.toHaveText('PICKED'); await expect(page.locator('#settings')).toBeFocused();
+  expect(h.state.errors).toEqual([]);
+});
+
+test('passing the team\'s picks sends the focus to its first living creature', async ({ page }) => {
+  const h = await mount(page, { allies: [{ ...roster[0], isAlive: false }, roster[1], roster[2]] });
+  await page.locator('#planning-pass').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(page.locator('#planning-dialog')).toBeHidden();
+  await expect(page.locator('#actor-layer [data-creature="2"]')).toBeFocused();
+  await expect(page.locator('#actor-layer [data-picked]')).toHaveCount(0); expect(h.state.errors).toEqual([]);
+});
+
+test('a pick closed without a confirm drops its draft and gives the focus back to what opened the sheet', async ({ page }) => {
+  const h = await mount(page);
+  // The phase opened the sheet by itself: the command that opens it again takes the focus.
+  await page.locator('#planning-close').click(); await expect(page.locator('#planning-dialog')).toBeHidden();
+  await expect(page.locator('#planning-open')).toBeFocused();
+  // Opened from a creature on the field, a draft made, then Escape: the creature has the focus, and its old form.
+  const two = page.locator('#actor-layer [data-creature="2"]');
+  await two.click(); await page.locator('[data-mutation="root1"]').click();
+  await expect(two).toHaveAttribute('data-preview-form', 'predator');
+  await page.keyboard.press('Escape'); await expect(page.locator('#planning-dialog')).toBeHidden();
+  await expect(two).toBeFocused(); await expect(two).not.toHaveAttribute('data-preview-form');
+  await expect(two).toHaveAttribute('data-form', 'base-creature');
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
+
+test('a reveal marks the new spell in the inspection, and a repeated snapshot never shows the reveal again', async ({ page }) => {
+  const h = await mount(page);
+  await page.locator('#planning-close').click();
+  h.state.view = { ...h.state.view, waitingFor: null, waitingAsked: null, options: {}, feedNext: 6,
+    feed: [{ sequence: 5, round: 1, event: { kind: 'PurchasesRevealed', roundId: 1, choices: [{ creature: 1, tier: 'root0' }] } }],
+    board: { ...h.state.view.board, subPhase: 'Speed', allies: roster.map(one => one.id === 1 ? { ...one, acquiredTiers: ['root0'], knownSpells: ['spell0'] } : one) } };
+  await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#growth-receipt')).toBeVisible();
+  await page.locator('#actor-layer [data-creature="1"]').click(); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  const spell = page.locator('#inspect-spells [data-inspect-spell="spell0"]');
+  await expect(spell).toHaveAttribute('data-fresh', 'true');
+  await expect(spell.locator('.inspect-spell-source')).toHaveText('New · Learned from Brute');
+  await page.keyboard.press('Escape');
+  // Read once: Continue sets it aside, and the same snapshot again brings neither the receipt nor a second reveal.
+  await page.locator('#growth-dismiss').click(); await expect(page.locator('#growth-receipt')).toBeHidden();
+  await h.publish(); await page.clock.runFor(50);
+  await expect(page.locator('#growth-receipt')).toBeHidden();
+  expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
+});
