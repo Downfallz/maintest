@@ -352,8 +352,10 @@ result in `battle/src` with UX12.
     to its band, is 79,800 bytes), `table/rules` to 116 KiB, `table/stats` to 800 KiB, each with S9's sign-out head; `table/offline` is 24 KiB, its
     plate asked for first. Each painting gains a 1280 px file for the band on a wide screen. The walk's `contrast` reads 7.27:1 at
     the least, at both widths; at 320 the bands are 88, 120 and 102 px. Left: the worker keeps the kit but not the rulebook's head
-    painting, so its band is soot offline; the French rulebook's band was not filmed; the rulebook's own measures (words
-    under 11 px, targets under 44) are its brief's **Left**.
+    painting, so its band is soot offline, and the French rulebook's band was not filmed (#1060); the rulebook's own
+    measures, words under 11 px and targets under 44, are its brief's **Left** (#1059); `offline.js` is refreshed only
+    when the worker installs again (#1061). A first build left the rulebook's deep links 135 px short of their section
+    on a phone; #1058 fixed it.
 11. **S11, the Mutation Tree and the result.** The tree's head and its column heads, the result's head, with
     UX12's windows (its brief, `windows.md`). Tests: `battle-mutations.spec.js`, the battle's budget, the
     measures.
