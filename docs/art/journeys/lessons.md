@@ -407,7 +407,8 @@ creature. On a phone the card stands in the dock in place of what the dock says;
 complete." and nothing more.
 
 The next lesson's title and link are in the view, `practice.tutorial.next` (#980): the page asks for nothing more.
-A link that would leave the site leads to Learn to play (`/#learn-to-play`), which the home already scrolls to.
+When the link is not on this site, the action leads to Learn to play (`/#learn-to-play`), which the home already
+scrolls to.
 
 ### Pictures
 
@@ -425,8 +426,8 @@ done.
   of the player's team; over the field, wider. Its three actions are on the first screen at 320 by 568.
 - **Waiting**: after Next or Leave, until the host has let go of the practice (at most 1.5 s): the pressed control
   is disabled. Play again restarts from the cut at once, as today. Read, not seen.
-- **Error**: a done the host could not be told is said again at the next change; the host also keeps it done
-  before the practice is let go of (#1138).
+- **Error**: a done the host could not be told is said again at the next change. The host also keeps it done
+  before the practice is let go of, and says on its console when its store cannot (#1138).
 - **Offline**: as the error; Leave and Next are links, and the offline page answers them.
 
 ### Motion
@@ -489,8 +490,8 @@ report. It is the end of the series too, and today says nothing of it.
   actions.
 - **Budget**: 130 words, 129 since UX8 (122 before; 125 was my sum, short of the eyebrow's own words); the battle
   report is most of it, and UX12's. The page adds one line, and the eyebrow names the lesson. The line shows only
-  when the seat's view says the three other tutorials were done (`practice.tutorial.othersDone`, #980): a player who skipped one is not told the series
-  is finished, and Leave the tutorial stays the filled action either way.
+  when the seat's view says the three other tutorials were done (`practice.tutorial.othersDone`, #980): a player
+  who skipped one is not told the series is finished, and Leave the tutorial stays the filled action either way.
 
 ```text
 TUTORIAL 4 OF 4 · COMPLETE

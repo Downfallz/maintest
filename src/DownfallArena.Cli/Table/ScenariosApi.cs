@@ -320,17 +320,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     private async Task<StudioResponse> OpenAsync(string id, AccountId who, string name)
     {
         var account = who.ToString();
-        ScenarioPractices.Practice? opened;
-        ScenarioPractices.Refusal? refused;
-        try
-        {
-            (opened, refused) = await practices.OpenAsync(id, account, KeepDoneAsync);
-        }
-        catch (Exception failure) when (TableRegistry.StoreFails(failure))
-        {
-            return NotKept(failure);
-        }
-
+        var (opened, refused) = await practices.OpenAsync(id, account, KeepDoneAsync);
         if (opened is null)
         {
             return Error(refused!.Error, refused.Message, refused.Status);
@@ -349,7 +339,9 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     {
         try
         {
-            return await accounts.TutorialsAsync(account) is { } kept && store.Tutorials.Where(one => one.Id != id).All(one => kept.StateOf(one.Id) == TutorialState.Done);
+            // A tutorial missing from the series at this host is not done: the series is not finished.
+            return store.Tutorials.Count >= store.Series && await accounts.TutorialsAsync(account) is { } kept
+                && store.Tutorials.Where(one => one.Id != id).All(one => kept.StateOf(one.Id) == TutorialState.Done);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {

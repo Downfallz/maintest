@@ -379,15 +379,20 @@ reproduces (`"bug": 812`), and the tab marks it *Bug #812*; every other row says
 
 Its link `/battle?scenario=<id>` a signed-in player opens as practice (`GET /api/scenarios/<id>`,
 `GET`/`POST /api/scenarios/<id>/practice`: resumed, or started from the cut in place of the account's last
-practice; `DELETE /api/scenarios/<id>/practice` lets go of it, 204 whether there was one or not; a tutorial done is
-kept done on the account before its practice is let go of, by a reload, a Leave, the next practice opened or the
-idle sweep; one the account's store cannot keep done answers 503 `Tutorial.Unavailable` to the reload, the Leave or
-the opening, which opens nothing, and the practice is kept for the next try, the sweep's included, said on the console
-(#931, #1138); in this process's memory, never recorded, indexed or in the ladder, one an account, 200 at most, let
-go of after an idle hour, gone with a restart), the battle view saying it is practice in a band with Briefing,
+practice; `DELETE /api/scenarios/<id>/practice` lets go of it, 204 whether there was one or not; in this process's
+memory, never recorded, indexed or in the ladder, one an account, 200 at most, let go of after an idle hour, gone with
+a restart), the battle view saying it is practice in a band with Briefing,
 Restart the round and Leave, and opening a practice started from its cut on a briefing card (its title, goal,
 seat and round). `GET /api/scenarios` lists the scenarios listed under Practice, which a signed-in player's home
-page shows. A scenario cut before #736 from a game still played is neither opened nor resumed until that game is
+page shows.
+
+A tutorial done is kept done on the account before its practice is let go of, whether by a reload, a Leave, another
+practice opened or the idle sweep (#931, #1138). When the store cannot keep it, the reload, the Leave or the opening
+answers 503 `Tutorial.Unavailable` and opens nothing, and the practice is kept for the next try. The sweep keeps it
+after the request that swept, which waits on no other account's write; a failure is said on the console and tried
+again at the next sweep, and a practice whose keeping has failed for an hour is let go of unkept.
+
+A scenario cut before #736 from a game still played is neither opened nor resumed until that game is
 over (`GET`/`POST .../practice` 409 `Scenario.UnderWay`, or 409 `Scenario.SourceUnread` when its record cannot be
 parsed, or 503 `Scenario.Unavailable` when the store cannot say), and `GET /api/scenarios` leaves it off, as it
 leaves off one whose game the store cannot read just then, said in one console line for the list (#833).
@@ -421,8 +426,8 @@ The seat's view says the lesson under `practice.tutorial`:
 - `shown`: how many steps have had their question asked.
 - `done`: the last step's question was asked and its round ended, or the match ended.
 - `next`: the lesson that follows in the series, its `title` and `link`; null after the last (#980).
-- `othersDone`: whether the account had done every other tutorial of the series when this one opened; false when
-  its store could not say (#980).
+- `othersDone`: whether the account has done every other tutorial of the series, as of when this one opened; false
+  when its store cannot say, or when a tutorial of the series is missing at this host (#980).
 
 #### The admin panel: Overview, Activity and Settings
 
