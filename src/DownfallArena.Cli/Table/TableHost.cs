@@ -212,11 +212,10 @@ internal static class TableHost
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
-        var clock = services.GetRequiredService<TimeProvider>();
         var kept = new ComposedHost.Kept();
         try
         {
-            var composed = await ComposeAsync(services, options, rules, pushing, files, clock, kept, cancellationToken);
+            var composed = await ComposeAsync(services, options, rules, pushing, files, kept, cancellationToken);
             if (composed is null)
             {
                 await kept.DisposeAsync();
@@ -231,8 +230,9 @@ internal static class TableHost
         }
     }
 
-    private static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, TimeProvider clock, ComposedHost.Kept kept, CancellationToken cancellationToken)
+    private static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, ComposedHost.Kept kept, CancellationToken cancellationToken)
     {
+        var clock = services.GetRequiredService<TimeProvider>();
         // A table told --no-record opens nothing and writes nothing: a rule tried out at a table should be
         // able to leave the disk as it found it.
         var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, cancellationToken) : null;
@@ -244,7 +244,7 @@ internal static class TableHost
             .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
             .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
 
-        var push = pushing is null ? null : new PushNotices(pushing.Sender, pushing.PublicKey, clock) { Record = table => table.RecordAsync() };
+        var push = pushing is null ? null : new PushNotices(pushing.Sender, pushing.PublicKey, clock) { Record = table => table.RecordAsync(CancellationToken.None) };
         // Finished matches with an account in them, kept beside the accounts for a ladder (ADR 0122, stage 5).
         var results = options.Accounts != AccountsMode.Off && store is not null
             ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken)
@@ -344,7 +344,7 @@ internal static class TableHost
             // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
             friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), opened!.Value.Store, clock);
             friends = new FriendsApi(friendships, accounts, notifier);
-            accounts.ForgetFriends = id => friendships.ForgetAsync(id);
+            accounts.ForgetFriends = id => friendships.ForgetAsync(id, CancellationToken.None);
             // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
             // operator's list of players read from it, the accounts and the results.
             accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), clock);
@@ -418,7 +418,7 @@ internal static class TableHost
         if (feedback is not null && accounts is not null)
         {
             var forget = new ForgetFeedbackAccount(feedback, feedbackWrites);
-            accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString());
+            accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString(), CancellationToken.None);
         }
 
         // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
@@ -467,7 +467,7 @@ internal static class TableHost
             Settings = accounts?.Settings,
         };
 
-        composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id))?.Username.Value;
+        composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id, CancellationToken.None))?.Username.Value;
         // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
         var leaderboard = accounts is null || results is null
             ? null
