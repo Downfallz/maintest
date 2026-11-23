@@ -5,7 +5,7 @@
 // (`recent`) and never in a cookie, so a session cookie taken from a device left signed in cannot change how the
 // account is reached. The host decides what may be added or removed; this page draws what it answered.
 
-import { accountRequest, answerGoogle, confirmAction, loadGoogle, prepareGoogle, recentSignIn, signInWays } from './account.js';
+import { accountRequest, answerGoogle, confirmAction, loadGoogle, prepareGoogle, forgetRecentSignIn, recentSignIn, signInWays } from './account.js';
 import { startDiscord } from './discord.js';
 
 export const WAYS_ROUTE = '/api/account/identities';
@@ -92,6 +92,7 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
     el('ways-again-button').disabled = true;
     try {
       await request('/api/account/signout', { everywhere: false });
+      forgetRecentSignIn(session);
       keepWaysNote(session, 'Signed in again. You can change how you sign in for the next ten minutes.');
       win.location.assign('/lobby');
     } catch (error) {

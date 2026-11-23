@@ -606,7 +606,8 @@ internal sealed class AccountApi
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {
-            Said($"  Way in not added ({name}) to account {who.Account.Id}: {HttpHost.OneLine(failure)}");
+            // The failure's type alone: a file store's message names the by-subject path, the provider's identifier.
+            Said($"  Way in not added ({name}) to account {who.Account.Id}: {failure.GetType().Name}.");
             return WaysUnavailable();
         }
 
@@ -654,7 +655,7 @@ internal sealed class AccountApi
             // The account may be written and its generation raised, the entry left behind: its cookie may be dead
             // too, so the page reads the account again.
             _cache.TryRemove(who.Account.Id, out _);
-            Said($"  Way in not removed ({name}) from account {who.Account.Id}: {HttpHost.OneLine(failure)}");
+            Said($"  Way in not removed ({name}) from account {who.Account.Id}: {failure.GetType().Name}.");
             return WaysUnavailable();
         }
 
@@ -674,7 +675,7 @@ internal sealed class AccountApi
             }
             catch (Exception failure) when (TableRegistry.StoreFails(failure))
             {
-                Said($"  Way in removed ({name}) from account {account.Id}, its devices not forgotten: {HttpHost.OneLine(failure)}");
+                Said($"  Way in removed ({name}) from account {account.Id}, its devices not forgotten: {failure.GetType().Name}.");
                 return Problem(503, "Account.Unavailable", "The way to sign in is removed, but your devices could not be signed out. Sign out everywhere from Settings.") with
                 {
                     Headers = [new KeyValuePair<string, string>("Set-Cookie", cookie)],

@@ -250,3 +250,14 @@ test('Google is initialized once, and its answer goes to Settings while it waits
   assert.deepEqual(got, [['link', 'a'], ['signin', 'b']]);
   answerGoogle('signin', null);
 });
+
+test('a sign out forgets the tab\'s proof of a recent sign-in', async () => {
+  const { forgetRecentSignIn, keepRecentSignIn, recentSignIn } = await import('./account.js');
+  const store = new Map();
+  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) };
+  keepRecentSignIn(storage, 'r1.proof');
+
+  forgetRecentSignIn(storage);
+
+  assert.equal(recentSignIn(storage), null);
+});

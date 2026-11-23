@@ -91,6 +91,11 @@ export function keepRecentSignIn(storage, value, now = Date.now()) {
   try { storage?.setItem(RECENT, JSON.stringify({ value, at: now })); } catch { /* Changing a way then asks for a sign in again. */ }
 }
 
+/** Forgets the proof of a recent sign-in: a sign out leaves nothing in the tab that changes the account's ways in. */
+export function forgetRecentSignIn(storage) {
+  try { storage?.removeItem(RECENT); } catch { /* Nothing kept, nothing to forget. */ }
+}
+
 /** The proof of a recent sign-in this tab keeps, or null when it has none or it is too old to be taken. */
 export function recentSignIn(storage, now = Date.now()) {
   try {
@@ -413,6 +418,7 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       try {
         await request('/api/account/signout', await signOutBody(everywhere));
         markSignedOut(session);
+        forgetRecentSignIn(session);
         await refresh();
       } catch (error) {
         if (!everywhere) el('account-menu').open = true;
