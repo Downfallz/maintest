@@ -433,6 +433,17 @@ test('the other player\'s move offers pop-ups by the page\'s card, and Turn on i
   await page.locator('#push-offer-close').click(); await expect(page.locator('#push-offer')).toBeHidden();
   await page.locator('#settings').click(); await expect(page.locator('#notices-toggle')).toHaveText('Stop notifying me');
 });
+// Refused in the prompt, the card points to the switch its Turn on turns on, this page's own (#1160).
+test('a Turn on refused in the browser\'s prompt points to Match settings', async ({ page }) => {
+  const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'person', name: 'Rook' } });
+  await page.evaluate(() => { Notification.requestPermission = async () => { window.serviceCalls.push('permission'); Notification.permission = 'denied'; return 'denied'; }; });
+  h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#push-offer')).toBeVisible();
+  await page.locator('#push-offer-on').click();
+  await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. You can turn them on in Match settings.');
+  expect(h.writes).toEqual([]);
+});
 test('the player\'s own turn takes an unanswered card away', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'person', name: 'Rook' } });
   const board = h.view.board;

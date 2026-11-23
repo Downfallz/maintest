@@ -910,6 +910,10 @@ Pop-ups stay off. You can turn them on in the menu, under Settings, Notification
 Pop-ups could not be turned on. You can try again in the menu, under Settings, Notifications.   (the host refused)
 ```
 
+Each line says where the switch is. With accounts off nobody is signed in and Settings shows no Notifications, so
+the offer made through a game's seat says "in the game's Match settings" instead (#1160); the battle view's says
+"in Match settings", which is the switch its Turn on turns on.
+
 "Pop-ups" is the word of Settings, Notifications (**Pop-ups on this device**, N3); "your turn" and "the game" are
 the lobby's. `docs/domain/player-terminology.md` names neither; it is not amended for a word Settings already uses.
 

@@ -180,19 +180,19 @@ function seatAnswering({ publicKey = 'BAUG', ok = true, status = ok ? 200 : 500 
 
 const waiting = { table: { id: 'w' }, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-test('with accounts off the offer asks through the waiting game\'s seat: ready once its key is read, and Turn on registers the browser with that seat (#1127)', async () => {
+test('with accounts off the offer asks through the waiting game\'s seat: ready once its key is read, says its switch is in the game\'s Match settings, and Turn on registers the browser with that seat (#1127, #1160)', async () => {
   const browser = pushingBrowser(), host = seatAnswering();
   let told = 0;
   const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport, onChange: () => { told++; } });
   assert.equal(source.state().ready, false, 'no game waits: nothing to offer through');
 
   await source.setSeat(waiting);
-  assert.deepEqual(source.state(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
+  assert.deepEqual(source.state(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false, where: "in the game's Match settings" });
   assert.ok(told > 0, 'the offer is told the seat was read');
   assert.deepEqual(host.asked, [['key', 'player1', 'seat-token']]);
 
   const after = await source.turnOn();
-  assert.deepEqual(after, { ready: true, keyed: true, subscribed: true, permission: 'granted', hotseat: false });
+  assert.deepEqual(after, { ready: true, keyed: true, subscribed: true, permission: 'granted', hotseat: false, where: "in the game's Match settings" });
   assert.deepEqual(browser.calls, [['register', '/sw.js'], ['permission'], ['subscribe']]);
   assert.deepEqual(host.asked.at(-1), ['push', 'player1', 'seat-token', 'made']);
 });

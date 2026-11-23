@@ -114,6 +114,9 @@ export function waitsOnAPerson(entry) {
   return gameKind(entry?.table) === 'players' && (entry?.seats ?? []).length === 1 && waitsOnAnother(entry);
 }
 
+/** Where a seat's switch is, with accounts off: the game's own Match settings, as Settings shows nobody's (#1160). */
+export const SEAT_WHERE = "in the game's Match settings";
+
 /**
  * The offer's source on a host with accounts off (#1127): nobody is signed in, so the account's switch has no device
  * to read. The browser is asked through the seat of the game that waits, as the battle view asks through its own
@@ -123,7 +126,7 @@ export function waitsOnAPerson(entry) {
 export function seatPushSource({ nav = globalThis.navigator, win = globalThis, transport = httpTransport, onChange = () => {} } = {}) {
   const state = { ready: false, keyed: false, subscribed: false, permission: win?.Notification?.permission ?? 'default', busy: false };
   let seat = null, token = null, registration = null, publicKey = null, reading = 0, failed = false;
-  const snapshot = () => ({ ready: state.ready && !state.busy, keyed: state.keyed, subscribed: state.subscribed, permission: state.permission, hotseat: false });
+  const snapshot = () => ({ ready: state.ready && !state.busy, keyed: state.keyed, subscribed: state.subscribed, permission: state.permission, hotseat: false, where: SEAT_WHERE });
 
   async function read() {
     const ticket = ++reading, asked = seat;

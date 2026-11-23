@@ -83,6 +83,20 @@ test('what the card says after Turn on: done, blocked, or still off, each with w
   assert.match(turnedOnLine({ subscribed: false, permission: 'granted' }, true), /could not be turned on.*Settings, Notifications/);
 });
 
+test('a source that says where its switch is has the card point there, not to Settings', () => {
+  const where = "in the game's Match settings";
+  assert.equal(turnedOnLine({ subscribed: false, permission: 'default', where }), "Pop-ups stay off. You can turn them on in the game's Match settings.");
+  assert.equal(turnedOnLine({ subscribed: false, permission: 'granted', where }, true), "Pop-ups could not be turned on. You can try again in the game's Match settings.");
+});
+
+test('after Turn on, the card says where the source keeps its switch', async () => {
+  const { offer, elements, click, current } = page({ turnOn: async () => ({ ...current, permission: 'denied' }) });
+  current.where = "in the game's Match settings";
+  offer.consider();
+  await click('push-offer-on');
+  assert.equal(elements['push-offer-said'].textContent, "Pop-ups stay off. You can turn them on in the game's Match settings.");
+});
+
 /** A page with a body to add the card to, the elements it adds, and a window that raises events. */
 function page({ userAgent = ANDROID, state = { ready: true, keyed: true, subscribed: false, permission: 'default' }, turnOn, storage = store(), now = () => NOW } = {}) {
   const elements = {};
