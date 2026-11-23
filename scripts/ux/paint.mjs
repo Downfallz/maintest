@@ -86,16 +86,23 @@ export function summary(runs) {
   };
 }
 
+/**
+ * The walker signed in with the lessons skipped, on `context`'s browser. A refusal stops the paints here: `home-new`
+ * would otherwise measure the sign-in panel without a word (#1093).
+ */
+export async function signIn(context, game) {
+  const headers = { Origin: game };
+  const made = await context.request.post(`${game}/api/account/dev`, { data: { username: 'Walker' }, headers });
+  if (!made.ok()) throw new Error(`The host refused the account Walker: ${made.status()}`);
+  const skipped = await context.request.post(`${game}/api/tutorials/sc-repo-tutorial-your-first-combat/skip`, { data: {}, headers });
+  if (!skipped.ok()) throw new Error(`The host refused to skip the lessons of Walker: ${skipped.status()}`);
+}
+
 /** The three doors: the showcase's home, the game's sign-in panel, and the home of a player with nothing. */
 export async function paints(browser, showcase, { runs = PAINT_RUNS } = {}) {
   const set = await raiseSet(showcase);
   try {
-    const signIn = async context => {
-      const origin = { Origin: set.game };
-      await context.request.post(`${set.game}/api/account/dev`, { data: { username: 'Walker' }, headers: origin });
-      await context.request.post(`${set.game}/api/tutorials/sc-repo-tutorial-your-first-combat/skip`, { data: {}, headers: origin });
-    };
-    const pages = [['showcase-home', `${set.showcase}/`, null], ['sign-in-panel', `${set.game}/`, null], ['home-new', `${set.game}/`, signIn]];
+    const pages = [['showcase-home', `${set.showcase}/`, null], ['sign-in-panel', `${set.game}/`, null], ['home-new', `${set.game}/`, context => signIn(context, set.game)]];
     const result = { profile: { viewport: `${VIEWPORT.width}x${VIEWPORT.height}`, ...SLOW_PHONE }, pages: {} };
     // One load after the other, on purpose: two at once would share the processor that is being held back.
     for (const [name, url, prepare] of pages) {

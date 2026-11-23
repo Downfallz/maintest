@@ -18,11 +18,33 @@ export const lessons = readdirSync(folder).filter(name => name.endsWith('.json')
 /** The seat's view as the page last read it (studio/browser/seat-views.js, installed by the walk). */
 export const latest = page => page.evaluate(() => globalThis.seatViews?.latest ?? null);
 
-export async function confirm(page, selector) {
-  const written = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
-  await page.locator(selector).click();
-  const status = (await written).status();
-  if (status !== 204) throw new Error(`The host answered ${status} to the decision behind ${selector}.`);
+const isDecision = response => response.url().endsWith('/decision') && response.request().method() === 'POST';
+
+/**
+ * Press `selector` and read the host's answer to the decision it sends. With `until`, a sheet that sends several
+ * (the tempos, one per creature), every answer is read until that sheet hides: a refusal of the second is not
+ * lost behind the first's 204 (#1093). A status is read as it arrives, never a body (studio/AGENTS.md).
+ */
+export async function confirm(page, selector, { until = null } = {}) {
+  const statuses = [];
+  let refused;
+  const refusal = new Promise(done => { refused = done; });
+  const seen = response => {
+    if (!isDecision(response)) return;
+    statuses.push(response.status());
+    if (response.status() !== 204) refused();
+  };
+  page.on('response', seen);
+  try {
+    const written = page.waitForResponse(isDecision);
+    await page.locator(selector).click();
+    await written;
+    if (until) await Promise.race([page.locator(until).waitFor({ state: 'hidden', timeout: 20000 }), refusal]);
+  } finally {
+    page.off('response', seen);
+  }
+  const status = statuses.find(one => one !== 204);
+  if (status !== undefined) throw new Error(`The host answered ${status} to the decision behind ${selector}.`);
 }
 
 // What the battle shows, in one read of the page.
@@ -125,8 +147,7 @@ async function answerSpeed(page, next, blocked, tempo = () => null) {
     await choose(page, `[data-speed="${next('Speed', Number(tab))?.speed ?? tempo(index) ?? 'Standard'}"]`, blocked);
   }
   // One confirmation sends every creature's tempo: the sheet closes once all are sent.
-  await confirm(page, '#planning-confirm');
-  await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 });
+  await confirm(page, '#planning-confirm', { until: '#planning-dialog' });
 }
 
 async function answerAction(page, view, next, look, blocked) {

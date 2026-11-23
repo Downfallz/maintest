@@ -48,7 +48,9 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 /** Serve a built showcase on a free local port, a folder answering with its `index.html`. */
 export async function serveShowcase(folder) {
   const server = createServer(async (request, response) => {
-    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    let pathname;
+    // A malformed escape is the caller's error: said with a 400, never a rejection nobody catches (#1093).
+    try { pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname); } catch { response.writeHead(400).end(); return; }
     let file = resolve(folder, `.${pathname}`);
     if (file !== folder && !file.startsWith(`${folder}/`)) { response.writeHead(404).end(); return; }
     try {
@@ -68,28 +70,62 @@ async function freePort() {
   return port;
 }
 
+/** A process is gone once it has an exit code or was ended by a signal (a crash, out of memory). */
+export const exited = child => child.exitCode !== null || child.signalCode !== null;
+
+const STOPPED_LATE = Symbol('the process outlived its grace');
+
+/**
+ * Stop a process: an interrupt, then a kill once `grace` ms have passed. Returns at once when it is already gone, so
+ * a host a signal killed does not hold the walk until its spec's timeout (#1093).
+ */
+export async function stopProcess(child, { grace = 10000 } = {}) {
+  // A program never spawned has no pid, and may never say `exit`: there is nothing to stop.
+  if (exited(child) || child.pid === undefined) return;
+  const closed = new Promise(done => child.once('exit', done));
+  child.kill('SIGINT');
+  let timer;
+  const late = new Promise(done => { timer = setTimeout(done, grace, STOPPED_LATE); });
+  try {
+    if (await Promise.race([closed, late]) === STOPPED_LATE) { child.kill('SIGKILL'); await closed; }
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /**
  * A table host as a developer starts one: accounts by a typed name, a table of seed 7 with a bot in its second
  * seat, the scenarios of the repository, a recording under `folder`. Returns its origin and the first seat's
  * invitation.
  */
-export async function startHost(folder) {
+export async function startHost(folder, { program = dotnetBinary() } = {}) {
   const port = await freePort();
-  const host = spawn(dotnetBinary(), [HOST, 'table', '--declaration', 'at-activation', '--p2', 'greedy', '--seed', '7',
+  const host = spawn(program, [HOST, 'table', '--declaration', 'at-activation', '--p2', 'greedy', '--seed', '7',
     '--accounts', 'dev', '--record', join(folder, 'sessions'), '--port', String(port)], { cwd: root });
-  let log = '';
+  let log = '', failed = null;
   host.stdout.on('data', data => { log += data; }); host.stderr.on('data', data => { log += data; });
-  const end = Date.now() + 30000;
-  while (!hostLinks(log)) {
-    if (host.exitCode !== null || Date.now() > end) { host.kill('SIGINT'); throw new Error(`The table host did not start:\n${log}`); }
-    await new Promise(done => setTimeout(done, 100));
+  // A program that cannot be spawned emits an error, and never an exit: without a listener it ends the process.
+  host.once('error', error => { failed = error; });
+  // Waited on what the host says, or on its end, for 30 s at most.
+  await new Promise(done => {
+    const timer = setTimeout(settled, 30000);
+    function check() { if (hostLinks(log) || failed || exited(host)) settled(); }
+    function settled() {
+      clearTimeout(timer);
+      for (const stream of [host.stdout, host.stderr]) stream.off('data', check);
+      host.off('exit', check); host.off('error', check);
+      done();
+    }
+    for (const stream of [host.stdout, host.stderr]) stream.on('data', check);
+    host.on('exit', check); host.on('error', check);
+    check();
+  });
+  if (!hostLinks(log)) {
+    await stopProcess(host, { grace: 2000 });
+    const why = failed ? ` (${failed.message})` : '';
+    throw new Error(`The table host did not start${why}:\n${log}`);
   }
-  const close = async () => {
-    if (host.exitCode !== null) return;
-    const closed = new Promise(done => host.once('exit', done));
-    host.kill('SIGINT');
-    await closed;
-  };
+  const close = () => stopProcess(host);
   return { origin: `http://127.0.0.1:${port}`, invitation: hostLinks(log).join, close };
 }
 

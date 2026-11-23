@@ -20,7 +20,9 @@ export async function account(walk, page, username, { skipLessons = true } = {})
   const headers = { Origin: walk.set.game };
   const made = await page.request.post(`${walk.set.game}/api/account/dev`, { data: { username }, headers });
   if (!made.ok()) throw new Error(`The host refused the account ${username}: ${made.status()}`);
-  if (skipLessons) await page.request.post(`${walk.set.game}/api/tutorials/${FIRST_LESSON}/skip`, { data: {}, headers });
+  if (!skipLessons) return;
+  const skipped = await page.request.post(`${walk.set.game}/api/tutorials/${FIRST_LESSON}/skip`, { data: {}, headers });
+  if (!skipped.ok()) throw new Error(`The host refused to skip the lessons of ${username}: ${skipped.status()}`);
 }
 
 // The home once its sections are in: its lists no longer say they are being found.
