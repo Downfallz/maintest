@@ -69,7 +69,8 @@ export function readShot(path, { scenarios = join(root, 'scenarios') } = {}) {
     refuse('"scenario" names a file directly under scenarios/, such as "greedy-1v1-round-3.json".');
   }
   const named = basename(shot.scenario, '.json');
-  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${LEFT_OUT.map(one => JSON.stringify(`${one}...`)).join(' or ')}.`);
+  const prefixes = LEFT_OUT.map(one => JSON.stringify(one + '...')).join(' or ');
+  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${prefixes}.`);
   if (named.length > LONGEST_NAME) refuse(`the host cuts a scenario's name past ${LONGEST_NAME} characters: name the file shorter.`);
   if (!existsSync(join(scenarios, shot.scenario))) refuse(`the scenario scenarios/${shot.scenario} does not exist.`);
   const ratios = shot.ratios ?? Object.keys(RATIOS);
@@ -125,7 +126,8 @@ const TICK_MS = 100;
  * left. `done` is asked before each step and once after the last; it is the answer.
  */
 export async function steps(step, { times, done = () => false }) {
-  if (await done()) return true;
+  // `done` may answer at once or from the page: either way, a promise.
+  if (await Promise.resolve(done())) return true;
   if (times <= 0) return false;
   await step();
   return steps(step, { times: times - 1, done });
