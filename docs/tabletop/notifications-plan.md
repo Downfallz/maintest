@@ -1,6 +1,6 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1, N2 and N3 are built; each stage below is
+Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 to N4 are built; each stage below is
 one pull request.
 
 ## What the owner asked for
@@ -13,7 +13,7 @@ their mind. Clean, best practice, able to grow if the game gets big, cheap to st
 
 ## What exists today
 
-| Concern | What the code and the docs hold |
+| Concern | What the code and the docs held before N1 |
 | --- | --- |
 | The bell | `table/inbox.js`, `docs/tabletop/home-navigation.md#the-bell`. It lists what **waits**: a turn against a person, an invitation, a friend request, a declined invitation. It is computed from `GET /api/lobby/mine` and `GET /api/friends`. The host stores no notification. No switch turns it off. |
 | What the bell never shows | What happened and calls for nothing: a friend accepted, an invited friend accepted or left, a match over or voided, a turn about to time out. These exist only as a push. A player without push never learns of them: this is what reads as "everything is off". |
@@ -192,6 +192,34 @@ Jobs tab show the counts and the queue's length.
 4. **N4, the offer.** The journey's brief, `table/push-offer.js`, the card in the lobby and in the battle view,
    the three answers, the words by platform, Install on Android. The classic page's own offer is removed.
    Tests: `push-offer.test.js` (when it shows, each answer, each platform), the browser specs (`table.push.js`).
+
+   *Built (2026-11-23)*: the brief is `docs/art/journeys/lobby.md`, *The pop-ups offer*. `table/push-offer.js` is
+   the card, added by the page to its body and styled once in `identity.css` (`.push-offer`, a card of the kit with
+   its cut corner). It stands at the foot of the lobby and at the top of the battle view, so the dock and lesson 1's
+   end card stay free. It shows the eyebrow *POP-UPS*, the title *Away from the game?* and one line by platform:
+   Android in the owner's words, a desktop browser, an iPhone at the home screen, and an iPhone outside it, which
+   gets the steps to add the app and no Turn on. Its answers are **Turn on**, **Not now**, **Don't ask again**, and
+   **Install the app** on Android once the browser raised `beforeinstallprompt`.
+
+   The page's own switch does the asking. In the lobby it is Settings, Notifications (`devices.js`, which now tells
+   the page where it stands). In the battle view it is the match settings' switch (`battle-services.js`, through the
+   seats, which N3 made the account's devices too). The end of a tutorial is asked through the account's switch,
+   because a practice seat answers no push route (the host reviewer's finding); a practice seat now shows no switch,
+   and a seat the host refuses no longer lets go of a subscription the browser already held. The lobby offers when a
+   game against a person waits on the other player (`waitsOnAPerson`); the battle view on the other player's move
+   against a person and at lesson 1's end (`battleMoment`). The card goes, unanswered and unkept, when the moment
+   passes, and the page does not ask again.
+
+   The answers are the browser's (`downfall.push-offer`). Not now counts as an asking, and so does a Turn on that
+   leaves pop-ups off. Askings are a week apart at least, three at most. Don't ask again, or pop-ups turned on, ends
+   the offer for good. After Turn on the card says Done, stays off or could not, and where the switch is, with a
+   Close; no clock. The classic page's offer, and its `offerShown`, are removed.
+
+   Left: the card is not on the journey's walk, because its host has no push keys and headless Chromium refuses the
+   permission; the spec shows it with a browser never asked. A host with accounts off makes no offer in the lobby,
+   whose switch is the account's; the battle view still does. The brief's **Left** holds the owner's choices on the
+   card over the lobby's featured space at 320 px.
+
 5. **N5, the queue.** ADR: notices are sent by the worker from a queue; "your turn" is a delayed message.
    `infra/main.bicep` gains the queue. Tests: the worker's tests on a retry, a 410 and a give-up, on Azurite;
    the `infra-reviewer`.
