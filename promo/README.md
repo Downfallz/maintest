@@ -74,7 +74,7 @@ in a practice, and the filmed seat plays as a player does, looking 800 ms at wha
 closes a window opened over the field, presses OK and Continue, buys no Mutation, takes a Standard tempo, and casts
 the first spell of `film.casts` it can (if none, the first spell it can), on the first targets offered.
 
-What makes two takes the same:
+What makes two takes the same, the five things held:
 
 - the page's clock moves a frame at a time, and only once every request it made is answered and every picture it
   is loading has loaded;
