@@ -228,7 +228,7 @@ const VALUED = {
   '--out': (text, options) => { options.out = text; },
   '--strip': (text, options) => { options.strip = text; },
   '--showcase': (text, options) => { options.showcase = text; },
-  // Read against the sizes once the strip is known: a strip may name its own (`viewports`).
+  // Read against the sizes once the strip is known: a strip may name its own (`viewports`). Set only when given.
   '--width': (text, options) => { options.width = text; },
 };
 for (const flag of ['--frames', '--interval', '--runs']) {
@@ -250,7 +250,7 @@ export function blockedLines(id, viewport, taken) {
 }
 
 export function parseArguments(argv) {
-  const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, width: null, runs: PAINT_RUNS };
+  const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, runs: PAINT_RUNS };
   const given = new Set();
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
