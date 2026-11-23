@@ -14,7 +14,7 @@ test.beforeEach(classicTable);
 // tap is as far as this goes; what it proves is the wiring on the real host, which the unit tests cannot.
 
 const root = resolve('../..');
-let host, seatLink, keysDirectory;
+let host, seatLink, keysDirectory, keysFile, port;
 
 function run(args) {
   const dotnet = dotnetBinary();
@@ -25,7 +25,7 @@ function run(args) {
 test.beforeAll(async () => {
   const probe = createServer();
   await new Promise(done => probe.listen(0, '127.0.0.1', done));
-  const port = probe.address().port;
+  port = probe.address().port;
   await new Promise(done => probe.close(done));
 
   keysDirectory = mkdtempSync(join(tmpdir(), 'push-keys-'));
@@ -35,7 +35,7 @@ test.beforeAll(async () => {
     printing.stdout.on('data', data => { out += data.toString(); });
     printing.on('exit', code => (code === 0 ? done(out) : fail(new Error(`push-keys exited ${code}`))));
   });
-  const keysFile = join(keysDirectory, 'push-keys.json');
+  keysFile = join(keysDirectory, 'push-keys.json');
   writeFileSync(keysFile, keys);
 
   host = run(['table', '--p2', 'greedy', '--no-record', '--seed', '7', '--port', String(port), '--push-keys', keysFile]);
@@ -66,20 +66,8 @@ test('a seat page on a host with keys registers the worker and offers the notice
   // browser on the CI runner answers every notification permission with a refusal, and the page says so.
   const button = page.locator('#notices-match');
   await expect(button).toHaveText(/Notify me when it's my turn|Notifications are blocked/, { timeout: 10000 });
-  // Offered once on entering, too: a player who arrives second never waits in the room that offered it before.
-  // Blocked is a "no" already said, and is not offered again.
-  const offer = page.locator('#notices-offer');
-  if (await button.isEnabled()) {
-    await expect(offer).toBeVisible();
-    await expect(page.locator('#notices-offer-yes')).toHaveText("Notify me when it's my turn");
-    await page.locator('#notices-offer-no').click();
-    await expect(offer).toBeHidden();
-    await page.reload();
-    await expect(button).toHaveText("Notify me when it's my turn", { timeout: 10000 });
-    await expect(offer).toBeHidden();
-  } else {
-    await expect(offer).toBeHidden();
-  }
+  // The offer of pop-ups is the lobby's and the battle view's (notifications plan, N4): the classic page has none.
+  await expect(page.locator('#notices-offer')).toHaveCount(0);
   await expect.poll(() => page.evaluate(async () => Boolean(await navigator.serviceWorker.getRegistration('/'))), { timeout: 10000 }).toBe(true);
   const key = await page.evaluate(async () => (await (await fetch('/api/lobby/push')).json()).publicKey);
   expect(key).toMatch(/^[A-Za-z0-9_-]{87}$/);
@@ -106,4 +94,71 @@ test('a seat page on a host with keys registers the worker and offers the notice
   // An already opted-in endpoint may be rebound; subscriptions/test requests are never automatic.
   expect(battleWrites.every(method => method === 'PUT')).toBe(true);
 
+});
+
+// The offer in the lobby (N4): a signed-in player whose game against a person waits on the other player is offered
+// pop-ups by the page's own card, never the browser's prompt first; Not now waits a week, Don't ask again ends it.
+test('the lobby offers pop-ups when a game against a person waits, and keeps the answer', async ({ page, context }) => {
+  const probe = createServer();
+  await new Promise(done => probe.listen(0, '127.0.0.1', done));
+  const lobbyPort = probe.address().port;
+  await new Promise(done => probe.close(done));
+  const lobbyHost = run(['table', '--p2', 'greedy', '--record', mkdtempSync(join(keysDirectory, 'sessions-')), '--seed', '7', '--accounts', 'dev', '--port', String(lobbyPort), '--push-keys', keysFile]);
+  let log = '';
+  lobbyHost.stdout.on('data', data => { log += data.toString(); });
+  lobbyHost.stderr.on('data', data => { log += data.toString(); });
+  try {
+    await expect.poll(() => log, { timeout: 20000, message: 'Table host starts' }).toContain('joins at');
+    const origin = `http://127.0.0.1:${lobbyPort}`;
+    // Headless Chromium answers every notification permission with a refusal, which the card rightly takes as a no:
+    // the page is shown a browser never asked, whose prompt is closed without an answer.
+    await context.addInitScript(() => {
+      Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
+      Notification.requestPermission = async () => 'default';
+    });
+    const headers = { Origin: origin };
+    expect((await page.request.post(`${origin}/api/account/dev`, { data: { username: 'Walker' }, headers })).ok()).toBe(true);
+    // The first tutorial would open by itself for a new account: skipped, as a returning player has.
+    expect((await page.request.post(`${origin}/api/tutorials/sc-repo-tutorial-your-first-combat/skip`, { data: {}, headers })).ok()).toBe(true);
+    expect((await page.request.post(`${origin}/api/lobby/tables`, { data: { opponent: 'person' }, headers })).ok()).toBe(true);
+
+    await page.goto(`${origin}/`);
+    const offer = page.locator('#push-offer');
+    await expect(offer).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
+    await expect(page.locator('#push-offer-on')).toHaveText('Turn on');
+    // A region, not a window: the focus stays where the player is.
+    expect(await page.evaluate(() => document.getElementById('push-offer').contains(document.activeElement))).toBe(false);
+    await page.locator('#push-offer-later').click();
+    await expect(offer).toBeHidden();
+    expect(JSON.parse(await page.evaluate(() => localStorage.getItem('downfall.push-offer'))).asked).toBe(1);
+    await page.reload();
+    await expect(page.locator('#my-tables')).not.toContainText('Finding');
+    await expect(offer).toBeHidden();
+
+    // A week later it asks again; Turn on asks the browser, which has no push service here: it says so, and where the switch is.
+    await page.evaluate(() => localStorage.setItem('downfall.push-offer', JSON.stringify({ never: false, asked: 1, last: Date.now() - 8 * 24 * 3600 * 1000 })));
+    await page.reload();
+    await expect(offer).toBeVisible({ timeout: 20000 });
+    await page.locator('#push-offer-on').click();
+    await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.', { timeout: 10000 });
+    await expect(page.locator('#push-offer-close')).toBeFocused();
+    await page.locator('#push-offer-close').click();
+    await expect(offer).toBeHidden();
+
+    await page.evaluate(() => localStorage.removeItem('downfall.push-offer'));
+    await page.reload();
+    await expect(offer).toBeVisible({ timeout: 20000 });
+    await page.locator('#push-offer-never').click();
+    await page.reload();
+    await expect(page.locator('#my-tables')).not.toContainText('Finding');
+    await expect(offer).toBeHidden();
+    expect(JSON.parse(await page.evaluate(() => localStorage.getItem('downfall.push-offer'))).never).toBe(true);
+  } finally {
+    if (lobbyHost.exitCode === null) {
+      const closed = new Promise(done => lobbyHost.once('exit', done));
+      lobbyHost.kill('SIGINT');
+      await closed;
+    }
+  }
 });

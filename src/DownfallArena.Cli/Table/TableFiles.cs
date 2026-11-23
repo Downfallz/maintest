@@ -114,6 +114,7 @@ internal sealed partial class TableFiles
             ["/invitation.js"] = (Path.Combine(tableDirectory, "invitation.js"), JavaScript),
             ["/outcome.js"] = (Path.Combine(tableDirectory, "outcome.js"), JavaScript),
             ["/push.js"] = (Path.Combine(tableDirectory, "push.js"), JavaScript),
+            ["/push-offer.js"] = (Path.Combine(tableDirectory, "push-offer.js"), JavaScript),
 
             // The service worker, at the root so its scope is the whole table (ADR 0118), and what an installed
             // page and a notification show: the manifest and the icon, as a vector and as the two bitmaps

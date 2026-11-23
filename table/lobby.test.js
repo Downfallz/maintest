@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, latestFinished } from './lobby.js';
+import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, waitsOnAPerson, latestFinished } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -142,6 +142,19 @@ test('a game of mine waits on another when the player against it is asked to pla
   const open = { table: { id: 'o', waiting: true, openSeats: 1, format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'You', turn: false }, { seat: 'player2', kind: 'open' }] }, seats: [{ seat: 'player1' }] };
   assert.equal(waitsOnAnother(open), true, 'a seat not yet taken');
   assert.equal(waitsOnAnother(null), false, 'not one of mine');
+});
+
+test('the offer of pop-ups is made on a game against a person that waits on the other player, never a bot\'s or a shared device\'s', () => {
+  const theirs = game('d', { against: 'person' });
+  theirs.table.seats[1].turn = true;
+  assert.equal(waitsOnAPerson(theirs), true);
+  assert.equal(waitsOnAPerson(game('e', { against: 'person', turn: true })), false, 'my turn: I am here already');
+  const bot = game('a');
+  bot.table.waiting = true;
+  assert.equal(waitsOnAPerson(bot), false, 'a bot is nobody to wait for');
+  const both = { ...theirs, seats: [{ seat: 'player1' }, { seat: 'player2' }] };
+  assert.equal(waitsOnAPerson(both), false, 'both seats here: nobody is away');
+  assert.equal(waitsOnAPerson(null), false);
 });
 
 test('the latest finished game is the one that ended last among the first game of each group\'s first page', () => {

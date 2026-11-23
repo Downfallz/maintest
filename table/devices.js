@@ -69,7 +69,7 @@ export function needsFreshSubscription(error) {
  * host to forget this device and lets go of the subscription, which every page of the browser shares. The kinds
  * are the account's, read with its settings and saved as soon as a box changes.
  */
-export function mountDevices(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, storage = null } = {}) {
+export function mountDevices(doc, { request = accountRequest, nav = globalThis.navigator, win = globalThis, storage = null, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
   const state = {
     account: null,
@@ -85,11 +85,14 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
     pending: false,
     ios: /iPhone|iPad|iPod/.test(nav?.userAgent ?? '') && !win.MSStream,
     secure: win.isSecureContext !== false,
+    // Once this browser was read for the signed-in account: the offer (push-offer.js) waits for it.
+    synced: false,
   };
   const problem = (text = '') => { if (el('device-problem')) { el('device-problem').textContent = text; el('device-problem').hidden = !text; } };
   const result = (text = '') => { if (el('device-result')) { el('device-result').textContent = text; el('device-result').hidden = !text; } };
 
   function render() {
+    onChange();
     const panel = el('device-panel');
     if (!panel) return;
     const shown = deviceSwitch(state);
@@ -173,6 +176,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
   // browser the player turned off holds no subscription, so it is told nothing.
   async function sync() {
     state.subscribed = false;
+    state.synced = false;
     state.kinds = null;
     problem();
     result();
@@ -182,7 +186,8 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       state.publicKey = key.publicKey ?? null;
       state.keyed = Boolean(state.publicKey);
       if (state.keyed) await readKinds();
-      if (!state.keyed || !state.supported) { render(); return; }
+      // A browser that cannot push is read once the key is: an iPhone outside the home screen is still offered the steps.
+      if (!state.keyed || !state.supported) { state.synced = true; render(); return; }
       await nav.serviceWorker.register('/sw.js');
       state.registration = await nav.serviceWorker.ready;
       const subscription = await current();
@@ -202,6 +207,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       // A worker that will not register, or a host that cannot be asked: the panel says so by its absence.
       state.keyed = false;
     }
+    state.synced = Boolean(state.account);
     render();
   }
 
@@ -268,6 +274,15 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
   nav?.serviceWorker?.addEventListener?.('message', event => { if (event.data?.kind === 'subscription-changed') void sync(); });
   render();
   return {
+    /** Where the switch stands, as the offer of pop-ups reads it: nothing to offer before the browser was read. */
+    offerState() {
+      return { ready: state.synced && !state.busy, keyed: state.keyed, subscribed: state.subscribed, permission: state.permission, hotseat: false };
+    },
+    /** The offer's Turn on: the switch turned on, as a tap on it would; the state it ends in. */
+    async turnOn() {
+      if (!state.subscribed) await toggle();
+      return this.offerState();
+    },
     /** Told by the sign-in whenever who is signed in changes. */
     setAccount(account) {
       if ((account?.id ?? null) === (state.account?.id ?? null)) return;
