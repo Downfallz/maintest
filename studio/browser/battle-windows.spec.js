@@ -396,10 +396,15 @@ test('a new round announced while its upkeep sheet is open still plays at the to
   const state = await mount(page); await page.clock.resume();
   await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
   await expect(page.locator('#round-toast')).toHaveClass(/showing/);
-  const played = () => page.locator('#round-toast').evaluate(toast => [toast.getAnimations().length, getComputedStyle(toast).opacity !== '0']);
   // Under 620 px the toast is never drawn, so it never plays (table/battle.css, #1000): the sheet changes nothing there.
   const wide = page.viewportSize().width >= 620;
-  expect(await played()).toEqual([wide ? 1 : 0, true]);
-  await page.locator('#upkeep-dialog').evaluate(dialog => dialog.showModal());
-  expect(await played()).toEqual([wide ? 1 : 0, true]);
+  // Read before and after the sheet opens in one task: the toast leaves after 2.6 s of real time, which a loaded
+  // runner can spend between two calls (#1131's CI).
+  const [before, after] = await page.locator('#upkeep-dialog').evaluate(dialog => {
+    const toast = document.getElementById('round-toast');
+    const played = () => [toast.getAnimations().length, getComputedStyle(toast).opacity !== '0'];
+    const shown = played(); dialog.showModal(); return [shown, played()];
+  });
+  expect(before).toEqual([wide ? 1 : 0, true]);
+  expect(after).toEqual([wide ? 1 : 0, true]);
 });
