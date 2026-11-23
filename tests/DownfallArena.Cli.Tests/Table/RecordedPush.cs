@@ -8,7 +8,12 @@ namespace DownfallArena.Cli.Tests.Table;
 /// <summary>A push sender that keeps what it was asked to send, and sends nothing.</summary>
 internal sealed class RecordedPush : IPushSender
 {
+    private readonly TaskCompletionSource _first = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public List<(string Endpoint, string Payload, string Topic)> Sent { get; } = [];
+
+    /// <summary>Done once the first send is kept: what a test waits on rather than looking at <see cref="Sent" /> on a timer (#1187).</summary>
+    public Task FirstSent => _first.Task;
 
     /// <summary>The endpoints the push service answers gone (410): sent to, and refused.</summary>
     public HashSet<string> Gone { get; } = [];
@@ -38,6 +43,7 @@ internal sealed class RecordedPush : IPushSender
         lock (Sent)
         {
             Sent.Add((to.Endpoint, payload, topic));
+            _first.TrySetResult();
             return !Gone.Contains(to.Endpoint);
         }
     }

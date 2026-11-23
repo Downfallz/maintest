@@ -241,6 +241,19 @@ complete runs.
    seconds. A pull request that plays one small spec now starts four phone jobs, as it starts two desktop halves:
    a half the shard leaves empty pays its setup to play nothing.
 
+   *Read after a day of `main` (2026-11-22 18:44 to 11-23 20:23, #1096)*: 41 CI runs on `main` and the one nightly
+   since. 23 ran the journeys and all were read, 2 of them a few specs only; 6 skipped the journeys and 12 were
+   cancelled. The step "Verify the journeys of this project", median and longest over the 22 full runs: desktop and
+   tablet 1/2 13:27 and 18:51, 2/2 14:41 and 18:11, small-phone 1/2 10:36 and 12:03, 2/2 10:29 and 11:24, phone 1/2
+   12:43 and 13:36, 2/2 10:01 and 12:23. No job passed 20 of its 30 minutes, where the phone's had reached them 9
+   times in 53 runs before. Every `desktop and tablet 1/2` log says "No test flaked": `battle-ground` and
+   `battle-motion` (#961, #976) neither failed nor passed only on the retry. `battle-fx.spec.js`'s own time is not in
+   the log, which the dot reporter keeps per run; Playwright names a file over 5 minutes as slow, and no log read
+   names it, where it took 7 to 9 before. Its slowest files now are `battle-stagings` (10.6 minutes) and
+   `battle-tutorial` (8.0) on desktop, `battle-tutorial` (5.0 to 5.4) on the phones. The only failures were one
+   test of `battle-windows.spec.js`, a toast's animation, on the phones' second halves in 3 runs on 11-22 between
+   19:53 and 21:05; it failed on its retry too, and `main` was green again from 22:01.
+
    Every browser job (journeys, real engine, battle-release) restores `~/.cache/ms-playwright` with
    `actions/cache/restore`, keyed by the runner's image, Playwright's version and the job's one `ENGINE`. It then
    runs `install --with-deps` as before: the system packages are installed every time, and the engine is

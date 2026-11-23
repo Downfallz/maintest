@@ -50,7 +50,8 @@ internal sealed class HostedTables : IDisposable
     /// <param name="content">A change to the content before it is built: a host after a deploy that moved it.</param>
     /// <param name="journal">What the journal the store keeps is wrapped in: a test that counts its reads.</param>
     /// <param name="said">Where the composer and the tables it composes say their console lines: the console unless given.</param>
-    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null, Func<IDecisionJournal, IDecisionJournal>? journal = null, Action<string>? said = null)
+    /// <param name="clock">The clock the host's services read, the system's unless given: a test that moves time on (#1180).</param>
+    public HostedTables(Func<string, IArtifactStore>? store, RuleSet? rules = null, PushNotices? push = null, ReplayBasis? basis = null, InMemoryTableIndex? index = null, IAgentTurns? turns = null, Action<StudioContent>? content = null, Func<IDecisionJournal, IDecisionJournal>? journal = null, Action<string>? said = null, TimeProvider? clock = null)
     {
         Index = index ?? new InMemoryTableIndex();
         _content.Write("presentation/package-tags.json", PackageTags);
@@ -61,7 +62,8 @@ internal sealed class HostedTables : IDisposable
         _host = CliHost.Build(
             new CliOptions { Command = "table", Output = "out.csv", SchemaPath = Path.Combine(_content.Path, "dst", "game.schema.json") },
             seed: 7,
-            logMatchToConsole: false);
+            logMatchToConsole: false,
+            clock);
         var opened = store?.Invoke(RunsDirectory);
 
         // A store wrapped by a test still keeps its runs under the directory it was made over, and so does the journal.

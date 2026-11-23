@@ -1,6 +1,7 @@
 using DownfallArena.Application.Matches.Journaling;
 using DownfallArena.Application.Ports;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Learning;
 using DownfallArena.Infrastructure.Work;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -68,10 +69,7 @@ public sealed class TableHostWorkersTests : IDisposable
 
         var noticing = await TableHost.StartNoticesAsync(channels, notices, push, registry, TimeProvider.System, stopping.Token);
         await door.NotifyAsync(account, new Application.Accounts.Notice(Application.Accounts.NoticeKind.MatchOver, "Victory", "You won.", "/lobby", "match:t1"), Cancel);
-        for (var attempt = 0; attempt < 250 && sender.Sent.Count == 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await sender.FirstSent.WaitAsync(SeatsAsked.Within, Cancel);
 
         await stopping.CancelAsync();
         await noticing.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
@@ -81,7 +79,9 @@ public sealed class TableHostWorkersTests : IDisposable
     /// <summary>
     /// The notices worker's process holds a copy of the table it has not looked at for longer than its watch looks
     /// (<see cref="TableWatch.WatchedFor" />), while the match moved on in the API (#1134): the turn that came due is the
-    /// later asking, and the copy is brought up to date before it is read, so the seat's account is told.
+    /// later asking, and the copy is brought up to date before it is read, so the seat's account is told. The worker is
+    /// a host of its own over the same runs and index, as the two processes are: a registry over the API's own services
+    /// would rebuild the match into the API's match repository, under the API's running match (#1187).
     /// </summary>
     [Fact]
     public async Task A_turn_due_at_a_table_this_process_holds_stale_is_told_once_the_table_is_brought_up_to_date()
@@ -102,9 +102,10 @@ public sealed class TableHostWorkersTests : IDisposable
         }
 
         table.Session.Begin();
-        var first = await AskedAsync(table, after: 0);
+        var first = await table.Seats.AllAskedAsync(after: 0, Cancel);
         await table.RecordAsync(Cancel);
-        using var worker = hosted.Registry();
+        using var workerHost = new HostedTables(_ => new FileArtifactStore(hosted.RunsDirectory), index: hosted.Index);
+        using var worker = workerHost.Registry();
         var stale = (await worker.FindAsync(table.Id, Cancel)).Table.ShouldNotBeNull();
         stale.Touch(DateTimeOffset.UtcNow - TableWatch.WatchedFor - TimeSpan.FromMinutes(1));
         foreach (var seat in table.Seats)
@@ -114,7 +115,7 @@ public sealed class TableHostWorkersTests : IDisposable
             (await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/decision", pass, seat.Token)).Status.ShouldBe(204);
         }
 
-        var later = await AskedAsync(table, after: first);
+        var later = await table.Seats.AllAskedAsync(after: first, Cancel);
         var channels = new InMemoryWorkChannels(TimeProvider.System);
         var notices = await channels.OpenAsync(QueuedNotice.Queue, Cancel);
         var sender = new RecordedPush();
@@ -125,26 +126,12 @@ public sealed class TableHostWorkersTests : IDisposable
 
         var noticing = await TableHost.StartNoticesAsync(channels, notices, push, worker, TimeProvider.System, stopping.Token);
         await notices.SendAsync(QueuedNotice.Of(new DueTurn(table.Id, table.Seats[0].Name, later, 2)).ToJson(), cancellationToken: Cancel);
-        for (var attempt = 0; attempt < 250 && sender.Sent.Count == 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await sender.FirstSent.WaitAsync(SeatsAsked.Within, Cancel);
 
         await stopping.CancelAsync();
         await noticing.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
         sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone");
         table.Dispose();
-    }
-
-    /// <summary>Waits for the table's first seat to be asked something later than <paramref name="after" />, and answers the asking.</summary>
-    private static async Task<long> AskedAsync(PlayedTable table, long after)
-    {
-        for (var attempt = 0; attempt < 300 && table.Seats.Any(seat => seat.Person!.Waiting is not { } question || question.Asked <= after); attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
-
-        return table.Seats[0].Person!.Waiting.ShouldNotBeNull().Asked;
     }
 
     [Fact]
