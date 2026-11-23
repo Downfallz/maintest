@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { badgeText, bellLabel, inboxCount, inboxItems, readUpTo } from './inbox.js';
+import { badgeText, bellLabel, inboxCount, inboxItems, mountInbox, readUpTo } from './inbox.js';
 
 const table = (id, seats, extra = {}) => ({ id, format: '3v3', over: false, waiting: false, round: 4, seats, ...extra });
 const me = { seat: 'player1', kind: 'person', name: 'MarcF' };
@@ -106,4 +106,69 @@ test('a turn waiting with no cast since the last visit says only when the last m
   const [item] = inboxItems({ mine }, now);
 
   assert.equal(item.detail, '3v3 battle · Round 4 · last move 2 d ago');
+});
+
+// A document with only what the bell and its copy in the site menu read (#1002): elements by id, created nodes and
+// their listeners. A guest's `request` is never asked; a player's answers the lists the test hands it.
+function inboxDocument() {
+  const element = (id = '') => {
+    const node = { id, hidden: false, textContent: '', attributes: {}, children: [], listeners: {}, dataset: {} };
+    node.setAttribute = (name, value) => { node.attributes[name] = String(value); };
+    node.addEventListener = (type, listener) => { (node.listeners[type] ??= []).push(listener); };
+    node.append = (...items) => { node.children.push(...items); };
+    node.replaceChildren = (...items) => { node.children = items; };
+    return node;
+  };
+  const ids = ['inbox-open', 'inbox-badge', 'inbox-problem', 'inbox-list', 'inbox-dialog', 'inbox-open-menu', 'inbox-menu-count', 'menu-inbox-badge', 'menu-inbox-said'];
+  const byId = Object.fromEntries(ids.map(id => [id, element(id)]));
+  return { byId, hidden: false, getElementById: id => byId[id] ?? null, createElement: () => element() };
+}
+
+function mountedInbox(account, mine = []) {
+  const doc = inboxDocument();
+  const request = async path => {
+    if (path === '/api/lobby/mine') return { tables: mine, invitations: [] };
+    if (path === '/api/friends') return { friends: [], incoming: [], outgoing: [] };
+    if (path === '/api/account/notices') return { notices: [] };
+    throw new Error(`Unexpected ${path}`);
+  };
+  const win = { setTimeout: () => 0, clearTimeout: () => {}, navigator: {}, location: { assign() {} } };
+  const inbox = mountInbox(doc, { request, win, changes: () => () => {}, reopen: () => {} });
+  inbox.setAccount(account);
+  return { doc, inbox };
+}
+const settled = () => new Promise(resolve => setImmediate(resolve));
+
+test('a guest gets no bell entry in the site menu, and its counts stay hidden', async () => {
+  // Signed in, then signed out: the entry a player had is hidden again.
+  const { doc, inbox } = mountedInbox({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  assert.equal(doc.byId['inbox-open-menu'].hidden, false);
+  inbox.setAccount(null);
+  await settled();
+  for (const id of ['inbox-open-menu', 'inbox-open', 'inbox-menu-count', 'menu-inbox-badge']) assert.equal(doc.byId[id].hidden, true, id);
+  assert.equal(doc.byId['menu-inbox-said'].textContent, '');
+});
+
+test('a player with nothing waiting sees the menu\'s entry, both its counts hidden and no description', async () => {
+  const { doc } = mountedInbox({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  assert.equal(doc.byId['inbox-open-menu'].hidden, false);
+  for (const id of ['inbox-menu-count', 'menu-inbox-badge']) {
+    assert.equal(doc.byId[id].hidden, true);
+    assert.equal(doc.byId[id].textContent, '');
+  }
+  assert.equal(doc.byId['menu-inbox-said'].textContent, '');
+});
+
+test('two turns waiting show 2 on the menu\'s entry and its button, and the button is described by the bell\'s words', async () => {
+  const turnAgainst = (id, name) => ({ table: table(id, [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name }]), seats: [{ seat: 'player1', token: id }] });
+  const { doc } = mountedInbox({ id: 'acct_a', username: 'MarcF' }, [turnAgainst('a', 'Bastien'), turnAgainst('b', 'Julie')]);
+  await settled();
+  assert.equal(doc.byId['inbox-open-menu'].hidden, false);
+  for (const id of ['inbox-menu-count', 'menu-inbox-badge']) {
+    assert.equal(doc.byId[id].hidden, false);
+    assert.equal(doc.byId[id].textContent, '2');
+  }
+  assert.equal(doc.byId['menu-inbox-said'].textContent, 'Notifications · 2 waiting');
 });
