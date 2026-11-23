@@ -98,12 +98,13 @@ public sealed class OperatorVoidTests : IDisposable
     {
         var (id, _) = await OpenedAsync();
         await OwnedAsync(id);
-        _composer.Notifier = new AccountNotifier(null, new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System)));
+        _composer.Notifier = new AccountNotifier(null, new AccountNotices(new Unsent(), new AccountDevices(new DevicesOut(), TimeProvider.System))) { Said = _said.Add };
         _admin.Notes = new OperatorNotes(new OperatorActions(new OperatorLogOut(), TimeProvider.System)) { Said = _said.Add };
 
         (await VoidAsync(id, Reason("abuse", "Zelda_42 kept stalling.\nThe bot failed to answer."))).Status.ShouldBe(200);
 
-        _said.ShouldContain(line => line.Contains("the players could not be told", StringComparison.Ordinal));
+        // The door says the push it could not make (ADR 0203), rather than failing the void's notices.
+        _said.ShouldContain(line => line.Contains("a notice could not be pushed", StringComparison.Ordinal));
         _said.ShouldContain(line => line.StartsWith("  The operator log could not keep", StringComparison.Ordinal));
         _said.ShouldAllBe(line => !line.Contains("Zelda_42") && !line.Contains("failed to answer"));
     }
