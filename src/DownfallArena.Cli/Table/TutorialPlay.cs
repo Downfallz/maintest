@@ -31,7 +31,6 @@ internal sealed class TutorialPlay
     private bool _done;
     private int _answering;
     private int _again;
-    private bool _othersDone;
 
     public TutorialPlay(TutorialLesson lesson, AssistedSeat assisted, PlayerSlot seat, int of)
     {
@@ -70,11 +69,7 @@ internal sealed class TutorialPlay
     /// Whether the account had done every other tutorial of the series when this one opened: the last lesson's end
     /// says the series is finished from it, with no second request (#980). False when it could not be read.
     /// </summary>
-    public bool OthersDone
-    {
-        get => Volatile.Read(ref _othersDone);
-        internal set => Volatile.Write(ref _othersDone, value);
-    }
+    public bool OthersDone { get; internal set; }
 
     /// <summary>The question kinds the person answers.</summary>
     public IReadOnlyList<string> Teaches { get; }

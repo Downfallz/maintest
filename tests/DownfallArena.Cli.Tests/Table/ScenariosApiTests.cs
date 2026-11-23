@@ -690,7 +690,7 @@ public sealed class ScenariosApiTests : IDisposable
         var listed = await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner);
         var described = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}", learner);
 
-        string? Renewed(StudioResponse answer) => answer.Headers?.SingleOrDefault(header => header.Key == "Set-Cookie").Value;
+        static string? Renewed(StudioResponse answer) => answer.Headers?.SingleOrDefault(header => header.Key == "Set-Cookie").Value;
         (listed.Status, described.Status).ShouldBe((200, 200));
         Renewed(listed).ShouldNotBeNull().ShouldStartWith(AccountSessions.Cookie + "=");
         Renewed(described).ShouldNotBeNull().ShouldStartWith(AccountSessions.Cookie + "=");

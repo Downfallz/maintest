@@ -367,22 +367,20 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         {
             foreach (var idle in _byAccount.Values.Where(one => now - one.Seen >= Idle).ToList())
             {
-                if (keepDone is not null && Done(idle))
+                if (keepDone is not null && Done(idle) && !GaveUp(idle, now))
                 {
-                    // A failure from before the last read belongs to an idle stretch that ended.
-                    var failedSince = idle.KeepFailedSince is { } since && since >= idle.Seen ? since : (DateTimeOffset?)null;
-                    if (failedSince is not { } failed || now - failed < KeptFor)
+                    if (Due(idle, now))
                     {
-                        if (!idle.Keeping && (idle.Tried is not { } tried || now - tried >= RetryAfter))
-                        {
-                            idle.Keeping = true;
-                            idle.Tried = now;
-                            held.Add(idle);
-                        }
-
-                        continue;
+                        idle.Keeping = true;
+                        idle.Tried = now;
+                        held.Add(idle);
                     }
 
+                    continue;
+                }
+
+                if (keepDone is not null && Done(idle))
+                {
                     Said($"  A tutorial done was let go of unkept: its account's store could not keep it for {KeptFor.TotalMinutes:0} minutes.");
                 }
 
@@ -394,6 +392,17 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             KeepSwept(held, keepDone);
         }
     }
+
+    /// <summary>
+    /// Whether the keeping of an idle tutorial done has failed for <see cref="KeptFor" />. A failure from before its
+    /// last read belongs to an idle stretch that ended, and counts no more.
+    /// </summary>
+    private static bool GaveUp(Practice idle, DateTimeOffset now) =>
+        idle.KeepFailedSince is { } since && since >= idle.Seen && now - since >= KeptFor;
+
+    /// <summary>Whether a sweep is to try keeping it done now: no other is on it, and none tried within <see cref="RetryAfter" />.</summary>
+    private static bool Due(Practice idle, DateTimeOffset now) =>
+        !idle.Keeping && (idle.Tried is not { } tried || now - tried >= RetryAfter);
 
     /// <summary>
     /// Keeps done the tutorials a sweep held, after the request that swept, which waits on no other account's write
@@ -413,8 +422,15 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
                 return;
             }
 
-            _kept = _kept.ContinueWith(_ => KeepSweptAsync(held, keepDone), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default).Unwrap();
+            _kept = AfterAsync(_kept, held, keepDone);
         }
+    }
+
+    /// <summary>The keeping after the one before it, on the thread pool: never on the request that swept, which holds the gate.</summary>
+    private async Task AfterAsync(Task before, List<Practice> held, Func<string, string, Task> keepDone)
+    {
+        await before.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ForceYielding);
+        await KeepSweptAsync(held, keepDone);
     }
 
     /// <summary>
