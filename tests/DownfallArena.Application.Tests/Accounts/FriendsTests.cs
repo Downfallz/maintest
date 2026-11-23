@@ -33,7 +33,7 @@ public sealed class FriendsTests
     {
         var id = AccountId.New();
         var username = Username.Create(name).Value;
-        _accounts.Accounts[id] = new Account(id, new ExternalIdentity(ExternalIdentity.Development, username.Key), username, _clock.GetUtcNow(), 1);
+        _accounts.Accounts[id] = new Account(id, AccountIdentities.Of(new ExternalIdentity(ExternalIdentity.Development, username.Key)), username, _clock.GetUtcNow(), 1);
         _accounts.Names[username.Key] = new UsernameReservation(username, id, _clock.GetUtcNow());
         return id;
     }

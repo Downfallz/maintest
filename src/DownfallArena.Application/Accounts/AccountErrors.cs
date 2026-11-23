@@ -15,6 +15,15 @@ public static class AccountErrors
 
     public static readonly DomainError AlreadyRegistered = new("Account.AlreadyRegistered", "This sign-in already has an account.");
 
+    /// <summary>An identity linked to an account while another account holds it (ADR 0204).</summary>
+    public static readonly DomainError IdentityTaken = new("Account.IdentityTaken", "Another account already signs in this way. Sign in with it to remove it there first.");
+
+    /// <summary>Removing the only way into an account (ADR 0204): deleting the account is how it goes.</summary>
+    public static readonly DomainError LastIdentity = new("Account.LastIdentity", "This is the only way into this account. Add another before removing it.");
+
+    /// <summary>Removing an identity the account does not hold.</summary>
+    public static readonly DomainError IdentityNotLinked = new("Account.IdentityNotLinked", "This account does not sign in this way.");
+
     public static readonly DomainError NotFound = new("Account.NotFound", "There is no such account.");
 
     /// <summary>A sign-in refused because the operator suspended the account (ADR 0178), saying why.</summary>

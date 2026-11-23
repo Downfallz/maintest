@@ -89,7 +89,7 @@ public sealed class RelayTests : IDisposable
     {
         using var registry = _hosted.Registry();
         var lobby = new LobbyApi(registry, _hosted.Composer, TimeProvider.System);
-        var account = new DownfallArena.Application.Accounts.Account(Mark, new DownfallArena.Application.Accounts.ExternalIdentity(DownfallArena.Application.Accounts.ExternalIdentity.Development, "markf"), DownfallArena.Application.Accounts.Username.Create("MarkF").Value, default, 0);
+        var account = new DownfallArena.Application.Accounts.Account(Mark, DownfallArena.Application.Accounts.AccountIdentities.Of(new DownfallArena.Application.Accounts.ExternalIdentity(DownfallArena.Application.Accounts.ExternalIdentity.Development, "markf")), DownfallArena.Application.Accounts.Username.Create("MarkF").Value, default, 0);
 
         var without = await lobby.HandleAsync("GET", "/api/lobby/negotiate", string.Empty);
         lobby.Relay = new RecordedRelay();

@@ -121,8 +121,108 @@ public sealed class AccountRegistry
     }
 
     /// <summary>
-    /// Removes the account (ADR 0122): its sign-in first, so nobody signs in to it again, then the account, then its
-    /// name, which another player may then take. The same sign-in can register afresh afterwards, under a new id.
+    /// Adds a way into the account (ADR 0204), for a player signed in to it: the identity's binding is written first,
+    /// create-only-if-absent, so an identity another account holds is refused however close the race, then the
+    /// account. A binding already naming this account is a link that stopped between its writes, finished now; one
+    /// naming an account that no longer exists holds nobody and is taken back. Sessions are left alone.
+    /// </summary>
+    public async Task<Result<Account>> LinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
+    {
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(id, cancellationToken) is not { } account)
+            {
+                return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            if (account.Identities.Contains(identity))
+            {
+                return Result.Success(account);
+            }
+
+            if (!await BindAsync(identity, id, cancellationToken))
+            {
+                return Result.Failure<Account>(AccountErrors.IdentityTaken);
+            }
+
+            var linked = account with { Identities = account.Identities.With(identity) };
+            await _store.SaveAsync(linked, cancellationToken);
+            return Result.Success(linked);
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
+    /// <summary>
+    /// Removes a way into the account (ADR 0204); the last one stays, since deleting the account is how that goes.
+    /// The account is written first, then the binding removed, so a removal that stops between the two leaves a
+    /// binding that still signs in to this account -- never one another account could take while this one lists
+    /// it -- and removing it again finishes the job.
+    /// </summary>
+    public async Task<Result<Account>> UnlinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
+    {
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(id, cancellationToken) is not { } account)
+            {
+                return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            var remaining = account.Identities.Without(identity);
+            if (remaining.IsFailure)
+            {
+                return remaining.Error == AccountErrors.IdentityNotLinked && await _store.UnbindSubjectAsync(identity, id, cancellationToken)
+                    ? Result.Success(account)
+                    : Result.Failure<Account>(remaining.Error);
+            }
+
+            var unlinked = account with { Identities = remaining.Value };
+            await _store.SaveAsync(unlinked, cancellationToken);
+            await _store.UnbindSubjectAsync(identity, id, cancellationToken);
+            return Result.Success(unlinked);
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
+    // Binds the identity to the account; true when it now names it, already or once a binding to an account that no
+    // longer exists is taken back, false when another account holds it.
+    private async Task<bool> BindAsync(ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    {
+        if (await _store.TryBindSubjectAsync(identity, id, cancellationToken))
+        {
+            return true;
+        }
+
+        var holder = await _store.FindBySubjectAsync(identity, cancellationToken);
+        if (holder == id)
+        {
+            return true;
+        }
+
+        if (holder is { } other)
+        {
+            if (await _store.FindAsync(other, cancellationToken) is not null)
+            {
+                return false;
+            }
+
+            await _store.UnbindSubjectAsync(identity, other, cancellationToken);
+        }
+
+        return await _store.TryBindSubjectAsync(identity, id, cancellationToken)
+            || await _store.FindBySubjectAsync(identity, cancellationToken) == id;
+    }
+
+    /// <summary>
+    /// Removes the account (ADR 0122): its sign-ins first, so nobody signs in to it again, then the account, then its
+    /// name, which another player may then take. The same sign-ins can register afresh afterwards, under a new id.
     /// False when there is no such account.
     /// </summary>
     public async Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default)
@@ -135,7 +235,11 @@ public sealed class AccountRegistry
                 return false;
             }
 
-            await _store.UnbindSubjectAsync(account.Identity, id, cancellationToken);
+            foreach (var identity in account.Identities.All)
+            {
+                await _store.UnbindSubjectAsync(identity, id, cancellationToken);
+            }
+
             await _store.DeleteAsync(id, cancellationToken);
             await _store.ReleaseUsernameAsync(new UsernameReservation(account.Username, id, account.CreatedAt), cancellationToken);
             return true;
@@ -175,7 +279,7 @@ public sealed class AccountRegistry
             }
 
             var reservation = new UsernameReservation(name.Value, id, _clock.GetUtcNow());
-            if (await ReserveAsync(reservation, account.Identity, cancellationToken) is not { } held || held.Account != id)
+            if (await ReserveAsync(reservation, account.Identities.All[0], cancellationToken) is not { } held || held.Account != id)
             {
                 return Result.Failure<Account>(AccountErrors.UsernameTaken);
             }
@@ -240,7 +344,7 @@ public sealed class AccountRegistry
         var resumed = held.Account != reservation.Account;
         var account = resumed
             ? await _store.FindAsync(held.Account, cancellationToken)
-            : new Account(reservation.Account, identity, name.Value, now, Generation: 1);
+            : new Account(reservation.Account, AccountIdentities.Of(identity), name.Value, now, Generation: 1);
         if (account is null)
         {
             // The interrupted account went between reading its name and reading it: somebody reclaimed both.
@@ -283,7 +387,7 @@ public sealed class AccountRegistry
         if (holder is not null)
         {
             var account = await _store.FindAsync(holder.Account, cancellationToken);
-            if (account is not null && account.Identity == identity)
+            if (account is not null && account.Identities.Contains(identity))
             {
                 return holder;
             }
@@ -307,10 +411,23 @@ public sealed class AccountRegistry
         await AbandonedAsync(holder, await _store.FindAsync(holder.Account, cancellationToken), cancellationToken);
 
     /// <summary>
-    /// A name is abandoned when it has been held an hour for an account that was never written, or for one whose
-    /// sign-in was never bound to it: both are a registration that stopped between its writes.
+    /// A name is abandoned when it has been held an hour for an account that was never written, or for one none of
+    /// whose identities is bound to it: both are a registration that stopped between its writes.
     /// </summary>
     private async Task<bool> AbandonedAsync(UsernameReservation holder, Account? account, CancellationToken cancellationToken) =>
         _clock.GetUtcNow() - holder.ReservedAt >= AbandonedAfter
-        && (account is null || await _store.FindBySubjectAsync(account.Identity, cancellationToken) != account.Id);
+        && (account is null || !await AnyBoundAsync(account, cancellationToken));
+
+    private async Task<bool> AnyBoundAsync(Account account, CancellationToken cancellationToken)
+    {
+        foreach (var identity in account.Identities.All)
+        {
+            if (await _store.FindBySubjectAsync(identity, cancellationToken) == account.Id)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

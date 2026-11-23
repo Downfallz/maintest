@@ -1,6 +1,6 @@
 # Plan: more ways to sign in, and a guest
 
-Status: accepted, 2026-11-23. The owner settled the four questions (at the end). Nothing is built.
+Status: accepted, 2026-11-23. The owner settled the four questions (at the end). P1 is built; P2 to P6 are not.
 
 ## What the owner asked for
 
@@ -120,6 +120,17 @@ and 4. The recommended answer:
    stores reading the old shape, `LinkAsync` and `UnlinkAsync`. No route, no page. Tests: an old account reads as
    one identity; a link writes its index; an identity held elsewhere is refused under a race; the last one
    cannot be removed.
+
+   *Built (2026-11-23)*: [ADR 0204](../adr/0204-let-one-account-hold-several-ways-to-sign-in.md) amends ADR 0122.
+   `AccountIdentities` (never empty, never one twice, in the order added) replaces `Account.Identity`;
+   `AccountRegistry.LinkAsync` binds the index first, create-only-if-absent, and refuses an identity another account
+   holds (`Account.IdentityTaken`), takes back a binding to a deleted account, and finishes a link that stopped
+   between its writes; `UnlinkAsync` writes the account first, refuses the last identity (`Account.LastIdentity`) and
+   one the account does not hold (`Account.IdentityNotLinked`), and finishes a removal that stopped. Deleting an
+   account unbinds every identity; a name is abandoned only when none of its account's identities is bound. The
+   stores write `identities` and keep the first as `provider` and `subject`, so the image before reads them; a record
+   without `identities` reads as one. Left to P4: the routes over `LinkAsync` and `UnlinkAsync`, and the revision
+   before running beside a deploy, which rewrites an account without its `identities` (ADR 0204, Consequences).
 2. **P2, providers behind one port.** `ISignInProvider`, Google moved behind it unchanged, `--sign-in` with
    `--accounts` kept as an alias, `POST /api/account/<provider>`, `/api/me` listing the providers, the page
    drawing a button per provider, a count of sign-ins started and finished per provider. Tests: every existing

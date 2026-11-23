@@ -6,7 +6,8 @@ namespace DownfallArena.Application.Tests.Support;
 
 /// <summary>
 /// The account store's contract in memory; <see cref="RefuseNextBinding" /> plays a registration that lost a race,
-/// <see cref="FailNextBinding" /> one whose host stopped before it bound its sign-in.
+/// <see cref="FailNextBinding" /> one whose host stopped before it bound its sign-in, <see cref="BeforeNextBinding" /> another
+/// writer getting there first.
 /// </summary>
 internal sealed class MemoryAccountStore : IAccountStore
 {
@@ -19,6 +20,9 @@ internal sealed class MemoryAccountStore : IAccountStore
     public bool RefuseNextBinding { get; set; }
 
     public bool FailNextBinding { get; set; }
+
+    /// <summary>Runs once just before the next binding: somebody else's write landing between a check and the bind.</summary>
+    public Action? BeforeNextBinding { get; set; }
 
     /// <summary>Lets every read of an account yield first, as a store across a network does, so racing callers interleave.</summary>
     public bool SlowReads { get; set; }
@@ -77,6 +81,12 @@ internal sealed class MemoryAccountStore : IAccountStore
         {
             FailNextBinding = false;
             throw new IOException("The store went away.");
+        }
+
+        if (BeforeNextBinding is { } before)
+        {
+            BeforeNextBinding = null;
+            before();
         }
 
         if (RefuseNextBinding)

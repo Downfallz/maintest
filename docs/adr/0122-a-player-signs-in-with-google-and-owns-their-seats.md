@@ -2,7 +2,7 @@
 
 Date: 2026-11-03
 
-Status: Accepted. Amends ADRs 0081, 0115 and 0116.
+Status: Accepted. Amends ADRs 0081, 0115 and 0116. Amended by [0204](0204-let-one-account-hold-several-ways-to-sign-in.md): an account holds one or more identities, not one Google `sub`.
 
 ## Context
 
