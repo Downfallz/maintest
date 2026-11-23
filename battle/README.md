@@ -886,8 +886,9 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
   button per concept card. It stands low on a phone's field and in the top left corner on a wider screen. Where a
   sheet docks under the field, the card stands in the sheet (`.coach.in-sheet`, #650), under the spell choice's
   heading or at the top of the command sheet. The field over a docked sheet is too short to carry it. The card steps
-  aside while results are read and while targets are chosen on the field. What the step points at, a creature or
-  a control (`CONTROLS`, held to the host's `LessonControls.Names`), carries `data-coach="true"` and a gold ring.
+  aside while results are read and while targets are chosen on the field. It is inert from the start of its fade
+  (#1139). What the step points at, a creature or a control (`CONTROLS`, held to the host's `LessonControls.Names`),
+  carries `data-coach="true"` and a gold ring.
 - A step opens its concept cards (`#concept-dialog`) once, before the question's own sheet, one after the other.
   The coach card's buttons open a card again. Nothing is kept: a reload opens them again. The cards are read from
   the rulebook the table serves (`rules.json`, through `table/concepts.js`) once a tutorial shows; until then, or
@@ -898,7 +899,9 @@ A practice whose view carries `practice.tutorial` is a tutorial (ADR 0187, docs/
 - The phase tips are silent (`battleGuidance` returns no topic in a tutorial). Help keeps the round guide.
 - Once the host says `done`, the coach card says **Tutorial complete**, with **Keep playing** and **Leave the
   tutorial**; the band keeps saying it. The page tells the host once (`POST /api/tutorials/<id>/done`), and the
-  account keeps it.
+  account keeps it. The end card's **Next** is the lesson the seat's view names (`practice.tutorial.next`). On the
+  last lesson, the result says the series is finished when the view says the account did every other lesson
+  (`othersDone`). The page asks for no list of the series (#980).
 
 `battle-tutorial.spec.js` plays tutorial 1's own lesson to its end on a fixture board, at 320 px, 390 px and
 desktop.

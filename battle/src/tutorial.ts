@@ -18,8 +18,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   const dialog = el<HTMLDialogElement>('concept-dialog'), coach = el('coach');
   let shown: Coach | null = null, key = '', queue: Concept[] = [], pointed: HTMLElement[] = [];
   let latest: unknown = null, doneSaid = false, concepts = NO_CONCEPTS, asked = false, reading = false;
-  // The series the host lists, read once a lesson is done, for the end card's next lesson (UX8).
-  let series: unknown = null, seriesAsked = false, endFocused = false;
+  let endFocused = false;
   // The question the person turned away from: its sheet closed with nothing sent (UX8, the hint).
   let turnedAway: number | null = null;
   let total = 0;
@@ -118,17 +117,6 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   for (const id of ['practice-leave', 'coach-leave', 'coach-next', 'match-leave']) el(id).addEventListener('click', leave);
   // Restart the round is an icon where the card stands in a sheet, named by its words (battle.css).
   el('coach-restart').prepend(iconElement(document, 'reset'));
-  /** Reads the series once the lesson is done; not read, the end card offers the next lesson's place and Learn to play. */
-  async function readSeries() {
-    if (seriesAsked) return;
-    seriesAsked = true;
-    try {
-      const response = await request('/api/tutorials');
-      series = response.ok ? await response.json() : null;
-    } catch { series = null; }
-    key = '';
-    onChange();
-  }
   /**
    * The hint (UX8): started by the person, never by a clock. Closing the question's sheet with nothing sent, while the
    * host still asks the same question, says the person turned away from it; the hint names the control that asks it.
@@ -188,7 +176,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
    */
   const ending = () => {
     const lesson = tutorialOf(latest);
-    return lesson ? { again, done: lesson.done === true, eyebrow: `${tutorialBand(lesson).eyebrow} · COMPLETE`, last: Number.isInteger(lesson.of) && lesson.order >= lesson.of, finished: finishedSeries(series, lesson) } : null;
+    return lesson ? { again, done: lesson.done === true, eyebrow: `${tutorialBand(lesson).eyebrow} · COMPLETE`, last: Number.isInteger(lesson.of) && lesson.order >= lesson.of, finished: finishedSeries(lesson) } : null;
   };
   // On the smallest phone the band's place in the series takes Restart's place in the header, and the card offers it (#728).
   el('coach-restart').addEventListener('click', () => el('practice-restart').click());
@@ -209,7 +197,6 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     el('practice-brief-skip').hidden = !brief.skip;
     // The host says the tutorial is done: the account keeps it, said once for this practice.
     if (lesson.done && !doneSaid) { doneSaid = true; void say('done'); }
-    if (lesson.done) void readSeries();
     // Kept until the next practice is opened: a view that is not there yet leaves the band as it reads.
     document.getElementById('battle')!.dataset.tutorial = String(lesson.order);
     const band = tutorialBand(lesson);
@@ -231,7 +218,8 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     }));
     el('coach-cards').hidden = card.cards.length === 0;
     el('coach-end').hidden = !card.done;
-    const next = card.done ? nextLesson(series, lesson) : null;
+    // The seat's view names the next lesson: no second request (#980).
+    const next = card.done ? nextLesson(lesson) : null;
     el('coach-next').hidden = !next;
     if (next) { text('coach-next', next.label); el<HTMLAnchorElement>('coach-next').href = next.link; }
     // Play again is filled only where no lesson follows: the series is the point (UX8).
@@ -253,7 +241,7 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     if (shown) delete coach.dataset.fade;
     else if (!coach.hidden) coach.dataset.fade = String(!coach.classList.contains('in-sheet') && !coach.classList.contains('in-dock'));
     coach.hidden = !shown;
-    coach.inert = !shown;
+    settle();
     coach.dataset.done = String(shown?.done === true);
     const nextKey = shown?.key ?? '';
     if (shown && nextKey !== key) drawCard(shown, lesson);
@@ -273,11 +261,17 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
    * behind the sheet.
    */
   const pending = () => dialog.open || owed() || (reading && Boolean(shown?.names) && !opened.has(shown!.key));
+  /**
+   * The card takes no focus while it is gone or steps aside for the targets: there it fades, still displayed for
+   * the length of the fade, and a keyboard could Tab into it meanwhile (battle.css, #1139). The combat sheet sets the
+   * mode on #battle, which this hears, as no new view comes with it.
+   */
+  const battle = document.getElementById('battle')!;
+  function settle() { coach.inert = !shown || battle.dataset.combat === 'targets'; }
+  new MutationObserver(settle).observe(battle, { attributes: true, attributeFilter: ['data-combat'] });
   /** A new practice teaches its steps again. */
   function reset() {
     document.getElementById('battle')!.dataset.tutorial = ''; opened.clear(); key = ''; latest = null; doneSaid = false; endFocused = false; turnedAway = null;
-    // A series not read is asked again at the next practice's end, not kept unread for the life of the page.
-    if (!series) seriesAsked = false;
     if (!concepts.all.length) asked = false;
     toField(); text('practice-restart', 'Restart the round');
     text('practice-brief-begin', 'Begin'); el('practice-brief-skip').hidden = true; el<HTMLButtonElement>('practice-brief-skip').disabled = false;

@@ -53,15 +53,16 @@ export function tutorialBrief(lesson, round) {
 const SAME_SITE = /^\/(?![/\\])/;
 
 /**
- * The lesson after this one, as the end card offers it (UX8): its title and link from the series the host lists
- * (`GET /api/tutorials`), or, the series not read, its place and Learn to play, which lists it. None after the last.
+ * The lesson after this one, as the end card offers it (UX8): its title and link as the seat's view names them
+ * (`practice.tutorial.next`, #980). A link that would leave the site goes to Learn to play, which lists the lesson.
+ * None after the last, or when the view names none.
  */
-export function nextLesson(answer, lesson) {
-  const order = lesson?.order ?? 0, of = Math.max(lesson?.of ?? 0, order);
-  if (!Number.isInteger(order) || order >= of) return null;
-  const listed = (answer?.tutorials ?? []).find(one => one?.order === order + 1 && typeof one.link === 'string' && SAME_SITE.test(one.link));
-  const place = `tutorial ${order + 1} of ${of}`;
-  return listed ? { label: `Next: ${listed.title || place}`, link: listed.link } : { label: `Next: ${place}`, link: '/#learn-to-play' };
+export function nextLesson(lesson) {
+  const next = lesson?.next, order = lesson?.order;
+  if (!next || typeof next !== 'object') return null;
+  const place = Number.isInteger(order) ? `tutorial ${order + 1} of ${Math.max(lesson.of ?? 0, order + 1)}` : 'the next tutorial';
+  const link = typeof next.link === 'string' && SAME_SITE.test(next.link) ? next.link : '/#learn-to-play';
+  return { label: `Next: ${typeof next.title === 'string' && next.title ? next.title : place}`, link };
 }
 
 /**
@@ -76,13 +77,12 @@ export function coachHint(label) {
 
 /**
  * Whether the person has finished the whole series with this lesson (UX8): the last of the series, and every other
- * one the host lists done. Not read, or one skipped, it is only the last tutorial.
+ * one done, as the seat's view says it (`practice.tutorial.othersDone`, #980). One skipped, or not read, it is only
+ * the last tutorial.
  */
-export function finishedSeries(answer, lesson) {
+export function finishedSeries(lesson) {
   const order = lesson?.order, of = lesson?.of;
-  if (!Number.isInteger(order) || !Number.isInteger(of) || order < of) return false;
-  const others = (answer?.tutorials ?? []).filter(one => one?.order !== order);
-  return others.length === of - 1 && others.every(one => one?.state === 'done');
+  return Number.isInteger(order) && Number.isInteger(of) && order >= of && lesson.othersDone === true;
 }
 
 const standing = creatures => {

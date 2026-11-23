@@ -28,8 +28,8 @@ What holds for every screen of the journey:
   face is added. Every beat moves `transform` or `opacity`, from the tokens of `docs/art/branding.css`, its travel
   written inside `prefers-reduced-motion: no-preference`.
 - The host decides; the page shows. A step shows when the seat's view asks its question (`lessonStep`), a lesson is
-  over when the view says `done`, the series and each lesson's state are `GET /api/tutorials`'s. No route is added
-  and nothing the host sends changes.
+  over when the view says `done`, the next lesson and whether the others were done are the view's
+  (`practice.tutorial.next`, `othersDone`, #980), and the home's series is `GET /api/tutorials`'s. No route is added.
 - Inside the canvas is the `battle-designer`'s: the ACTING mark, a blow, a creature's health falling. Where the
   coach waits for a blow it waits for the page's playback to settle (`held`), whose timing is
   `table/battle-timing.js`'s.
@@ -383,7 +383,7 @@ did, in a line the journal confirms, and the lesson that comes next. Today the f
 for a round that will not be played, the coach's card covers the player's team, and the dock says "Tutorial
 complete" a second time.
 
-- **Filled action**: Next: Who acts first (the next lesson's title, from `GET /api/tutorials`), the owner's choice.
+- **Filled action**: Next: Who acts first (the next lesson's title, from the seat's view, #980), the owner's choice.
   It leaves this lesson as Leave does, then opens the next. Play again becomes an outline; Leave the tutorial a
   quiet link.
 
@@ -406,10 +406,9 @@ view gives them (`isAlive`). It is the same line for every lesson, so no lesson 
 creature. On a phone the card stands in the dock in place of what the dock says; wider, the dock says "Tutorial
 complete." and nothing more.
 
-The next lesson's title is not in the view: `practice.tutorial` holds `order`, `of` and this lesson's `title`.
-The page reads it from `GET /api/tutorials`, a route the home already reads, once the view says done. When it
-cannot be read, the action says "Next: tutorial 2 of 4" and leads to Learn to play (`/#learn-to-play`), which the
-home already scrolls to.
+The next lesson's title and link are in the view, `practice.tutorial.next` (#980): the page asks for nothing more.
+When the link is not on this site, the action leads to Learn to play (`/#learn-to-play`), which the home already
+scrolls to.
 
 ### Pictures
 
@@ -427,8 +426,8 @@ done.
   of the player's team; over the field, wider. Its three actions are on the first screen at 320 by 568.
 - **Waiting**: after Next or Leave, until the host has let go of the practice (at most 1.5 s): the pressed control
   is disabled. Play again restarts from the cut at once, as today. Read, not seen.
-- **Error**: `/api/tutorials` not read: "Next: tutorial 2 of 4", to Learn to play. A done the host could not be
-  told is said again at the next change (today's behaviour).
+- **Error**: a done the host could not be told is said again at the next change. The host also keeps it done
+  before the practice is let go of, and says on its console when its store cannot (#1138).
 - **Offline**: as the error; Leave and Next are links, and the offline page answers them.
 
 ### Motion
@@ -459,7 +458,7 @@ stage finds and stops it.
 
 ### Cost
 
-- **Bytes**: none added; one request, `/api/tutorials`, of a few hundred bytes.
+- **Bytes**: none added; no request beyond the seat's view (#980).
 - **Largest paint**: not measured on the battle page.
 - **Shift**: before UX8, 0.41 and 0.38 at 390 on lessons 2 and 3, 0.13 and 0.24 at 320: past the 0.25 that is
   poor. Since UX8, 0.05, 0.32 and 0.44 at 320 on lessons 1, 2 and 3, and 0.03, 0.41 and 0.38 at 390. The card in the
@@ -472,8 +471,7 @@ stage finds and stops it.
   the board gives it whole for every lesson, where the journal's summary needed a step that names a creature.
 - A next lesson the account has already finished is still named next: the series' order, not the account's
   progress. The owner may prefer the first one not done.
-- The view could carry the next lesson's title and link (`practice.tutorial.next`): a host change, `host-reviewer`'s,
-  which would remove the request. Not this stage.
+- The view carries the next lesson's title and link (`practice.tutorial.next`, #980): the request is gone.
 
 ## The tutorial's result (`lesson-result`)
 
@@ -492,8 +490,8 @@ report. It is the end of the series too, and today says nothing of it.
   actions.
 - **Budget**: 130 words, 129 since UX8 (122 before; 125 was my sum, short of the eyebrow's own words); the battle
   report is most of it, and UX12's. The page adds one line, and the eyebrow names the lesson. The line shows only
-  when `GET /api/tutorials` lists the three other tutorials done: a player who skipped one is not told the series
-  is finished, and Leave the tutorial stays the filled action either way.
+  when the seat's view says the three other tutorials were done (`practice.tutorial.othersDone`, #980): a player
+  who skipped one is not told the series is finished, and Leave the tutorial stays the filled action either way.
 
 ```text
 TUTORIAL 4 OF 4 · COMPLETE

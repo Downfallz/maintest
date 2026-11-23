@@ -62,6 +62,15 @@ internal sealed class TutorialPlay
 
     public string Title => _lesson.Title;
 
+    /// <summary>The lesson that follows in the series, its title and its link, for the end card (#980); none after the last.</summary>
+    public Lesson? Next { get; init; }
+
+    /// <summary>
+    /// Whether the account had done every other tutorial of the series when this one opened: the last lesson's end
+    /// says the series is finished from it, with no second request (#980). False when it could not be read.
+    /// </summary>
+    public bool OthersDone { get; internal set; }
+
     /// <summary>The question kinds the person answers.</summary>
     public IReadOnlyList<string> Teaches { get; }
 
@@ -116,6 +125,9 @@ internal sealed class TutorialPlay
     internal sealed record Step(Question At, IReadOnlyList<string> Says, IReadOnlyList<string> Concepts, Pointer? PointsAt);
 
     internal sealed record Question(string Kind, int Round, int? Creature);
+
+    /// <summary>A lesson of the series as the end card names it: its title and the link that opens it.</summary>
+    internal sealed record Lesson(string Title, string Link);
 
     internal sealed record Pointer(int? Creature, string? Control);
 
@@ -254,7 +266,7 @@ internal sealed class TutorialPlay
     /// play's to hold); none once the tutorial is done, for a question that is the person's, or when the seat was
     /// handed back, which is said here.
     /// </summary>
-    private (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? Next(Seat table)
+    private (Application.Matches.Decisions.PlayerDecision Decision, long Asked)? Owing(Seat table)
     {
         var snapshot = table.Read();
         if (snapshot is null || Finished(snapshot, table))
@@ -281,7 +293,7 @@ internal sealed class TutorialPlay
     {
         try
         {
-            while (Next(table) is { } answer)
+            while (Owing(table) is { } answer)
             {
 
                 var taken = (await table.Decide(answer.Decision, answer.Asked)).Taken;

@@ -20,11 +20,13 @@ const cardOf = id => {
 };
 const id = 'sc-repo-tutorial-your-first-combat';
 const legal = candidates => ({ candidates, minTargets: 1, maxTargets: 1 });
+// The lesson after tutorial 1, as the host's seat view names it (#980).
+const whoActsFirst = { title: 'Who acts first', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' };
 const creature = (number, health = 30) => ({ id: number, name: `Creature ${number}`, health, maxHealth: 30, energy: 4, totalDefense: number === 5 ? 2 : 0,
   currentInitiative: 5, isAlive: true, isStunned: false, isStunImmune: false, knownSpells: ['shock'], conditions: [], acquiredTiers: [] });
 
-async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false, endsMatch = false, order: place = lesson.order, series = null } = {}) {
-  const state = { errors: [], writes: [], said: [], left: 0, opened: 0, asked: 20, answered: 0, handedBack: false };
+async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = false, endsMatch = false, order: place = lesson.order, next = place < 4 ? whoActsFirst : null, othersDone = false } = {}) {
+  const state = { errors: [], writes: [], said: [], left: 0, opened: 0, listed: 0, asked: 20, answered: 0, handedBack: false };
   page.on('pageerror', error => state.errors.push(error.message));
   const order = lesson.steps.map(step => step.at.creature);
   // The lesson's casts, each one Shock on creature 4, as a match played to its end records them: the live seat reads
@@ -41,7 +43,7 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
       allies: [1, 2, 3].map(number => creature(number)), enemies: over ? [4, 5, 6].map(number => ({ ...creature(number, 0), isAlive: false })) : [creature(4, Math.max(1, 9 - 3 * state.answered)), creature(5), creature(6)],
       timeline: done || assisted ? [] : [{ creature: order[state.answered], owner: 'Player1', speed: 'Standard' }], speedChoices: [] };
     const tutorial = { order: place, of: 4, title: lesson.title, teaches: lesson.teaches,
-      assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done: done && !state.notYetDone };
+      assisted: state.handedBack ? [] : ['Evolution', 'Speed', 'TieOrder', 'Intent', 'Target'], steps: lesson.steps, shown: Math.min(order.length, state.answered + (assisted ? 0 : 1)), done: done && !state.notYetDone, next, othersDone };
     const question = assisted || (done && state.handedBack) ? { waitingFor: 'Speed', waitingAsked: state.asked, waitingCreature: 1, options: { speed: { missing: [1, 2, 3] } } }
       : done ? { waitingFor: null }
         : { waitingFor: 'Action', waitingAsked: state.asked, waitingCreature: order[state.answered], options: { action: { actor: order[state.answered], spells: [{ spell: 'shock', legalTargets: legal([4, 5, 6]) }] } } };
@@ -76,8 +78,8 @@ async function mount(page, { assistedFirst = false, book = null, upkeepAtEnd = f
     }
     // What the page says of the account's progress (O4): skipped, or done once the host's view says so.
     if (url.pathname.startsWith(`/api/tutorials/${id}/`) && request.method() === 'POST') { const what = url.pathname.split('/').at(-1); state.said.push(what); return route.fulfill({ json: { id, state: what === 'done' ? 'done' : 'skipped' } }); }
-    // The series, as the home reads it: the end card names the next lesson from it (UX8).
-    if (url.pathname === '/api/tutorials') return series ? route.fulfill({ json: series }) : route.fulfill({ status: 404, json: {} });
+    // The series, as the home reads it: the end card no longer asks for it, the seat's view names the next lesson (#980).
+    if (url.pathname === '/api/tutorials') { state.listed++; return route.fulfill({ status: 404, json: {} }); }
     if (url.pathname === '/api/me') return route.fulfill({ json: { accounts: 'dev', account: { id: 'acct_learnerlearnerlea', username: 'Learner' } } });
     if (url.pathname === '/api/catalogue') return route.fulfill({ json: { rules: { roundCap: 12, combatDeclaration: 'AtActivation' }, cards: [{ id: 'shock', name: 'Shock', cost: 2, targeting: 'One enemy', effects: ['Damage 7'] }], packages: [] } });
     // Held, the last answer is written but the view that says the lesson is done waits for the test to let it through.
@@ -112,6 +114,8 @@ async function playStep(page, state, index, capture) {
   await expect(dialog).toBeHidden();
   const coach = page.locator('#coach');
   await expect(coach).toBeVisible();
+  // Back on the field, it takes the focus again (#1139).
+  await expect(coach).toHaveJSProperty('inert', false);
   await expect(page.locator('#coach-step')).toHaveText(`STEP ${index + 1} OF ${lesson.steps.length}`);
   for (const line of step.says) await expect(page.locator('#coach-lines')).toContainText(line);
   await expect(page.locator('#coach-cards button')).toHaveCount(step.concepts.length);
@@ -142,8 +146,10 @@ async function playStep(page, state, index, capture) {
   await page.locator('[data-spell="shock"]').click();
   // Targets are chosen on the field: the coach card steps aside, and the creature the step points at stays ringed.
   await expect(page.locator('#battle')).toHaveAttribute('data-combat', 'targets');
-  // It steps aside in a fade, and takes no tap while it fades (#978).
+  // It steps aside in a fade, and takes no tap while it fades (#978), and no focus either: inert from the start of the
+  // fade, not only once it ends (#1139).
   expect(await coach.evaluate(node => [getComputedStyle(node).pointerEvents, getComputedStyle(node).transitionProperty.includes('visibility')])).toEqual(['none', true]);
+  await expect(coach).toHaveJSProperty('inert', true);
   await expect(coach).toBeHidden();
   await expect(page.locator(`[data-creature="${step.pointsAt.creature}"]`)).toHaveAttribute('data-coach', 'true');
   if (index === 0 && capture) await capture('coach-targets');
@@ -199,10 +205,10 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page.locator('#coach-again')).toHaveText('Play again');
   await expect(page.locator('#coach-leave')).toHaveAttribute('href', '/');
   // The end says how the board stands and leads on to the next lesson, its one filled action, focused (UX8). The
-  // series not read here, it names the next lesson's place and Learn to play, which lists it.
+  // seat's view names that lesson: the page asks the host for no list of the series (#980).
   await expect(page.locator('#coach-lines')).toContainText('Your team: 3 of 3 standing.');
-  await expect(page.locator('#coach-next')).toHaveText('Next: tutorial 2 of 4');
-  await expect(page.locator('#coach-next')).toHaveAttribute('href', '/#learn-to-play');
+  await expect(page.locator('#coach-next')).toHaveText('Next: Who acts first');
+  await expect(page.locator('#coach-next')).toHaveAttribute('href', whoActsFirst.link);
   await expect(page.locator('#coach-next')).toHaveClass(/primary/);
   await expect(page.locator('#coach-again')).not.toHaveClass(/primary/);
   await expect(page.locator('#coach-next')).toBeFocused();
@@ -223,6 +229,7 @@ test('tutorial 1 is played to its end: each step shows its coach card and opens 
   await expect(page).toHaveTitle('Home');
   expect(state.said).toEqual(['done']);
   expect(state.left).toBe(1);
+  expect(state.listed).toBe(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(state.errors).toEqual([]);
 });
@@ -618,11 +625,9 @@ test('Replay the match from a tutorial\'s result, closed, gives back Tutorial co
   expect(state.errors).toEqual([]);
 });
 
-test('the end card names the next lesson the host lists, and Next leaves this one for it', async ({ page }) => {
+test('the end card names the next lesson the seat\'s view names, and Next leaves this one for it', async ({ page }) => {
   test.setTimeout(120000);
-  const series = { tutorials: [{ id, order: 1, of: 4, title: 'Your first combat', link: `/battle?scenario=${id}` },
-    { id: 'sc-repo-tutorial-who-acts-first', order: 2, of: 4, title: 'Who acts first', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' }] };
-  const state = await mount(page, { series });
+  const state = await mount(page);
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await expect(page.locator('#coach-next')).toHaveText('Next: Who acts first');
@@ -661,11 +666,9 @@ test('a step whose sheet is closed with nothing sent shows a hint naming the con
   expect(state.errors).toEqual([]);
 });
 
-const seriesOf = state => ({ tutorials: [1, 2, 3, 4].map(order => ({ id: order === 4 ? id : `sc-repo-tutorial-${order}`, order, of: 4, title: `Tutorial ${order}`, link: `/battle?scenario=sc-repo-tutorial-${order}`, state: order === 4 ? 'new' : state })) });
-
 test('the last tutorial\'s result ends the series: Leave the tutorial is its filled way on', async ({ page }) => {
   test.setTimeout(120000);
-  const state = await mount(page, { endsMatch: true, order: 4, series: seriesOf('done') });
+  const state = await mount(page, { endsMatch: true, order: 4, othersDone: true });
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await matchResult(page);
@@ -683,7 +686,7 @@ test('the last tutorial\'s result ends the series: Leave the tutorial is its fil
 
 test('the last tutorial played with an earlier one skipped does not say the series is finished', async ({ page }) => {
   test.setTimeout(120000);
-  const state = await mount(page, { endsMatch: true, order: 4, series: seriesOf('skipped') });
+  const state = await mount(page, { endsMatch: true, order: 4, othersDone: false });
   await page.locator('#practice-brief-begin').click();
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await matchResult(page);

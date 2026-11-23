@@ -119,7 +119,7 @@ public sealed class FeedbackReproduceTests : IDisposable
         var document = await ScenarioAsync(sheet);
         (document.Scenario.Cut.Round, document.Seat, document.Session, document.Title, document.Goal).ShouldBe((2, PlayerSlot.Player2, session, $"Report {id}, round 2", null));
         await using var practices = new ScenarioPractices(_hosted.Composer, _scenarios, _clock);
-        var practice = (await practices.OpenAsync(scenario, "operator", Cancel)).Opened.ShouldNotBeNull();
+        var practice = (await practices.OpenAsync(scenario, "operator", cancellationToken: Cancel)).Opened.ShouldNotBeNull();
         var board = Read(await practice.Play.Api.HandleAsync("GET", "/api/seat/player2", "", practice.Play.Token)).GetProperty("board");
         (board.GetProperty("roundNumber").GetInt32(), board.GetProperty("allies").GetArrayLength()).ShouldBe((2, 3));
         (await ActivityAsync()).ShouldBe([$"feedback.reproduce {id} {scenario}, round 2, player2"]);
@@ -253,7 +253,7 @@ public sealed class FeedbackReproduceTests : IDisposable
         var session = await PlayedAsync();
         var practised = Read(await Cutting().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session, round = 2, seat = "player2" }), "mark")).GetProperty("id").GetString()!;
         await using var practices = new ScenarioPractices(_hosted.Composer, _scenarios, _clock);
-        var play = (await practices.OpenAsync(practised, "learner", Cancel)).Opened.ShouldNotBeNull().Play;
+        var play = (await practices.OpenAsync(practised, "learner", cancellationToken: Cancel)).Opened.ShouldNotBeNull().Play;
         var view = Read(await play.Api.HandleAsync("GET", "/api/seat/player2", "", play.Token));
         var creature = view.GetProperty("options").GetProperty("speed").GetProperty("missing")[0].GetInt32();
         var sent = await play.Api.HandleAsync("POST", "/api/seat/player2/decision", JsonSerializer.Serialize(new { asked = view.GetProperty("waitingAsked").GetInt64(), kind = "Speed", creature, speed = "Quick" }), play.Token);
