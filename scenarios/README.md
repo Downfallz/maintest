@@ -57,10 +57,10 @@ been shown and whether the lesson is done (docs/reference/commands.md).
 ```
 
 - `order` is its place in the series, from 1; no two tutorials share one. `title` is what the person reads.
-- `of` is how many tutorials the series has, the same in every file, and never short of `order`. A host that
-  misses a lesson of it, the last one too, says so on its console when it starts, and keeps the series that long:
-  a player who has the others is not told the series is finished (#1186). A file without it ends the series at
-  its last lesson. Add a lesson: raise `of` in every file.
+- `of` is how many tutorials the series has. It is the same in every file, never less than `order`, and at most
+  20. When a host lacks one of these lessons, even the last, it says so on its console at start-up and keeps the
+  series that long. A player who has finished the others is then not told the series is done (#1186). A file
+  without `of` ends the series at its last lesson. To add a lesson, raise `of` in every file.
 - `teaches` names the question kinds the person answers, among `Evolution`, `Speed`, `TieOrder`, `Intent`,
   `Target` and `Action`. Every other kind is an assisted question: answered from the recorded answers.
 - A step shows at the question `at` names: its `kind`, one the lesson teaches, and its `round`.

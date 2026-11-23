@@ -1360,8 +1360,10 @@ public sealed class ScenariosApiTests : IDisposable
 
         var third = await OpenedPlayAsync(api, practices, learner, Series[2]);
         var lesson = Lesson(await third.Api.HandleAsync("GET", "/api/seat/player1", "", third.Token));
+        var listed = Read(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).GetProperty("tutorials").EnumerateArray().ToList();
 
-        (lesson.GetProperty("of").GetInt32(), lesson.GetProperty("othersDone").GetBoolean()).ShouldBe((4, false));
+        (lesson.GetProperty("of").GetInt32(), lesson.GetProperty("othersDone").GetBoolean(), lesson.GetProperty("next").ValueKind).ShouldBe((4, false, JsonValueKind.Null));
+        (listed.Count, listed.Select(one => one.GetProperty("of").GetInt32()).Distinct().Single()).ShouldBe((3, 4));
     }
 
     /// <summary>The repository's scenarios, but for one tutorial file left out.</summary>

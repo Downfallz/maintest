@@ -61,8 +61,8 @@ internal sealed class RepositoryScenarios
     public IReadOnlyList<Shipped> Tutorials { get; }
 
     /// <summary>
-    /// How many tutorials the series has: the longest its lessons say (#1186), or, from lessons that say none, the
-    /// place of the last one. A lesson missing at this host, the last one too, leaves it as long.
+    /// How many tutorials the series has: the greatest <c>of</c> any lesson gives (#1186), or the order of the last
+    /// lesson when none gives one. A missing lesson, even the last, does not shorten it.
     /// </summary>
     public int Series { get; }
 
@@ -107,18 +107,23 @@ internal sealed class RepositoryScenarios
         return shipped;
     }
 
-    /// <summary>Says each lesson the series misses at this host, and lessons that disagree on its length (#1186).</summary>
+    /// <summary>Reports each lesson missing at this host, and lessons that disagree on the series length or give none (#1186).</summary>
     private void SayWhatTheSeriesMisses(Action<string> said)
     {
         var lengths = Tutorials.Select(one => one.Document.Tutorial!.Of).OfType<int>().Distinct().Order().ToList();
         if (lengths.Count > 1)
         {
-            said($"  Tutorials disagree on the length of the series ({string.Join(", ", lengths)}): it is taken as {Series}.");
+            said($"  Tutorials disagree on the series length ({string.Join(", ", lengths)}): using the longest, {Series}.");
+        }
+
+        foreach (var silent in lengths.Count == 0 ? [] : Tutorials.Where(one => one.Document.Tutorial!.Of is null))
+        {
+            said($"  Tutorial file {silent.File} gives no series length (of), where the others give {Series}.");
         }
 
         foreach (var order in Enumerable.Range(1, Series).Where(order => !Tutorials.Any(one => one.Document.Tutorial!.Order == order)))
         {
-            said($"  Tutorial {order} of {Series} is missing: no file under {TutorialsDirectory}/ is that lesson.");
+            said($"  Tutorial {order} of {Series} is missing: no file under {TutorialsDirectory}/ has order {order}.");
         }
     }
 

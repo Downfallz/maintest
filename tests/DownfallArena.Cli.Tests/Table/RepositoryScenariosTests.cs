@@ -140,6 +140,23 @@ public sealed class RepositoryScenariosTests : IDisposable
         said.ShouldContain(line => line.Contains("disagree", StringComparison.Ordinal));
     }
 
+    /// <summary>A lesson that gives no length where the others give one is said: a file left behind when the series grew.</summary>
+    [Fact]
+    public void A_lesson_that_gives_no_length_where_the_others_do_is_said()
+    {
+        var said = new List<string>();
+        CopyTutorialsBut("to-the-end.json");
+        var path = Path.Combine(_root, "tutorials", "your-first-combat.json");
+        var first = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        first["tutorial"]!.AsObject().Remove("of").ShouldBeTrue();
+        File.WriteAllText(path, first.ToJsonString());
+
+        var shipped = RepositoryScenarios.Read(_root, said.Add);
+
+        shipped.Series.ShouldBe(4);
+        said.ShouldContain(line => line.Contains("tutorials/your-first-combat.json gives no series length", StringComparison.Ordinal));
+    }
+
     /// <summary>The repository's tutorials, copied under this test's directory, but for one file, and with a field taken out of each block.</summary>
     private void CopyTutorialsBut(string left, string? without = null)
     {
