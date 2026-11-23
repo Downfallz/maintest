@@ -38,12 +38,9 @@ public sealed class BlobNoticeCountStore : INoticeCountStore
     public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
     {
         var old = new List<string>();
-        await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: null, cancellationToken))
+        await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: null, cancellationToken).Where(item => NoticeCountDocuments.DayOf(item.Name) < day))
         {
-            if (NoticeCountDocuments.DayOf(item.Name) < day)
-            {
-                old.Add(item.Name);
-            }
+            old.Add(item.Name);
         }
 
         foreach (var name in old)

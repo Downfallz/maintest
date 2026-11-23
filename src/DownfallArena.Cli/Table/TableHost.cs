@@ -235,7 +235,8 @@ internal static class TableHost
         // What the notices worker sent, had refused and found gone (N6), a day at a time beside the recordings, which
         // the worker app adds to as well; in memory where this host records nothing, as its queues are its own. A store
         // that cannot be opened leaves the counts out, never the notices.
-        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(store is null ? null : options.Record ?? DefaultRunsDirectory, clock, stopping.Token);
+        var countsAt = store is null ? null : options.Record ?? DefaultRunsDirectory;
+        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(countsAt, clock, stopping.Token);
         if (channels is not null && notices is not null)
         {
             var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(notices.Name), stopping.Token);
