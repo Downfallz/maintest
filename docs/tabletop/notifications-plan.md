@@ -1,6 +1,6 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1, N2 and N3 are built; each stage below is
+Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 to N4 are built; each stage below is
 one pull request.
 
 ## What the owner asked for
@@ -192,6 +192,24 @@ Jobs tab show the counts and the queue's length.
 4. **N4, the offer.** The journey's brief, `table/push-offer.js`, the card in the lobby and in the battle view,
    the three answers, the words by platform, Install on Android. The classic page's own offer is removed.
    Tests: `push-offer.test.js` (when it shows, each answer, each platform), the browser specs (`table.push.js`).
+
+   *Built (2026-11-23)*: the brief is `docs/art/journeys/lobby.md`, *The pop-ups offer*. `table/push-offer.js` is the
+   card, added by the page to its body and styled once in `identity.css` (`.push-offer`): at the foot of the lobby, at
+   the top of the battle view, so the dock and lesson 1's end card stay free. The eyebrow *POP-UPS*, the title *Away
+   from the game?*, one line by platform (Android in the owner's words; a desktop browser; an iPhone at the home
+   screen; an iPhone outside it gets the steps and no Turn on), **Turn on**, **Not now**, **Don't ask again**, and
+   **Install** on Android once the browser raised `beforeinstallprompt`. The page's own switch does the asking: in
+   the lobby Settings, Notifications (`devices.js`, now telling the page where it stands), in the battle view the
+   match settings' (`battle-services.js`, through the seats, which N3 made the account's devices too). The lobby
+   offers when a game against a person waits on the other player (`waitsOnAPerson`); the battle view on the other
+   player's move against a person and at lesson 1's end (`battleMoment`). The answers are the browser's
+   (`downfall.push-offer`): Not now and a Turn on that ends off count as an asking, a week apart, three at most;
+   Don't ask again and pop-ups on end it. After Turn on the card says Done, stays off or could not, and where the
+   switch is, with a Close; no clock. The classic page's offer is gone (`offerShown` with it). Left: the card is
+   not on the journey's walk (its host has no push keys, headless Chromium refuses the permission), so the spec
+   shows it with a browser never asked; a host with accounts off makes no offer in the lobby (the switch there is
+   the account's), the battle view still does; the brief's **Left** holds the owner's choices on the card over
+   the lobby's featured space at 320 px (room at the foot, yielding to the player's turn, waiting for a window).
 5. **N5, the queue.** ADR: notices are sent by the worker from a queue; "your turn" is a delayed message.
    `infra/main.bicep` gains the queue. Tests: the worker's tests on a retry, a 410 and a give-up, on Azurite;
    the `infra-reviewer`.

@@ -223,7 +223,7 @@ export function wearFriendsHead(doc, page) {
 }
 
 // The pages share the same controls and dialogs. Only creating a new match belongs to the lobby.
-export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, onFriends = () => {}, onInbox = () => {} } = {}) {
+export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, onFriends = () => {}, onInbox = () => {}, onDevice = () => {} } = {}) {
   const header = doc.querySelector('[data-navigation]');
   const page = header.dataset.navigation;
   const game = page === 'classic' || page === 'battle';
@@ -235,7 +235,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', rules: 'rules-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
   const navigation = mountHomeNavigation(doc);
-  const devices = mountDevices(doc, { storage });
+  const devices = mountDevices(doc, { storage, onChange: () => onDevice() });
   const gameSettings = mountGameSettings(doc, storage);
   const showAgain = mountShowAgain(doc);
   // Report or suggest (ADR 0189), in the account menu: a signed-in player's, sent as the account. The battle view's own
@@ -296,7 +296,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
       return onChange(account, mode);
     },
   });
-  return { setOutstanding: friends.setOutstanding, inbox };
+  return { setOutstanding: friends.setOutstanding, inbox, devices };
 }
 
 // Every page with the navigation has the service worker (ADR 0166), not only one whose player asked for notices: it

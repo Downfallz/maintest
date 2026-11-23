@@ -511,9 +511,12 @@ shows; a tap on a notice brings a battle view already open at that table to the 
 behind another app or a locked screen counts as nobody looking, even while it still runs. The notice says
 "your turn", the round and the question. After a last visit it also says how many spells were cast since
 (*Round 4: choose a spell. 3 casts since your last visit.*). Nothing else. On an iPhone the button says to add the table to the home screen
-first. Every seat page makes the offer once, in a bar at the bottom of the screen, and its answer is remembered
-by the browser; the button stays in the Match panel and in the waiting room. The second player to arrive never
-waits in a room, so the bar is where they are asked. Where no notice can reach, the Match panel says why instead of
+first. The offer of pop-ups (`push-offer.js`, notifications plan N4) is a card of the page, never the browser's
+prompt first, made by the lobby when a game against a person waits on the other player, and by the battle view on
+the other player's turn and at the end of the first tutorial: **Turn on**, **Not now** (asked again a week later
+at the earliest, three times at most), **Don't ask again**, and **Install** on Android when the browser offers it.
+The answers are kept by the browser (`downfall.push-offer`); the switch stays in Settings, Notifications, in the
+Match settings and in the classic page's waiting room. Where no notice can reach, the Match panel says why instead of
 showing nothing: a browser built into a chat or social app (**This browser cannot notify you**: open the table in
 Chrome, Firefox or Safari), notifications blocked for the site, or plain http on a network address. A device holding
 both seats of the table is hotseat and is told nothing: the other player is whoever holds it (ADR 0120), and its

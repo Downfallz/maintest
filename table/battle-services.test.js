@@ -62,3 +62,23 @@ test('the switch says it is this device\'s, for every game, and where what pops 
   const both = harness({ hotseat: true }); await tick();
   assert.equal(both.control.model().where, '', 'a page holding both seats offers no switch to explain');
 });
+test('the offer of pop-ups reads the seat\'s switch once its worker is read, and Turn on is the switch turned on', async () => {
+  const fresh = createBattleServices({ onChange() {}, scope: {} });
+  assert.deepEqual(fresh.offerState(), { ready: false }, 'no seat: nothing to offer');
+  const h = harness(); await tick();
+  assert.deepEqual(h.control.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
+  const after = await h.control.turnOn();
+  assert.deepEqual(h.calls, ['permission', 'subscribe', 'bind']);
+  assert.equal(after.subscribed, true);
+  await h.control.turnOn();
+  assert.equal(h.calls.length, 3, 'on is not turned on twice');
+});
+test('the offer sees both seats here, and a browser that cannot push but heard the host\'s key', async () => {
+  const both = harness({ hotseat: true }); await tick();
+  assert.equal(both.control.offerState().hotseat, true);
+  const unable = harness({ supported: false }); await tick();
+  assert.equal(unable.control.offerState().ready, true, 'the card decides by platform: an iPhone outside the home screen is given the steps');
+  assert.equal(unable.control.offerState().keyed, true);
+  const offline = harness(); await tick(); offline.control.setOnline(false);
+  assert.equal(offline.control.offerState().ready, false);
+});

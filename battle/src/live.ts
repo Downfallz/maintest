@@ -44,6 +44,7 @@ import { battleSeats, seatPath } from '../../table/battle-seats.js';
 import { openPractice, practiceBand, practiceBrief, practiceOf } from '../../table/battle-practice.js';
 import { holdsTheNextRound, lessonOverText, tutorialOf, withoutAssisted } from '../../table/battle-tutorial.js';
 import { tutorialControls } from './tutorial.js';
+import { battleMoment, mountPushOffer } from '../../table/push-offer.js';
 import { createLiveConnection } from '../../table/battle-live.js';
 import { signInPath } from '../../table/account.js';
 import { arrivalFor, readArrival } from '../../table/arrival.js';
@@ -191,8 +192,12 @@ const rematchOf = () => {
   return rematchPlan(selected.table, held.length ? held : [selected.seat], opponentCard(opponent.seat, opponent.ladder, opponent.friends).friend);
 };
 const matchUI = matchControls(match, () => { passOver(); combat.close(); planning.close(); }, rematchOf, () => catalogue?.effects ?? [], () => tutorialUI.ending());
-const services = createBattleServices({ onChange: () => servicesUI.render() });
+// The offer of pop-ups (notifications plan, N4): made while a game against a person waits on the other player, and
+// at the end of the first tutorial, once the seat's switch has read this browser, whichever comes first.
+let pushOffer: ReturnType<typeof mountPushOffer> | null = null, offerMoment = false;
+const services = createBattleServices({ onChange: () => { servicesUI.render(); pushOffer?.changed(); if (offerMoment) pushOffer?.consider(); } });
 const servicesUI = serviceControls(services, storage);
+pushOffer = mountPushOffer(document, { storage, source: { state: () => services.offerState(), turnOn: () => services.turnOn() } });
 // Reactions (ADR 0173): the set of short messages the two players send each other, and the bubbles that show them.
 const reactions = createBattleReactions({ onChange: () => reactionsUI.render(), storage });
 const reactionsUI = reactionControls(reactions, {
@@ -600,6 +605,8 @@ function render() {
     ? waitingOn(view, { accepted: action.accepted || planning.model().accepted, opponent: other && other.kind !== 'open' && other.name !== 'Player' ? other.name : null, bot: other?.kind === 'bot' })
     : null;
   $('battle').dataset.awaiting = awaiting?.kind ?? '';
+  offerMoment = battleMoment({ awaiting, lesson: tutorialOf(view), other });
+  if (offerMoment) pushOffer?.consider();
   $('reading-dots').hidden = !awaiting;
   $('waiting-last').hidden = !awaiting || !playbackState.summary;
   if (awaiting) {

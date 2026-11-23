@@ -410,3 +410,32 @@ test('a scenario asks a player who is not signed in to sign in, and shows no pra
   await expect(page.locator('#practice-band')).toBeHidden();
   expect(state.errors).toEqual([]);
 });
+
+// The offer of pop-ups (notifications plan, N4): a game against a person that waits on the other player makes the
+// page's own card, at the top, where it hides neither the dock nor a lesson's end card; never the browser's prompt first.
+test('the other player\'s move offers pop-ups by the page\'s card, and Turn on is the match settings\' switch', async ({ page }) => {
+  const person = { seat: 'player2', kind: 'person', name: 'Rook', account: 'acct_rookrookrookrookr' };
+  const h = await mount(page, { over: false, opponent: person });
+  await expect(page.locator('#push-offer')).toBeHidden();
+  expect(await page.evaluate(() => window.serviceCalls)).toEqual([]);
+  h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#push-offer')).toBeVisible();
+  await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
+  expect(await page.evaluate(() => window.serviceCalls)).toEqual([]);
+  const card = await page.locator('#push-offer').boundingBox(), dock = await page.locator('#playback-pacing').boundingBox();
+  if (dock) expect(card.y + card.height).toBeLessThanOrEqual(dock.y + 1);
+  await page.locator('#push-offer-on').click();
+  await expect(page.locator('#push-offer-said')).toHaveText('Done: pop-ups are on for this device.');
+  expect(await page.evaluate(() => window.serviceCalls)).toEqual(['permission', 'subscribe']);
+  await expect.poll(() => h.writes.map(one => one.path)).toEqual(['/api/lobby/push']);
+  await page.locator('#push-offer-close').click(); await expect(page.locator('#push-offer')).toBeHidden();
+  await page.locator('#settings').click(); await expect(page.locator('#notices-toggle')).toHaveText('Stop notifying me');
+});
+test('a bot\'s move makes no offer of pop-ups', async ({ page }) => {
+  const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'bot', name: 'Greedy' } });
+  h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#round-phase')).not.toHaveText('');
+  await expect(page.locator('#push-offer')).toBeHidden();
+});

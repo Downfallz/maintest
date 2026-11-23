@@ -121,10 +121,25 @@ export function createBattleServices({ onChange, scope = globalThis }) {
       // One switch a device (ADR 0202): this one is the browser's, for every game, and Settings says what pops up.
       where: notice.offered ? WHERE : '' };
   }
+  /**
+   * Where the switch stands, as the offer of pop-ups reads it (push-offer.js): ready once the seat's worker is read,
+   * or once a host with keys was heard by a browser that cannot push, which may still be given the steps to install.
+   */
+  function offerState() {
+    const push = current?.push;
+    if (!push || !online || view?.replay) return { ready: false };
+    return { ready: !push.busy && (Boolean(current.registration) || (push.keyed && !push.supported)),
+      keyed: push.keyed, subscribed: push.subscribed, permission: push.permission, hotseat: push.hotseat };
+  }
+  /** The offer's Turn on: the match settings' switch turned on, through the seats it plays; the state it ends in. */
+  async function turnOn() {
+    if (current && !current.push.subscribed) await toggle();
+    return offerState();
+  }
   scope.navigator?.serviceWorker?.addEventListener?.('message', event => {
     if (event.data?.kind !== 'subscription-changed') return;
     const context = current;
     if (context?.registration && valid(context)) void refreshHeld(context).then(() => emit(context)).catch(() => {});
   });
-  return { reset, receive, setOnline, model, toggle, test };
+  return { reset, receive, setOnline, model, toggle, test, offerState, turnOn };
 }
