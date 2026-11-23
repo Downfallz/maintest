@@ -22,9 +22,6 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// <summary>The journal each practice is played on, kept in memory: a test gives one that cannot be played on (#931).</summary>
     internal Func<IDecisionJournal> Journals { get; init; } = () => new InMemoryDecisionJournal();
 
-    /// <summary>How long keeping a tutorial done may hold the gate every account's practices wait on.</summary>
-    internal TimeSpan KeepDoneWait { get; init; } = TimeSpan.FromSeconds(5);
-
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly InProcessAgentTurns _turns = new(clock);
     private readonly Dictionary<string, Practice> _byAccount = new(StringComparer.Ordinal);
@@ -81,32 +78,66 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// with nothing kept on the account: it is not done, and there is nothing left to play (#912).
     /// </summary>
     /// <param name="keepDone">
-    /// Keeps on the account that the tutorial is done, run under this gate just before a done tutorial is let go of:
-    /// whether it is done is read once, so a match that ends meanwhile is never let go of unkept (#931). It is given
-    /// at most <see cref="KeepDoneWait" />, as every account's practices wait behind it.
+    /// Keeps on the account that the tutorial is done, before a done tutorial is let go of. Whether it is done is read
+    /// once, under this gate, so a match that ends meanwhile is never let go of unkept (#931). The keeping itself is a
+    /// store write, made outside the gate, which every account's practices wait on: if it fails, the practice is kept
+    /// for the next reload or Leave.
     /// </param>
-    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<CancellationToken, Task>? keepDone = null)
+    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<Task>? keepDone = null)
+    {
+        var (practice, done, over) = await ReadAsync(account, scenario, sweep: true);
+        if (practice is null || practice.Play.Api.Practice?.Tutorial is null)
+        {
+            return practice;
+        }
+
+        if (!done && !over)
+        {
+            return practice;
+        }
+
+        await KeepAsync(done, keepDone);
+        await LetGoAsync(practice);
+        return null;
+    }
+
+    /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
+    /// <param name="keepDone">As <see cref="ResumeAsync" />'s: run outside the gate before a done tutorial is let go of.</param>
+    public async Task<bool> ForgetAsync(string account, string scenario, Func<Task>? keepDone = null)
+    {
+        var (practice, done, _) = await ReadAsync(account, scenario, sweep: false);
+        if (practice is null)
+        {
+            return false;
+        }
+
+        await KeepAsync(done, keepDone);
+        await LetGoAsync(practice);
+        return true;
+    }
+
+    /// <summary>
+    /// The account's practice of the scenario, and, for a tutorial, whether it is done and whether its table plays on
+    /// no more, read once under the gate. Over is read first: a table whose match ended has its board's outcome before
+    /// it says it is over, so a tutorial read over and not done did not end its match.
+    /// </summary>
+    private async Task<(Practice? Practice, bool Done, bool Over)> ReadAsync(string account, string scenario, bool sweep)
     {
         await _gate.WaitAsync();
         try
         {
-            await SweepAsync();
+            if (sweep)
+            {
+                await SweepAsync();
+            }
+
             if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
             {
-                return null;
+                return (null, false, false);
             }
 
-            if (practice.Play.Api.Practice?.Tutorial is { } tutorial)
-            {
-                var done = await KeptDoneAsync(tutorial, keepDone);
-                if (done || practice.Play.Session.IsOver)
-                {
-                    await StopAsync(practice);
-                    return null;
-                }
-            }
-
-            return practice;
+            var over = practice.Play.Session.IsOver;
+            return (practice, practice.Play.Api.Practice?.Tutorial?.Done == true, over);
         }
         finally
         {
@@ -114,25 +145,24 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
     }
 
-    /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
-    /// <param name="keepDone">As <see cref="ResumeAsync" />'s: run under this gate before a done tutorial is let go of.</param>
-    public async Task<bool> ForgetAsync(string account, string scenario, Func<CancellationToken, Task>? keepDone = null)
+    private static async Task KeepAsync(bool done, Func<Task>? keepDone)
+    {
+        if (done && keepDone is not null)
+        {
+            await keepDone();
+        }
+    }
+
+    /// <summary>Lets go of a practice read before, under the gate, unless the account opened another meanwhile.</summary>
+    private async Task LetGoAsync(Practice practice)
     {
         await _gate.WaitAsync();
         try
         {
-            if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
+            if (_byAccount.TryGetValue(practice.Account, out var current) && ReferenceEquals(current, practice))
             {
-                return false;
+                await StopAsync(practice);
             }
-
-            if (practice.Play.Api.Practice?.Tutorial is { } tutorial)
-            {
-                await KeptDoneAsync(tutorial, keepDone);
-            }
-
-            await StopAsync(practice);
-            return true;
         }
         finally
         {
@@ -201,23 +231,6 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         {
             _gate.Release();
         }
-    }
-
-    /// <summary>
-    /// Whether the tutorial is done, read once; when it is, <paramref name="keepDone" /> keeps it on the account, under
-    /// this gate. That write is the one store call made under it, so it is bounded: a store that does not answer in
-    /// <see cref="KeepDoneWait" /> fails the request, the practice is kept, and the next reload or Leave tries again.
-    /// </summary>
-    private async Task<bool> KeptDoneAsync(TutorialPlay tutorial, Func<CancellationToken, Task>? keepDone)
-    {
-        var done = tutorial.Done;
-        if (done && keepDone is not null)
-        {
-            using var bounded = new CancellationTokenSource(KeepDoneWait);
-            await keepDone(bounded.Token);
-        }
-
-        return done;
     }
 
     /// <summary>Lets go of the practices nobody read for <see cref="Idle" />.</summary>

@@ -25,7 +25,7 @@ id: fizzle
 title: Un tour sauté
 Une créature qui ne peut pas agir quand vient son tour est sautée. Rien ne se résout, rien n’est dépensé.
 La créature a été vaincue ou étourdie plus tôt dans le round.
-> Une créature étourdie avant son tour est sautée et garde toute son Énergie.
+> Une créature étourdie par un tour précédent est sautée et garde toute son Énergie.
 ```
 
 ## Le plateau change entre deux tours {#the-board-changes}

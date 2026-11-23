@@ -1261,8 +1261,8 @@
             "id": "tempo",
             "title": "Tempo",
             "lines": [
-              "Chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.",
-              "Instinct agit avant chaque créature en Précision, mais sans critique ce round.",
+              "À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.",
+              "Instinct agit avant toute créature en Précision, sans critique ce round.",
               "Précision agit après Instinct et garde le jet de critique."
             ],
             "example": "Une créature en Instinct à 5 d’initiative agit avant une créature en Précision à 9."
@@ -2063,7 +2063,7 @@
               "Une créature qui ne peut pas agir quand vient son tour est sautée. Rien ne se résout, rien n’est dépensé.",
               "La créature a été vaincue ou étourdie plus tôt dans le round."
             ],
-            "example": "Une créature étourdie avant son tour est sautée et garde toute son Énergie."
+            "example": "Une créature étourdie par un tour précédent est sautée et garde toute son Énergie."
           }
         },
         {

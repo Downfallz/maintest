@@ -939,22 +939,44 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     /// <summary>
-    /// Keeping a tutorial done holds the gate every account's practices wait on, so a store that does not answer is
-    /// given a bounded wait: the request fails, and the practice is kept for the next reload or Leave to try again.
+    /// Keeping a tutorial done is a store write: it is made outside the gate every account's practices wait on, so a
+    /// slow store holds no one else's practice, and the tutorial is let go of once it is kept.
     /// </summary>
     [Fact]
-    public async Task Keeping_a_tutorial_done_waits_a_bounded_time_and_keeps_the_practice_when_the_store_does_not_answer()
+    public async Task Keeping_a_tutorial_done_holds_no_other_account_s_practice_and_lets_it_go_once_kept()
     {
         var store = Shipping();
-        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock) { KeepDoneWait = TimeSpan.FromMilliseconds(50) };
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+        var account = practices.ByToken(play.Token).ShouldNotBeNull().Account;
+        var kept = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var resuming = practices.ResumeAsync(account, Tutorial, () => { writing.TrySetResult(); return kept.Task; });
+        await writing.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        var other = await practices.CurrentAsync("someone-else", Tutorial).WaitAsync(TimeSpan.FromSeconds(5), Cancel);
+        kept.SetResult();
+
+        other.ShouldBeNull();
+        (await resuming).ShouldBeNull();
+        practices.Count.ShouldBe(0);
+    }
+
+    /// <summary>A store that cannot keep the tutorial done fails the request, and the practice is kept for the next try.</summary>
+    [Fact]
+    public async Task A_tutorial_done_that_the_store_cannot_keep_is_kept_for_the_next_reload()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
         var play = await OpenTutorialAsync(store, practices, "learner");
         await AnswerTheLessonAsync(store, play);
         await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
         var account = practices.ByToken(play.Token).ShouldNotBeNull().Account;
 
-        await Should.ThrowAsync<OperationCanceledException>(() => practices.ResumeAsync(account, Tutorial, cancellationToken => Task.Delay(Timeout.Infinite, cancellationToken)));
+        await Should.ThrowAsync<IOException>(() => practices.ResumeAsync(account, Tutorial, () => Task.FromException(new IOException("The store is out."))));
 
-        practices.Count.ShouldBe(1);
         (await practices.CurrentAsync(account, Tutorial)).ShouldNotBeNull();
     }
 

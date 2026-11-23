@@ -155,8 +155,8 @@ sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
 ```card
 id: tempo
 title: Tempo
-Chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.
-Instinct agit avant chaque créature en Précision, mais sans critique ce round.
+À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.
+Instinct agit avant toute créature en Précision, sans critique ce round.
 Précision agit après Instinct et garde le jet de critique.
 > Une créature en Instinct à {creature.initiative} d’initiative agit avant une créature en Précision à {creature.initiative + 4}.
 ```
