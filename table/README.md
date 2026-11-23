@@ -464,20 +464,22 @@ one of them differs from the module.
 
 ## Signing in (ADR 0122)
 
-`table --sign-in google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`; `--accounts google` is the
-older spelling) lets players sign in on the home page with Google; `--accounts dev` signs in by a typed name
+`table --sign-in google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`) lets players sign in on the
+home page with Google. `--accounts google` is the older spelling. `--accounts dev` signs in by a typed name
 instead, on a loopback host only. `--sign-in` lists the providers, comma-separated, in the order the page draws
-their buttons; each is one provider behind the host's sign-in port, at `POST /api/account/<provider>`
-(docs/tabletop/sign-in-methods-plan.md, P2). The page shows a button for each provider `/api/me` lists (Google's own
+their buttons, and each provider signs in at `POST /api/account/<provider>` (docs/tabletop/sign-in-methods-plan.md,
+P2). The page shows a button for each provider `/api/me` lists (Google's own
 button, for Google), then asks a first-time player for a unique name (3 to 20 letters, digits, `_` or `-`; bot
 names reserved), and puts the account in the masthead with *Sign out* and *Sign out everywhere*. The host checks
 Google's ID token itself and keeps its own `HttpOnly` session cookie for thirty days. Accounts are kept beside the
 recordings: `runs/accounts/`, or the `accounts` container next to the recordings' one. Nothing else is kept: no
-email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev` or
-`signin`), `signIn` (each provider as `{"provider", "clientId"}`, in order), `googleClientId` (for a page of the
-release before) and `account`. Each sign-in writes one console line per step, `Sign-in started (<provider>).` when
+email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev`, or `google` for
+any host that signs in through providers, the name the page of the release before reads), `signIn` (each provider
+as `{"provider", "clientId"}`, in order), `googleClientId` (also for that older page) and `account`. Each sign-in writes one console line per step, `Sign-in started (<provider>).` when
 the proof reaches the host, then `Sign-in finished (<provider>).` once a session is issued (after the name window,
-for a new player) or `Sign-in refused (<provider>).`: counted by provider, they say where people stop.
+for a new player) or `Sign-in refused (<provider>).` (the provider said no, the account is suspended, or
+registration is closed). Counted by provider, the lines show where people stop. A request with a forged proof
+writes its two lines too.
 
 With accounts on, playing needs a sign-in, and a seat belongs to the account that took it: opening a table, taking
 an open place and accepting an invitation answer `401` to nobody, and a seat's token alone is refused (`401`

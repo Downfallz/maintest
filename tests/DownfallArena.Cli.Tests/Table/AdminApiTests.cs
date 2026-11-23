@@ -505,7 +505,7 @@ public sealed class AdminApiTests : IDisposable
 
             var me = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, new AccountRequest(null, Secure: false)))).RootElement;
 
-            me.GetProperty("accounts").GetString().ShouldBe("signin");
+            me.GetProperty("accounts").GetString().ShouldBe("google");
             var offered = me.GetProperty("signIn").EnumerateArray().Single();
             offered.GetProperty("provider").GetString().ShouldBe("google");
             offered.GetProperty("clientId").GetString().ShouldBe("1234.apps.googleusercontent.com");

@@ -778,7 +778,7 @@ test('a host that signs nobody in shows no Settings tab', async ({ page }) => {
 // The host's settings (ADR 0177) as a host that signs players in keeps them, and /api/me carrying their notice.
 async function withSettings(page) {
   const state = { settings: { registrationOpen: true, notice: null, updatedBy: null, updatedAt: null }, puts: [] };
-  await page.route('**/api/me', route => route.fulfill({ json: { operator: true, admin: '/admin', accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], account: null, googleClientId: 'id', notice: state.settings.notice } }));
+  await page.route('**/api/me', route => route.fulfill({ json: { operator: true, admin: '/admin', accounts: 'google', signIn: [{ provider: 'google', clientId: 'id' }], account: null, googleClientId: 'id', notice: state.settings.notice } }));
   await page.route('**/api/admin/settings', route => {
     if (route.request().method() === 'PUT') {
       const asked = route.request().postDataJSON();

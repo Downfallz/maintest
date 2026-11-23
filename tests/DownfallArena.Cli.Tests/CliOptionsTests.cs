@@ -264,12 +264,12 @@ public sealed class CliOptionsTests
     }
 
     [Theory]
-    [InlineData("off", "off")]
-    [InlineData("google", "signin")]
-    [InlineData("dev", "dev")]
-    public void The_table_says_how_players_sign_in(string value, string named)
+    [InlineData("off")]
+    [InlineData("google")]
+    [InlineData("dev")]
+    public void The_table_says_how_players_sign_in(string value)
     {
-        AccountApi.Named(CliOptions.Parse(["table", "--accounts", value]).Accounts).ShouldBe(named);
+        AccountApi.Named(CliOptions.Parse(["table", "--accounts", value]).Accounts).ShouldBe(value);
     }
 
     [Fact]

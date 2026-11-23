@@ -62,6 +62,11 @@ internal sealed class AccountApi
             throw new ArgumentException("Only a host that signs in with providers is given any.", nameof(providers));
         }
 
+        if (providers.FirstOrDefault(provider => string.IsNullOrEmpty(provider.Name) || !provider.Name.All(char.IsAsciiLetterLower)) is { } misnamed)
+        {
+            throw new ArgumentException($"A provider is named in lower-case letters, as its route is: not '{misnamed.Name}'.", nameof(providers));
+        }
+
         if (providers.DistinctBy(provider => provider.Name, StringComparer.Ordinal).Count() != providers.Count)
         {
             throw new ArgumentException("Each provider signs in at its own route: one of them is given twice.", nameof(providers));
@@ -219,10 +224,14 @@ internal sealed class AccountApi
     /// </summary>
     public AccountActivityLog? Activity { get; set; }
 
-    /// <summary>How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list.</summary>
+    /// <summary>
+    /// How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list. A host that signs
+    /// in through providers still says <c>google</c>, the name the page of the release before checks before it draws
+    /// Google's button: renaming it waits until every page reads <c>signIn</c> (sign-in methods plan, P3).
+    /// </summary>
     public static string Named(AccountsMode mode) => mode switch
     {
-        AccountsMode.SignIn => "signin",
+        AccountsMode.SignIn => "google",
         AccountsMode.Development => "dev",
         _ => "off",
     };
@@ -489,9 +498,13 @@ internal sealed class AccountApi
         }
 
         // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
-        return await RegistrationClosedAsync()
-            ? Refused(AccountErrors.RegistrationClosed)
-            : Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
+        if (await RegistrationClosedAsync())
+        {
+            Counted("refused", name);
+            return Refused(AccountErrors.RegistrationClosed);
+        }
+
+        return Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
 
     /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
@@ -508,6 +521,7 @@ internal sealed class AccountApi
         // A ticket handed out before the operator closed registration is refused too (ADR 0177).
         if (await RegistrationClosedAsync())
         {
+            Counted("refused", identity.Provider);
             return Refused(AccountErrors.RegistrationClosed);
         }
 
@@ -517,7 +531,8 @@ internal sealed class AccountApi
 
     /// <summary>
     /// The string fields of a posted object, which is all a provider is given; null for a body that is not one object.
-    /// A field that is not text is left out, so the provider reads it as missing.
+    /// A field that is not text is left out, so the provider reads it as missing. Names are read whatever their case,
+    /// as the route's JSON was before providers (<c>Credential</c> signed in then too).
     /// </summary>
     private static SignInProof? Proof(string body)
     {
@@ -532,7 +547,7 @@ internal sealed class AccountApi
             return null;
         }
 
-        var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var field in posted.RootElement.EnumerateObject())
         {
             if (field.Value.ValueKind == JsonValueKind.String)

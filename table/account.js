@@ -34,9 +34,13 @@ export function nextPath(search) {
   return null;
 }
 
-/** The ways in /api/me lists, in its order, that this page draws: each a provider's name and its public client id. */
+/**
+ * The ways in /api/me lists, in its order, that this page draws: each a provider's name and its public client id. A
+ * host of the release before lists none and says `accounts: 'google'` with its client id: that is Google alone.
+ */
 export function signInWays(me) {
-  const listed = Array.isArray(me?.signIn) ? me.signIn : [];
+  const older = me?.accounts === 'google' && typeof me?.googleClientId === 'string' ? [{ provider: 'google', clientId: me.googleClientId }] : [];
+  const listed = Array.isArray(me?.signIn) ? me.signIn : older;
   return listed
     .filter(way => typeof way?.provider === 'string' && DRAWN_WAYS.includes(way.provider))
     .map(way => ({ provider: way.provider, clientId: typeof way.clientId === 'string' ? way.clientId : null }));
@@ -45,8 +49,7 @@ export function signInWays(me) {
 /** The player half of /api/me, with off for an older host that does not say. */
 export function accountState(me) {
   const ways = signInWays(me);
-  const google = ways.find(way => way.provider === 'google');
-  return { mode: me?.accounts ?? 'off', account: me?.account ?? null, clientId: google?.clientId ?? me?.googleClientId ?? null, ways };
+  return { mode: me?.accounts ?? 'off', account: me?.account ?? null, clientId: ways.find(way => way.provider === 'google')?.clientId ?? null, ways };
 }
 
 /**
@@ -54,7 +57,7 @@ export function accountState(me) {
  * to order them in; none at all on a host that signs nobody in through a provider.
  */
 export function drawWays(doc, state) {
-  const shown = state.mode === 'signin' ? state.ways.map(way => way.provider) : [];
+  const shown = state.mode === 'dev' || state.mode === 'off' ? [] : state.ways.map(way => way.provider);
   for (const provider of DRAWN_WAYS) {
     const button = doc.getElementById(`${provider}-button`);
     if (button) button.hidden = !shown.includes(provider);
@@ -193,7 +196,7 @@ function mountSignIn(doc, { request, google, refresh, say }) {
   }
 
   async function withGoogle(state) {
-    const way = state.mode === 'signin' ? state.ways.find(each => each.provider === 'google') : null;
+    const way = state.mode === 'dev' || state.mode === 'off' ? null : state.ways.find(each => each.provider === 'google');
     if (!way?.clientId) return;
     try {
       const id = await google();

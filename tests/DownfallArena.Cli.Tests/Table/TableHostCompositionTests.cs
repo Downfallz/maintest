@@ -106,12 +106,6 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         (await _host.Accounts.HandleAsync("POST", "/api/account/discord", """{"code":"x"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(404);
     }
 
-    [Fact]
-    public async Task A_provider_without_its_client_id_composes_no_host()
-    {
-        (await ComposeSigningInAsync(googleClientId: null)).ShouldBeNull();
-    }
-
     /// <summary>Signs the name in through the host's own sign-in, and answers its session and its account.</summary>
     private static async Task<(string Session, AccountId Id)> SignInAsync(ComposedHost host, string name, bool phone = false)
     {

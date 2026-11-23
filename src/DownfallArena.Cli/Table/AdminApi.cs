@@ -299,8 +299,8 @@ internal sealed class AdminApi
                 @operator = operatorName is not null,
                 admin = Page,
                 accounts = AccountApi.Named(Accounts?.Mode ?? AccountsMode.Off),
-                // The ways in, in the order the page draws them (sign-in methods plan, P2); googleClientId stays for a page
-                // of the release before, open in a tab while this one deploys.
+                // The ways in, in the order the page draws them (sign-in methods plan, P2). The page of the release before
+                // reads accounts = google and googleClientId instead, so both stay while a deploy runs two revisions.
                 signIn = Accounts?.Offered() ?? [],
                 googleClientId = Accounts?.GoogleClientId,
                 account = player is null ? null : AccountApi.Describe(player.Account),

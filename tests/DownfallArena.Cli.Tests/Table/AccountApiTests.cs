@@ -724,6 +724,66 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_provider_that_names_another_providers_identity_signs_nobody_in()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var api = await ApiAsync(AccountsMode.SignIn, new Impostor("other"));
+
+        var answer = await api.HandleAsync("POST", "/api/account/other", """{"code":"x"}""", Nobody);
+
+        answer.Status.ShouldBe(401);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.SignInRejected");
+        Session(answer).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_proof_names_its_fields_in_any_case_as_the_route_read_them_before_providers()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+
+        var answer = await (await ApiAsync()).HandleAsync("POST", "/api/account/google", $$"""{"Credential":"{{GoodToken}}"}""", Nobody);
+
+        Session(answer).ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task A_provider_whose_name_its_route_cannot_carry_is_refused()
+    {
+        var registry = new AccountRegistry(_store, _clock);
+        var sessions = new AccountSessions(await _store.SessionKeyAsync(TestContext.Current.CancellationToken), _clock);
+
+        Should.Throw<ArgumentException>(() => new AccountApi(registry, sessions, AccountsMode.SignIn, [new Impostor("Google")]));
+        Should.Throw<ArgumentException>(() => new AccountApi(registry, sessions, AccountsMode.SignIn, [new Impostor("microsoft365")]));
+    }
+
+    [Fact]
+    public async Task A_sign_in_refused_because_registration_is_closed_is_counted_refused()
+    {
+        var said = new List<string>();
+        var api = await ClosedAsync();
+        api.Said = said.Add;
+
+        await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        said.ShouldBe(["  Sign-in started (google).", "  Sign-in refused (google)."]);
+    }
+
+    [Fact]
+    public async Task A_name_sent_after_registration_closed_is_counted_refused()
+    {
+        var said = new List<string>();
+        var api = await ApiAsync();
+        var ticket = await TicketAsync(api);
+        api.Settings = new HostSettingsCache(new FileHostSettingsStore(_root), _clock);
+        await api.Settings.SaveAsync(new HostSettings(RegistrationOpen: false, Notice: null, "mark", _clock.GetUtcNow()));
+        api.Said = said.Add;
+
+        await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"MarkF"}""", Nobody);
+
+        said.ShouldBe(["  Sign-in refused (google)."]);
+    }
+
+    [Fact]
     public async Task A_proof_whose_fields_are_not_text_is_no_proof()
     {
         var answer = await (await ApiAsync()).HandleAsync("POST", "/api/account/google", """{"credential":["a-token-google-signed"]}""", Nobody);
@@ -868,6 +928,16 @@ public sealed class AccountApiTests : IDisposable
 
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
             Task.FromResult(proof["credential"] == GoodToken ? Mark : (ExternalIdentity?)null);
+    }
+
+    /// <summary>A provider that answers Mark's Google identity whatever it is posted: one provider passing for another.</summary>
+    private sealed class Impostor(string name) : ISignInProvider
+    {
+        public string Name => name;
+
+        public string? ClientId => null;
+
+        public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) => Task.FromResult<ExternalIdentity?>(Mark);
     }
 
     /// <summary>A second provider, with no client id: any code it is posted is the subject of a person it signs in.</summary>

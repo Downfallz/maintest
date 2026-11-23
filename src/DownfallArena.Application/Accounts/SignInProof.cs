@@ -3,7 +3,8 @@ namespace DownfallArena.Application.Accounts;
 /// <summary>
 /// What a page posts to sign in with a provider, as the string fields of the body it sent: Google's
 /// <c>credential</c>, or a later provider's <c>code</c> and <c>verifier</c>. Each provider reads the fields it knows;
-/// a field that is missing, or was not a string, reads as null.
+/// a field that is missing, or was not a string, reads as null. The names are matched as the given dictionary
+/// compares them.
 /// </summary>
 public sealed class SignInProof
 {

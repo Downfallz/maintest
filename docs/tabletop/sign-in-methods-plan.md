@@ -139,19 +139,29 @@ and 4. The recommended answer:
    drawing a button per provider, a count of sign-ins started and finished per provider. Tests: every existing
    account test passes unchanged; an unknown provider is `404`; the page draws what `/api/me` lists.
 
-   *Built (2026-11-23)*: `ISignInProvider` (a name, the public client id its button is drawn for, and a proof in, an
-   identity or null out) replaces `IIdentityTokenVerifier`. Google's verifier implements it unchanged, reading the
-   posted `credential`. A proof is the string fields of the posted object (`SignInProof`); a body that is not one
-   object is a 400. `POST /api/account/<provider>` signs in with each provider the host lists and answers 404
-   `Account.NoProvider` for any other; an identity a provider names under another provider's name is refused.
-   `--sign-in google[,...]` lists the providers in order (`SignInProviders.Known` and `Build` hold what this release
-   knows); `--accounts google` is its older spelling, refused beside it. `/api/me` says `accounts: "signin"` and
-   lists `signIn: [{provider, clientId}]`, `googleClientId` kept for a page of the release before. The page draws
-   the button of each provider listed that it knows (`DRAWN_WAYS`, the row `#sign-in-ways`) and hides the others.
-   The count is one console line per step, `Sign-in started|finished|refused (<provider>).`, finished once a
-   session is issued, after the name window for a new player. The account tests pass with the mode renamed
-   (`AccountsMode.SignIn`) and their fake Google behind the new port. Left: the ops report does not read the
-   count yet; `infra/main.bicep` still passes `--accounts google`, which P3 changes with `discordClientId`.
+   *Built (2026-11-23)*:
+
+   - The port: `ISignInProvider` (a name, the public client id its button is drawn for, and a proof in, an identity
+     or null out) replaces `IIdentityTokenVerifier`. Google's verifier implements it unchanged and reads the posted
+     `credential`. A proof is the string fields of the posted object (`SignInProof`), their names read in any case
+     as before; a body that is not one object is a 400.
+   - The route: `POST /api/account/<provider>` signs in with each provider the host lists. Any other provider is a
+     404 `Account.NoProvider`, which replaces `Account.NoGoogle`. A provider that returns an identity of another
+     provider is refused, and a provider whose name is not lower-case letters is refused when the host is built.
+   - The flag: `--sign-in google[,...]` lists the providers in order. `SignInProviders.Known` and `Build` hold
+     what this release knows. `--accounts google` is the older spelling and is refused beside it.
+   - `/api/me` lists `signIn: [{provider, clientId}]`. It still says `accounts: "google"` and `googleClientId`,
+     which the page of the release before reads; the new page reads an older host's answer as Google alone. Renaming
+     `accounts` waits for P3, once every page reads `signIn`.
+   - The page draws the button of each listed provider it knows (`DRAWN_WAYS`, the row `#sign-in-ways`) and hides
+     the others.
+   - The count: each sign-in writes one console line per step, `Sign-in started|finished|refused (<provider>).`
+     It is finished once a session is issued, after the name window for a new player, and refused when the
+     provider says no, the account is suspended or registration is closed.
+   - The account tests pass with the mode renamed (`AccountsMode.SignIn`) and their fake Google behind the new
+     port. A credential that is not text is now a 401 rather than a 400.
+   - Left: the ops report reads the count, and a forged proof stops writing a line each (#1171).
+     `infra/main.bicep` still passes `--accounts google`; P3 changes it with `discordClientId`.
 3. **P3, Discord.** `DiscordSignIn` (PKCE, public client, scope `identify`), `/signin/discord`, the state check,
    `discordClientId` in `infra/main.bicep`, and the owner's steps in `infra/README.md` (the app, the redirect
    addresses, *public client* on). Tests: a fake Discord answers the exchange and `@me`; a wrong state, a reused

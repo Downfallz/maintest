@@ -634,10 +634,10 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
 
 - `--sign-in <provider>[,...]` signs players in on the home page with the providers listed, in the order their
   buttons are drawn (ADR 0122, docs/tabletop/sign-in-methods-plan.md): `google` checks Google's ID token against
-  `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`. A provider the release does not know, or one named twice, is
-  refused. Each signs in at `POST /api/account/<provider>`, and `/api/me` lists them as `signIn`.
-- `--accounts google|dev`: `google` is the older spelling of `--sign-in google`, refused beside `--sign-in`; `dev`
-  signs in by a typed name and is refused off the loopback address.
+  `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`. Each provider signs in at `POST /api/account/<provider>`, and
+  `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
+- `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
+  also given. `dev` signs in by a typed name and is refused off the loopback address.
 - `--admins <acct_id>[,...]` (or `DOWNFALL_ADMINS`) names the accounts that are the operator once signed in,
   beside the token or the platform's sign-in, so the menu's Admin link shows for them (ADR 0172; by id, never by
   name).
@@ -789,15 +789,15 @@ One pass of what is due on the tables, then exit (ADR 0162), kept as a run for t
 (`tend/` beside the recordings, or the tend container; the last 500, a failed one too):
 
 - every table that never began closed after twenty hours, through its record;
-- every invitation nobody answered in a day let go of (`--accounts google|dev` reads whether the two are still
-  friends);
+- every invitation nobody answered in a day let go of (`--sign-in` or `--accounts google|dev` reads whether the
+  two are still friends);
 - every begun game between two players whose journal was not written for longer than its time to answer ended
   for whoever it still asks, its result kept and its seats told with `--push-keys`, and the player asked at a
   game whose time reaches its last quarter in the pass told so once (ADR 0169);
 - every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170);
 - every piece of feedback closed more than 180 days ago deleted (ADR 0189);
-- with `--accounts google|dev`, every notice older than 90 days erased from its account's notice log, and a log left
-  empty removed (ADR 0201, #1118).
+- with `--sign-in` or `--accounts google|dev`, every notice older than 90 days erased from its account's notice
+  log, and a log left empty removed (ADR 0201, #1118).
 
 What the hourly job runs. The tables it picks up take no bot turn.
 
@@ -809,9 +809,10 @@ dotnet run --project src/DownfallArena.Cli -- table-worker --record <container-u
 
 The turn worker and the dead-letter worker in a process of their own, until stopped (ADR 0162): the bots' turns
 a host told `--turns worker` puts on the queue, taken at tables picked up from their records. A match its turn
-ends is written once, by whichever process claims it (`closing.json`); with `--accounts google|dev` the result
-is kept for the ladder and the finished games, and with `--push-keys` (or `DOWNFALL_PUSH_KEYS`) too each seat's
-account is told how it ended, so it takes the same `--accounts` and keys as the host it works for. It raises no
+ends is written once, by whichever process claims it (`closing.json`); with `--sign-in` or
+`--accounts google|dev` the result is kept for the ladder and the finished games, and with `--push-keys` (or
+`DOWNFALL_PUSH_KEYS`) too each seat's account is told how it ended, so it takes the same sign-in flag and keys as
+the host it works for. It raises no
 "your turn"; the host serving the seat does. With keys it sends what the `notices` queue holds, a signed-in seat's
 "your turn" included once its grace is over, beside the host (ADR 0203). What the worker app runs.
 

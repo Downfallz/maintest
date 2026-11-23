@@ -10,7 +10,7 @@ test('a name the host could never take is said at once, without asking it', () =
 test('a host that says nothing about accounts has them off', () => {
   assert.deepEqual(accountState({ operator: false }), { mode: 'off', account: null, clientId: null, ways: [] });
   assert.deepEqual(accountState(null), { mode: 'off', account: null, clientId: null, ways: [] });
-  const signedIn = accountState({ accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], googleClientId: 'id', account: { id: 'acct_x', username: 'MarkF' } });
+  const signedIn = accountState({ accounts: 'google', signIn: [{ provider: 'google', clientId: 'id' }], googleClientId: 'id', account: { id: 'acct_x', username: 'MarkF' } });
   assert.equal(signedIn.account.username, 'MarkF');
   assert.equal(signedIn.clientId, 'id');
 });
@@ -22,9 +22,17 @@ test('the ways in are the providers the host lists, in its order, that this page
   assert.deepEqual(signInWays({ signIn: 'google' }), []);
 });
 
+test('a host of the release before, which lists no ways, still draws Google\'s button from its client id', () => {
+  const doc = anyPage();
+
+  assert.deepEqual(drawWays(doc, accountState({ accounts: 'google', googleClientId: 'id', account: null })), ['google']);
+  assert.equal(doc.getElementById('google-button').hidden, false);
+  assert.deepEqual(signInWays({ accounts: 'dev', googleClientId: 'id' }), []);
+});
+
 test('the page draws the button of each way /api/me lists and hides the others', () => {
   const doc = anyPage();
-  const me = { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], account: null };
+  const me = { accounts: 'google', signIn: [{ provider: 'google', clientId: 'id' }], account: null };
 
   assert.deepEqual(drawWays(doc, accountState(me)), ['google']);
   assert.equal(doc.getElementById('google-button').hidden, false);
