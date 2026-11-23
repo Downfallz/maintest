@@ -311,7 +311,8 @@
   #battle .brand div { display: none; }
   #battle .brand > span { display: block; font-size: 25px; }
   /* The mark alone is the way back to the lobby: its link holds a thumb (44 px, #1113). It reaches 4 px into the
-     header's padding and its gap, so the header's row keeps the mark's own width and Settings stays on a 320 px screen. */
+     header's padding and its gap (2 px where a tutorial narrows the gap, below), so the header's row keeps the mark's
+     own width and Settings stays on a 320 px screen. */
   #battle .hud-top > .brand { min-width: 44px; min-height: 44px; margin-inline: -4px; justify-content: center; }
   #battle .hud-top { gap: 6px; }
   #history-dialog { margin: auto auto 12px; height: min(700px,calc(100dvh - 24px)); }
@@ -2038,6 +2039,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 @media (max-width: 359px) and (orientation: portrait) {
   /* The header's spacing gives the band the width a finished lesson needs, so Leave stays clear of Settings (#1046). */
   .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) .hud-top { gap: 2px; padding-left: 4px; }
+  /* The mark's link reaches no further than this narrower gap, or the next control would cover its edge (#1113). */
+  .battle-page[data-home="member"] #battle[data-tutorial]:not([data-tutorial=""]) .hud-top > .brand { margin-inline-end: -2px; }
   .battle-page[data-home="member"] #battle .hud-top > .practice-band { gap: 2px; padding-left: 4px; }
   .battle-page[data-home="member"] #battle .hud-top > .practice-band .eyebrow { display: block; }
   .battle-page[data-home="member"] #battle .hud-top > .practice-band #practice-restart { display: none; }
