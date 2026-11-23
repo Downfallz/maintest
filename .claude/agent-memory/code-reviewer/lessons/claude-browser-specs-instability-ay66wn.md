@@ -1,0 +1,5 @@
+# code-reviewer lessons (branch claude/browser-specs-instability-ay66wn)
+
+- A deliberate "late board" injected inside the first `toPass` attempt (one-shot flag) proves nothing when the attempt fails for another reason (a null boundingBox, a missing `window.notifyBattle`) or when the injection does nothing: the retry passes either way. Count or assert the injected path outside the loop (#1141, feedback.spec.js:161-168, e358108).
+- A "wait for animations" helper and the "nothing moves" check in the same spec must filter alike: `settled` skips endless animations, `small()` reports every running one, so a looping animation in the window fails the check forever (#1114, fit.js:44 vs battle-history.spec.js:412, e358108).
+- A flake fixed by accepting a second end state ("played or settled") must leave a test that still requires the first one somewhere: battle.combat.js keeps `displayed.some(impact)` at the end, but it accepts the opponent's impact, so own casts that never play stay green (#1075, battle.combat.js:137/146, e358108).

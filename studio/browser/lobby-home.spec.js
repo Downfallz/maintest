@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
+import { settled } from './fit.js';
 
 const player = { id: 'acct_aaaaaaaaaaaaaaaa', username: 'MarcF' };
 const friend = { id: 'acct_bbbbbbbbbbbbbbbb', username: 'Bastien' };
@@ -460,14 +461,20 @@ test('local hosts still resume games and reconnect automatically without a refre
   expect(state.errors).toEqual([]);
 });
 
-// A head's close sits in its top end corner, apart from the words, and stays a 44 px target.
+// A head's close sits in its top end corner, apart from the words, and stays a 44 px target. Read once the window
+// has entered, the three boxes in one attempt. On a loaded runner one of them once came back null, the element then
+// without a box (#1074; not reproduced since, so its cause is not known): the attempt is read again, and a box that
+// stays null fails by name.
 async function closeInTheFarCorner(page, heading, close) {
-  const band = await heading.boundingBox(), button = await page.locator(close).boundingBox();
-  const words = await heading.locator('.scene-words').boundingBox();
-  expect(band.x + band.width - (button.x + button.width)).toBeLessThanOrEqual(12);
-  expect(button.y - band.y).toBeLessThanOrEqual(12);
-  expect(button.x).toBeGreaterThanOrEqual(words.x + words.width);
-  expect(band.height).toBeLessThanOrEqual(page.viewportSize().height < 600 ? 64 + 1 : 120 + 1);
+  await settled(heading.locator('xpath=ancestor::dialog[1]'));
+  await expect(async () => {
+    const [band, button, words] = await Promise.all([heading.boundingBox(), page.locator(close).boundingBox(), heading.locator('.scene-words').boundingBox()]);
+    expect(band && button && words, 'the head, its close and its words are drawn').toBeTruthy();
+    expect(band.x + band.width - (button.x + button.width)).toBeLessThanOrEqual(12);
+    expect(button.y - band.y).toBeLessThanOrEqual(12);
+    expect(button.x).toBeGreaterThanOrEqual(words.x + words.width);
+    expect(band.height).toBeLessThanOrEqual(page.viewportSize().height < 600 ? 64 + 1 : 120 + 1);
+  }).toPass({ timeout: 5000 });
 }
 
 test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics, the ladder, the rules and the battle view', async ({ page }) => {
@@ -482,10 +489,14 @@ test('the Friends window wears the Deathstalker\'s bank as its head on the home,
     await expect(heading).toHaveAttribute('data-side', 'start');
     await expect(heading.locator('img[data-scene]')).toHaveAttribute('data-focus-x', '75');
     await expect(heading.locator('img[data-scene]')).toHaveAttribute('loading', 'lazy');
-    // One frame on every page: the band runs from edge to edge of the window.
-    const [band, frame] = [await heading.boundingBox(), await page.locator('#friends-dialog').boundingBox()];
-    expect(Math.abs(band.x - frame.x)).toBeLessThanOrEqual(2);
-    expect(Math.abs(band.width - frame.width)).toBeLessThanOrEqual(2);
+    // One frame on every page: the band runs from edge to edge of the window, read as closeInTheFarCorner reads.
+    await settled(page.locator('#friends-dialog'));
+    await expect(async () => {
+      const [band, frame] = await Promise.all([heading.boundingBox(), page.locator('#friends-dialog').boundingBox()]);
+      expect(band && frame, 'the window and its head are drawn').toBeTruthy();
+      expect(Math.abs(band.x - frame.x)).toBeLessThanOrEqual(2);
+      expect(Math.abs(band.width - frame.width)).toBeLessThanOrEqual(2);
+    }).toPass({ timeout: 5000 });
     await closeInTheFarCorner(page, heading, '#friends-dialog [data-home-close]');
     await page.keyboard.press('Escape');
   }
