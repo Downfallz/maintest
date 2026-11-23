@@ -62,14 +62,14 @@ export function readShot(path, { scenarios = join(root, 'scenarios') } = {}) {
   if (shot === null || typeof shot !== 'object' || Array.isArray(shot)) refuse('a shot is a JSON object.');
   if (shot.format !== FORMAT) refuse(`"format" is "${FORMAT}".`);
   const unknown = Object.keys(shot).filter(key => !KEYS.has(key));
-  if (unknown.length) refuse(`unknown key ${unknown.map(key => `"${key}"`).join(', ')}.`);
+  if (unknown.length) refuse(`unknown key ${unknown.map(key => JSON.stringify(key)).join(', ')}.`);
   if (typeof shot.title !== 'string' || !shot.title.trim()) refuse('"title" says what the shot shows.');
   // A tutorial or a bug scenario opens with its lesson or its report: a shot plays a scenario of its own.
   if (typeof shot.scenario !== 'string' || !/^[a-z0-9][a-z0-9-]*\.json$/.test(shot.scenario)) {
     refuse('"scenario" names a file directly under scenarios/, such as "greedy-1v1-round-3.json".');
   }
   const named = basename(shot.scenario, '.json');
-  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${LEFT_OUT.map(one => `"${one}..."`).join(' or ')}.`);
+  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${LEFT_OUT.map(one => JSON.stringify(`${one}...`)).join(' or ')}.`);
   if (named.length > LONGEST_NAME) refuse(`the host cuts a scenario's name past ${LONGEST_NAME} characters: name the file shorter.`);
   if (!existsSync(join(scenarios, shot.scenario))) refuse(`the scenario scenarios/${shot.scenario} does not exist.`);
   const ratios = shot.ratios ?? Object.keys(RATIOS);
@@ -121,6 +121,17 @@ const EPOCH = new Date('2026-01-01T00:00:00Z');
 const TICK_MS = 100;
 
 /**
+ * Run `step` until `done` says so, at most `times` times, one after the other: each step acts on what the last one
+ * left. `done` is asked before each step and once after the last; it is the answer.
+ */
+export async function steps(step, { times, done = () => false }) {
+  if (await done()) return true;
+  if (times <= 0) return false;
+  await step();
+  return steps(step, { times: times - 1, done });
+}
+
+/**
  * Give the page a clock that moves only when it is told to: installed at EPOCH, a clock still follows the wall's,
  * so it is paused at once. Call it before the page loads.
  */
@@ -157,29 +168,22 @@ export async function shootStill(browser, origin, shot, ratio) {
     // A request the page has made may not have reached this process yet: one round trip to the page first.
     const caughtUp = () => page.evaluate(() => 0).then(settled);
     // The page's clock moves only here, a tick at a time, once what the last tick asked for has come.
-    const tick = async (times = 1) => {
-      for (let one = 0; one < times; one++) {
-        await page.clock.runFor(TICK_MS);
-        await caughtUp();
-      }
-    };
+    const tick = (times = 1) => steps(() => page.clock.runFor(TICK_MS).then(caughtUp), { times });
     await page.addInitScript(pinRandom);
     await holdClock(page);
     const signed = await page.request.post(`${origin}/api/account/dev`, { data: { username: 'Promo' } });
     if (!signed.ok()) throw new Error(`The host refused the account: ${signed.status()}.`);
     await page.goto(`${origin}/battle?scenario=${encodeURIComponent(shot.id)}`);
     const ready = page.locator('#battle[data-ready="true"]');
-    for (let ticks = 0; ticks < 300 && await ready.count() === 0; ticks++) await tick();
-    if (await ready.count() === 0) throw new Error(`The battle view did not open the scenario ${shot.scenario}.`);
+    const opened = await steps(tick, { times: 300, done: async () => await ready.count() > 0 });
+    if (!opened) throw new Error(`The battle view did not open the scenario ${shot.scenario}.`);
     await tick(30);
     // The practice's briefing is begun, and the windows a first visit opens are closed, as a player closes them.
     const begin = page.locator('#practice-brief-begin');
     if (await begin.isVisible()) { await begin.click(); await tick(10); }
-    for (let closed = 0; closed < 6 && await page.locator('dialog[open]').count() > 0; closed++) {
-      await page.keyboard.press('Escape');
-      await tick(10);
-    }
-    if (await page.locator('dialog[open]').count() > 0) throw new Error('A window stayed open over the field.');
+    const closed = await steps(() => page.keyboard.press('Escape').then(() => tick(10)),
+      { times: 6, done: async () => await page.locator('dialog[open]').count() === 0 });
+    if (!closed) throw new Error('A window stayed open over the field.');
     // The practice's band says this is a practice: a match has none, and a post shows the match.
     if (await page.locator('#practice-band').count() !== 1) throw new Error('The practice\'s band (#practice-band) is not on the page: the still would show what it hides.');
     await page.addStyleTag({ content: '#practice-band { display: none !important; }' });
@@ -221,13 +225,14 @@ async function main(argv) {
   const browser = await chromium.launch({ executablePath: process.env.STUDIO_CHROMIUM || undefined });
   try {
     // One ratio after the other, each on a host of its own.
-    for (const ratio of ratios) {
+    const shootOne = async ratio => {
       const png = await onHost(startHost, origin => shootStill(browser, origin, shot, ratio));
       const path = join(folder, stillName(ratio));
       await writeFile(path, png);
       const shown = path.startsWith(`${root}${sep}`) ? relative(root, path) : path;
       console.log(`${shown}  sha256:${sha256(png)}`);
-    }
+    };
+    await ratios.reduce((previous, ratio) => previous.then(() => shootOne(ratio)), Promise.resolve());
   } finally {
     await browser.close();
   }

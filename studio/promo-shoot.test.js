@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { FORMAT, RATIOS, SIZES, framing, parseArguments, readShot, scenarioId, stillName } from '../scripts/promo/shoot.mjs';
+import { FORMAT, RATIOS, SIZES, framing, parseArguments, readShot, scenarioId, steps, stillName } from '../scripts/promo/shoot.mjs';
 
 const shots = fileURLToPath(new URL('../promo/shots/', import.meta.url));
 const script = fileURLToPath(new URL('../scripts/promo/shoot.mjs', import.meta.url));
@@ -137,4 +137,16 @@ test('the command refuses a --ratio the shot does not name, with exit 1', () => 
   assert.equal(run.status, 1);
   assert.match(run.stderr, /--ratio 1:1 is not one of the shot's: 9:16/);
   assert.equal(run.stdout, '');
+});
+
+test('steps run one after the other until done, and say whether done was reached', async () => {
+  const ran = [];
+  assert.equal(await steps(async () => { ran.push(ran.length); }, { times: 5, done: () => ran.length === 3 }), true);
+  assert.deepEqual(ran, [0, 1, 2]);
+  assert.equal(await steps(async () => { ran.push(ran.length); }, { times: 2, done: () => false }), false);
+  assert.deepEqual(ran, [0, 1, 2, 3, 4]);
+  // With no done, every step runs: a tick of ten is ten ticks.
+  let ticks = 0;
+  await steps(() => { ticks += 1; }, { times: 10 });
+  assert.equal(ticks, 10);
 });
