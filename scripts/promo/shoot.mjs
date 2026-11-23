@@ -101,15 +101,7 @@ export function readShot(path, { scenarios = join(root, 'scenarios'), spells = j
   const unknown = Object.keys(shot).filter(key => !KEYS.has(key));
   if (unknown.length) refuse(`unknown key ${unknown.map(key => JSON.stringify(key)).join(', ')}.`);
   if (typeof shot.title !== 'string' || !shot.title.trim()) refuse('"title" says what the shot shows.');
-  // A tutorial or a bug scenario opens with its lesson or its report: a shot plays a scenario of its own.
-  if (typeof shot.scenario !== 'string' || !/^[a-z0-9][a-z0-9-]*\.json$/.test(shot.scenario)) {
-    refuse('"scenario" names a file directly under scenarios/, such as "greedy-1v1-round-3.json".');
-  }
-  const named = basename(shot.scenario, '.json');
-  const prefixes = LEFT_OUT.map(one => JSON.stringify(one + '...')).join(' or ');
-  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${prefixes}.`);
-  if (named.length > LONGEST_NAME) refuse(`the host cuts a scenario's name past ${LONGEST_NAME} characters: name the file shorter.`);
-  if (!existsSync(join(scenarios, shot.scenario))) refuse(`the scenario scenarios/${shot.scenario} does not exist.`);
+  checkScenario(shot.scenario, refuse, scenarios);
   const ratios = shot.ratios ?? Object.keys(RATIOS);
   if (!Array.isArray(ratios) || ratios.length === 0) refuse(`"ratios" lists one or more of ${Object.keys(RATIOS).join(', ')}.`);
   for (const ratio of ratios) if (!Object.hasOwn(RATIOS, ratio)) refuse(`the ratio ${JSON.stringify(ratio)} is not one of ${Object.keys(RATIOS).join(', ')}.`);
@@ -118,6 +110,19 @@ export function readShot(path, { scenarios = join(root, 'scenarios'), spells = j
   if (!SIZES.includes(size)) refuse(`"size" is ${SIZES.join(' or ')}.`);
   const film = shot.film === undefined ? null : readFilm(shot.film, refuse, spells);
   return { name, title: shot.title, scenario: shot.scenario, id: scenarioId(shot.scenario), ratios, size, film };
+}
+
+// A shot's scenario: a file directly under `scenarios/` that the host lists. A tutorial or a bug scenario opens with
+// its lesson or its report: a shot plays a scenario of its own.
+function checkScenario(scenario, refuse, scenarios) {
+  if (typeof scenario !== 'string' || !/^[a-z0-9][a-z0-9-]*\.json$/.test(scenario)) {
+    refuse('"scenario" names a file directly under scenarios/, such as "greedy-1v1-round-3.json".');
+  }
+  const named = basename(scenario, '.json');
+  const prefixes = LEFT_OUT.map(one => JSON.stringify(one + '...')).join(' or ');
+  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${prefixes}.`);
+  if (named.length > LONGEST_NAME) refuse(`the host cuts a scenario's name past ${LONGEST_NAME} characters: name the file shorter.`);
+  if (!existsSync(join(scenarios, scenario))) refuse(`the scenario scenarios/${scenario} does not exist.`);
 }
 
 // A shot's film: how long, at what rate, and the spells the filmed seat casts when it can.
@@ -323,7 +328,7 @@ async function onScenario(browser, origin, shot, ratio, work, { hold = false } =
     const stays = path => (hold ? /\/api\/lobby\/events$/ : STREAM).test(path);
     page.on('request', request => {
       token ??= request.headers()['x-seat-token'] ?? null;
-      if (/\/fx\.js$/.test(new URL(request.url()).pathname)) kit ??= request.url();
+      if (new URL(request.url()).pathname.endsWith('/fx.js')) kit ??= request.url();
       if (request.resourceType() !== 'eventsource' && !stays(new URL(request.url()).pathname)) open.add(request);
     });
     const done = request => {
@@ -340,13 +345,15 @@ async function onScenario(browser, origin, shot, ratio, work, { hold = false } =
     const streams = hold ? await holdStreams(page, done) : null;
     // A request the page has made may not have reached this process yet: one round trip to the page first. A held
     // stream answered owes a read, which is waited for in turn.
-    const loaded = async () => {
-      const end = Date.now() + 30000;
-      while (await page.evaluate(() => window.__promoLoading?.() ?? 0) > 0) {
-        if (Date.now() > end) throw new Error(`The page was still loading after 30 s; pictures not complete: ${await page.evaluate(() => [...document.images].filter(image => image.src && !image.complete).map(image => `${image.loading} ${image.src.slice(0, 80)}`).join(', '))}`);
-        await new Promise(wait => setTimeout(wait, 20));
-      }
-    };
+    const incomplete = () => page.evaluate(() => [...document.images].filter(image => image.src && !image.complete)
+      .map(image => image.loading + ' ' + image.src.slice(0, 80)).join(', '));
+    // Asked again every 20 ms, one ask after the other, for 30 s at most.
+    const loaded = (end = Date.now() + 30000) => page.evaluate(() => window.__promoLoading?.() ?? 0).then(async left => {
+      if (left === 0) return;
+      if (Date.now() > end) throw new Error(`The page was still loading after 30 s; pictures not complete: ${await incomplete()}`);
+      await new Promise(wait => setTimeout(wait, 20));
+      return loaded(end);
+    });
     // The effects kit (battle/src/fx-loader.ts) is a module the page imports once its first frame is drawn: fetched,
     // it is still to be run, and a spell is drawn as its motif until it has. Importing it here resolves once it ran.
     const kitRan = async () => {
@@ -409,6 +416,17 @@ const pageState = page => page.evaluate(paced => ({
 }), PACED);
 
 /**
+ * What the filmed seat would act on now, as one name, or null: a window open over the field first, then the button
+ * a reading waits on, then the host's question once nothing is being read. The seat acts once the same name has
+ * been on screen for a beat.
+ */
+export function actOn(state, asking) {
+  if (state.window) return `window ${state.window}`;
+  if (state.button) return state.button;
+  return !state.reading && !asking.over && asking.waitingFor ? `asked ${asking.waitingAsked}` : null;
+}
+
+/**
  * Film the shot framed at `ratio`: open its scenario as a still does, then step the page's clock one frame of the
  * film at a time and hand `frame(index, png)` each, for `film.seconds`. The seat plays as a player does, `BEAT_MS`
  * after what it acts on is on screen: it closes a window opened over the field, presses OK or Continue when a
@@ -439,30 +457,30 @@ export async function shootFilm(browser, origin, shot, ratio, frame) {
     // What the host asks the seat, read once at the start and again after each answer: it changes only then.
     let asking = await seat();
     const decisions = [];
-    // What the seat would act on, and from when: it acts once the same thing has been on screen for a beat.
+    const act = async state => {
+      if (state.window) return page.keyboard.press('Escape');
+      // Pressed in the page, in one go: Playwright's click waits on the browser's own frames for the button to stand
+      // still, and the page's clock would not be where it was each take.
+      if (state.button) return page.evaluate(selector => document.querySelector(selector).click(), state.button);
+      const decision = answer(asking, casts);
+      const sent = await page.request.post(`${origin}/api/seat/player1/decision`, { headers: { 'X-Seat-Token': token() }, data: decision });
+      if (sent.status() !== 204) throw new Error(`The host refused ${JSON.stringify(decision)}: ${sent.status()} ${await sent.text()}`);
+      decisions.push(decision);
+      asking = await settles(decision.asked);
+      // The page reads at once on a stream it holds open, or once its clock opens the stream again.
+      return streams.tell();
+    };
+    // What the seat would act on, and from when: it acts once the same thing has been on screen for a beat. The frames
+    // are taken one after the other, each from what the last one left: the awaits in this loop are the film.
     let seen = null, since = 0;
     const frames = seconds * fps;
     for (let index = 0; index < frames; index++) {
       const now = Math.round((index * 1000) / fps);
       const state = await pageState(page);
-      const next = (state.window && `window ${state.window}`) ?? state.button ?? (!state.reading && !asking.over && asking.waitingFor ? `asked ${asking.waitingAsked}` : null);
+      const next = actOn(state, asking);
       if (next !== seen) { seen = next; since = now; }
       if (seen && now - since >= BEAT_MS) {
-        if (state.window) {
-          await page.keyboard.press('Escape');
-        } else if (state.button) {
-          // Pressed in the page, in one go: Playwright's click waits on the browser's own frames for the button to
-          // stand still, and the page's clock would not be where it was each take.
-          await page.evaluate(selector => document.querySelector(selector).click(), state.button);
-        } else {
-          const decision = answer(asking, casts);
-          const sent = await page.request.post(`${origin}/api/seat/player1/decision`, { headers: { 'X-Seat-Token': token() }, data: decision });
-          if (sent.status() !== 204) throw new Error(`The host refused ${JSON.stringify(decision)}: ${sent.status()} ${await sent.text()}`);
-          decisions.push(decision);
-          asking = await settles(decision.asked);
-          // The page reads at once on a stream it holds open, or once its clock opens the stream again.
-          await streams.tell();
-        }
+        await act(state);
         await caughtUp();
         seen = null;
       }
@@ -495,12 +513,14 @@ export const framesDigest = hashes => sha256(hashes.join('\n'));
 
 /** Which frames a sheet shows: `picks` of `count`, evenly spaced, the first and the last among them. */
 export function sheetFrames(count, picks = 12) {
-  if (count <= picks) return [...Array(count).keys()];
-  return [...Array(picks).keys()].map(index => Math.round((index * (count - 1)) / (picks - 1)));
+  if (count <= picks) return Array.from({ length: count }, (_, index) => index);
+  return Array.from({ length: picks }, (_, index) => index).map(index => Math.round((index * (count - 1)) / (picks - 1)));
 }
 
 /** Whether `ffmpeg` and `ffprobe` answer: a film is encoded and measured with them. */
-export const hasEncoder = () => ['ffmpeg', 'ffprobe'].every(tool => spawnSync(tool, ['-version'], { stdio: 'ignore' }).status === 0);
+// NOSONAR below: javascript:S4036, ffmpeg and ffprobe are found on the PATH of whoever films a shot (a session or the
+// promo workflow's runner); the arguments are the script's own and a checked shot's numbers, nothing a visitor sends.
+export const hasEncoder = () => ['ffmpeg', 'ffprobe'].every(tool => spawnSync(tool, ['-version'], { stdio: 'ignore' }).status === 0); // NOSONAR
 
 /**
  * Encode the PNG frames of `folder` (`000000.png` on) at `fps` into an H.264 MP4 a feed takes: yuv420p, the index
@@ -509,7 +529,8 @@ export const hasEncoder = () => ['ffmpeg', 'ffprobe'].every(tool => spawnSync(to
  * otherwise, which the workflow records beside the hashes.
  */
 export function encodeFilm(folder, fps, out) {
-  const run = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(folder, '%06d.png'),
+  const run = spawnSync('ffmpeg', ['-y', // NOSONAR: S4036, as for hasEncoder
+    '-loglevel', 'error', '-framerate', String(fps), '-i', join(folder, '%06d.png'),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-threads', '1',
     '-bsf:v', 'filter_units=remove_types=6', '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:v', '+bitexact', '-movflags', '+faststart', out], { encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`ffmpeg could not encode ${folder}: ${run.stderr || run.error?.message}`);
@@ -517,7 +538,8 @@ export function encodeFilm(folder, fps, out) {
 
 /** What a film is, read back with ffprobe: its width, height, frame count and length in seconds. */
 export function filmFacts(path) {
-  const run = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-count_frames', '-show_entries',
+  const run = spawnSync('ffprobe', ['-v', // NOSONAR: S4036, as for hasEncoder
+    'error', '-select_streams', 'v:0', '-count_frames', '-show_entries',
     'stream=width,height,nb_read_frames,codec_name,pix_fmt:format=duration', '-of', 'json', path], { encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`ffprobe could not read ${path}: ${run.stderr || run.error?.message}`);
   const facts = JSON.parse(run.stdout);

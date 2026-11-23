@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { FORMAT, FRAME_RATES, LONGEST_FILM, RATIOS, SAFE_ZONES, SIZES, answer, encodeFilm, filmFacts, filmNames, frameEnd, framesDigest, framing, hasEncoder, parseArguments, readShot, scenarioId, sha256, sheetFrames, steps, stillName } from '../scripts/promo/shoot.mjs';
+import { FORMAT, FRAME_RATES, actOn, LONGEST_FILM, RATIOS, SAFE_ZONES, SIZES, answer, encodeFilm, filmFacts, filmNames, frameEnd, framesDigest, framing, hasEncoder, parseArguments, readShot, scenarioId, sha256, sheetFrames, steps, stillName } from '../scripts/promo/shoot.mjs';
 
 const shots = fileURLToPath(new URL('../promo/shots/', import.meta.url));
 const script = fileURLToPath(new URL('../scripts/promo/shoot.mjs', import.meta.url));
@@ -252,4 +252,14 @@ test('frames encode into an MP4 of the length, the size and the frame count aske
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }
+});
+
+test('the filmed seat closes a window first, then presses what a reading waits on, then answers once nothing is read', () => {
+  const asked = { waitingFor: 'Action', waitingAsked: 8, over: false };
+  assert.equal(actOn({ window: 'help-dialog', button: '#playback-next', reading: true }, asked), 'window help-dialog');
+  assert.equal(actOn({ window: null, button: '#playback-next', reading: true }, asked), '#playback-next');
+  assert.equal(actOn({ window: null, button: null, reading: true }, asked), null, 'a reading is let finish');
+  assert.equal(actOn({ window: null, button: null, reading: false }, asked), 'asked 8');
+  assert.equal(actOn({ window: null, button: null, reading: false }, { ...asked, over: true }), null);
+  assert.equal(actOn({ window: null, button: null, reading: false }, { waitingFor: null }), null);
 });

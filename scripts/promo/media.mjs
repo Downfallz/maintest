@@ -29,7 +29,7 @@ export function readMedia(path, { shots = join(root, 'promo/shots') } = {}) {
   const seen = new Set();
   media.files.forEach((file, index) => {
     const at = `file ${index + 1}`;
-    if (file === null || typeof file !== 'object' || Object.keys(file).sort().join() !== [...FILE_KEYS].sort().join()) refuse(`${at} has exactly ${FILE_KEYS.join(', ')}.`);
+    if (file === null || typeof file !== 'object' || Object.keys(file).sort((a, b) => a.localeCompare(b)).join() !== [...FILE_KEYS].sort((a, b) => a.localeCompare(b)).join()) refuse(`${at} has exactly ${FILE_KEYS.join(', ')}.`);
     if (!/^[a-z0-9][a-z0-9-]*$/.test(file.shot) || !existsSync(join(shots, `${file.shot}.json`))) refuse(`${at} names the shot ${JSON.stringify(file.shot)}, which promo/shots/ does not hold.`);
     if (!Object.hasOwn(RATIOS, file.ratio)) refuse(`${at} names the ratio ${JSON.stringify(file.ratio)}.`);
     const tag = String(file.ratio).replace(':', 'x');
