@@ -13,7 +13,9 @@ kit of [the pages' craft plan](ux-craft-plan.md), UX5). The patterns and their s
 | `docs/art/page-pictures.json` | The declaration: each picture a page draws, its painting, the width it is drawn at, the pages that draw it. | A session, by hand |
 | `table/page-art/` | Each picture at the sizes it is sent, as WebP, named by its own bytes. | `scripts/ux/pictures.mjs` |
 | `table/page-art.js` | The module the pages and the showcase's build read: each file, its width, its height, its bytes. | `scripts/ux/pictures.mjs` |
-| `table/picture.js` | The form: the `<img>`, the strip, and a scene as a head, a ground or a plate. | A session |
+| `table/battle-page-art.js` | The pictures declared for `table/battle`: what the battle bundle carries, and what `page-art.js` imports, so each entry is written once (#1016). | `scripts/ux/pictures.mjs` |
+| `table/picture-form.js` | The form: the `<img>`, the strip, and a scene as a head, a ground or a plate, drawn from the pictures it is handed (`art`). | A session |
+| `table/picture.js` | The form as the pages use it, drawing from `page-art.js`. | A session |
 | `table/picture-focus.js` | Where a cut picture centres: the check of a `focus`, which imports nothing, so the script runs on a broken `page-art.js`. | A session |
 | `table/icons.js` | The icon set. | A session |
 | `docs/art/page-budget.json` | The bytes of pictures a page may load, and ADR 0197's times. | A session |
@@ -46,6 +48,10 @@ One entry in `docs/art/page-pictures.json`:
   first of `drawn`, or at more than one, each listed in `drawn`. The battle draws a spell's portrait at 40 px on a card and at 24 px in
   the journal's rows: `"drawn": [40, 24]`, `"phone": { "table/battle": [40, 24] }`. A page it does not name draws it
   at the first width.
+- `group` (optional): for each page that draws one picture of a set at a time, the set's name, in lower case, digits
+  and hyphens. The statistics page draws one mutation, the one the player acquires most, out of 21. Each of
+  the 21 pictures carries `"group": { "table/stats": "leaned-mutation" }`. The budget counts a group as its heaviest member, not their sum
+  (#993). A group has two members or more; a page it does not name counts every member.
 - `focus` (optional): where a box that cuts the painting centres the cut, across then down, in steps of 5%:
   `"focus": "30% 60%"` keeps a subject left of centre and low in view. `pictureElement` and `pictureHtml` write it as
   `data-focus-x` and `data-focus-y`, which `table/identity.css` turns into the image's `object-position`. The
@@ -76,10 +82,14 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 - `page` is required and must be in the picture's `pages`: that is what the budget counts.
 - `focus` gives this box its own cut when one picture is drawn in two boxes that cut it differently; without it, the
   box uses the declaration's. A page sheet that sets `object-position` itself wins over both.
-- `lazy` loads the picture when it is near the screen, even where the page declares it `first`. A painting used on
-  the first screen and in a list below it is then one declaration, so the page fetches one file. The home's first
-  lesson creature is drawn by the featured space and by Learn to play's first card (#985). The card, 96 px wide,
-  takes the 150 or 300 px file: a little more than it draws when the featured space shows something else.
+- `lazy` loads the picture when it is near the screen, even where the page declares it `first` or `largest`, and
+  does not ask for it first. A painting used on the first screen and again below it is then one declaration, so the
+  page fetches one file. The home's first lesson creature is drawn by the featured space and by Learn to play's
+  first card (#985). The card, 96 px wide, takes the 150 or 300 px file: a little more than it draws when the
+  featured space shows something else. The showcase's eclipse is the hero's ground, its largest paint, and the
+  battlefields' first round, lazy (#1082): `battlefield-eclipse` lists both widths in `drawn` and in `phone`. Where a
+  picture is `largest` or `first`, the first width in its `phone` is the one on the first screen. The budget counts
+  the files for the other widths in `all` only, so draw each later use with `lazy`; a test holds the showcase to it.
 - `alt` says what is shown; leave it out for decoration. `sizes` says the width it is drawn at when it is not
   the declaration's first; for a strip it is the width of all its frames. `class` goes on the image.
 - `pictureHtml` and `stripHtml` write the same as text, for a page built before it is served. The showcase's
@@ -88,6 +98,10 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 - The image carries its `width` and `height`, and the class `picture`: never wider than its room, its height
   following. Its room is held before it loads.
 - Never write a derived file's name in a page: it changes when the picture is derived again.
+- The battle bundle imports `picture-form.js` and hands it `BATTLE_PAGE_ART` of `table/battle-page-art.js`
+  (`battle/src/spell-portrait.ts`, `table/battle-scenes.js`). `battle/build.mjs` refuses a bundle that carries
+  `page-art.js` (`everyPagesPictures` of `battle/live-guard.mjs`): its entries cover every page, and the battle would
+  pay for all of them.
 
 ## A scene in one of three forms
 
@@ -167,8 +181,9 @@ control that has a name; it is never the only thing that says a fact. A new mean
 `docs/art/page-budget.json` gives each page of the declaration two numbers: the bytes of pictures asked for
 before any scroll (`first`), and of all its pictures (`all`). They are counted as a phone takes them: the
 smallest file that fills the width drawn at twice the density, for each width the page draws it at on the phone
-(`phone`), each file once. `studio/ux-pictures.test.js` fails when a page
-goes over, and when a budget is so loose it holds nothing. Adding a picture to a page raises its number in the
+(`phone`), each file once, and a `group` as its heaviest member. `studio/ux-pictures.test.js` fails when a page
+goes over, and when a budget is so loose it holds nothing: either number more than 1.5 times what the page loads,
+plus 4 KiB (#1107). Adding a picture to a page raises its number in the
 same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are read by
 `node scripts/ux/journey.mjs --paint`.
 

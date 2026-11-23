@@ -218,7 +218,8 @@ public sealed class TableFilesTests
     [Fact]
     public void Every_picture_the_kit_names_is_served_as_webp_bytes()
     {
-        var module = Encoding.UTF8.GetString(Files.Get("/page-art.js").Body);
+        // page-art.js writes every page's entries but the battle's, which it imports from battle-page-art.js (#1016).
+        var module = Encoding.UTF8.GetString(Files.Get("/page-art.js").Body) + Encoding.UTF8.GetString(Files.Get("/battle-page-art.js").Body);
         var named = module.Split("file: '").Skip(1).Select(rest => rest[..rest.IndexOf('\'', StringComparison.Ordinal)])
             .Order(StringComparer.Ordinal).ToList();
 

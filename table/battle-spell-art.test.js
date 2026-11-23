@@ -29,7 +29,7 @@ test('every spell portrait is declared for the battle page at the 40 px of a car
   }
 });
 
-test('every form a mutation leads to is declared for the battle page at 64 px, lazy, and for the statistics at 144', () => {
+test('every form a mutation leads to is declared for the battle page at 64 px, lazy, for the statistics at 144, one at a time, and for the field guide', () => {
   // The pick and the Mutation Tree draw the form a mutation's `artwork` names (data/presentation/mutation-art.json),
   // on each mutation and in the detail; a capstone names a portrait and no artwork, and keeps its portrait.
   const artworks = [...new Set(Object.values(read('mutation-art.json')).map(visual => visual.artwork).filter(Boolean))];
@@ -37,9 +37,10 @@ test('every form a mutation leads to is declared for the battle page at 64 px, l
   for (const artwork of artworks) {
     const picture = PAGE_ART[`mutation-${artwork}`];
     assert.ok(picture, `mutation-${artwork} is declared and derived`);
-    assert.deepEqual(picture.drawn, [144, 64], artwork);
-    assert.deepEqual(picture.pages, { 'table/stats': 'lazy', 'table/battle': 'lazy' }, artwork);
-    assert.deepEqual(picture.phone, { 'table/battle': [64] }, artwork);
+    assert.deepEqual(picture.drawn, [144, 64, 258, 368], artwork);
+    assert.deepEqual(picture.pages, { 'table/stats': 'lazy', 'table/battle': 'lazy', 'showcase/mutations': 'lazy' }, artwork);
+    assert.deepEqual(picture.phone, { 'table/battle': [64], 'showcase/mutations': [258] }, artwork);
+    assert.deepEqual(picture.group, { 'table/stats': 'leaned-mutation' }, `${artwork}: the statistics paint one, the most acquired (#993)`);
     assert.ok([64, 128].every(width => picture.sizes.some(size => size.width === width)), `${artwork} is sent at 64 and 128 px`);
   }
 });

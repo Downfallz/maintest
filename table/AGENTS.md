@@ -13,7 +13,9 @@ What the client may never decide is in docs/tabletop/playtest-app.md; the routes
 - The motion kit (ADR 0197, `docs/art/branding.md#motion`): its forms at the foot of `identity.css`, and
   `motion.js`, which every page that loads `identity.css` also loads: it handles less motion and ambience.
 - The picture kit (ADR 0198, docs/art/page-pictures.md): `picture.js` writes a painting's `<img>` and a strip of
-  frames from `page-art.js`, which `scripts/ux/pictures.mjs` derives with `page-art/`; `icons.js` is the icon set.
+  frames from `page-art.js`, which `scripts/ux/pictures.mjs` derives with `page-art/`; the battle bundle takes only
+  the form, `picture-form.js`, and its own pictures, `battle-page-art.js`, which is also derived; `icons.js` is the
+  icon set.
 - `battle-*.js`: the shared modules the battle view imports. `battle-build/` is the bundle `battle/` builds:
   ignored, never committed, never edited by hand.
 - `/battle-lab` is an isolated visual study on fictional sample frames, not a live seat
@@ -53,8 +55,10 @@ Every flag of `table` is in docs/reference/commands.md.
 - `identity.css` stays last in every page's `<head>`.
 - A painting on a page comes from `picture.js`, declared for that page in `docs/art/page-pictures.json` and under
   its budget (`docs/art/page-budget.json`); never a file of `battle-art/` sent whole, never a derived file's name
-  written in a page. `page-art.js` and `page-art/` are generated: derive them again, do not edit them. An icon
-  comes from `icons.js`, inside a control that has a name; a new emoji or glyph as an icon is refused in review.
+  written in a page. `page-art.js`, `battle-page-art.js` and `page-art/` are generated: derive them again, do not
+  edit them. An icon comes from `icons.js`, inside a control that has a name; a new emoji or glyph as an icon is refused in review.
+- A new module the picture kit imports joins, in the same change, `TableFiles.cs`, `OFFLINE_SCRIPTS` of `sw.js`, `KIT`
+  of `studio/browser/picture-kit.spec.js` and `SHOWCASE_FILES` of `studio/browser/plan.js`: each lists them by name.
 - Motion comes from the kit: a token of `docs/art/branding.css`, never a number; `transform` and `opacity` only;
   travel under full motion alone. A `<dialog>` stays displayed while it fades after closing: test `open`, not `display`. The
   match's windows are in the kit, its docked sheets (`.docked-sheet`) fade in and leave at once, and

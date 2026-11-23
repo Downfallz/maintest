@@ -8,3 +8,6 @@ export const laboratoryOnly = path => LABORATORY_ONLY.test(path);
 export const engineOrLaboratory = path => laboratoryOnly(path) || /(?:^|\/)node_modules\//.test(path);
 // The kit's own modules: no other bundle carries one, or the kit would be paid for in the first frame.
 export const kitOnly = path => /(?:^|\/)src\/fx\//.test(path);
+// Every page's pictures (table/page-art.js): the battle draws from its own, table/battle-page-art.js, which
+// scripts/ux/pictures.mjs writes beside it, so no bundle pays for the showcase's and the lobby's entries (#1016).
+export const everyPagesPictures = path => /(?:^|\/)table\/page-art\.js$/.test(path);

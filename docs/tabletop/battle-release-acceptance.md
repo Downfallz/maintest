@@ -55,7 +55,14 @@ the spell portraits of #1004 brought the picture kit's module (`table/page-art.j
 portraits of every spell and three capstones (#1005 to #1010) add 39 entries to that module and brought the bundle
 to 1,774,322 bytes (503,442 gzip). The module lists every page's pictures, not only the battle's: a module of the
 battle's own would take most of it back out. The raw limit rises by 64 KiB; the gzip limit (524,288) is unchanged.
+
 The download budget does not bound GPU memory. No remote fonts or audio downloads are needed.
+
+**Lightened, 2026-11-23 (#1016).** The bundle draws from `table/battle-page-art.js`, the battle's own pictures,
+which `table/page-art.js` imports and adds every other page's to; `battle/build.mjs` refuses a bundle that carries
+`page-art.js`. Main measured 1,819,028 bytes (515,245 gzip) at `587077a`; the bundle is now 1,813,650 (512,742 gzip), 21,358
+under the limit. Most of the module was the battle's own: its 47 spell portraits and 21 forms, which it draws, and
+the forms gained the field guide's widths (#967). The limits do not move.
 
 | Surface | Current coverage | Release limitation |
 | --- | --- | --- |

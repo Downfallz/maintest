@@ -352,7 +352,7 @@ test('installing keeps the offline page\'s script, the picture kit and the plate
 
   await install(w);
 
-  for (const path of ['/offline.js', '/picture.js', '/picture-focus.js', '/page-art.js', '/page-art/parasite-offline-358.11111111.webp', '/page-art/parasite-offline-716.22222222.webp']) {
+  for (const path of ['/offline.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/battle-page-art.js', '/page-art/parasite-offline-358.11111111.webp', '/page-art/parasite-offline-716.22222222.webp']) {
     assert.ok(w.store.has(path), `${path} is kept`);
   }
   assert.ok(!w.store.has('/page-art/parasite-under-slate-323.aaaaaaaa.webp'), 'only the plate is kept, not every picture');

@@ -97,6 +97,19 @@ function figure(art, form, l) {
   return picture ? `<div class="field-figure">${art}${scene(picture, 'form', l.scenes[form], '(min-width: 1421px) 421px, (min-width: 651px) 30vw, calc(90vw - 28px)')}</div>` : art;
 }
 
+const GUIDE = 'showcase/mutations';
+// The widths each picture is drawn at, as showcase.css lays it out; the declaration's `drawn` holds the same (#967).
+const SIZES = {
+  // A form's portrait, shown whole in its 3:2 box: 258 px on a phone, under its 245 px height (368 px) wider.
+  portrait: '(max-width: 650px) 258px, min(368px, 31vw)',
+  // The head's creature, shown whole: 218 px on a phone; wider, under its height of 20vw, from 175 to 290 px: 263
+  // to 435 px wide.
+  head: '(max-width: 650px) 218px, min(435px, max(263px, 30vw))',
+};
+
+/** A form's portrait: the kit's picture of the mutation its artwork names (#967). */
+const formPortrait = artwork => pictureHtml('mutation-' + artwork, { page: GUIDE, base: SHOWCASE_ART, sizes: SIZES.portrait });
+
 function entry(t, lang, byId) {
   const l = lore[lang], n = escape(name(t, lang)), id = 'form-' + key(t.id);
   const parentLinks = ids => ids.map(id => `<a href="#form-${key(id)}">${escape(name(byId.get(id), lang))}</a>`).join(' · ');
@@ -106,7 +119,7 @@ function entry(t, lang, byId) {
   return `<details class="form-entry" id="${id}" data-form="${n}">
     <summary><span class="roman">${stageNumeral(t.level)}</span><strong>${n}</strong><span class="form-teaser">${t.passive ? l.passive : t.spells.map(s => escape(name(s, lang))).join(' · ')}</span></summary>
     <div class="field-entry ${t.passive ? 'passive-entry' : ''}">
-      ${t.visual.artwork ? figure(`<div class="field-art"><img src="/assets/evolutions/${t.visual.artwork}.webp" alt="" width="450" height="300" loading="lazy" decoding="async"></div>`, key(t.id), l) : ''}
+      ${t.visual.artwork ? figure(`<div class="field-art">${formPortrait(t.visual.artwork)}</div>`, key(t.id), l) : ''}
       <div><div class="mutation-facts"><p class="requirement">${need}</p>
         ${initiativeChip(t.initiative)}</div><p class="anatomy">${escape(t.notes[lang])}</p>
       ${t.passive ? `<p class="passive-rule">${portrait(t.visual.portrait)}${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
@@ -137,7 +150,7 @@ export function guidePage(c, catalogue, app) {
     <div class="contain guide-page">
       <header class="guide-head"><div><p class="kicker">${c.guide}</p><h1>${l.guideTitle}</h1><p class="lead">${l.guideIntro}</p>
         <p class="catalogue-counts">${forms} ${l.formTotal} <span>·</span> ${catalogue.nodes.length - forms} ${l.passiveTotal} <span>·</span> ${countSpells} ${l.spellTotal}</p></div>
-        ${pictureHtml('specimen-base-creature', { page: 'showcase/mutations', base: SHOWCASE_ART, alt: l.altBase, sizes: '(max-width: 650px) 218px, 435px' })}</header>
+        ${pictureHtml('specimen-base-creature', { page: GUIDE, base: SHOWCASE_ART, alt: l.altBase, sizes: SIZES.head })}</header>
       <div class="guide-tools"><nav class="family-jumps" aria-label="${l.familyLabel}">${families.map((family, i) => `<a href="#family-${family}">${l.familyNames[i]}</a>`).join('')}</nav>
         <div class="field-search" data-search hidden><label for="field-query">${l.search}</label><div><input id="field-query" type="search" placeholder="${escape(l.placeholder)}" autocomplete="off"><button type="button" data-clear hidden>${l.clear}</button></div>
         <span data-search-status role="status" class="visually-hidden"></span></div></div>

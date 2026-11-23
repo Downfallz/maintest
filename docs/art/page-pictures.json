@@ -83,15 +83,9 @@
       "pages": { "table/offline": "largest" }
     },
     {
-      "name": "showcase-ground",
-      "source": "table/battle-art/eclipse-battle.webp",
-      "drawn": [720, 1440],
-      "pages": { "showcase/home": "largest" }
-    },
-    {
       "name": "colossus",
       "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
-      "drawn": [308, 620],
+      "drawn": [308, 620, 850],
       "pages": { "showcase/home": "largest" }
     },
     {
@@ -109,26 +103,27 @@
     {
       "name": "round-mutate",
       "source": "docs/art/sources/pages/round-mutate.webp",
-      "drawn": [351],
+      "drawn": [351, 368],
       "pages": { "showcase/home": "lazy" }
     },
     {
       "name": "round-tempo",
       "source": "docs/art/sources/pages/round-tempo.webp",
-      "drawn": [351],
+      "drawn": [351, 368],
       "pages": { "showcase/home": "lazy" }
     },
     {
       "name": "round-cast",
       "frames": ["docs/art/sources/pages/round-cast-1.webp", "docs/art/sources/pages/round-cast-2.webp", "docs/art/sources/pages/round-cast-3.webp", "docs/art/sources/pages/round-cast-4.webp", "docs/art/sources/pages/round-cast-5.webp", "docs/art/sources/pages/round-cast-6.webp"],
-      "drawn": [351],
+      "drawn": [351, 368],
       "pages": { "showcase/home": "lazy" }
     },
     {
       "name": "battlefield-eclipse",
       "source": "table/battle-art/eclipse-battle.webp",
-      "drawn": [351, 1250],
-      "pages": { "showcase/home": "lazy", "table/home": "wide" }
+      "drawn": [720, 1440, 351, 1250],
+      "pages": { "showcase/home": "largest", "table/home": "wide" },
+      "phone": { "showcase/home": [720, 351] }
     },
     {
       "name": "battlefield-breach",
@@ -151,8 +146,9 @@
     {
       "name": "specimen-base-creature",
       "source": "table/battle-art/evolutions/base-creature.webp",
-      "drawn": [315, 218, 465],
-      "pages": { "showcase/home": "lazy", "showcase/mutations": "first" }
+      "drawn": [315, 218, 465, 435, 263],
+      "pages": { "showcase/home": "lazy", "showcase/mutations": "first" },
+      "phone": { "showcase/mutations": [218] }
     },
     {
       "name": "specimen-warped-base",
@@ -291,149 +287,170 @@
     {
       "name": "mutation-brute-base",
       "source": "table/battle-art/evolutions/brute-base.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-brute-stage2-frenzied",
       "source": "table/battle-art/evolutions/brute-stage2-frenzied.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-brute-stage2-ironhide",
       "source": "table/battle-art/evolutions/brute-stage2-ironhide.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-brute-stage2-oppressor",
       "source": "table/battle-art/evolutions/brute-stage2-oppressor.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-brute-stage3-colossus",
       "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-brute-stage3-oppressor",
       "source": "table/battle-art/evolutions/brute-stage3-oppressor.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-brute-stage3-ravager",
       "source": "table/battle-art/evolutions/brute-stage3-ravager.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-base",
       "source": "table/battle-art/evolutions/predator-base.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-stage2-blighted",
       "source": "table/battle-art/evolutions/predator-stage2-blighted.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-stage2-open-maw",
       "source": "table/battle-art/evolutions/predator-stage2-open-maw.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-stage2-scythe",
       "source": "table/battle-art/evolutions/predator-stage2-scythe.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-stage3-blightweaver",
       "source": "table/battle-art/evolutions/predator-stage3-blightweaver.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-stage3-deathstalker",
       "source": "table/battle-art/evolutions/predator-stage3-deathstalker.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-predator-stage3-soulreaver",
       "source": "table/battle-art/evolutions/predator-stage3-soulreaver.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-base",
       "source": "table/battle-art/evolutions/warped-base.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-stage2-ethereal",
       "source": "table/battle-art/evolutions/warped-stage2-ethereal.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-stage2-necrotic",
       "source": "table/battle-art/evolutions/warped-stage2-necrotic.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-stage2-stormborn",
       "source": "table/battle-art/evolutions/warped-stage2-stormborn.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-stage3-cataclysm",
       "source": "table/battle-art/evolutions/warped-stage3-cataclysm.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-stage3-revenant",
       "source": "table/battle-art/evolutions/warped-stage3-revenant.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "mutation-warped-stage3-transcendent",
       "source": "table/battle-art/evolutions/warped-stage3-transcendent.webp",
-      "drawn": [144, 64],
-      "pages": { "table/stats": "lazy", "table/battle": "lazy" },
-      "phone": { "table/battle": [64] }
+      "drawn": [144, 64, 258, 368],
+      "pages": { "table/stats": "lazy", "table/battle": "lazy", "showcase/mutations": "lazy" },
+      "phone": { "table/battle": [64], "showcase/mutations": [258] },
+      "group": { "table/stats": "leaned-mutation" }
     },
     {
       "name": "spell-focus",

@@ -2,7 +2,7 @@ import { build } from 'esbuild';
 import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { benchSpells } from './bench-spells.mjs';
-import { engineOrLaboratory, kitOnly, laboratoryOnly } from './live-guard.mjs';
+import { engineOrLaboratory, everyPagesPictures, kitOnly, laboratoryOnly } from './live-guard.mjs';
 
 // What the content says of each spell, for the effects bench (`bench-spells.mjs`): its name and what casts it.
 // The laboratory's bundle alone carries it; the live page names no spell.
@@ -33,5 +33,8 @@ if (!live.length || live.some(laboratoryOnly)) {
 }
 if ([...live, ...inputs(result, 'game')].some(kitOnly)) {
   throw new Error('The effects kit loads after the first frame, as its own file: no other bundle may include it.');
+}
+if ([...live, ...inputs(result, 'game'), ...inputs(kit, 'fx')].some(everyPagesPictures)) {
+  throw new Error('The battle draws from table/battle-page-art.js: no bundle may include every page\'s pictures (table/page-art.js).');
 }
 await copyFile('node_modules/phaser/LICENSE.md', '../table/battle-build/PHASER-LICENSE.txt');
