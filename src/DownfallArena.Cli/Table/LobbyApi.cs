@@ -1073,32 +1073,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             var offered = 0;
             foreach (var table in await TablesAsync(summary => summary.Seats.Any(seat => seat.Account == account.Value || seat.InvitedAccount == account.Value)))
             {
-                // A seat kept for the account is kept for nobody now, and a seat the account kept for a friend is
-                // offered to everyone, as the account's own seat is about to be (ADR 0129): the friend was waiting on
-                // a player who is gone.
-                foreach (var kept in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken && !table.IsOver).ToArray())
-                {
-                    if (kept.InvitedAccount == account)
-                    {
-                        await LetGoAsync(table, kept, declinedBy: null);
-                    }
-                    else if (Inviter(table, account))
-                    {
-                        await OfferToEveryoneAsync(table, kept);
-                    }
-                }
-
-                foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null && !table.IsOver).ToArray())
-                {
-                    if (table.Run is not null && await VacateAsync(table, seat))
-                    {
-                        offered++;
-                    }
-                    else
-                    {
-                        seat.Account = null;
-                    }
-                }
+                offered += await ReleaseAtAsync(table, account);
             }
 
             return offered;
@@ -1107,6 +1082,65 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             Claims.Release();
         }
+    }
+
+    /// <summary>Under the claim gate: the account's seats at one table let go of; how many were offered to another player.</summary>
+    private async Task<int> ReleaseAtAsync(PlayedTable table, AccountId account)
+    {
+        // A seat kept for the account is kept for nobody now, and a seat the account kept for a friend is offered to
+        // everyone, as the account's own seat is about to be (ADR 0129): the friend was waiting on a player who is gone.
+        foreach (var kept in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken && !table.IsOver).ToArray())
+        {
+            if (kept.InvitedAccount == account)
+            {
+                await LetGoAsync(table, kept, declinedBy: null);
+            }
+            else if (Inviter(table, account))
+            {
+                await OfferToEveryoneAsync(table, kept);
+            }
+        }
+
+        var offered = 0;
+        foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null && !table.IsOver).ToArray())
+        {
+            if (table.Run is not null && await VacateAsync(table, seat))
+            {
+                offered++;
+            }
+            else
+            {
+                seat.Account = null;
+            }
+        }
+
+        return offered;
+    }
+
+    /// <summary>The subscription a browser sent, or why it is refused: not one, on no push service the host sends to, or gone.</summary>
+    private async Task<(PushSubscription? Subscription, StudioResponse? Refused)> SentSubscriptionAsync(PushNotices notices, string body, AccountId? account)
+    {
+        var sent = JsonSerializer.Deserialize<BrowserSubscription>(body, Web);
+        var subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
+        if (subscription is null)
+        {
+            return (null, Problem(400, "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16."));
+        }
+
+        if (!PushSubscription.OnKnownService(subscription.Endpoint))
+        {
+            return (null, Problem(400, "Lobby.UnknownPushService", "This browser's push service is not one this host sends to."));
+        }
+
+        // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a push
+        // service say an endpoint is gone (ADR 0202), in whichever process sent it, and the account's devices remember
+        // it (ADR 0203): either one's word makes the page subscribe again.
+        if (notices.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
+        {
+            return (null, Problem(410, "This subscription is gone from its push service. Subscribe again."));
+        }
+
+        return (subscription, null);
     }
 
     /// <summary>
@@ -1124,25 +1158,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         PushSubscription? subscription = null;
         if (body is not null)
         {
-            var sent = JsonSerializer.Deserialize<BrowserSubscription>(body, Web);
-            subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
-            if (subscription is null)
+            var (sent, refused) = await SentSubscriptionAsync(push, body, account);
+            if (refused is not null)
             {
-                return Problem(400, "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16.");
+                return refused;
             }
 
-            if (!PushSubscription.OnKnownService(subscription.Endpoint))
-            {
-                return Problem(400, "Lobby.UnknownPushService", "This browser's push service is not one this host sends to.");
-            }
-
-            // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a
-            // push service say an endpoint is gone (ADR 0202), in whichever process sent it, and the account's devices
-            // remember it (ADR 0203): either one's word makes the page subscribe again.
-            if (push.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
-            {
-                return Problem(410, "This subscription is gone from its push service. Subscribe again.");
-            }
+            subscription = sent;
         }
 
         // Under the claim gate, and the seat found under it: a leave, a claim or a new invitation replaces the
@@ -1438,7 +1460,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
             openSeats = OpenSeatCount(table),
-            ranked = Ranked(table, held),
+            ranked = CountsOnTheLadder(table, held),
             players = seats.Select(seat => seat.Name).ToArray(),
             seats,
         };
@@ -1451,7 +1473,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// friend, is taken by an account when it is taken. Decided here so the card reads a badge, not the seats'
     /// account ids (#971).
     /// </summary>
-    private static bool Ranked(PlayedTable table, IReadOnlyList<SeatSummary> seats)
+    private static bool CountsOnTheLadder(PlayedTable table, IReadOnlyList<SeatSummary> seats)
     {
         if (table.Casual || table.Session.Rules.Format != MatchFormat.ThreeOnThree || seats.Any(seat => seat.Kind == "bot"))
         {
