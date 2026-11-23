@@ -150,7 +150,7 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    writes the film and its sheet under their SHA-256 from a job that runs none of the repository's code; its summary
    gives each file's line of `promo/media.json` (`scripts/promo/media.mjs`). The owner's steps are in
    [promo-identity.md](../../infra/runbooks/promo-identity.md). The workflow is unproven: its environment admits
-   only `main`, no upload has run, and the Bicep was not compiled here (no `az` in a session).
+   only `main`, no upload has run, and the Bicep was not compiled here (no `az` in a session): #1190.
 
    Tests: `studio/promo-shoot.test.js` (the film's refusals, the seat's answer to each question, the frames' ends,
    the sheet's frames, the margins, and an MP4 of 90 frames at the length, size and count asked, the same bytes
@@ -160,7 +160,7 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
 
    Left to later stages: the seat buys no Mutation and plays a Standard tempo, so a shot cannot yet ask for a
    Mutation or a tempo; the film starts at the cut, so a later moment of a round is a scenario cut there; one seat
-   is filmed, the scenario's own.
+   is filmed, the scenario's own (#1191).
 
 3. **P3, the cut.** `promo/cuts/`, title and end cards from the brand, captions in English and French,
    assembled. Tests: a cut naming a missing shot or a caption over its card is refused; a raw colour in a card
