@@ -7,8 +7,9 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 createServer(async (request, response) => {
   if (request.url === '/__root') { response.writeHead(200, { 'content-type': 'text/plain' }).end(root); return; }
   const pathname = new URL(request.url, 'http://localhost').pathname.replace(/^\/maintest/, '');
-  const table = pathname.startsWith('/table/');
-  const asset = table ? pathname.slice('/table'.length) : pathname;
+  // The picture kit writes absolute /page-art/ sources (ADR 0198): the real host serves them from table/page-art/.
+  const table = pathname.startsWith('/table/') || pathname.startsWith('/page-art/');
+  const asset = pathname.startsWith('/table/') ? pathname.slice('/table'.length) : pathname;
   const relative = asset === '/' ? '/index.html' : asset;
   let base = 'studio';
   if (table) base = 'table';

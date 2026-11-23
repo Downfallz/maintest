@@ -379,6 +379,35 @@ test('a sign out is asked under the Predator at rest, Sign out filled; the panel
   expect(state.errors).toEqual([]);
 });
 
+test('a sign out from the statistics lands on the home\'s goodbye, and a reload shows the plain door', async ({ page }) => {
+  const state = await home(page);
+  // The host serves the home at /lobby; the mock host serves it under /table/ (navigation.js replaces to /lobby).
+  const asked = [];
+  await page.route('**/lobby', route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 302, headers: { location: '/table/lobby.html' } }); });
+  await page.goto('/table/stats.html');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'member');
+  await page.locator('#account-menu summary').click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Sign out on this device?' })).toBeVisible();
+  const before = await page.evaluate(() => history.length);
+  await page.locator('#action-confirm').click();
+  await expect(page).toHaveURL(/\/table\/lobby\.html$/);
+  expect(asked).toEqual(['/lobby']);
+  // Replaced, not assigned: the statistics are not left behind the goodbye.
+  expect(await page.evaluate(() => history.length)).toBe(before);
+  expect(state.signouts).toEqual([{ everywhere: false }]);
+  const panel = page.locator('#sign-in-panel');
+  await expect(panel).toHaveAttribute('data-door', 'left');
+  await expect(page.locator('#sign-in-eyebrow')).toHaveText('Signed out');
+  await expect(page.locator('#sign-in-heading')).toHaveText('See you soon.');
+  await expect(page.locator('#sign-in-art')).toHaveAttribute('data-pictures', 'predator-at-rest');
+  // Read once: a reload shows the plain door.
+  await page.reload();
+  await expect(panel).toHaveAttribute('data-door', 'plain');
+  await expect(page.locator('#sign-in-heading')).toHaveText('Sign in to play.');
+  expect(state.errors).toEqual([]);
+});
+
 test('joining validates the code inside its window and follows a valid invitation', async ({ page }) => {
   await home(page);
   await openPanel(page, 'Join with a code');
@@ -441,9 +470,10 @@ async function closeInTheFarCorner(page, heading, close) {
   expect(band.height).toBeLessThanOrEqual(page.viewportSize().height < 600 ? 64 + 1 : 120 + 1);
 }
 
-test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics, the ladder and the rules', async ({ page }) => {
+test('the Friends window wears the Deathstalker\'s bank as its head on the home, the statistics, the ladder, the rules and the battle view', async ({ page }) => {
   const state = await home(page);
-  for (const path of ['/table/lobby.html', '/table/stats.html', '/table/leaderboard.html', '/table/rules.html']) {
+  for (const path of ['/table/lobby.html', '/table/stats.html', '/table/leaderboard.html', '/table/rules.html', '/table/battle.html']) {
+    if (path === '/table/battle.html') await battleViewReads(page);
     if (path !== '/table/lobby.html') await page.goto(path);
     await openPanel(page, /^Friends/);
     const heading = page.locator('#friends-dialog > .dialog-heading');
@@ -458,6 +488,65 @@ test('the Friends window wears the Deathstalker\'s bank as its head on the home,
     expect(Math.abs(band.width - frame.width)).toBeLessThanOrEqual(2);
     await closeInTheFarCorner(page, heading, '#friends-dialog [data-home-close]');
     await page.keyboard.press('Escape');
+  }
+  expect(state.errors).toEqual([]);
+});
+
+// The battle view's own reads, for a seat it has no board for: the header is what these tests open there, with
+// battle-lab.css and its bare dialog rules loaded (#1051).
+async function battleViewReads(page) {
+  await page.addInitScript(() => localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'seat-token' })));
+  await page.route(/\/api\/(catalogue|seat\/|tables?\/.*\/events|lobby\/events)/, route => route.fulfill({ status: 204 }));
+}
+
+// Every header window wears the home's frame on every page with the header (lobby.css, #1051): at 320 by 568 each
+// one opened on the statistics and on the battle view has no padding, its head from edge to edge, fits the screen,
+// and keeps its close and its filled action in view. Settings saves as it changes and fills no button: its first
+// tab stands for it.
+const headerWindows = [
+  { name: 'Notifications', dialog: '#inbox-dialog', close: 'Close notifications', filled: () => '#inbox-list button.primary' },
+  { name: 'Settings', dialog: '#app-settings-dialog', close: 'Close settings', filled: () => '#app-settings-tab-game' },
+  { name: 'Join with a code', dialog: '#join-dialog', close: 'Close join a battle', filled: () => '#join-dialog button.primary' },
+  { name: 'Friends', dialog: '#friends-dialog', close: 'Close friends', filled: () => '#friend-ask-submit' },
+];
+async function openHeaderWindow(page, name) {
+  if (name === 'Settings') { await page.locator('#account-menu summary').click(); await page.locator('#account-menu').getByRole('button', { name: 'Settings' }).click(); return; }
+  if (name === 'Notifications') {
+    if (await page.locator('#inbox-open').isVisible()) { await page.locator('#inbox-open').click(); return; }
+    await openNavigation(page); await page.locator('#inbox-open-menu').click(); return;
+  }
+  await openPanel(page, name === 'Friends' ? /^Friends/ : name);
+}
+
+test('each header window fits 320 by 568 on the statistics and the battle view, its close and its filled action in view', async ({ page }, info) => {
+  test.skip(info.project.name !== 'small-phone', 'Read once, on the small phone, at 320 by 568.');
+  await page.setViewportSize({ width: 320, height: 568 });
+  const state = await home(page);
+  await battleViewReads(page);
+  for (const path of ['/table/stats.html', '/table/battle.html']) {
+    await page.goto(path);
+    await expect(page.locator('body')).toHaveAttribute('data-home', 'member');
+    for (const { name, dialog, close, filled } of headerWindows) {
+      await openHeaderWindow(page, name);
+      const window = page.locator(dialog);
+      await expect(window, `${name} on ${path}`).toBeVisible();
+      const bounds = await window.boundingBox();
+      expect(bounds.x, `${name} on ${path}`).toBeGreaterThanOrEqual(0);
+      expect(bounds.y, `${name} on ${path}`).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width, `${name} on ${path}`).toBeLessThanOrEqual(320);
+      expect(bounds.y + bounds.height, `${name} on ${path}`).toBeLessThanOrEqual(568);
+      expect(await window.evaluate(node => node.scrollWidth <= node.clientWidth), `${name} on ${path}`).toBe(true);
+      // The home's frame, not battle-lab.css's bare dialog: no padding, the head from edge to edge.
+      expect(await window.evaluate(node => getComputedStyle(node).paddingTop), `${name} on ${path}`).toBe('0px');
+      const head = await window.locator(':scope > .dialog-heading').boundingBox();
+      expect(Math.abs(head.x - bounds.x), `${name}'s head on ${path}`).toBeLessThanOrEqual(2);
+      expect(Math.abs(head.width - bounds.width), `${name}'s head on ${path}`).toBeLessThanOrEqual(2);
+      await noOverflow(page);
+      await expect(page.getByRole('button', { name: close }), `${name} on ${path}`).toBeInViewport({ ratio: 1 });
+      await expect(page.locator(filled()).first(), `${name} on ${path}`).toBeInViewport({ ratio: 1 });
+      await page.keyboard.press('Escape');
+      await expect(window).toBeHidden();
+    }
   }
   expect(state.errors).toEqual([]);
 });
@@ -1469,6 +1558,8 @@ test('the panel an invitation opens shows the duel whole on a phone, in place of
     await expect(duel).toHaveAttribute('fetchpriority', 'high');
     await expect(duel).toHaveAttribute('alt', '');
     await expect(page.locator('#sign-in-art img')).toHaveCount(1);
+    // The painting loads: the mock host serves /page-art/ as the real one does (#1040).
+    await expect.poll(() => duel.evaluate(image => image.complete && image.naturalWidth), `loaded at ${width}`).toBeGreaterThan(0);
     const [panel, drawn] = await Promise.all([page.locator('#sign-in-panel').boundingBox(), duel.boundingBox()]);
     expect(Math.abs(drawn.width - panel.width), `at ${width}`).toBeLessThanOrEqual(2);
     expect(Math.abs(drawn.height - drawn.width * 941 / 1672), `whole at ${width}`).toBeLessThanOrEqual(2);
