@@ -135,11 +135,7 @@ internal sealed class SignInAttempts
             var tally = TallyOf(own, now);
             var wider = network is null ? null : TallyOf(network, now);
             tally.Checking = Math.Max(0, tally.Checking - 1);
-            if (wider is not null)
-            {
-                wider.Checking = Math.Max(0, wider.Checking - 1);
-            }
-
+            wider?.Checking = Math.Max(0, wider.Checking - 1);
             if (outcome == Outcome.Unchecked)
             {
                 return;
@@ -206,13 +202,27 @@ internal sealed class SignInAttempts
     /// <summary>The /48 an IPv6 address or network is in; null for any other address.</summary>
     private static string? Network(string address)
     {
-        var network = IPNetwork.TryParse(address, out var parsed) ? parsed : IPAddress.TryParse(address, out var one) ? new IPNetwork(one, one.AddressFamily == AddressFamily.InterNetworkV6 ? 128 : 32) : (IPNetwork?)null;
-        if (network is not { BaseAddress.AddressFamily: AddressFamily.InterNetworkV6 } v6 || v6.PrefixLength < 48)
+        IPAddress first;
+        int prefix;
+        if (IPNetwork.TryParse(address, out var network))
+        {
+            (first, prefix) = (network.BaseAddress, network.PrefixLength);
+        }
+        else if (IPAddress.TryParse(address, out var one))
+        {
+            (first, prefix) = (one, 128);
+        }
+        else
         {
             return null;
         }
 
-        var bytes = v6.BaseAddress.GetAddressBytes();
+        if (first.AddressFamily != AddressFamily.InterNetworkV6 || prefix < 48)
+        {
+            return null;
+        }
+
+        var bytes = first.GetAddressBytes();
         Array.Clear(bytes, 6, 10);
         return $"{new IPNetwork(new IPAddress(bytes), 48)}";
     }

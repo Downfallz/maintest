@@ -510,12 +510,7 @@ internal sealed class AccountApi
         // Checked by address before the provider is asked (#1193): its budget is every player's, not one address's.
         if (request.Address is { } address && _attempts.Admit(address, Clock.GetUtcNow()) is { } wait)
         {
-            Counted(SignInCounts.Step.Limited, name);
-            var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return Problem(429, "Account.TooManySignIns", "Too many sign-ins from your network just now. Try again in a minute.") with
-            {
-                Headers = [new KeyValuePair<string, string>("Retry-After", seconds)],
-            };
+            return Limited(name, wait);
         }
 
         // Counted only once the provider answered: a provider that fails unexpectedly cost the address nothing.
@@ -540,12 +535,7 @@ internal sealed class AccountApi
         }
         finally
         {
-            // The place is given back however the provider answered, and the answer counted: a person vouched for once.
-            if (request.Address is { } settled)
-            {
-                var person = vouched is { } one && one.Provider == name ? one.ToString() : null;
-                _attempts.Settle(settled, Clock.GetUtcNow(), person is null ? outcome : SignInAttempts.Outcome.Vouched, person);
-            }
+            Settle(request, name, outcome, vouched);
         }
 
         if (vouched is not { } identity || identity.Provider != name)
@@ -567,6 +557,29 @@ internal sealed class AccountApi
         }
 
         return Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
+    }
+
+    /// <summary>A sign-in its address's count refuses (#1193), with how long until a place frees.</summary>
+    private StudioResponse Limited(string provider, TimeSpan wait)
+    {
+        Counted(SignInCounts.Step.Limited, provider);
+        var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return Problem(429, "Account.TooManySignIns", "Too many sign-ins from your network just now. Try again in a minute.") with
+        {
+            Headers = [new KeyValuePair<string, string>("Retry-After", seconds)],
+        };
+    }
+
+    /// <summary>Gives the address's place back however the provider answered, and counts the answer: a person vouched for once.</summary>
+    private void Settle(AccountRequest request, string provider, SignInAttempts.Outcome outcome, ExternalIdentity? vouched)
+    {
+        if (request.Address is not { } address)
+        {
+            return;
+        }
+
+        var person = vouched is { } one && one.Provider == provider ? one.ToString() : null;
+        _attempts.Settle(address, Clock.GetUtcNow(), person is null ? outcome : SignInAttempts.Outcome.Vouched, person);
     }
 
     /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
