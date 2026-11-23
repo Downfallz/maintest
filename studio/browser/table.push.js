@@ -189,6 +189,6 @@ test('a keyed host with accounts off offers pop-ups in the lobby, through the wa
     await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
     expect(keyReads.some(Boolean)).toBe(true);
     await page.locator('#push-offer-on').click();
-    await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.', { timeout: 10000 });
+    await expect(page.locator('#push-offer-said')).toHaveText("Pop-ups stay off. You can turn them on in the game's Match settings.", { timeout: 10000 });
   });
 });

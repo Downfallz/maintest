@@ -66,7 +66,7 @@ test('the offer of pop-ups reads the seat\'s switch once its worker is read, and
   const fresh = createBattleServices({ onChange() {}, scope: {} });
   assert.deepEqual(fresh.offerState(), { ready: false }, 'no seat: nothing to offer');
   const h = harness(); await tick();
-  assert.deepEqual(h.control.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
+  assert.deepEqual(h.control.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false, where: 'in Match settings' }, 'the switch Turn on turns on is this page\'s own (#1160)');
   const after = await h.control.turnOn();
   assert.deepEqual(h.calls, ['permission', 'subscribe', 'bind']);
   assert.equal(after.subscribed, true);

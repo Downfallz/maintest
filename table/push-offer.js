@@ -100,14 +100,18 @@ export function offerWords(platform) {
   return words ? { eyebrow: 'POP-UPS', title: TITLE, ...words } : null;
 }
 
+/** Where the switch is when the source does not say: the account's, in Settings. */
+export const SETTINGS_WHERE = 'in the menu, under Settings, Notifications';
+
 /**
  * What the card says once Turn on was answered: on; refused, or left unanswered, in the browser's prompt; or the
- * switch could not be turned on (`failed`: the host or the push service refused). Each says where the switch is.
+ * switch could not be turned on (`failed`: the host or the push service refused). Each says where the switch is:
+ * the source's `where` when it has one (a seat's switch, with accounts off, where Settings has none, #1160).
  */
-export function turnedOnLine({ subscribed }, failed = false) {
+export function turnedOnLine({ subscribed, where = SETTINGS_WHERE }, failed = false) {
   if (subscribed) return 'Done: pop-ups are on for this device.';
-  if (failed) return 'Pop-ups could not be turned on. You can try again in the menu, under Settings, Notifications.';
-  return 'Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.';
+  if (failed) return `Pop-ups could not be turned on. You can try again ${where}.`;
+  return `Pop-ups stay off. You can turn them on ${where}.`;
 }
 
 const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-labelledby="push-offer-title" hidden>
@@ -127,7 +131,8 @@ const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-l
 
 /**
  * The card, added once to the page's body. `source` is the page's own switch: `state()` says where it stands
- * (`keyed`, `subscribed`, `permission`, `hotseat`, and `ready` once it has read the browser), and `turnOn()` asks
+ * (`keyed`, `subscribed`, `permission`, `hotseat`, `ready` once it has read the browser, and `where` the switch is
+ * when it is not in Settings), and `turnOn()` asks
  * the browser and registers the device, the same as the switch does. The page calls `consider()` at its moments; the
  * card shows only when it is due, once a page.
  * @param {Document} doc

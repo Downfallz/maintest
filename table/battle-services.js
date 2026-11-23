@@ -143,7 +143,8 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     const push = current?.push;
     if (!push || !online || view?.replay || push.practice) return { ready: false };
     return { ready: !push.busy && (Boolean(current.registration) || (push.keyed && !push.supported)),
-      keyed: push.keyed, subscribed: push.subscribed, permission: push.permission, hotseat: push.hotseat };
+      // The offer's Turn on is this page's own switch, which Settings does not show with accounts off (#1160).
+      keyed: push.keyed, subscribed: push.subscribed, permission: push.permission, hotseat: push.hotseat, where: 'in Match settings' };
   }
   /** The offer's Turn on: the match settings' switch turned on, through the seats it plays; the state it ends in. */
   async function turnOn() {
