@@ -19,7 +19,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--gold); }
 .lobby-section h2 { font: 400 22px/1.2 var(--font-display); color: var(--bone); }
 .lobby-section h2 .lobby-count { font-family: var(--font-text); }
 .eyebrow { letter-spacing: .16em; }
-dialog .eyebrow, .lobby-hero .eyebrow, .featured .eyebrow, .scene-head .eyebrow { color: var(--brand-ember); }
+dialog .eyebrow, .lobby-hero .eyebrow, .featured .eyebrow, .scene-head .eyebrow, .push-offer .eyebrow { color: var(--brand-ember); }
 
 /* The rule under a title: the rune, then a bone hairline that fades out. */
 .lobby-section > .section-heading, .home-dialog > .dialog-heading { position: relative; }
@@ -44,7 +44,7 @@ dialog .eyebrow, .lobby-hero .eyebrow, .featured .eyebrow, .scene-head .eyebrow 
 
 /* Cards and windows: grain and soot inside, a bone-tinted edge, the top right corner cut. --cut: 0px keeps a
    surface square, which is what a sheet docked to an edge of the screen wants. */
-html :is(.game-card, .game-row, .lobby-panel, dialog),
+html :is(.game-card, .game-row, .lobby-panel, dialog, .push-offer),
 .battle-page :is(#history-dialog, #help-dialog, #growth-dialog, #inspect-dialog, #atlas-dialog, #opponent-dialog, #match-dialog) {
   --cut-edge: color-mix(in srgb, var(--bone) 26%, var(--line-soft));
   border-color: var(--cut-edge); border-radius: 0;
@@ -169,17 +169,18 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
   overflow-wrap: anywhere;
 }
 
-/* The offer of pop-ups (push-offer.js, notifications plan N4): a card at the foot of the screen, over the page and
-   never modal, its words in bone, Turn on the gold, the other answers quiet. Room is kept for the home indicator. */
+/* The offer of pop-ups (push-offer.js, notifications plan N4): a card of the kit (its cut corner and gold edge, as a
+   game of mine) at the foot of the screen, over the page and never modal, its words in bone, Turn on the gold, the
+   other answers quiet. Room is kept for the home indicator. The cut clips any shadow, so it casts none. */
 .push-offer {
+  --cut: 12px; --cut-edge: color-mix(in srgb, var(--gold) 70%, var(--line-soft));
   position: fixed; z-index: 40; left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); max-width: 460px; margin: 0 auto;
-  padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--gold) 70%, var(--line-soft)); border-radius: 0;
-  background: var(--tex-grain), var(--raised); box-shadow: 0 10px 30px #000a;
+  padding: 12px 14px; border: 1px solid;
 }
 .push-offer[hidden] { display: none; }
 .push-offer h2 { margin: 2px 0 4px; font: 400 18px/1.2 var(--font-display); color: var(--bone); }
 .push-offer p { margin: 0; line-height: 1.45; overflow-wrap: anywhere; }
-.push-offer .eyebrow { font-size: 11px; color: var(--brand-ember); letter-spacing: .16em; }
+.push-offer .eyebrow { margin: 0; font-size: 11px; }
 .push-offer .unseen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .push-offer-said { margin-top: 6px; }
 .push-offer-said[hidden] { display: none; }

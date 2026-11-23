@@ -82,3 +82,20 @@ test('the offer sees both seats here, and a browser that cannot push but heard t
   const offline = harness(); await tick(); offline.control.setOnline(false);
   assert.equal(offline.control.offerState().ready, false);
 });
+test('a practice seat shows no switch and makes no offer: no lobby route answers its token', async () => {
+  const h = harness(); await tick();
+  h.control.receive({ recording: true, over: false, practice: { tutorial: { order: 1 } } });
+  assert.equal(h.control.model().notice.hidden, true);
+  assert.deepEqual(h.control.offerState(), { ready: false });
+});
+test('a subscription the browser already held is kept when the host refuses a seat', async () => {
+  const h = harness({ held: true });
+  h.transport.push = async () => { h.calls.push('refused'); return { ok: false, status: 403 }; };
+  await tick(); await tick();
+  // The held one was refused on reading too: the page shows the switch off, and turning it on is refused again.
+  assert.equal(h.control.model().notice.label, 'Notify me when it\'s my turn');
+  h.calls.length = 0;
+  await h.control.toggle();
+  assert.equal(h.calls.includes('unsubscribe'), false, 'the account\'s device keeps its subscription');
+  assert.match(h.control.model().message, /could not save/);
+});

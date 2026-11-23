@@ -186,7 +186,8 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       state.publicKey = key.publicKey ?? null;
       state.keyed = Boolean(state.publicKey);
       if (state.keyed) await readKinds();
-      if (!state.keyed || !state.supported) { render(); return; }
+      // A browser that cannot push is read once the key is: an iPhone outside the home screen is still offered the steps.
+      if (!state.keyed || !state.supported) { state.synced = true; render(); return; }
       await nav.serviceWorker.register('/sw.js');
       state.registration = await nav.serviceWorker.ready;
       const subscription = await current();

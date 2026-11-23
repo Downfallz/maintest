@@ -197,7 +197,16 @@ const matchUI = matchControls(match, () => { passOver(); combat.close(); plannin
 let pushOffer: ReturnType<typeof mountPushOffer> | null = null, offerMoment = false;
 const services = createBattleServices({ onChange: () => { servicesUI.render(); pushOffer?.changed(); if (offerMoment) pushOffer?.consider(); } });
 const servicesUI = serviceControls(services, storage);
-pushOffer = mountPushOffer(document, { storage, source: { state: () => services.offerState(), turnOn: () => services.turnOn() } });
+// A game's seat is asked through its own switch; a tutorial's practice seat answers no lobby route, so its end is
+// asked through the account's switch, which the site's navigation mounts on this page (navigation.js).
+type Devices = { offerState: () => { ready: boolean }, turnOn: () => Promise<unknown> };
+const accountDevices = () => (globalThis as { downfallNavigation?: { devices?: Devices } }).downfallNavigation?.devices ?? null;
+const inPractice = () => Boolean((view as { practice?: unknown } | null)?.practice);
+pushOffer = mountPushOffer(document, { storage, source: {
+  state: () => (inPractice() ? accountDevices()?.offerState() ?? { ready: false } : services.offerState()),
+  turnOn: () => (inPractice() ? accountDevices()?.turnOn() ?? Promise.resolve({ ready: false }) : services.turnOn()),
+} });
+document.addEventListener('devices-changed', () => { pushOffer?.changed(); if (offerMoment) pushOffer?.consider(); });
 // Reactions (ADR 0173): the set of short messages the two players send each other, and the bubbles that show them.
 const reactions = createBattleReactions({ onChange: () => reactionsUI.render(), storage });
 const reactionsUI = reactionControls(reactions, {
@@ -607,6 +616,7 @@ function render() {
   $('battle').dataset.awaiting = awaiting?.kind ?? '';
   offerMoment = battleMoment({ awaiting, lesson: tutorialOf(view), other });
   if (offerMoment) pushOffer?.consider();
+  else pushOffer?.withdraw();
   $('reading-dots').hidden = !awaiting;
   $('waiting-last').hidden = !awaiting || !playbackState.summary;
   if (awaiting) {

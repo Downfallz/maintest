@@ -424,13 +424,38 @@ test('the other player\'s move offers pop-ups by the page\'s card, and Turn on i
   await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
   expect(await page.evaluate(() => window.serviceCalls)).toEqual([]);
   const card = await page.locator('#push-offer').boundingBox(), dock = await page.locator('#playback-pacing').boundingBox();
-  if (dock) expect(card.y + card.height).toBeLessThanOrEqual(dock.y + 1);
+  expect(dock).not.toBeNull();
+  expect(card.y + card.height).toBeLessThanOrEqual(dock.y + 1);
   await page.locator('#push-offer-on').click();
   await expect(page.locator('#push-offer-said')).toHaveText('Done: pop-ups are on for this device.');
   expect(await page.evaluate(() => window.serviceCalls)).toEqual(['permission', 'subscribe']);
   await expect.poll(() => h.writes.map(one => one.path)).toEqual(['/api/lobby/push']);
   await page.locator('#push-offer-close').click(); await expect(page.locator('#push-offer')).toBeHidden();
   await page.locator('#settings').click(); await expect(page.locator('#notices-toggle')).toHaveText('Stop notifying me');
+});
+test('the player\'s own turn takes an unanswered card away', async ({ page }) => {
+  const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'person', name: 'Rook' } });
+  const board = h.view.board;
+  h.view = { ...h.view, board: { ...board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#push-offer')).toBeVisible();
+  h.view = { ...h.view, board };
+  await page.evaluate(() => window.notifyBattle());
+  await expect(page.locator('#push-offer')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('downfall.push-offer'))).toBeNull();
+});
+// A tutorial's practice seat answers no lobby route: its end is offered through the account's switch, and the
+// seat's own push routes are never written.
+test('the end of the first tutorial offers pop-ups through the account\'s switch, not the practice seat', async ({ page }) => {
+  const h = await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
+  h.view = { ...h.view, practice: { tutorial: { order: 1, of: 4, done: true, title: 'Your first combat', steps: [{ id: 'one', title: 'One' }], shown: 1 } } };
+  // Signed in, the header's own stream is the last one opened: the seat is read again by opening the page again.
+  await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
+  await expect(page.locator('#push-offer')).toBeVisible();
+  await page.locator('#push-offer-on').click();
+  await expect(page.locator('#push-offer-said')).not.toBeEmpty();
+  expect(h.writes.filter(one => one.path.startsWith('/api/lobby/push'))).toEqual([]);
+  await expect.poll(() => h.writes.map(one => `${one.method} ${one.path}`)).toContain('PUT /api/account/push');
 });
 test('a bot\'s move makes no offer of pop-ups', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'bot', name: 'Greedy' } });

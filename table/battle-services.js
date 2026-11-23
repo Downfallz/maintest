@@ -18,7 +18,9 @@ export function createBattleServices({ onChange, scope = globalThis }) {
       registration: null, message: '', publicKey: null } : null;
     view = null; online = false; onChange();
   }
-  function receive(next) { view = next; if (!next) reset(); else onChange(); }
+  // A practice's seat is the practice's own token, which no lobby route answers: no switch there, and no offer
+  // through it (the end of a tutorial is offered through the account's switch, push-offer.js).
+  function receive(next) { view = next; if (!next) reset(); else { if (current) current.push.practice = Boolean(next.practice); onChange(); } }
   function setOnline(value) {
     online = value;
     const context = current;
@@ -75,13 +77,17 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     if (!valid(context)) return;
     context.push.permission = permission;
     if (permission !== 'granted') return;
+    // A subscription the browser already holds is every page's (the account's device among them): this page lets go
+    // only of one it made itself, when the host would not keep it.
+    const held = await context.registration.pushManager.getSubscription();
+    if (!valid(context)) return;
     const made = await context.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(context.publicKey) });
     if (!valid(context)) return;
     const answers = await Promise.all(context.held.map(transport => transport.push(made.toJSON())));
     if (!valid(context)) return;
     context.push.subscribed = answers.every(answer => answer.ok);
     if (!context.push.subscribed) {
-      await made.unsubscribe();
+      if (!held) await made.unsubscribe();
       context.message = 'The host could not save notifications. Try again.';
     }
   }
@@ -127,7 +133,7 @@ export function createBattleServices({ onChange, scope = globalThis }) {
    */
   function offerState() {
     const push = current?.push;
-    if (!push || !online || view?.replay) return { ready: false };
+    if (!push || !online || view?.replay || push.practice) return { ready: false };
     return { ready: !push.busy && (Boolean(current.registration) || (push.keyed && !push.supported)),
       keyed: push.keyed, subscribed: push.subscribed, permission: push.permission, hotseat: push.hotseat };
   }

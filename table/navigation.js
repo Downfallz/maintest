@@ -309,5 +309,7 @@ if (typeof navigator !== 'undefined' && navigator.serviceWorker?.register) {
 if (typeof document !== 'undefined' && document.querySelector('[data-navigation]:not([data-navigation="lobby"])')) {
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* The menu also works without browser storage. */ }
-  mountNavigation(document, storage);
+  // The battle view's bundle reads the account's switch here for the offer of pop-ups at a tutorial's end, whose
+  // practice seat no lobby route answers (push-offer.js): kept on the page, and told when it changes.
+  globalThis.downfallNavigation = mountNavigation(document, storage, { onDevice: () => document.dispatchEvent(new Event('devices-changed')) });
 }

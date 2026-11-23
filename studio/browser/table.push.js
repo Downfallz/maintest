@@ -119,7 +119,7 @@ test('the lobby offers pop-ups when a game against a person waits, and keeps the
     const headers = { Origin: origin };
     expect((await page.request.post(`${origin}/api/account/dev`, { data: { username: 'Walker' }, headers })).ok()).toBe(true);
     // The first tutorial would open by itself for a new account: skipped, as a returning player has.
-    await page.request.post(`${origin}/api/tutorials/sc-repo-tutorial-your-first-combat/skip`, { data: {}, headers });
+    expect((await page.request.post(`${origin}/api/tutorials/sc-repo-tutorial-your-first-combat/skip`, { data: {}, headers })).ok()).toBe(true);
     expect((await page.request.post(`${origin}/api/lobby/tables`, { data: { opponent: 'person' }, headers })).ok()).toBe(true);
 
     await page.goto(`${origin}/`);
@@ -141,7 +141,7 @@ test('the lobby offers pop-ups when a game against a person waits, and keeps the
     await page.reload();
     await expect(offer).toBeVisible({ timeout: 20000 });
     await page.locator('#push-offer-on').click();
-    await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. Settings, Notifications, in the menu, keeps the switch.', { timeout: 10000 });
+    await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.', { timeout: 10000 });
     await expect(page.locator('#push-offer-close')).toBeFocused();
     await page.locator('#push-offer-close').click();
     await expect(offer).toBeHidden();

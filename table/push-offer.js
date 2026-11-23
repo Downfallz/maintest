@@ -103,8 +103,8 @@ export function offerWords(platform) {
  */
 export function turnedOnLine({ subscribed }, failed = false) {
   if (subscribed) return 'Done: pop-ups are on for this device.';
-  if (failed) return 'Pop-ups could not be turned on. Settings, Notifications, in the menu, keeps the switch.';
-  return 'Pop-ups stay off. Settings, Notifications, in the menu, keeps the switch.';
+  if (failed) return 'Pop-ups could not be turned on. You can try again in the menu, under Settings, Notifications.';
+  return 'Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.';
 }
 
 const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-labelledby="push-offer-title" hidden>
@@ -115,7 +115,7 @@ const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-l
   <p id="push-offer-told" class="unseen" role="status" aria-live="polite"></p>
   <div class="push-offer-actions">
     <button id="push-offer-on" type="button" class="primary"></button>
-    <button id="push-offer-install" type="button" class="secondary" hidden>Install</button>
+    <button id="push-offer-install" type="button" class="secondary" hidden>Install the app</button>
     <button id="push-offer-later" type="button" class="secondary">Not now</button>
     <button id="push-offer-never" type="button" class="secondary">Don't ask again</button>
     <button id="push-offer-close" type="button" class="secondary" aria-label="Close the pop-ups offer" hidden>Close</button>
@@ -223,8 +223,18 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
       before = doc.activeElement ?? null;
       draw();
       el('push-offer').hidden = false;
-      el('push-offer-told').textContent = `${TITLE} Pop-ups offered.`;
+      // Said once the card is shown: words written into a hidden region are not announced.
+      const tell = () => { el('push-offer-told').textContent = `${TITLE} Pop-ups offered.`; };
+      if (win?.requestAnimationFrame) win.requestAnimationFrame(tell); else tell();
       return true;
+    },
+    /**
+     * The moment passed unanswered (the player's own turn came): the card goes, nothing is kept, and this page does
+     * not ask again. A card that answered Turn on stays until its Close.
+     */
+    withdraw() {
+      if (el('push-offer').hidden || busy || el('push-offer-said').textContent) return;
+      close();
     },
     /** The switch changed elsewhere (Settings, the match settings): a card for a browser now on goes. */
     changed() {

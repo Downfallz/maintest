@@ -871,18 +871,20 @@ the lobby, a game of Your games against a person that waits on the other player;
 player's turn, and lesson 1's end card. It is never the browser's prompt: that opens only after Turn on ([Ask for notices in context](../ux-craft.md#ask-for-notices-in-context)).
 It is not made for a browser that cannot push, a permission blocked, pop-ups already on, a host without push keys
 or a device holding both seats; after Not now it waits a week at least and asks three times at most; Don't ask
-again ends it. It is made once a page at most, and only once the page's own switch has read the browser.
+again ends it. It is made once a page at most, and only once the page's own switch has read the browser. The card
+yields when the moment passes, the player's own turn come: it goes, unanswered, nothing is kept, and the page does
+not ask again. At a tutorial's end it asks through the account's switch, since a practice seat answers no push route.
 
 - **Filled action**: Turn on. On an iPhone outside the home screen there is no Turn on, and the card has none
-  filled: the steps are the answer. Install, Not now and Don't ask again are quiet.
+  filled: the steps are the answer. Install the app, Not now and Don't ask again are quiet.
 
 ### Words
 
-- **Order**: the eyebrow, the title, the line of the platform, then the answers: Turn on, Install, Not now, Don't
+- **Order**: the eyebrow, the title, the line of the platform, then the answers: Turn on, Install the app, Not now, Don't
   ask again.
 - **Budget**: 36 words on the card at most, 0 today: neither page offers anything (the classic page's offer, which
   goes, says "Get told when it's your turn", its button's words and Not now). Built from these words: 28 on
-  Android, 29 with Install, 28 on a desktop browser and on an iPhone at the home screen, 32 on an iPhone outside it.
+  Android, 31 with Install the app, 28 on a desktop browser and on an iPhone at the home screen, 32 on an iPhone outside it.
 
 The eyebrow and the title are the same on every platform. The title asks the question the line answers, so the
 line the owner settled is not said twice.
@@ -895,7 +897,7 @@ Turn on pop-ups to be told when it is your turn, even with the tab closed.     (
 Turn on pop-ups to be told when it is your turn, even with the app closed.     (an iPhone, at the home screen)
 On iPhone, pop-ups need the game on your Home Screen: tap Share, then Add to Home Screen, and open it from there.
                                                                                (an iPhone, outside it)
-[Turn on]  Install  Not now  Don't ask again
+[Turn on]  Install the app  Not now  Don't ask again
 ```
 
 Install is there on Android only, when the browser raised `beforeinstallprompt`; on an iPhone outside the home
@@ -904,8 +906,8 @@ they keep its capitals. After Turn on, the answers give their room to one line a
 
 ```text
 Done: pop-ups are on for this device.                                   (the browser and the host said yes)
-Pop-ups stay off. Settings, Notifications, in the menu, keeps the switch.   (refused in the browser's prompt)
-Pop-ups could not be turned on. Settings, Notifications, in the menu, keeps the switch.   (the host refused)
+Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.   (refused in the prompt)
+Pop-ups could not be turned on. You can try again in the menu, under Settings, Notifications.   (the host refused)
 ```
 
 "Pop-ups" is the word of Settings, Notifications (**Pop-ups on this device**, N3); "your turn" and "the game" are
@@ -959,7 +961,8 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
   the pop-ups offer".
 - **Announced**: through the card's polite `role="status"` region (`aria-live="polite"`), never an alert, kept
   rendered and out of sight (`.unseen`) so its first words are heard: "Away from the game? Pop-ups offered." on
-  arrival, then the line that answers Turn on, which the card also shows.
+  arrival, once the card is shown (words written into a hidden region are not heard), then the line that answers
+  Turn on, which the card also shows.
 - **Targets**: every answer 44 px tall at least, Close too. Today the classic page's offer is 40 px tall, and goes.
 
 ### Cost
@@ -972,9 +975,9 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
 ### Left
 
 - At 320 by 568 the card, two rows of answers on Android, covers the foot of the lobby's featured space, its
-  actions with it, until it is answered. Not built, and the owner's to choose: room held at the page's foot while
-  the card stands; the card yielding, unanswered and unkept, to the player's own turn; a moment heard while a
-  window is open waiting for it to close; or the lobby waiting until no game is the player's to play, which amends
+  actions with it, until it is answered or the moment passes. Not built, and the owner's to choose: room held at the
+  page's foot while the card stands; a moment heard while a window is open waiting for it to close; or the lobby
+  waiting until no game is the player's to play, which amends
   question 4 of [the notifications plan](../../tabletop/notifications-plan.md#questions-the-owner-settled-2026-11-22).
 - In the battle view the card stands at the top, over the round's bar, so lesson 1's end card in the dock stays
   free: the round's bar and the header's tools are under it until it is answered.

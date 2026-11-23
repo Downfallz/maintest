@@ -1080,5 +1080,6 @@ if (typeof document !== 'undefined') {
     navigation.inbox.feed(mine);
     offerMoment = (mine.tables ?? []).some(waitsOnAPerson);
     if (offerMoment) offer.consider();
+    else offer.withdraw();
   });
 }

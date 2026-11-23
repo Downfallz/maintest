@@ -94,12 +94,13 @@ function page({ userAgent = ANDROID, state = { ready: true, keyed: true, subscri
     } },
     getElementById: id => elements[id] ?? null,
   };
-  const win = { ...pushing, addEventListener: (type, listener) => { listeners[`window:${type}`] = listener; } };
+  const frames = [];
+  const win = { ...pushing, requestAnimationFrame: run => frames.push(run), addEventListener: (type, listener) => { listeners[`window:${type}`] = listener; } };
   const current = { ...state };
   const source = { state: () => current, turnOn: turnOn ?? (async () => { current.subscribed = true; current.permission = 'granted'; return current; }) };
   const offer = mountPushOffer(doc, { source, storage, nav: nav(userAgent), win, now });
   const click = async id => { await listeners[`${id}:click`](); await new Promise(resolve => setImmediate(resolve)); };
-  return { offer, elements, listeners, storage, current, click, win, doc };
+  return { offer, elements, listeners, storage, current, click, win, doc, frame: () => frames.splice(0).forEach(run => run()) };
 }
 
 test('the card is added once to the page, hidden until a moment makes it due', () => {
@@ -181,6 +182,8 @@ test('the card arrives without the focus, is announced, and gives the focus back
   const before = { isConnected: true, focused: 0, focus() { this.focused++; } };
   harness.doc.activeElement = before;
   harness.offer.consider();
+  assert.equal(harness.elements['push-offer-told'].textContent, '', 'not yet: the card is shown first');
+  harness.frame();
   assert.match(harness.elements['push-offer-told'].textContent, /Pop-ups offered/);
   harness.doc.activeElement = harness.elements['push-offer-later'];
   await harness.click('push-offer-later');
@@ -250,4 +253,22 @@ test('the battle view\'s moments: the other player\'s move against a person, and
   assert.equal(battleMoment({ lesson: { order: 1, done: false }, awaiting, other: { kind: 'person' } }), false, 'a lesson under way');
   assert.equal(battleMoment({ lesson: { order: 2, done: true } }), false, 'only the first tutorial\'s end');
   assert.equal(battleMoment(), false);
+});
+
+test('a moment that passes unanswered takes the card away, keeps nothing, and the page does not ask again', () => {
+  const harness = page();
+  harness.offer.consider();
+  harness.offer.withdraw();
+  assert.equal(harness.elements['push-offer'].hidden, true);
+  assert.deepEqual(readMemory(harness.storage), fresh);
+  assert.equal(harness.offer.consider(), false);
+  assert.equal(page({ storage: harness.storage }).offer.consider(), true, 'a later page asks');
+});
+
+test('a card that answered Turn on stays until its Close, whatever the moment', async () => {
+  const harness = page();
+  harness.offer.consider();
+  await harness.click('push-offer-on');
+  harness.offer.withdraw();
+  assert.equal(harness.elements['push-offer'].hidden, false);
 });

@@ -879,8 +879,6 @@ body:has(#table) { padding-bottom: 24px; }
 .invitation-panel { max-width: 640px; }
 .notices-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-top: .8rem; }
 .notices-row[hidden] { display: none; }
-/* Fixed to the bottom of the screen: on a phone anything in the flow sits under the phase dock or off screen,
-   and the offer is made once, so it may cover the controls until either of its two buttons is tapped. */
 .invitation-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
 .invitation-actions :is(button, .admin-link) { min-height: 44px; }
 .invitation-actions .admin-link { display: inline-flex; align-items: center; margin-top: 0; }

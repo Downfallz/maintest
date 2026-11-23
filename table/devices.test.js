@@ -187,3 +187,12 @@ test('a browser already on is not turned on again by the offer', async () => {
   await devices.turnOn();
   assert.equal(calls.length, before);
 });
+
+test('a browser that cannot push is read once the host\'s key is, so the offer can give an iPhone the steps', async () => {
+  const { devices } = harness();
+  const unable = mountDevices({ getElementById: () => null }, { request: async path => (path === '/api/lobby/push' ? { publicKey: 'AQID' } : {}), nav: { userAgent: 'iPhone' }, win: {} });
+  unable.setAccount({ id: 'acc-1' });
+  await settled();
+  assert.deepEqual(unable.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
+  assert.equal(devices.offerState().ready, false, 'nobody signed in there');
+});
