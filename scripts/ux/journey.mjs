@@ -24,9 +24,9 @@ import { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage,
 import { PAINT_RUNS, judgePaints, paints } from './paint.mjs';
 import { measureContrast } from './contrast.mjs';
 import { installSeatViews } from '../../studio/browser/seat-views.js';
-import { DESKTOP, VIEWPORTS, buildShowcase, missing, raiseSet, root } from './set.mjs';
+import { VIEWPORTS, buildShowcase, missing, raiseSet, root } from './set.mjs';
 
-export { DESKTOP, VIEWPORTS };
+export { DESKTOP, VIEWPORTS } from './set.mjs';
 /** Under this width a walk is a phone's, with a finger; from it, a desktop's, with a mouse. */
 const DESKTOP_FROM = 760;
 
@@ -276,7 +276,7 @@ export function parseArguments(argv) {
     if (!journey.strips?.[options.strip]) throw new Error(`The ${journey.id} journey has no strip named ${options.strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
     options.viewports = journey.strips[options.strip].viewports ?? VIEWPORTS;
   }
-  if (options.width !== null) {
+  if (given.has('width')) {
     const viewport = options.viewports.find(one => String(one.width) === options.width);
     if (!viewport) throw new Error(`--width is ${options.viewports.map(one => one.width).join(' or ')}.`);
     options.viewports = [viewport];

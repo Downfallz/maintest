@@ -187,7 +187,8 @@ export function judgePaints({ pages }, budget) {
     const partly = largest !== null && page.painted < page.runs;
     const paintOver = largest === null || partly || largest > budget.largestPaintMs, shiftOver = shift === null || shift > budget.shift;
     over ||= paintOver || shiftOver;
-    const painted = largest === null ? 'not painted' : `${inSeconds(largest)}${partly ? `, painted in ${page.painted} of ${page.runs} runs` : ''}`;
+    let painted = 'not painted';
+    if (largest !== null) painted = partly ? `${inSeconds(largest)}, painted in ${page.painted} of ${page.runs} runs` : inSeconds(largest);
     return `${name}: largest paint ${painted}, ${paintOver ? 'over' : 'within'} ${inSeconds(budget.largestPaintMs)}; `
       + `shift ${shift === null ? 'not read' : shift}, ${shiftOver ? 'over' : 'within'} ${budget.shift}`;
   });

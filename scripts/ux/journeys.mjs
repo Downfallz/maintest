@@ -222,11 +222,12 @@ async function friendTakesTheSeat(walk) {
 // The seat's part of the question both players are asked, answered from `page` with the first choices the host
 // offers, until the seat waits on the other player: a mutation is asked a creature at a time.
 async function answerOurPart(walk, page) {
-  let view = await asked(page);
-  for (let turn = 0; view?.waitingFor && !view.over; turn++) {
-    if (turn === 12) throw new Error(`The seat was still asked ${view.waitingFor} after twelve answers.`);
+  let view = await asked(page), answers = 0;
+  while (view?.waitingFor && !view.over) {
+    if (answers === 12) throw new Error(`The seat was still asked ${view.waitingFor} after twelve answers.`);
     await readUntilAsked(page);
     await answer(page, view, { blocked: walk.blocked, ahead: true });
+    answers += 1;
     view = await latest(page);
   }
 }
