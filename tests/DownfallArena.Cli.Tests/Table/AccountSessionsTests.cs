@@ -13,7 +13,7 @@ public sealed class AccountSessionsTests
     private readonly MovableClock _clock = new(Now);
 
     private static Account AnAccount(int generation = 1) =>
-        new(AccountId.New(), Mark, Username.Create("MarkF").Value, Now, generation);
+        new(AccountId.New(), AccountIdentities.Of(Mark), Username.Create("MarkF").Value, Now, generation);
 
     private AccountSessions Sessions(byte[]? key = null) => new(key ?? Key, _clock);
 

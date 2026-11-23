@@ -8,7 +8,7 @@ namespace DownfallArena.Infrastructure.Accounts;
 
 /// <summary>
 /// The shape an account store writes, the same in a directory and in a blob container, and where each record
-/// is: <c>accounts/&lt;id&gt;.json</c>, <c>by-subject/&lt;provider&gt;/&lt;subject&gt;.json</c> and
+/// is (each identity of an account has its own <c>by-subject</c> entry, ADR 0204): <c>accounts/&lt;id&gt;.json</c>, <c>by-subject/&lt;provider&gt;/&lt;subject&gt;.json</c> and
 /// <c>by-name/&lt;key&gt;.json</c>. A subject is written in base64url, because a provider chooses its characters
 /// and a path must not let it.
 /// </summary>
@@ -39,8 +39,9 @@ internal static class AccountDocuments
     public static string NamePath(Username username) => $"by-name/{username.Key}.json";
 
     public static string Write(Account account) => JsonSerializer.Serialize(
-        new AccountRecord(account.Id.Value, account.Identity.Provider, account.Identity.Subject, account.Username.Value, account.CreatedAt, account.Generation)
+        new AccountRecord(account.Id.Value, account.Identities.All[0].Provider, account.Identities.All[0].Subject, account.Username.Value, account.CreatedAt, account.Generation)
         {
+            Identities = [.. account.Identities.All.Select(identity => new IdentityRecord(identity.Provider, identity.Subject))],
             Suspension = account.Suspension is { } suspension
                 ? new SuspensionRecord(suspension.Reason, suspension.By, suspension.At)
                 : null,
@@ -52,7 +53,7 @@ internal static class AccountDocuments
         var record = JsonSerializer.Deserialize<AccountRecord>(json, Web) ?? throw new InvalidDataException("An account record is empty.");
         return new Account(
             AccountId.Parse(record.Id),
-            new ExternalIdentity(record.Provider, record.Subject),
+            ReadIdentities(record),
             Username.Restore(record.Username),
             record.CreatedAt,
             record.Generation)
@@ -61,6 +62,24 @@ internal static class AccountDocuments
                 ? new AccountSuspension(suspension.Reason, suspension.By, suspension.At)
                 : null,
         };
+    }
+
+    // A record written before ADR 0204 holds one identity as provider and subject; a later one also lists them all.
+    // A broken list is an InvalidDataException, as every other broken record is, whichever check refuses it.
+    private static AccountIdentities ReadIdentities(AccountRecord record)
+    {
+        try
+        {
+            return record.Identities is { Count: > 0 } identities
+                ? AccountIdentities.Restore(identities.Select((identity, index) => identity is null
+                    ? throw new InvalidDataException($"Account {record.Id}: identities[{index}] is null.")
+                    : new ExternalIdentity(identity.Provider, identity.Subject)))
+                : AccountIdentities.Of(new ExternalIdentity(record.Provider, record.Subject));
+        }
+        catch (ArgumentException broken)
+        {
+            throw new InvalidDataException($"Account {record.Id}: its identities do not read.", broken);
+        }
     }
 
     public static string Write(UsernameReservation reservation) =>
@@ -81,10 +100,16 @@ internal static class AccountDocuments
     }
 
     // Suspension is missing from a record written before ADR 0178, and from every account in good standing.
+    // Identities is missing from a record written before ADR 0204; Provider and Subject stay the first identity, so
+    // the image before it still reads an account written after (the way back).
     private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation)
     {
         public SuspensionRecord? Suspension { get; init; }
+
+        public IReadOnlyList<IdentityRecord?>? Identities { get; init; }
     }
+
+    private sealed record IdentityRecord(string Provider, string Subject);
 
     private sealed record SuspensionRecord(string Reason, string By, DateTimeOffset At);
 

@@ -32,7 +32,7 @@ public sealed class AccountRegistryTests
         var found = (await registry.FindAsync(Mark, Cancel)).ShouldNotBeNull();
         found.ShouldBe(registered);
         found.Username.Value.ShouldBe("MarkF");
-        found.Identity.ShouldBe(Mark);
+        found.Identities.All.ShouldBe([Mark]);
         found.CreatedAt.ShouldBe(FixedTimeProvider.Default);
         found.Generation.ShouldBe(1);
     }

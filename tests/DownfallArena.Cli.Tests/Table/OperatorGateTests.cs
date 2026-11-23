@@ -65,7 +65,7 @@ public sealed class OperatorGateTests
     }
 
     private static Account Signed(string name) =>
-        new(AccountId.New(), new ExternalIdentity(ExternalIdentity.Development, name), Username.Restore(name), DateTimeOffset.UnixEpoch, 0);
+        new(AccountId.New(), AccountIdentities.Of(new ExternalIdentity(ExternalIdentity.Development, name)), Username.Restore(name), DateTimeOffset.UnixEpoch, 0);
 
     [Fact]
     public void A_gate_needs_a_token_to_be_a_token_gate()

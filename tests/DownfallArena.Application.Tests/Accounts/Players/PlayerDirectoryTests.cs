@@ -21,7 +21,7 @@ public sealed class PlayerDirectoryTests
 
     private Account Add(string name, int createdDaysAgo = 0)
     {
-        var account = new Account(AccountId.New(), new ExternalIdentity(ExternalIdentity.Development, name.ToLowerInvariant()), Username.Restore(name), Start.AddDays(-createdDaysAgo), 1);
+        var account = new Account(AccountId.New(), AccountIdentities.Of(new ExternalIdentity(ExternalIdentity.Development, name.ToLowerInvariant())), Username.Restore(name), Start.AddDays(-createdDaysAgo), 1);
         _accounts.Accounts[account.Id] = account;
         return account;
     }
@@ -32,7 +32,7 @@ public sealed class PlayerDirectoryTests
         new(Guid.CreateVersion7().ToString(), Start.AddHours(-1), "3v3", "at-activation", "hash", 9, winner, [first, second], Casual: casual);
 
     private static PlayerSummary Summary(string name, int games = 0, DateTimeOffset? seen = null, DateTimeOffset? created = null) =>
-        new(new Account(AccountId.New(), new ExternalIdentity(ExternalIdentity.Development, name), Username.Restore(name), created ?? Start, 1),
+        new(new Account(AccountId.New(), AccountIdentities.Of(new ExternalIdentity(ExternalIdentity.Development, name)), Username.Restore(name), created ?? Start, 1),
             seen is null ? null : new AccountActivity(AccountId.New(), null, seen), games, 0, 0, 0, 0, null);
 
     [Fact]

@@ -1,0 +1,2 @@
+- A two-write index change (binding + record) "finished by asking again" still leaves the index answering in between: check the read path (sign-in `FindAsync(identity)`) verifies the record lists the index entry, or a crashed unlink keeps a way in the page will not show (ADR 0204, a185a2d).
+- A store reader that throws InvalidDataException for one broken shape and lets a value object's ArgumentException out for another (duplicate, bad provider) splits what the hosts' `catch ... InvalidDataException` handles: wrap the whole read (ADR 0204, a185a2d).
