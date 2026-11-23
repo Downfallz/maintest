@@ -390,7 +390,8 @@ A tutorial done is kept done on the account before its practice is let go of, wh
 practice opened or the idle sweep (#931, #1138). When the store cannot keep it, the reload, the Leave or the opening
 answers 503 `Tutorial.Unavailable` and opens nothing, and the practice is kept for the next try. The sweep keeps it
 after the request that swept, which waits on no other account's write; a failure is said on the console and tried
-again at the next sweep, and a practice whose keeping has failed for an hour is let go of unkept.
+again at a later sweep, at most once a minute. A practice whose keeping has failed for an hour of one idle stretch is
+let go of unkept; it is always tried at least once.
 
 A scenario cut before #736 from a game still played is neither opened nor resumed until that game is
 over (`GET`/`POST .../practice` 409 `Scenario.UnderWay`, or 409 `Scenario.SourceUnread` when its record cannot be

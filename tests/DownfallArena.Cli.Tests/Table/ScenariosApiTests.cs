@@ -1139,6 +1139,7 @@ public sealed class ScenariosApiTests : IDisposable
         var first = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
         await practices.Kept.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
         var kept = practices.Count;
+        _clock.Advance(ScenarioPractices.RetryAfter);
         var second = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
         await practices.Kept.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
 
@@ -1177,6 +1178,79 @@ public sealed class ScenariosApiTests : IDisposable
         heldAfterOneFailure.ShouldBe(1);
         practices.Count.ShouldBe(0);
         said.ShouldContain(line => line.Contains("let go of unkept", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A failure from an idle stretch the player ended by coming back does not count against the next one: the next
+    /// sweep tries again, and keeps the tutorial done (#1138).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_read_after_a_failed_keeping_is_tried_again_in_its_next_idle_stretch()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock) { Said = _ => { } };
+        var (api, accounts, preferences) = await FailingOnceAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var other = await SignedInAsync(accounts, "other");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+        _clock.Advance(ScenarioPractices.Idle);
+        preferences.Failures = 1;
+        await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
+        await practices.Kept.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        practices.ByToken(play.Token).ShouldNotBeNull();
+        _clock.Advance(ScenarioPractices.Idle + ScenarioPractices.KeptFor);
+
+        await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
+        await practices.Kept.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>Another account's request is answered while the sweep's write is still on its way: it waits on no other account's store (#1138).</summary>
+    [Fact]
+    public async Task A_request_that_sweeps_answers_before_the_swept_tutorial_is_kept()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+        _clock.Advance(ScenarioPractices.Idle);
+        var kept = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var current = await practices.CurrentAsync("someone-else", Tutorial, (_, _) => kept.Task).WaitAsync(TimeSpan.FromSeconds(5), Cancel);
+        var stillHeld = practices.Count;
+        kept.SetResult();
+        await practices.Kept.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        (current, stillHeld).ShouldBe((null, 1));
+        practices.Count.ShouldBe(0);
+    }
+
+    /// <summary>Opening a practice sweeps too: another account's tutorial done and idle is kept done before it goes (#1138).</summary>
+    [Fact]
+    public async Task Opening_a_practice_keeps_another_account_s_idle_tutorial_done_before_it_is_let_go_of()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var other = await SignedInAsync(accounts, "other");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+        _clock.Advance(ScenarioPractices.Idle);
+
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{Series[1]}/practice", other);
+        await practices.Kept.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        opened.Status.ShouldBe(200, Encoding.UTF8.GetString(opened.Body));
+        practices.ByToken(play.Token).ShouldBeNull();
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
     }
 
     /// <summary>

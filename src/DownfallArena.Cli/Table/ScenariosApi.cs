@@ -309,7 +309,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     private StudioResponse NotKept(Exception failure)
     {
         Said($"  A tutorial done could not be kept on its account: {HttpHost.OneLine(failure)}");
-        return Error("Tutorial.Unavailable", "Your progress could not be saved just now. Try again in a moment.", 503);
+        return Error(ScenarioPractices.NotKept.Error, ScenarioPractices.NotKept.Message, ScenarioPractices.NotKept.Status);
     }
 
     /// <summary>
@@ -339,7 +339,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     {
         try
         {
-            // A tutorial missing from the series at this host is not done: the series is not finished.
+            // A tutorial missing before the last one shipped (its order skipped) is not done: the series is not finished.
             return store.Tutorials.Count >= store.Series && await accounts.TutorialsAsync(account) is { } kept
                 && store.Tutorials.Where(one => one.Id != id).All(one => kept.StateOf(one.Id) == TutorialState.Done);
         }
