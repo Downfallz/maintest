@@ -7,4 +7,8 @@ namespace DownfallArena.Application.Accounts;
 /// a seat's: a seat's subscription belongs to the browser holding its token and goes with it (ADR 0118); a device
 /// stays until the account says otherwise, signs out everywhere, or is deleted.
 /// </summary>
-public sealed record PushDevice(string Endpoint, string P256dh, string Auth, DateTimeOffset AddedAt);
+/// <param name="Gone">
+/// An endpoint its push service said is gone, kept without its keys, so that whichever process heard it, the page that
+/// still holds the subscription is answered 410 and makes a new one (ADR 0203). Never told, never counted as a device.
+/// </param>
+public sealed record PushDevice(string Endpoint, string P256dh, string Auth, DateTimeOffset AddedAt, bool Gone = false);

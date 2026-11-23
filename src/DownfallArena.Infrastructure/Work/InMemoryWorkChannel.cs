@@ -25,20 +25,22 @@ public sealed class InMemoryWorkChannel(string name, TimeProvider clock) : IWork
         }
     }
 
-    public Task SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default)
+    public Task<QueuedWork> SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(body);
         var now = clock.GetUtcNow();
         var kept = keptFor ?? KeptFor;
+        var held = new Held(Guid.NewGuid().ToString("N"), body, now, kept == Timeout.InfiniteTimeSpan ? DateTimeOffset.MaxValue : now + kept)
+        {
+            VisibleAt = now + (hiddenFor ?? TimeSpan.Zero),
+            Receipt = Guid.NewGuid().ToString("N"),
+        };
         lock (_gate)
         {
-            _held.Add(new Held(Guid.NewGuid().ToString("N"), body, now, kept == Timeout.InfiniteTimeSpan ? DateTimeOffset.MaxValue : now + kept)
-            {
-                VisibleAt = now + (hiddenFor ?? TimeSpan.Zero),
-            });
+            _held.Add(held);
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(new QueuedWork(held.Id, held.Receipt, body, 0, now));
     }
 
     public Task<IReadOnlyList<QueuedWork>> ReceiveAsync(int most, TimeSpan hiddenFor, CancellationToken cancellationToken = default)

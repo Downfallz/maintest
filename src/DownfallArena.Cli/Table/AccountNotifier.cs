@@ -1,5 +1,6 @@
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Ports;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Table;
@@ -33,10 +34,16 @@ internal sealed class AccountNotifier(AccountNoticeLog? log, AccountNotices? pus
     /// </summary>
     public IPreferenceStore? Preferences { get; init; }
 
+    /// <summary>
+    /// The notices queue (ADR 0203): the push goes on it, one item a device, for <see cref="NoticeWorker" /> to send off
+    /// the request. None on a host with no queue, which sends in the request, as before.
+    /// </summary>
+    public IWorkChannel? Outbox { get; set; }
+
     /// <summary>Where a line about a notice the bell could not keep is said: the console, unless a test listens.</summary>
     public Action<string> Said { get; init; } = Console.WriteLine;
 
-    /// <summary>The bell, then the push. How many devices took the push.</summary>
+    /// <summary>The bell, then the push. How many devices took the push, or how many it was queued for.</summary>
     public Task<int> NotifyAsync(AccountId to, Notice notice, CancellationToken cancellationToken = default) =>
         NotifyAsync(to, notice, except: null, cancellationToken);
 
@@ -64,7 +71,10 @@ internal sealed class AccountNotifier(AccountNoticeLog? log, AccountNotices? pus
             return 0;
         }
 
-        return await push.SendAsync(to, AccountNotices.Payload(notice.Title, notice.Body, notice.Url, notice.Tag), TopicOf(notice.Kind), except, cancellationToken);
+        var payload = AccountNotices.Payload(notice.Title, notice.Body, notice.Url, notice.Tag);
+        return Outbox is { } outbox
+            ? await push.EnqueueAsync(outbox, to, payload, TopicOf(notice.Kind), except, cancellationToken)
+            : await push.SendAsync(to, payload, TopicOf(notice.Kind), except, cancellationToken);
     }
 
     // A choice that cannot be read is no reason to keep a notice from the phone: it goes, as it did before the choice.

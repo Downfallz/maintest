@@ -2,6 +2,7 @@
 
 Date: 2026-11-22
 Status: Accepted. Amends [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) (push is a channel a player chooses, not the only carrier of a notice)
+Amended by [0203](0203-send-the-notices-from-a-queue-and-your-turn-as-a-delayed-message.md): the door puts the push on the notices queue, where the host has one.
 Rulebook: none
 
 ## Context

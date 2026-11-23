@@ -44,7 +44,7 @@ from the code, and the rest are where the phases above left them.
 | Token to table, code to seat | `TableRegistry`, `JoinCodes` | Dictionaries filled at open and at restore | An index in the store, or a token that names its table |
 | The table's version | `TableChanges` | A counter | Journal length plus record revision |
 | When a question was shown | `DecisionClock` | Per-seat stamps for `elapsedMs` | Question 3: the page's own measure when the stamp is lost |
-| "Your turn" after a grace | `PushNotices`, off `HumanSeat.Asked` | A delay in process | A delayed message, or stays best-effort |
+| "Your turn" after a grace | `PushNotices`, off `HumanSeat.Asked` | A delay in process | Done (ADR 0203): a message on `notices` hidden for the grace, taken back when the page draws the question; in process on a host with no queue |
 | The trace and feed of a live match | `MatchTraceRecorder` | Built from dispatched events | A cache rebuilt by replay |
 | The recording as it is written | `PlaytestRun` (757 lines) | Written as the driver runs | A projection of the journal (open question 2) |
 | The sweep | `TableRegistry.SweepIfDue`, called per request | Needs a clock tick, has only requests | A scheduled command |

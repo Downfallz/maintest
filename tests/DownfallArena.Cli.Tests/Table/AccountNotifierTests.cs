@@ -55,6 +55,20 @@ public sealed class AccountNotifierTests
     }
 
     [Fact]
+    public async Task With_a_queue_the_bell_is_kept_in_the_request_and_the_push_goes_on_the_queue()
+    {
+        var outbox = new Infrastructure.Work.InMemoryWorkChannel(QueuedNotice.Queue, TimeProvider.System);
+        var notifier = new AccountNotifier(_log, await PushAsync()) { Outbox = outbox };
+
+        var queued = await notifier.NotifyAsync(_mark, Over, Cancel);
+
+        queued.ShouldBe(1);
+        _sender.Sent.ShouldBeEmpty();
+        (await _log.ListAsync(_mark, Cancel)).ShouldHaveSingleItem();
+        QueuedNotice.Parse(outbox.Bodies.ShouldHaveSingleItem())!.Push!.Topic.ShouldBe("match");
+    }
+
+    [Fact]
     public async Task What_waits_is_pushed_and_not_kept_as_news()
     {
         var notifier = new AccountNotifier(_log, await PushAsync());

@@ -137,7 +137,8 @@ public sealed class WorkersRunningTests
     {
         public string Name => "unanswering";
 
-        public Task SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default) => Out();
+        public Task<QueuedWork> SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default) =>
+            Task.FromException<QueuedWork>(new IOException("The queue is out."));
 
         public Task<IReadOnlyList<QueuedWork>> ReceiveAsync(int most, TimeSpan hiddenFor, CancellationToken cancellationToken = default) =>
             Task.FromException<IReadOnlyList<QueuedWork>>(new IOException("The queue is out."));
@@ -165,7 +166,7 @@ public sealed class WorkersRunningTests
 
         public string Name => inner.Name;
 
-        public async Task SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default)
+        public async Task<QueuedWork> SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default)
         {
             if (Refusals > 0)
             {
@@ -173,8 +174,9 @@ public sealed class WorkersRunningTests
                 throw new IOException("The queue is out.");
             }
 
-            await inner.SendAsync(body, keptFor, hiddenFor, cancellationToken);
+            var sent = await inner.SendAsync(body, keptFor, hiddenFor, cancellationToken);
             Interlocked.Increment(ref _sent);
+            return sent;
         }
 
         public Task<IReadOnlyList<QueuedWork>> ReceiveAsync(int most, TimeSpan hiddenFor, CancellationToken cancellationToken = default) => inner.ReceiveAsync(most, hiddenFor, cancellationToken);

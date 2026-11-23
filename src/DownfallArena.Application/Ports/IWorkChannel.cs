@@ -11,10 +11,14 @@ public interface IWorkChannel
     /// <summary>The queue's name, what a dead letter says it came from.</summary>
     string Name { get; }
 
-    /// <summary>Puts an item on the queue, kept for as long as given, or the queue's own time when none is.</summary>
+    /// <summary>
+    /// Puts an item on the queue, kept for as long as given, or the queue's own time when none is. Answers the item
+    /// as sent, delivered zero times, with a receipt that deletes it before anybody received it: a "your turn" whose
+    /// page drew the question within the grace is taken back this way (ADR 0203).
+    /// </summary>
     /// <param name="keptFor">How long the item is kept unreceived; <see cref="Timeout.InfiniteTimeSpan" /> for ever.</param>
     /// <param name="hiddenFor">How long before the item can first be received; at once when none is given.</param>
-    Task SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default);
+    Task<QueuedWork> SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default);
 
     /// <summary>Up to <paramref name="most" /> items, each hidden from every other receiver for <paramref name="hiddenFor" />.</summary>
     Task<IReadOnlyList<QueuedWork>> ReceiveAsync(int most, TimeSpan hiddenFor, CancellationToken cancellationToken = default);

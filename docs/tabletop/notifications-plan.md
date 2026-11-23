@@ -1,6 +1,6 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 to N4 are built; each stage below is
+Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 to N5 are built; each stage below is
 one pull request.
 
 ## What the owner asked for
@@ -223,6 +223,25 @@ Jobs tab show the counts and the queue's length.
 5. **N5, the queue.** ADR: notices are sent by the worker from a queue; "your turn" is a delayed message.
    `infra/main.bicep` gains the queue. Tests: the worker's tests on a retry, a 410 and a give-up, on Azurite;
    the `infra-reviewer`.
+
+   *Built (2026-11-23)*: ADR 0203. The queue is `notices`, beside the turns', with `notices-poison` and `notices-dlq`.
+   The door still writes the bell's entry in the request; the push goes on the queue as one item a device
+   (`DevicePush`: the account, the endpoint and the payload, never the keys, read again at send time so a device let
+   go of since is told nothing). `NoticeWorker` sends it, in the API and in `table-worker` both: 2 seconds, then twice
+   as long, up to a minute, and at five deliveries onto the poison queue, which the dead-letter worker keeps. A 410
+   forgets the device and is done with. "Your turn" is a `DueTurn` hidden on the queue for the grace; the send's
+   receipt lets the host delete it when the page draws the question in time, and the process that reads it when it
+   comes due picks the table up and tells the seat only if it is still on that asking. The 410 list moved to the
+   account's devices document, a `gone` entry without keys among the five latest, read by `PUT /api/account/push`
+   and a signed-in seat's `PUT /api/lobby/push`; an anonymous seat keeps ADR 0118's list in memory. The lobby's
+   notices are held until the route let go of the claim gate (left by N1). `main.bicep` wakes the worker on `notices`
+   and `notices-poison`; no new role, the API and the worker hold the queue role already. A host with no queue
+   (`--turns process`) and the hourly job send in process, as before. Tests: `NoticeWorkerContract` (a retry, a 410,
+   a give-up kept as a dead letter, a device let go of, an item that is no notice) in memory and on Azurite, the
+   queued "your turn" in `PushNoticesTests` (sent when due, taken back when drawn, sent by another process), the
+   door, the gone list in the devices and their stores, and the claim gate let go of before a slow notice. Left: a
+   "your turn" drawn on another replica than the one that queued it is not taken back (the API runs one at most);
+   the counts are N6.
 6. **N6, the counts.** The worker's counts in the ops report and in the admin's Jobs tab. Tests: Cli tests on
    the counts, `ops.test.js`, `admin.test.js`.
 

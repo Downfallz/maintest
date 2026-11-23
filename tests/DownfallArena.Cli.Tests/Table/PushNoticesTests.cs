@@ -3,6 +3,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Matches.Projections;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Work;
 using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
@@ -389,6 +390,85 @@ public sealed class PushNoticesTests : IDisposable
         await Settled();
         _sender.Sent.ShouldBeEmpty();
         (await devices.ListAsync(account, TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task With_a_queue_a_question_nobody_drew_waits_on_it_for_the_grace_and_is_sent_when_it_comes_due()
+    {
+        var (table, notices) = await Seated();
+        var (outbox, worker) = Queued(notices, table);
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        var asked = await Asked(table);
+        await QueuedOnce(outbox);
+        (await worker.RunOnceAsync(TestContext.Current.CancellationToken)).ShouldBe(0, "hidden for the grace");
+        _clock.Advance(Grace);
+        await worker.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        var (to, payload) = await _sender.Next();
+        to.ShouldBe(Phone);
+        JsonDocument.Parse(payload).RootElement.GetProperty("asked").GetInt64().ShouldBe(asked);
+        (await outbox.CountAsync(TestContext.Current.CancellationToken)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task With_a_queue_a_question_the_page_drew_in_time_is_taken_back_from_it()
+    {
+        var (table, notices) = await Seated();
+        var (outbox, worker) = Queued(notices, table);
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        var asked = await Asked(table);
+        await QueuedOnce(outbox);
+        (await table.Api.HandleAsync("GET", "/api/seat/player1", "", table.Seats[0].Token, null, $"?shown={asked}")).Status.ShouldBe(200);
+        await Settled();
+        _clock.Advance(Grace);
+        await worker.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        (await outbox.CountAsync(TestContext.Current.CancellationToken)).ShouldBe(0);
+        _sender.Sent.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_turn_queued_by_a_process_that_stopped_is_told_by_the_next_one_and_not_once_answered()
+    {
+        var (table, notices) = await Seated();
+        var (outbox, _) = Queued(notices, table);
+        table.Seats[0].Push = Phone;
+        await Arrive(table);
+        var asked = await Asked(table);
+        await QueuedOnce(outbox);
+
+        // Another process, which never saw the asking, reads the item once it comes due.
+        var next = new PushNotices(_sender, "BP8", _clock, Grace);
+        var worker = new NoticeWorker(outbox, new InMemoryWorkChannel("notices-poison", _clock), _clock) { Turns = (due, _) => next.TurnDueAsync(table, due) };
+        _clock.Advance(Grace);
+        await worker.RunOnceAsync(TestContext.Current.CancellationToken);
+        await next.TurnDueAsync(table, new DueTurn(table.Id, "player1", asked - 1, 1));
+
+        var (to, _) = await _sender.Next();
+        to.ShouldBe(Phone);
+        _sender.Sent.Count.ShouldBe(1, "an asking the seat is no longer on is owed nothing");
+    }
+
+    private (InMemoryWorkChannel Outbox, NoticeWorker Worker) Queued(PushNotices notices, PlayedTable table)
+    {
+        var outbox = new InMemoryWorkChannel(QueuedNotice.Queue, _clock);
+        notices.Outbox = outbox;
+        return (outbox, new NoticeWorker(outbox, new InMemoryWorkChannel("notices-poison", _clock), _clock) { Turns = (due, _) => notices.TurnDueAsync(table, due) });
+    }
+
+    /// <summary>The asking's "your turn" on the queue, once the task that puts it there has.</summary>
+    private static async Task QueuedOnce(InMemoryWorkChannel outbox)
+    {
+        for (var attempt = 0; attempt < 250 && outbox.Bodies.Count == 0; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        QueuedNotice.Parse(outbox.Bodies.ShouldHaveSingleItem())!.Turn!.Seat.ShouldBe("player1");
     }
 
     private static async Task<AccountDevices> DevicesAsync(AccountId account, string endpoint)

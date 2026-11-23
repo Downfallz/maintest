@@ -101,6 +101,41 @@ public sealed class AccountDevicesTests
         (await _devices.ListAsync(_mark, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/new"]);
     }
 
+    [Fact]
+    public async Task A_device_its_push_service_says_is_gone_is_listed_no_more_and_its_endpoint_is_remembered_as_gone()
+    {
+        await _devices.AddAsync(_mark, Phone("one"), Cancel);
+        await _devices.AddAsync(_mark, Phone("two"), Cancel);
+
+        (await _devices.MarkGoneAsync(_mark, "https://push.example/one", Cancel)).ShouldBeTrue();
+
+        (await _devices.ListAsync(_mark, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/two"]);
+        (await _devices.IsGoneAsync(_mark, "https://push.example/one", Cancel)).ShouldBeTrue();
+        (await _devices.IsGoneAsync(_mark, "https://push.example/two", Cancel)).ShouldBeFalse();
+        (await _store.ListAsync(_mark, Cancel)).Single(device => device.Gone).P256dh.ShouldBeEmpty("a gone endpoint keeps no key");
+    }
+
+    [Fact]
+    public async Task Gone_endpoints_take_no_place_of_a_device_and_only_the_latest_are_remembered()
+    {
+        for (var index = 0; index < AccountDevices.MostGone + 2; index++)
+        {
+            await _devices.AddAsync(_mark, Phone($"dead-{index}"), Cancel);
+            await _devices.MarkGoneAsync(_mark, $"https://push.example/dead-{index}", Cancel);
+            _clock.Advance(TimeSpan.FromMinutes(1));
+        }
+
+        for (var index = 0; index < AccountDevices.MostPerAccount; index++)
+        {
+            await _devices.AddAsync(_mark, Phone($"live-{index}"), Cancel);
+        }
+
+        (await _devices.ListAsync(_mark, Cancel)).Count.ShouldBe(AccountDevices.MostPerAccount);
+        (await _store.ListAsync(_mark, Cancel)).Count(device => device.Gone).ShouldBe(AccountDevices.MostGone);
+        (await _devices.IsGoneAsync(_mark, "https://push.example/dead-0", Cancel)).ShouldBeFalse("the oldest gone endpoint is let go of");
+        (await _devices.IsGoneAsync(_mark, $"https://push.example/dead-{AccountDevices.MostGone + 1}", Cancel)).ShouldBeTrue();
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

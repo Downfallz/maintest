@@ -14,6 +14,9 @@ public sealed class AccountDevices
 {
     public const int MostPerAccount = 5;
 
+    /// <summary>How many gone endpoints an account remembers, the latest: a browser told 410 makes a new one at once.</summary>
+    public const int MostGone = 5;
+
     /// <summary>How many writes in a row a change may lose to others before it gives up.</summary>
     public const int Tries = 8;
 
@@ -28,8 +31,31 @@ public sealed class AccountDevices
         _clock = clock;
     }
 
-    public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) =>
-        _store.ListAsync(account, cancellationToken);
+    /// <summary>The devices the account is told on, oldest first: the gone endpoints are not among them.</summary>
+    public async Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        [.. (await _store.ListAsync(account, cancellationToken)).Where(device => !device.Gone)];
+
+    /// <summary>Whether a push service said this endpoint of the account is gone (ADR 0203), whichever process heard it.</summary>
+    public async Task<bool> IsGoneAsync(AccountId account, string endpoint, CancellationToken cancellationToken = default) =>
+        (await _store.ListAsync(account, cancellationToken)).Any(device => device.Gone && string.Equals(device.Endpoint, endpoint, StringComparison.Ordinal));
+
+    /// <summary>
+    /// The push service said the device at that endpoint is gone: it is told no more, and the endpoint is remembered
+    /// as gone, without its keys, among the latest <see cref="MostGone" />. False when it was no device of the account.
+    /// </summary>
+    public async Task<bool> MarkGoneAsync(AccountId account, string endpoint, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        var was = false;
+        var gone = new PushDevice(endpoint, string.Empty, string.Empty, _clock.GetUtcNow(), Gone: true);
+        await ChangeAsync(account, held =>
+        {
+            was = held.Any(known => !known.Gone && string.Equals(known.Endpoint, endpoint, StringComparison.Ordinal));
+            var others = held.Where(known => !string.Equals(known.Endpoint, endpoint, StringComparison.Ordinal)).ToList();
+            return Trimmed([.. others, gone]);
+        }, cancellationToken);
+        return was;
+    }
 
     /// <summary>
     /// Registers the device, stamped now. A device already there by its endpoint is replaced where it stands: a
@@ -42,18 +68,17 @@ public sealed class AccountDevices
         var stamped = device with { AddedAt = _clock.GetUtcNow() };
         return (await ChangeAsync(account, held =>
         {
-            var kept = held.Where(known => !string.Equals(known.Endpoint, stamped.Endpoint, StringComparison.Ordinal))
-                .Append(stamped)
-                .OrderBy(known => known.AddedAt)
-                .ToList();
-            if (kept.Count > MostPerAccount)
-            {
-                kept.RemoveRange(0, kept.Count - MostPerAccount);
-            }
-
-            return kept;
-        }, cancellationToken))!;
+            var kept = held.Where(known => !string.Equals(known.Endpoint, stamped.Endpoint, StringComparison.Ordinal)).Append(stamped);
+            return Trimmed([.. kept]);
+        }, cancellationToken))!.Where(known => !known.Gone).ToList();
     }
+
+    // At most so many devices, the oldest going first, and so many gone endpoints, the latest kept.
+    private static List<PushDevice> Trimmed(IReadOnlyList<PushDevice> held) =>
+    [
+        .. held.Where(known => known.Gone).OrderBy(known => known.AddedAt).TakeLast(MostGone),
+        .. held.Where(known => !known.Gone).OrderBy(known => known.AddedAt).TakeLast(MostPerAccount),
+    ];
 
     /// <summary>Forgets the device at that endpoint: the browser asked, or its push service said it is gone. False when there was none.</summary>
     public async Task<bool> RemoveAsync(AccountId account, string endpoint, CancellationToken cancellationToken = default)

@@ -2,6 +2,7 @@ using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Work;
 using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -59,8 +60,9 @@ public sealed class AccountNoticesTests
 
         reached.ShouldBe(1);
         (await _devices.ListAsync(_mark, Cancel)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/new");
-        _notices.IsDead("https://push.example/old").ShouldBeTrue();
-        _notices.IsDead("https://push.example/new").ShouldBeFalse();
+        (await _notices.IsGoneAsync(_mark, "https://push.example/old", Cancel)).ShouldBeTrue();
+        (await _notices.IsGoneAsync(_mark, "https://push.example/new", Cancel)).ShouldBeFalse();
+        (await new AccountNotices(_sender, _devices).IsGoneAsync(_mark, "https://push.example/old", Cancel)).ShouldBeTrue("another process reads it from the devices");
     }
 
     [Fact]
@@ -73,7 +75,36 @@ public sealed class AccountNoticesTests
 
         reached.ShouldBe(0);
         (await _devices.ListAsync(_mark, Cancel)).ShouldHaveSingleItem();
-        _notices.IsDead("https://push.example/phone").ShouldBeFalse();
+        (await _notices.IsGoneAsync(_mark, "https://push.example/phone", Cancel)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_queued_notice_is_one_item_a_device_but_the_ones_left_out_and_names_no_key()
+    {
+        await _devices.AddAsync(_mark, Phone("phone"), Cancel);
+        await _devices.AddAsync(_mark, Phone("laptop"), Cancel);
+        var outbox = new InMemoryWorkChannel(QueuedNotice.Queue, TimeProvider.System);
+
+        var queued = await _notices.EnqueueAsync(outbox, _mark, "{}", "friend", ["https://push.example/laptop"], Cancel);
+
+        queued.ShouldBe(1);
+        _sender.Sent.ShouldBeEmpty("nothing is sent in the request");
+        var body = outbox.Bodies.ShouldHaveSingleItem();
+        QueuedNotice.Parse(body)!.Push.ShouldBe(new DevicePush(_mark.Value, "https://push.example/phone", "{}", "friend"));
+        body.ShouldNotContain(Key);
+    }
+
+    [Fact]
+    public async Task A_queued_notice_reaches_its_device_and_one_for_a_device_let_go_of_since_reaches_nothing()
+    {
+        await _devices.AddAsync(_mark, Phone("phone"), Cancel);
+
+        var sent = await _notices.SendOneAsync(new DevicePush(_mark.Value, "https://push.example/phone", "{}", "friend"), Cancel);
+        var dropped = await _notices.SendOneAsync(new DevicePush(_mark.Value, "https://push.example/signed-out", "{}", "friend"), Cancel);
+
+        sent.ShouldBe(DeviceSend.Sent);
+        dropped.ShouldBe(DeviceSend.NotADevice);
+        _sender.Sent.ShouldHaveSingleItem().To.ShouldBe(new PushSubscription("https://push.example/phone", Key, Auth));
     }
 
     [Fact]

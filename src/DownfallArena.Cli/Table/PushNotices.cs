@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Matches.Projections;
+using DownfallArena.Application.Ports;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Domain.Matches;
 using DownfallArena.SharedKernel.Identifiers;
@@ -58,6 +59,17 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     /// </summary>
     public AccountNotifier? Accounts { get; set; }
 
+    /// <summary>
+    /// The notices queue (ADR 0203): a question nobody drew is put on it, hidden for the grace, and taken back when the
+    /// seat's page draws it in time, so a process that stops meanwhile loses no notice; <see cref="NoticeWorker" /> tells
+    /// the seat once it comes due (<see cref="TurnDueAsync" />). None on a host with no queue, which waits in its own
+    /// process, as before.
+    /// </summary>
+    public IWorkChannel? Outbox { get; set; }
+
+    // The "your turn" each seat has on the queue, still hidden, so its page drawing the question takes it back.
+    private readonly ConditionalWeakTable<ISeatPerson, StrongBox<QueuedWork?>> _queued = [];
+
     /// <summary>Every seat a person holds at this table, from now on: whatever the match asks it is noticed.</summary>
     public void Watch(PlayedTable table)
     {
@@ -86,7 +98,67 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         {
             shown.Value = Math.Max(shown.Value, question.Asked);
         }
+
+        _ = TakeBackAsync(person, question.Asked);
     }
+
+    /// <summary>
+    /// "Your turn" come due on the notices queue (ADR 0203): sent unless the table is over, the seat was answered or
+    /// asked something else meanwhile, or its page here drew it. A failure is thrown, for the queue to try again.
+    /// </summary>
+    public async Task TurnDueAsync(PlayedTable table, DueTurn due)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        ArgumentNullException.ThrowIfNull(due);
+        if (table.IsOver || table.Seats.FirstOrDefault(seat => string.Equals(seat.Name, due.Seat, StringComparison.Ordinal)) is not { Person: { Waiting: { } question } person } seat || question.Asked != due.Asked)
+        {
+            return;
+        }
+
+        if (_shown.TryGetValue(person, out var shown) && shown.Value >= question.Asked)
+        {
+            return;
+        }
+
+        await TellAsync(table, seat, question, due.Round);
+    }
+
+    // The seat's "your turn" still hidden on the queue, when it is for this asking or an earlier one: taken back, since
+    // the page drew the question. One that cannot be taken back comes due, and the table says nothing is owed.
+    private async Task TakeBackAsync(ISeatPerson person, long asked)
+    {
+        if (Outbox is not { } outbox || !_queued.TryGetValue(person, out var box))
+        {
+            return;
+        }
+
+        QueuedWork? queued;
+        lock (box)
+        {
+            queued = box.Value;
+            if (queued is null || DueTurnOf(queued)?.Asked > asked)
+            {
+                return;
+            }
+
+            box.Value = null;
+        }
+
+        try
+        {
+            await outbox.DeleteAsync(queued);
+        }
+        catch (Azure.RequestFailedException gone) when (gone.Status == 404)
+        {
+            // Already come due and sent, or found nothing owed: nothing to take back.
+        }
+        catch (Exception failure)
+        {
+            Console.WriteLine($"  A \"your turn\" drawn in time could not be taken back from {outbox.Name}; it comes due and finds nothing owed: {HttpHost.OneLine(failure)}");
+        }
+    }
+
+    private static DueTurn? DueTurnOf(QueuedWork work) => QueuedNotice.Parse(work.Body)?.Turn;
 
     /// <summary>Whether a push service said this endpoint is gone: a subscription the page should not send again.</summary>
     public bool IsDead(string endpoint) => _dead.ContainsKey(endpoint);
@@ -217,6 +289,11 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     {
         try
         {
+            if (Outbox is { } outbox && seat.Person is { } asked && await QueuedAsync(outbox, table, seat, asked, question, round))
+            {
+                return;
+            }
+
             await Task.Delay(_grace, clock);
             if (table.IsOver || seat.Person?.Waiting != question)
             {
@@ -228,47 +305,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 return;
             }
 
-            if (seat.Account is { } account && Accounts is { } door)
-            {
-                await NoticeAccountAsync(door, account, table, seat, question, round);
-                return;
-            }
-
-            if (seat.Push is not { } subscription)
-            {
-                return;
-            }
-
-            // One phone holding both seats is hotseat (ADR 0120): the other player is the person holding it, and a
-            // "your turn" for either seat would only say what the pass screen says, twice an opportunity.
-            if (table.Seats.Any(other => other != seat && other.Push?.Endpoint == subscription.Endpoint))
-            {
-                return;
-            }
-
-            if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, await CastsAsync(table, seat)), Topic))
-            {
-                // Said, so a host's log shows what reached a phone and what did not.
-                Console.WriteLine($"  Session {table.Id}: {seat.Name} notified of asking {question.Asked}.");
-                return;
-            }
-
-            // Gone from the push service: the browser was reinstalled, or the service let it go. Sending again
-            // would only fail again, so the seat forgets it and the endpoint is remembered as dead: the browser
-            // still holds it and sends it on its next load, and is answered 410, which is when it makes a new one.
-            // Only the subscription that was refused: the seat may hold another by now, the browser's new one or
-            // the next player's, and that one answered nothing.
-            _dead[subscription.Endpoint] = 0;
-            if (seat.Push != subscription)
-            {
-                return;
-            }
-
-            seat.Push = null;
-            if (Record is { } record)
-            {
-                await record(table);
-            }
+            await TellAsync(table, seat, question, round);
         }
         catch (Exception failure)
         {
@@ -276,6 +313,82 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             // be written, a key the sender could not use -- the notice is lost, the seat keeps its subscription
             // for the next asking, and the console says what happened rather than nothing.
             Console.WriteLine($"  Session {table.Id}: {seat.Name} could not be notified: {failure.Message}");
+        }
+    }
+
+    // On the queue, hidden for the grace, and held to be taken back if the page draws the question first, even while
+    // the item was being sent.
+    // A queue that is out is no reason to lose the notice: it waits in this process instead, as on a host with no queue.
+    private async Task<bool> QueuedAsync(IWorkChannel outbox, PlayedTable table, TableSeat seat, ISeatPerson person, Asking question, int? round)
+    {
+        QueuedWork queued;
+        try
+        {
+            queued = await outbox.SendAsync(QueuedNotice.Of(new DueTurn(table.Id, seat.Name, question.Asked, round)).ToJson(), AccountNotices.KeptFor, _grace);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  Session {table.Id}: {seat.Name}'s turn could not be put on {outbox.Name}, so it waits here: {HttpHost.OneLine(failure)}");
+            return false;
+        }
+
+        var box = _queued.GetOrCreateValue(person);
+        lock (box)
+        {
+            box.Value = queued;
+        }
+
+        if (_shown.TryGetValue(person, out var shown) && shown.Value >= question.Asked)
+        {
+            await TakeBackAsync(person, question.Asked);
+        }
+
+        return true;
+    }
+
+    /// <summary>The seat told its turn, now: on its account's devices when it has one, or on its own subscription.</summary>
+    private async Task TellAsync(PlayedTable table, TableSeat seat, Asking question, int? round)
+    {
+        if (seat.Account is { } account && Accounts is { } door)
+        {
+            await NoticeAccountAsync(door, account, table, seat, question, round);
+            return;
+        }
+
+        if (seat.Push is not { } subscription)
+        {
+            return;
+        }
+
+        // One phone holding both seats is hotseat (ADR 0120): the other player is the person holding it, and a
+        // "your turn" for either seat would only say what the pass screen says, twice an opportunity.
+        if (table.Seats.Any(other => other != seat && other.Push?.Endpoint == subscription.Endpoint))
+        {
+            return;
+        }
+
+        if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, await CastsAsync(table, seat)), Topic))
+        {
+            // Said, so a host's log shows what reached a phone and what did not.
+            Console.WriteLine($"  Session {table.Id}: {seat.Name} notified of asking {question.Asked}.");
+            return;
+        }
+
+        // Gone from the push service: the browser was reinstalled, or the service let it go. Sending again
+        // would only fail again, so the seat forgets it and the endpoint is remembered as dead: the browser
+        // still holds it and sends it on its next load, and is answered 410, which is when it makes a new one.
+        // Only the subscription that was refused: the seat may hold another by now, the browser's new one or
+        // the next player's, and that one answered nothing.
+        _dead[subscription.Endpoint] = 0;
+        if (seat.Push != subscription)
+        {
+            return;
+        }
+
+        seat.Push = null;
+        if (Record is { } record)
+        {
+            await record(table);
         }
     }
 }

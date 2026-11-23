@@ -175,11 +175,18 @@ internal static class TableWorker
         Console.WriteLine(composer.Notifier is not { Push: not null }
             ? "  Notices: off. How a match ended reaches nobody's devices from here (--accounts and --push-keys)."
             : "  Notices: on. Each seat's account is told how a match ended when its last turn is taken here.");
+        // The notices put on the queue by the API, or by this worker's own door, sent from here too (ADR 0203), so a
+        // notice outlives the API's replica. Its seats' "your turn" comes due here as in the API; the key a page
+        // subscribes with is the API's to serve, so none is needed here.
+        var outbox = sender is null ? null : await TableHost.OpenChannelAsync(over.Channels, QueuedNotice.Queue, stopping, "this worker sends no notice the API queued");
+        var push = sender is null ? null : new PushNotices(sender, string.Empty, clock) { Record = table => table.RecordAsync(), Accounts = composer.Notifier };
+        composer.Notifier?.Outbox = outbox;
         using var registry = new TableRegistry(over.Index) { Loader = new TableLoader(new StoredSessions(over.Store), composer, clock), Basis = composer.Basis };
         using var running = CancellationTokenSource.CreateLinkedTokenSource(stopping);
         try
         {
             var working = await TableHost.StartWorkersAsync(over.Channels, turns, registry, clock, running.Token);
+            var noticing = await TableHost.StartNoticesAsync(over.Channels, outbox, push, registry, clock, running.Token);
 
             // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
             // hands -- is seen as the host sees the worker's (ADR 0162); and a finished table nobody is at any more is
@@ -187,6 +194,7 @@ internal static class TableWorker
             var watching = TableHost.WatchAsync(new TableWatch(registry, clock), relay, clock, running.Token);
             var letting = LetGoOfIdleAsync(registry, clock, running.Token);
             await working;
+            await noticing;
             await watching;
             await letting;
         }

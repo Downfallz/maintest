@@ -85,6 +85,11 @@ var recordings = '${storage.properties.primaryEndpoints.blob}${containerName}'
 var turnsQueue = 'agent-turns'
 var poisonQueue = 'agent-turns-poison'
 
+// The queues the notices go through (ADR 0203): the API and the worker send them, and the worker wakes for them, so a
+// notice outlives the API's replica.
+var noticesQueue = 'notices'
+var noticesPoisonQueue = 'notices-poison'
+
 // The push keys as a secret of each app that sends notices, read by the host as a variable (ADR 0118).
 var pushSecrets = empty(pushKeys) ? [] : [
   {
@@ -414,7 +419,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
 }
 
 // The worker (ADR 0162): the turn worker and the dead-letter worker, over the same store, picking tables up as
-// the API does. No ingress. Zero replicas while neither queue holds anything, one when either does: a second
+// the API does, and the notices' two (ADR 0203). No ingress. Zero replicas while no queue holds anything, one when one does: a second
 // would only take turns the first is already taking. It closes a match its turn ended, so it keeps the result
 // and tells the accounts as the API would, with the same sign-in and the same keys.
 resource worker 'Microsoft.App/containerApps@2025-01-01' = {
@@ -473,6 +478,30 @@ resource worker 'Microsoft.App/containerApps@2025-01-01' = {
               metadata: {
                 accountName: storage.name
                 queueName: poisonQueue
+                queueLength: '1'
+              }
+              identity: 'system'
+            }
+          }
+          {
+            name: 'notices-owed'
+            custom: {
+              type: 'azure-queue'
+              metadata: {
+                accountName: storage.name
+                queueName: noticesQueue
+                queueLength: '1'
+              }
+              identity: 'system'
+            }
+          }
+          {
+            name: 'notices-given-up-on'
+            custom: {
+              type: 'azure-queue'
+              metadata: {
+                accountName: storage.name
+                queueName: noticesPoisonQueue
                 queueLength: '1'
               }
               identity: 'system'
