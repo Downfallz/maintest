@@ -238,19 +238,23 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 
 /* The head: a band across the top of a window, a sheet or a page, its eyebrow and title on its darker side. The
    band is 3:1, at most 120 px tall, 64 px on a short screen, so it never pushes the window's filled action out of
-   view; words that wrap make it taller rather than being cut. The scrim is opaque under the whole column of words
-   and fades out beyond it. */
+   view; words that wrap make it taller rather than being cut. The band's scrim is light, so the painting reads
+   across it; the words carry their own soot, feathered at its edge, dense enough for 4.5:1 under the eyebrow. */
 .scene-head { display: grid; background-color: var(--soot); }
 .scene-head::after { content: ""; grid-area: 1 / 1; aspect-ratio: 3 / 1; max-height: 120px; pointer-events: none; }
-.scene-head > .scene-words { grid-area: 1 / 1; align-self: end; max-width: 60%; padding: 10px 16px; }
+.scene-head > .scene-words {
+  grid-area: 1 / 1; align-self: end; width: fit-content; max-width: 60%; margin: 8px; padding: 6px 10px;
+  border-radius: var(--radius-sharp); background: color-mix(in srgb, var(--soot) 82%, transparent);
+  box-shadow: 0 0 18px 10px color-mix(in srgb, var(--soot) 82%, transparent);
+}
 .scene-head[data-side="end"] > .scene-words { justify-self: end; text-align: end; }
-.scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 90%, transparent) 62%, transparent 100%); }
-.scene-head[data-side="end"]::before { background: linear-gradient(to left, var(--soot) 0, color-mix(in srgb, var(--soot) 90%, transparent) 62%, transparent 100%); }
+.scene-head::before { background: linear-gradient(to right, var(--soot) 0, color-mix(in srgb, var(--soot) 55%, transparent) 30%, color-mix(in srgb, var(--soot) 20%, transparent) 60%, transparent 85%); }
+.scene-head[data-side="end"]::before { background: linear-gradient(to left, var(--soot) 0, color-mix(in srgb, var(--soot) 55%, transparent) 30%, color-mix(in srgb, var(--soot) 20%, transparent) 60%, transparent 85%); }
 .scene-head :is(h1, h2, h3) { margin: 0; color: var(--bone); }
 .scene-head .eyebrow { margin: 0 0 2px; }
 @media (max-height: 600px) {
   .scene-head::after { max-height: 64px; }
-  .scene-head > .scene-words { padding: 6px 12px; }
+  .scene-head > .scene-words { margin: 4px; padding: 4px 8px; }
 }
 
 /* A window's own heading wearing a head (picture.js, wearScene): the band runs from edge to edge, the close keeps
