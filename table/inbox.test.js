@@ -109,10 +109,11 @@ test('a turn waiting with no cast since the last visit says only when the last m
 });
 
 // A document with only what the bell and its copy in the site menu read (#1002): elements by id, created nodes and
-// their listeners. A guest's `request` is never asked; a player's answers the lists the test hands it.
+// their listeners. Each starts shown and written, so a test sees what the bell hides or empties; `request` answers
+// the lists the test hands it.
 function inboxDocument() {
   const element = (id = '') => {
-    const node = { id, hidden: false, textContent: '', attributes: {}, children: [], listeners: {}, dataset: {} };
+    const node = { id, hidden: false, textContent: 'stale', attributes: {}, children: [], listeners: {}, dataset: {} };
     node.setAttribute = (name, value) => { node.attributes[name] = String(value); };
     node.addEventListener = (type, listener) => { (node.listeners[type] ??= []).push(listener); };
     node.append = (...items) => { node.children.push(...items); };
@@ -137,13 +138,14 @@ function mountedInbox(account, mine = []) {
   inbox.setAccount(account);
   return { doc, inbox };
 }
+const turnAgainst = (id, name) => ({ table: table(id, [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name }]), seats: [{ seat: 'player1', token: id }] });
 const settled = () => new Promise(resolve => setImmediate(resolve));
 
-test('a guest gets no bell entry in the site menu, and its counts stay hidden', async () => {
-  // Signed in, then signed out: the entry a player had is hidden again.
-  const { doc, inbox } = mountedInbox({ id: 'acct_a', username: 'MarcF' });
+test('a player who signs out gets no bell entry in the site menu, its counts hidden and its description emptied', async () => {
+  const { doc, inbox } = mountedInbox({ id: 'acct_a', username: 'MarcF' }, [turnAgainst('a', 'Bastien'), turnAgainst('b', 'Julie')]);
   await settled();
   assert.equal(doc.byId['inbox-open-menu'].hidden, false);
+  assert.equal(doc.byId['menu-inbox-said'].textContent, 'Notifications · 2 waiting');
   inbox.setAccount(null);
   await settled();
   for (const id of ['inbox-open-menu', 'inbox-open', 'inbox-menu-count', 'menu-inbox-badge']) assert.equal(doc.byId[id].hidden, true, id);
@@ -162,7 +164,6 @@ test('a player with nothing waiting sees the menu\'s entry, both its counts hidd
 });
 
 test('two turns waiting show 2 on the menu\'s entry and its button, and the button is described by the bell\'s words', async () => {
-  const turnAgainst = (id, name) => ({ table: table(id, [{ ...me, turn: true }, { seat: 'player2', kind: 'person', name }]), seats: [{ seat: 'player1', token: id }] });
   const { doc } = mountedInbox({ id: 'acct_a', username: 'MarcF' }, [turnAgainst('a', 'Bastien'), turnAgainst('b', 'Julie')]);
   await settled();
   assert.equal(doc.byId['inbox-open-menu'].hidden, false);

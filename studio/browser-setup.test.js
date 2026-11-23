@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createServer as createTcpServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -95,6 +95,7 @@ test('the suite\'s own server serves a page\'s pictures under /page-art/, as the
   const served = await fetch(`http://127.0.0.1:${port}/page-art/${picture}`);
   assert.equal(served.status, 200);
   assert.equal(served.headers.get('content-type'), 'image/webp');
+  assert.deepEqual(Buffer.from(await served.arrayBuffer()), readFileSync(join(checkout, 'table', 'page-art', picture)));
   assert.equal((await fetch(`http://127.0.0.1:${port}/page-art/missing.webp`)).status, 404);
 });
 
