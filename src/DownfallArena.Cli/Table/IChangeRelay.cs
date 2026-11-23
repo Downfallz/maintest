@@ -22,6 +22,9 @@ internal interface IChangeRelay
     /// <summary>One account's own lists moved: that player's lobbies are told.</summary>
     void Account(AccountId account);
 
+    /// <summary>One account's notices alone moved (#1152): that player's bells are told, as <c>account notices</c>.</summary>
+    void Notices(AccountId account);
+
     /// <summary>Where a seat's page connects to hear its table move, for a while.</summary>
     Task<Uri> SeatAsync(string table, CancellationToken cancellationToken = default);
 

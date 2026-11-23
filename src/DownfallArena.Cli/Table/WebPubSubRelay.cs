@@ -60,6 +60,8 @@ internal sealed class WebPubSubRelay : IChangeRelay
 
     public void Account(AccountId account) => _sends.Post($"a:{account.Value}");
 
+    public void Notices(AccountId account) => _sends.Post($"n:{account.Value}");
+
     public async Task<Uri> SeatAsync(string table, CancellationToken cancellationToken = default) =>
         await _client.GetClientAccessUriAsync(Lifetime, userId: null, roles: null, groups: [TableGroup(table)], cancellationToken);
 
@@ -80,6 +82,10 @@ internal sealed class WebPubSubRelay : IChangeRelay
                 break;
             case 'l':
                 await _client.SendToGroupAsync(LobbyGroup, "lobby", ContentType.TextPlain);
+                break;
+            case 'n':
+                // A page from before this word reads it as "account", its prefix (#1152).
+                await _client.SendToUserAsync(value, "account notices", ContentType.TextPlain);
                 break;
             default:
                 await _client.SendToUserAsync(value, "account", ContentType.TextPlain);

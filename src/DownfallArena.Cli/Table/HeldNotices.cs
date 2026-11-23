@@ -29,19 +29,15 @@ internal sealed class HeldNotices
     /// <summary>
     /// Runs the work, then gives the notices it held, once it has let go of the gate, whether it finished or failed: a
     /// release that fails at its third table has told the players at the first two. A notice that cannot go is a line on
-    /// <paramref name="said" />. Work begun inside a scope still open joins it, and the outer one gives them; work begun
-    /// inside a scope that has closed since (a loop a route started) opens one of its own. Joining is decided when the
-    /// work begins: a notice given after the scope it joined has closed goes at once.
+    /// <paramref name="said" />. Work begun inside another scope holds its notices in a scope of its own all the same, and
+    /// at its end hands them to the outer scope while that one is still open, or gives them itself once it has closed: a
+    /// loop a route started runs on after the route answered, and its notices still wait for its own work (#1178).
     /// </summary>
     public static async Task<T> AfterAsync<T>(Func<Task<T>> work, Action<string> said)
     {
         ArgumentNullException.ThrowIfNull(work);
         ArgumentNullException.ThrowIfNull(said);
-        if (Current.Value is { IsOpen: true })
-        {
-            return await work();
-        }
-
+        var outer = Current.Value;
         var held = new HeldNotices();
         Current.Value = held;
         try
@@ -50,18 +46,11 @@ internal sealed class HeldNotices
         }
         finally
         {
-            Current.Value = null;
-            await GiveAsync(held.Close(), said);
-        }
-    }
-
-    private bool IsOpen
-    {
-        get
-        {
-            lock (_held)
+            Current.Value = outer;
+            var notices = held.Close();
+            if (outer?.HoldAll(notices) != true)
             {
-                return !_closed;
+                await GiveAsync(notices, said);
             }
         }
     }
@@ -92,6 +81,21 @@ internal sealed class HeldNotices
             }
 
             _held.Add((notifier, to, notice));
+            return true;
+        }
+    }
+
+    /// <summary>Takes an inner scope's notices, all of them or none: none once this scope has closed.</summary>
+    private bool HoldAll(List<(AccountNotifier Notifier, AccountId To, Notice Notice)> notices)
+    {
+        lock (_held)
+        {
+            if (_closed)
+            {
+                return false;
+            }
+
+            _held.AddRange(notices);
             return true;
         }
     }

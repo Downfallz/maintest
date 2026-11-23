@@ -297,7 +297,7 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Reading_the_notices_tells_the_player_s_other_pages_and_reading_nothing_new_tells_nobody()
+    public async Task Reading_the_notices_tells_the_player_s_other_bells_only_and_reading_nothing_new_tells_nobody()
     {
         var (api, log) = await KeepingNoticesAsync();
         var changes = new LobbyChanges();
@@ -307,11 +307,12 @@ public sealed class AccountApiTests : IDisposable
         var first = await log.AddAsync(mark, Over("t1"), TestContext.Current.CancellationToken);
 
         await api.HandleAsync("POST", "/api/account/notices/read", $$"""{"upTo":{{first.Id}}}""", Signed(session));
-        var told = changes.VersionOf(mark);
+        var told = changes.NoticesVersionOf(mark);
         await api.HandleAsync("POST", "/api/account/notices/read", $$"""{"upTo":{{first.Id}}}""", Signed(session));
 
         told.ShouldBe(1);
-        changes.VersionOf(mark).ShouldBe(1);
+        changes.NoticesVersionOf(mark).ShouldBe(1);
+        changes.VersionOf(mark).ShouldBe(0, "the account's lists did not move: only its bell reads again (#1152)");
     }
 
     [Theory]
@@ -427,6 +428,26 @@ public sealed class AccountApiTests : IDisposable
         refused.Status.ShouldBe(400);
         Json(refused).GetProperty("error").GetString().ShouldBe("Account.UnknownPushService");
         (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
+    /// <summary>A device kept before the host checked its push service is never called: no push service said anything about it (#1176).</summary>
+    [Fact]
+    public async Task A_test_on_a_device_kept_on_a_push_service_the_host_does_not_know_says_it_is_gone_without_naming_a_push_service()
+    {
+        var (api, devices, _) = await NotifyingAsync();
+        using var sender = new WebPushSender(PushKeys.Generate() with { Subject = "mailto:table@example.org" });
+        api.Notices = new AccountNotices(sender, devices);
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var id = await IdOf(api, session);
+        await devices.AddAsync(id, new PushDevice("https://slow.example/phone", "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A", "AAECAwQFBgcICQoLDA0ODw", default), TestContext.Current.CancellationToken);
+
+        var test = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://slow.example/phone"}""", Signed(session));
+
+        test.Status.ShouldBe(502);
+        var message = Json(test).GetProperty("message").GetString().ShouldNotBeNull();
+        message.ShouldContain("gone", Case.Sensitive, "the pages forget a subscription whose test says gone");
+        message.ShouldNotContain("push service", Case.Insensitive);
+        (await devices.ListAsync(id, TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 
     [Fact]

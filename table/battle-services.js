@@ -98,7 +98,10 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     context.push.subscribed = answers.every(answer => answer.ok);
     if (!context.push.subscribed) {
       if (!held) await made.unsubscribe();
-      context.message = 'The host could not save notifications. Try again.';
+      // A push service the host does not send to stays one: a retry cannot help (#1175).
+      context.message = answers.some(answer => answer.body?.error === 'Lobby.UnknownPushService')
+        ? 'This browser\'s notifications are not supported here.'
+        : 'The host could not save notifications. Try again.';
     }
   }
   async function toggle() {

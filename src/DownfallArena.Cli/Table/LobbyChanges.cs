@@ -20,6 +20,7 @@ internal sealed class LobbyChanges
 {
     private readonly TableChanges _everyone = new();
     private readonly ConcurrentDictionary<AccountId, TableChanges> _accounts = new();
+    private readonly ConcurrentDictionary<AccountId, TableChanges> _notices = new();
 
     // The shape each held table was last read in, kept on the table's own lifetime.
     private readonly ConditionalWeakTable<PlayedTable, StrongBox<Shape?>> _shapes = [];
@@ -29,6 +30,9 @@ internal sealed class LobbyChanges
 
     /// <summary>How many times one account's own lists changed; 0 for one nothing was said of yet.</summary>
     public long VersionOf(AccountId account) => _accounts.TryGetValue(account, out var changes) ? changes.Version : 0;
+
+    /// <summary>How many times one account's notices alone changed; 0 for one nothing was said of yet.</summary>
+    public long NoticesVersionOf(AccountId account) => _notices.TryGetValue(account, out var changes) ? changes.Version : 0;
 
     /// <summary>How often the stream says it is still there, as a table's does (<see cref="TableApi.KeepAlive" />).</summary>
     public TimeSpan KeepAlive { get; init; } = TimeSpan.FromSeconds(20);
@@ -54,6 +58,16 @@ internal sealed class LobbyChanges
             Of(id).Bump();
             Relay?.Account(id);
         }
+    }
+
+    /// <summary>
+    /// One account's notices changed and nothing else of it (#1152): notices marked read on another page. Only its bell
+    /// reads again; a page from before this word reads it as <c>account</c>, its prefix, and reads every list.
+    /// </summary>
+    public void Notices(AccountId account)
+    {
+        _notices.GetOrAdd(account, _ => new TableChanges()).Bump();
+        Relay?.Notices(account);
     }
 
     /// <summary>
@@ -103,22 +117,26 @@ internal sealed class LobbyChanges
 
     /// <summary>
     /// The stream of <c>GET /api/lobby/events</c>: <c>ready</c>, then <c>changed</c> with <c>lobby</c> when the
-    /// public lists moved and <c>account</c> when the signed-in player's own did, and a comment every
+    /// public lists moved, <c>account</c> when the signed-in player's own did, <c>account notices</c> when only their
+    /// notices did, and a comment every
     /// <see cref="KeepAlive" /> while neither does. It ends when the browser goes.
     /// </summary>
     public async Task StreamAsync(Stream stream, AccountId? account, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(stream);
         var mine = account is { } id ? Of(id) : null;
+        var bell = account is { } owner ? _notices.GetOrAdd(owner, _ => new TableChanges()) : null;
         var seenLobby = _everyone.Version;
         var seenMine = mine?.Version ?? 0;
+        var seenBell = bell?.Version ?? 0;
         await WriteAsync(stream, "event: ready\ndata: 0\n\n", cancellationToken);
         while (!cancellationToken.IsCancellationRequested)
         {
             var lobby = _everyone.WaitAsync(seenLobby, cancellationToken);
             var own = mine?.WaitAsync(seenMine, cancellationToken);
+            var notices = bell?.WaitAsync(seenBell, cancellationToken);
             var quiet = Task.Delay(KeepAlive, cancellationToken);
-            var first = own is null ? await Task.WhenAny(lobby, quiet) : await Task.WhenAny(lobby, own, quiet);
+            var first = own is null || notices is null ? await Task.WhenAny(lobby, quiet) : await Task.WhenAny(lobby, own, notices, quiet);
             if (first == quiet)
             {
                 await quiet;
@@ -136,6 +154,12 @@ internal sealed class LobbyChanges
             {
                 seenMine = own.Result;
                 await WriteAsync(stream, $"event: changed\ndata: account {seenMine.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
+            }
+
+            if (notices is { IsCompletedSuccessfully: true } && notices.Result > seenBell)
+            {
+                seenBell = notices.Result;
+                await WriteAsync(stream, $"event: changed\ndata: account notices {seenBell.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
             }
 
             cancellationToken.ThrowIfCancellationRequested();

@@ -29,10 +29,24 @@ public sealed class BlobNoticeCountStore : INoticeCountStore
         return new NoticeCountRead(text is null ? [] : NoticeCountDocuments.Read(text), version);
     }
 
-    public Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Reads the day again to write back what this revision does not know of it (#1151): a write over a version that
+    /// has moved since is refused there, without trying it.
+    /// </summary>
+    public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(counts);
-        return ConditionalBlob.WriteAsync(Blob(day), NoticeCountDocuments.Write(counts), version, cancellationToken);
+        string? before = null;
+        if (version is not null)
+        {
+            (before, var current) = await ConditionalBlob.ReadAsync(Blob(day), cancellationToken);
+            if (!string.Equals(current, version, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return await ConditionalBlob.WriteAsync(Blob(day), NoticeCountDocuments.Write(counts, before), version, cancellationToken);
     }
 
     public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)

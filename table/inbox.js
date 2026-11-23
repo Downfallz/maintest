@@ -1,5 +1,5 @@
 import { accountRequest } from './account.js';
-import { accountMoved, backoff, onLobbyChange, signedInChanged } from './changes.js';
+import { accountMoved, backoff, noticesMoved, onLobbyChange, signedInChanged } from './changes.js';
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { sinceVisitLine, turnOf } from './players.js';
 import { sentAgo } from './battle-reactions.js';
@@ -106,7 +106,7 @@ export function bellLabel(waiting, unread = 0) {
  */
 export function mountInbox(doc, { storage = null, request = accountRequest, win = globalThis, changes = onLobbyChange, reopen = signedInChanged, fresh: freshFor = 5000, onChange = () => {} } = {}) {
   const el = id => doc.getElementById(id);
-  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, readThrough = 0, issued = 0, applied = 0, fed = 0, busy = false, drawn = '';
+  let account = null, mine = [], invitations = [], friends = null, news = [], keepsNews = true, marking = false, refused = null, readThrough = 0, issued = 0, applied = 0, newsIssued = 0, newsApplied = 0, fed = 0, busy = false, drawn = '';
   // The news unread when the window showed it: marked new while the window stays open, though the host has it read.
   const shownNew = new Set();
   const dialog = () => doc.getElementById('inbox-dialog');
@@ -245,7 +245,7 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
   }
   async function refresh(force = false) {
     if (!account) { mine = []; invitations = []; friends = null; render(); return; }
-    const reading = account.id, fresh = !force && Date.now() - fed < freshFor, order = ++issued;
+    const reading = account.id, fresh = !force && Date.now() - fed < freshFor, order = ++issued, newsOrder = ++newsIssued;
     try {
       const [games, list, kept] = await Promise.all([fresh ? null : request('/api/lobby/mine'), request('/api/friends'), readNews()]);
       // A read that answers after a later one was drawn is older than what the bell shows: dropped.
@@ -254,7 +254,11 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
       if (games) { mine = games.tables ?? []; invitations = games.invitations ?? []; }
       friends = list;
       // A list read before a mark the host confirmed may answer after it: what was marked stays read.
-      if (Array.isArray(kept)) news = kept.map(entry => (entry?.id <= readThrough ? { ...entry, read: true } : entry));
+      // News a later read of the news alone already drew is older than it: kept as drawn.
+      if (Array.isArray(kept) && newsOrder > newsApplied) {
+        newsApplied = newsOrder;
+        news = kept.map(entry => (entry?.id <= readThrough ? { ...entry, read: true } : entry));
+      }
       render();
       // The lists answered and the news did not: read again shortly, as when the lists fail.
       if (kept?.failed) retry.failed(); else retry.answered();
@@ -263,6 +267,20 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
       // will not be told twice.
       if (account?.id === reading) retry.failed();
     }
+  }
+  // Notices marked read on another of the player's pages: only the news is read again (#1152).
+  async function refreshNews() {
+    if (!account) return;
+    // Its own order: a read of the lists issued before it still draws its lists, though not its older news.
+    const reading = account.id, order = ++newsIssued;
+    const kept = await readNews();
+    if (account?.id !== reading || order < newsApplied || !Array.isArray(kept)) {
+      if (kept?.failed && account?.id === reading) retry.failed();
+      return;
+    }
+    newsApplied = order;
+    news = kept.map(entry => (entry?.id <= readThrough ? { ...entry, read: true } : entry));
+    render();
   }
   const retry = backoff(() => void refresh(true), { schedule: (run, delay) => win.setTimeout(run, delay), cancel: id => win.clearTimeout(id) });
   for (const opener of [el('inbox-open'), doc.getElementById('inbox-open-menu')].filter(Boolean)) opener.addEventListener('click', () => {
@@ -277,7 +295,11 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
   // listened to while somebody is signed in: a page nobody signed in to has no bell to keep current.
   let unlisten = null;
   const listen = on => {
-    if (on && !unlisten) unlisten = changes(event => { if (!doc.hidden && accountMoved(event)) void refresh(); });
+    if (on && !unlisten) unlisten = changes(event => {
+      if (doc.hidden) return;
+      if (accountMoved(event)) void refresh();
+      else if (noticesMoved(event)) void refreshNews();
+    });
     if (!on && unlisten) { unlisten(); unlisten = null; }
   };
   return {

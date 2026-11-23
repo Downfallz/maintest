@@ -173,3 +173,48 @@ test('two turns waiting show 2 on the menu\'s entry and its button, and the butt
   }
   assert.equal(doc.byId['menu-inbox-said'].textContent, 'Notifications · 2 waiting');
 });
+
+test('notices marked read on another page read the bell\'s news again, and not the player\'s lists (#1152)', async () => {
+  const doc = inboxDocument();
+  const asked = [];
+  const request = async path => {
+    asked.push(path);
+    if (path === '/api/lobby/mine') return { tables: [], invitations: [] };
+    if (path === '/api/friends') return { friends: [], incoming: [], outgoing: [] };
+    if (path === '/api/account/notices') return { notices: [] };
+    throw new Error(`Unexpected ${path}`);
+  };
+  let listener = null;
+  const win = { setTimeout: () => 0, clearTimeout: () => {}, navigator: {}, location: { assign() {} } };
+  const inbox = mountInbox(doc, { request, win, changes: heard => { listener = heard; return () => {}; }, reopen: () => {} });
+  inbox.setAccount({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  asked.length = 0;
+  listener({ event: 'changed', data: 'account notices 2' });
+  await settled();
+  assert.deepEqual(asked, ['/api/account/notices']);
+  asked.length = 0;
+  listener({ event: 'changed', data: 'account 3' });
+  await settled();
+  assert.deepEqual(asked.toSorted(), ['/api/account/notices', '/api/friends', '/api/lobby/mine']);
+});
+
+test('a read of the lists that answers after a read of the news alone still draws its lists (#1152)', async () => {
+  const doc = inboxDocument();
+  let release = null, listener = null;
+  const request = async path => {
+    if (path === '/api/lobby/mine') { await new Promise(resolve => { release = resolve; }); return { tables: [turnAgainst('a', 'Bastien')], invitations: [] }; }
+    if (path === '/api/friends') return { friends: [], incoming: [], outgoing: [] };
+    if (path === '/api/account/notices') return { notices: [] };
+    throw new Error(`Unexpected ${path}`);
+  };
+  const win = { setTimeout: () => 0, clearTimeout: () => {}, navigator: {}, location: { assign() {} } };
+  const inbox = mountInbox(doc, { request, win, changes: heard => { listener = heard; return () => {}; }, reopen: () => {} });
+  inbox.setAccount({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  listener({ event: 'changed', data: 'account notices 2' });
+  await settled();
+  release();
+  await settled();
+  assert.equal(doc.byId['menu-inbox-said'].textContent, 'Notifications · 1 waiting');
+});

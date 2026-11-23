@@ -109,8 +109,9 @@ public sealed class RelayTests : IDisposable
 
         changes.Everyone();
         changes.Account(Mark);
+        changes.Notices(Mark);
 
-        relay.Said.ShouldBe(["lobby", $"account {Mark.Value}"]);
+        relay.Said.ShouldBe(["lobby", $"account {Mark.Value}", $"account notices {Mark.Value}"]);
     }
 
     [Fact]

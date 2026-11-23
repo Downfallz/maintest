@@ -783,7 +783,8 @@ internal sealed class AccountApi
             var marked = await log.MarkReadAsync(who.Account.Id, upTo);
             if (marked > 0)
             {
-                Changes?.Account(who.Account.Id);
+                // Only the bell shows what was read: the account's lists stay as they are (#1152).
+                Changes?.Notices(who.Account.Id);
             }
 
             return Answer(new { marked }, who.Renewed);

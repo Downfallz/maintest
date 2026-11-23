@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DownfallArena.Application.Work;
 
 namespace DownfallArena.Infrastructure.Work;
@@ -8,6 +9,8 @@ namespace DownfallArena.Infrastructure.Work;
 /// The shape a notice count store writes, the same in a directory and in a blob container (N6): one document a UTC
 /// day, <c>&lt;yyyy-MM-dd&gt;.json</c>, holding its counts a kind each. A document that does not parse, or a count
 /// without its kind, reads as nothing counted, so the next addition writes over it instead of failing on it for good.
+/// A field this revision does not know, on the day or on a kind, is written back as it was read: during a deploy the
+/// revision before runs beside the next, and would otherwise wipe a count the next one added (#1151).
 /// </summary>
 internal static class NoticeCountDocuments
 {
@@ -28,27 +31,59 @@ internal static class NoticeCountDocuments
             : null;
     }
 
-    public static string Write(IReadOnlyList<NoticeCount> counts) =>
-        JsonSerializer.Serialize(new CountsRecord([.. counts.Select(count => new CountRecord(count.Kind, count.Sent, count.Refused, count.Gone))]), Web);
+    /// <summary>
+    /// The day's counts as a document, keeping what <paramref name="before" />, the document they were read from, holds
+    /// that this revision does not know: the fields of the day, those of each kind, and a kind that counts only them.
+    /// </summary>
+    public static string Write(IReadOnlyList<NoticeCount> counts, string? before = null)
+    {
+        ArgumentNullException.ThrowIfNull(counts);
+        var kept = Parse(before);
+        var unknown = (kept?.Kinds ?? [])
+            .Where(kind => !string.IsNullOrWhiteSpace(kind?.Kind) && kind.Unknown is { Count: > 0 })
+            .GroupBy(kind => kind!.Kind!, StringComparer.Ordinal)
+            .ToDictionary(kind => kind.Key, kind => kind.First()!.Unknown, StringComparer.Ordinal);
+        var written = counts.Select(count => new CountRecord(count.Kind, count.Sent, count.Refused, count.Gone) { Unknown = unknown.GetValueOrDefault(count.Kind) }).ToList();
+        written.AddRange(unknown.Where(kind => !counts.Any(count => string.Equals(count.Kind, kind.Key, StringComparison.Ordinal)))
+            .Select(kind => new CountRecord(kind.Key, 0, 0, 0) { Unknown = kind.Value }));
+        return JsonSerializer.Serialize(new CountsRecord([.. written.OrderBy(count => count.Kind, StringComparer.Ordinal)]) { Unknown = kept?.Unknown }, Web);
+    }
 
     public static IReadOnlyList<NoticeCount> Read(string json)
     {
-        CountsRecord? record;
+        return [.. (Parse(json)?.Kinds ?? [])
+            .Where(count => !string.IsNullOrWhiteSpace(count?.Kind))
+            .Select(count => new NoticeCount(count!.Kind!, Math.Max(0, count.Sent), Math.Max(0, count.Refused), Math.Max(0, count.Gone)))
+            // A kind that counts only what this revision does not know is kept on the next write, not read as zeros.
+            .Where(count => !count.IsEmpty)];
+    }
+
+    private static CountsRecord? Parse(string? json)
+    {
+        if (json is null)
+        {
+            return null;
+        }
+
         try
         {
-            record = JsonSerializer.Deserialize<CountsRecord>(json, Web);
+            return JsonSerializer.Deserialize<CountsRecord>(json, Web);
         }
         catch (JsonException)
         {
-            return [];
+            return null;
         }
-
-        return [.. (record?.Kinds ?? [])
-            .Where(count => !string.IsNullOrWhiteSpace(count?.Kind))
-            .Select(count => new NoticeCount(count!.Kind!, Math.Max(0, count.Sent), Math.Max(0, count.Refused), Math.Max(0, count.Gone)))];
     }
 
-    private sealed record CountsRecord(IReadOnlyList<CountRecord?>? Kinds);
+    private sealed record CountsRecord(IReadOnlyList<CountRecord?>? Kinds)
+    {
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? Unknown { get; init; }
+    }
 
-    private sealed record CountRecord(string? Kind, long Sent, long Refused, long Gone);
+    private sealed record CountRecord(string? Kind, long Sent, long Refused, long Gone)
+    {
+        [JsonExtensionData]
+        public Dictionary<string, JsonElement>? Unknown { get; init; }
+    }
 }

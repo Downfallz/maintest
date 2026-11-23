@@ -643,7 +643,7 @@ browser as a device.
 With accounts on, push keys or not, the news to an account (a friend accepted, the invited friend took the seat,
 the other player left, a match ended) is kept in its notice log under `notices/`, the 100 latest of the last 90
 days, forgotten with the account. `GET /api/account/notices` lists it, newest first, with the unread count.
-`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201). When it marked any, the account's lobby stream says its lists changed, and the account's other pages read the bell again.
+`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201). When it marked any, the account's lobby stream and relay say `account notices`, and the account's other pages read the bell's news again, not their lists (#1152).
 
 #### Accounts
 

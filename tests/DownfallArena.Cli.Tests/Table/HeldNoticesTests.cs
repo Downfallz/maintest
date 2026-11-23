@@ -69,4 +69,65 @@ public sealed class HeldNoticesTests
         keptWhileWorking.ShouldBe(0, "held until the work let go of the gate");
         (await _log.ListAsync(to, Cancel)).ShouldHaveSingleItem();
     }
+
+    [Fact]
+    public async Task Work_that_joined_a_scope_which_closed_while_it_ran_still_holds_its_notices_until_it_ends()
+    {
+        var notifier = new AccountNotifier(_log, push: null);
+        var to = AccountId.New();
+        var joined = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var outerClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<int>? inner = null;
+        var keptWhileWorking = -1;
+
+        await HeldNotices.AfterAsync(
+            () =>
+            {
+                // Begun while the outer scope is open, so it joins it; the outer scope then closes while it runs (#1178).
+                inner = Task.Run(() => HeldNotices.AfterAsync(
+                    async () =>
+                    {
+                        joined.SetResult();
+                        await outerClosed.Task;
+                        await HeldNotices.NotifyAsync(notifier, to, Voided);
+                        keptWhileWorking = (await _log.ListAsync(to, Cancel)).Count;
+                        return 0;
+                    },
+                    _said.Add), Cancel);
+                return joined.Task.ContinueWith(_ => 0, Cancel, TaskContinuationOptions.None, TaskScheduler.Default);
+            },
+            _said.Add);
+        outerClosed.SetResult();
+        await inner!;
+
+        keptWhileWorking.ShouldBe(0, "held until the inner work let go of the gate, though the scope it began in had closed");
+        (await _log.ListAsync(to, Cancel)).ShouldHaveSingleItem();
+        _said.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Nested_work_that_ends_while_the_outer_scope_is_open_hands_its_notices_to_the_outer_scope()
+    {
+        var notifier = new AccountNotifier(_log, push: null);
+        var to = AccountId.New();
+        var keptAfterInner = -1;
+
+        await HeldNotices.AfterAsync(
+            async () =>
+            {
+                await HeldNotices.AfterAsync(
+                    async () =>
+                    {
+                        await HeldNotices.NotifyAsync(notifier, to, Voided);
+                        return 0;
+                    },
+                    _said.Add);
+                keptAfterInner = (await _log.ListAsync(to, Cancel)).Count;
+                return 0;
+            },
+            _said.Add);
+
+        keptAfterInner.ShouldBe(0, "the outer work still holds the gate");
+        (await _log.ListAsync(to, Cancel)).ShouldHaveSingleItem();
+    }
 }
