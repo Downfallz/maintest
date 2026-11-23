@@ -64,7 +64,7 @@ test('the switch says it is this device\'s, for every game, and where what pops 
 });
 test('the offer of pop-ups reads the seat\'s switch once its worker is read, and Turn on is the switch turned on', async () => {
   const fresh = createBattleServices({ onChange() {}, scope: {} });
-  assert.deepEqual(fresh.offerState(), { ready: false }, 'no seat: nothing to offer');
+  assert.deepEqual(fresh.offerState(), { ready: false, where: 'in Match settings' }, 'no seat: nothing to offer');
   const h = harness(); await tick();
   assert.deepEqual(h.control.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false, where: 'in Match settings' }, 'the switch Turn on turns on is this page\'s own (#1160)');
   const after = await h.control.turnOn();
@@ -81,12 +81,13 @@ test('the offer sees both seats here, and a browser that cannot push but heard t
   assert.equal(unable.control.offerState().keyed, true);
   const offline = harness(); await tick(); offline.control.setOnline(false);
   assert.equal(offline.control.offerState().ready, false);
+  assert.equal(offline.control.offerState().where, 'in Match settings', 'a Turn on that ends offline still points to this page\'s switch (#1160)');
 });
 test('a practice seat shows no switch and makes no offer: no lobby route answers its token', async () => {
   const h = harness(); await tick();
   h.control.receive({ recording: true, over: false, practice: { tutorial: { order: 1 } } });
   assert.equal(h.control.model().notice.hidden, true);
-  assert.deepEqual(h.control.offerState(), { ready: false });
+  assert.deepEqual(h.control.offerState(), { ready: false, where: 'in Match settings' });
 });
 test('a subscription the browser already held is kept when the host refuses a seat', async () => {
   const h = harness({ held: true });

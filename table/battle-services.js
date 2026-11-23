@@ -2,6 +2,8 @@ import { keyBytes, sameKey, noticeButton, pushSupported, showOwnNotice, testRead
 
 /** Where the rest of the notifications is chosen, said under the match settings' switch. */
 export const WHERE = 'This switch is this device\'s, for every game. Signed in, Settings, Notifications, in the menu, chooses what pops up. The bell keeps everything.';
+/** Where the offer's Turn on points afterwards: this page's own switch, which Settings does not show with accounts off (#1160). */
+export const MATCH_WHERE = 'in Match settings';
 
 // Optional notices use the existing seat endpoints, never the decision/acknowledgement path.
 // Each asynchronous continuation belongs to one selected seat and can only update that seat's UI.
@@ -141,10 +143,9 @@ export function createBattleServices({ onChange, scope = globalThis }) {
    */
   function offerState() {
     const push = current?.push;
-    if (!push || !online || view?.replay || push.practice) return { ready: false };
+    if (!push || !online || view?.replay || push.practice) return { ready: false, where: MATCH_WHERE };
     return { ready: !push.busy && (Boolean(current.registration) || (push.keyed && !push.supported)),
-      // The offer's Turn on is this page's own switch, which Settings does not show with accounts off (#1160).
-      keyed: push.keyed, subscribed: push.subscribed, permission: push.permission, hotseat: push.hotseat, where: 'in Match settings' };
+      keyed: push.keyed, subscribed: push.subscribed, permission: push.permission, hotseat: push.hotseat, where: MATCH_WHERE };
   }
   /** The offer's Turn on: the match settings' switch turned on, through the seats it plays; the state it ends in. */
   async function turnOn() {
