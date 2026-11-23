@@ -39,10 +39,19 @@ export async function fitsBattlefield(page) {
 }
 
 // A window measured while it enters (the motion kit's rise, ADR 0197) can read a fraction of a pixel short of 44
-// (#1114). This waits until every animation of the node and of what it holds has ended, an endless one aside. It
-// reads the page's animations, which run on real time: it waits as long under a held page clock.
-export async function settled(locator) {
-  await locator.evaluate(node => Promise.all(node.getAnimations({ subtree: true })
-    .filter(one => Number.isFinite(one.effect?.getComputedTiming().endTime))
-    .map(one => one.finished.catch(() => {}))));
+// (#1114). This waits until every animation of the node and of what it holds has ended, an endless one aside. The
+// animations run on real time, a held page clock or not, so the bound is kept here, not in the page: one that has
+// not ended within `timeout` (a paused one never does) fails the wait by its name.
+export async function settled(locator, { timeout = 5000 } = {}) {
+  let timer;
+  const ended = await Promise.race([
+    locator.evaluate(node => Promise.all(node.getAnimations({ subtree: true })
+      .filter(one => Number.isFinite(one.effect?.getComputedTiming().endTime)).map(one => one.finished.catch(() => {}))).then(() => true)),
+    new Promise(done => { timer = setTimeout(() => done(false), timeout); }),
+  ]).finally(() => clearTimeout(timer));
+  if (ended) return;
+  const running = await locator.evaluate(node => node.getAnimations({ subtree: true })
+    .filter(one => Number.isFinite(one.effect?.getComputedTiming().endTime) && one.playState !== 'finished')
+    .map(one => one.transitionProperty ?? one.animationName ?? one.id));
+  expect(running, 'animations still running').toEqual([]);
 }

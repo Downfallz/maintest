@@ -462,8 +462,9 @@ test('local hosts still resume games and reconnect automatically without a refre
 });
 
 // A head's close sits in its top end corner, apart from the words, and stays a 44 px target. Read once the window
-// has entered, the three boxes in one attempt: a box read while its window is still drawn comes back null on a
-// loaded runner (#1074), and is read again with the others.
+// has entered, the three boxes in one attempt. On a loaded runner one of them once came back null, the element then
+// without a box (#1074; not reproduced since, so its cause is not known): the attempt is read again, and a box that
+// stays null fails by name.
 async function closeInTheFarCorner(page, heading, close) {
   await settled(heading.locator('xpath=ancestor::dialog[1]'));
   await expect(async () => {

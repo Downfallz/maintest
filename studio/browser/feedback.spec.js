@@ -158,21 +158,24 @@ test('the result offers the entry on a quiet line of its own', async ({ page }, 
   // The board arriving late may draw over a result opened by hand: it is opened again until it stays, and read
   // and pressed in the same attempt, so that no read falls between the check and the click (#1141). The first
   // attempt meets a late board after its check, so every run takes that path.
-  let late = true;
+  let late = 'to send';
   await expect(async () => {
     await page.evaluate(() => { const result = document.getElementById('match-dialog'); if (!result.open) result.showModal(); });
     await expect(entry).toBeVisible({ timeout: 1000 });
-    if (late) {
-      late = false;
+    if (late === 'to send') {
+      late = 'sent';
       await page.evaluate(() => window.notifyBattle());
       await expect(page.locator('#match-dialog')).not.toHaveAttribute('open');
+      late = 'met';
     }
     const [box, replay] = await Promise.all([entry.boundingBox(), page.locator('#match-replay').boundingBox()]);
+    expect(box && replay, 'the entry and Replay are drawn').toBeTruthy();
     expect(box.height).toBeGreaterThanOrEqual(44);
     expect(box.y).toBeGreaterThan(replay.y);
     await page.screenshot({ path: info.outputPath('feedback-result.png') });
     await entry.click({ timeout: 1000 });
   }).toPass();
+  expect(late, 'the late board closed the result once').toBe('met');
   await expect(page.locator('#feedback-dialog')).toBeVisible();
 });
 

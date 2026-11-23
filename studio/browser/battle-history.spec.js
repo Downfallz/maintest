@@ -400,15 +400,16 @@ test('every control of the journal is at least 44 px, and its footer stays in re
   await page.addInitScript(() => localStorage.removeItem('downfall.battle.history-view.v1'));
   const h = await mount(page, [{ sequence: 9, event: { kind: 'PurchasesRevealed', roundId: 2, choices: [{ creature: 1, tier: 'root' }, { creature: 4, tier: 'root' }] } },
     entry(10)]);
-  // A loaded runner measures the window while it still rises, a fraction of a pixel short of 44 (#1114): its
-  // entrance is slowed here so that every run measures during the rise unless it waits for its end.
+  // A loaded runner measures the window while it still rises (#1114): under a fractional translate a 44 px control
+  // can read 43.99. The entrance is slowed here so that a run that does not wait for its end always fails.
   await page.addStyleTag({ content: ':root { --motion-normal: 1500ms; }' });
   await page.locator('#history-open').click();
   await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
   await expect(page.locator('.summary-mutations li')).toHaveCount(2);
   // A measure taken while the window still moves is no measure: what moves is named with what is small.
   const small = () => page.evaluate(() => [
-    ...document.getElementById('history-dialog').getAnimations({ subtree: true }).filter(one => one.playState === 'running')
+    ...document.getElementById('history-dialog').getAnimations({ subtree: true })
+      .filter(one => one.playState === 'running' && Number.isFinite(one.effect?.getComputedTiming().endTime))
       .map(one => `moving ${one.transitionProperty ?? one.animationName}`),
     ...[...document.querySelectorAll('#history-dialog :is(button, a[href], select, input, summary)')]
       .filter(one => one.checkVisibility({ visibilityProperty: true }) && !one.closest('[hidden]'))

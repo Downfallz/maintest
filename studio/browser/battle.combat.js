@@ -131,7 +131,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
           if (cast === undefined) return 'not resolved';
           return page.evaluate(sequence => {
             if (window.battleFrames.some(frame => frame.stage === 'impact' && frame.sequence === sequence)) return 'played';
-            const seen = Math.max(-1, ...JSON.parse(localStorage.getItem('downfall.battle.seen.v1') ?? '[]').map(one => one.sequence));
+            const seen = JSON.parse(localStorage.getItem('downfall.battle.seen.v1') ?? '[]').find(one => one.game?.endsWith(':player1'))?.sequence ?? -1;
             return seen >= sequence && document.getElementById('battle').dataset.reading === 'false' ? 'settled' : 'not shown';
           }, cast);
         }, { timeout: 10000 }).toMatch(/^(played|settled)$/);
@@ -144,6 +144,11 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     const { displayed, frames } = await page.evaluate(() => ({ displayed: window.battleFrames, frames: window.hostFrames }));
     expect(displayed.some(frame => frame.stage === 'windup')).toBe(true);
     expect(displayed.some(frame => frame.stage === 'impact')).toBe(true);
+    // One of the player's own casts reached its impact on screen: the first may be settled unplayed (#1075), not all
+    // three, and the opponent's impacts alone would pass the line above.
+    const allies = new Set((await seat.latest()).board.allies.map(one => one.id)), actions = await seat.actions();
+    expect(displayed.some(frame => frame.stage === 'impact' && allies.has(actions.get(frame.sequence)?.event.resolution?.action?.actor)),
+      'one of the player\'s casts played to its impact').toBe(true);
     for (const shown of displayed) {
       const frame = frames[shown.sequence]; expect(frame).toBeTruthy();
       for (const one of frame[shown.stage === 'windup' ? 'before' : 'after']) {
