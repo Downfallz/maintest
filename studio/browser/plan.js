@@ -134,6 +134,9 @@ const RULES = [
   { matches: (path) => path === 'scripts/ux/contrast.mjs', calls: () => ({ journeys: (spec) => spec === 'picture-kit.spec.js' || spec === 'rules.spec.js', realEngine: true }) },
   { matches: (path) => path === 'scripts/ux/measures.mjs', calls: () => ({ journeys: (spec) => spec === 'rules.spec.js', realEngine: true }) },
   { matches: (path) => path.startsWith('scripts/ux/'), calls: () => ({ realEngine: true }) },
+  // The promotion's still is shot on the real engine by its own journey (table.promo.js), from the shots it reads
+  // and the scenarios directly under scenarios/ that a shot plays.
+  { matches: (path) => path.startsWith('scripts/promo/') || path.startsWith('promo/shots/') || /^scenarios\/[^/]+\.json$/.test(path), calls: () => ({ realEngine: true }) },
   { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
   { matches: (path) => /^(table|studio)\/.*\.(test\.js|fixture\.json)$/.test(path), calls: () => ({}) },
   { matches: (path) => path.startsWith('table/'), calls: () => ({ journeys: isTableSpec, realEngine: true, release: true }) },
