@@ -192,7 +192,7 @@ test('the featured space waits for both the games and the lessons, then fills in
   assert.equal(readArrival(session, 'g'), 'Round 1 against Rook');
 });
 
-test('with nothing to resume or learn, the featured action plays a bot, and Multiplayer is the quiet one under it', () => {
+test('with nothing to resume or learn, Multiplayer is the primary one, first, and Play a bot the quiet one beside it', () => {
   const doc = page(), asked = [];
   const featured = mountFeatured(doc, { enter: () => {}, openCreate: one => asked.push(one), go: () => {}, session: null, ambience: () => {} });
 
@@ -201,6 +201,9 @@ test('with nothing to resume or learn, the featured action plays a bot, and Mult
   assert.equal(doc.ids['featured-action'].textContent, 'Play a bot →');
   assert.equal(doc.ids['featured-status'].dataset.empty, 'true', 'no status to show');
   assert.equal(doc.ids['new-table'].textContent, 'Multiplayer');
+  assert.ok(doc.ids['new-table'].classList.contains('primary'));
+  assert.ok(doc.ids['featured-action'].classList.contains('secondary'));
+  assert.ok(!doc.ids['featured-action'].classList.contains('primary'));
   doc.ids['featured-action'].listeners.click();
   assert.deepEqual(asked, [{ opponent: 'bot' }]);
 });
@@ -215,6 +218,8 @@ test('a lesson featured after the duel was asked for stands on the eclipse, and 
   assert.match(doc.ids['featured-art'].children[0].children[1].attributes.src, /home-ground-eclipse-/);
   featured.setGames([game('g', { round: 2 })]);
   assert.equal(doc.ids['new-table'].textContent, '＋ New battle');
+  assert.ok(doc.ids['featured-action'].classList.contains('primary'), 'the game on show is the primary one again');
+  assert.ok(doc.ids['new-table'].classList.contains('secondary'));
 });
 
 test('the Great Rupture is a picture whose landscape source is its own wide composition, and the duel stays a bare image', () => {

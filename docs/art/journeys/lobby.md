@@ -9,8 +9,8 @@ sheets.
 The returning player's first screen now shows the Deathstalker and Ethereal duel in the mist, edge to edge on a
 phone. The two buttons sit over the dark foreground, at the foot of the space; links to Your games and Open seats
 sit below them. With nothing to resume or learn, the eyebrow is `NEW BATTLE · BETA`, the title "Choose your
-opponent" and there is no detail: **Play a bot →** opens the Create window on Solo, and Multiplayer, the quiet
-button, opens it on Multiplayer. The same duel stays behind a game's rounds 1 to 5; from round 6 the Great Rupture
+opponent" and there is no detail: **Multiplayer**, filled and first, opens the Create window on Multiplayer, and
+Play a bot →, the quiet button beside it, opens it on Solo. The same duel stays behind a game's rounds 1 to 5; from round 6 the Great Rupture
 takes over, on either player's turn ([the replacement plan](../scene-replacement-plan.md#featured-lobby-painting)),
 and a lesson stands on the eclipse. The text is anchored to the foot of the space, so a line that
 appears (a turn's status) moves the title up and never the buttons. The duel is the home's largest paint, sent at
@@ -74,7 +74,7 @@ What holds for every screen of the journey:
   2. a game of theirs that waits on someone else: the other player's turn, or a seat not yet taken;
   3. a lesson to continue: the next lesson not done, unless it and every lesson after it were skipped;
   4. a new battle: "Your next battle.", "A bot answers at once. Or challenge a friend, or take an open seat.", and
-     **Play a bot →** filled, which opens the Create window on Solo (the quickest first game).
+     **Multiplayer** filled and first, which opens the Create window on Multiplayer; Play a bot →, beside it, opens it on Solo.
 
   A featured game stays featured while it is eligible at its rank. Nothing replaces it while its action has the
   focus or a finger is on it (from `pointerdown` until `pointerup` or `pointercancel`): the change waits for the blur
@@ -197,7 +197,7 @@ the first screen.
   but unseen, the eclipse ground asked for: before the first read nothing says which action is the player's, and a
   wrong one that changes under a finger is worse than none. The lists say "Finding your games…"; the footer waits.
 - **Empty**: this screen is the home's empty state. Rank 4, a player with no game and no lesson to continue, shows
-  the ground and the base creature, "Your next battle." and Play a bot → filled; the walk films it nowhere in this
+  the ground and the base creature, "Your next battle." and Multiplayer filled, first; the walk films it nowhere in this
   journey, and the lessons' `home-after-the-lessons` shows it (four lessons done, no game).
 - **Loaded**: the featured lesson as under **Words**, the picture faded in once it has arrived.
 - **Waiting**: after Play →: `Opening…`, `aria-busy`, until the battle page replaces the home.
