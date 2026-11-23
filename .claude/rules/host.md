@@ -90,8 +90,9 @@ paths:
 - A field added to a route's answer gets one test through the route, not only the page's mapper, whose fixture
   writes the field by hand (#812, #1017).
 - A service that sets a field in a route's answer is a required constructor parameter, read from the host's
-  services (`GetRequiredService`); a test builds the API from those services. An optional one (`= null`) lets the
-  host drop it with no compile error and no red test, and production answers the field `null` (#812, #991).
+  services (`GetRequiredService`); a test builds the API from those services. An optional parameter (`= null`)
+  lets the host leave the service out with no compile error and no red test, and production answers the field
+  `null` (#812, #991).
 - A second reader of a seat's feed applies the seat view's two limits, `FeedStart` and `session.Journaled`
   (`TableApi.SinceVisitAsync`), or it counts entries the page never shows (#724).
 - Storage tests need Azurite; without it they are skipped. Report them as skipped.

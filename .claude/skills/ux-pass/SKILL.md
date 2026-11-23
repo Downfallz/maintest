@@ -96,7 +96,8 @@ dotnet build && dotnet run --project tools/DownfallArena.DataBuilder -- data dat
   change. A brief does not carry a pattern nobody wrote down.
 - The identity is settled (ADR 0158): a pass adds no shade and no face. A value a brief writes as `*Kit*:` is
   added by the pass that needs it, as a token in `docs/art/branding.css` named in ADR 0197's vocabulary
-  (`--motion-<name>`, a duration or a curve), then `node scripts/sync-branding.mjs`; never as a number in a
+  (`--motion-<name>`, a duration or a curve), with its name in the lists of `table/motion.test.js` and of
+  ADR 0197, then `node scripts/sync-branding.mjs`; never as a number in a
   page's sheet (#957). A picture the kit lacks is asked of the owner.
 - Nothing here changes a rule, who may play, what a lesson teaches or what the host sends. A screen that would
   need one stops the pass: say which plan it amends, and ask.

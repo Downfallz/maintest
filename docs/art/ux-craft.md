@@ -170,14 +170,15 @@ These come from decisions already taken. No pattern below is an exception to the
   paper the page links.
 - **Pages**: the hint is a line beside the control it is about, shown when the stream says the player has not
   acted, and removed at the next action.
-- **Cost**: a line of text. What "stalled" means is read from the host's stream and the player's own gesture,
-  never on a clock (rule 2): the view still asks the same question (`waitingAsked` unchanged) and the player
+- **Cost**: a line of text. A stall is read from the host's stream and the player's own gesture, never from a
+  clock (rule 2): the view asks the same question as before (`waitingAsked` unchanged), and the player has
   closed that question's sheet with nothing sent. A tap on the field that selects nothing is not a stall. A hint
   after some seconds idle would need this entry and ADR 0197 to change first; the owner chose against it (UX8).
 - **Less motion and screen reader**: the hint fades in without travel. It is in a polite live region, said once.
-- **Here**: the lessons' coach shows it (`coachHint` in `table/battle-tutorial.js`, UX8): the pointed control's
-  words, until another question is asked or the choice is sent ([the lessons' brief](journeys/lessons.md)). The study's games were two Flash puzzles in a browser
-  and one desktop program, none a tactics game on a phone: the direction is borrowed, not the number.
+- **Here**: the lessons' coach shows it (UX8). `battle/src/tutorial.ts` reads the stall (`turnedAway`) and
+  `coachHint` in `table/battle-tutorial.js` writes the words: the pointed control's, until another question is
+  asked or the choice is sent ([the lessons' brief](journeys/lessons.md)).
+  The study's games were two Flash puzzles in a browser and one desktop program, none a tactics game on a phone: the direction is borrowed, not the number.
 
 ### A tutorial where trying does not teach
 
@@ -909,9 +910,9 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Less motion and screen reader**: the suite runs the journeys once more under `reducedMotion: 'reduce'`.
 - **Here**: the suite holds Playwright alone. The plan's walk ran axe by hand over 14 screens: two rules fail,
   the round's button whose name differs from its label (`#recap-open`) and a rulebook table that scrolls and
-  cannot be focused at 320 px. axe's `target-size` rule carries the tags `wcag22aa` and `wcag258` and is off by
-  default: a scan turns it on by naming one of its tags in `runOnly`, which `scripts/ux/measures.mjs` does with
-  `wcag22aa`. Read in the axe-core 4.14.1 package the suite pins (`getRules()` and `ruleShouldRun`) on
+  cannot be focused at 320 px. axe's `target-size` rule carries the tags `wcag22aa` and `wcag258`, among others, and
+  is off by default: a scan turns it on by naming one of its tags in `runOnly`, which `scripts/ux/measures.mjs` does with
+  `wcag22aa`. This was read in the axe-core 4.14.1 package the suite pins (`getRules()` and `ruleShouldRun`) on
   2026-11-23. UX2 measures, UX13 gates.
 
 ### What stays for a person

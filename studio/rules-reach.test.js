@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -46,7 +46,7 @@ const LESSONS = [
     paths: [
       'src/DownfallArena.Cli/Table/TableApi.cs',
       'src/DownfallArena.Application/Catalogue/CatalogueProjection.cs',
-      'src/DownfallArena.Infrastructure/Content/SpellVisual.cs',
+      'src/DownfallArena.Infrastructure/Resources/MutationArt.cs',
       'tests/DownfallArena.Application.Tests/Catalogue/CatalogueProjectionTests.cs',
     ],
   },
@@ -58,12 +58,12 @@ const LESSONS = [
   {
     issue: '#979, a changed visible string is grepped in the real-engine journeys and the walk',
     words: /old text in every suite: `studio\/browser\/`.*?`scripts\/ux\/`/,
-    paths: ['table/lobby-tutorials.js', 'table/battle.html', 'studio/browser/battle.tutorials.js'],
+    paths: ['table/lobby-tutorials.js', 'table/battle.html', 'studio/browser/battle.tutorials.js', 'scripts/ux/play.mjs', 'scripts/ux/journeys.mjs'],
   },
   {
     issue: '#979, a window that fades is read by `open`, not `isVisible`, in every suite',
     words: /`isVisible`/,
-    paths: ['table/battle.css', 'table/battle-tutorial.js', 'studio/browser/battle.tutorials.js'],
+    paths: ['table/battle.css', 'table/battle-tutorial.js', 'studio/browser/battle.tutorials.js', 'scripts/ux/play.mjs', 'scripts/ux/journeys.mjs'],
   },
 ];
 
@@ -79,6 +79,8 @@ test('a glob of a rule reaches the paths under it, and only those', () => {
 
 for (const lesson of LESSONS) {
   test(`the lesson loads wherever its mistake is made: ${lesson.issue}`, () => {
+    // A path that is not there proves nothing of where the lesson loads: a rename moves it here too.
+    assert.deepEqual(lesson.paths.filter(path => !existsSync(join(root, path))), [], 'named here, and not in the repository');
     const missed = lesson.paths.filter(path => reaching(lesson.words, path).length === 0);
     assert.deepEqual(missed, [], `no rule under ${RULES} says it and loads on these paths`);
   });

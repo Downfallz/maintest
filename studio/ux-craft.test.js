@@ -195,9 +195,9 @@ test('the book names the axe tag that turns the target-size rule on, and the mea
 });
 
 test('the hint at the moment of need says what a stall is on the pages: the question still asked, a sheet closed (#981)', () => {
-  const body = entry('A hint at the moment of need')?.body ?? '';
+  const body = (entry('A hint at the moment of need')?.body ?? '').replace(/\n\s*/g, ' ');
   assert.match(body, /`waitingAsked`/, 'the entry names what the stream says');
-  assert.match(body, /never (?:on|by) a clock/, 'the entry says a clock never starts it');
+  assert.match(body, /never (?:on|by|from) a clock/, 'the entry says a clock never starts it');
 });
 
 test('the plan\'s walk says the classic sheet held the motion tokens and a rule for less motion (#928)', () => {
