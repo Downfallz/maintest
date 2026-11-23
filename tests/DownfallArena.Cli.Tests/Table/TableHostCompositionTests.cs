@@ -350,6 +350,31 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task With_a_relay_a_seat_at_a_table_the_host_composes_is_sent_to_its_table_s_group()
+    {
+        var host = await ComposeAsync(relay: new RecordedRelay());
+        var table = await host.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        _tables.Add(table);
+        var seat = table.Seats[0];
+
+        var answer = await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}/negotiate", string.Empty, seat.Token);
+
+        answer.Status.ShouldBe(200);
+        Json(answer).GetProperty("url").GetString().ShouldBe($"wss://relay.example/client/hubs/downfall?group=table-{table.Id}");
+    }
+
+    [Fact]
+    public async Task With_a_relay_the_host_s_lobby_sends_its_pages_to_the_relay()
+    {
+        var host = await ComposeAsync(relay: new RecordedRelay());
+
+        var answer = await host.Admin.Lobby.HandleAsync("GET", "/api/lobby/negotiate", string.Empty);
+
+        answer.Status.ShouldBe(200);
+        Json(answer).GetProperty("url").GetString().ShouldBe("wss://relay.example/client/hubs/downfall?user=nobody");
+    }
+
+    [Fact]
     public async Task A_pass_run_from_the_panel_tends_with_every_part_the_host_composed()
     {
         var host = await ComposeAsync();
