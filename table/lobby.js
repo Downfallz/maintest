@@ -132,6 +132,8 @@ export function seatPushSource({ nav = globalThis.navigator, win = globalThis, t
     try {
       const key = await asked.pushKey();
       if (ticket !== reading) return;
+      // A host without keys answers with none; an answer that is not a success is read again with the next list.
+      if (!key.ok) failed = true;
       publicKey = key.ok ? key.body?.publicKey ?? null : null;
       state.keyed = Boolean(publicKey);
       if (state.keyed && pushSupported(nav, win)) {
