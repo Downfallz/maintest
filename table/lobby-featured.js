@@ -208,10 +208,9 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
   // The first button before the second, in the document as on screen, so the keys follow the eyes. The one that
   // moves is the one without the focus: a focused button moved would lose it.
   function order(first, second) {
-    const row = first.parentNode;
-    if (!row?.insertBefore || second.previousElementSibling === first) return;
-    if (doc.activeElement === first) row.insertBefore(second, first.nextSibling);
-    else row.insertBefore(first, second);
+    if (!first.parentNode || second.previousElementSibling === first) return;
+    if (doc.activeElement === first) first.after(second);
+    else second.before(first);
   }
 
   function draw() {
