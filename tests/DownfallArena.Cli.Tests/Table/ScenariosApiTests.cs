@@ -939,7 +939,27 @@ public sealed class ScenariosApiTests : IDisposable
     }
 
     /// <summary>
-    /// A tutorial whose session could not go on (a bot's turn that throws) has no outcome: it plays on no more and did
+    /// Keeping a tutorial done holds the gate every account's practices wait on, so a store that does not answer is
+    /// given a bounded wait: the request fails, and the practice is kept for the next reload or Leave to try again.
+    /// </summary>
+    [Fact]
+    public async Task Keeping_a_tutorial_done_waits_a_bounded_time_and_keeps_the_practice_when_the_store_does_not_answer()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock) { KeepDoneWait = TimeSpan.FromMilliseconds(50) };
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+        var account = practices.ByToken(play.Token).ShouldNotBeNull().Account;
+
+        await Should.ThrowAsync<OperationCanceledException>(() => practices.ResumeAsync(account, Tutorial, cancellationToken => Task.Delay(Timeout.Infinite, cancellationToken)));
+
+        practices.Count.ShouldBe(1);
+        (await practices.CurrentAsync(account, Tutorial)).ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// A tutorial whose session could not go on (a journal that refuses the bots' writes) has no outcome: it plays on no more and did
     /// not end its match. It is not resumed, and nothing is kept on the account: it is neither done nor skipped (#931).
     /// </summary>
     [Fact]
@@ -952,7 +972,7 @@ public sealed class ScenariosApiTests : IDisposable
         var play = await OpenTutorialAsync(store, practices, "learner");
         await Task.WhenAny(play.Session.Outcome, Task.Delay(TimeSpan.FromSeconds(10), Cancel));
 
-        (play.Session.IsOver, play.Session.HasEnded).ShouldBe((true, false));
+        (play.Session.IsOver, play.Session.HasEnded, play.Session.Outcome.IsFaulted).ShouldBe((true, false, true));
         play.Api.Practice!.Tutorial!.Done.ShouldBeFalse();
         var reopened = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
 

@@ -148,7 +148,7 @@ id: tempo
 title: Tempo
 Each round, every creature that is not stunned takes a tempo: Instinct or Precision.
 Instinct acts before every Precision creature, but cannot roll a critical this round.
-Precision acts after, and keeps the critical roll.
+Precision acts after Instinct and keeps the critical roll.
 > An Instinct creature at {creature.initiative} initiative acts before a Precision creature at {creature.initiative + 4}.
 ```
 
@@ -226,8 +226,8 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 id: intent
 title: Choosing a spell
 No spell is declared in advance.
-When its turn comes, you choose its spell and targets on the board as it stands. It resolves at once.
-> A creature at {1 + rules.energyPerRound} Energy may cast, at its turn, any spell it knows that costs {1 + rules.energyPerRound} or less.
+When a creature's turn comes, you choose its spell and targets on the board as it stands. It resolves at once.
+> A creature at {1 + rules.energyPerRound} Energy can cast, on its turn, any spell it knows that costs {1 + rules.energyPerRound} or less.
 ```
 
 ## Targets {#targets}
@@ -291,10 +291,10 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 ```card
 id: defense
 title: Defense
-Defense lowers the damage of every hit a creature takes, never below zero.
+Defense lowers the damage of every hit taken, never below zero.
 Defense buffs add at most {engine.defenseBuffCeiling} to it, however many it holds.
 Only damage over time, at Upkeep, ignores it.
-> A creature starts at {creature.defense} Defense. A hit of 7 deals {max(0, 7 - creature.defense)}, or {max(0, 5 - creature.defense)} at {creature.defense + 2}.
+> A creature starts at {creature.defense} Defense. A hit of 7 deals {max(0, 7 - creature.defense)}, or {max(0, 5 - creature.defense)} at {creature.defense + 2} Defense.
 ```
 
 ## The damage bonus {#damage-bonus}

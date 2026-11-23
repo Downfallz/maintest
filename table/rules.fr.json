@@ -1261,9 +1261,9 @@
             "id": "tempo",
             "title": "Tempo",
             "lines": [
-              "À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.",
+              "Chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.",
               "Instinct agit avant chaque créature en Précision, mais sans critique ce round.",
-              "Précision agit après, et garde le jet de critique."
+              "Précision agit après Instinct et garde le jet de critique."
             ],
             "example": "Une créature en Instinct à 5 d’initiative agit avant une créature en Précision à 9."
           }
@@ -1487,9 +1487,9 @@
             "title": "Choisir un sort",
             "lines": [
               "Aucun sort n’est déclaré à l’avance.",
-              "Quand vient son tour, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Il se résout aussitôt."
+              "Au tour d’une créature, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Il se résout aussitôt."
             ],
-            "example": "Une créature à 3 points d’Énergie peut lancer, à son tour, tout sort connu qui coûte 3 ou moins."
+            "example": "Une créature à 3 points d’Énergie peut lancer, à son tour, tout sort qu’elle connaît coûtant 3 ou moins."
           }
         },
         {
@@ -1754,10 +1754,10 @@
             "title": "Défense",
             "lines": [
               "La Défense réduit les dégâts de chaque coup, jamais sous zéro.",
-              "Ses renforts ajoutent au plus 10, quel que soit leur nombre.",
+              "Ses renforts ajoutent au plus 10 en tout.",
               "Seuls les dégâts dans la durée, à l’Entretien, l’ignorent."
             ],
-            "example": "Une créature commence à 0 de Défense. Un coup de 7 inflige 7, ou 5 à 2."
+            "example": "Une créature commence à 0 de Défense. Un coup de 7 inflige 7, ou 5 à 2 de Défense."
           }
         },
         {
@@ -2061,9 +2061,9 @@
             "title": "Un tour sauté",
             "lines": [
               "Une créature qui ne peut pas agir quand vient son tour est sautée. Rien ne se résout, rien n’est dépensé.",
-              "Elle a été vaincue ou étourdie plus tôt dans le round."
+              "La créature a été vaincue ou étourdie plus tôt dans le round."
             ],
-            "example": "Une créature étourdie par un tour précédent est sautée au sien, et garde toute son Énergie."
+            "example": "Une créature étourdie avant son tour est sautée et garde toute son Énergie."
           }
         },
         {

@@ -264,8 +264,8 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// can reach the host first, and once the practice is gone nothing shows it was done. Read and let go of under one
     /// gate, a match that ends between the two is not let go of unkept (#931). None for a scenario that teaches nothing.
     /// </summary>
-    private Func<Task>? KeepDone(AccountId account, string id) =>
-        store.Teaches(id) ? () => accounts.NoteTutorialAsync(account, id, TutorialState.Done) : null;
+    private Func<CancellationToken, Task>? KeepDone(AccountId account, string id) =>
+        store.Teaches(id) ? cancellationToken => accounts.NoteTutorialAsync(account, id, TutorialState.Done, cancellationToken) : null;
 
     /// <summary>The account's practice of the scenario to go on with; a tutorial that is done is kept done and let go of.</summary>
     private async Task<StudioResponse> ResumeAsync(AccountId account, string id, string name) =>
@@ -273,7 +273,11 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
             ? Opened(current, name)
             : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
 
-    /// <summary>Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204 either way.</summary>
+    /// <summary>
+    /// Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204,
+    /// whether there was one or not. A tutorial done that the account's store cannot keep done fails the request and
+    /// keeps the practice, so the next Leave or reload tries again.
+    /// </summary>
     private async Task<StudioResponse> ForgetAsync(AccountId account, string id)
     {
         await practices.ForgetAsync(account.ToString(), id, KeepDone(account, id));

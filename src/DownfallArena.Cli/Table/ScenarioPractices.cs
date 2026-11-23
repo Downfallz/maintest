@@ -22,6 +22,9 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// <summary>The journal each practice is played on, kept in memory: a test gives one that cannot be played on (#931).</summary>
     internal Func<IDecisionJournal> Journals { get; init; } = () => new InMemoryDecisionJournal();
 
+    /// <summary>How long keeping a tutorial done may hold the gate every account's practices wait on.</summary>
+    internal TimeSpan KeepDoneWait { get; init; } = TimeSpan.FromSeconds(5);
+
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly InProcessAgentTurns _turns = new(clock);
     private readonly Dictionary<string, Practice> _byAccount = new(StringComparer.Ordinal);
@@ -79,9 +82,10 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// </summary>
     /// <param name="keepDone">
     /// Keeps on the account that the tutorial is done, run under this gate just before a done tutorial is let go of:
-    /// whether it is done is read once, so a match that ends meanwhile is never let go of unkept (#931).
+    /// whether it is done is read once, so a match that ends meanwhile is never let go of unkept (#931). It is given
+    /// at most <see cref="KeepDoneWait" />, as every account's practices wait behind it.
     /// </param>
-    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<Task>? keepDone = null)
+    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<CancellationToken, Task>? keepDone = null)
     {
         await _gate.WaitAsync();
         try
@@ -112,7 +116,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
 
     /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
     /// <param name="keepDone">As <see cref="ResumeAsync" />'s: run under this gate before a done tutorial is let go of.</param>
-    public async Task<bool> ForgetAsync(string account, string scenario, Func<Task>? keepDone = null)
+    public async Task<bool> ForgetAsync(string account, string scenario, Func<CancellationToken, Task>? keepDone = null)
     {
         await _gate.WaitAsync();
         try
@@ -199,13 +203,18 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
     }
 
-    /// <summary>Whether the tutorial is done, read once; when it is, <paramref name="keepDone" /> keeps it on the account.</summary>
-    private static async Task<bool> KeptDoneAsync(TutorialPlay tutorial, Func<Task>? keepDone)
+    /// <summary>
+    /// Whether the tutorial is done, read once; when it is, <paramref name="keepDone" /> keeps it on the account, under
+    /// this gate. That write is the one store call made under it, so it is bounded: a store that does not answer in
+    /// <see cref="KeepDoneWait" /> fails the request, the practice is kept, and the next reload or Leave tries again.
+    /// </summary>
+    private async Task<bool> KeptDoneAsync(TutorialPlay tutorial, Func<CancellationToken, Task>? keepDone)
     {
         var done = tutorial.Done;
         if (done && keepDone is not null)
         {
-            await keepDone();
+            using var bounded = new CancellationTokenSource(KeepDoneWait);
+            await keepDone(bounded.Token);
         }
 
         return done;

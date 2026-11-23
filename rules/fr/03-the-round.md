@@ -155,9 +155,9 @@ sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
 ```card
 id: tempo
 title: Tempo
-À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.
+Chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.
 Instinct agit avant chaque créature en Précision, mais sans critique ce round.
-Précision agit après, et garde le jet de critique.
+Précision agit après Instinct et garde le jet de critique.
 > Une créature en Instinct à {creature.initiative} d’initiative agit avant une créature en Précision à {creature.initiative + 4}.
 ```
 
@@ -239,8 +239,8 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 id: intent
 title: Choisir un sort
 Aucun sort n’est déclaré à l’avance.
-Quand vient son tour, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Il se résout aussitôt.
-> Une créature à {1 + rules.energyPerRound} points d’Énergie peut lancer, à son tour, tout sort connu qui coûte {1 + rules.energyPerRound} ou moins.
+Au tour d’une créature, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Il se résout aussitôt.
+> Une créature à {1 + rules.energyPerRound} points d’Énergie peut lancer, à son tour, tout sort qu’elle connaît coûtant {1 + rules.energyPerRound} ou moins.
 ```
 
 ## Cibles {#targets}
@@ -306,9 +306,9 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 id: defense
 title: Défense
 La Défense réduit les dégâts de chaque coup, jamais sous zéro.
-Ses renforts ajoutent au plus {engine.defenseBuffCeiling}, quel que soit leur nombre.
+Ses renforts ajoutent au plus {engine.defenseBuffCeiling} en tout.
 Seuls les dégâts dans la durée, à l’Entretien, l’ignorent.
-> Une créature commence à {creature.defense} de Défense. Un coup de 7 inflige {max(0, 7 - creature.defense)}, ou {max(0, 5 - creature.defense)} à {creature.defense + 2}.
+> Une créature commence à {creature.defense} de Défense. Un coup de 7 inflige {max(0, 7 - creature.defense)}, ou {max(0, 5 - creature.defense)} à {creature.defense + 2} de Défense.
 ```
 
 ## Le bonus de dégâts {#damage-bonus}

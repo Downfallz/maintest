@@ -1254,7 +1254,7 @@
             "lines": [
               "Each round, every creature that is not stunned takes a tempo: Instinct or Precision.",
               "Instinct acts before every Precision creature, but cannot roll a critical this round.",
-              "Precision acts after, and keeps the critical roll."
+              "Precision acts after Instinct and keeps the critical roll."
             ],
             "example": "An Instinct creature at 5 initiative acts before a Precision creature at 9."
           }
@@ -1478,9 +1478,9 @@
             "title": "Choosing a spell",
             "lines": [
               "No spell is declared in advance.",
-              "When its turn comes, you choose its spell and targets on the board as it stands. It resolves at once."
+              "When a creature's turn comes, you choose its spell and targets on the board as it stands. It resolves at once."
             ],
-            "example": "A creature at 3 Energy may cast, at its turn, any spell it knows that costs 3 or less."
+            "example": "A creature at 3 Energy can cast, on its turn, any spell it knows that costs 3 or less."
           }
         },
         {
@@ -1744,11 +1744,11 @@
             "id": "defense",
             "title": "Defense",
             "lines": [
-              "Defense lowers the damage of every hit a creature takes, never below zero.",
+              "Defense lowers the damage of every hit taken, never below zero.",
               "Defense buffs add at most 10 to it, however many it holds.",
               "Only damage over time, at Upkeep, ignores it."
             ],
-            "example": "A creature starts at 0 Defense. A hit of 7 deals 7, or 5 at 2."
+            "example": "A creature starts at 0 Defense. A hit of 7 deals 7, or 5 at 2 Defense."
           }
         },
         {
@@ -2052,7 +2052,7 @@
             "title": "A skipped turn",
             "lines": [
               "A creature that cannot act when its turn comes is skipped. Nothing resolves, nothing is spent.",
-              "It was defeated or stunned earlier in the round."
+              "The creature was defeated or stunned earlier in the round."
             ],
             "example": "A creature stunned by an earlier turn is skipped when its own comes, and keeps all its Energy."
           }

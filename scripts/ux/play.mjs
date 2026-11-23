@@ -141,12 +141,16 @@ async function answerAction(page, view, next, look, blocked) {
 }
 
 /**
- * The lesson's action asked now, cast with the person's recorded answer, its spell choice open: the spell, its
- * targets, Cast. What the lessons' first-cast strip films (#978).
+ * The lesson's spell chosen as the person's recorded answer, the spell choice open: the cast begins, and the coach
+ * steps aside while the targets are chosen. What the lessons' first-cast strip films (#978): a strip's frames are
+ * taken once its act is done, so the act stops at the spell, where the coach's leaving starts.
  */
-export async function castRecorded(page, lesson, blocked = async () => {}) {
+export async function chooseRecordedSpell(page, lesson, blocked = async () => {}) {
   const view = await asked(page, ['Action']);
-  await answerAction(page, view, recordedAnswers(lesson.file), async () => {}, blocked);
+  if (view.over) throw new Error(`Tutorial ${lesson.order}'s match was over before its first cast.`);
+  const offered = view.options.action.spells, recorded = recordedAnswers(lesson.file)('Action', view.waitingCreature);
+  const spell = offered.find(one => one.spell === recorded?.spell) ?? offered[0];
+  await choose(page, `[data-spell="${spell.spell}"]`, blocked);
 }
 
 /** Answer what the seat is asked, its sheet open first. `look` is called once the sheet is open, and once targets are asked. */

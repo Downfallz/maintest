@@ -23,7 +23,7 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 id: fizzle
 title: A skipped turn
 A creature that cannot act when its turn comes is skipped. Nothing resolves, nothing is spent.
-It was defeated or stunned earlier in the round.
+The creature was defeated or stunned earlier in the round.
 > A creature stunned by an earlier turn is skipped when its own comes, and keeps all its Energy.
 ```
 
