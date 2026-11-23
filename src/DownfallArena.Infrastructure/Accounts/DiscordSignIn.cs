@@ -114,7 +114,8 @@ public sealed class DiscordSignIn : ISignInProvider, IDisposable
                 }
 
                 var identity = await WhoAsync(token, patience.Token);
-                await RevokeAsync(token, patience.Token);
+                // Outside the sign-in's patience: once the player is known, nothing the revocation does may undo it.
+                await RevokeAsync(token, cancellationToken);
                 return identity;
             }
             catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
@@ -233,10 +234,14 @@ public sealed class DiscordSignIn : ISignInProvider, IDisposable
 
     /// <summary>
     /// Gives the token back, so it is good for nothing once the host has read who it is for. Its refresh token goes with
-    /// it. Best effort: the sign-in is already decided, and a token that could not be revoked lapses on its own.
+    /// it. Best effort, with a patience of its own: the sign-in is already decided, and a token that could not be revoked
+    /// lapses on its own. Only the caller's own cancellation goes through.
     /// </summary>
-    private async Task RevokeAsync(string token, CancellationToken cancellationToken)
+    private async Task RevokeAsync(string token, CancellationToken caller)
     {
+        using var patience = CancellationTokenSource.CreateLinkedTokenSource(caller);
+        patience.CancelAfter(_patience);
+        var cancellationToken = patience.Token;
         try
         {
             using var request = Request(HttpMethod.Post, "oauth2/token/revoke");
@@ -248,7 +253,7 @@ public sealed class DiscordSignIn : ISignInProvider, IDisposable
             });
             using var response = await _http.SendAsync(request, cancellationToken);
         }
-        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException && !caller.IsCancellationRequested)
         {
             // Left to lapse: see the summary.
         }

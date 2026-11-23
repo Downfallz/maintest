@@ -81,6 +81,14 @@ public sealed class DiscordSignInTests : IDisposable
     }
 
     [Fact]
+    public async Task A_revocation_slower_than_the_host_waits_still_signs_the_player_in()
+    {
+        _discord.RevokeDelay = TimeSpan.FromSeconds(30);
+
+        (await Discord(patience: TimeSpan.FromMilliseconds(200)).SignInAsync(Proof(), Cancel)).ShouldBe(new ExternalIdentity("discord", UserId));
+    }
+
+    [Fact]
     public async Task A_token_discord_will_not_take_back_still_signs_the_player_in()
     {
         _discord.RevokeStatus = HttpStatusCode.ServiceUnavailable;
@@ -306,6 +314,8 @@ public sealed class DiscordSignInTests : IDisposable
 
         public HttpStatusCode RevokeStatus { get; set; } = HttpStatusCode.OK;
 
+        public TimeSpan RevokeDelay { get; set; }
+
         public int Calls { get; private set; }
 
         public List<Dictionary<string, string>> Revoked { get; } = [];
@@ -351,6 +361,7 @@ public sealed class DiscordSignInTests : IDisposable
         private async Task<HttpResponseMessage> RevokeAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Revoked.Add(await FormAsync(request, cancellationToken));
+            await Task.Delay(RevokeDelay, cancellationToken);
             return new HttpResponseMessage(RevokeStatus);
         }
 
