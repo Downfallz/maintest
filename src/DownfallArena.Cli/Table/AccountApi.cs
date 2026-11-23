@@ -485,10 +485,10 @@ internal sealed class AccountApi
             return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
         }
 
-        Counted(SignInStep.Started, name);
+        Counted(StepStarted, name);
         if (await provider.SignInAsync(proof) is not { } identity || identity.Provider != name)
         {
-            Counted(SignInStep.Refused, name);
+            Counted(StepRefused, name);
             return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
         }
 
@@ -500,7 +500,7 @@ internal sealed class AccountApi
         // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
         if (await RegistrationClosedAsync())
         {
-            Counted(SignInStep.Refused, name);
+            Counted(StepRefused, name);
             return Refused(AccountErrors.RegistrationClosed);
         }
 
@@ -521,7 +521,7 @@ internal sealed class AccountApi
         // A ticket handed out before the operator closed registration is refused too (ADR 0177).
         if (await RegistrationClosedAsync())
         {
-            Counted(SignInStep.Refused, identity.Provider);
+            Counted(StepRefused, identity.Provider);
             return Refused(AccountErrors.RegistrationClosed);
         }
 
@@ -562,13 +562,10 @@ internal sealed class AccountApi
     /// <summary>One step of a sign-in, said as a line the ops report can count by provider.</summary>
     private void Counted(string step, string provider) => Said($"  Sign-in {step} ({provider}).");
 
-    /// <summary>The steps a sign-in's lines name, as the ops report reads them.</summary>
-    private static class SignInStep
-    {
-        public const string Started = "started";
-        public const string Finished = "finished";
-        public const string Refused = "refused";
-    }
+    // The steps a sign-in's lines name, as the ops report reads them.
+    private const string StepStarted = "started";
+    private const string StepFinished = "finished";
+    private const string StepRefused = "refused";
 
     private async Task<StudioResponse> DevelopmentAsync(string body, AccountRequest request)
     {
@@ -586,7 +583,7 @@ internal sealed class AccountApi
         // The name is the identity: whoever types it again is that account again, which is what a laptop's
         // table and a test want, and why this mode is refused anywhere but the loopback address.
         var identity = new ExternalIdentity(ExternalIdentity.Development, name.Value.Key);
-        Counted(SignInStep.Started, identity.Provider);
+        Counted(StepStarted, identity.Provider);
         if (await _registry.FindAsync(identity) is { } account)
         {
             return await SignedInAsync(account, request, identity.Provider);
@@ -909,7 +906,7 @@ internal sealed class AccountApi
         // A suspended account is told why, and given no session (ADR 0178).
         if (account.Suspension is { } suspension)
         {
-            Counted(SignInStep.Refused, provider);
+            Counted(StepRefused, provider);
             var refused = AccountErrors.Suspended(suspension);
             return Problem(403, refused.Code, refused.Message);
         }
@@ -920,7 +917,7 @@ internal sealed class AccountApi
         }
 
         var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
-        Counted(SignInStep.Finished, provider);
+        Counted(StepFinished, provider);
         return Answer(new { account = Describe(account) }, cookie);
     }
 
