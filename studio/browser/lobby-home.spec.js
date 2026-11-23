@@ -1592,7 +1592,9 @@ test('an inviter\'s name of the longest kind, named late, leaves the sign-in whe
   // Twenty characters, the most a player name holds (account.js), of the widest letters.
   const longest = { ...rooks, seats: [{ ...rooks.seats[0], name: 'WWWWWWWWWWWWWWWWWWWW' }, rooks.seats[1]] };
   // Under 1280 px; beside the painting the room is let go of (lobby.css).
-  for (const [width, height] of [[320, 568], [390, 844], [700, 900], [1024, 768], [1279, 800]]) {
+  // The widths where the format, once named, used to add a line (422 and 439 px), and a spent answer.
+  const sizes = [[320, 568], [390, 844], [422, 900], [439, 900], [700, 900], [1024, 768], [1279, 800]];
+  for (const [width, height] of sizes) {
     await page.unrouteAll({ behavior: 'ignoreErrors' });
     await page.setViewportSize({ width, height });
     let release;
@@ -1602,6 +1604,22 @@ test('an inviter\'s name of the longest kind, named late, leaves the sign-in whe
     const button = await page.getByRole('button', { name: 'Continue with Google' }).boundingBox();
     release();
     await expect(page.getByRole('heading', { name: `${longest.seats[0].name} invited you to a 3v3 battle.` })).toBeVisible();
+    expect(await page.getByRole('button', { name: 'Continue with Google' }).boundingBox(), `${width} by ${height}`).toEqual(button);
+    expect(state.errors).toEqual([]);
+  }
+});
+
+test('a late answer that the link is spent leaves the sign-in where it was (#973)', async ({ page }) => {
+  for (const [width, height] of [[320, 568], [390, 844], [1024, 768]]) {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.setViewportSize({ width, height });
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    const state = await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch, holdInvitation: held });
+    await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
+    const button = await page.getByRole('button', { name: 'Continue with Google' }).boundingBox();
+    release();
+    await expect(page.getByRole('heading', { name: 'This invitation can no longer be used.' })).toBeVisible();
     expect(await page.getByRole('button', { name: 'Continue with Google' }).boundingBox(), `${width} by ${height}`).toEqual(button);
     expect(state.errors).toEqual([]);
   }

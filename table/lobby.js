@@ -139,7 +139,12 @@ export function seatPushSource({ nav = globalThis.navigator, win = globalThis, t
         registration = await nav.serviceWorker.ready;
         const held = await registration.pushManager.getSubscription();
         // A subscription made with another key is nobody's to send to: it is not on, and Turn on makes a fresh one.
-        if (held && sameKey(held, publicKey) && ticket === reading) state.subscribed = (await asked.push(held.toJSON())).ok;
+        if (held && sameKey(held, publicKey) && ticket === reading) {
+          const answer = await asked.push(held.toJSON());
+          state.subscribed = answer.ok;
+          // Gone from its push service (410): let go of, so Turn on makes a fresh one, as the battle view does.
+          if (answer.status === 410) await held.unsubscribe();
+        }
       }
     } catch {
       // Read again with the next list of games: one network hiccup does not cost the visit its offer.
@@ -157,7 +162,7 @@ export function seatPushSource({ nav = globalThis.navigator, win = globalThis, t
       const held = entry?.seats?.[0] ?? null;
       if ((held?.token ?? null) === token && !failed) return;
       token = held?.token ?? null;
-      seat = held ? transport(held.seat, held.token) : null;
+      try { seat = held ? transport(held.seat, held.token) : null; } catch { seat = null; }
       await read();
     },
     async turnOn() {
@@ -172,9 +177,11 @@ export function seatPushSource({ nav = globalThis.navigator, win = globalThis, t
           if (held && !sameKey(held, publicKey)) await held.unsubscribe();
           const kept = held && sameKey(held, publicKey) ? held : null;
           const made = kept ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
-          state.subscribed = (await asked.push(made.toJSON())).ok;
-          // A subscription the browser already held is every page's: only one made here is let go of.
-          if (!state.subscribed && !kept) await made.unsubscribe();
+          const answer = await asked.push(made.toJSON());
+          state.subscribed = answer.ok;
+          // A subscription the browser already held is every page's: only one made here, or one gone from its push
+          // service, is let go of.
+          if (!state.subscribed && (!kept || answer.status === 410)) await made.unsubscribe();
         }
       } finally {
         state.busy = false;

@@ -169,11 +169,11 @@ function pushingBrowser({ held = null, permission = 'default', answer = 'granted
 }
 
 // A seat that answers as the host does: its key (BAUG in base64url is the bytes 4, 5, 6), and each subscription it is given.
-function seatAnswering({ publicKey = 'BAUG', ok = true } = {}) {
+function seatAnswering({ publicKey = 'BAUG', ok = true, status = ok ? 200 : 500 } = {}) {
   const asked = [];
   const transport = (seat, token) => ({
     pushKey: async () => { asked.push(['key', seat, token]); return { ok: Boolean(publicKey), status: publicKey ? 200 : 404, body: publicKey ? { publicKey } : null }; },
-    push: async body => { asked.push(['push', seat, token, body.endpoint]); return { ok, status: ok ? 200 : 500, body: {} }; },
+    push: async body => { asked.push(['push', seat, token, body.endpoint]); return { ok, status, body: {} }; },
   });
   return { transport, asked };
 }
@@ -224,6 +224,22 @@ test('with accounts off a seat that could not be read is read again with the nex
   down = false;
   await source.setSeat(waiting);
   assert.equal(source.state().keyed, true);
+});
+
+test('with accounts off a subscription gone from its push service is let go of, so the next Turn on makes a fresh one', async () => {
+  const browser = pushingBrowser({ held: 'dead', permission: 'granted' }), host = seatAnswering({ ok: false, status: 410 });
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().subscribed, false);
+  assert.deepEqual(browser.calls.at(-1), ['unsubscribe', 'dead']);
+});
+
+test('with accounts off a seat the page cannot speak for is no seat, and nothing is thrown', async () => {
+  const browser = pushingBrowser(), host = seatAnswering();
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: () => { throw new Error('neither player1 nor player2'); } });
+  await source.setSeat({ table: { id: 'x' }, seats: [{ seat: 'player3', token: 't' }] });
+  assert.equal(source.state().ready, false);
+  assert.deepEqual(host.asked, []);
 });
 
 test('with accounts off a refusal of the seat leaves pop-ups off, and lets go of the subscription it made', async () => {

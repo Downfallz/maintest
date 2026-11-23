@@ -675,7 +675,8 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
   `<img>` with `fetchpriority="high"`, in the first HTML, not waiting for `table/lobby.css`.
 - **Shift**: 0.04 in the paint runs, 0.00 in the walk. The panel's room and Google's box are held before the
   host and Google answer. Under 1280 px, where the words stand under the duel, the invited title holds the room of
-  its longest form, an inviter's name of twenty of the widest letters (#973), so a late answer moves nothing.
+  its longest form, an inviter's name of twenty of the widest letters in a named format (#973), so a late
+  answer moves nothing, a spent link's included.
 
 ### Left
 
