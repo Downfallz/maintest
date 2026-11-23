@@ -243,7 +243,9 @@ Jobs tab show the counts and the queue's length.
    list and its stores, the claim gate, and the notices worker the host starts.
 
    Left: a "your turn" drawn on another replica than the one that queued it is not taken back (the API runs one at
-   most). An operator's release of seats and a void still notify under the claim gate. The counts are N6.
+   most). An operator's release of seats and a void still notify under the claim gate (#1133). Any https endpoint is
+   still accepted (#1132). The cross-process cases have no test yet (#1134), nor the hosts' wiring (#1109). The
+   counts are N6.
 
 6. **N6, the counts.** The worker's counts in the ops report and in the admin's Jobs tab. Tests: Cli tests on
    the counts, `ops.test.js`, `admin.test.js`.
