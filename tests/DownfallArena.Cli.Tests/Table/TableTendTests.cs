@@ -63,6 +63,41 @@ public sealed class TableTendTests : IDisposable
         (await store.IdsAsync(Cancel)).ShouldBeEmpty();
     }
 
+    /// <summary>An idle account's bell at rest (#1118): the pass erases what is past 90 days, the other players' names with it.</summary>
+    [Fact]
+    public async Task A_pass_erases_the_notices_past_90_days_of_an_account_nobody_told_since()
+    {
+        using var job = await _hosted.RestartedAsync();
+        var now = new DateTimeOffset(2026, 11, 16, 3, 0, 0, TimeSpan.Zero);
+        var store = new FileNoticeStore(Path.Combine(_own, "accounts"));
+        var account = AccountId.New();
+        await store.WriteAsync(account, [new NoticeEntry(1, NoticeKind.MatchOver, "Victory", "You won against bastien.", "/play?table=t1", "match:t1", now.AddDays(-91), Read: true)], null, Cancel);
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), now, notices: new AccountNoticeLog(store, new FakeTimeProvider(now)));
+
+        tended.NoticesErased.ShouldBe(1);
+        File.Exists(Path.Combine(store.RootDirectory, "notices", $"{account.Value}.json")).ShouldBeFalse();
+    }
+
+    /// <summary>The job's own composition (#1109, #1118): over a host that signs players in, its pass reaches the notice logs.</summary>
+    [Fact]
+    public async Task The_command_over_a_host_with_accounts_erases_the_notices_past_90_days()
+    {
+        var runs = Path.Combine(_own, "playtest");
+        var options = CliOptions.Parse([CliOptions.TendCommand, "--record", runs, "--accounts", "dev"]) with { SchemaPath = _hosted.SchemaPath };
+        using var services = CliHost.Build(options, seed: 7, logMatchToConsole: false);
+        var store = await ArtifactStores.OpenNoticesAsync(runs, Cancel);
+        var account = AccountId.New();
+        await store.WriteAsync(account, [new NoticeEntry(1, NoticeKind.MatchOver, "Victory", "You won against bastien.", "/play?table=t1", "match:t1", DateTimeOffset.UtcNow.AddDays(-91), Read: true)], null, Cancel);
+        var said = new List<string>();
+
+        var exit = await TableTend.RunAsync(services.Services, options, HostedTables.Rules, said.Add);
+
+        exit.ShouldBe(0);
+        (await store.ReadAsync(account, Cancel)).Entries.ShouldBeEmpty();
+        said.ShouldContain("  Notices: the bells of 1 account let go of what was older than 90 days.");
+    }
+
     [Fact]
     public async Task A_pass_says_what_it_has_done_after_each_stage()
     {

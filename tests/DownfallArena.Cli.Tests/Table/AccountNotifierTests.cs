@@ -216,6 +216,8 @@ public sealed class AccountNotifierTests
 
         public Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default) => throw new IOException("The notices are out.");
 
+        public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default) => throw new IOException("The notices are out.");
+
         public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The notices are out.");
     }
 }

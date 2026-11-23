@@ -50,6 +50,14 @@ public sealed class InMemoryNoticeStore : INoticeStore
         }
     }
 
+    public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult<IReadOnlyList<AccountId>>([.. _held.Keys]);
+        }
+    }
+
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         lock (_gate)

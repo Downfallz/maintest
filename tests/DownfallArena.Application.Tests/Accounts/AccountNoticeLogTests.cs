@@ -155,6 +155,59 @@ public sealed class AccountNoticeLogTests
     }
 
     /// <summary>A log in memory that refuses a write over a version another write replaced, as the real stores do.</summary>
+    /// <summary>An idle account's log at rest (#1118): what is past 90 days goes, without a notice to make it go.</summary>
+    [Fact]
+    public async Task A_sweep_erases_the_entries_past_90_days_of_a_log_nobody_wrote_since()
+    {
+        await _log.AddAsync(_mark, Over("t1"), Cancel);
+        _clock.Advance(TimeSpan.FromDays(30));
+        await _log.AddAsync(_mark, Over("t2"), Cancel);
+        _clock.Advance(AccountNoticeLog.KeptFor - TimeSpan.FromDays(29));
+
+        var swept = await _log.EraseExpiredAsync(Cancel);
+
+        swept.ShouldBe(1);
+        (await _store.ReadAsync(_mark, Cancel)).Entries.Select(entry => entry.Tag).ShouldBe(["match:t2"]);
+    }
+
+    [Fact]
+    public async Task A_sweep_erases_a_log_whose_every_entry_is_past_90_days()
+    {
+        await _log.AddAsync(_mark, Over("t1"), Cancel);
+        _clock.Advance(AccountNoticeLog.KeptFor + TimeSpan.FromHours(1));
+
+        await _log.EraseExpiredAsync(Cancel);
+
+        (await _store.ReadAsync(_mark, Cancel)).Entries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_sweep_writes_no_log_with_nothing_past_90_days()
+    {
+        await _log.AddAsync(_mark, Over("t1"), Cancel);
+        var writes = _store.Writes;
+        _clock.Advance(TimeSpan.FromDays(89));
+
+        var swept = await _log.EraseExpiredAsync(Cancel);
+
+        swept.ShouldBe(0);
+        _store.Writes.ShouldBe(writes);
+    }
+
+    /// <summary>A write that came first cut the log to what is kept, as every write does: the sweep has nothing left to do there.</summary>
+    [Fact]
+    public async Task A_sweep_that_loses_its_write_to_another_leaves_that_write()
+    {
+        await _log.AddAsync(_mark, Over("t1"), Cancel);
+        _clock.Advance(AccountNoticeLog.KeptFor + TimeSpan.FromHours(1));
+        _store.BeforeNextWrite = () => _log.AddAsync(_mark, Over("t2"), Cancel);
+
+        var swept = await _log.EraseExpiredAsync(Cancel);
+
+        swept.ShouldBe(0);
+        (await _store.ReadAsync(_mark, Cancel)).Entries.Select(entry => entry.Tag).ShouldBe(["match:t2"]);
+    }
+
     private sealed class VersionedNotices : INoticeStore
     {
         private readonly Dictionary<AccountId, (IReadOnlyList<NoticeEntry> Entries, string Version)> _held = [];
@@ -186,6 +239,9 @@ public sealed class AccountNoticeLogTests
             _held[account] = ([.. entries], $"{++_written}");
             return true;
         }
+
+        public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<AccountId>>([.. _held.Keys]);
 
         public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
         {

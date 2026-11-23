@@ -17,8 +17,8 @@ namespace DownfallArena.Cli.Table;
 /// waits for a request: the sweep closes, through its record, every table that never began and was opened twenty
 /// hours ago, an invitation nobody answered in a day is let go of, a game whose player let their time to answer
 /// run out ends with them losing (ADR 0169), and a begun game whose seat its player left and nobody took in a day
-/// ends with that seat giving it up (ADR 0170). The tables it picks up to do so take no bot turn here: that is the
-/// worker's.
+/// ends with that seat giving it up (ADR 0170), and an account's notice past 90 days is erased from its bell at rest
+/// (ADR 0201, #1118). The tables it picks up to do so take no bot turn here: that is the worker's.
 /// </summary>
 internal static class TableTend
 {
@@ -39,6 +39,9 @@ internal static class TableTend
 
         /// <summary>How much closed feedback was let go of, 180 days after it was closed (ADR 0189).</summary>
         public int FeedbackLetGo { get; init; }
+
+        /// <summary>How many accounts' notice logs let go of what was past 90 days (ADR 0201, #1118).</summary>
+        public int NoticesErased { get; init; }
     }
 
     /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
@@ -67,59 +70,14 @@ internal static class TableTend
         using var sender = keys is null ? null : new WebPushSender(keys);
         try
         {
-            var store = await ArtifactStores.OpenAsync(target);
-            var index = await ArtifactStores.OpenIndexAsync(target);
-            var composer = new TableComposer(services, rules, store)
-            {
-                Results = options.Accounts == AccountsMode.Off ? null : await ArtifactStores.OpenResultsAsync(target),
-                Contents = await TableHost.OpenContentsAsync(target, CancellationToken.None),
-                Turns = new NoAgentTurns(),
-                Index = index,
-                Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
-            };
-            // A game it times out ends here (ADR 0169): its result is kept for the ladder and each seat's account is
-            // told how it ended, as the worker does for a game its turn ends.
-            // The bell keeps the news whether or not the host can push (ADR 0201).
-            if (options.Accounts != AccountsMode.Off)
-            {
-                var accounts = await ArtifactStores.OpenAccountsAsync(target);
-                var noticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(target), clock);
-                composer.Notifier = new AccountNotifier(noticeLog, sender is null ? null : new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock)))
-                {
-                    Exists = async (id, token) => await accounts.FindAsync(id, token) is not null,
-                    Preferences = await ArtifactStores.OpenPreferencesAsync(target),
-                };
-                composer.NameOf = async id => (await accounts.FindAsync(id))?.Username.Value;
-            }
-
-            var stored = new StoredSessions(store);
-            using var registry = new TableRegistry(index) { Loader = new TableLoader(stored, composer, clock), Basis = composer.Basis };
-
-            // Whether two players are still friends is what lets an invitation between them stand (ADR 0129).
-            var friends = options.Accounts == AccountsMode.Off
-                ? null
-                : new Friends(await ArtifactStores.OpenFriendsAsync(target), await ArtifactStores.OpenAccountsAsync(target), clock);
-            // What the pass closes and lets go of is said to the pages and the API through the relay, when there is one
-            // (ADR 0165), and the job waits for it to have gone before it exits.
-            var relay = WebPubSubRelay.FromEnvironment();
-            composer.Relay = relay;
-            composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
-            composer.Notifier?.Changes = composer.Lobby;
-            var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby, Notifier = composer.Notifier };
-            // The seats of the accounts suspended a day ago (ADR 0178), offered to other players.
-            var suspended = options.Accounts == AccountsMode.Off
-                ? null
-                : await OpenSuspendedAsync(target, lobby);
-
-            // Feedback closed 180 days ago is let go of (ADR 0189); a store that cannot be opened costs that alone.
-            // Through the index's store (#866), so what is let go of leaves the index too.
-            var feedbackStore = await TableHost.OpenFeedbackAsync(target, clock, CancellationToken.None);
-            var feedback = feedbackStore is null ? null : new LetGoOfClosedFeedback(feedbackStore.Records, clock);
+            using var tending = await ComposeAsync(services, options, rules, sender, target);
+            var (registry, lobby, composer, relay) = (tending.Registry, tending.Lobby, tending.Composer, tending.Relay);
+            var (suspended, feedback, feedbackStore, notices) = (tending.Suspended, tending.Feedback, tending.FeedbackStore, tending.Notices);
 
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
             var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
-            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended, feedback, feedbackStore));
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended, feedback, feedbackStore, notices));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -135,6 +93,85 @@ internal static class TableTend
             await Console.Error.WriteLineAsync($"The tables could not be tended: {failure.Message}");
             return 1;
         }
+    }
+
+    /// <summary>What one pass works with, composed as the job composes it, not yet run: the tables, the lobby and the door every notice goes through (ADR 0201).</summary>
+    internal sealed record Tending(TableRegistry Registry, LobbyApi Lobby, TableComposer Composer, IChangeRelay? Relay) : IDisposable
+    {
+        /// <summary>The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</summary>
+        public SuspendedSeats? Suspended { get; init; }
+
+        /// <summary>What lets go of feedback closed 180 days ago (ADR 0189); none where it cannot be opened.</summary>
+        public LetGoOfClosedFeedback? Feedback { get; init; }
+
+        public FeedbackIndex? FeedbackStore { get; init; }
+
+        /// <summary>The accounts' notice logs (ADR 0201), the bell's news kept whether or not the job can push; none on a host that signs nobody in.</summary>
+        public AccountNoticeLog? Notices { get; init; }
+
+        public void Dispose() => Registry.Dispose();
+    }
+
+    /// <summary>
+    /// The pass's parts over <paramref name="target" />, wired as the job runs them: what <see cref="RunAsync" /> tends
+    /// with, and what the tests compose to see the door is built and handed to the lobby (#1109).
+    /// </summary>
+    /// <param name="sender">What sends a notice to a device; none on a job without push keys, whose bell still keeps the news.</param>
+    internal static async Task<Tending> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, IPushSender? sender, string target)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(options);
+        var clock = services.GetRequiredService<TimeProvider>();
+        var store = await ArtifactStores.OpenAsync(target);
+        var index = await ArtifactStores.OpenIndexAsync(target);
+        var composer = new TableComposer(services, rules, store)
+        {
+            Results = options.Accounts == AccountsMode.Off ? null : await ArtifactStores.OpenResultsAsync(target),
+            Contents = await TableHost.OpenContentsAsync(target, CancellationToken.None),
+            Turns = new NoAgentTurns(),
+            Index = index,
+            Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
+        };
+        // A game it times out ends here (ADR 0169): its result is kept for the ladder and each seat's account is
+        // told how it ended, as the worker does for a game its turn ends.
+        // The bell keeps the news whether or not the host can push (ADR 0201).
+        if (options.Accounts != AccountsMode.Off)
+        {
+            var accounts = await ArtifactStores.OpenAccountsAsync(target);
+            var noticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(target), clock);
+            composer.Notifier = new AccountNotifier(noticeLog, sender is null ? null : new AccountNotices(sender, new AccountDevices(await ArtifactStores.OpenDevicesAsync(target), clock)))
+            {
+                Exists = async (id, token) => await accounts.FindAsync(id, token) is not null,
+                Preferences = await ArtifactStores.OpenPreferencesAsync(target),
+            };
+            composer.NameOf = async id => (await accounts.FindAsync(id))?.Username.Value;
+        }
+
+        // Whether two players are still friends is what lets an invitation between them stand (ADR 0129).
+        var friends = options.Accounts == AccountsMode.Off
+            ? null
+            : new Friends(await ArtifactStores.OpenFriendsAsync(target), await ArtifactStores.OpenAccountsAsync(target), clock);
+        // The accounts suspended a day ago (ADR 0178), whose seats are offered to other players.
+        var suspendedAccounts = options.Accounts == AccountsMode.Off ? null : await ArtifactStores.OpenAccountsAsync(target);
+
+        // Feedback closed 180 days ago is let go of (ADR 0189); a store that cannot be opened costs that alone.
+        // Through the index's store (#866), so what is let go of leaves the index too.
+        var feedbackStore = await TableHost.OpenFeedbackAsync(target, clock, CancellationToken.None);
+        var feedback = feedbackStore is null ? null : new LetGoOfClosedFeedback(feedbackStore.Records, clock);
+
+        // What the pass closes and lets go of is said to the pages and the API through the relay, when there is one
+        // (ADR 0165), and the job waits for it to have gone before it exits.
+        var relay = WebPubSubRelay.FromEnvironment();
+        composer.Relay = relay;
+        composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
+        composer.Notifier?.Changes = composer.Lobby;
+
+        // Made last, once nothing is left to open: nothing can fail between it and the pass that lets go of it.
+        var registry = new TableRegistry(index) { Loader = new TableLoader(new StoredSessions(store), composer, clock), Basis = composer.Basis };
+        var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby, Notifier = composer.Notifier };
+        var suspended = suspendedAccounts is null ? null : new SuspendedSeats(suspendedAccounts, lobby);
+
+        return new Tending(registry, lobby, composer, relay) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log };
     }
 
     /// <summary>What a pass did, a line for the pass and one for each table, account or feedback it touched.</summary>
@@ -161,6 +198,11 @@ internal static class TableTend
             said($"  Account {id}: suspended a day ago, its seats in unfinished games offered to other players.");
         }
 
+        if (tended.NoticesErased > 0)
+        {
+            said($"  Notices: the bells of {tended.NoticesErased} account{(tended.NoticesErased == 1 ? string.Empty : "s")} let go of what was older than {AccountNoticeLog.KeptFor.TotalDays:0} days.");
+        }
+
         if (tended.FeedbackLetGo > 0)
         {
             said($"  Feedback: {tended.FeedbackLetGo} closed more than {Feedback.KeptClosed.TotalDays:0} days ago let go of.");
@@ -170,12 +212,6 @@ internal static class TableTend
         {
             said($"  Session {id}: its player was told a quarter of their time to answer is left.");
         }
-    }
-
-    private static async Task<SuspendedSeats> OpenSuspendedAsync(string target, LobbyApi lobby)
-    {
-        var accounts = await ArtifactStores.OpenAccountsAsync(target);
-        return new SuspendedSeats(accounts, lobby);
     }
 
     /// <summary>
@@ -263,12 +299,13 @@ internal static class TableTend
         }
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago.</summary>
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago and the notices past 90 days.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
     /// <param name="suspended">The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</param>
     /// <param name="feedback">What lets go of feedback closed 180 days ago (ADR 0189); none on a host that keeps none.</param>
-    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null, LetGoOfClosedFeedback? feedback = null, FeedbackIndex? feedbackIndex = null)
+    /// <param name="notices">The accounts' notice logs (ADR 0201), swept for what is past 90 days (#1118); none on a host that signs nobody in.</param>
+    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null, LetGoOfClosedFeedback? feedback = null, FeedbackIndex? feedbackIndex = null, AccountNoticeLog? notices = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(lobby);
@@ -295,6 +332,12 @@ internal static class TableTend
         if (feedback is not null)
         {
             done = done with { FeedbackLetGo = await feedback.HandleAsync() };
+            progress?.Invoke(done);
+        }
+
+        if (notices is not null)
+        {
+            done = done with { NoticesErased = await notices.EraseExpiredAsync() };
             progress?.Invoke(done);
         }
 

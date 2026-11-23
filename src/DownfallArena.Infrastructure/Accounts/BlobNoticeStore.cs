@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.SharedKernel.Identifiers;
@@ -32,6 +33,20 @@ public sealed class BlobNoticeStore : INoticeStore
     {
         ArgumentNullException.ThrowIfNull(entries);
         return ConditionalBlob.WriteAsync(Blob(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries), version, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var accounts = new List<AccountId>();
+        await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, NoticeDocuments.Prefix, cancellationToken))
+        {
+            if (NoticeDocuments.AccountOf(item.Name) is { } account)
+            {
+                accounts.Add(account);
+            }
+        }
+
+        return accounts;
     }
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>

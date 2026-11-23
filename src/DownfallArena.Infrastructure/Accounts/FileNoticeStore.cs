@@ -30,6 +30,17 @@ public sealed class FileNoticeStore : INoticeStore
         return ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries), version, cancellationToken);
     }
 
+    public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var directory = Path.Combine(RootDirectory, NoticeDocuments.Prefix);
+        IReadOnlyList<AccountId> accounts = !Directory.Exists(directory)
+            ? []
+            : [.. Directory.EnumerateFiles(directory)
+                .Select(file => NoticeDocuments.AccountOf(NoticeDocuments.Prefix + Path.GetFileName(file)))
+                .OfType<AccountId>()];
+        return Task.FromResult(accounts);
+    }
+
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
         ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
 

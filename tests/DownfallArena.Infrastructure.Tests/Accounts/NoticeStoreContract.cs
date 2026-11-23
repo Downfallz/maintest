@@ -42,6 +42,27 @@ public abstract class NoticeStoreContract
     }
 
     [Fact]
+    public async Task The_accounts_with_a_log_are_listed_and_one_whose_log_went_is_not()
+    {
+        var store = await StoreAsync();
+        var kept = AccountId.New();
+        var emptied = AccountId.New();
+        var forgotten = AccountId.New();
+        foreach (var account in new[] { kept, emptied, forgotten })
+        {
+            await store.WriteAsync(account, [Entry(1)], null, Cancel);
+        }
+
+        await store.WriteAsync(emptied, [], (await store.ReadAsync(emptied, Cancel)).Version, Cancel);
+        await store.ForgetAsync(forgotten, Cancel);
+
+        var listed = await store.AccountsAsync(Cancel);
+        listed.ShouldContain(kept);
+        listed.ShouldNotContain(emptied);
+        listed.ShouldNotContain(forgotten);
+    }
+
+    [Fact]
     public async Task A_write_over_a_version_another_write_replaced_is_refused_and_leaves_that_write()
     {
         var store = await StoreAsync();

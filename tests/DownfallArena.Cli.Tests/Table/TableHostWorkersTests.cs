@@ -78,6 +78,75 @@ public sealed class TableHostWorkersTests : IDisposable
         sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone");
     }
 
+    /// <summary>
+    /// The notices worker's process holds a copy of the table it has not looked at for longer than its watch looks
+    /// (<see cref="TableWatch.WatchedFor" />), while the match moved on in the API (#1134): the turn that came due is the
+    /// later asking, and the copy is brought up to date before it is read, so the seat's account is told.
+    /// </summary>
+    [Fact]
+    public async Task A_turn_due_at_a_table_this_process_holds_stale_is_told_once_the_table_is_brought_up_to_date()
+    {
+        using var hosted = new HostedTables(recording: true);
+        using var api = hosted.Registry();
+        var table = await hosted.Composer.ComposeAsync(HostedTables.TwoPeople, Cancel);
+        using (var place = (await api.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await api.AddAsync(table, place, Cancel);
+        }
+
+        var account = SharedKernel.Identifiers.AccountId.New();
+        table.Seats[0].Account = account;
+        foreach (var seat in table.Seats)
+        {
+            seat.Person!.Arrive();
+        }
+
+        table.Session.Begin();
+        var first = await AskedAsync(table, after: 0);
+        await table.RecordAsync(Cancel);
+        using var worker = hosted.Registry();
+        var stale = (await worker.FindAsync(table.Id, Cancel)).Table.ShouldNotBeNull();
+        stale.Touch(DateTimeOffset.UtcNow - TableWatch.WatchedFor - TimeSpan.FromMinutes(1));
+        foreach (var seat in table.Seats)
+        {
+            var asked = seat.Person!.Waiting.ShouldNotBeNull().Asked;
+            var pass = System.Text.Json.JsonSerializer.Serialize(new { kind = "Evolution", pass = true, asked });
+            (await table.Api.HandleAsync("POST", $"/api/seat/{seat.Name}/decision", pass, seat.Token)).Status.ShouldBe(204);
+        }
+
+        var later = await AskedAsync(table, after: first);
+        var channels = new InMemoryWorkChannels(TimeProvider.System);
+        var notices = await channels.OpenAsync(QueuedNotice.Queue, Cancel);
+        var sender = new RecordedPush();
+        var devices = new Application.Accounts.AccountDevices(new InMemoryDeviceStore(), TimeProvider.System);
+        await devices.AddAsync(account, new Application.Accounts.PushDevice("https://push.example/phone", InMemoryDeviceStore.Key, InMemoryDeviceStore.Auth, default), Cancel);
+        var push = new PushNotices(sender, "BP8", TimeProvider.System) { Accounts = new AccountNotifier(log: null, new AccountNotices(sender, devices)) };
+        using var stopping = new CancellationTokenSource();
+
+        var noticing = await TableHost.StartNoticesAsync(channels, notices, push, worker, TimeProvider.System, stopping.Token);
+        await notices.SendAsync(QueuedNotice.Of(new DueTurn(table.Id, table.Seats[0].Name, later, 2)).ToJson(), cancellationToken: Cancel);
+        for (var attempt = 0; attempt < 250 && sender.Sent.Count == 0; attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        await stopping.CancelAsync();
+        await noticing.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone");
+        table.Dispose();
+    }
+
+    /// <summary>Waits for the table's first seat to be asked something later than <paramref name="after" />, and answers the asking.</summary>
+    private static async Task<long> AskedAsync(PlayedTable table, long after)
+    {
+        for (var attempt = 0; attempt < 300 && table.Seats.Any(seat => seat.Person!.Waiting is not { } question || question.Asked <= after); attempt++)
+        {
+            await Task.Delay(20, Cancel);
+        }
+
+        return table.Seats[0].Person!.Waiting.ShouldNotBeNull().Asked;
+    }
+
     [Fact]
     public async Task Without_a_queue_or_push_keys_no_notices_worker_runs()
     {

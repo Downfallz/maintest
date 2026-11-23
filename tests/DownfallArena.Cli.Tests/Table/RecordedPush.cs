@@ -10,14 +10,16 @@ internal sealed class RecordedPush : IPushSender
 {
     public List<(string Endpoint, string Payload, string Topic)> Sent { get; } = [];
 
+    /// <summary>The endpoints the push service answers gone (410): sent to, and refused.</summary>
+    public HashSet<string> Gone { get; } = [];
+
     public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
     {
         lock (Sent)
         {
             Sent.Add((to.Endpoint, payload, topic));
+            return Task.FromResult(!Gone.Contains(to.Endpoint));
         }
-
-        return Task.FromResult(true);
     }
 }
 

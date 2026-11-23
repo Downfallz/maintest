@@ -65,6 +65,28 @@ public sealed class AccountNoticeLog
         return marked;
     }
 
+    /// <summary>
+    /// The sweep of the hourly job (#1118): every log that holds an entry past <see cref="KeptFor" /> is written without
+    /// it, and a log left with none goes, so an account nobody told since keeps nothing past its time at rest, the
+    /// other players' names with it. A log with nothing past its time is not written. How many logs it wrote.
+    /// </summary>
+    public async Task<int> EraseExpiredAsync(CancellationToken cancellationToken = default)
+    {
+        var erased = 0;
+        foreach (var account in await _store.AccountsAsync(cancellationToken))
+        {
+            var read = await _store.ReadAsync(account, cancellationToken);
+            var kept = Kept(read.Entries, _clock.GetUtcNow());
+            // Refused, another write came first, and every write cuts the log to what is kept: nothing is left to do.
+            if (kept.Count < read.Entries.Count && await _store.WriteAsync(account, kept, read.Version, cancellationToken))
+            {
+                erased++;
+            }
+        }
+
+        return erased;
+    }
+
     /// <summary>The log goes with the account.</summary>
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => _store.ForgetAsync(account, cancellationToken);
 

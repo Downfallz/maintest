@@ -38,9 +38,9 @@ push still goes.
 - Bad: one more blob read and write for each notice that is news, in the request that causes it (under the lobby's
   claim gate for a seat taken or left), until the queue arrives (stage N5).
 - Bad: an entry names the other player as they were named then, and keeps that name after they rename or delete
-  their account, as the push on a phone already does. An entry older than 90 days is no longer listed, but it is
-  erased only at the account's next write or with the account: nothing sweeps a log at rest yet. N2 says so in the
-  privacy sentences.
+  their account, as the push on a phone already does. An entry older than 90 days is no longer listed, and is
+  erased at the account's next write, with the account, or by the hourly job (`table-tend`), whose pass writes every
+  log that holds one without it, and removes a log left empty (#1118): the privacy sentences promise erasure at 90 days.
 - Neutral: a host skips an entry of a kind it does not know, and its next write drops it: a new kind is sent only
   once every process (the API, the worker, the hourly job) reads it.
 - Neutral: push still goes to every device on every kind until the account's preferences (stage N3).

@@ -785,8 +785,10 @@ One pass of what is due on the tables, then exit (ADR 0162), kept as a run for t
 - every begun game between two players whose journal was not written for longer than its time to answer ended
   for whoever it still asks, its result kept and its seats told with `--push-keys`, and the player asked at a
   game whose time reaches its last quarter in the pass told so once (ADR 0169);
-- every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170).
-- every piece of feedback closed more than 180 days ago deleted (ADR 0189).
+- every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170);
+- every piece of feedback closed more than 180 days ago deleted (ADR 0189);
+- with `--accounts google|dev`, every notice older than 90 days erased from its account's notice log, and a log left
+  empty removed (ADR 0201, #1118).
 
 What the hourly job runs. The tables it picks up take no bot turn.
 
