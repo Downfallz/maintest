@@ -1,1 +1,0 @@
-- A static folder routed by enumeration at construction (TableFiles /page-art/*.webp, UX5): the Dockerfile's final stage copies table/ whole, so only the csproj Content glob and the test holding folder to module matter; files derived while a host runs are not served until restart (UX5 picture kit).

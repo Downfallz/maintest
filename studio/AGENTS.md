@@ -47,6 +47,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   loaded runner. Where a test only needs the playback's stages, jump between its timers with `fastForward`; a test
   that runs the fake clock 1 s or more frame by frame gets `test.setTimeout(60000)` (#784). To know the first board
   arrived, wait for `data-connection` to be `live`, never for the hidden `#loading` card (#785).
+- A spec waits on what the page shows or on the fake clock, never on a real timer's length or a fixed poll budget:
+  a slow shard turns a 2.6 s toast or a 30 s film into a flake (#961, #976, #1135).
 - A battle spec reads its mock route's `shown` or `writes` through `expect.poll`. The request reaches the route some
   time after the click, and a change the page draws before sending (a menu closed, a bubble drawn) does not mean the
   route has it yet (#816, #831, #845). A plain read is fine in two cases, with no click, key press or awaited

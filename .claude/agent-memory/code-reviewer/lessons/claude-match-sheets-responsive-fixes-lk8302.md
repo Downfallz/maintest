@@ -1,4 +1,0 @@
-- Moving an accessible name from `aria-label` into `.unseen` spans changes the control's textContent: grep the specs for `toHaveText` on that control (battle-mutations.spec.js `#planning-creatures [aria-pressed=true]` broke in 4 tests x 3 projects) (#1087, 8904ccc6).
-- A CSS rule that suppresses an element "under any modal" (`body:has(dialog:modal)`) must be checked against the modals the app opens by itself at the same moment: the upkeep sheet is `showModal()`ed on every new round, so the round toast never shows (#1087, 8904ccc6).
-- Replacing `bottom` positioning with a `transform` on an element that another, more specific rule already transforms (`#battle[data-combat="targets"] .creature-tag { transform: translateX(-50%) }`) drops the new translation in that state (#1035, 8904ccc6).
-- A per-frame motion spec (max step < N px) written on an idle machine must be run with --repeat-each under --workers: #1035's caption test failed 6 of 8 at 4 workers (8904ccc6).

@@ -16,5 +16,10 @@ paths:
   `scripts/terminology.mjs` and refuses every sentence of its Before column, whatever its case (#675).
 - A new file joins the host's file table (`src/DownfallArena.Cli/Table/TableFiles.cs`, or the studio's
   `StudioFiles.cs`) and its test, or it is a 404 once deployed.
+- A picture is checked at each breakpoint it is declared for (320, phone, tablet, desktop): the `currentSrc` the
+  browser picks from `sizes`, and the crop the box makes. One width passing says nothing of the others (S2, S8,
+  S11, #1090, #1103).
+- A CSS change is checked in the cascade: a later or more specific rule can win over it, and a fit check measures
+  the element itself, not a neighbour's box (#1035, #1087, UX12).
 - The page shows what the host decided. A rule, a legal option or a card text computed in a page is a bug.
 - Read what changed from the host's streams or the relay, never on a timer (ADR 0164).

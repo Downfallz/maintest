@@ -1,2 +1,0 @@
-- A "names exist in the installed types" check proves the written names exist, not the book's "Removed"/"gone" prose: grep the .d.ts for the replacement (Mesh -> `Phaser.GameObjects.Mesh2D`, `add.mesh2d`) before accepting "Removed" (BC1 craft book, docs/art/battle-craft.md:674, 6b395de).
-- A test that makes `node --test studio/*.test.js` read another area's node_modules breaks "no install" wherever ADR 0024 is quoted: grep `no install` and `No dependency` across AGENTS.md files and .claude/rules, not only the root gate line (BC1, table/AGENTS.md:24, 6b395de).

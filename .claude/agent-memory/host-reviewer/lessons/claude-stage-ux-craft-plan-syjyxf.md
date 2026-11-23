@@ -1,3 +1,0 @@
-- A page that reuses an anonymous route for a new purpose (UX7 door: inviter's name from `POST /api/lobby/invitations` `table.seats[].kind/name`) leans on fields no host test asserts; the browser spec's mocked fixture writes them (#812 shape). Ask for a route test on an accounts host, signed out (UX7 PR).
-- `POST /api/lobby/invitations` and `POST /api/lobby/claim` have no row in `table/README.md#routes`; the invitations answer hands any link holder the inviter's `accountId` via `SeatSummary` (UX7 PR, pre-existing).
-- Cli.Tests in a `/reviewers` copy: 4 TableFilesTests fail for want of the battle bundle (`battle-build/*.js`); environmental, not the diff (UX7 PR).

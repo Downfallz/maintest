@@ -1,2 +1,0 @@
-- A "came over byte for byte from #NNNN" claim is checked in seconds: `git ls-tree -r <their head>` blob hashes against the branch's; all ten matched (scene paintings S1, #1033 head 5d5e081, e6cb1ae).
-- An id check that collects every `"id"` under all of `data/` (balance, presentation, trees) passes an id that is only a reference somewhere: build the set from the folder that owns the kind (`data/Tiers`, `data/Spells`) (scene paintings S1, studio/ux-pictures.test.js:168, e6cb1ae).

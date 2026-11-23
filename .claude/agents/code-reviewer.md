@@ -15,6 +15,11 @@ When you are given a sha and a copy of that commit (`/reviewers` gives both), re
 copy, never in the checkout, which the author's session may be editing, and start your report with
 `Reviewed: <sha>`. Given none, copy `HEAD` yourself (`git archive HEAD | tar -x` into an empty temporary folder)
 and name its sha. Only your memory and `table/battle-build/` come from the checkout.
+Before you write the report, read the tip of the branch you reviewed again: `git rev-parse HEAD` when it is
+the checkout's branch, `git fetch origin <branch>` and `FETCH_HEAD` for a pull request reviewed from elsewhere.
+If it is no longer the sha you reviewed, read `git diff <reviewed sha>..<tip>`, re-check each finding on the
+new sha and name both shas (seen more than twenty times, `lessons.md`). A `git archive` copy holds no ignored file: build what the gate reads there
+(`table/battle-build/`, the battle bundle's packages) before you trust a red test in it.
 
 Look for, in this order:
 
@@ -25,6 +30,9 @@ Look for, in this order:
    route's answer is tested through the route, not only by the page's mapper, whose fixture writes it by hand (#812).
 4. Convention drift: naming outside the glossary, public setters in the domain, logic in Infrastructure.
 5. Docs left stale: glossary, ADR needed but absent, `AGENTS.md` now wrong.
+6. A line of the `AGENTS.md` of each area the diff touches that the new code breaks (motion in transform and
+   opacity only, a picture through the picture kit, a new module in the browser plan): read those files, they are
+   not loaded for you (#1004, #1049, #1104, #1130).
 
 Verify claims by reading code, not by trusting the PR description. Run `dotnet build` and `dotnet test` in the
 copy if the SDK is available and report the actual output; copy the checkout's `table/battle-build/` in first,

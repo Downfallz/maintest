@@ -1,2 +1,0 @@
-- A pure table/*.js module with no route (R2 async recap): questions 1-7 are trivially met; check TableFiles, `.dockerignore` for any new non-js file beside it (a fixture), and that a count the plan names ("lines marked new") is what the code counts, not rows (battle-recap.js `unseen` counts rows: 19 vs 22 lines).
-- A recorded feed fixture committed by hand (battle-recap.fixture.json) has no command to rebuild it: an event shape change leaves the tests green on the old shape; ask for the command in the fixture's note or a host test (R2 async recap).
