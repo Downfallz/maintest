@@ -2,7 +2,6 @@ import { existsSync, readdirSync } from 'node:fs';
 import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { EVOLUTION_REGISTRY } from '../table/battle-evolution-art.js';
 import { loadCatalogue } from './catalogue.mjs';
 import { notFoundPage } from './not-found.mjs';
 import { english, french } from './copy.mjs';
@@ -33,9 +32,6 @@ const catalogue = await loadCatalogue();
 const books = Object.fromEntries(await Promise.all([['en', 'rules.json'], ['fr', 'rules.fr.json']].map(async ([lang, file]) =>
   [lang, JSON.parse(await readFile(new URL(`table/${file}`, source), 'utf8'))])));
 const { specimen } = observe(catalogue, specimenPath);
-// Publish only the ordinary forms, for the field guide. This observation's artwork, its one hybrid included, is the
-// kit's (page.mjs): the remaining hybrids are discovered in play.
-const portraits = new Set(catalogue.nodes.filter(t => t.visual.artwork).map(t => EVOLUTION_REGISTRY.art(t.visual.artwork).file));
 const stage = await mkdtemp(destination + '-');
 try {
   const assets = [
@@ -49,7 +45,6 @@ try {
     // The kit's pictures the showcase's pages draw, at the sizes they are sent (ADR 0198, docs/art/page-pictures.md).
     ...Object.values(PAGE_ART).filter(entry => Object.keys(entry.pages).some(name => name.startsWith('showcase/')))
       .flatMap(entry => entry.sizes.map(size => [`table/page-art/${size.file}`, `${SHOWCASE_ART.slice(1)}${size.file}`])),
-    ...[...portraits].map(file => [`table/battle-art/${file}`, `assets/${file}`]),
   ];
   const documents = [english, french].flatMap(c => {
     const path = routes[c.lang];

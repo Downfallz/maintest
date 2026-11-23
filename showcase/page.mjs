@@ -16,11 +16,13 @@ export function specimenPicture(id, pictures = PAGE_ART) {
 
 // The widths each picture is drawn at, as showcase.css lays it out; the declaration's `drawn` holds the same.
 const SIZES = {
-  // Under 600 px the ground is 68% of the hero's height, its width following: about 710 px on a phone.
+  // Under 600 px the ground is 68% of the hero's height, its width following: about 710 px on a phone. It is the
+  // battlefields' eclipse, one declaration drawn twice, so the page takes its files once (#1082).
   ground: '(max-width: 600px) 720px, 100vw',
   beast: '(max-width: 600px) 79vw, min(54vw, 850px)',
   field: '(max-width: 850px) 90vw, min(1250px, 88vw)',
-  specimen: '(max-width: 650px) 315px, 465px',
+  // Shown whole: 315 px under its 210 px height on a phone; wider, its column, until its 310 px height stops it (#967).
+  specimen: '(max-width: 650px) 315px, min(465px, 46vw)',
   move: '(max-width: 600px) 90vw, (max-width: 1420px) 26vw, 368px',
   // A strip's file holds its six frames side by side: it is drawn six times as wide.
   strip: '(max-width: 600px) 540vw, (max-width: 1420px) 156vw, 2208px',
@@ -66,7 +68,7 @@ function battlefield(c) {
     ${selector(c.roundPicker, choices)}
     ${rounds.map((round, index) => `<figure class="moment" id="round-${round}" data-panel>
       <div class="landscape ${round === 12 ? 'shattered' : ''}">
-        ${art(['battlefield-eclipse', 'battlefield-breach', 'battlefield-broken'][index], { sizes: SIZES.field })}
+        ${art(['battlefield-eclipse', 'battlefield-breach', 'battlefield-broken'][index], { sizes: SIZES.field, lazy: true })}
         ${round === 12 ? art('battlefield-sky', { class: 'sky', sizes: SIZES.field }) : ''}
       </div>
       <figcaption><strong>${choices[index][1]}</strong><span>${c.moments[index]}</span></figcaption>
@@ -78,7 +80,7 @@ export function page(c, specimen, app) {
   const play = (label, style) => `<a class="${style}" href="${app}">${label} ${arrow}</a>`;
   return layout(c, 'home', app, c.kicker, c.description, `
     <section class="hero" aria-labelledby="title">
-      <div class="hero-ground">${art('showcase-ground', { sizes: SIZES.ground })}</div>
+      <div class="hero-ground">${art('battlefield-eclipse', { sizes: SIZES.ground })}</div>
       ${art('colossus', { class: 'hero-beast motion-breath', sizes: SIZES.beast })}
       <div class="hero-inner contain"><div class="hero-copy">
         <p class="kicker">${c.kicker}</p>

@@ -19,7 +19,7 @@ const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/motion.j
 // What the offline page draws its plate with (ADR 0200): its script, the picture kit and the sizes it derived, and the
 // plate's own files, which page-art.js names. Given only when the network cannot answer at all. The kit is refreshed
 // each time a page loads it; offline.js only when the worker installs again, since no page loads it online.
-const OFFLINE_SCRIPTS = ['/offline.js', '/picture.js', '/picture-focus.js', '/page-art.js'];
+const OFFLINE_SCRIPTS = ['/offline.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js'];
 const PAGE_ART = '/page-art.js';
 const PLATE = 'parasite-offline';
 const KEPT_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED, ...OFFLINE_SCRIPTS]);

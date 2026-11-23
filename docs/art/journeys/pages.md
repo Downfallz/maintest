@@ -1195,7 +1195,7 @@ A plate: a `figure`, the painting whole, above the title, centred, at most 358 p
 `alt`: "A Parasite hidden under a slab of slate, one claw in the light, its teeth in the dark."
 
 - **Its own declaration.** `parasite-offline` is cut from the same painting as `parasite-under-slate`, the showcase's,
-  as `eclipse-ground` and `showcase-ground` are both cut from one. It is drawn at 358 only, so it has two files, 358
+  as `eclipse-ground` and `battlefield-eclipse` are both cut from one. It is drawn at 358 only, so it has two files, 358
   and 716 px. Its role is `largest`: it is the page's one picture on its first screen, asked for first (the plan's
   rule, as the 404's claw).
 - **With no network.** The page loads no sheet of the table and is served alone. The worker keeps, at install, the

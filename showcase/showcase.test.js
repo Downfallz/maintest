@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test, { after } from 'node:test';
 import { GAME_ORIGIN, SITE_ORIGIN } from '../table/site-origins.js';
+import { PAGE_ART } from '../table/page-art.js';
 
 // Built into a folder of its own, so running the tests leaves the working tree's showcase/dist as it was.
 const builder = fileURLToPath(new URL('./build.mjs', import.meta.url));
@@ -401,7 +402,7 @@ for (const [lang, file] of [['en', 'index.html'], ['fr', 'fr/index.html']]) {
     }
     const first = kit.filter(tag => attribute(tag, 'fetchpriority') === 'high').map(tag => attribute(tag, 'src'));
     assert.equal(first.length, 2);
-    assert.match(first[0], /^\/page-art\/showcase-ground-/, 'the ground is the largest paint, in the HTML');
+    assert.match(first[0], /^\/page-art\/battlefield-eclipse-/, 'the ground is the largest paint, in the HTML');
     assert.match(first[1], /^\/page-art\/colossus-/);
     // No painting waits for the sheet: the stylesheet names none.
     assert.doesNotMatch(read('showcase.css'), /url\('\/assets\/[^']+\.webp'\)/);
@@ -468,6 +469,48 @@ for (const [lang, file] of [['en', 'mutations/index.html'], ['fr', 'fr/mutations
     }
   });
 }
+
+for (const [lang, file] of [['en', 'mutations/index.html'], ['fr', 'fr/mutations/index.html']]) {
+  test(`${lang}: the field guide's 21 portraits are the kit's, lazy, sent at the size they are drawn (#967)`, () => {
+    const portraits = [...read(file).matchAll(/<div class="field-art">(<img [^>]*>)<\/div>/g)].map(match => match[1]);
+    assert.equal(portraits.length, 21);
+    for (const tag of portraits) {
+      const [, name] = /src="\/page-art\/(mutation-[a-z0-9-]+)-\d+\.[0-9a-f]{8}\.webp"/.exec(tag) ?? [];
+      assert.ok(name, tag);
+      assert.equal(PAGE_ART[name].pages['showcase/mutations'], 'lazy', name);
+      assert.equal(attribute(tag, 'loading'), 'lazy', name);
+      assert.equal(attribute(tag, 'sizes'), '(max-width: 650px) 258px, min(368px, 31vw)', name);
+      assert.ok(Math.max(...PAGE_ART[name].sizes.map(size => size.width)) <= 736, `${name}: no file past twice the 368 px it is drawn at`);
+    }
+    assert.doesNotMatch(read(file), /\/assets\/evolutions\//);
+  });
+}
+
+test('the published site sends no painting whole: the field guide\'s portraits are the kit\'s files (#967)', () => {
+  assert.ok(!existsSync(join(root, 'assets/evolutions')));
+});
+
+test('every width a page\'s sizes give a painting, in pixels, is one its declaration draws (#967)', () => {
+  for (const file of ['index.html', 'mutations/index.html', 'fr/index.html', 'fr/mutations/index.html']) {
+    for (const tag of picturesOf(read(file))) {
+      const [, name] = /src="\/page-art\/([a-z0-9-]+?)-\d+\.[0-9a-f]{8}\.webp"/.exec(tag) ?? [];
+      if (!name) continue;
+      const entry = PAGE_ART[name], drawn = entry.drawn.map(width => width * entry.frames);
+      // The media conditions are the screen's width, not the picture's.
+      const widths = [...attribute(tag, 'sizes').replace(/\([^)]*\)/g, '').matchAll(/(\d+)px/g)].map(match => Number(match[1]));
+      for (const width of widths) assert.ok(drawn.includes(width), `${file}: ${name} is drawn at ${width} px, and its declaration lists ${drawn.join(', ')}`);
+    }
+  }
+});
+
+test('the showcase\'s home takes the eclipse under one name, at the top and among the battlefields (#1082)', () => {
+  const tags = picturesOf(read('index.html')).filter(tag => /src="\/page-art\/battlefield-eclipse-/.test(tag));
+  assert.equal(tags.length, 2);
+  assert.equal(attribute(tags[0], 'fetchpriority'), 'high');
+  assert.equal(attribute(tags[1], 'loading'), 'lazy', 'the battlefields\' eclipse waits until it is near');
+  assert.equal(attribute(tags[1], 'fetchpriority'), undefined);
+  assert.equal(attribute(tags[0], 'srcset'), attribute(tags[1], 'srcset'), 'one set of files');
+});
 
 test('the field guide\'s scenes are in English and French, never the same words', () => {
   const alts = file => [...read(file).matchAll(/class="picture (?:family|form)-scene"[^>]*alt="([^"]*)"/g)].map(m => m[1]);

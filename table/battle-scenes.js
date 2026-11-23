@@ -1,8 +1,10 @@
 // The scenes the match's windows wear (docs/art/scene-paintings-plan.md, S11; docs/art/journeys/windows.md): the
 // Mutation Tree opens on the Brute's moult, each of its family columns on the scene of that family, and the match's
-// result on the ground the last blow left. Each is a head (table/picture.js): a decoration under the window's own
-// words, declared for the battle page in docs/art/page-pictures.json.
-import { wearScene } from './picture.js';
+// result on the ground the last blow left. Each is a head (table/picture-form.js): a decoration under the window's
+// own words, declared for the battle page in docs/art/page-pictures.json and drawn from the battle's own pictures,
+// which the bundle carries instead of every page's (#1016).
+import { BATTLE_PAGE_ART } from './battle-page-art.js';
+import { wearScene } from './picture-form.js';
 
 export const BATTLE_PAGE = 'table/battle';
 
@@ -28,7 +30,7 @@ export const FAMILY_HEAD_SIZES = '(max-width: 819px) min(94vw, 400px), 400px';
 export const RESULT_HEAD = { name: 'crushing-stomp-aftermath', side: 'end', sizes: '(min-width: 658px) 620px, calc(100vw - 38px)' };
 
 const worn = (doc, element, { name, ...options }, words) =>
-  wearScene(doc, element, name, { page: BATTLE_PAGE, form: 'head', side: 'start', words, ...options });
+  wearScene(doc, element, name, { page: BATTLE_PAGE, art: BATTLE_PAGE_ART, form: 'head', side: 'start', words, ...options });
 
 /** The Mutation Tree's band: `.atlas-band` holds the eyebrow, the title and the progress line, and the Close. */
 export function wearTreeHead(doc) {

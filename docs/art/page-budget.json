@@ -6,11 +6,11 @@
   "pages": {
     "showcase/home": {
       "first": 229376,
-      "all": 1376256
+      "all": 1392640
     },
     "showcase/mutations": {
-      "first": 98304,
-      "all": 344064
+      "first": 73728,
+      "all": 1802240
     },
     "showcase/404": {
       "first": 32768,
@@ -22,11 +22,11 @@
     },
     "table/home": {
       "first": 294912,
-      "all": 851968
+      "all": 614400
     },
     "table/stats": {
       "first": 0,
-      "all": 819200
+      "all": 229376
     },
     "table/battle": {
       "first": 0,
@@ -34,11 +34,11 @@
     },
     "table/leaderboard": {
       "first": 0,
-      "all": 172032
+      "all": 98304
     },
     "table/rules": {
       "first": 0,
-      "all": 118784
+      "all": 106496
     },
     "table/offline": {
       "first": 24576,

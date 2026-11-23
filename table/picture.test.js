@@ -198,14 +198,14 @@ const sources = [
 ];
 
 test('every picture a page names has its width and its height, so its room is held', () => {
-  // picture.js writes its own from the derived module, which the tests above hold.
-  const images = sources.filter(path => path !== 'table/picture.js').flatMap(path => [...read(path).matchAll(/<img\s[^>]*>/g)].map(([tag]) => ({ path, tag })));
+  // The form writes its own from the derived module, which the tests above hold.
+  const images = sources.filter(path => path !== 'table/picture-form.js').flatMap(path => [...read(path).matchAll(/<img\s[^>]*>/g)].map(([tag]) => ({ path, tag })));
   assert.ok(images.length > 0);
   for (const { path, tag } of images) assert.ok(/\swidth="[^"]+"/.test(tag) && /\sheight="[^"]+"/.test(tag), `${path}: ${tag}`);
 });
 
 test('a page reaches a derived picture through the kit, never by its file name', () => {
-  for (const path of sources.filter(path => !['table/page-art.js', 'table/picture.js'].includes(path)))
+  for (const path of sources.filter(path => !['table/page-art.js', 'table/battle-page-art.js', 'table/picture-form.js'].includes(path)))
     assert.doesNotMatch(read(path), /page-art\/[\w-]+\.[0-9a-f]{8}\.webp/, `${path} names a derived file: its name changes when it is derived again`);
 });
 
@@ -300,8 +300,21 @@ test('the ladder, the statistics and the rulebook hold their head in their HTML,
   }
 });
 
-test('a use below the first screen of a picture declared first loads when near; the largest paint never does (#985)', () => {
+test('a use below the first screen of a picture declared first or largest loads when near, and is not asked for first (#985, #1082)', () => {
   assert.equal(pictureAttributes('beast', { page: 'door', art: ART, lazy: true }).loading, 'lazy');
   assert.equal(pictureAttributes('beast', { page: 'door', art: ART }).loading, undefined);
-  assert.equal(pictureAttributes('beast', { page: 'home', art: ART, lazy: true }).loading, undefined);
+  // The largest paint drawn again lower on its page: one declaration, so the page takes one file, and that use waits.
+  const again = pictureAttributes('beast', { page: 'home', art: ART, lazy: true }), first = pictureAttributes('beast', { page: 'home', art: ART });
+  assert.equal(again.loading, 'lazy');
+  assert.equal(again.fetchpriority, undefined);
+  assert.equal(again.decoding, 'async');
+  assert.equal(first.loading, undefined);
+  assert.equal(first.fetchpriority, 'high');
+});
+
+test('the form alone draws only from the pictures it is handed, so a bundle carries the ones it draws (#1016)', async () => {
+  const form = await import('./picture-form.js');
+  assert.throws(() => form.pictureAttributes('beast', { page: 'home' }), /beast: the form draws from the pictures it is handed/);
+  assert.deepEqual(form.pictureAttributes('beast', { page: 'home', art: ART }), pictureAttributes('beast', { page: 'home', art: ART }));
+  assert.doesNotMatch(read('table/picture-form.js'), /from '[^']*page-art\.js'/, 'it imports no pictures of its own');
 });

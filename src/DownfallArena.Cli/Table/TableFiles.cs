@@ -79,8 +79,11 @@ internal sealed partial class TableFiles
             ["/devices.js"] = (Path.Combine(tableDirectory, "devices.js"), JavaScript),
             ["/game-preferences.js"] = (Path.Combine(tableDirectory, "game-preferences.js"), JavaScript),
             ["/motion.js"] = (Path.Combine(tableDirectory, "motion.js"), JavaScript),
-            // The picture kit (ADR 0198): the form, the sizes a script derived, and the icon set.
+            // The picture kit (ADR 0198): the form, the sizes a script derived (every page's, and the battle's own,
+            // which its bundle imports instead, #1016), and the icon set.
             ["/picture.js"] = (Path.Combine(tableDirectory, "picture.js"), JavaScript),
+            ["/picture-form.js"] = (Path.Combine(tableDirectory, "picture-form.js"), JavaScript),
+            ["/battle-page-art.js"] = (Path.Combine(tableDirectory, "battle-page-art.js"), JavaScript),
             ["/picture-focus.js"] = (Path.Combine(tableDirectory, "picture-focus.js"), JavaScript),
             ["/page-art.js"] = (Path.Combine(tableDirectory, "page-art.js"), JavaScript),
             ["/icons.js"] = (Path.Combine(tableDirectory, "icons.js"), JavaScript),

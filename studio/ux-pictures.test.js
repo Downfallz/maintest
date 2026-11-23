@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from '../table/page-art.js';
-import { asked, budgetOf, check, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
+import { asked, battleArt, battleModuleText, budgetOf, check, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
+import { everyPagesPictures } from '../battle/live-guard.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root));
@@ -73,6 +74,59 @@ test('a page that draws a picture at more than one width on the phone counts eac
   assert.deepEqual(budgetOf({ twice: art.twice }, 'battle', 2), { first: 0, all: 8, largest: 0 }, 'two widths that take one file count it once');
 });
 
+test('a largest paint drawn again lower on its page counts that second file in all, not before any scroll (#1082)', () => {
+  const sizes = [{ width: 720, bytes: 30 }, { width: 1440, bytes: 90 }];
+  const art = { ground: { drawn: [720, 360], frames: 1, pages: { home: 'largest' }, phone: { home: [720, 360] }, sizes } };
+  assert.deepEqual(budgetOf(art, 'home', 2), { first: 90, all: 120, largest: 1 });
+  assert.deepEqual(budgetOf(art, 'home', 1), { first: 30, all: 30, largest: 1 }, 'one file for both widths is counted once');
+});
+
+test('a group a page draws one picture of at a time counts as its heaviest member, not their sum (#993)', () => {
+  const one = bytes => [{ width: 288, bytes }];
+  const art = {
+    brute: { drawn: [144], frames: 1, pages: { stats: 'lazy', battle: 'lazy' }, group: { stats: 'leaned' }, sizes: one(30) },
+    predator: { drawn: [144], frames: 1, pages: { stats: 'lazy', battle: 'lazy' }, group: { stats: 'leaned' }, sizes: one(50) },
+    warped: { drawn: [144], frames: 1, pages: { stats: 'lazy', battle: 'lazy' }, group: { stats: 'leaned' }, sizes: one(40) },
+    head: { drawn: [144], frames: 1, pages: { stats: 'first' }, sizes: one(7) },
+  };
+  assert.deepEqual(budgetOf(art, 'stats', 2), { first: 7, all: 57, largest: 0 });
+  assert.deepEqual(budgetOf(art, 'battle', 2), { first: 0, all: 120, largest: 0 }, 'a page the group does not name draws them all');
+});
+
+test('the statistics count the one mutation they paint, the heaviest of the 21, and their budget holds that visit (#993)', () => {
+  const mutations = authored.pictures.filter(picture => picture.name.startsWith('mutation-'));
+  assert.equal(mutations.length, 21);
+  for (const picture of mutations) assert.deepEqual(picture.group, { 'table/stats': 'leaned-mutation' }, picture.name);
+  const rest = Object.fromEntries(Object.entries(PAGE_ART).filter(([name]) => !name.startsWith('mutation-')));
+  const heaviest = Math.max(...mutations.map(({ name }) => phoneSize(PAGE_ART[name].sizes, 144, budget.density).bytes));
+  assert.equal(budgetOf(PAGE_ART, 'table/stats', budget.density).all, budgetOf(rest, 'table/stats', budget.density).all + heaviest);
+});
+
+test('a group is refused when it names a page that does not draw it, is no name, or has one member', () => {
+  const list = () => readdirSync(new URL('table/page-art', root));
+  const [first, ...others] = authored.pictures;
+  const bad = change => check({ authored: { ...authored, pictures: [{ ...first, ...change }, ...others] }, art: PAGE_ART, read, list }).join('\n');
+  assert.match(bad({ group: { 'showcase/home': 'grounds' } }), /eclipse-ground: group names showcase\/home, a page that does not draw it/);
+  assert.match(bad({ group: { 'table/sign-in': 'Grounds' } }), /eclipse-ground: on table\/sign-in its group is a name in lower case/);
+  assert.match(bad({ group: ['table/sign-in'] }), /eclipse-ground: group gives each page the set it is drawn one of/);
+  assert.match(bad({ group: { 'table/sign-in': 'grounds' } }), /eclipse-ground: on table\/sign-in it is the only picture of the group grounds/);
+});
+
+test('the battle bundle carries the battle\'s own pictures, never every page\'s (#1016)', () => {
+  assert.equal(read('table/battle-page-art.js').toString('utf8'), battleModuleText(PAGE_ART));
+  const own = battleArt(PAGE_ART), names = Object.keys(own);
+  assert.deepEqual(names, Object.keys(PAGE_ART).filter(name => PAGE_ART[name].pages['table/battle']));
+  assert.ok(names.length > 0 && names.length < Object.keys(PAGE_ART).length);
+  for (const name of names) assert.deepEqual(own[name].sizes, PAGE_ART[name].sizes, `${name}: every file, for the browser to choose`);
+  assert.deepEqual(own['mutation-brute-base'].pages, { 'table/battle': 'lazy' });
+  assert.equal(own['ironhide-scar'].focus, PAGE_ART['ironhide-scar'].focus);
+  for (const path of ['../table/page-art.js', '/home/x/table/page-art.js', 'table/page-art.js']) assert.equal(everyPagesPictures(path), true, path);
+  for (const path of ['../table/battle-page-art.js', '../table/picture-form.js', 'src/spell-portrait.ts']) assert.equal(everyPagesPictures(path), false, path);
+  assert.match(read('battle/build.mjs').toString('utf8'), /\.some\(everyPagesPictures\)/);
+  for (const module of ['battle/src/spell-portrait.ts', 'table/battle-scenes.js'])
+    assert.doesNotMatch(read(module).toString('utf8'), /from '[^']*\/(?:picture|page-art)\.js'/, `${module} draws from the battle's own pictures`);
+});
+
 test('the committed pictures are the ones the declaration asks for: every file, its size, its bytes, its painting', () => {
   assert.deepEqual(check({ authored, art: PAGE_ART, read, list: () => readdirSync(new URL('table/page-art', root)) }), []);
 });
@@ -115,6 +169,8 @@ test('every page of the declaration has a budget, and its pictures hold under it
     assert.ok(measured.first <= limit.first, `${page}: ${measured.first} bytes before any scroll, over ${limit.first}`);
     assert.ok(measured.all <= limit.all, `${page}: ${measured.all} bytes of pictures, over ${limit.all}`);
     assert.ok(limit.first <= measured.first * 1.5 + 4096, `${page}: a budget half again over what is loaded holds nothing`);
+    // The same of all its pictures (#1107): a limit far over what a visit loads lets a heavier painting through unseen.
+    assert.ok(limit.all <= measured.all * 1.5 + 4096, `${page}: ${limit.all} bytes of pictures allowed, half again over the ${measured.all} it loads`);
     assert.ok(measured.largest <= 2, `${page}: one or two pictures are asked for first, or the hint means nothing`);
   }
 });
@@ -220,10 +276,10 @@ test('the script and the kit are where a session looks for them', () => {
   assert.match(read('docs/README.md').toString('utf8'), /art\/page-pictures\.md/);
 });
 
-test('a table page never takes one file under two names: one painting drawn in two places is one declaration (#985)', () => {
+test('a page never takes one file under two names: one painting drawn in two places is one declaration (#985, #1082)', () => {
   const named = new Map();
   for (const [name, picture] of Object.entries(PAGE_ART)) {
-    for (const page of Object.keys(picture.pages).filter(one => one.startsWith('table/'))) {
+    for (const page of Object.keys(picture.pages)) {
       for (const size of picture.sizes) {
         const bytes = `${page} ${size.file.split('.').at(-2)}`;
         named.set(bytes, [...(named.get(bytes) ?? []), name]);

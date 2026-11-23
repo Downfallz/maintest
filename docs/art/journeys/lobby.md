@@ -21,7 +21,7 @@ requests the 841 px WebP. When the screen is wider than it is tall (a phone turn
 the landscape instead (the battlefield's eclipse for a lesson, the Rupture's own wide composition from round 6); a
 portrait tablet keeps the portrait, which its tall box stretches less
 than it would the landscape. The 841 px file is the largest there is, so a 3× phone or a portrait tablet draws it
-somewhat stretched. The Rupture's portrait is 941 px wide, its 2× file that width. The home's first-paint budget is 288 KiB, and 832 KiB for all its pictures across every state
+somewhat stretched. The Rupture's portrait is 941 px wide, its 2× file that width. The home's first-paint budget is 288 KiB, and 600 KiB for all its pictures across every state (lowered from 832 KiB once #1120 took the breach and sky portraits away, #1107)
 (`docs/art/page-budget.json`).
 
 | Featured state | Portrait source |
