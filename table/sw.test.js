@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { reachedModules } from '../scripts/module-imports.mjs';
 
 // The worker, run against what a browser gives one: `self` with its clients, its registration and the events
 // it listens for. A notice is a `push` event whose data reads as JSON.
@@ -592,4 +594,16 @@ test('a tap sends the page already on the game to the table the notice came from
 
   assert.deepEqual(went, ['/play?table=a']);
   assert.deepEqual(w.opened, []);
+});
+
+// #1136: OFFLINE_SCRIPTS is written by hand; a module offline.js reaches by import and the list leaves out would
+// leave the offline page without its plate, the network gone.
+test('installing keeps every module the offline page\'s script reaches by its imports', async () => {
+  const w = offlineWorker({ network: async path => ({ ...answer(`installed ${path}`), text: async () => '' }) });
+
+  await install(w);
+
+  const reached = reachedModules(fileURLToPath(new URL('.', import.meta.url)), ['offline.js']);
+  assert.ok(reached.has('/picture-focus.js'), 'the walk follows picture.js down to picture-focus.js');
+  for (const path of reached) assert.ok(w.store.has(path), `${path} is kept`);
 });
