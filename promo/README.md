@@ -67,12 +67,12 @@ One shot gives the same bytes each time on one machine and one build of Chromium
 node scripts/promo/shoot.mjs promo/shots/brute-pummel-round-3.json --film --ratio 9:16
 ```
 
-`film-9x16.mp4` (H.264, at the shot's size and rate), `frames-9x16/` (one PNG a frame) and `sheet-9x16.png`
+It writes `film-9x16.mp4` (H.264, at the shot's size and rate), `frames-9x16/` (one PNG a frame) and `sheet-9x16.png`
 (twelve frames, with the margins the vertical feeds cover with their buttons and captions hatched: `SAFE_ZONES` in
 the script). The film is the scenario played on from where it is cut: the scripted opponent answers as it does
 in a practice, and the filmed seat plays as a player does, looking 800 ms at what is on screen before it acts. It
 closes a window opened over the field, presses OK and Continue, buys no Mutation, takes a Standard tempo, and casts
-the first spell of `film.casts` it can, else the first it can, on the first targets offered.
+the first spell of `film.casts` it can (if none, the first spell it can), on the first targets offered.
 
 What makes two takes the same:
 
@@ -80,19 +80,23 @@ What makes two takes the same:
   is loading has loaded;
 - its streams are held: it hears "read again" only once the host has finished with an answer, the scripted
   opponent's included, so it never draws a step between;
-- the browser's own frames run before each tick, for the observers that lay the field out again;
+- the browser's own frames run before each tick, for the observers that lay the field out again, and the effects
+  kit, once the page asks for it, has run;
+- a press is made in the page, in one step;
 - a frame shows CSS transitions finished, as they run on the compositor's clock, not the page's. The field's motion
   is drawn on the page's clock, and is filmed.
 
-The journey holds a three-second film to the same frames twice. Over 20 seconds, see the plan's P2 note for what
-was measured.
+The journey holds a three-second film to the same frames twice, and a seven-second one to casting the shot's
+spell. What was measured over 20 seconds is in the plan's P2 note. The MP4 carries no date and no note of the
+encoder's version, but another build of x264 may code the same frames otherwise: the workflow names its ffmpeg.
 
 ## Where the files go
 
 `.github/workflows/promo-film.yml` (*Film a promotion shot*, by hand) films a shot on a runner and writes the film
 and its sheet to the `promo` container as the promo identity, which may write that container and nothing else
-([the runbook](../infra/runbooks/promo-identity.md)). Each file is named by its SHA-256 under its shot, and its
-summary gives the line to add to `media.json`:
+([the runbook](../infra/runbooks/promo-identity.md)). The film is shot in a job with no token; the upload runs
+none of the repository's code. Each file is named by its SHA-256 under its shot, and the summary gives its line of
+`media.json`:
 
 ```json
 { "shot": "brute-pummel-round-3", "ratio": "9:16", "file": "film-9x16.mp4", "sha256": "<64 hex>", "bytes": 1234567, "blob": "brute-pummel-round-3/<sha256>.mp4" }

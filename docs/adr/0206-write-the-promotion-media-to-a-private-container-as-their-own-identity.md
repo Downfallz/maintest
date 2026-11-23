@@ -14,8 +14,9 @@ and the identities that exist either deploy (Contributor on the group) or read (
 
 ## Decision
 
-**The container.** `infra/main.bicep` adds a private `promo` container to the table's account. The processes of
-the table hold no role on it that they did not hold before, and nothing of the table reads it.
+**The container.** `infra/main.bicep` adds a private `promo` container to the table's account. No process of the
+table reads it. Their roles are on the whole account, so they could: the container is kept from them by what they
+run, not by a role, and a file they replaced would no longer match its recorded hash.
 
 **Who writes it.** A fourth registration, `downfall-table-promo`, made by `infra/bootstrap.sh setup`, trusts the
 repository's `promo` environment alone, which only `main` may run in. It holds Storage Blob Data Contributor on
@@ -24,12 +25,16 @@ template assigns it from the `AZURE_PROMO_PRINCIPAL_ID` variable, a role the dep
 `.github/workflows/promo-film.yml`, started by hand, films a shot of `promo/shots/` and writes the film and its
 sheet as that identity.
 
-**Who reads it.** The operators of `TABLE_OPERATORS` hold the same role on the container alone, to open and tidy
-the files in the portal; the owner posts by hand (question 4).
+**Who else writes it.** The operators of `TABLE_OPERATORS` hold the same role on the container alone, to open,
+replace and delete its files in the portal; the owner posts by hand (question 4). A reading role would need the
+deploying identity's condition widened, and the owner deletes old films anyway.
 
 **What the repository keeps.** Each file is written once, named by its SHA-256 under its shot
 (`<shot>/<sha256>.mp4`), and `promo/media.json` records it: the shot, the ratio, the file, the hash, the size and the
-blob. A file is what its hash says, whoever wrote it.
+blob, in bytes. A file is what its hash says, whoever wrote it.
+
+**Where it runs.** The film is shot in a job that holds no token; the upload, in a job of the `promo` environment
+that checks out nothing and runs none of the repository's code, holds the identity's token.
 
 ## Consequences
 
@@ -38,8 +43,10 @@ blob. A file is what its hash says, whoever wrote it.
 - Good: no secret: the workflow signs in by federation, as the deploy and the report do.
 - Bad: the owner runs the setup again, sets three variables and deploys once before the first upload
   (`infra/runbooks/promo-identity.md`).
-- Bad: a film is shot on a runner, so its bytes are that runner's: the repository records the hash of what was
-  written, not of what a session's machine would draw.
+- Bad: a film is shot on a runner, so its bytes are that runner's and its ffmpeg's: the repository records the
+  hash of what was written, and the summary names the encoder, not what a session's machine would draw.
+- Bad: reverting this change leaves the container, its role assignments and the registration in place: the
+  runbook's last paragraph takes them away by hand.
 - Neutral: storage costs cents a month at these sizes; reads and writes are a handful a week.
 
 ## Alternatives considered

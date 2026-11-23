@@ -317,14 +317,13 @@ async function onScenario(browser, origin, shot, ratio, work, { hold = false } =
     const page = await context.newPage();
     // What the page is still waiting for, but the event streams, which stay open for as long as the page does.
     const open = new Set(), waiting = [];
-    // The seat's key, and the last asking the page said it drew (`shown`, table/transport.js).
-    let token = null, shown = null;
+    // The seat's key, and the address of the effects kit once the page asks for it.
+    let token = null, kit = null, kitReady = false;
     // A held seat stream is waited for until it is held or answered; the lobby's, and a stream not held, never.
     const stays = path => (hold ? /\/api\/lobby\/events$/ : STREAM).test(path);
     page.on('request', request => {
       token ??= request.headers()['x-seat-token'] ?? null;
-      const drawn = /[?&]shown=(\d+)/.exec(request.url());
-      if (drawn) shown = Number(drawn[1]);
+      if (/\/fx\.js$/.test(new URL(request.url()).pathname)) kit ??= request.url();
       if (request.resourceType() !== 'eventsource' && !stays(new URL(request.url()).pathname)) open.add(request);
     });
     const done = request => {
@@ -348,7 +347,14 @@ async function onScenario(browser, origin, shot, ratio, work, { hold = false } =
         await new Promise(wait => setTimeout(wait, 20));
       }
     };
-    const flushed = () => page.evaluate(() => 0).then(settled).then(loaded).then(() => page.evaluate(() => window.__promoRealFrame?.()));
+    // The effects kit (battle/src/fx-loader.ts) is a module the page imports once its first frame is drawn: fetched,
+    // it is still to be run, and a spell is drawn as its motif until it has. Importing it here resolves once it ran.
+    const kitRan = async () => {
+      if (!kit || kitReady) return;
+      await page.evaluate(url => import(url).then(() => true, () => false), kit);
+      kitReady = true;
+    };
+    const flushed = () => page.evaluate(() => 0).then(settled).then(loaded).then(kitRan).then(() => page.evaluate(() => window.__promoRealFrame?.()));
     const caughtUp = () => flushed().then(() => streams?.owed()).then(flushed);
     // The page's clock moves only here, once what the last move asked for has come.
     const run = ms => page.clock.runFor(ms).then(caughtUp);
@@ -373,7 +379,7 @@ async function onScenario(browser, origin, shot, ratio, work, { hold = false } =
     if (await page.locator('#practice-band').count() !== 1) throw new Error('The practice\'s band (#practice-band) is not on the page: the shot would show what it hides.');
     await page.addStyleTag({ content: '#practice-band { display: none !important; }' });
     await tick(30);
-    return await work({ page, token: () => token, shown: () => shown, run, caughtUp, streams });
+    return await work({ page, token: () => token, run, caughtUp, streams });
   } finally {
     await context.close();
   }
@@ -397,7 +403,7 @@ const PACED = ['#playback-next', '#order-continue'];
  * phase comes), the paced button on screen, and whether a result is being read.
  */
 const pageState = page => page.evaluate(paced => ({
-  window: document.querySelector('dialog[open]')?.id || null,
+  window: document.querySelector('dialog[open]') ? document.querySelector('dialog[open]').id || '(a window)' : null,
   reading: document.querySelector('#battle')?.dataset.reading === 'true',
   button: paced.find(selector => { const node = document.querySelector(selector); return node && !node.hidden && node.offsetParent !== null; }) ?? null,
 }), PACED);
@@ -409,7 +415,7 @@ const pageState = page => page.evaluate(paced => ({
  * reading waits for it, and answers the host's
  * question (`answer`) through the seat's own route once nothing is being read. The scripted opponent answers on the
  * host. After each answer the host is let finish, and only then is the page told to read again, so the page draws
- * the same steps at the same frames each take.
+ * the same steps at the same frames each take. Returns the decisions the seat sent, in order.
  */
 export async function shootFilm(browser, origin, shot, ratio, frame) {
   if (!shot.film) throw new Error(`The shot ${shot.name} has no "film".`);
@@ -432,6 +438,7 @@ export async function shootFilm(browser, origin, shot, ratio, frame) {
     };
     // What the host asks the seat, read once at the start and again after each answer: it changes only then.
     let asking = await seat();
+    const decisions = [];
     // What the seat would act on, and from when: it acts once the same thing has been on screen for a beat.
     let seen = null, since = 0;
     const frames = seconds * fps;
@@ -451,6 +458,7 @@ export async function shootFilm(browser, origin, shot, ratio, frame) {
           const decision = answer(asking, casts);
           const sent = await page.request.post(`${origin}/api/seat/player1/decision`, { headers: { 'X-Seat-Token': token() }, data: decision });
           if (sent.status() !== 204) throw new Error(`The host refused ${JSON.stringify(decision)}: ${sent.status()} ${await sent.text()}`);
+          decisions.push(decision);
           asking = await settles(decision.asked);
           // The page reads at once on a stream it holds open, or once its clock opens the stream again.
           await streams.tell();
@@ -463,6 +471,7 @@ export async function shootFilm(browser, origin, shot, ratio, frame) {
       // shows them finished, as a held clock would after its tick. The field's motion is drawn on the page's clock.
       await frame(index, await page.screenshot({ animations: 'disabled' }));
     }
+    return decisions;
   }, { hold: true });
 }
 
@@ -495,12 +504,14 @@ export const hasEncoder = () => ['ffmpeg', 'ffprobe'].every(tool => spawnSync(to
 
 /**
  * Encode the PNG frames of `folder` (`000000.png` on) at `fps` into an H.264 MP4 a feed takes: yuv420p, the index
- * at the front, no date or encoder's version written in it, one thread, so one set of frames gives one file.
+ * at the front, one thread, no date, and without the note x264 writes of its version and options (an SEI unit, cut
+ * by `filter_units`). One set of frames gives one file with one build of x264: another build may code the frames
+ * otherwise, which the workflow records beside the hashes.
  */
 export function encodeFilm(folder, fps, out) {
   const run = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(folder, '%06d.png'),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-threads', '1',
-    '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:v', '+bitexact', '-movflags', '+faststart', out], { encoding: 'utf8' });
+    '-bsf:v', 'filter_units=remove_types=6', '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:v', '+bitexact', '-movflags', '+faststart', out], { encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`ffmpeg could not encode ${folder}: ${run.stderr || run.error?.message}`);
 }
 

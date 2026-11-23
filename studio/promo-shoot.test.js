@@ -243,7 +243,9 @@ test('frames encode into an MP4 of the length, the size and the frame count aske
     encodeFilm(folder, 30, out);
     const facts = filmFacts(out);
     assert.deepEqual({ ...facts, seconds: Math.round(facts.seconds * 10) / 10 }, { width: 64, height: 112, frames: 90, codec: 'h264', pixels: 'yuv420p', seconds: 3 });
-    // The same frames give the same file: nothing of the moment is written in it.
+    // Nothing of the moment or of the encoder's build is written in it: not x264's note of its version and options.
+    assert.ok(!readFileSync(out).includes('x264 - core'), 'the encoder\'s note is cut');
+    // The same frames give the same file.
     const again = join(folder, 'again.mp4');
     encodeFilm(folder, 30, again);
     assert.equal(sha256(readFileSync(out)), sha256(readFileSync(again)));

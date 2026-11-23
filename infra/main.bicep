@@ -81,7 +81,8 @@ var adminArgs = empty(googleClientId) || empty(trim(adminAccounts)) ? [] : [
 ]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
-// The promotion's films and pictures (ADR 0206): not the recordings, so the processes of the table never see them.
+// The promotion's films and pictures (ADR 0206), beside the recordings. The table's processes never read them,
+// though their roles on the whole account reach this container too.
 var promoContainerName = 'promo'
 var rulesFile = 'docs/tabletop/playtest.rules.json'
 var recordings = '${storage.properties.primaryEndpoints.blob}${containerName}'
@@ -296,7 +297,8 @@ resource playtests 'Microsoft.Storage/storageAccounts/blobServices/containers@20
 
 // The promotion's media (ADR 0206, the promotion plan's question 3): the films, sheets and generated pictures a
 // post shows, too large for the repository, which keeps their hashes. Private like the recordings: the promo
-// identity writes it, and the operators read it in the portal, by identity, as every credential here works.
+// identity writes it, and the operators open, replace and delete its files in the portal, by identity, as every
+// credential here works.
 resource promo 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobs
   name: promoContainerName
@@ -609,7 +611,9 @@ resource tendRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for r
 }]
 
 // On the promo container alone, never the account: the promo identity, which a workflow of `main` signs in as,
-// writes the media; the operators read and tidy them. Neither reaches a recording, an index or a queue.
+// writes the media; the operators may open, replace and delete them (a replaced file no longer matches the hash
+// promo/media.json records). Neither reaches a recording, an index or a queue. An operator is a user; one that is
+// also the promo identity is left out, as a second assignment of the same role would be refused.
 resource promoWriterRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(promoWriter)) {
   scope: promo
   name: guid(promo.id, promoWriter, storageBlobDataContributor)
@@ -620,7 +624,7 @@ resource promoWriterRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = 
   }
 }
 
-resource promoReaderRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for operator in operatorIds: {
+resource promoOperatorRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for operator in filter(operatorIds, id => id != promoWriter): {
   scope: promo
   name: guid(promo.id, operator, storageBlobDataContributor)
   properties: {

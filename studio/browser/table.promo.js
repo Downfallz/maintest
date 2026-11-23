@@ -69,3 +69,15 @@ test('two takes of a three-second film give the same frames, encoded at the leng
     await rm(folder, { recursive: true, force: true });
   }
 });
+
+test('the filmed seat casts the shot\'s spell when the host asks it to act', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'table-phone', 'The film sets its own size: one project plays it.');
+  test.setTimeout(300000);
+  // Seven seconds reach the first combat: the seat is asked to act there, and the shot casts Pummel. Each answer is
+  // one the host took (a refusal fails the film), so the answers to an action are checked on the real options.
+  const filmed = readShot(join(root, 'promo/shots/brute-pummel-round-3.json'));
+  const shot = { ...filmed, size: 720, film: { ...filmed.film, seconds: 7 } };
+  const decisions = await onHost(startHost, origin => shootFilm(browser, origin, shot, '9:16', async () => {}));
+  expect(decisions.map(one => one.kind)).toEqual(['Evolution', 'Speed', 'Action']);
+  expect(decisions[2]).toMatchObject({ kind: 'Action', spell: 'spell:pummel:v1', creature: 1, targets: [2] });
+});

@@ -1252,16 +1252,17 @@ each time on one machine and one build. `--ratio` shoots one of the shot's ratio
 
 `--film` films a shot that has a `film` (docs/art/promotion-plan.md, P2): the scenario opened as for a still, then
 the page's clock moved one frame of the film at a time for `film.seconds` at `film.fps`, a PNG a frame under
-`frames-<ratio>/`, encoded by `ffmpeg` into `film-<ratio>.mp4` (H.264, yuv420p, no date written), and
+`frames-<ratio>/`, encoded by `ffmpeg` into `film-<ratio>.mp4` (H.264, yuv420p, no date and no note of the
+encoder's version: one build of x264 makes one file of one set of frames), and
 `sheet-<ratio>.png`, twelve of its frames with the margins a feed covers hatched. The seat plays as a player:
 it closes a window opened over the field, presses OK and Continue, and answers the host's question through the
 seat's route, each 800 ms after it is on screen; it buys no Mutation, takes a Standard tempo and casts the first
 spell of `film.casts` it can. The page's streams are held, so it reads only once the host has finished with an
-answer. It prints the film's SHA-256, its frame count and one digest of its frames. It needs `ffmpeg` and
-`ffprobe` besides, and exits 1 on a shot without a `film`, or with both `--still` and `--film`, before it starts a
-browser. A 20-second film takes about two minutes here.
+answer. It prints the film's SHA-256, its frame count and one digest of its frames. A 20-second film at 720 takes
+about two minutes.
 
-It needs what `ux/journey.mjs` needs, and exits 1 on a shot it refuses (promo/README.md) before it starts a browser.
+Both modes need what `ux/journey.mjs` needs, a film also `ffmpeg` and `ffprobe`. Both exit 1 before they start a
+browser on a shot they refuse (promo/README.md), and `--film` on a shot without a `film` or beside `--still`.
 
 ### promo/media.mjs
 
