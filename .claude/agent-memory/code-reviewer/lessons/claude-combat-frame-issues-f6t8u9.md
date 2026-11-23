@@ -1,0 +1,3 @@
+# code-reviewer lessons (branch claude/combat-frame-issues-f6t8u9)
+- A rename of an id must grep the new id across the page before it lands: `opponent-heart` -> `opponent-friend` (the name the issue itself proposed, #1092) collided with the opponent card's Add friend button (battle.html:109), so `$('opponent-friend')` took the chip's span; the node tests' `id="..."[^>]*>Friend<` regexes passed and only battle-live.spec.js's strict locator went red (7e36a04).
+- A negative margin that "reaches into the gap" must be read against every rule that narrows that gap or padding: `.brand { margin-inline: -4px }` (a0e6982) assumed gap 4-6 px, but the tutorial header at <=359 px sets gap 2px and padding-left 4px (battle.css:2040), so the mark slid 2 px under its neighbour.

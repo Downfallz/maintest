@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mutationReference, createBattleGrowth } from './battle-growth.js';
+import { crestInset, mutationReference, createBattleGrowth } from './battle-growth.js';
 const catalogue = { cards: [{ id: 'new', name: 'Devour' }], packages: [
   { id: 'root', name: 'Predator', level: 1, spells: ['old', 'new'] },
   { id: 'other', name: 'Brute', level: 1, spells: [] },
@@ -132,4 +132,22 @@ test('a reveal clears by itself once this seat has committed its tempos, or the 
   assert.equal(later.receipt(), null, 'combat began');
   const evolving = createBattleGrowth(), x = view(); evolving.receive(x, catalogue); revealed(x);
   evolving.receive(at(x, 'Evolution', 'Evolution'), catalogue); assert.ok(evolving.receipt(), 'a reveal read during Evolution waits for the tempos');
+});
+
+// #1091: the reveal's receipt arrives rising (`.motion-arrive`, 8 px low): the crests start under where it settles,
+// not under the frame's place of a receipt still on its way.
+test('the crests start under where the receipt settles, its arrival\'s rise taken out', () => {
+  const receipt = { bottom: 120, height: 60 }, stage = { top: 40 };
+  assert.equal(crestInset(receipt, stage, 'none'), 84);
+  assert.equal(crestInset(receipt, stage, '0px 8px'), 76);
+  assert.equal(crestInset(receipt, stage, '0px 3.5px'), 80.5);
+  // A translate along x alone moves nothing down.
+  assert.equal(crestInset(receipt, stage, '4px'), 84);
+});
+
+test('no crest inset without a receipt in view or a stage to stand on', () => {
+  assert.equal(crestInset({ bottom: 0, height: 0 }, { top: 40 }, 'none'), 0);
+  assert.equal(crestInset({ bottom: 120, height: 60 }, undefined, 'none'), 0);
+  // A receipt above the stage leaves it whole.
+  assert.equal(crestInset({ bottom: 20, height: 20 }, { top: 40 }, 'none'), 0);
 });

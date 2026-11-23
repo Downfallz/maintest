@@ -225,7 +225,8 @@ test('when the tempos close on a late answer the field takes its room at once, i
   expect(feet.filter(one => one > before + 20 && one < end - 20)).toEqual([]);
   const shifts = await page.evaluate(() => window.shifts);
   expect(shifts.flatMap(one => one.sources).filter(name => /\b(caption|creature-tag|creature)\b/.test(name))).toEqual([]);
-  expect(shifts.reduce((sum, one) => sum + one.value, 0)).toBeLessThan(0.02);
+  // #1112: the captions leave their compact form in the same frame, drawn afresh, so nothing inside them moves either.
+  expect(shifts).toEqual([]);
   expect(h.errors).toEqual([]);
 });
 // #1034: under 660 px tall the pinned head folds, so the spell reference brought under it shows a card above the foot.
