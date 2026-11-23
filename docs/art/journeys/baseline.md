@@ -20,15 +20,22 @@ has the screen, not the baseline's. `showcase-404` and `showcase-404-fr`, the 40
 scene paintings' S5: their lines are S5's walk of 2026-11-21. `sign-out` and `signed-out-panel`, a sign out's
 confirmation and the panel after it, were added by S9: their lines are S9's walk of 2026-11-22, the first that has
 the screens. The confirmation's words on its head read 11.34:1 at 320, the lowest, and 11.6:1 at 390.
+`showcase-home-story` and `showcase-home-modes` (the home's two scenes, scrolled to), `showcase-mutations-family`
+(the field guide at `#family-predator`) and `showcase-mutations-entry` (the Parasite's entry opened) were added by
+#1044: their lines are that change's walk of 2026-11-23, the first that has the screens.
 
 At 320 by 568:
 
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | showcase-home | 6745 px | 741 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
+| showcase-home-story | 7906 px | 741 | 1 | 12 img, 5 background; 1 sent over twice their size | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
+| showcase-home-modes | 7906 px | 741 | 1 | 12 img, 5 background; 1 sent over twice their size | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-round | 7541 px | 741 | 1 | 10 img, 5 background | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-home-fr | 7307 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-mutations | 4025 px | 262 | 0 | 3 img; 3 sent over twice their size | 11 px | 0 | 23 of 58 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
+| showcase-mutations-family | 4694 px | 262 | 0 | 8 img | 11 px | 0 | 1 of 58 | 0 | 0 | 0 | 0.00 | nothing |
+| showcase-mutations-entry | 5737 px | 326 | 0 | 12 img; 1 sent under their size | 11 px | 0 | 2 of 59 | 1 | 0 | 0 | 0.00 | nothing |
 | showcase-rules | 32495 px | 5895 | 0 | 2 img; 2 sent over twice their size | 10 px | 20 | 15 of 92 | 9 | 0 | 0 | 0.00 | label-content-name-mismatch (1), link-in-text-block (12), scrollable-region-focusable (2) |
 | showcase-404 | 767 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-404-fr | 767 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
@@ -45,9 +52,13 @@ At 390 by 844:
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | showcase-home | 6305 px | 741 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
+| showcase-home-story | 7654 px | 741 | 1 | 12 img, 5 background; 2 sent over twice their size | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
+| showcase-home-modes | 7654 px | 741 | 1 | 12 img, 5 background; 2 sent over twice their size | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-round | 7218 px | 741 | 1 | 10 img, 5 background | 11 px | 0 | 0 of 29 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-home-fr | 6754 px | 830 | 2 | 5 img, 8 background; 5 sent over twice their size | 8 px | 4 | 7 of 29 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | showcase-mutations | 3922 px | 262 | 0 | 3 img; 3 sent over twice their size | 11 px | 0 | 23 of 58 | 0 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
+| showcase-mutations-family | 4638 px | 262 | 0 | 8 img | 11 px | 0 | 1 of 58 | 0 | 0 | 0 | 0.00 | nothing |
+| showcase-mutations-entry | 5622 px | 326 | 0 | 12 img; 1 sent under their size | 11 px | 0 | 2 of 59 | 1 | 0 | 0 | 0.00 | nothing |
 | showcase-rules | 27854 px | 5895 | 0 | 2 img; 2 sent over twice their size | 10 px | 20 | 17 of 92 | 11 | 0 | 0 | 0.00 | label-content-name-mismatch (1), link-in-text-block (12), scrollable-region-focusable (1) |
 | showcase-404 | 844 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
 | showcase-404-fr | 844 px | 34 | 1 | 3 img, 1 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
@@ -61,12 +72,17 @@ At 390 by 844:
 
 ## The lessons
 
+`lesson-1-push-offer`, the pop-ups offer at lesson 1's end, was added by #1126: its line is that change's walk of
+2026-11-23, the first whose host has push keys. Its two filled actions are the card's Turn on and the end card's
+Next; its overlaps at 320 are the card over the round's bar ([the brief](lobby.md#the-pop-ups-offer-home-push-offer)).
+
 At 320 by 568:
 
 | Screen | Height | Words | Filled actions | Pictures | Smallest text | Words under 11 px | Targets under 44 px | Targets under 24 px | Overlaps | Animating | Shift | axe |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | lesson-1-brief | 387 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.05 | nothing |
 | lesson-1-concept-card | 398 px, a window | 65 | 1 | 1 background | 10 px | 2 | 0 of 2 | 0 | 0 | 0 | 0.05 | nothing |
+| lesson-1-push-offer | 568 px | 107 | 2 | 6 background, the canvas | 11 px | 0 | 0 of 17 | 0 | 6 | 0 | 0.02 | nothing |
 | lesson-1-first-step | 568 px | 141 | 0 | 2 background, the canvas | 7 px | 69 | 0 of 24 | 0 | 3 | 0 | 0.05 | label-content-name-mismatch (10) |
 | lesson-1-complete | 568 px | 90 | 0 | 3 background, the canvas | 8 px | 36 | 0 of 14 | 0 | 3 | 1 | 0.05 | label-content-name-mismatch (8) |
 | lesson-2-brief | 387 px, a window | 67 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
@@ -101,6 +117,7 @@ At 390 by 844:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | lesson-1-brief | 348 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
 | lesson-1-concept-card | 336 px, a window | 65 | 1 | 1 background | 10 px | 2 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
+| lesson-1-push-offer | 844 px | 109 | 2 | 6 background, the canvas | 11 px | 0 | 0 of 18 | 0 | 0 | 0 | 0.01 | nothing |
 | lesson-1-first-step | 844 px | 141 | 0 | 2 background, the canvas | 7 px | 72 | 0 of 24 | 0 | 1 | 0 | 0.03 | label-content-name-mismatch (9) |
 | lesson-1-complete | 844 px | 95 | 0 | 3 background, the canvas | 7 px | 41 | 0 of 15 | 0 | 4 | 1 | 0.03 | label-content-name-mismatch (8) |
 | lesson-2-brief | 348 px, a window | 67 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.01 | nothing |
@@ -119,6 +136,11 @@ At 390 by 844:
 
 ## The lobby
 
+`home-push-offer` (the pop-ups offer, a game against a person waiting, #1126) and `home-answer-arrives` (a turn
+delivered by Rook's answer inside a round, #988) were added on 2026-11-23: their lines are that walk's, the first
+that has the screens. The offer's overlaps are the card over the featured space's actions, which its brief leaves to
+the owner.
+
 `home-turn-arrives`, a turn that arrives on the open home, was added by UX9: its line comes from UX9's walk of
 2026-11-20, not from the baseline, whose walk had no such screen. `home-ended-ground` and `home-waiting-ground`, the
 game that ended last and the table that waits, each scrolled into view on its ground, were added by S8 of the scenes'
@@ -136,10 +158,12 @@ At 320 by 568:
 | home-your-turn | 2238 px | 194 | 6 | 10 background | 9 px | 12 | 5 of 16 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | waiting-room | 568 px | 72 | 0 | 3 background, the canvas | 8 px | 28 | 0 of 14 | 0 | 3 | 3 | 0.00 | label-content-name-mismatch (8), target-size (2) |
 | home-waiting | 2408 px | 209 | 7 | 11 background | 9 px | 12 | 5 of 17 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (2) |
+| home-push-offer | 2804 px | 209 | 2 | 6 img, 12 background | 11 px | 0 | 0 of 24 | 0 | 4 | 1 | 0.00 | nothing |
 | home-game-ended | 2139 px | 193 | 5 | 10 background | 9 px | 13 | 6 of 16 | 2 | 0 | 0 | 0.00 | nothing |
 | home-ended-ground | 2611 px | 163 | 1 | 6 img, 10 background | 11 px | 0 | 0 of 18 | 0 | 0 | 0 | 0.00 | nothing |
 | home-waiting-ground | 2872 px | 178 | 1 | 6 img, 11 background | 11 px | 0 | 0 of 19 | 0 | 0 | 0 | 0.00 | nothing |
 | home-turn-arrives | 2611 px | 169 | 1 | 5 img, 10 background | 11 px | 0 | 2 of 18 | 0 | 0 | 0 | 0.00 | nothing |
+| home-answer-arrives | 2751 px | 190 | 1 | 5 img, 10 background | 11 px | 0 | 0 of 21 | 0 | 0 | 1 | 0.02 | label-content-name-mismatch (1) |
 
 Out of a player's reach at this size. The walk's script made these choices so the rest could be filmed:
 
@@ -156,10 +180,12 @@ At 390 by 844:
 | home-your-turn | 2213 px | 194 | 6 | 10 background | 9 px | 12 | 4 of 16 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (1) |
 | waiting-room | 844 px | 75 | 0 | 3 background, the canvas | 7 px | 31 | 0 of 14 | 0 | 0 | 3 | 0.00 | label-content-name-mismatch (8) |
 | home-waiting | 2383 px | 209 | 7 | 11 background | 9 px | 12 | 4 of 17 | 2 | 0 | 0 | 0.00 | label-content-name-mismatch (2) |
+| home-push-offer | 2885 px | 209 | 2 | 6 img, 12 background | 11 px | 0 | 0 of 24 | 0 | 2 | 1 | 0.00 | nothing |
 | home-game-ended | 2099 px | 193 | 5 | 10 background | 9 px | 13 | 5 of 16 | 2 | 0 | 0 | 0.00 | nothing |
 | home-ended-ground | 2401 px | 163 | 1 | 6 img, 10 background | 11 px | 0 | 0 of 18 | 0 | 0 | 0 | 0.00 | nothing |
 | home-waiting-ground | 2677 px | 178 | 1 | 6 img, 11 background | 11 px | 0 | 0 of 19 | 0 | 0 | 0 | 0.00 | nothing |
 | home-turn-arrives | 2401 px | 169 | 1 | 5 img, 10 background | 11 px | 0 | 1 of 18 | 0 | 0 | 0 | 0.00 | nothing |
+| home-answer-arrives | 2833 px | 190 | 1 | 5 img, 10 background | 11 px | 0 | 0 of 21 | 0 | 0 | 1 | 0.01 | label-content-name-mismatch (1) |
 
 ## The player's pages
 

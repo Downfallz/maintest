@@ -733,8 +733,8 @@ The disclosure opens at once: a `<details>` has no beat in the kit.
   wide band takes a larger file; the budget is counted at 390. The walk's `pictures` count one `img` more and 0
   oversized; 4 backgrounds today.
 - **Largest paint**: the title, The ladder., today. Once painted, the band (354 by 118 px) is larger than the title,
-  so it may become the largest paint. Not measured: `--paint` was not run on this page (the plan's **Left**). Budget
-  2.5 s (ADR 0197).
+  so it may become the largest paint. `--paint` measures the page after a ranked game, not before it: see the ladder
+  after a ranked game (#992). Budget 2.5 s (ADR 0197).
 - **Shift**: 0.00 at both widths today. The band holds its 3:1 room in the HTML before its painting. Your place holds
   its room before the read (two lines and the action's height), so the action arriving moves nothing.
 
@@ -854,8 +854,8 @@ page's in every state: the ladder is where fights are counted, whether the playe
 ### Cost
 
 - **Bytes**: the head of the ladder before a ranked game, the same file, from the browser's cache: no byte more.
-- **Largest paint**: the band, the title or the rating, not measured: `--paint` was not run on this page (the plan's **Left**).
-  Budget 2.5 s.
+- **Largest paint**: the band's painting, 0.8 s on `--paint`'s slow phone (0.8 to 0.8 over five loads, signed in after
+  a ranked game, #992). Budget 2.5 s. Its shift there is 0.08, under 0.1.
 - **Shift**: Your place holds the room of its filled form (the rating, the line, the two drawings) before the read,
   so a number arriving moves nothing; the Players rows arrive below the first screen at 320. Budget 0.1.
 
@@ -952,8 +952,8 @@ it. No mutation has been acquired, so no evolution is drawn; the empty state is 
   one file for 323 and 354, the 708 px file at twice the density. Today's 646 and 842 px files weigh 13,736 and 20,714
   bytes; the 708's bytes are `--budget`'s once derived. table/stats raises its `all` from 780,288 bytes by that file;
   its `first` stays 0.
-- **Largest paint**: the title today, perhaps the band once painted; not measured: `--paint` was not run on this page
-  (the plan's **Left**). Budget 2.5 s.
+- **Largest paint**: the title today, perhaps the band once painted. `--paint` measures the page after a ranked game,
+  not before it: see the statistics after a ranked game (#992). Budget 2.5 s.
 - **Shift**: 0.00 today. The band holds its room in the HTML; the empty state's room is held before the read.
 
 ### Left
@@ -1062,8 +1062,8 @@ of 844.
 
 - **Bytes**: the head, the same file as before a ranked game, from the browser's cache. One evolution, lazily, at 144 px wide and twice that at a phone's density; its bytes are what
   `node scripts/ux/pictures.mjs --budget` measures once derived, and the page's budget is set from it.
-- **Largest paint**: the title at 320, perhaps the painting at 390 if it is inside the first screen: not measured:
-  `--paint` was not run on this page (the plan's **Left**). Budget 2.5 s.
+- **Largest paint**: a painting at 390, 1.8 s on `--paint`'s slow phone (1.8 to 1.8 over five loads, signed in after a
+  ranked game, #992). Budget 2.5 s. Its shift there is 0.00.
 - **Shift**: the painting's `width` and `height`; Record, Most acquired and Most cast hold their rooms. Budget 0.1.
 
 ### Left

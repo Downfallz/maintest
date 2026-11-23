@@ -1187,7 +1187,8 @@ screens in order, numbered and named) and a file of measures (`doors-390.measure
 line a screen). The journeys are `doors`, `lessons`, `lobby`, `pages`, `match` and `windows` (the match's
 windows, UX12); `--all` walks the six, and `--list` prints their screens and their strips. Each walk builds its own set: the showcase built into a temporary
 folder and served from it (`--showcase <folder>` reads one already built), and a table host with developer
-accounts, a recording of its own and a table of seed 7. It needs the engine built (`dotnet build`), the content
+accounts, a recording of its own, a table of seed 7 and push keys of its own (`push-keys`), so the pages offer
+pop-ups; where a walk films that offer, its browser stands in for one never asked about notifications. It needs the engine built (`dotnet build`), the content
 consolidated (`data/dst`), the battle bundle and the browser suite's Playwright and axe
 (`npm --prefix studio/browser ci --ignore-scripts`); without axe the measures say it was not run.
 
@@ -1212,12 +1213,18 @@ stopped.
 
 `--strip <interaction>` films one interaction across time instead: the walk stops at the strip's screen, stops
 the animations and holds the timers, makes the interaction and steps the page (`--frames`, 12 by default,
-`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. A strip, like a walk,
-prints on standard error each control it had to press by script. `--paint` loads the showcase's home,
-the sign-in panel and a new player's home `--runs` times each (5 by default) with nothing cached, on a slow
-phone's network and processor, and writes the median, the fastest and the slowest of the first and the largest
-paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 when
-nothing is named, when a journey, a width or a strip is unknown, or when a build is missing. It also exits 1 when
+`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. A strip may name its
+own sizes: `lessons --strip first-cast` is filmed at 320, 390 and 1280 by 800 (`--width 1280` for that one), where
+the coach steps aside on the field; a width from 760 px is walked with a mouse, not a finger. A strip, like a walk,
+prints on standard error each control it had to press by script. `--paint` loads the pages of
+`docs/art/page-budget.json` a player opens first, by the names that file gives them: `showcase/home`,
+`table/sign-in`, a new player's `table/home`, then `table/leaderboard` and `table/stats` signed in, once the
+walker has played a ranked game against the friend. Each is loaded `--runs` times (5 by default) with nothing
+cached, on a slow phone's network and processor. It writes the median, the fastest and the slowest of the first and
+the largest paint in `paint.json`, then prints, a line a page, whether the median largest paint and shift are
+within the file's `largestPaintMs` and `shift` (ADR 0197). `--out` is the folder (`artifacts/journeys/` by default).
+It exits 1 when a page is over its paint budget or never painted, when nothing is named, when a journey, a width or
+a strip is unknown, or when a build is missing. It also exits 1 when
 `--frames` or `--interval` is given without `--strip`, or `--runs` without `--paint`.
 
 `baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,

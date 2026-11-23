@@ -9,11 +9,11 @@ import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { JOURNEYS, account } from '../scripts/ux/journeys.mjs';
-import { VIEWPORTS, blockedLines, ended, listing, parseArguments, settle, walked } from '../scripts/ux/journey.mjs';
+import { DESKTOP, VIEWPORTS, blockedLines, contextOptions, ended, listing, parseArguments, settle, walked } from '../scripts/ux/journey.mjs';
 import { differences, measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
-import { readPaintInPage, signIn, spread, summary } from '../scripts/ux/paint.mjs';
-import { confirm } from '../scripts/ux/play.mjs';
-import { serveShowcase, startHost, stopProcess } from '../scripts/ux/set.mjs';
+import { PAINTED, judgePaints, readPaintInPage, signIn, spread, summary } from '../scripts/ux/paint.mjs';
+import { confirm, waitAhead } from '../scripts/ux/play.mjs';
+import { hostArguments, neverAskedInPage, serveShowcase, startHost, stopProcess } from '../scripts/ux/set.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const script = new URL('../scripts/ux/journey.mjs', import.meta.url).pathname;
@@ -68,6 +68,71 @@ test('what a walk or a strip pressed by script is said with its journey and its 
 
 test('the walk is at 320 by 568 and 390 by 844', () => {
   assert.deepEqual(VIEWPORTS, [{ width: 320, height: 568 }, { width: 390, height: 844 }]);
+});
+
+// The coach's fade on the field plays only from 760 px wide (#978): the first cast names its own sizes, the phones' and
+// a desktop's, so `--strip first-cast` films it at 1280 by 800 too (#1140).
+test('a strip names its own viewports, and the first cast is filmed on a desktop too', () => {
+  assert.deepEqual(DESKTOP, { width: 1280, height: 800 });
+  const lessons = JOURNEYS.find(journey => journey.id === 'lessons');
+  assert.deepEqual(lessons.strips['first-cast'].viewports, [...VIEWPORTS, DESKTOP]);
+  assert.deepEqual(parseArguments(['lessons', '--strip', 'first-cast']).viewports, [...VIEWPORTS, DESKTOP]);
+  assert.deepEqual(parseArguments(['lessons', '--strip', 'first-cast', '--width', '1280']).viewports, [DESKTOP]);
+  assert.deepEqual(parseArguments(['lessons', '--strip', 'brief-begins']).viewports, VIEWPORTS);
+  assert.throws(() => parseArguments(['lessons', '--strip', 'brief-begins', '--width', '1280']), /--width is 320 or 390/);
+  assert.throws(() => parseArguments(['lessons', '--width', '1280']), /--width is 320 or 390/);
+  // The order of the flags does not matter: the width is read against the strip once both are known.
+  assert.deepEqual(parseArguments(['--width', '1280', 'lessons', '--strip', 'first-cast']).viewports, [DESKTOP]);
+  // A desktop is walked with a mouse, a phone with a finger: the battle docks its sheets by the width, not the pointer.
+  assert.deepEqual(contextOptions(DESKTOP), { viewport: DESKTOP, isMobile: false, hasTouch: false });
+  assert.deepEqual(contextOptions(VIEWPORTS[0]), { viewport: VIEWPORTS[0], isMobile: true, hasTouch: true });
+});
+
+// The six scenes of the field guide and the two of the showcase's home sit below their first screen: the walk scrolls
+// to each, so the sheet shows them (#1044).
+test('the doors film the field guide\'s scenes and the home\'s, below their first screen', () => {
+  const doors = JOURNEYS.find(journey => journey.id === 'doors');
+  for (const name of ['showcase-home-story', 'showcase-home-modes', 'showcase-mutations-family', 'showcase-mutations-entry']) assert.ok(doors.screens.includes(name), name);
+  assert.ok(doors.screens.indexOf('showcase-home-story') < doors.screens.indexOf('showcase-home-fr'));
+  assert.equal(doors.screens.indexOf('showcase-mutations-entry'), doors.screens.indexOf('showcase-mutations') + 2);
+});
+
+// The pop-ups offer is filmed where it is made (#1126): the lobby with a game against a person waiting, and lesson 1's end.
+test('the walk films the pop-ups offer in the lobby and at lesson 1\'s end', () => {
+  const lobby = JOURNEYS.find(journey => journey.id === 'lobby'), lessons = JOURNEYS.find(journey => journey.id === 'lessons');
+  assert.equal(lobby.screens[lobby.screens.indexOf('home-waiting') + 1], 'home-push-offer');
+  assert.equal(lessons.screens[lessons.screens.indexOf('lesson-1-complete') - 1], 'lesson-1-push-offer');
+});
+
+// A host without keys never makes the card: the walk's host is started with a pair of its own.
+test('the walk\'s host sends pop-ups, with keys of its own', () => {
+  const args = hostArguments('/walk', 5000);
+  assert.equal(args[args.indexOf('--push-keys') + 1], '/walk/push-keys.json');
+  assert.equal(args[args.indexOf('--port') + 1], '5000');
+  assert.equal(args[args.indexOf('--accounts') + 1], 'dev');
+});
+
+// Headless Chromium answers every notification permission with a refusal, which the card rightly takes as a no: the
+// walk stands in a browser never asked, as studio/browser/table.push.js does.
+test('the walk stands in a browser never asked for notifications', async () => {
+  const kept = globalThis.Notification;
+  globalThis.Notification = { permission: 'denied', requestPermission: async () => 'denied' };
+  try {
+    neverAskedInPage();
+    assert.equal(globalThis.Notification.permission, 'default');
+    assert.equal(await globalThis.Notification.requestPermission(), 'default');
+  } finally {
+    globalThis.Notification = kept;
+  }
+  // A page without notifications at all is left as it is.
+  neverAskedInPage();
+});
+
+// The other form of a turn that arrives (#988): a game begun, the walker answered and waits, Rook answers inside the round.
+test('the lobby films a turn delivered by an answer inside a round, after the seat taken', () => {
+  const lobby = JOURNEYS.find(journey => journey.id === 'lobby');
+  assert.equal(lobby.screens.at(-1), 'home-answer-arrives');
+  assert.ok(lobby.screens.indexOf('home-turn-arrives') < lobby.screens.indexOf('home-answer-arrives'));
 });
 
 test('the arguments name journeys, a width, a strip of one journey, or the paints', () => {
@@ -167,6 +232,16 @@ test('a confirmation reads every decision its sheet sends until the sheet closes
   await assert.rejects(confirm(fake([204, 409]), '#planning-confirm', { until: '#planning-dialog' }), /answered 409/);
   await confirm(fake([204, 204]), '#planning-confirm', { until: '#planning-dialog' });
   await assert.rejects(confirm(fake([409]), '#planning-confirm'), /answered 409/);
+});
+
+// A seat that answers before the other player is asked nothing after it: its tempos are not left until both are in, so
+// the step is behind it once the asking changes, to nothing too (#988).
+test('a step answered ahead of the other player ends once the seat is asked something else or nothing', async () => {
+  const view = { waitingFor: 'Speed', waitingAsked: 3 };
+  const reads = views => { let index = 0; return async () => views[Math.min(index++, views.length - 1)]; };
+  await waitAhead(view, reads([view, view, { waitingFor: null, waitingAsked: null }]), { interval: 1 });
+  await waitAhead(view, reads([{ ...view, over: true }]), { interval: 1 });
+  await assert.rejects(waitAhead(view, reads([view]), { timeout: 20, interval: 1 }), /Speed step \(asking 3\) was still asked/);
 });
 
 // A host killed by a signal has no exit code: closing it returns at once, not at the spec's timeout (#1093, 1).
@@ -282,6 +357,32 @@ test('a paint is reported as its median with the fastest and the slowest run', (
   assert.equal(told.largestIs, 'picture');
   assert.deepEqual(told.shift, { median: 0.26, fastest: 0.2, slowest: 0.3 });
   assert.equal(told.pictureBytes, 700);
+});
+
+// The paints are held to ADR 0197's two times (#962), for each page the budget file names (#992): the ladder and the
+// statistics are measured signed in, with a ranked game on them.
+test('the pages painted are named as the budget file names them, the ladder and the statistics among them', () => {
+  const budget = JSON.parse(read('docs/art/page-budget.json'));
+  assert.deepEqual(PAINTED, ['showcase/home', 'table/sign-in', 'table/home', 'table/leaderboard', 'table/stats']);
+  for (const name of PAINTED) assert.ok(budget.pages[name], `page-budget.json names ${name}`);
+});
+
+const painted = (largest, shift) => ({ runs: 5, largestPaintMs: largest === null ? null : { median: largest, fastest: largest, slowest: largest }, shift: shift === null ? null : { median: shift, fastest: shift, slowest: shift } });
+test('a paint over its budget, or never read, is said and fails the run', () => {
+  const budget = { largestPaintMs: 2500, shift: 0.1 };
+  const within = judgePaints({ pages: { 'table/home': painted(1900, 0.02) } }, budget);
+  assert.equal(within.over, false);
+  assert.deepEqual(within.lines, ['table/home: largest paint 1.9 s, within 2.5 s; shift 0.02, within 0.1']);
+  const over = judgePaints({ pages: { 'showcase/home': painted(4300, 0), 'table/home': painted(1900, 0.26) } }, budget);
+  assert.equal(over.over, true);
+  assert.deepEqual(over.lines, ['showcase/home: largest paint 4.3 s, over 2.5 s; shift 0, within 0.1', 'table/home: largest paint 1.9 s, within 2.5 s; shift 0.26, over 0.1']);
+  // At the budget is within it; a page that never painted, or whose shift was never read, is not.
+  assert.equal(judgePaints({ pages: { a: painted(2500, 0.1) } }, budget).over, false);
+  const unread = judgePaints({ pages: { a: painted(null, null) } }, budget);
+  assert.equal(unread.over, true);
+  assert.deepEqual(unread.lines, ['a: largest paint not painted, over 2.5 s; shift not read, over 0.1']);
+  assert.throws(() => judgePaints({ pages: {} }, budget), /No page was painted/);
+  assert.throws(() => judgePaints({ pages: { a: painted(1, 0) } }, {}), /budget names no largestPaintMs/);
 });
 
 test('the command reference and the scripts page name the journey film', () => {

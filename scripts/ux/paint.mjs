@@ -3,6 +3,8 @@
 // network and the processor held back, and what is reported is the median with the fastest and the slowest.
 // One run is a sample.
 
+import { installSeatViews } from '../../studio/browser/seat-views.js';
+import { FRIEND, WALKER, account, rankedGame } from './journeys.mjs';
 import { raiseSet } from './set.mjs';
 
 export const PAINT_RUNS = 5;
@@ -98,14 +100,56 @@ export async function signIn(context, game) {
   if (!skipped.ok()) throw new Error(`The host refused to skip the lessons of Walker: ${skipped.status()}`);
 }
 
-/** The three doors: the showcase's home, the game's sign-in panel, and the home of a player with nothing. */
+/**
+ * The pages painted, named as `docs/art/page-budget.json` names them (#962): the three doors (the showcase's home, the
+ * game's sign-in panel, the home of a player with nothing), then the ladder and the statistics, signed in once the
+ * walker has a ranked game on them (#992).
+ */
+export const PAINTED = ['showcase/home', 'table/sign-in', 'table/home', 'table/leaderboard', 'table/stats'];
+
+/**
+ * One ranked game between the walker and the friend, played through its first round and conceded, as the player's
+ * pages walk plays it (journeys.mjs): the ladder has two players, the statistics a record.
+ */
+async function rankedForTheWalker(browser, set) {
+  const contexts = [];
+  const person = async () => {
+    const context = await browser.newContext({ viewport: VIEWPORT, isMobile: true, hasTouch: true });
+    await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);
+    contexts.push(context);
+    return context.newPage();
+  };
+  try {
+    const page = await person(), friend = await person();
+    const walk = { page, set, person, blocked: async () => {} };
+    await account(walk, page, WALKER);
+    await account(walk, friend, FRIEND);
+    await rankedGame(walk, friend);
+  } finally {
+    for (const context of contexts) await context.close().catch(() => {});
+  }
+}
+
+/** The pages of PAINTED, in its order: each name, its address, how its browser is prepared, and what comes first. */
+function paintedPages(browser, set) {
+  const signedIn = context => signIn(context, set.game);
+  return [
+    ['showcase/home', `${set.showcase}/`, null],
+    ['table/sign-in', `${set.game}/`, null],
+    ['table/home', `${set.game}/`, signedIn],
+    ['table/leaderboard', `${set.game}/leaderboard`, signedIn, () => rankedForTheWalker(browser, set)],
+    ['table/stats', `${set.game}/stats`, signedIn],
+  ];
+}
+
+/** The pages of PAINTED, each loaded `runs` times on the slow phone. */
 export async function paints(browser, showcase, { runs = PAINT_RUNS } = {}) {
   const set = await raiseSet(showcase);
   try {
-    const pages = [['showcase-home', `${set.showcase}/`, null], ['sign-in-panel', `${set.game}/`, null], ['home-new', `${set.game}/`, context => signIn(context, set.game)]];
     const result = { profile: { viewport: `${VIEWPORT.width}x${VIEWPORT.height}`, ...SLOW_PHONE }, pages: {} };
     // One load after the other, on purpose: two at once would share the processor that is being held back.
-    for (const [name, url, prepare] of pages) {
+    for (const [name, url, prepare, first] of paintedPages(browser, set)) {
+      await first?.();
       const taken = [];
       for (let run = 0; run < runs; run++) taken.push(await onePaint(browser, url, prepare));
       result.pages[name] = summary(taken);
@@ -114,4 +158,25 @@ export async function paints(browser, showcase, { runs = PAINT_RUNS } = {}) {
   } finally {
     await set.close();
   }
+}
+
+const inSeconds = ms => `${Number((ms / 1000).toFixed(1))} s`;
+
+/**
+ * Each page's median largest paint and shift held to the budget's two times (ADR 0197): a line a page, and `over`
+ * when one is above its budget or was never read. At the budget is within it.
+ */
+export function judgePaints({ pages }, budget) {
+  for (const key of ['largestPaintMs', 'shift']) if (typeof budget[key] !== 'number') throw new Error(`The budget names no ${key}.`);
+  const named = Object.entries(pages ?? {});
+  if (!named.length) throw new Error('No page was painted.');
+  let over = false;
+  const lines = named.map(([name, page]) => {
+    const largest = page.largestPaintMs?.median ?? null, shift = page.shift?.median ?? null;
+    const paintOver = largest === null || largest > budget.largestPaintMs, shiftOver = shift === null || shift > budget.shift;
+    over ||= paintOver || shiftOver;
+    return `${name}: largest paint ${largest === null ? 'not painted' : inSeconds(largest)}, ${paintOver ? 'over' : 'within'} ${inSeconds(budget.largestPaintMs)}; `
+      + `shift ${shift === null ? 'not read' : shift}, ${shiftOver ? 'over' : 'within'} ${budget.shift}`;
+  });
+  return { lines, over };
 }

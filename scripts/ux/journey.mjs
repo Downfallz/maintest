@@ -8,7 +8,8 @@
 //   node scripts/ux/journey.mjs --all --out <folder>          # every journey
 //   node scripts/ux/journey.mjs lobby --width 390             # one width
 //   node scripts/ux/journey.mjs lobby --strip create-window   # one interaction across time: lobby-create-window-390.png
-//   node scripts/ux/journey.mjs --paint                       # the first paints on a slow phone: paint.json
+//   node scripts/ux/journey.mjs --paint                       # the first paints on a slow phone: paint.json, held to
+//                                                             # docs/art/page-budget.json (exit 1 when one is over)
 //   node scripts/ux/journey.mjs --list                        # the journeys, their screens and their strips
 //
 // It needs the engine built, the content consolidated, the battle bundle and the browser suite's Playwright.
@@ -20,12 +21,20 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { JOURNEYS } from './journeys.mjs';
 import { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage, measuresLines, watchShiftInPage } from './measures.mjs';
-import { PAINT_RUNS, paints } from './paint.mjs';
+import { PAINT_RUNS, judgePaints, paints } from './paint.mjs';
 import { measureContrast } from './contrast.mjs';
 import { installSeatViews } from '../../studio/browser/seat-views.js';
-import { buildShowcase, missing, raiseSet, root } from './set.mjs';
+import { DESKTOP, VIEWPORTS, buildShowcase, missing, raiseSet, root } from './set.mjs';
 
-export const VIEWPORTS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
+export { DESKTOP, VIEWPORTS };
+/** Under this width a walk is a phone's, with a finger; from it, a desktop's, with a mouse. */
+const DESKTOP_FROM = 760;
+
+/** A walker's browser at one size: a phone touched, a desktop pointed at. */
+export function contextOptions(viewport) {
+  const phone = viewport.width < DESKTOP_FROM;
+  return { viewport, isMobile: phone, hasTouch: phone };
+}
 const COLUMNS = 5;
 /** A page taller than this many screens is cut on its sheet, and its caption says how tall it is. */
 const SCREENS_SHOWN = 3;
@@ -120,7 +129,7 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
   const person = async () => {
     // UX_JOURNEY_VIDEO=<folder> records each person's walk in real time, a clip of a stage's interaction (UX7-UX12).
     const video = process.env.UX_JOURNEY_VIDEO ? { recordVideo: { dir: join(process.env.UX_JOURNEY_VIDEO, String(viewport.width)), size: viewport } } : {};
-    const context = await browser.newContext({ viewport, isMobile: true, hasTouch: true, deviceScaleFactor: scale, ...video });
+    const context = await browser.newContext({ ...contextOptions(viewport), deviceScaleFactor: scale, ...video });
     await context.addInitScript(watchShiftInPage);
     // The seat's views as the page reads them, for the walks that play (studio/browser/seat-views.js).
     await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);
@@ -219,11 +228,8 @@ const VALUED = {
   '--out': (text, options) => { options.out = text; },
   '--strip': (text, options) => { options.strip = text; },
   '--showcase': (text, options) => { options.showcase = text; },
-  '--width': (text, options) => {
-    const viewport = VIEWPORTS.find(one => String(one.width) === text);
-    if (!viewport) throw new Error(`--width is ${VIEWPORTS.map(one => one.width).join(' or ')}.`);
-    options.viewports = [viewport];
-  },
+  // Read against the sizes once the strip is known: a strip may name its own (`viewports`).
+  '--width': (text, options) => { options.width = text; },
 };
 for (const flag of ['--frames', '--interval', '--runs']) {
   VALUED[flag] = (text, options) => {
@@ -244,7 +250,7 @@ export function blockedLines(id, viewport, taken) {
 }
 
 export function parseArguments(argv) {
-  const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, runs: PAINT_RUNS };
+  const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, width: null, runs: PAINT_RUNS };
   const given = new Set();
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
@@ -268,6 +274,12 @@ export function parseArguments(argv) {
     if (options.all || options.journeys.length !== 1) throw new Error('--strip films one interaction of one journey.');
     const journey = JOURNEYS.find(one => one.id === options.journeys[0]);
     if (!journey.strips?.[options.strip]) throw new Error(`The ${journey.id} journey has no strip named ${options.strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
+    options.viewports = journey.strips[options.strip].viewports ?? VIEWPORTS;
+  }
+  if (options.width !== null) {
+    const viewport = options.viewports.find(one => String(one.width) === options.width);
+    if (!viewport) throw new Error(`--width is ${options.viewports.map(one => one.width).join(' or ')}.`);
+    options.viewports = [viewport];
   }
   return options;
 }
@@ -316,8 +328,13 @@ async function main(argv) {
     }
     if (options.paint) {
       const path = join(out, 'paint.json');
-      await writeFile(path, `${JSON.stringify(await paints(browser, showcase, { runs: options.runs }), null, 2)}\n`);
+      const painted = await paints(browser, showcase, { runs: options.runs });
+      await writeFile(path, `${JSON.stringify(painted, null, 2)}\n`);
       console.log(path);
+      // Held to ADR 0197's two times, as the budget file holds them (#962): a page over its budget fails the run.
+      const verdict = judgePaints(painted, JSON.parse(await readFile(join(root, 'docs/art/page-budget.json'), 'utf8')));
+      for (const line of verdict.lines) console.log(line);
+      if (verdict.over) { console.error('A page is over its paint budget (docs/art/page-budget.json).'); process.exitCode = 1; }
     }
   } finally {
     await browser?.close();

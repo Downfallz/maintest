@@ -174,15 +174,34 @@ export async function chooseRecordedSpell(page, lesson, blocked = async () => {}
   await choose(page, `[data-spell="${spell.spell}"]`, blocked);
 }
 
-/** Answer what the seat is asked, its sheet open first. `look` is called once the sheet is open, and once targets are asked. */
-export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {}, tempo } = {}) {
+/**
+ * The step a seat answered ahead of the other player is behind it once the seat is asked something else, or nothing:
+ * the round waits on the other seat, and its tempos are not left until both are in (#988). A tempo sheet closes once
+ * every creature's tempo is sent (`answerSpeed`), so a view that asks nothing after it is the wait, not a gap.
+ */
+export async function waitAhead(view, read, { timeout = 15000, interval = 100 } = {}) {
+  const end = Date.now() + timeout;
+  for (;;) {
+    const now = await read();
+    if (now?.over || now?.waitingAsked !== view.waitingAsked) return;
+    if (Date.now() > end) throw new Error(`The ${view.waitingFor} step (asking ${view.waitingAsked}) was still asked after ${timeout / 1000} s.`);
+    await new Promise(done => setTimeout(done, interval));
+  }
+}
+
+/**
+ * Answer what the seat is asked, its sheet open first. `look` is called once the sheet is open, and once targets are
+ * asked. `ahead` says the other player has not answered yet: the step is read as behind the seat by `waitAhead`.
+ */
+export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {}, tempo, ahead = false } = {}) {
   if (view.waitingFor === 'Action') await openSpells(page); else await openPlanning(page);
   await look();
   if (view.waitingFor === 'Evolution') await answerEvolution(page, view, next, blocked);
   else if (view.waitingFor === 'Speed') await answerSpeed(page, next, blocked, tempo);
   else if (view.waitingFor === 'TieOrder') { await page.locator('#planning-keep').click(); await confirm(page, '#planning-confirm'); }
   else await answerAction(page, view, next, look, blocked);
-  await waitAnswered(view, () => latest(page), { timeout: 15000 });
+  if (ahead) await waitAhead(view, () => latest(page));
+  else await waitAnswered(view, () => latest(page), { timeout: 15000 });
 }
 
 // The seat's view once it asks the person something the page can answer.
