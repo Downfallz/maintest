@@ -57,6 +57,7 @@
 | [tabletop/app-roadmap.md](tabletop/app-roadmap.md) | The app in seven stages: what each one ships, what it is tested with, and what a reviewer checks. |
 | [tabletop/free-activation-playtest.md](tabletop/free-activation-playtest.md) | The free-activation playtest (ADR 0110). |
 | [tabletop/accounts-plan.md](tabletop/accounts-plan.md) | Plan: player accounts with a Google sign-in, and the home page (ADR 0122). |
+| [tabletop/sign-in-methods-plan.md](tabletop/sign-in-methods-plan.md) | Plan: more ways to sign in (Discord first) on one account, and a guest for UX15; the host keeps the sign-in rather than Supabase. |
 | [tabletop/friends-plan.md](tabletop/friends-plan.md) | Plan: friends, and inviting one of them to a table. |
 | [tabletop/admin-plan.md](tabletop/admin-plan.md) | Plan: the admin panel as the host's headquarters: tabs, players, the jobs' runs, registration. |
 | [tabletop/scenarios-plan.md](tabletop/scenarios-plan.md) | Plan: a recorded match cut at the top of a round, played as practice, shared as a link or a `scenario.json`, and the admin diagnosis of a stuck table. |
