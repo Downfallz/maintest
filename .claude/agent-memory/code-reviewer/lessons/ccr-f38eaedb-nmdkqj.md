@@ -1,2 +1,0 @@
-- A .NET `^...$` validator without `\z` accepts a trailing `\n` (`$` matches before a final newline): replacing it with a hand check silently changes what is kept; probe `"x\n"` on the old code and say it in the PR (#733, PlanPath, aea5f84).
-- A flake caused by CPU starvation (a 100 ms regex timeout) is not closed by a test with a wall-clock budget: the Stopwatch assertion is the same failure class with more headroom; and run the "hostile" input against the old code (it passed there: the pattern never backtracked) (#733, PlanPathTests, aea5f84).
