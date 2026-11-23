@@ -96,26 +96,38 @@ test('a seat page on a host with keys registers the worker and offers the notice
 
 });
 
-// The offer in the lobby (N4): a signed-in player whose game against a person waits on the other player is offered
-// pop-ups by the page's own card, never the browser's prompt first; Not now waits a week, Don't ask again ends it.
-test('the lobby offers pop-ups when a game against a person waits, and keeps the answer', async ({ page, context }) => {
+// A lobby host with push keys and the given accounts, on a free port, for one test: `body` is given its origin. The
+// browser is one never asked: headless Chromium answers every notification permission with a refusal, which the card
+// rightly takes as a no, so the page is shown a prompt closed without an answer.
+async function withLobbyHost(context, accounts, body) {
   const probe = createServer();
   await new Promise(done => probe.listen(0, '127.0.0.1', done));
   const lobbyPort = probe.address().port;
   await new Promise(done => probe.close(done));
-  const lobbyHost = run(['table', '--p2', 'greedy', '--record', mkdtempSync(join(keysDirectory, 'sessions-')), '--seed', '7', '--accounts', 'dev', '--port', String(lobbyPort), '--push-keys', keysFile]);
+  const lobbyHost = run(['table', '--p2', 'greedy', '--record', mkdtempSync(join(keysDirectory, 'sessions-')), '--seed', '7', '--accounts', accounts, '--port', String(lobbyPort), '--push-keys', keysFile]);
   let log = '';
   lobbyHost.stdout.on('data', data => { log += data.toString(); });
   lobbyHost.stderr.on('data', data => { log += data.toString(); });
   try {
     await expect.poll(() => log, { timeout: 20000, message: 'Table host starts' }).toContain('joins at');
-    const origin = `http://127.0.0.1:${lobbyPort}`;
-    // Headless Chromium answers every notification permission with a refusal, which the card rightly takes as a no:
-    // the page is shown a browser never asked, whose prompt is closed without an answer.
     await context.addInitScript(() => {
       Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
       Notification.requestPermission = async () => 'default';
     });
+    await body(`http://127.0.0.1:${lobbyPort}`);
+  } finally {
+    if (lobbyHost.exitCode === null) {
+      const closed = new Promise(done => lobbyHost.once('exit', done));
+      lobbyHost.kill('SIGINT');
+      await closed;
+    }
+  }
+}
+
+// The offer in the lobby (N4): a signed-in player whose game against a person waits on the other player is offered
+// pop-ups by the page's own card, never the browser's prompt first; Not now waits a week, Don't ask again ends it.
+test('the lobby offers pop-ups when a game against a person waits, and keeps the answer', async ({ page, context }) => {
+  await withLobbyHost(context, 'dev', async origin => {
     const headers = { Origin: origin };
     expect((await page.request.post(`${origin}/api/account/dev`, { data: { username: 'Walker' }, headers })).ok()).toBe(true);
     // The first tutorial would open by itself for a new account: skipped, as a returning player has.
@@ -154,33 +166,13 @@ test('the lobby offers pop-ups when a game against a person waits, and keeps the
     await expect(page.locator('#my-tables')).not.toContainText('Finding');
     await expect(offer).toBeHidden();
     expect(JSON.parse(await page.evaluate(() => localStorage.getItem('downfall.push-offer'))).never).toBe(true);
-  } finally {
-    if (lobbyHost.exitCode === null) {
-      const closed = new Promise(done => lobbyHost.once('exit', done));
-      lobbyHost.kill('SIGINT');
-      await closed;
-    }
-  }
+  });
 });
 
 // A host with accounts off (a local or LAN host, #1127): nobody is signed in, so the lobby asks through the seat of
 // the game that waits, as the battle view does, and the card is made all the same.
 test('a keyed host with accounts off offers pop-ups in the lobby, through the waiting game\'s seat', async ({ page, context }) => {
-  const probe = createServer();
-  await new Promise(done => probe.listen(0, '127.0.0.1', done));
-  const lobbyPort = probe.address().port;
-  await new Promise(done => probe.close(done));
-  const lobbyHost = run(['table', '--p2', 'greedy', '--record', mkdtempSync(join(keysDirectory, 'sessions-')), '--seed', '7', '--accounts', 'off', '--port', String(lobbyPort), '--push-keys', keysFile]);
-  let log = '';
-  lobbyHost.stdout.on('data', data => { log += data.toString(); });
-  lobbyHost.stderr.on('data', data => { log += data.toString(); });
-  try {
-    await expect.poll(() => log, { timeout: 20000, message: 'Table host starts' }).toContain('joins at');
-    const origin = `http://127.0.0.1:${lobbyPort}`;
-    await context.addInitScript(() => {
-      Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
-      Notification.requestPermission = async () => 'default';
-    });
+  await withLobbyHost(context, 'off', async origin => {
     const keyReads = [];
     page.on('request', request => { if (new URL(request.url()).pathname === '/api/lobby/push') keyReads.push(request.headers()['x-seat-token'] ?? null); });
     // A table opened for another player from this browser, which keeps its seat; the battle page is not needed here.
@@ -195,14 +187,8 @@ test('a keyed host with accounts off offers pop-ups in the lobby, through the wa
     const offer = page.locator('#push-offer');
     await expect(offer).toBeVisible({ timeout: 20000 });
     await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
-    expect(keyReads.some(token => token)).toBe(true);
+    expect(keyReads.some(Boolean)).toBe(true);
     await page.locator('#push-offer-on').click();
     await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.', { timeout: 10000 });
-  } finally {
-    if (lobbyHost.exitCode === null) {
-      const closed = new Promise(done => lobbyHost.once('exit', done));
-      lobbyHost.kill('SIGINT');
-      await closed;
-    }
-  }
+  });
 });

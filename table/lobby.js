@@ -1037,6 +1037,22 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   };
   el('opponent').addEventListener('change', showOpponent);
   function giveBackCreate(submit, words) { busy = false; submit.textContent = words; submit.removeAttribute('aria-busy'); showOpponent(); }
+  /** Sends what the Create window says: an invitation to another friend, or a new table, entered at once. True once the page is leaving. */
+  async function sendCreate() {
+    if (opponentOf() === 'friend' && !el('friend').value) throw new Error('Choose a friend to keep the seat for.');
+    if (reinviting) {
+      await lobbyRequest(`/api/lobby/tables/${encodeURIComponent(reinviting)}/invitation`, { friend: el('friend').value });
+      dialog.close();
+      await refresh();
+      return false;
+    }
+    const opponent = opponentOf(), between = ['person', 'friend'].includes(opponent);
+    enter(await lobbyRequest('/api/lobby/tables', { opponent, format: el('format').value, friend: opponent === 'friend' ? el('friend').value : undefined,
+      // A bot is chosen by how strong it is, never by its name (ADR 0180).
+      ...(opponent === 'bot' ? { level: el('bot-level').value } : {}),
+      ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
+    return true;
+  }
   el('create-table').addEventListener('submit', async event => {
     event.preventDefault();
     if (busy) return;
@@ -1049,22 +1065,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     submit.setAttribute('aria-busy', 'true');
     el('create-problem').hidden = true;
     try {
-      if (opponentOf() === 'friend' && !el('friend').value) {
-        throw new Error('Choose a friend to keep the seat for.');
-      }
-
-      if (reinviting) {
-        await lobbyRequest(`/api/lobby/tables/${encodeURIComponent(reinviting)}/invitation`, { friend: el('friend').value });
-        dialog.close();
-        await refresh();
-      } else {
-        const opponent = opponentOf(), between = ['person', 'friend'].includes(opponent);
-        enter(await lobbyRequest('/api/lobby/tables', { opponent, format: el('format').value, friend: opponent === 'friend' ? el('friend').value : undefined,
-          // A bot is chosen by how strong it is, never by its name (ADR 0180).
-          ...(opponent === 'bot' ? { level: el('bot-level').value } : {}),
-          ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
-        leaving = true;
-      }
+      leaving = await sendCreate();
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
     finally {
       // Once the battle's page is asked for, the window keeps saying Creating… until the page changes; a page brought
