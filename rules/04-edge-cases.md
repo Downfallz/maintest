@@ -22,8 +22,8 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 ```card
 id: fizzle
 title: A skipped turn
-A creature that cannot act when its turn comes is skipped: nothing resolves, and nothing is spent.
-It happens when the creature was defeated or stunned earlier in the round.
+A creature that cannot act when its turn comes is skipped. Nothing resolves, nothing is spent.
+The creature was defeated or stunned earlier in the round.
 > A creature stunned by an earlier turn is skipped when its own comes, and keeps all its Energy.
 ```
 
@@ -114,6 +114,6 @@ id: critical
 title: Critical
 A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.
 On a critical, the spell's damage and healing on its targets are multiplied.
-An Instinct creature never rolls.
+Instinct never rolls.
 > A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes {floor(7 * rules.criticalMultiplier)}.
 ```

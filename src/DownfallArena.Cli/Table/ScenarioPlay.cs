@@ -33,7 +33,8 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
     private const string Run = "scenario";
 
     /// <param name="label">What the seat's view says the table is, so the page shows it as practice; none at the local table.</param>
-    public static async Task<ScenarioPlay> StartAsync(IServiceProvider services, SteppedHost stepped, ScenarioDocument document, string token, PracticeLabel? label, CancellationToken stopping)
+    /// <param name="journal">The empty journal the playthrough is kept in; a new one in memory unless the host gives one.</param>
+    public static async Task<ScenarioPlay> StartAsync(IServiceProvider services, SteppedHost stepped, ScenarioDocument document, string token, PracticeLabel? label, CancellationToken stopping, IDecisionJournal? journal = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(stepped);
@@ -47,7 +48,7 @@ internal sealed record ScenarioPlay(SteppedSession Session, TableApi Api, string
             throw PracticeRefusal.Of($"The scenario cannot be played on this engine: {started.Error.Message}");
         }
 
-        var journal = new InMemoryDecisionJournal();
+        journal ??= new InMemoryDecisionJournal();
         await journal.AppendAsync(Run, JournalPosition.Start, started.Value.Entries, stopping);
 
         var opponent = ScriptedOpponent.Of(scenario, Other(document.Seat), new GreedyAgent(resources, rules));

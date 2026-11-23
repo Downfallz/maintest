@@ -1,5 +1,6 @@
 # What changed
 
+- 2026-11-23: The Health, Tempo, Initiative, Choosing a spell, Defense, A skipped turn and Critical cards are shorter, and in French the Energy card too, with no rule changed.
 - 2026-11-22: The reference has a section on the ladder: what a ranked game is, what moves a rating and by how much, that a draw counts as half a win and a voided game never counts, what the ± says and when a rating is provisional. The Mutation and Conditions cards are shorter, with no rule changed (ADR 0124, ADR 0176).
 - 2026-11-18: Three spells take their locked names: Whirlwind is Groundbreaker, Claim is Seize, Soul Feast is Devour. No rule moved.
 - 2026-11-18: The mutation card no longer says a capstone gives an initiative bonus: a capstone gives a passive in place of spells and an initiative bonus (ADR 0101).

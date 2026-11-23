@@ -1,3 +1,4 @@
+using DownfallArena.Application.Matches.Ports;
 using DownfallArena.Application.Matches.Scenarios;
 using DownfallArena.Infrastructure.Matches;
 
@@ -17,6 +18,9 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
 
     /// <summary>How long a practice nobody reads is kept.</summary>
     public static readonly TimeSpan Idle = TimeSpan.FromHours(1);
+
+    /// <summary>The journal each practice is played on, kept in memory: a test gives one that cannot be played on (#931).</summary>
+    internal Func<IDecisionJournal> Journals { get; init; } = () => new InMemoryDecisionJournal();
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly InProcessAgentTurns _turns = new(clock);
@@ -73,24 +77,67 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// table plays on no more without having ended its match (let go of, or it could not go on) is let go of too,
     /// with nothing kept on the account: it is not done, and there is nothing left to play (#912).
     /// </summary>
-    public async Task<Practice?> ResumeAsync(string account, string scenario)
+    /// <param name="keepDone">
+    /// Keeps on the account that the tutorial is done, before a done tutorial is let go of. Whether it is done is read
+    /// under this gate, once to decide and again where it is let go of, so a match that ends meanwhile is never let go
+    /// of unkept (#931). The keeping itself is a store write, made outside the gate, which every account's practices
+    /// wait on: if it fails, the practice is kept, for a reload or a Leave of the same tutorial within the idle hour.
+    /// </param>
+    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<Task>? keepDone = null)
+    {
+        var (practice, done, over) = await ReadAsync(account, scenario, sweep: true);
+        if (practice is null || practice.Play.Api.Practice?.Tutorial is null)
+        {
+            return practice;
+        }
+
+        if (!done && !over)
+        {
+            return practice;
+        }
+
+        await KeepAsync(done, keepDone);
+        await LetGoAsync(practice, done, keepDone);
+        return null;
+    }
+
+    /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
+    /// <param name="keepDone">As <see cref="ResumeAsync" />'s: run outside the gate before a done tutorial is let go of.</param>
+    public async Task<bool> ForgetAsync(string account, string scenario, Func<Task>? keepDone = null)
+    {
+        var (practice, done, _) = await ReadAsync(account, scenario, sweep: false);
+        if (practice is null)
+        {
+            return false;
+        }
+
+        await KeepAsync(done, keepDone);
+        await LetGoAsync(practice, done, keepDone);
+        return true;
+    }
+
+    /// <summary>
+    /// The account's practice of the scenario, and, for a tutorial, whether it is done and whether its table plays on
+    /// no more, read once under the gate. Over is read first: a table whose match ended has its board's outcome before
+    /// it says it is over, so a tutorial read over and not done did not end its match.
+    /// </summary>
+    private async Task<(Practice? Practice, bool Done, bool Over)> ReadAsync(string account, string scenario, bool sweep)
     {
         await _gate.WaitAsync();
         try
         {
-            await SweepAsync();
+            if (sweep)
+            {
+                await SweepAsync();
+            }
+
             if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
             {
-                return null;
+                return (null, false, false);
             }
 
-            if (practice.Play.Api.Practice?.Tutorial is { } tutorial && (tutorial.Done || practice.Play.Session.IsOver))
-            {
-                await StopAsync(practice);
-                return null;
-            }
-
-            return practice;
+            var over = practice.Play.Session.IsOver;
+            return (practice, practice.Play.Api.Practice?.Tutorial?.Done == true, over);
         }
         finally
         {
@@ -98,13 +145,40 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
     }
 
-    /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
-    public async Task<bool> ForgetAsync(string account, string scenario)
+    private static async Task KeepAsync(bool done, Func<Task>? keepDone)
+    {
+        if (done && keepDone is not null)
+        {
+            await keepDone();
+        }
+    }
+
+    /// <summary>
+    /// Lets go of a practice read before, under the gate, unless the account opened another meanwhile. Whether it is
+    /// done is read again there: a match that ended since the first read is kept done first, outside the gate, and
+    /// the practice is let go of on that second read (#931).
+    /// </summary>
+    private async Task LetGoAsync(Practice practice, bool kept, Func<Task>? keepDone)
+    {
+        while (!await LetGoUnlessDoneSinceAsync(practice, kept || keepDone is null))
+        {
+            await keepDone!();
+            kept = true;
+        }
+    }
+
+    /// <summary>Lets go of the practice under the gate, and says so; false, keeping it, when it became done unkept.</summary>
+    private async Task<bool> LetGoUnlessDoneSinceAsync(Practice practice, bool kept)
     {
         await _gate.WaitAsync();
         try
         {
-            if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
+            if (!_byAccount.TryGetValue(practice.Account, out var current) || !ReferenceEquals(current, practice))
+            {
+                return true;
+            }
+
+            if (!kept && practice.Play.Api.Practice?.Tutorial?.Done == true)
             {
                 return false;
             }
@@ -162,7 +236,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             ScenarioPlay play;
             try
             {
-                play = await ScenarioPlay.StartAsync(content.Services, stepped, document, PracticeRun.NewToken(), label, cancellationToken);
+                play = await ScenarioPlay.StartAsync(content.Services, stepped, document, PracticeRun.NewToken(), label, cancellationToken, Journals());
             }
             catch (InvalidDataException failure)
             {

@@ -19,8 +19,8 @@ sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-life
 ```card
 id: health
 title: Health
-At zero Health a creature is defeated, for the rest of the match.
-When a team has no creature left, the match ends at once, even in the middle of a round.
+At zero Health a creature is defeated for good.
+When a team has no creature left, the match ends, even mid-round.
 Healing never takes a creature above the Health it started the match with.
 > A creature starts at {creature.health} Health. A hit of 7 leaves it at {max(0, creature.health - max(0, 7 - creature.defense))}.
 ```

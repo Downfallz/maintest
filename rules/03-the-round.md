@@ -147,8 +147,8 @@ sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
 id: tempo
 title: Tempo
 Each round, every creature that is not stunned takes a tempo: Instinct or Precision.
-Instinct acts before every Precision creature, and cannot roll a critical this round.
-Precision acts after every Instinct creature, and keeps the critical roll.
+Instinct acts before every Precision creature, but cannot roll a critical this round.
+Precision acts after Instinct and keeps the critical roll.
 > An Instinct creature at {creature.initiative} initiative acts before a Precision creature at {creature.initiative + 4}.
 ```
 
@@ -187,9 +187,9 @@ sources: ADR 0036, ADR 0059, ADR 0063, game-rules#round-sequence-adr-0010
 id: initiative
 title: Initiative
 Initiative orders the creatures inside their tempo: the highest acts first.
-A creature starts with its base initiative. Each mutation adds its bonus, for the rest of the match.
+Each mutation adds its bonus to the base initiative, for good.
 A tie between the two teams is settled by a d20 roll-off.
-> Two Precision creatures at {creature.initiative + 2} and {creature.initiative} initiative: the one at {creature.initiative + 2} acts first.
+> In Precision, the creature at {creature.initiative + 2} initiative acts before the one at {creature.initiative}.
 ```
 
 ## Ordering your ties {#tie-order}
@@ -225,9 +225,9 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 ```card
 id: intent
 title: Choosing a spell
-No spell is declared in advance: a creature chooses its spell when its turn comes.
-You choose the spell and its targets on the board as it stands, and it resolves at once.
-> A creature at {1 + rules.energyPerRound} Energy, at its turn, may cast any spell it knows that costs {1 + rules.energyPerRound} or less.
+No spell is declared in advance.
+When a creature's turn comes, you choose its spell and targets on the board as it stands. It resolves at once.
+> A creature at {1 + rules.energyPerRound} Energy can cast, on its turn, any spell it knows that costs {1 + rules.energyPerRound} or less.
 ```
 
 ## Targets {#targets}
@@ -291,10 +291,10 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 ```card
 id: defense
 title: Defense
-Defense lowers the damage of every hit a creature takes, never below zero.
+Defense lowers the damage of every hit taken, never below zero.
 Defense buffs add at most {engine.defenseBuffCeiling} to it, however many it holds.
-Only damage over time, applied at Upkeep, ignores it.
-> A hit of 7 on a creature with {creature.defense + 2} Defense deals {max(0, 5 - creature.defense)}. A creature starts at {creature.defense} Defense: the same hit on it deals {max(0, 7 - creature.defense)}.
+Only damage over time, at Upkeep, ignores it.
+> A creature starts at {creature.defense} Defense. A hit of 7 deals {max(0, 7 - creature.defense)}, or {max(0, 5 - creature.defense)} at {creature.defense + 2} Defense.
 ```
 
 ## The damage bonus {#damage-bonus}

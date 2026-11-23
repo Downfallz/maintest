@@ -4,7 +4,7 @@
 // interactions `--strip` films.
 
 import { GAME_ORIGIN } from '../../table/site-origins.js';
-import { choose, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
+import { choose, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
 
 export const WALKER = 'Walker', FRIEND = 'Rook';
 const FIRST_LESSON = 'sc-repo-tutorial-your-first-combat';
@@ -123,6 +123,9 @@ const theLessons = {
     ...(hasCards(lesson) ? [`lesson-${lesson.order}-concept-card`] : []), lesson.endsTheMatch ? 'lesson-result' : `lesson-${lesson.order}-complete`]), 'home-after-the-lessons'],
   strips: {
     'brief-begins': { at: 'lesson-1-brief', act: ({ page }) => page.locator('#practice-brief-begin').click() },
+    // The first cast (#978): the coach and its ring by the spell choice, then the spell chosen, and the frames after it
+    // show the coach stepping aside while the targets are chosen. Film it with `--frames 12 --interval 40`.
+    'first-cast': { at: 'lesson-1-first-step', act: ({ page, blocked }) => chooseRecordedSpell(page, lessons[0], blocked) },
   },
   async walk(walk) {
     const { page, set } = walk;

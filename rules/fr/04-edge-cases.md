@@ -23,9 +23,9 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 ```card
 id: fizzle
 title: Un tour sauté
-Une créature qui ne peut pas agir quand vient son tour est sautée : rien ne se résout, et rien n’est dépensé.
-Cela arrive quand la créature a été vaincue ou étourdie plus tôt dans le round.
-> Une créature étourdie par un tour précédent est sautée quand vient le sien, et garde toute son Énergie.
+Une créature qui ne peut pas agir quand vient son tour est sautée. Rien ne se résout, rien n’est dépensé.
+La créature a été vaincue ou étourdie plus tôt dans le round.
+> Une créature étourdie par un tour précédent est sautée et garde toute son Énergie.
 ```
 
 ## Le plateau change entre deux tours {#the-board-changes}
@@ -117,8 +117,8 @@ sources: ADR 0033, ADR 0042, ADR 0100, ADR 0154, game-rules#implemented, game-ru
 ```card
 id: critical
 title: Critique
-Une créature en Précision lance un d20 quand son sort se résout, contre le nombre que le sort indique.
-Sur un critique, les dégâts et les soins du sort sur ses cibles sont multipliés.
-Une créature en Instinct ne lance jamais le dé.
-> Un sort indique d20 : 11+. Un jet de 14 est un critique : ses 7 dégâts deviennent {floor(7 * rules.criticalMultiplier)}.
+Quand son sort se résout, une créature en Précision lance un d20 contre le nombre indiqué.
+Un critique multiplie dégâts et soins du sort sur ses cibles.
+Instinct ne lance jamais le dé.
+> Un sort indique 11+. Un jet de 14 est critique et ses 7 dégâts deviennent {floor(7 * rules.criticalMultiplier)}.
 ```

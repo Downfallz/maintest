@@ -26,8 +26,8 @@ sources: ADR 0010, ADR 0101, ADR 0114, ADR 0132, game-rules#round-sequence-adr-0
 id: energy
 title: Énergie
 Chaque créature vivante gagne de l’Énergie à l’Entretien, quand un round commence.
-Un sort coûte de l’Énergie. Elle est dépensée quand le sort se résout, jamais avant.
-> Une créature à 1 point d’Énergie en gagne {rules.energyPerRound} à l’Entretien et en a {1 + rules.energyPerRound} : assez pour un sort qui coûte {1 + rules.energyPerRound}.
+Un sort coûte de l’Énergie, dépensée quand il se résout, jamais avant.
+> Une créature à 1 point d’Énergie en gagne {rules.energyPerRound} à l’Entretien et en a {1 + rules.energyPerRound}, assez pour un sort qui coûte {1 + rules.energyPerRound}.
 ```
 
 ## Effets en cours {#ongoing-effects}
@@ -155,10 +155,10 @@ sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
 ```card
 id: tempo
 title: Tempo
-À chaque round, chaque créature qui n’est pas étourdie prend un tempo : Instinct ou Précision.
-Instinct agit avant chaque créature en Précision, et ne peut pas obtenir de critique ce round.
-Précision agit après chaque créature en Instinct, et garde le jet de critique.
-> Une créature en Instinct à une initiative de {creature.initiative} agit avant une créature en Précision à {creature.initiative + 4}.
+À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.
+Instinct agit avant toute créature en Précision, sans critique ce round.
+Précision agit après Instinct et garde le jet de critique.
+> Une créature en Instinct à {creature.initiative} d’initiative agit avant une créature en Précision à {creature.initiative + 4}.
 ```
 
 ## L’ordre des tours {#turn-order}
@@ -198,10 +198,10 @@ sources: ADR 0036, ADR 0059, ADR 0063, game-rules#round-sequence-adr-0010
 ```card
 id: initiative
 title: Initiative
-L’initiative ordonne les créatures à l’intérieur de leur tempo : la plus haute agit en premier.
-Une créature commence avec son initiative de base. Chaque mutation ajoute son bonus, pour le reste de la partie.
+L’initiative ordonne les créatures dans leur tempo, la plus haute en premier.
+Chaque mutation ajoute son bonus à l’initiative de base, pour de bon.
 Une égalité entre les deux équipes se tranche par un départage au d20.
-> Deux créatures en Précision à une initiative de {creature.initiative + 2} et de {creature.initiative} : celle à {creature.initiative + 2} agit en premier.
+> En Précision, la créature à {creature.initiative + 2} d’initiative agit avant celle à {creature.initiative}.
 ```
 
 ## Ordonner vos égalités {#tie-order}
@@ -238,9 +238,9 @@ sources: ADR 0083, ADR 0110, ADR 0112, game-rules#implemented, game-rules#round-
 ```card
 id: intent
 title: Choisir un sort
-Aucun sort n’est déclaré à l’avance : une créature choisit son sort quand vient son tour.
-Vous choisissez le sort et ses cibles sur le plateau tel qu’il est, et il se résout aussitôt.
-> Une créature dont l’Énergie est de {1 + rules.energyPerRound} peut, à son tour, lancer n’importe quel sort qu’elle connaît et qui coûte {1 + rules.energyPerRound} ou moins.
+Aucun sort n’est déclaré à l’avance.
+Au tour d’une créature, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Il se résout aussitôt.
+> Une créature à {1 + rules.energyPerRound} points d’Énergie peut lancer, à son tour, tout sort qu’elle connaît coûtant {1 + rules.energyPerRound} ou moins.
 ```
 
 ## Cibles {#targets}
@@ -305,10 +305,10 @@ sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequ
 ```card
 id: defense
 title: Défense
-La Défense réduit les dégâts de chaque coup que reçoit une créature, jamais en dessous de zéro.
-Les renforts de Défense y ajoutent au plus {engine.defenseBuffCeiling}, quel que soit leur nombre.
-Seuls les dégâts dans la durée, appliqués à l’Entretien, l’ignorent.
-> Un coup de 7 sur une créature à {creature.defense + 2} de Défense inflige {max(0, 5 - creature.defense)}. Une créature commence à {creature.defense} de Défense : le même coup sur elle inflige {max(0, 7 - creature.defense)}.
+La Défense réduit les dégâts de chaque coup, jamais sous zéro.
+Ses renforts ajoutent au plus {engine.defenseBuffCeiling} en tout.
+Seuls les dégâts dans la durée, à l’Entretien, l’ignorent.
+> Une créature commence à {creature.defense} de Défense. Un coup de 7 inflige {max(0, 7 - creature.defense)}, ou {max(0, 5 - creature.defense)} à {creature.defense + 2} de Défense.
 ```
 
 ## Le bonus de dégâts {#damage-bonus}

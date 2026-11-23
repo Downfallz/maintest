@@ -119,11 +119,11 @@
             "id": "health",
             "title": "Santé",
             "lines": [
-              "À zéro point de Santé, une créature est vaincue, pour le reste de la partie.",
-              "Quand une équipe n’a plus de créature, la partie se termine aussitôt, même au milieu d’un round.",
-              "Un soin ne porte jamais une créature au-dessus de la Santé avec laquelle elle a commencé la partie."
+              "À zéro point de Santé, une créature est vaincue pour de bon.",
+              "La partie finit dès qu’une équipe n’a plus de créature, même en plein round.",
+              "Un soin s’arrête à la Santé de départ."
             ],
-            "example": "Une créature commence avec une Santé de 30. Un coup de 7 la laisse à 23."
+            "example": "Une créature commence à 30 de Santé. Un coup de 7 la laisse à 23."
           }
         },
         {
@@ -744,9 +744,9 @@
             "title": "Énergie",
             "lines": [
               "Chaque créature vivante gagne de l’Énergie à l’Entretien, quand un round commence.",
-              "Un sort coûte de l’Énergie. Elle est dépensée quand le sort se résout, jamais avant."
+              "Un sort coûte de l’Énergie, dépensée quand il se résout, jamais avant."
             ],
-            "example": "Une créature à 1 point d’Énergie en gagne 2 à l’Entretien et en a 3 : assez pour un sort qui coûte 3."
+            "example": "Une créature à 1 point d’Énergie en gagne 2 à l’Entretien et en a 3, assez pour un sort qui coûte 3."
           }
         },
         {
@@ -1261,11 +1261,11 @@
             "id": "tempo",
             "title": "Tempo",
             "lines": [
-              "À chaque round, chaque créature qui n’est pas étourdie prend un tempo : Instinct ou Précision.",
-              "Instinct agit avant chaque créature en Précision, et ne peut pas obtenir de critique ce round.",
-              "Précision agit après chaque créature en Instinct, et garde le jet de critique."
+              "À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.",
+              "Instinct agit avant toute créature en Précision, sans critique ce round.",
+              "Précision agit après Instinct et garde le jet de critique."
             ],
-            "example": "Une créature en Instinct à une initiative de 5 agit avant une créature en Précision à 9."
+            "example": "Une créature en Instinct à 5 d’initiative agit avant une créature en Précision à 9."
           }
         },
         {
@@ -1373,11 +1373,11 @@
             "id": "initiative",
             "title": "Initiative",
             "lines": [
-              "L’initiative ordonne les créatures à l’intérieur de leur tempo : la plus haute agit en premier.",
-              "Une créature commence avec son initiative de base. Chaque mutation ajoute son bonus, pour le reste de la partie.",
+              "L’initiative ordonne les créatures dans leur tempo, la plus haute en premier.",
+              "Chaque mutation ajoute son bonus à l’initiative de base, pour de bon.",
               "Une égalité entre les deux équipes se tranche par un départage au d20."
             ],
-            "example": "Deux créatures en Précision à une initiative de 7 et de 5 : celle à 7 agit en premier."
+            "example": "En Précision, la créature à 7 d’initiative agit avant celle à 5."
           }
         },
         {
@@ -1486,10 +1486,10 @@
             "id": "intent",
             "title": "Choisir un sort",
             "lines": [
-              "Aucun sort n’est déclaré à l’avance : une créature choisit son sort quand vient son tour.",
-              "Vous choisissez le sort et ses cibles sur le plateau tel qu’il est, et il se résout aussitôt."
+              "Aucun sort n’est déclaré à l’avance.",
+              "Au tour d’une créature, vous choisissez son sort et ses cibles sur le plateau tel qu’il est. Il se résout aussitôt."
             ],
-            "example": "Une créature dont l’Énergie est de 3 peut, à son tour, lancer n’importe quel sort qu’elle connaît et qui coûte 3 ou moins."
+            "example": "Une créature à 3 points d’Énergie peut lancer, à son tour, tout sort qu’elle connaît coûtant 3 ou moins."
           }
         },
         {
@@ -1753,11 +1753,11 @@
             "id": "defense",
             "title": "Défense",
             "lines": [
-              "La Défense réduit les dégâts de chaque coup que reçoit une créature, jamais en dessous de zéro.",
-              "Les renforts de Défense y ajoutent au plus 10, quel que soit leur nombre.",
-              "Seuls les dégâts dans la durée, appliqués à l’Entretien, l’ignorent."
+              "La Défense réduit les dégâts de chaque coup, jamais sous zéro.",
+              "Ses renforts ajoutent au plus 10 en tout.",
+              "Seuls les dégâts dans la durée, à l’Entretien, l’ignorent."
             ],
-            "example": "Un coup de 7 sur une créature à 2 de Défense inflige 5. Une créature commence à 0 de Défense : le même coup sur elle inflige 7."
+            "example": "Une créature commence à 0 de Défense. Un coup de 7 inflige 7, ou 5 à 2 de Défense."
           }
         },
         {
@@ -2060,10 +2060,10 @@
             "id": "fizzle",
             "title": "Un tour sauté",
             "lines": [
-              "Une créature qui ne peut pas agir quand vient son tour est sautée : rien ne se résout, et rien n’est dépensé.",
-              "Cela arrive quand la créature a été vaincue ou étourdie plus tôt dans le round."
+              "Une créature qui ne peut pas agir quand vient son tour est sautée. Rien ne se résout, rien n’est dépensé.",
+              "La créature a été vaincue ou étourdie plus tôt dans le round."
             ],
-            "example": "Une créature étourdie par un tour précédent est sautée quand vient le sien, et garde toute son Énergie."
+            "example": "Une créature étourdie par un tour précédent est sautée et garde toute son Énergie."
           }
         },
         {
@@ -2357,11 +2357,11 @@
             "id": "critical",
             "title": "Critique",
             "lines": [
-              "Une créature en Précision lance un d20 quand son sort se résout, contre le nombre que le sort indique.",
-              "Sur un critique, les dégâts et les soins du sort sur ses cibles sont multipliés.",
-              "Une créature en Instinct ne lance jamais le dé."
+              "Quand son sort se résout, une créature en Précision lance un d20 contre le nombre indiqué.",
+              "Un critique multiplie dégâts et soins du sort sur ses cibles.",
+              "Instinct ne lance jamais le dé."
             ],
-            "example": "Un sort indique d20 : 11+. Un jet de 14 est un critique : ses 7 dégâts deviennent 14."
+            "example": "Un sort indique 11+. Un jet de 14 est critique et ses 7 dégâts deviennent 14."
           }
         }
       ]
@@ -2991,6 +2991,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-23",
+      "text": "Les cartes Santé, Tempo, Initiative, Choisir un sort, Défense, Un tour sauté et Critique sont plus courtes, et en français la carte Énergie aussi, sans qu’aucune règle ne change.",
+      "adrs": []
+    },
     {
       "date": "2026-11-22",
       "text": "La référence a une section sur le classement : ce qu’est une partie classée, ce qui fait bouger une cote et de combien, qu’une partie nulle compte pour une demi-victoire et qu’une partie annulée ne compte jamais, ce que dit le ± et quand une cote est provisoire. Les cartes Mutation et États sont plus courtes, sans qu’aucune règle ne change (ADR 0124, ADR 0176).",

@@ -20,10 +20,10 @@ sources: ADR 0011, ADR 0083, ADR 0087, ADR 0105, ADR 0169, game-rules#match-life
 ```card
 id: health
 title: Santé
-À zéro point de Santé, une créature est vaincue, pour le reste de la partie.
-Quand une équipe n’a plus de créature, la partie se termine aussitôt, même au milieu d’un round.
-Un soin ne porte jamais une créature au-dessus de la Santé avec laquelle elle a commencé la partie.
-> Une créature commence avec une Santé de {creature.health}. Un coup de 7 la laisse à {max(0, creature.health - max(0, 7 - creature.defense))}.
+À zéro point de Santé, une créature est vaincue pour de bon.
+La partie finit dès qu’une équipe n’a plus de créature, même en plein round.
+Un soin s’arrête à la Santé de départ.
+> Une créature commence à {creature.health} de Santé. Un coup de 7 la laisse à {max(0, creature.health - max(0, 7 - creature.defense))}.
 ```
 
 ## Un round {#a-round}

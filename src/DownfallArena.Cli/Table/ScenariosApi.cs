@@ -259,33 +259,54 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     }
 
     /// <summary>
-    /// Keeps that the account finished a tutorial when its practice here says so, before that practice is let go of:
-    /// the page says it too, but a Leave or a reload can reach the host first, and once the practice is gone nothing
-    /// shows it was done.
+    /// What keeps that the account finished a tutorial, handed to the practices, which run it when its practice here
+    /// says it is done, before that practice is let go of: the page says it too, but a Leave or a reload can reach the
+    /// host first, and once the practice is gone nothing shows it was done. The practices read whether it is done under
+    /// their gate, and again where they let it go, so a match that ends meanwhile is not let go of unkept (#931). None
+    /// for a scenario that teaches nothing.
     /// </summary>
-    private async Task KeepDoneAsync(AccountId account, string id)
-    {
-        if (store.Teaches(id) && (await practices.CurrentAsync(account.ToString(), id))?.Play.Api.Practice?.Tutorial is { Done: true })
-        {
-            await accounts.NoteTutorialAsync(account, id, TutorialState.Done);
-        }
-    }
+    private Func<Task>? KeepDone(AccountId account, string id) =>
+        store.Teaches(id) ? () => accounts.NoteTutorialAsync(account, id, TutorialState.Done) : null;
 
     /// <summary>The account's practice of the scenario to go on with; a tutorial that is done is kept done and let go of.</summary>
     private async Task<StudioResponse> ResumeAsync(AccountId account, string id, string name)
     {
-        await KeepDoneAsync(account, id);
-        return await practices.ResumeAsync(account.ToString(), id) is { } current
-            ? Opened(current, name)
-            : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
+        try
+        {
+            return await practices.ResumeAsync(account.ToString(), id, KeepDone(account, id)) is { } current
+                ? Opened(current, name)
+                : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            return NotKept(failure);
+        }
     }
 
-    /// <summary>Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204 either way.</summary>
+    /// <summary>
+    /// Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204,
+    /// whether there was one or not. A tutorial done that the account's store cannot keep done answers 503 and keeps
+    /// the practice: a Leave or a reload of the same tutorial within the idle hour tries again. Opening another
+    /// practice, Play again or the idle sweep lets it go without trying.
+    /// </summary>
     private async Task<StudioResponse> ForgetAsync(AccountId account, string id)
     {
-        await KeepDoneAsync(account, id);
-        await practices.ForgetAsync(account.ToString(), id);
-        return new StudioResponse(204, StudioResponse.Plain, []);
+        try
+        {
+            await practices.ForgetAsync(account.ToString(), id, KeepDone(account, id));
+            return new StudioResponse(204, StudioResponse.Plain, []);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            return NotKept(failure);
+        }
+    }
+
+    /// <summary>A tutorial done that the account's store could not keep: said on the console, answered 503, the practice kept.</summary>
+    private StudioResponse NotKept(Exception failure)
+    {
+        Said($"  A tutorial done could not be kept on its account: {HttpHost.OneLine(failure)}");
+        return Error("Tutorial.Unavailable", "Your progress could not be saved just now. Try again in a moment.", 503);
     }
 
     private async Task<StudioResponse> OpenAsync(string id, string account, string name)
