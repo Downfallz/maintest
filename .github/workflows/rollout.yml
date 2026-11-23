@@ -102,6 +102,8 @@ jobs:
           ALERT_EMAIL: ${{ secrets.TABLE_ALERT_EMAIL }}
           # The first day of the budget's month, set once (infra/runbooks/alerts.md); unset, no budget.
           BUDGET_START: ${{ vars.TABLE_BUDGET_START }}
+          # The promo identity's principal (ADR 0206, infra/runbooks/promo-identity.md); unset, nobody writes the promo container.
+          PROMO_WRITER: ${{ vars.AZURE_PROMO_PRINCIPAL_ID }}
         run: |
           relay="$RELAY_SKU"
           if [[ "$relay" == "none" ]]; then relay=""; fi
@@ -114,7 +116,7 @@ jobs:
             --template-file infra/main.bicep \
             --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
               namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" discordClientId="$DISCORD_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
-              customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" \
+              customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" promoWriter="$PROMO_WRITER" \
             --parameters @"$RUNNER_TEMP/alerts.parameters.json" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"
           url="$(jq -r .url.value "$RUNNER_TEMP/outputs.json")"
