@@ -30,6 +30,7 @@
 | [art/page-pictures.md](art/page-pictures.md) | The pages' pictures (UX5, ADR 0198): how a painting is declared, derived at the size it is drawn and placed as an `<img>`, a strip of frames, the icon set, a page's budget of bytes, and how a painting asked of the owner comes back. |
 | [art/journeys/README.md](art/journeys/README.md) | The journeys' briefs (UX3): how one journey of the pages is staged, a screen at a time, in the pages' craft book's words, before it is built. The format, nine parts a screen, and one file a journey; the two doors are the worked example. A test holds each brief to the walk's screens, the book's entries and the declared tokens. |
 | [art/journeys/baseline.md](art/journeys/baseline.md) | The journeys' baseline (UX2): the five journeys of the pages' craft plan walked by `scripts/ux/journey.mjs` before any pass, a line of measures a screen at 320 and 390 px, what a walk could not press, and the first paints on a slow phone. Written by `scripts/ux/baseline.mjs`. |
+| [art/promotion-plan.md](art/promotion-plan.md) | Plan: promotion. Shots of the real game filmed frame by frame into clips at 16:9, 9:16 and 1:1, cuts with captions in English and French, prompt packs for ChatGPT or Gemini, a calendar of posts the owner approves, and a `/promo` skill. |
 | [art/battle-polish.md](art/battle-polish.md) | Playback polish, and the art pipeline's follow-ups. The ART-2 source list is `art/source-intake.json`. |
 | [adr/](adr/README.md) | Architecture Decision Records: what was decided, why, and what it cost. The index is generated from the files. |
 | [architecture/overview.md](architecture/overview.md) | Layers, dependency rule, folder layout, how a request flows. |
@@ -57,6 +58,7 @@
 | [tabletop/app-roadmap.md](tabletop/app-roadmap.md) | The app in seven stages: what each one ships, what it is tested with, and what a reviewer checks. |
 | [tabletop/free-activation-playtest.md](tabletop/free-activation-playtest.md) | The free-activation playtest (ADR 0110). |
 | [tabletop/accounts-plan.md](tabletop/accounts-plan.md) | Plan: player accounts with a Google sign-in, and the home page (ADR 0122). |
+| [tabletop/sign-in-methods-plan.md](tabletop/sign-in-methods-plan.md) | Plan: more ways to sign in (Discord first) on one account, and a guest for UX15; the host keeps the sign-in rather than Supabase. |
 | [tabletop/friends-plan.md](tabletop/friends-plan.md) | Plan: friends, and inviting one of them to a table. |
 | [tabletop/admin-plan.md](tabletop/admin-plan.md) | Plan: the admin panel as the host's headquarters: tabs, players, the jobs' runs, registration. |
 | [tabletop/scenarios-plan.md](tabletop/scenarios-plan.md) | Plan: a recorded match cut at the top of a round, played as practice, shared as a link or a `scenario.json`, and the admin diagnosis of a stuck table. |
