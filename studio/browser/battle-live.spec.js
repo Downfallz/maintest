@@ -141,7 +141,7 @@ test('the header names the opponent with its rank and friendship, and its card a
   await page.reload(); await choose(page, 1);
   const chip = page.locator('#opponent-open');
   await expect(chip).toBeVisible(); await expect(page.locator('#opponent-name')).toHaveText('bastien');
-  await expect(page.locator('#opponent-badge')).toHaveText('#3'); await expect(page.locator('#opponent-friend')).toBeHidden();
+  await expect(page.locator('#opponent-badge')).toHaveText('#3'); await expect(page.locator('#opponent-friend-tag')).toBeHidden();
   await expect(page.locator('#enemy-label')).toHaveText('OPPONENT · BASTIEN'); await expect(page.locator('#enemy-label')).toBeVisible();
   // On the round's line, never over the field, where it hid a creature in landscape.
   const [chipBox, roundBox, field] = await Promise.all(['#opponent-open', '#battle .round', '#battle-zone'].map(one => page.locator(one).boundingBox()));
@@ -162,10 +162,10 @@ test('the header names the opponent with its rank and friendship, and its card a
   friends = { friends: [{ id: 'acct_bastien' }], incoming: [], outgoing: [] };
   await chip.click(); await expect(page.locator('#opponent-note')).toHaveText('Your friend');
   // The word, not a heart (#1000): the set's heart is health, and health is not friendship.
-  await page.keyboard.press('Escape'); await expect(page.locator('#opponent-friend')).toBeVisible();
-  await expect(page.locator('#opponent-friend')).toHaveText('Friend');
+  await page.keyboard.press('Escape'); await expect(page.locator('#opponent-friend-tag')).toBeVisible();
+  await expect(page.locator('#opponent-friend-tag')).toHaveText('Friend');
   await fitsViewport(page, '#opponent-open, #help-open, #settings');
-  const word = await page.locator('#opponent-friend').boundingBox();
+  const word = await page.locator('#opponent-friend-tag').boundingBox();
   expect(word.x).toBeGreaterThanOrEqual(0); expect(word.y).toBeGreaterThanOrEqual(0); expect(word.x + word.width).toBeLessThanOrEqual(page.viewportSize().width);
   expect(state.requests.filter(one => one.path.endsWith('/decision'))).toEqual([]);
 });

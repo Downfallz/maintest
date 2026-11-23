@@ -22,7 +22,7 @@ export function creatureButton(id: string) {
 /**
  * The caption's contents drawn afresh, empty, for the caller to fill in the same render. A caption that changes
  * form (compact under a docked sheet, full on the open field) would otherwise move its bar and its numbers inside
- * it, a layout shift a translation cannot carry (#1112); new contents have no place before to shift from.
+ * it. That is a layout shift a translation cannot carry (#1112); new contents have no earlier place to shift from.
  */
 export function renewCaption(node: HTMLElement) {
   const caption = node.querySelector<HTMLElement>('.caption')!;

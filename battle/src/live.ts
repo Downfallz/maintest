@@ -541,8 +541,8 @@ function render() {
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
     const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? tieTag(one.id) ?? targetTag?.tag ?? tagOf(one);
-    // A caption that changes form is drawn afresh, in this render: its bar and numbers arrive in their new places
-    // rather than moving there, at once as the field takes its room (#1112).
+    // A caption that changes form is drawn afresh in this render: its bar and numbers arrive in their new places
+    // instead of moving there, as the field takes its room at once (#1112).
     const form = $('battle').dataset.docked ?? 'false';
     if (node.dataset.captionForm && node.dataset.captionForm !== form) renewCaption(node);
     node.dataset.captionForm = form;
@@ -671,7 +671,7 @@ function render() {
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
   // The receipt floats over the top of the field: crests start below it rather than behind it.
-  // Where it settles, its arrival's rise taken out (crestInset, #1091).
+  // The receipt as it settles, with its arrival rise taken out (crestInset, #1091).
   const receiptNode = $('growth-receipt'), receiptBox = receiptNode.getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
   const inset = unlocks ? crestInset(receiptBox, stageBox, getComputedStyle(receiptNode).translate) : 0;
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
@@ -828,7 +828,7 @@ function drawOpponent() {
   chip.dataset.kind = card.kind;
   text('opponent-avatar', avatarOf(card)); text('opponent-name', card.name);
   $('opponent-badge').hidden = !card.badge; text('opponent-badge', card.badge);
-  $('opponent-friend').hidden = card.friend !== 'friend';
+  $('opponent-friend-tag').hidden = card.friend !== 'friend';
   chip.setAttribute('aria-label', `Opponent: ${card.name}${card.badge ? `, ${card.badge === 'BOT' ? 'a bot' : `rank ${card.badge}`}` : ''}${card.friend === 'friend' ? ', your friend' : ''}. Open details.`);
   text('enemy-label', view ? opponentLabel() : '');
   // The card, open or not, says the same.

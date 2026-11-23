@@ -230,9 +230,10 @@ None.
   Done (#1087): the button has no `aria-label`; it speaks its name, then its family and Stage
   (written for the ear only), then the line it shows.
 - **Announced**: nothing new: a picture that arrives says nothing.
-- **Targets**: 24 controls at 390 and 19 at 320, none under 44 px. A face with its form stays 44 px tall at the least.
-  The walk counted one at 390: the rule sentence's Rules link, 28 px wide. Done (#1113): the rulebook's links are
-  44 px wide at the least, and so is the header's mark, the way back to the lobby (36 by 38 px for a guest).
+- **Targets**: 24 controls at 390 and 19 at 320. A face with its form stays 44 px tall at the least. The walk
+  counted one control under 44 px at 390: the rule sentence's Rules link, 28 px wide. A guest's header mark, the way
+  back to the lobby, measured 36 by 38 px at both widths. Done (#1113): the rulebook's links and the header's mark
+  are 44 px at the least, and `battle-mutations.spec.js` holds every control the pick leaves in reach to 44 px.
 
 ### Cost
 
@@ -700,9 +701,9 @@ None.
   button by a translation, so they move by a transform and cause no layout shift. At 390, on a late answer, a shift of
   0.013 remained: the caption's health bar and numbers changed places as the caption left its docked form. Done
   (#1112): a caption that changes form is drawn afresh in the same frame (`renewCaption`, `battle/src/targets.ts`),
-  so nothing inside it moves, and `battle-tempo.spec.js` now allows no shift at all. The field first eased into the room the sheet left over `RETURN_MS`; the owner found the
-  figures drifting down after every Tempo and Mutation Tree too slow, so the field now takes its room at once, as it
-  does when the spell choice closes (`battle/src/scene.ts`).
+  so nothing inside it moves, and `battle-tempo.spec.js` now allows no shift at all. The field first eased into
+  the room the sheet left over `RETURN_MS`. The owner found the figures' drift down after every Tempo and Mutation
+  Tree too slow. The field now takes its room at once, as it does when the spell choice closes (`battle/src/scene.ts`).
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 

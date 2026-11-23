@@ -1,0 +1,2 @@
+# code-reviewer lessons (branch claude/combat-frame-issues-f6t8u9)
+- A rename of an id must grep the new id across the page before it lands: `opponent-heart` -> `opponent-friend` (the name the issue itself proposed, #1092) collided with the opponent card's Add friend button (battle.html:109), so `$('opponent-friend')` took the chip's span; the node tests' `id="..."[^>]*>Friend<` regexes passed and only battle-live.spec.js's strict locator went red (7e36a04).

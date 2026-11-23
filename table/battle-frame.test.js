@@ -33,7 +33,7 @@ test('the frame\'s History and the order row draw the set\'s history and next', 
     }
   }
   assert.doesNotMatch(sheet, /content: '›'/, 'no glyph stands for next');
-  assert.match(read('table/battle.html'), /id="opponent-friend"[^>]*>Friend</, 'a friend is a word, not the heart of health');
+  assert.match(read('table/battle.html'), /id="opponent-friend-tag"[^>]*>Friend</, 'a friend is a word, not the heart of health');
 });
 
 // A placed creature's caption hangs from its button by a translation, not by `bottom` (#999): a button whose height
@@ -49,11 +49,17 @@ test('a placed caption hangs from its button by a translation of the button\'s h
 test('the opponent\'s rank and Friend are one square tag that differs only in colour', () => {
   const page = read('table/battle.html'), css = read('table/battle.css');
   assert.match(page, /<span id="opponent-badge" class="opponent-tag opponent-badge" hidden><\/span>/);
-  assert.match(page, /<span id="opponent-friend" class="opponent-tag opponent-friend" hidden>Friend<\/span>/);
+  assert.match(page, /<span id="opponent-friend-tag" class="opponent-tag opponent-friend-tag" hidden>Friend<\/span>/);
   const tag = css.match(/^\.opponent-tag \{([^}]*)\}/m);
   assert.ok(tag, 'one rule draws the tag');
   assert.match(tag[1], /border-radius: var\(--radius-sharp\)/);
-  assert.equal(css.match(/^\.opponent-friend \{([^}]*)\}/m)?.[1].trim(), 'color: var(--gold);', 'Friend differs in its colour alone');
+  assert.equal(css.match(/^\.opponent-friend-tag \{([^}]*)\}/m)?.[1].trim(), 'color: var(--gold);', 'Friend differs in its colour alone');
   assert.doesNotMatch(css, /^\.opponent-badge \{/m, 'the rank has no rule of its own beside the tag');
   for (const path of ['table/battle.html', 'table/battle.css', 'battle/src/live.ts', 'studio/browser/battle-live.spec.js']) assert.doesNotMatch(read(path), /opponent-heart/, path);
+});
+
+// An id names one element of its page: `$()` finds the first, so a second one is never reached (#1092's review).
+test('no id appears twice in the battle page', () => {
+  const ids = [...read('table/battle.html').matchAll(/\sid="([^"]+)"/g)].map(([, id]) => id);
+  assert.deepEqual(ids.filter((id, index) => ids.indexOf(id) !== index), []);
 });

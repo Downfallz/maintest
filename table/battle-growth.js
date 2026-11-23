@@ -2,12 +2,10 @@ import { cardsById } from './card.js';
 import { talentClasses, familyRoot, talentPalette, classColour } from './mat.js';
 import { creatureLabel } from './battle-live.js';
 
-// A public reference: never pass evolutionChoices to talentClasses. Pending own picks belong only in
-// the private command sheet; both teams' acquired tiers change at PurchasesRevealed on the host.
 /**
  * How far down the stage the reveal's crests start (#1077): under the receipt that floats over the field's top, 4 px
- * clear of it. Its arrival's rise (`translate`, the kit's `.motion-arrive`) is taken out, so a frame drawn while it
- * rises puts the crests under where it settles (#1091). `translate` is the receipt's computed value.
+ * clear of it. The receipt's arrival rise (`translate`, the kit's `.motion-arrive`) is taken out, so a frame drawn
+ * mid-rise still puts the crests under where the receipt settles (#1091). `translate` is the receipt's computed value.
  */
 export function crestInset(receipt, stage, translate) {
   if (!stage || !receipt.height) return 0;
@@ -15,6 +13,8 @@ export function crestInset(receipt, stage, translate) {
   return Math.max(0, receipt.bottom - rising - stage.top + 4);
 }
 
+// A public reference: never pass evolutionChoices to talentClasses. Pending own picks belong only in
+// the private command sheet; both teams' acquired tiers change at PurchasesRevealed on the host.
 export function mutationReference(view, catalogue, selectedId) {
   const board = view?.board;
   const roster = [...(board?.allies ?? []).map(one => ({ ...one, enemy: false })),
