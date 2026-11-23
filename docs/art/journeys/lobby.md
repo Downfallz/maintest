@@ -47,6 +47,8 @@ were read screen by screen, at 320 and at 390 px, with their measures. No strip 
 run for this brief: the paints are the baseline's (home-new: largest paint 1.9 s, shift 0.26) and UX7's note (the
 home's shift 0.21 on the slow phone once the footer waits with the panel). On the fast walk every screen's shift is
 0.00. At 320 by 568 the walk could not press the match's Settings after `home-waiting`: that is the match's, UX11's.
+`--paint` held to the budget (#962) read a new player's home on 2026-11-23 at 2.6 s, its shift 0.01: over the 2.5 s budget,
+the one page that fails the run on that machine.
 The pop-ups offer, briefed last, is filmed since #1126: the walk's host has push keys of its own
 (`scripts/ux/set.mjs`), and the walker's browser stands in for one never asked, as `studio/browser/table.push.js`
 does, from `home-waiting` on (`home-push-offer`) and through the lessons (`lesson-1-push-offer`).
@@ -760,9 +762,9 @@ says a turn is the player's. The walk films it after `home-game-ended`, two game
 show when Rook takes the open seat of the walker's table from another browser, the match begins, and both players
 are asked to choose (the strip `turn-arrives`). A person's turn outranks a bot's, so Rook's game takes the featured
 space, and its press opens Rook's game (the walk asserts it). Had the featured game been the one waiting on Rook,
-its status and action would change together, in place: the second form under **Words**, which the walk films last
-(`home-answer-arrives`, #988). The walker opens Rook's game and answers its question, concedes the bot's game, and
-goes home, where Rook's game is featured as their turn; Rook answers through the host, inside the round, and the
+its status and action would change together, in place: the second form under **Words**. The walk films it last
+(`home-answer-arrives`, #988). The walker opens Rook's game, answers its question, concedes the bot's game and goes
+home. Rook's game is now featured as their turn. Rook then answers through the host, inside the round, and the
 walker's turn arrives on the open home.
 
 - **Filled action**: Play your turn →, now on Rook's game. Nothing replaces the featured game while a finger is on
@@ -983,8 +985,9 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
 ### Left
 
 - At 320 by 568 the card, two rows of answers on Android, covers the foot of the lobby's featured space, its
-  actions with it, until it is answered or the moment passes. The first film (#1126, `home-push-offer`) shows the
-  same at 390 by 844: the answers fit one row, and the card still hides the title's second line and both actions. Not built, and the owner's to choose: room held at the
+  actions with it, until it is answered or the moment passes. The first film (#1126, `home-push-offer`) shows it
+  covers them at 390 by 844 too: the answers fit one row, and the card still hides the title's second line and both
+  actions. Not built, and the owner's to choose: room held at the
   page's foot while the card stands; a moment heard while a window is open waiting for it to close; or the lobby
   waiting until no game is the player's to play, which amends
   question 4 of [the notifications plan](../../tabletop/notifications-plan.md#questions-the-owner-settled-2026-11-22).
@@ -997,8 +1000,8 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
 - The page's filled action under the card taking its outline while the card stands, so one gold shows a screen:
   proposed, not built.
 - The first film's critique (#1126): at lesson 1's end, Turn on and the end card's Next are two gold actions on one
-  screen (`lesson-1-push-offer`). The designer's choice is Turn on quiet while the end card stands, Next the one
-  filled action; the owner's to settle. At 390 Turn on breaks onto two lines in its button; Don't ask again could
+  screen (`lesson-1-push-offer`). The designer proposes Turn on as a quiet (outlined) button while the end card
+  stands, so Next is the only filled action. The owner settles it. At 390 Turn on breaks onto two lines in its button; Don't ask again could
   take the second row first. Only the card's loaded state, desktop words, was filmed: Waiting, the answer lines,
   the error and the Android and iPhone forms were not.
 - The battle view's other player's turn, and the end of lesson 1, are briefed here and not in `match.md` or

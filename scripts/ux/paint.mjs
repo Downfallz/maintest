@@ -81,6 +81,8 @@ export function summary(runs) {
   return {
     runs: runs.length,
     firstPaintMs: spread(runs.map(run => run.first)),
+    // How many runs painted at all: a median of the few that did is not the page's.
+    painted: runs.filter(run => run.largest !== null).length,
     largestPaintMs: spread(runs.map(run => run.largest)),
     largestIs: [...new Set(runs.map(run => run.element))].join(', '),
     shift: spread(runs.map(run => run.shift ?? null), 2),
@@ -89,7 +91,7 @@ export function summary(runs) {
 }
 
 /**
- * The walker signed in with the lessons skipped, on `context`'s browser. A refusal stops the paints here: `home-new`
+ * The walker signed in with the lessons skipped, on `context`'s browser. A refusal stops the paints here: `table/home`
  * would otherwise measure the sign-in panel without a word (#1093).
  */
 export async function signIn(context, game) {
@@ -130,16 +132,23 @@ async function rankedForTheWalker(browser, set) {
   }
 }
 
-/** The pages of PAINTED, in its order: each name, its address, how its browser is prepared, and what comes first. */
-function paintedPages(browser, set) {
+/**
+ * The pages of PAINTED, in its order: each name, its address, how its browser is prepared, and what comes first. A
+ * name of PAINTED with no way to load it throws, so the list the test reads is the list the run loads.
+ */
+export function paintedPages(browser, set) {
   const signedIn = context => signIn(context, set.game);
-  return [
-    ['showcase/home', `${set.showcase}/`, null],
-    ['table/sign-in', `${set.game}/`, null],
-    ['table/home', `${set.game}/`, signedIn],
-    ['table/leaderboard', `${set.game}/leaderboard`, signedIn, () => rankedForTheWalker(browser, set)],
-    ['table/stats', `${set.game}/stats`, signedIn],
-  ];
+  const loads = {
+    'showcase/home': [`${set.showcase}/`, null],
+    'table/sign-in': [`${set.game}/`, null],
+    'table/home': [`${set.game}/`, signedIn],
+    'table/leaderboard': [`${set.game}/leaderboard`, signedIn, () => rankedForTheWalker(browser, set)],
+    'table/stats': [`${set.game}/stats`, signedIn],
+  };
+  return PAINTED.map(name => {
+    if (!loads[name]) throw new Error(`The paints know no way to load ${name}.`);
+    return [name, ...loads[name]];
+  });
 }
 
 /** The pages of PAINTED, each loaded `runs` times on the slow phone. */
@@ -163,19 +172,23 @@ export async function paints(browser, showcase, { runs = PAINT_RUNS } = {}) {
 const inSeconds = ms => `${Number((ms / 1000).toFixed(1))} s`;
 
 /**
- * Each page's median largest paint and shift held to the budget's two times (ADR 0197): a line a page, and `over`
- * when one is above its budget or was never read. At the budget is within it.
+ * Each page's median largest paint and shift held to the budget file's two times (ADR 0197): a line a page, and
+ * `over` when one is above its budget, was never read, or painted in fewer runs than were loaded. At the budget is
+ * within it. A page the file does not name is refused: the paints and the file share their names (#962).
  */
 export function judgePaints({ pages }, budget) {
   for (const key of ['largestPaintMs', 'shift']) if (typeof budget[key] !== 'number') throw new Error(`The budget names no ${key}.`);
   const named = Object.entries(pages ?? {});
   if (!named.length) throw new Error('No page was painted.');
+  for (const [name] of named) if (!budget.pages?.[name]) throw new Error(`The budget file names no page ${name}.`);
   let over = false;
   const lines = named.map(([name, page]) => {
     const largest = page.largestPaintMs?.median ?? null, shift = page.shift?.median ?? null;
-    const paintOver = largest === null || largest > budget.largestPaintMs, shiftOver = shift === null || shift > budget.shift;
+    const partly = largest !== null && page.painted < page.runs;
+    const paintOver = largest === null || partly || largest > budget.largestPaintMs, shiftOver = shift === null || shift > budget.shift;
     over ||= paintOver || shiftOver;
-    return `${name}: largest paint ${largest === null ? 'not painted' : inSeconds(largest)}, ${paintOver ? 'over' : 'within'} ${inSeconds(budget.largestPaintMs)}; `
+    const painted = largest === null ? 'not painted' : `${inSeconds(largest)}${partly ? `, painted in ${page.painted} of ${page.runs} runs` : ''}`;
+    return `${name}: largest paint ${painted}, ${paintOver ? 'over' : 'within'} ${inSeconds(budget.largestPaintMs)}; `
       + `shift ${shift === null ? 'not read' : shift}, ${shiftOver ? 'over' : 'within'} ${budget.shift}`;
   });
   return { lines, over };

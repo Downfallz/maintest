@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { JOURNEYS, account } from '../scripts/ux/journeys.mjs';
 import { DESKTOP, VIEWPORTS, blockedLines, contextOptions, ended, listing, parseArguments, settle, walked } from '../scripts/ux/journey.mjs';
 import { differences, measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
-import { PAINTED, judgePaints, readPaintInPage, signIn, spread, summary } from '../scripts/ux/paint.mjs';
+import { PAINTED, judgePaints, paintedPages, readPaintInPage, signIn, spread, summary } from '../scripts/ux/paint.mjs';
 import { confirm, waitAhead } from '../scripts/ux/play.mjs';
 import { hostArguments, neverAskedInPage, serveShowcase, startHost, stopProcess } from '../scripts/ux/set.mjs';
 
@@ -353,6 +353,8 @@ test('a paint is reported as its median with the fastest and the slowest run', (
   const told = summary([{ first: 1200, largest: 4400, element: 'picture', shift: 0.26, pictureBytes: 700 }, { first: 1100, largest: 4000, element: 'picture', shift: 0.2, pictureBytes: 700 },
     { first: 1300, largest: 4600, element: 'picture', shift: 0.3, pictureBytes: 700 }]);
   assert.equal(told.runs, 3);
+  assert.equal(told.painted, 3);
+  assert.equal(summary([{ first: null, largest: null, element: null, shift: 0, pictureBytes: 0 }, { first: 900, largest: 1900, element: 'p', shift: 0, pictureBytes: 0 }]).painted, 1);
   assert.equal(told.largestPaintMs.median, 4400);
   assert.equal(told.largestIs, 'picture');
   assert.deepEqual(told.shift, { median: 0.26, fastest: 0.2, slowest: 0.3 });
@@ -365,11 +367,15 @@ test('the pages painted are named as the budget file names them, the ladder and 
   const budget = JSON.parse(read('docs/art/page-budget.json'));
   assert.deepEqual(PAINTED, ['showcase/home', 'table/sign-in', 'table/home', 'table/leaderboard', 'table/stats']);
   for (const name of PAINTED) assert.ok(budget.pages[name], `page-budget.json names ${name}`);
+  // The pages loaded are these names, in this order: the list the test reads is the list the run loads.
+  const loaded = paintedPages({}, { showcase: 'http://site', game: 'http://game' });
+  assert.deepEqual(loaded.map(([name]) => name), PAINTED);
+  assert.deepEqual(loaded.map(([, url]) => url), ['http://site/', 'http://game/', 'http://game/', 'http://game/leaderboard', 'http://game/stats']);
 });
 
-const painted = (largest, shift) => ({ runs: 5, largestPaintMs: largest === null ? null : { median: largest, fastest: largest, slowest: largest }, shift: shift === null ? null : { median: shift, fastest: shift, slowest: shift } });
+const painted = (largest, shift, runs = 5) => ({ runs: 5, painted: largest === null ? 0 : runs, largestPaintMs: largest === null ? null : { median: largest, fastest: largest, slowest: largest }, shift: shift === null ? null : { median: shift, fastest: shift, slowest: shift } });
 test('a paint over its budget, or never read, is said and fails the run', () => {
-  const budget = { largestPaintMs: 2500, shift: 0.1 };
+  const budget = { largestPaintMs: 2500, shift: 0.1, pages: { 'table/home': {}, 'showcase/home': {}, a: {} } };
   const within = judgePaints({ pages: { 'table/home': painted(1900, 0.02) } }, budget);
   assert.equal(within.over, false);
   assert.deepEqual(within.lines, ['table/home: largest paint 1.9 s, within 2.5 s; shift 0.02, within 0.1']);
@@ -382,7 +388,13 @@ test('a paint over its budget, or never read, is said and fails the run', () => 
   assert.equal(unread.over, true);
   assert.deepEqual(unread.lines, ['a: largest paint not painted, over 2.5 s; shift not read, over 0.1']);
   assert.throws(() => judgePaints({ pages: {} }, budget), /No page was painted/);
-  assert.throws(() => judgePaints({ pages: { a: painted(1, 0) } }, {}), /budget names no largestPaintMs/);
+  assert.throws(() => judgePaints({ pages: { a: painted(1, 0) } }, { pages: { a: {} } }), /budget names no largestPaintMs/);
+  // A page the budget file does not name is refused: the two lists share their names.
+  assert.throws(() => judgePaints({ pages: { 'table/stat': painted(1, 0) } }, budget), /budget file names no page table\/stat/);
+  // A page painted in only some of its runs is not judged on those alone (the median of one run is a sample).
+  const some = judgePaints({ pages: { a: painted(1900, 0, 1) } }, budget);
+  assert.equal(some.over, true);
+  assert.deepEqual(some.lines, ['a: largest paint 1.9 s, painted in 1 of 5 runs, over 2.5 s; shift 0, within 0.1']);
 });
 
 test('the command reference and the scripts page name the journey film', () => {

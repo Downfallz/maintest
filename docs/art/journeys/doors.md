@@ -205,7 +205,7 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
   390 and at 1280 px.
 - The walk filmed only the top of the home until #1044: `showcase-home-story` and `showcase-home-modes` now put each
   scene on the sheet, at 320 and 390 px, in English. The seat at 1280 px and the French page are still read on
-  full-page shots.
+  the critique's full-page shots.
 - The charge drawn at 1250 px weighs 185,362 B, sent to a wide screen only; the budget counts the phone's.
 
 ## A round seen played (`showcase-round`)

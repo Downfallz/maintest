@@ -364,8 +364,10 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    to `showcase/showcase.css`. No strip is committed: the first is UX6's, from the battle's films, and the
    encoder's strip was tried by hand, not in the gate. The `drawn` widths for a wide screen are estimated from
    the sheets' CSS, not measured. A painting is made smaller and never cut, so a ground that covers its box is sent
-   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` reported the paints and held them to
-   nothing until #962: it now holds each page's median to the budget's two times, and exits 1 when one is over. The design system's page is not republished: the owner runs `/design-system`
+   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` only reported the paints until #962.
+   It now exits 1 when a page's median is over the budget's two times. Its first run on 2026-11-23 found
+   `table/home` over: a largest paint of 2.6 s (2,552 to 2,576 ms, the text), its shift 0.01.
+   The design system's page is not republished: the owner runs `/design-system`
    after the merge, as for UX4.
 6. **UX6, the showcase.** The first door shows the game played: a round in pictures of the real battle view,
    taken from the films the battle craft makes, beside the three sentences. Its pictures at the size they are
