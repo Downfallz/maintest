@@ -51,13 +51,22 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     private static string[] Providers(StudioResponse response) =>
         [.. Json(response).GetProperty("identities").EnumerateArray().Select(way => way.GetProperty("provider").GetString()!)];
 
-    private static string Proof(string subject) => $$"""{"subject":"{{subject}}"}""";
+    // The proof of Mark's recent sign-in, as the sign-in's answer hands it to the page; empty before he signs in.
+    private string _recent = "";
 
-    /// <summary>Mark registered with Google, and a session of his from that sign-in.</summary>
+    /// <summary>A provider's proof naming the subject, with the recent sign-in the page sends beside it.</summary>
+    private string Proof(string subject) => $$"""{"subject":"{{subject}}","recent":"{{_recent}}"}""";
+
+    /// <summary>What a removal sends: the recent sign-in alone.</summary>
+    private string Recent() => $$"""{"recent":"{{_recent}}"}""";
+
+    /// <summary>Mark registered with Google, and a session of his from that sign-in, which also proves it recent.</summary>
     private async Task<string> MarkSignedInAsync(AccountApi api)
     {
         await Registry().RegisterAsync(Mark, "MarkF", Cancel);
-        return Session(await api.HandleAsync("POST", "/api/account/google", Proof(Mark.Subject), Nobody))!;
+        var signedIn = await api.HandleAsync("POST", "/api/account/google", Proof(Mark.Subject), Nobody);
+        _recent = Json(signedIn).GetProperty("recent").GetString()!;
+        return Session(signedIn)!;
     }
 
     [Fact]
@@ -71,6 +80,19 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         answer.Status.ShouldBe(200);
         Providers(answer).ShouldBe(["google"]);
         Encoding.UTF8.GetString(answer.Body).ShouldNotContain(Mark.Subject);
+    }
+
+    [Fact]
+    public async Task The_host_says_which_ways_can_be_removed_the_only_one_never()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+
+        var alone = Json(await api.HandleAsync("GET", Route, "", Signed(session))).GetProperty("identities");
+        var both = Json(await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session))).GetProperty("identities");
+
+        alone.EnumerateArray().Select(way => way.GetProperty("removable").GetBoolean()).ShouldBe([false]);
+        both.EnumerateArray().Select(way => way.GetProperty("removable").GetBoolean()).ShouldBe([true, true]);
     }
 
     [Theory]
@@ -103,6 +125,74 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Each_way_added_refused_or_removed_is_a_console_line_naming_the_account_and_not_the_identity()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        var id = (await Registry().FindAsync(Mark, Cancel))!.Id;
+        var said = new List<string>();
+        api.Said = said.Add;
+
+        await api.HandleAsync("POST", Route + "/discord", Recent(), Signed(session));
+        await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+        await api.HandleAsync("POST", Route + "/google", Proof("305555555555555555555"), Signed(session));
+        await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
+
+        said.ShouldBe([
+            $"  Way in refused (discord) for account {id}: 401.",
+            $"  Way in added (discord) to account {id}.",
+            $"  Way in refused (google) for account {id}: Account.ProviderLinked.",
+            $"  Way in removed (discord) from account {id}.",
+        ]);
+    }
+
+    [Fact]
+    public async Task A_session_without_a_recent_sign_in_changes_no_way_in()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        _recent = "";
+
+        var added = await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+        var removed = await api.HandleAsync("DELETE", Route + "/google", "{}", Signed(session));
+
+        added.Status.ShouldBe(403);
+        Error(added).ShouldBe("Account.SignInAgain");
+        removed.Status.ShouldBe(403);
+        Error(removed).ShouldBe("Account.SignInAgain");
+        Providers(await api.HandleAsync("GET", Route, "", Signed(session))).ShouldBe(["google"]);
+    }
+
+    [Fact]
+    public async Task A_sign_in_older_than_ten_minutes_is_not_recent()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        _clock.Advance(AccountSessions.RecentFor);
+
+        var answer = await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+
+        answer.Status.ShouldBe(403);
+        Error(answer).ShouldBe("Account.SignInAgain");
+    }
+
+    [Fact]
+    public async Task Another_accounts_recent_sign_in_does_not_count_for_this_one()
+    {
+        var api = await ApiAsync();
+        await Registry().RegisterAsync(MarkOnDiscord, "Bastien", Cancel);
+        var bastien = await api.HandleAsync("POST", "/api/account/discord", Proof(MarkOnDiscord.Subject), Nobody);
+        var bastiensRecent = Json(bastien).GetProperty("recent").GetString()!;
+        var session = await MarkSignedInAsync(api);
+        _recent = bastiensRecent;
+
+        var answer = await api.HandleAsync("POST", Route + "/discord", Proof("123"), Signed(session));
+
+        answer.Status.ShouldBe(403);
+        Error(answer).ShouldBe("Account.SignInAgain");
+    }
+
+    [Fact]
     public async Task A_provider_the_host_does_not_offer_cannot_be_added()
     {
         var api = await ApiAsync();
@@ -120,7 +210,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         var api = await ApiAsync();
         var session = await MarkSignedInAsync(api);
 
-        var answer = await api.HandleAsync("POST", Route + "/discord", "{}", Signed(session));
+        var answer = await api.HandleAsync("POST", Route + "/discord", Recent(), Signed(session));
 
         answer.Status.ShouldBe(401);
         Error(answer).ShouldBe("Account.SignInRejected");
@@ -184,7 +274,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
         var elsewhere = Session(await api.HandleAsync("POST", "/api/account/discord", Proof(MarkOnDiscord.Subject), Nobody));
 
-        var removed = await api.HandleAsync("DELETE", Route + "/discord", "", Signed(session));
+        var removed = await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
 
         removed.Status.ShouldBe(200);
         Providers(removed).ShouldBe(["google"]);
@@ -194,13 +284,29 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Removing_a_way_in_forgets_the_accounts_devices()
+    {
+        var api = await ApiAsync();
+        var devices = new AccountDevices(new FileDeviceStore(_root), _clock);
+        api.Devices = devices;
+        var session = await MarkSignedInAsync(api);
+        var id = (await Registry().FindAsync(Mark, Cancel))!.Id;
+        await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+        await devices.AddAsync(id, new PushDevice("https://fcm.googleapis.com/fcm/send/lent-phone", "key", "auth", _clock.GetUtcNow()), Cancel);
+
+        await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
+
+        (await devices.ListAsync(id, Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_removed_way_in_no_longer_reaches_the_account()
     {
         var api = await ApiAsync();
         var session = await MarkSignedInAsync(api);
         await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
 
-        await api.HandleAsync("DELETE", Route + "/discord", "", Signed(session));
+        await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
 
         Json(await api.HandleAsync("POST", "/api/account/discord", Proof(MarkOnDiscord.Subject), Nobody)).GetProperty("needsUsername").GetBoolean().ShouldBeTrue();
     }
@@ -212,7 +318,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         var session = await MarkSignedInAsync(api);
         await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
 
-        var removed = await api.HandleAsync("DELETE", Route + "/google", "", Signed(session));
+        var removed = await api.HandleAsync("DELETE", Route + "/google", Recent(), Signed(session));
 
         Providers(removed).ShouldBe(["discord"]);
         Json(await api.HandleAsync("POST", "/api/account/discord", Proof(MarkOnDiscord.Subject), Nobody)).GetProperty("account").GetProperty("username").GetString().ShouldBe("MarkF");
@@ -224,7 +330,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         var api = await ApiAsync();
         var session = await MarkSignedInAsync(api);
 
-        var answer = await api.HandleAsync("DELETE", Route + "/google", "", Signed(session));
+        var answer = await api.HandleAsync("DELETE", Route + "/google", Recent(), Signed(session));
 
         answer.Status.ShouldBe(409);
         Error(answer).ShouldBe("Account.LastIdentity");
@@ -237,7 +343,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         var api = await ApiAsync();
         var session = await MarkSignedInAsync(api);
 
-        var answer = await api.HandleAsync("DELETE", Route + "/discord", "", Signed(session));
+        var answer = await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
 
         answer.Status.ShouldBe(404);
         Error(answer).ShouldBe("Account.IdentityNotLinked");
@@ -252,7 +358,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         await Registry().LinkAsync(account!.Id, new ExternalIdentity("retired", "1"), Cancel);
 
         Providers(await api.HandleAsync("GET", Route, "", Signed(session))).ShouldBe(["google", "retired"]);
-        var removed = await api.HandleAsync("DELETE", Route + "/retired", "", Signed(session));
+        var removed = await api.HandleAsync("DELETE", Route + "/retired", Recent(), Signed(session));
 
         removed.Status.ShouldBe(200);
         Providers(removed).ShouldBe(["google"]);
@@ -300,6 +406,10 @@ public sealed class AccountIdentitiesApiTests : IDisposable
 
     private sealed class FixedClock(DateTimeOffset start) : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => start;
+        private DateTimeOffset _now = start;
+
+        public void Advance(TimeSpan by) => _now += by;
+
+        public override DateTimeOffset GetUtcNow() => _now;
     }
 }

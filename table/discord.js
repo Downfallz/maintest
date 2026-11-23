@@ -82,13 +82,15 @@ export function takeKept(storage) {
 export function discordReturn(search, kept, now = Date.now()) {
   const query = new URLSearchParams(search ?? '');
   const next = typeof kept?.next === 'string' ? kept.next : null;
+  // Whether the tab left to add Discord from Settings (P4), so the return page speaks of adding, not signing in.
+  const link = kept?.purpose === 'link';
   // The player saying no goes straight back; any other error (a misconfigured app, Discord failing) is said.
-  if (query.get('error') === 'access_denied') return { problem: 'cancelled', next };
-  if (query.get('error')) return { problem: 'failed', next };
-  if (!kept || typeof kept.state !== 'string' || typeof kept.verifier !== 'string' || typeof kept.at !== 'number' || now - kept.at >= KEPT_FOR_MS) return { problem: 'lapsed', next: null };
+  if (query.get('error') === 'access_denied') return { problem: 'cancelled', next, link };
+  if (query.get('error')) return { problem: 'failed', next, link };
+  if (!kept || typeof kept.state !== 'string' || typeof kept.verifier !== 'string' || typeof kept.at !== 'number' || now - kept.at >= KEPT_FOR_MS) return { problem: 'lapsed', next: null, link };
   const code = query.get('code');
-  if (!code || query.get('state') !== kept.state) return { problem: 'mismatch', next: null };
-  return { code, verifier: kept.verifier, next, link: kept.purpose === 'link' };
+  if (!code || query.get('state') !== kept.state) return { problem: 'mismatch', next: null, link };
+  return { code, verifier: kept.verifier, next, link };
 }
 
 /** Hands a name to choose to the lobby, in this tab only. */

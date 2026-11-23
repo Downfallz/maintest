@@ -33,8 +33,8 @@ test('the return gives the code and the kept verifier only for the state this ta
   const kept = takeKept(storage);
 
   assert.deepEqual(discordReturn(`?code=abc&state=${state}`, kept, 2000), { code: 'abc', verifier: kept.verifier, next: '/j/abc', link: false });
-  assert.deepEqual(discordReturn('?code=abc&state=another', kept, 2000), { problem: 'mismatch', next: null });
-  assert.deepEqual(discordReturn(`?state=${state}`, kept, 2000), { problem: 'mismatch', next: null });
+  assert.deepEqual(discordReturn('?code=abc&state=another', kept, 2000), { problem: 'mismatch', next: null, link: false });
+  assert.deepEqual(discordReturn(`?state=${state}`, kept, 2000), { problem: 'mismatch', next: null, link: false });
   assert.equal(takeKept(storage), null, 'what the tab kept is read once');
 });
 
@@ -49,7 +49,7 @@ test('a return this tab did not start, or started too long ago, is never posted'
 });
 
 test('a player who says no at Discord is cancelled, and goes back where they were going', () => {
-  assert.deepEqual(discordReturn('?error=access_denied&state=s', { state: 's', verifier: 'v', next: '/play?x=1', at: 0 }, 1), { problem: 'cancelled', next: '/play?x=1' });
+  assert.deepEqual(discordReturn('?error=access_denied&state=s', { state: 's', verifier: 'v', next: '/play?x=1', at: 0 }, 1), { problem: 'cancelled', next: '/play?x=1', link: false });
 });
 
 test('any other error Discord returns with is a failure the page says, not a cancel', () => {

@@ -661,8 +661,11 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
   identity that provider's proof vouches for (one per provider; `409 Account.IdentityTaken` when another account
   uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`).
-  A removal ends every other session of the account and forgets its devices. The console says
-  `Way in added (<provider>).` and `Way in removed (<provider>).`.
+  Both ask for a sign-in of this account made in the last ten minutes: every sign-in's answer carries `recent`,
+  which the page sends back; without it they answer `403 Account.SignInAgain`. A removal ends every other session of
+  the account and forgets its devices. The console says
+  `Way in added (<provider>) to account <id>.`, `Way in removed (<provider>) from account <id>.` and
+  `Way in refused (<provider>) for account <id>: <code or status>.`.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
   also given. `dev` signs in by a typed name and is refused off the loopback address.
 - `--admins <acct_id>[,...]` (or `DOWNFALL_ADMINS`) names the accounts that are the operator once signed in,

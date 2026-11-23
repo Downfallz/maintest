@@ -64,7 +64,7 @@ const panels = `<div class="navigation-panels lobby-page home-page">
     <section id="app-settings-privacy" class="app-settings-pane" role="tabpanel" aria-labelledby="app-settings-tab-privacy" hidden><section id="privacy-panel" class="lobby-panel privacy-panel" aria-labelledby="privacy-heading"><h2 id="privacy-heading">What we keep</h2><p>Your player name, an internal id, and, for each way you sign in (Google, Discord), the number that service gives your account, so you are you when you come back. Not your email, your real name or your photo. Settings, Account lists these ways; removing one deletes its number.</p><p>Who your friends are, and who asked whom, until one of you removes the other. If you turn pop-ups on for a device, here or in a game's settings, where to reach that browser, until you turn them off, sign out on it, or sign out everywhere. When that address stops working, it is kept without its keys, so the browser is asked to turn pop-ups on again. A pop-up that could not be delivered is kept a week at most, with only the internal id and its kind.</p><p>The news your bell shows (a friend accepted, a seat taken, a player who left, a result): the latest 100, each with the other player's name as it was then. Each is erased within the hour once it is 90 days old, or with your account.</p><p>Your game settings (reading pace, speed, phase tips, less motion, opponent reactions), what pops up on your devices, and which tutorials you finished or skipped, until you change them or delete your account.</p><p>When you last signed in and when you last used the site, to the hour, so the host can see who still plays, until you delete your account.</p><p>The reactions sent during a game (a few set messages, never free text) are kept with that game's record, the last few of them.</p><p>The games your seats play are recorded under the internal id, to replay them, to improve the bots, and to count your statistics, which only you see.</p><p>Delete your account any time from Settings, Account: your name is freed, your seats in unfinished games are offered to other players, and finished games keep only the id.</p><p>What you send with Report or suggest: your words, the page and your browser's name, and from a game, the game and its round; for a bug report, also the page's last errors and the position you attach. Only the host's operator reads it; a bug may be described in a public issue, in the operator's words, with nothing that names you. It is deleted 180 days after it is closed. The operator can stop you from sending more for 30 days.</p><p>The host's operator sees your name, those two times and how many games you played, and can sign you out everywhere, rename you, or delete your account.</p><p><a href="${new URL('privacy/', SITE_ORIGIN).href}">Read the full privacy policy</a></p></section></section>
     <section id="app-settings-account" class="app-settings-pane" role="tabpanel" aria-labelledby="app-settings-tab-account" hidden>
       <div class="app-settings-identity"><span id="app-settings-initial" class="account-initial" aria-hidden="true"></span><div><strong id="app-settings-name"></strong><small>Your player name, as your opponents and friends see it</small></div></div>
-      <section id="ways" class="app-settings-ways" aria-labelledby="ways-title" hidden><h3 id="ways-title">Ways to sign in</h3><ul id="ways-list" class="ways-list"></ul><p id="ways-note" class="muted" role="status" hidden></p><p id="ways-problem" class="problem" role="alert" hidden></p></section>
+      <section id="ways" class="app-settings-ways" aria-labelledby="ways-title" hidden><h3 id="ways-title">Ways to sign in</h3><ul id="ways-list" class="ways-list"></ul><p id="ways-note" class="muted" role="status" tabindex="-1" hidden></p><p id="ways-problem" class="problem" role="alert" hidden></p><p id="ways-again" class="ways-again" hidden><button id="ways-again-button" type="button" class="secondary">Sign out and sign in again</button></p></section>
       <div class="app-settings-danger" aria-labelledby="app-settings-danger-title"><h3 id="app-settings-danger-title">Sessions and account</h3>
         <div class="app-settings-row"><div><strong>Sign out everywhere</strong><small>Ends your sessions on every device, this one included. Your games wait for you.</small></div><button id="sign-out-everywhere" type="button" class="secondary">Sign out everywhere</button></div>
         <div class="app-settings-row"><div><strong>Delete account</strong><small>Frees your player name and offers your seats in unfinished games to other players. This cannot be undone.</small></div><button id="delete-account" type="button" class="danger">Delete account…</button></div>
@@ -95,7 +95,7 @@ export function codePath(value) {
 
 // A disclosure on phones, a normal navigation bar on desktop. Feature panels keep the
 // existing account/friends/device controllers and let native dialogs handle modality.
-function mountHomeNavigation(doc, win = globalThis) {
+function mountHomeNavigation(doc, win = globalThis, onTab = () => {}) {
   const el = id => doc.getElementById(id);
   const toggle = el('home-menu-toggle'), menu = el('home-navigation');
   const narrow = win.matchMedia('(max-width: 1306px)');
@@ -134,6 +134,7 @@ function mountHomeNavigation(doc, win = globalThis) {
       el(tab.getAttribute('aria-controls')).hidden = !selected;
     }
     if (focus) shown?.focus();
+    if (shown) onTab(shown.dataset.settingsTab);
   }
   for (const tab of tabs) {
     tab.addEventListener('click', () => showTab(tab.dataset.settingsTab));
@@ -245,7 +246,9 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   wearFriendsHead(doc, page);
   const current = { lobby: 'play-link-home', leaderboard: 'leaderboard-link', stats: 'stats-link', rules: 'rules-link', admin: 'nav-admin-link' }[page];
   if (current) el(current).setAttribute('aria-current', 'page');
-  const navigation = mountHomeNavigation(doc);
+  // Settings' Account tab reads the ways to sign in when it is shown, not on every page (sign-in methods plan, P4).
+  let ways = null;
+  const navigation = mountHomeNavigation(doc, globalThis, tab => void ways?.shown(tab));
   const devices = mountDevices(doc, { storage, onChange: () => onDevice() });
   const gameSettings = mountGameSettings(doc, storage);
   const showAgain = mountShowAgain(doc);
@@ -280,7 +283,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
     else { el('join-problem').textContent = 'Enter the eight-character code from your invitation.'; el('join-problem').hidden = false; el('code').focus(); }
   });
   el('code').addEventListener('input', () => { el('join-problem').hidden = true; });
-  const ways = mountWays(doc, { openSettings: navigation.openSettings });
+  ways = mountWays(doc, { openSettings: navigation.openSettings });
   let previous = null;
   let lastMe = null;
   void mountAccount(doc, {
@@ -307,7 +310,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
       showAgain.setAccount(account);
       friends.setAccount(account);
       inbox.setAccount(account);
-      void ways.setAccount(account, lastMe);
+      ways.setAccount(account, lastMe);
       return onChange(account, mode);
     },
   });

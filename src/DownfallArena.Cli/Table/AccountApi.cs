@@ -445,7 +445,7 @@ internal sealed class AccountApi
                 ("PUT", NoticePreferencesRoute) => await SaveNoticePreferencesAsync(body, request),
                 ("GET", IdentitiesRoute) => await IdentitiesAsync(request),
                 ("POST", _) when WayOf(path) is { } added => await AddWayAsync(added, body, request),
-                ("DELETE", _) when WayOf(path) is { } removed => await RemoveWayAsync(removed, request),
+                ("DELETE", _) when WayOf(path) is { } removed => await RemoveWayAsync(removed, body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 ("POST", _) when ProviderOf(path) is { } provider => await ProviderAsync(provider, body, request),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
@@ -549,9 +549,14 @@ internal sealed class AccountApi
             ? name
             : null;
 
-    /// <summary>The ways into an account as a page is told them: each one's provider, in the order added, never its identifier.</summary>
-    private static object Ways(Account account) =>
-        new { identities = account.Identities.All.Select(identity => new { provider = identity.Provider }).ToArray() };
+    /// <summary>
+    /// The ways into an account as a page is told them: each one's provider, in the order added, and whether the host
+    /// would remove it; never its identifier. The page draws Remove where the host says so.
+    /// </summary>
+    private static object Ways(Account account) => new
+    {
+        identities = account.Identities.All.Select(identity => new { provider = identity.Provider, removable = account.Identities.Without(identity).IsSuccess }).ToArray(),
+    };
 
     /// <summary>Settings' ways to sign in (sign-in methods plan, P4): the providers the signed-in account uses.</summary>
     private async Task<StudioResponse> IdentitiesAsync(AccountRequest request)
@@ -567,7 +572,7 @@ internal sealed class AccountApi
     /// <summary>
     /// Adds a way into the signed-in account (ADR 0204): the identity is the one the provider vouches for from the
     /// proof posted now, never one the request names. One per provider; one another account uses is refused.
-    /// Sessions are left alone.
+    /// Sessions are left alone. Asks for a recent sign-in (<see cref="RecentlySignedIn" />).
     /// </summary>
     private async Task<StudioResponse> AddWayAsync(string name, string body, AccountRequest request)
     {
@@ -581,33 +586,57 @@ internal sealed class AccountApi
             return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
         }
 
+        if (RecentlySignedIn(who.Account, body) is { } stale)
+        {
+            return stale;
+        }
+
         var (identity, refusal) = await VouchedAsync(provider, body, counted: false);
         if (refusal is not null)
         {
+            // The account is named, never the provider's identifier: a takeover is traced by the account it reached.
+            Said($"  Way in refused ({name}) for account {who.Account.Id}: {refusal.Status}.");
             return refusal;
         }
 
-        var linked = await _registry.LinkAsync(who.Account.Id, identity);
+        Result<Account> linked;
+        try
+        {
+            linked = await _registry.LinkAsync(who.Account.Id, identity);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            Said($"  Way in not added ({name}) to account {who.Account.Id}: {HttpHost.OneLine(failure)}");
+            return WaysUnavailable();
+        }
+
         if (linked.IsFailure)
         {
+            Said($"  Way in refused ({name}) for account {who.Account.Id}: {linked.Error.Code}.");
             return WayRefused(linked.Error);
         }
 
         _cache[linked.Value.Id] = (linked.Value, _sessions.Clock.GetUtcNow());
-        Said($"  Way in added ({name}).");
+        Said($"  Way in added ({name}) to account {linked.Value.Id}.");
         return Answer(Ways(linked.Value), who.Renewed);
     }
 
     /// <summary>
     /// Removes a way into the signed-in account (ADR 0204), whether or not the host still offers its provider; never
     /// the last. Every session of the account ends with it, and its devices are forgotten, as with "sign out
-    /// everywhere": whoever came in through it is out. The browser that asked is handed a new session.
+    /// everywhere": whoever came in through it is out. The browser that asked is handed a new session, even when
+    /// forgetting the devices fails after the removal. Asks for a recent sign-in.
     /// </summary>
-    private async Task<StudioResponse> RemoveWayAsync(string name, AccountRequest request)
+    private async Task<StudioResponse> RemoveWayAsync(string name, string body, AccountRequest request)
     {
         if (await WhoAsync(request) is not { } who)
         {
             return SignInRequired("Sign in to remove a way to sign in.");
+        }
+
+        if (RecentlySignedIn(who.Account, body) is { } stale)
+        {
+            return stale;
         }
 
         if (who.Account.Identities.ByProvider(name) is not { } identity)
@@ -615,7 +644,20 @@ internal sealed class AccountApi
             return WayRefused(AccountErrors.IdentityNotLinked);
         }
 
-        var unlinked = await _registry.UnlinkAsync(who.Account.Id, identity);
+        Result<Account> unlinked;
+        try
+        {
+            unlinked = await _registry.UnlinkAsync(who.Account.Id, identity);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            // The account may be written and its generation raised, the entry left behind: its cookie may be dead
+            // too, so the page reads the account again.
+            _cache.TryRemove(who.Account.Id, out _);
+            Said($"  Way in not removed ({name}) from account {who.Account.Id}: {HttpHost.OneLine(failure)}");
+            return WaysUnavailable();
+        }
+
         if (unlinked.IsFailure)
         {
             return WayRefused(unlinked.Error);
@@ -623,14 +665,42 @@ internal sealed class AccountApi
 
         var account = unlinked.Value;
         _cache[account.Id] = (account, _sessions.Clock.GetUtcNow());
+        var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
         if (Devices is { } devices)
         {
-            await devices.ForgetAsync(account.Id);
+            try
+            {
+                await devices.ForgetAsync(account.Id);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Way in removed ({name}) from account {account.Id}, its devices not forgotten: {HttpHost.OneLine(failure)}");
+                return Problem(503, "Account.Unavailable", "The way to sign in is removed, but your devices could not be signed out. Sign out everywhere from Settings.") with
+                {
+                    Headers = [new KeyValuePair<string, string>("Set-Cookie", cookie)],
+                };
+            }
         }
 
-        Said($"  Way in removed ({name}).");
-        return Answer(Ways(account), AccountSessions.SetCookie(_sessions.Issue(account), request.Secure));
+        Said($"  Way in removed ({name}) from account {account.Id}.");
+        return Answer(Ways(account), cookie);
     }
+
+    /// <summary>
+    /// Null when the posted <c>recent</c> proves this account signed in within <see cref="AccountSessions.RecentFor" />;
+    /// otherwise the 403 that asks the player to sign in again. The session cookie alone is not enough to change how
+    /// an account is reached: a cookie taken from a device left signed in would hand the account over for good.
+    /// </summary>
+    private StudioResponse? RecentlySignedIn(Account account, string body)
+    {
+        var proof = string.IsNullOrWhiteSpace(body) ? null : Proof(body);
+        return _sessions.ReadRecent(proof?["recent"]) == account.Id
+            ? null
+            : Problem(403, "Account.SignInAgain", "For your safety, sign in again to change how you sign in.");
+    }
+
+    private static StudioResponse WaysUnavailable() =>
+        Problem(503, "Account.Unavailable", "Your ways to sign in cannot be changed right now. Try again in a minute.");
 
     private static StudioResponse WayRefused(DomainError error) => Problem(
         error == AccountErrors.IdentityNotLinked || error == AccountErrors.NotFound ? 404
@@ -1057,7 +1127,7 @@ internal sealed class AccountApi
 
         var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
         Counted(StepFinished, provider);
-        return Answer(new { account = Describe(account) }, cookie);
+        return Answer(new { account = Describe(account), recent = _sessions.Recent(account) }, cookie);
     }
 
     private static StudioResponse Refused(DomainError error) => Problem(
