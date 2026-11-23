@@ -100,11 +100,27 @@ internal sealed class AccountApi
     public object[] Offered() => [.. SignIn.Select(provider => new { provider = provider.Name, clientId = provider.ClientId })];
 
     /// <summary>
-    /// Where a sign-in's lines go, one per step: started when a provider's proof reaches the host, then finished when
-    /// a session is issued, or refused. The console by default, which the ops report's logs keep; a line names the
-    /// provider and nothing about the person, so a count per provider reads where people stop.
+    /// Where the sign-ins' counts go, one line a minute per provider (<see cref="SignInCounts" />, #1171): started when a
+    /// provider's proof reaches the host, then finished when a session is issued, or refused, unavailable, or limited
+    /// for its address's count. And why a provider is unavailable, once a minute. The console by default, which the ops
+    /// report's logs keep; a line names the provider and nothing about the person.
     /// </summary>
     public Action<string> Said { get; set; } = Console.WriteLine;
+
+    private readonly SignInCounts _counts = new();
+    private readonly SignInAttempts _attempts = new();
+
+    /// <summary>
+    /// Says the sign-ins' counts once their minute is over. Run on every request the account API answers, and by the
+    /// host on every other one, so a minute's counts wait for no sign-in to be said.
+    /// </summary>
+    public void SayCountsIfDue()
+    {
+        foreach (var line in _counts.Due(Clock.GetUtcNow()))
+        {
+            Said(line);
+        }
+    }
 
     /// <summary>
     /// The devices an account can be told on (friends plan, stage 1), set by the host that keeps them; none on a
@@ -425,6 +441,7 @@ internal sealed class AccountApi
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(request);
+        SayCountsIfDue();
         try
         {
             return (method, path) switch
@@ -475,13 +492,24 @@ internal sealed class AccountApi
             return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
         }
 
+        // Counted by address before the provider is asked (#1193): its budget is every player's, not one address's.
+        if (request.Address is { } address && _attempts.Take(address, Clock.GetUtcNow()) is { } wait)
+        {
+            Counted(SignInCounts.Step.Limited, name);
+            var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return Problem(429, "Account.TooManySignIns", "Too many sign-ins from your network just now. Try again in a minute.") with
+            {
+                Headers = [new KeyValuePair<string, string>("Retry-After", seconds)],
+            };
+        }
+
         var proof = Proof(body);
         if (proof is null)
         {
             return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
         }
 
-        Counted(StepStarted, name);
+        Counted(SignInCounts.Step.Started, name);
         ExternalIdentity? vouched;
         try
         {
@@ -490,13 +518,18 @@ internal sealed class AccountApi
         catch (SignInUnavailableException exception)
         {
             // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
-            Said($"  Sign-in unavailable ({name}): {exception.Message}");
+            // Why is said once a minute: every post would otherwise write it again.
+            if (Counted(SignInCounts.Step.Unavailable, name) == 1)
+            {
+                Said($"  Sign-in unavailable ({name}): {exception.Message}");
+            }
+
             return Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
         }
 
         if (vouched is not { } identity || identity.Provider != name)
         {
-            Counted(StepRefused, name);
+            Counted(SignInCounts.Step.Refused, name);
             return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
         }
 
@@ -508,7 +541,7 @@ internal sealed class AccountApi
         // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
         if (await RegistrationClosedAsync())
         {
-            Counted(StepRefused, name);
+            Counted(SignInCounts.Step.Refused, name);
             return Refused(AccountErrors.RegistrationClosed);
         }
 
@@ -529,7 +562,7 @@ internal sealed class AccountApi
         // A ticket handed out before the operator closed registration is refused too (ADR 0177).
         if (await RegistrationClosedAsync())
         {
-            Counted(StepRefused, identity.Provider);
+            Counted(SignInCounts.Step.Refused, identity.Provider);
             return Refused(AccountErrors.RegistrationClosed);
         }
 
@@ -567,13 +600,8 @@ internal sealed class AccountApi
         return new SignInProof(fields);
     }
 
-    /// <summary>One step of a sign-in, said as a line the ops report can count by provider.</summary>
-    private void Counted(string step, string provider) => Said($"  Sign-in {step} ({provider}).");
-
-    // The steps a sign-in's lines name, as the ops report reads them; an unavailable provider is a line of its own.
-    private const string StepStarted = "started";
-    private const string StepFinished = "finished";
-    private const string StepRefused = "refused";
+    /// <summary>One step of a sign-in, counted by provider and said with the minute's others; how many the minute holds.</summary>
+    private long Counted(SignInCounts.Step step, string provider) => _counts.Add(provider, step, Clock.GetUtcNow());
 
     private async Task<StudioResponse> DevelopmentAsync(string body, AccountRequest request)
     {
@@ -591,7 +619,7 @@ internal sealed class AccountApi
         // The name is the identity: whoever types it again is that account again, which is what a laptop's
         // table and a test want, and why this mode is refused anywhere but the loopback address.
         var identity = new ExternalIdentity(ExternalIdentity.Development, name.Value.Key);
-        Counted(StepStarted, identity.Provider);
+        Counted(SignInCounts.Step.Started, identity.Provider);
         if (await _registry.FindAsync(identity) is { } account)
         {
             return await SignedInAsync(account, request, identity.Provider);
@@ -919,7 +947,7 @@ internal sealed class AccountApi
         // A suspended account is told why, and given no session (ADR 0178).
         if (account.Suspension is { } suspension)
         {
-            Counted(StepRefused, provider);
+            Counted(SignInCounts.Step.Refused, provider);
             var refused = AccountErrors.Suspended(suspension);
             return Problem(403, refused.Code, refused.Message);
         }
@@ -930,7 +958,7 @@ internal sealed class AccountApi
         }
 
         var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
-        Counted(StepFinished, provider);
+        Counted(SignInCounts.Step.Finished, provider);
         return Answer(new { account = Describe(account) }, cookie);
     }
 

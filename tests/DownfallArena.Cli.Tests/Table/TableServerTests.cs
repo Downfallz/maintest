@@ -20,6 +20,7 @@ public sealed class TableServerTests : IAsyncDisposable
     private readonly CancellationTokenSource _stopping = new();
     private readonly HttpClient _client = new(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
     private TableServer? _server;
+    private AccountApi? _accounts;
     private Task? _serving;
 
     public TableServerTests()
@@ -500,10 +501,79 @@ public sealed class TableServerTests : IAsyncDisposable
         }
     }
 
-    private async Task<string> ServeWithAccountsAsync(string root)
+    /// <summary>The address a sign-in came from reaches the count of its sign-ins (#1193): one spent address leaves the others theirs.</summary>
+    [Fact]
+    public async Task The_host_counts_sign_ins_by_the_address_each_came_from()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"server-accounts-{Guid.CreateVersion7():N}");
+        try
+        {
+            var url = await ServeWithAccountsAsync(root, new Refusing());
+            for (var posted = 0; posted < SignInAttempts.PerAddress; posted++)
+            {
+                (await PostSignInAsync(url, "203.0.113.7")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+            }
+
+            var spent = await PostSignInAsync(url, "203.0.113.7");
+            var other = await PostSignInAsync(url, "198.51.100.4");
+
+            spent.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+            spent.Headers.RetryAfter.ShouldNotBeNull();
+            other.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>The minute's sign-in counts are said on the first request after it, whatever its route (#1171).</summary>
+    [Fact]
+    public async Task The_host_says_the_minute_s_sign_in_counts_on_the_next_request_of_any_route()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"server-accounts-{Guid.CreateVersion7():N}");
+        try
+        {
+            var url = await ServeWithAccountsAsync(root);
+            var said = new List<string>();
+            _accounts!.Said = said.Add;
+            await SignInAsync(url, "MarkF");
+            said.ShouldBeEmpty();
+            _clock.Now += SignInCounts.Every;
+
+            (await Get(url, token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+            said.ShouldBe(["  Sign-ins (dev): 1 started, 1 finished, 0 refused, 0 unavailable, 0 limited."]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    private async Task<HttpResponseMessage> PostSignInAsync(string url, string address)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{url}api/account/refusing");
+        request.Content = new StringContent("""{"code":"x"}""", System.Text.Encoding.UTF8, "application/json");
+        request.Headers.Add("X-Forwarded-For", address);
+        return await _client.SendAsync(request, TestContext.Current.CancellationToken);
+    }
+
+    private async Task<string> ServeWithAccountsAsync(string root, Application.Accounts.Ports.ISignInProvider? provider = null)
     {
         var store = new Infrastructure.Accounts.FileAccountStore(root);
-        var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, _clock), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), _clock), AccountsMode.Development);
+        var accounts = new AccountApi(
+            new Application.Accounts.AccountRegistry(store, _clock),
+            new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), _clock),
+            provider is null ? AccountsMode.Development : AccountsMode.SignIn,
+            provider is null ? null : [provider]);
+        _accounts = accounts;
         var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.BehindPlatform(), _clock, "Rules 2 creatures (a test)", _hosted.Stored) { Accounts = accounts };
         _server = new TableServer(HttpHost.Loopback, FreePort(), _registry, new TableFiles(Path.Combine(AppContext.BaseDirectory, "table")), admin, _clock, _hosted.Stored, accounts);
         _serving = _server.RunAsync(_stopping.Token);
@@ -597,6 +667,17 @@ public sealed class TableServerTests : IAsyncDisposable
         using var probe = new TcpListener(IPAddress.Loopback, 0);
         probe.Start();
         return ((IPEndPoint)probe.LocalEndpoint).Port;
+    }
+
+    /// <summary>A provider that refuses every proof.</summary>
+    private sealed class Refusing : Application.Accounts.Ports.ISignInProvider
+    {
+        public string Name => "refusing";
+
+        public string? ClientId => null;
+
+        public Task<Application.Accounts.ExternalIdentity?> SignInAsync(Application.Accounts.SignInProof proof, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Application.Accounts.ExternalIdentity?>(null);
     }
 
     /// <summary>A clock a test moves, so a sweep is a fact rather than a wait.</summary>

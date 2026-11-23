@@ -46,6 +46,16 @@ public sealed class AccountApiTests : IDisposable
     private static async Task<string> TicketAsync(AccountApi api) =>
         Json(await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody)).GetProperty("ticket").GetString()!;
 
+    private static AccountRequest From(string address) => new(null, Secure: true, address);
+
+    /// <summary>What the API has said once a minute has passed and a request came: the minute's counts.</summary>
+    private async Task<List<string>> SaidAfterAMinuteAsync(AccountApi api, List<string> said)
+    {
+        _clock.Advance(SignInCounts.Every);
+        await api.HandleAsync("GET", "/api/account", "", Nobody);
+        return said;
+    }
+
     [Fact]
     public async Task A_sign_in_with_no_account_is_asked_for_a_name_and_given_no_session_yet()
     {
@@ -751,7 +761,7 @@ public sealed class AccountApiTests : IDisposable
 
         answer.Status.ShouldBe(401);
         Json(answer).GetProperty("error").GetString().ShouldBe("Account.SignInRejected");
-        said.ShouldBe(["  Sign-in started (discord).", "  Sign-in refused (discord)."]);
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (discord): 1 started, 0 finished, 1 refused, 0 unavailable, 0 limited."]);
     }
 
     [Fact]
@@ -766,7 +776,24 @@ public sealed class AccountApiTests : IDisposable
 
         answer.Status.ShouldBe(503);
         Json(answer).GetProperty("error").GetString().ShouldBe("Account.ProviderUnavailable");
-        said.ShouldBe(["  Sign-in started (discord).", "  Sign-in unavailable (discord): Discord answered 503."]);
+        said.ShouldBe(["  Sign-in unavailable (discord): Discord answered 503."]);
+        (await SaidAfterAMinuteAsync(api, said))[^1].ShouldBe("  Sign-ins (discord): 1 started, 0 finished, 0 refused, 1 unavailable, 0 limited.");
+    }
+
+    [Fact]
+    public async Task Discord_out_of_service_says_why_once_a_minute_not_once_a_request()
+    {
+        using var http = new HttpClient(new DiscordDown());
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
+        var said = new List<string>();
+        api.Said = said.Add;
+
+        for (var posted = 0; posted < 3; posted++)
+        {
+            await api.HandleAsync("POST", "/api/account/discord", DiscordProof($"code-{posted}"), Nobody);
+        }
+
+        said.ShouldBe(["  Sign-in unavailable (discord): Discord answered 503."]);
     }
 
     [Fact]
@@ -822,7 +849,7 @@ public sealed class AccountApiTests : IDisposable
 
         await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
 
-        said.ShouldBe(["  Sign-in started (google).", "  Sign-in refused (google)."]);
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (google): 1 started, 0 finished, 1 refused, 0 unavailable, 0 limited."]);
     }
 
     [Fact]
@@ -837,7 +864,7 @@ public sealed class AccountApiTests : IDisposable
 
         await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"MarkF"}""", Nobody);
 
-        said.ShouldBe(["  Sign-in refused (google)."]);
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (google): 1 started, 0 finished, 1 refused, 0 unavailable, 0 limited."]);
     }
 
     [Fact]
@@ -875,7 +902,7 @@ public sealed class AccountApiTests : IDisposable
 
         await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
 
-        said.ShouldBe(["  Sign-in started (google).", "  Sign-in finished (google)."]);
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (google): 1 started, 1 finished, 0 refused, 0 unavailable, 0 limited."]);
     }
 
     [Fact]
@@ -884,12 +911,13 @@ public sealed class AccountApiTests : IDisposable
         var said = new List<string>();
         var api = await ApiAsync();
         api.Said = said.Add;
+        await TicketAsync(api);
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (google): 1 started, 0 finished, 0 refused, 0 unavailable, 0 limited."]);
         var ticket = await TicketAsync(api);
-        said.ShouldBe(["  Sign-in started (google)."]);
 
         await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"MarkF"}""", Nobody);
 
-        said.ShouldBe(["  Sign-in started (google).", "  Sign-in finished (google)."]);
+        (await SaidAfterAMinuteAsync(api, said))[^1].ShouldBe("  Sign-ins (google): 1 started, 1 finished, 0 refused, 0 unavailable, 0 limited.");
     }
 
     [Fact]
@@ -901,7 +929,105 @@ public sealed class AccountApiTests : IDisposable
 
         await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", Nobody);
 
-        said.ShouldBe(["  Sign-in started (google).", "  Sign-in refused (google)."]);
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (google): 1 started, 0 finished, 1 refused, 0 unavailable, 0 limited."]);
+    }
+
+    [Fact]
+    public async Task Forged_proofs_write_no_line_each_but_one_line_a_minute_per_provider()
+    {
+        var said = new List<string>();
+        var api = await ApiAsync(AccountsMode.SignIn, new AnyCode("other"));
+        api.Said = said.Add;
+
+        for (var posted = 0; posted < 40; posted++)
+        {
+            await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", Nobody);
+            await api.HandleAsync("POST", "/api/account/other", """{"code":""}""", Nobody);
+        }
+
+        said.ShouldBeEmpty();
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe([
+            "  Sign-ins (google): 40 started, 0 finished, 40 refused, 0 unavailable, 0 limited.",
+            "  Sign-ins (other): 40 started, 0 finished, 40 refused, 0 unavailable, 0 limited.",
+        ]);
+    }
+
+    [Fact]
+    public async Task A_minute_s_counts_are_said_once_and_begun_again()
+    {
+        var said = new List<string>();
+        var api = await ApiAsync();
+        api.Said = said.Add;
+        await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", Nobody);
+        await SaidAfterAMinuteAsync(api, said);
+
+        await SaidAfterAMinuteAsync(api, said);
+
+        said.ShouldBe(["  Sign-ins (google): 1 started, 0 finished, 1 refused, 0 unavailable, 0 limited."]);
+    }
+
+    [Fact]
+    public async Task Sign_ins_from_one_address_past_its_count_are_refused_without_asking_the_provider()
+    {
+        var provider = new CountingProvider();
+        var api = await ApiAsync(AccountsMode.SignIn, provider);
+        for (var posted = 0; posted < SignInAttempts.PerAddress; posted++)
+        {
+            (await api.HandleAsync("POST", "/api/account/counted", """{"code":"x"}""", From("203.0.113.7"))).Status.ShouldBe(401);
+        }
+
+        var answer = await api.HandleAsync("POST", "/api/account/counted", """{"code":"x"}""", From("203.0.113.7"));
+
+        answer.Status.ShouldBe(429);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.TooManySignIns");
+        answer.Headers!.Single(header => header.Key == "Retry-After").Value.ShouldBe("60");
+        provider.Asked.ShouldBe(SignInAttempts.PerAddress);
+    }
+
+    [Fact]
+    public async Task Another_address_still_signs_in_while_one_has_spent_its_count()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var api = await ApiAsync();
+        for (var posted = 0; posted <= SignInAttempts.PerAddress; posted++)
+        {
+            await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", From("203.0.113.7"));
+        }
+
+        var answer = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", From("198.51.100.4"));
+
+        answer.Status.ShouldBe(200);
+        Session(answer).ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task An_address_that_spent_its_count_signs_in_again_once_its_minute_is_over()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var api = await ApiAsync();
+        for (var posted = 0; posted <= SignInAttempts.PerAddress; posted++)
+        {
+            await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", From("203.0.113.7"));
+        }
+
+        _clock.Advance(SignInAttempts.Window);
+        var answer = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", From("203.0.113.7"));
+
+        answer.Status.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task A_sign_in_refused_for_its_address_s_count_is_counted_limited_and_not_started()
+    {
+        var said = new List<string>();
+        var api = await ApiAsync();
+        api.Said = said.Add;
+        for (var posted = 0; posted <= SignInAttempts.PerAddress; posted++)
+        {
+            await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", From("203.0.113.7"));
+        }
+
+        (await SaidAfterAMinuteAsync(api, said)).ShouldBe(["  Sign-ins (google): 5 started, 0 finished, 5 refused, 0 unavailable, 1 limited."]);
     }
 
     [Fact]
@@ -977,6 +1103,22 @@ public sealed class AccountApiTests : IDisposable
     }
 
     /// <summary>Google, as far as these tests need it: one token is Mark's, every other one is nobody's.</summary>
+    /// <summary>A provider that refuses every proof and counts how often it was asked.</summary>
+    private sealed class CountingProvider : ISignInProvider
+    {
+        public int Asked { get; private set; }
+
+        public string Name => "counted";
+
+        public string? ClientId => null;
+
+        public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default)
+        {
+            Asked++;
+            return Task.FromResult<ExternalIdentity?>(null);
+        }
+    }
+
     private sealed class OneToken : ISignInProvider
     {
         public string Name => ExternalIdentity.Google;

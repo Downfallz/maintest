@@ -231,6 +231,8 @@ internal sealed class TableServer : IDisposable
 
     private async Task<StudioResponse> AnswerAsync(HttpListenerRequest request, string body)
     {
+        // The minute's sign-in counts are said on any request after it, a page's file too, not only on the next sign-in (#1171).
+        _accounts?.SayCountsIfDue();
         var path = request.Url?.AbsolutePath ?? "/";
         if (Starting && JoinCodes.Names(path))
         {
@@ -292,7 +294,7 @@ internal sealed class TableServer : IDisposable
             Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
 
-        var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request));
+        var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request), RequestAddress.Of(request));
         if (AccountApi.Names(path))
         {
             return _accounts is null

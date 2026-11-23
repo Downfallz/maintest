@@ -157,7 +157,9 @@ and 4. The recommended answer:
      the others.
    - The count: each sign-in writes one console line per step, `Sign-in started|finished|refused (<provider>).`
      It is finished once a session is issued, after the name window for a new player, and refused when the
-     provider says no, the account is suspended or registration is closed.
+     provider says no, the account is suspended or registration is closed. Since #1171 the host counts the steps
+     in memory and writes one line a minute per provider, `Sign-ins (<provider>): … started, … finished, …`, which
+     the ops report sums; since #1193 one address may post five sign-ins a minute.
    - The account tests pass with the mode renamed (`AccountsMode.SignIn`) and their fake Google behind the new
      port. A credential that is not text is now a 401 rather than a 400.
    - Left: the ops report reads the count, and a forged proof stops writing a line each (#1171).
