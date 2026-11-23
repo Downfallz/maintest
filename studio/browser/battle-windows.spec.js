@@ -382,7 +382,7 @@ test('the pick, the Mutation Tree and the journal speak the words their controls
 // #1087: the journal opened as a new round is announced leaves nothing playing beneath it; the announcement stays in
 // the page for a screen reader.
 test('a window opened over a new round\'s announcement leaves nothing animating beneath it', async ({ page }) => {
-  const state = await mount(page); await page.clock.resume();
+  const state = await mount(page);
   await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
   await expect(page.locator('#round-toast')).toHaveClass(/showing/);
   await page.locator('#history-open').click(); await expect(page.locator('#history-dialog')).toHaveJSProperty('open', true);
