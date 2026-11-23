@@ -41,6 +41,21 @@ public abstract class NoticeStoreContract
         (await store.ReadAsync(account, Cancel)).Version.ShouldBeNull();
     }
 
+    /// <summary>When a log was last written, read with it: what the hourly job erases a log by once it is 90 days past (#1118).</summary>
+    [Fact]
+    public async Task A_log_reads_with_when_it_was_last_written()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var before = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        await store.WriteAsync(account, [Entry(1)], null, Cancel);
+
+        var written = (await store.ReadAsync(account, Cancel)).Written.ShouldNotBeNull();
+        written.ShouldBeGreaterThan(before);
+        written.ShouldBeLessThan(DateTimeOffset.UtcNow.AddMinutes(1));
+    }
+
     [Fact]
     public async Task The_accounts_with_a_log_are_listed_and_one_whose_log_went_is_not()
     {

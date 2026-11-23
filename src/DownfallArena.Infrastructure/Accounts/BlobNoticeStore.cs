@@ -25,8 +25,8 @@ public sealed class BlobNoticeStore : INoticeStore
 
     public async Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        var (text, version) = await ConditionalBlob.ReadAsync(Blob(account), cancellationToken);
-        return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version);
+        var (text, version, written) = await ConditionalBlob.ReadWrittenAsync(Blob(account), cancellationToken);
+        return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version) { Written = written };
     }
 
     public Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)

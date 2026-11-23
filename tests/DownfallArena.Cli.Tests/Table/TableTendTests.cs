@@ -79,6 +79,62 @@ public sealed class TableTendTests : IDisposable
         File.Exists(Path.Combine(store.RootDirectory, "notices", $"{account.Value}.json")).ShouldBeFalse();
     }
 
+    /// <summary>A log no host can read, last written 91 days ago (#1118): it holds nothing newer, so it goes, names and all.</summary>
+    [Fact]
+    public async Task A_pass_erases_a_log_that_does_not_parse_once_it_was_last_written_90_days_ago()
+    {
+        using var job = await _hosted.RestartedAsync();
+        var store = new FileNoticeStore(Path.Combine(_own, "accounts"));
+        var account = AccountId.New();
+        var path = Path.Combine(store.RootDirectory, "notices", $"{account.Value}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, "{ \"entries\": [ { \"title\": \"MarkF won", Cancel);
+        var now = DateTimeOffset.UtcNow;
+        File.SetLastWriteTimeUtc(path, now.AddDays(-91).UtcDateTime);
+
+        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), now, notices: new AccountNoticeLog(store, new FakeTimeProvider(now)));
+
+        tended.NoticesErased.ShouldBe(1);
+        File.Exists(path).ShouldBeFalse();
+    }
+
+    /// <summary>A stage of the pass costs only itself: a log that cannot be read leaves the others swept (#1118).</summary>
+    [Fact]
+    public async Task A_notice_log_that_cannot_be_read_leaves_the_other_logs_swept()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var clock = new FakeTimeProvider(now.AddDays(-91));
+        var held = new InMemoryNoticeStore(clock);
+        var broken = AccountId.New();
+        var swept = AccountId.New();
+        foreach (var account in new[] { broken, swept })
+        {
+            await held.WriteAsync(account, [new NoticeEntry(1, NoticeKind.MatchOver, "Victory", "You won against bastien.", "/play?table=t1", "match:t1", now.AddDays(-91), Read: true)], null, Cancel);
+        }
+
+        clock.SetUtcNow(now);
+
+        var erased = await TableTend.EraseNoticesAsync(new AccountNoticeLog(new FailingFor(held, broken), clock));
+
+        erased.ShouldBe(1);
+        (await held.ReadAsync(swept, Cancel)).Version.ShouldBeNull();
+        (await held.ReadAsync(broken, Cancel)).Version.ShouldNotBeNull();
+    }
+
+    /// <summary>A notice store whose one account's log cannot be read, as a storage account that fails a request.</summary>
+    private sealed class FailingFor(InMemoryNoticeStore inner, AccountId broken) : Application.Accounts.Ports.INoticeStore
+    {
+        public Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) =>
+            account == broken ? throw new Azure.RequestFailedException(503, "The server is busy.") : inner.ReadAsync(account, cancellationToken);
+
+        public Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default) =>
+            inner.WriteAsync(account, entries, version, cancellationToken);
+
+        public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default) => inner.AccountsAsync(cancellationToken);
+
+        public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => inner.ForgetAsync(account, cancellationToken);
+    }
+
     /// <summary>The job's own composition (#1109, #1118): over a host that signs players in, its pass reaches the notice logs.</summary>
     [Fact]
     public async Task The_command_over_a_host_with_accounts_erases_the_notices_past_90_days()

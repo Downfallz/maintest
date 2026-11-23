@@ -299,6 +299,40 @@ internal static class TableTend
         }
     }
 
+    /// <summary>
+    /// The notices past 90 days erased from every account's log (#1118), a log at a time. A log that cannot be read or
+    /// written is a line on the console, and the next pass tries it again. How many logs were written.
+    /// </summary>
+    internal static async Task<int> EraseNoticesAsync(AccountNoticeLog notices)
+    {
+        ArgumentNullException.ThrowIfNull(notices);
+        IReadOnlyList<SharedKernel.Identifiers.AccountId> accounts;
+        try
+        {
+            accounts = await notices.AccountsAsync();
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The notice logs could not be listed, so none was swept: {Hosting.HttpHost.OneLine(failure)}");
+            return 0;
+        }
+
+        var erased = 0;
+        foreach (var account in accounts)
+        {
+            try
+            {
+                erased += await notices.EraseExpiredAsync(account) ? 1 : 0;
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+            {
+                Console.WriteLine($"  Account {account}: its notice log could not be swept: {Hosting.HttpHost.OneLine(failure)}");
+            }
+        }
+
+        return erased;
+    }
+
     /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago and the notices past 90 days.</summary>
     /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
@@ -335,16 +369,17 @@ internal static class TableTend
             progress?.Invoke(done);
         }
 
-        if (notices is not null)
-        {
-            done = done with { NoticesErased = await notices.EraseExpiredAsync() };
-            progress?.Invoke(done);
-        }
-
         // The index of feedback built again from every record (#866): what a revision that keeps none changed is put right.
         if (feedbackIndex is not null && !await feedbackIndex.RebuildAsync())
         {
             Console.WriteLine("  The index of feedback was written meanwhile: the next pass builds it again.");
+        }
+
+        // Last, and each log on its own: a store that fails costs the sweep of that log alone, never a stage after it.
+        if (notices is not null)
+        {
+            done = done with { NoticesErased = await EraseNoticesAsync(notices) };
+            progress?.Invoke(done);
         }
 
         return done;

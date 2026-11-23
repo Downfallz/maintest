@@ -14,11 +14,12 @@ public sealed class AccountNoticeLogTests
 
     private readonly AccountId _mark = AccountId.New();
     private readonly SteppedClock _clock = new(new DateTimeOffset(2026, 11, 22, 20, 0, 0, TimeSpan.Zero));
-    private readonly VersionedNotices _store = new();
+    private readonly VersionedNotices _store;
     private readonly AccountNoticeLog _log;
 
     public AccountNoticeLogTests()
     {
+        _store = new VersionedNotices(_clock);
         _log = new AccountNoticeLog(_store, _clock);
     }
 
@@ -154,7 +155,6 @@ public sealed class AccountNoticeLogTests
         public override DateTimeOffset GetUtcNow() => _now;
     }
 
-    /// <summary>A log in memory that refuses a write over a version another write replaced, as the real stores do.</summary>
     /// <summary>An idle account's log at rest (#1118): what is past 90 days goes, without a notice to make it go.</summary>
     [Fact]
     public async Task A_sweep_erases_the_entries_past_90_days_of_a_log_nobody_wrote_since()
@@ -164,9 +164,9 @@ public sealed class AccountNoticeLogTests
         await _log.AddAsync(_mark, Over("t2"), Cancel);
         _clock.Advance(AccountNoticeLog.KeptFor - TimeSpan.FromDays(29));
 
-        var swept = await _log.EraseExpiredAsync(Cancel);
+        var swept = await _log.EraseExpiredAsync(_mark, Cancel);
 
-        swept.ShouldBe(1);
+        swept.ShouldBeTrue();
         (await _store.ReadAsync(_mark, Cancel)).Entries.Select(entry => entry.Tag).ShouldBe(["match:t2"]);
     }
 
@@ -176,7 +176,7 @@ public sealed class AccountNoticeLogTests
         await _log.AddAsync(_mark, Over("t1"), Cancel);
         _clock.Advance(AccountNoticeLog.KeptFor + TimeSpan.FromHours(1));
 
-        await _log.EraseExpiredAsync(Cancel);
+        await _log.EraseExpiredAsync(_mark, Cancel);
 
         (await _store.ReadAsync(_mark, Cancel)).Entries.ShouldBeEmpty();
     }
@@ -188,10 +188,38 @@ public sealed class AccountNoticeLogTests
         var writes = _store.Writes;
         _clock.Advance(TimeSpan.FromDays(89));
 
-        var swept = await _log.EraseExpiredAsync(Cancel);
+        var swept = await _log.EraseExpiredAsync(_mark, Cancel);
 
-        swept.ShouldBe(0);
+        swept.ShouldBeFalse();
         _store.Writes.ShouldBe(writes);
+    }
+
+    /// <summary>
+    /// A log last written 90 days ago holds nothing newer (#1118): it goes whatever this host reads of it, a document that
+    /// does not parse or a kind a later host wrote included.
+    /// </summary>
+    [Fact]
+    public async Task A_sweep_erases_a_log_last_written_90_days_ago_even_when_none_of_its_entries_can_be_read()
+    {
+        _store.Unreadable(_mark);
+        _clock.Advance(AccountNoticeLog.KeptFor);
+
+        var swept = await _log.EraseExpiredAsync(_mark, Cancel);
+
+        swept.ShouldBeTrue();
+        (await _store.ReadAsync(_mark, Cancel)).Version.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_sweep_keeps_a_log_written_since_whose_entries_cannot_be_read()
+    {
+        _store.Unreadable(_mark);
+        _clock.Advance(AccountNoticeLog.KeptFor - TimeSpan.FromHours(1));
+
+        var swept = await _log.EraseExpiredAsync(_mark, Cancel);
+
+        swept.ShouldBeFalse();
+        (await _store.ReadAsync(_mark, Cancel)).Version.ShouldNotBeNull();
     }
 
     /// <summary>A write that came first cut the log to what is kept, as every write does: the sweep has nothing left to do there.</summary>
@@ -202,15 +230,16 @@ public sealed class AccountNoticeLogTests
         _clock.Advance(AccountNoticeLog.KeptFor + TimeSpan.FromHours(1));
         _store.BeforeNextWrite = () => _log.AddAsync(_mark, Over("t2"), Cancel);
 
-        var swept = await _log.EraseExpiredAsync(Cancel);
+        var swept = await _log.EraseExpiredAsync(_mark, Cancel);
 
-        swept.ShouldBe(0);
+        swept.ShouldBeFalse();
         (await _store.ReadAsync(_mark, Cancel)).Entries.Select(entry => entry.Tag).ShouldBe(["match:t2"]);
     }
 
-    private sealed class VersionedNotices : INoticeStore
+    /// <summary>A log in memory that refuses a write over a version another write replaced, as the real stores do.</summary>
+    private sealed class VersionedNotices(TimeProvider clock) : INoticeStore
     {
-        private readonly Dictionary<AccountId, (IReadOnlyList<NoticeEntry> Entries, string Version)> _held = [];
+        private readonly Dictionary<AccountId, (IReadOnlyList<NoticeEntry> Entries, string Version, DateTimeOffset Written)> _held = [];
         private long _written;
 
         public Func<Task>? BeforeNextWrite { get; set; }
@@ -220,7 +249,10 @@ public sealed class AccountNoticeLogTests
         public int Writes { get; private set; }
 
         public Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) =>
-            Task.FromResult(_held.TryGetValue(account, out var held) ? new NoticeLogRead(held.Entries, held.Version) : new NoticeLogRead([], null));
+            Task.FromResult(_held.TryGetValue(account, out var held) ? new NoticeLogRead(held.Entries, held.Version) { Written = held.Written } : new NoticeLogRead([], null));
+
+        /// <summary>A log written now that reads as no entries: a document that does not parse, or kinds this host does not know.</summary>
+        public void Unreadable(AccountId account) => _held[account] = ([], $"{++_written}", clock.GetUtcNow());
 
         public async Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
         {
@@ -236,7 +268,14 @@ public sealed class AccountNoticeLogTests
                 return false;
             }
 
-            _held[account] = ([.. entries], $"{++_written}");
+            if (entries.Count == 0)
+            {
+                // An empty log is no log, as in the real stores.
+                _held.Remove(account);
+                return true;
+            }
+
+            _held[account] = ([.. entries], $"{++_written}", clock.GetUtcNow());
             return true;
         }
 

@@ -65,26 +65,29 @@ public sealed class AccountNoticeLog
         return marked;
     }
 
+    /// <summary>The accounts that have a log: what the hourly job sweeps (#1118).</summary>
+    public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default) => _store.AccountsAsync(cancellationToken);
+
     /// <summary>
-    /// The sweep of the hourly job (#1118): every log that holds an entry past <see cref="KeptFor" /> is written without
-    /// it, and a log left with none goes, so an account nobody told since keeps nothing past its time at rest, the
-    /// other players' names with it. A log with nothing past its time is not written. How many logs it wrote.
+    /// The hourly job's sweep of one log (#1118): written without what is past <see cref="KeptFor" />, and removed when
+    /// that leaves none, so an account nobody told since keeps nothing past its time at rest, the other players' names
+    /// with it. A log last written longer ago than that holds nothing to keep, since no entry is newer than its last
+    /// write: it is removed whatever it holds, a document this host cannot read or a kind it does not know included. A
+    /// log with nothing past its time is not written. Whether it wrote.
     /// </summary>
-    public async Task<int> EraseExpiredAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> EraseExpiredAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        var erased = 0;
-        foreach (var account in await _store.AccountsAsync(cancellationToken))
+        var read = await _store.ReadAsync(account, cancellationToken);
+        if (read.Version is null)
         {
-            var read = await _store.ReadAsync(account, cancellationToken);
-            var kept = Kept(read.Entries, _clock.GetUtcNow());
-            // Refused, another write came first, and every write cuts the log to what is kept: nothing is left to do.
-            if (kept.Count < read.Entries.Count && await _store.WriteAsync(account, kept, read.Version, cancellationToken))
-            {
-                erased++;
-            }
+            return false;
         }
 
-        return erased;
+        var now = _clock.GetUtcNow();
+        var aged = read.Written <= now - KeptFor;
+        var kept = aged ? [] : Kept(read.Entries, now);
+        // Refused, another write came first, and every write cuts the log to what is kept: nothing is left to do.
+        return (aged || kept.Count < read.Entries.Count) && await _store.WriteAsync(account, kept, read.Version, cancellationToken);
     }
 
     /// <summary>The log goes with the account.</summary>

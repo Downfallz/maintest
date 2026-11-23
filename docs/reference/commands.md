@@ -345,7 +345,8 @@ no account (ADR 0178).
 
 Its Jobs tab lists the tending runs twenty a page with the last day's and week's totals
 (`GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>` a run's sheet) and runs a pass now in this
-process (`POST /api/admin/jobs/tend`, kept as manual with the operator's name), and, on a host whose bots' turns
+process (`POST /api/admin/jobs/tend`, kept as manual with the operator's name; the `table-tend` pass, the
+notice logs' sweep included on a host that signs players in), and, on a host whose bots' turns
 go through queues, shows each queue's length and oldest item and the dead letters, first 32 first
 (`GET /api/admin/jobs/turns`), and puts a letter's turn back on the queue or drops it
 (`POST /api/admin/jobs/turns/requeue {"ids"}` or `{"all":true}`, `POST .../drop {"ids"}`).

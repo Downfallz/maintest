@@ -20,8 +20,8 @@ public sealed class FileNoticeStore : INoticeStore
 
     public async Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        var (text, version) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
-        return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version);
+        var (text, version, written) = await ConditionalFile.ReadWrittenAsync(FullPath(account), cancellationToken);
+        return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version) { Written = written };
     }
 
     public Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)

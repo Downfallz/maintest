@@ -339,6 +339,21 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         seat.Status.ShouldBe(410);
     }
 
+    /// <summary>The panel's "Run now" runs the hourly job's pass (A3), the notice logs' sweep with it (#1118).</summary>
+    [Fact]
+    public async Task A_pass_run_from_the_panel_erases_the_notices_past_90_days()
+    {
+        var host = await ComposeAsync();
+        var mark = await SignInAsync(host, "MarkF");
+        var store = await ArtifactStores.OpenNoticesAsync(Path.Combine(_root, "playtest"), Cancel);
+        await store.WriteAsync(mark.Id, [new NoticeEntry(1, NoticeKind.MatchOver, "Victory", "You won against bastien.", "/play?table=t1", "match:t1", DateTimeOffset.UtcNow.AddDays(-91), Read: true)], null, Cancel);
+
+        var pass = await host.Admin.Jobs!.HandleAsync("POST", JobsApi.TendRoute, null, "op");
+
+        pass.Status.ShouldBe(200);
+        (await store.ReadAsync(mark.Id, Cancel)).Version.ShouldBeNull();
+    }
+
     /// <summary>A port nothing else on this machine holds right now, asked of the machine rather than guessed.</summary>
     private static int FreePort()
     {

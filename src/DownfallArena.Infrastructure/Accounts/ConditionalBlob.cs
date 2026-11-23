@@ -14,14 +14,21 @@ internal static class ConditionalBlob
     /// <summary>The blob's text and its tag, or none for a blob that is not there.</summary>
     public static async Task<(string? Text, string? Version)> ReadAsync(BlobClient blob, CancellationToken cancellationToken)
     {
+        var (text, version, _) = await ReadWrittenAsync(blob, cancellationToken);
+        return (text, version);
+    }
+
+    /// <summary>The blob's text, its tag and when it was last written, all from the one download; none for a blob that is not there.</summary>
+    public static async Task<(string? Text, string? Version, DateTimeOffset? Written)> ReadWrittenAsync(BlobClient blob, CancellationToken cancellationToken)
+    {
         try
         {
             var download = await blob.DownloadContentAsync(cancellationToken);
-            return (download.Value.Content.ToString(), download.Value.Details.ETag.ToString());
+            return (download.Value.Content.ToString(), download.Value.Details.ETag.ToString(), download.Value.Details.LastModified);
         }
         catch (RequestFailedException exception) when (exception.Status == 404)
         {
-            return (null, null);
+            return (null, null, null);
         }
     }
 
