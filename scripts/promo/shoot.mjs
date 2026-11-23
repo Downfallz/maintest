@@ -121,6 +121,15 @@ const EPOCH = new Date('2026-01-01T00:00:00Z');
 const TICK_MS = 100;
 
 /**
+ * Give the page a clock that moves only when it is told to: installed at EPOCH, a clock still follows the wall's,
+ * so it is paused at once. Call it before the page loads.
+ */
+export async function holdClock(page) {
+  await page.clock.install({ time: EPOCH });
+  await page.clock.pauseAt(new Date(EPOCH.getTime() + TICK_MS));
+}
+
+/**
  * Open the shot's scenario on the host at `origin` in a new context framed at `ratio`, and return the PNG of the
  * screen. Give it a host of its own: an account that opened the scenario before would resume its practice.
  */
@@ -155,7 +164,7 @@ export async function shootStill(browser, origin, shot, ratio) {
       }
     };
     await page.addInitScript(pinRandom);
-    await page.clock.install({ time: EPOCH });
+    await holdClock(page);
     const signed = await page.request.post(`${origin}/api/account/dev`, { data: { username: 'Promo' } });
     if (!signed.ok()) throw new Error(`The host refused the account: ${signed.status()}.`);
     await page.goto(`${origin}/battle?scenario=${encodeURIComponent(shot.id)}`);

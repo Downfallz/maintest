@@ -103,8 +103,8 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    [promo/README.md](../../promo/README.md), one shot (`promo/shots/brute-mirror-round-3.json`, on the greedy 1v1
    scenario) and `scripts/promo/shoot.mjs --still`. A still starts a real host, signs a new account in, opens the
    scenario as a practice in Chromium at 360 by 640, 1280 by 720 or 720 by 720 CSS pixels at the density that
-   makes the short side 1080, and saves the screen. The page's clock is Playwright's, moved 100 ms at a time once
-   every request it made is answered; `Math.random` is seeded. Three takes of the vertical still gave the same
+   makes the short side 1080, and saves the screen. The page's clock is Playwright's, paused, and moved 100 ms at a
+   time once every request it made is answered; `Math.random` is seeded. Three takes of the vertical still gave the same
    SHA-256. Tests: `studio/promo-shoot.test.js` (the refusals, the framing, the exit codes) and the real-engine
    journey `studio/browser/table.promo.js` (two stills, the same bytes, the sizes).
 
