@@ -10,8 +10,8 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null } = {}) {
-  const state = { holdInvitation, news, holdFirstNews, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null, holdCreate = null } = {}) {
+  const state = { holdInvitation, holdCreate, news, holdFirstNews, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -41,7 +41,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       return json({ invitations: invited ? [{ token: 'inv', kind: 'invitation', seat: 'player2', table: invited }] : [{ token: 'inv', kind: 'spent', seat: null, table: null }] });
     }
     // A table asked for is noted and refused: the dialog's request is what the tests read.
-    if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
+    if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); if (state.holdCreate) await state.holdCreate; return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
     if (path === '/api/lobby') {
@@ -1319,6 +1319,44 @@ test('an invitation\'s card and its painted ground are kept when the cards are d
   expect(state.errors).toEqual([]);
 });
 
+test('at 320 by 568 the Create window keeps Cancel and Create & play → at its foot, and the press says Creating… until the host answers (#987)', async ({ page }, info) => {
+  test.skip(info.project.name !== 'small-phone', 'Read once, on the small phone, at 320 by 568.');
+  await page.setViewportSize({ width: 320, height: 568 });
+  let release;
+  const state = await home(page, { holdCreate: new Promise(resolve => { release = resolve; }) });
+  await page.locator('#new-table').click();
+  const window = page.locator('#create-dialog'), submit = page.locator('#create-submit');
+  await expect(window).toBeVisible();
+  for (const tab of [/^Multiplayer/, /^Solo/]) {
+    await page.getByRole('tab', { name: tab }).click();
+    const bounds = await window.boundingBox();
+    expect(bounds.y + bounds.height, String(tab)).toBeLessThanOrEqual(568);
+    await expect(submit, String(tab)).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('#create-cancel'), String(tab)).toBeInViewport({ ratio: 1 });
+  }
+  // The options scroll under the actions; the actions stay where the thumb is.
+  await page.getByRole('tab', { name: /^Multiplayer/ }).click();
+  await window.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  await expect(submit).toBeInViewport({ ratio: 1 });
+  await expect(page.getByLabel(/^Time to answer/)).toBeInViewport();
+
+  await submit.click();
+  await expect(submit).toHaveText('Creating…');
+  await expect(submit).toHaveAttribute('aria-busy', 'true');
+  await expect(submit).toBeDisabled();
+  release();
+  await expect(page.locator('#create-problem')).toHaveText('All tables are occupied.');
+  // The refusal is held at the foot with the actions, never under them.
+  await expect(page.locator('#create-problem')).toBeInViewport({ ratio: 1 });
+  await window.evaluate(node => { node.scrollTop = 0; });
+  await expect(page.locator('#create-problem')).toBeInViewport({ ratio: 1 });
+  await expect(submit).toHaveText('Create & play →');
+  await expect(submit).not.toHaveAttribute('aria-busy', 'true');
+  await expect(submit).toBeEnabled();
+  await noOverflow(page);
+  expect(state.errors).toEqual([]);
+});
+
 test('the create dialog plays Solo against a bot in any format, and Multiplayer ranked in 3v3 or unranked in any format', async ({ page }, info) => {
   const state = await home(page);
   await page.locator('#new-table').click();
@@ -1425,7 +1463,8 @@ test('a skipped tutorial never opens by itself again: it waits under Learn to pl
   await expect(cards.nth(0).locator('.status-tag')).toHaveText('Skipped');
   await expect(cards.nth(0).locator('a')).toHaveText('Play');
   await expect(cards.nth(0).locator('a')).not.toHaveClass(/primary/);
-  await expect(cards.nth(0)).toHaveAttribute('data-next', 'true');
+  // Skipped, it is not the next lesson: the featured space offers a new battle (#987).
+  await expect(cards.nth(0)).not.toHaveAttribute('data-next', 'true');
   await expect(cards.nth(0).locator('img.tutorial-picture')).toHaveAttribute('alt', '');
   await expect(cards.nth(1).locator('.status-tag')).toHaveText('Done');
   await expect(cards.nth(1).locator('a')).not.toHaveClass(/primary/);
@@ -1549,6 +1588,43 @@ test('an invitation is one before the host describes it, and a late answer namin
   expect(state.errors).toEqual([]);
 });
 
+test('an inviter\'s name of the longest kind, named late, leaves the sign-in where it was wherever the words stand under the duel (#973)', async ({ page }) => {
+  // Twenty characters, the most a player name holds (account.js), of the widest letters.
+  const longest = { ...rooks, seats: [{ ...rooks.seats[0], name: 'WWWWWWWWWWWWWWWWWWWW' }, rooks.seats[1]] };
+  // Under 1280 px; beside the painting the room is let go of (lobby.css).
+  // The widths where the format, once named, used to add a line (422 and 439 px), and a spent answer.
+  const sizes = [[320, 568], [390, 844], [422, 900], [439, 900], [700, 900], [1024, 768], [1279, 800]];
+  for (const [width, height] of sizes) {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.setViewportSize({ width, height });
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    const state = await home(page, { account: null, mode: 'google', invited: longest, search: invitedSearch, holdInvitation: held });
+    await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
+    const button = await page.getByRole('button', { name: 'Continue with Google' }).boundingBox();
+    release();
+    await expect(page.getByRole('heading', { name: `${longest.seats[0].name} invited you to a 3v3 battle.` })).toBeVisible();
+    expect(await page.getByRole('button', { name: 'Continue with Google' }).boundingBox(), `${width} by ${height}`).toEqual(button);
+    expect(state.errors).toEqual([]);
+  }
+});
+
+test('a late answer that the link is spent leaves the sign-in where it was (#973)', async ({ page }) => {
+  for (const [width, height] of [[320, 568], [390, 844], [1024, 768]]) {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.setViewportSize({ width, height });
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    const state = await home(page, { account: null, mode: 'google', invited: null, search: invitedSearch, holdInvitation: held });
+    await expect(page.getByRole('heading', { name: 'You are invited to a battle.' })).toBeVisible();
+    const button = await page.getByRole('button', { name: 'Continue with Google' }).boundingBox();
+    release();
+    await expect(page.getByRole('heading', { name: 'This invitation can no longer be used.' })).toBeVisible();
+    expect(await page.getByRole('button', { name: 'Continue with Google' }).boundingBox(), `${width} by ${height}`).toEqual(button);
+    expect(state.errors).toEqual([]);
+  }
+});
+
 test('the panel an invitation opens shows the duel whole on a phone, in place of the ground and the Revenant, the sign-in within reach', async ({ page }) => {
   for (const width of [320, 390]) {
     await page.setViewportSize({ width, height: 568 });
@@ -1667,17 +1743,17 @@ test('a signed-in player\'s home loads none of the door\'s paintings', async ({ 
 // filled action, following what the host says of the player's games and lessons.
 const filledOnTheHome = page => page.locator('#home-games :is(button, a).primary:visible');
 
-test('a new account is featured its first lesson on the ancestral creature, the home\'s one filled action, within reach at 320 px', async ({ page }, info) => {
+test('a new account that skipped its first lesson is featured the first new one, the home\'s one filled action, within reach at 320 px (#987)', async ({ page }, info) => {
   await page.setViewportSize({ width: 320, height: 568 });
   const state = await home(page, { games: [], tutorials: series('skipped', 'new') });
   const featured = page.locator('#featured');
 
   await expect(featured).toHaveAttribute('data-featured', 'lesson');
-  await expect(page.locator('#featured-eyebrow')).toHaveText('Tutorial 1 of 4');
-  await expect(page.locator('#welcome')).toHaveText('Your first combat');
+  await expect(page.locator('#featured-eyebrow')).toHaveText('Tutorial 2 of 4');
+  await expect(page.locator('#welcome')).toHaveText('Who acts first');
   await expect(page.locator('#featured-action')).toHaveText('Play →');
   await expect(featured.locator('img.featured-ground')).toHaveAttribute('fetchpriority', 'high');
-  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/lesson-base-/);
+  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/lesson-brute-/);
   await expect(filledOnTheHome(page)).toHaveCount(1);
   await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
   await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });

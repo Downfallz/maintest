@@ -134,6 +134,12 @@
 html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 #action-heading.scene-head { margin: -28px -28px 18px; } /* the dialog's padding, .lobby-page dialog above */
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
+/* The Create window's actions, and the host's refusal above them, are held at its foot, over the window's padding
+   (.lobby-page dialog): its options scroll under them, so at 320 by 568 Create & play → stays on the first screen,
+   and a refusal is never under them (#987). */
+#create-table > .create-foot { position: sticky; z-index: 1; bottom: -28px; margin: 26px -28px -28px; padding: 14px 28px 28px;
+  border-top: 1px solid var(--line-soft); background: var(--panel); }
+#create-table .create-foot > .problem { margin: 0 0 12px; } #create-table .create-foot > .dialog-actions { margin-top: 0; }
 .lobby-page .problem { margin: 12px 0; }
 .account { position: relative; }
 .account-chip { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); list-style: none; font-weight: 650; }
@@ -282,6 +288,12 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .sign-in-content .eyebrow { color: var(--brand-ember); }
 .sign-in-content h2 { font: 400 clamp(38px, 5vw, 76px)/1.06 var(--font-display); letter-spacing: -.04em; color: var(--bone); margin: 16px 0 12px; overflow-wrap: anywhere; }
 .sign-in-panel[data-door="invited"] .sign-in-content h2 { font-size: clamp(30px, 4vw, 60px); }
+/* The title and the room it holds share one cell: the room, unseen, is the longest the title can become (door.js),
+   under 1280 px, where the words stand under the duel. */
+#sign-in-heading { display: grid; } #sign-in-heading > * { grid-area: 1 / 1; } #sign-in-heading > .title-room { visibility: hidden; }
+/* Beside the painting, from 1280 px, the longest name would hold three lines of slate under a short one's title: the
+   room is let go of there, where the sign-in is centred in a tall panel (#973). */
+@media (min-width: 1280px) { #sign-in-heading > .title-room { display: none; } }
 /* The goodbye's title takes the focus once, by script, since the menu that held it is gone: no ring on a heading. */
 .sign-in-panel[data-door="left"] #sign-in-heading:focus { outline: none; }
 .sign-in-content .sign-in-game { margin: 0 0 6px; color: var(--bone); font-size: 15px; line-height: 1.6; }
@@ -350,9 +362,8 @@ html #friends-dialog { width: min(720px, calc(100vw - 24px)); }
   .sign-in-panel { min-height: 0; margin-block: 20px; }
   .sign-in-content { width: 100%; padding: 26px 16px 28px; }
   .sign-in-content h2 { max-width: calc(100% - 112px); font-size: clamp(30px, 9vw, 38px); }
-  /* The invited title waits for the host to name who invites: its room is held for the longer words, three lines
-     at the panel's full width, under the duel. */
-  .sign-in-panel[data-door="invited"] .sign-in-content h2 { max-width: 100%; min-height: 3lh; font-size: 26px; }
+  /* The invited title takes the panel's full width, under the duel; door.js holds its room for the longest name. */
+  .sign-in-panel[data-door="invited"] .sign-in-content h2 { max-width: 100%; font-size: 26px; }
   .sign-in-panel[data-door="left"] .sign-in-content h2 { max-width: 100%; }
   .sign-in-content :is(.sign-in-game, .muted) { max-width: 100%; }
   .sign-in-panel::before { background: linear-gradient(180deg, color-mix(in srgb, var(--soot) 45%, transparent), var(--soot) 72%); }

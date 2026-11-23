@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, waitsOnAPerson, latestFinished } from './lobby.js';
+import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, waitsOnAPerson, latestFinished, seatPushSource } from './lobby.js';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -155,6 +155,112 @@ test('the offer of pop-ups is made on a game against a person that waits on the 
   const both = { ...theirs, seats: [{ seat: 'player1' }, { seat: 'player2' }] };
   assert.equal(waitsOnAPerson(both), false, 'both seats here: nobody is away');
   assert.equal(waitsOnAPerson(null), false);
+});
+
+// A browser that can take a push: a worker, a push manager and the permission's prompt, each answer recorded.
+function pushingBrowser({ held = null, permission = 'default', answer = 'granted' } = {}) {
+  const calls = [];
+  const subscription = endpoint => ({ endpoint, options: { applicationServerKey: new Uint8Array([4, 5, 6]).buffer }, toJSON: () => ({ endpoint }), unsubscribe: async () => { calls.push(['unsubscribe', endpoint]); } });
+  let current = held ? subscription(held) : null;
+  const registration = { pushManager: { getSubscription: async () => current, subscribe: async () => { calls.push(['subscribe']); current = subscription('made'); return current; } } };
+  const nav = { serviceWorker: { register: async path => { calls.push(['register', path]); }, ready: Promise.resolve(registration) } };
+  const win = { PushManager: function PushManager() {}, Notification: { permission, requestPermission: async () => { calls.push(['permission']); return answer; } }, isSecureContext: true };
+  return { nav, win, calls };
+}
+
+// A seat that answers as the host does: its key (BAUG in base64url is the bytes 4, 5, 6), and each subscription it is given.
+function seatAnswering({ publicKey = 'BAUG', ok = true, status = ok ? 200 : 500 } = {}) {
+  const asked = [];
+  const transport = (seat, token) => ({
+    pushKey: async () => { asked.push(['key', seat, token]); return { ok: Boolean(publicKey), status: publicKey ? 200 : 404, body: publicKey ? { publicKey } : null }; },
+    push: async body => { asked.push(['push', seat, token, body.endpoint]); return { ok, status, body: {} }; },
+  });
+  return { transport, asked };
+}
+
+const waiting = { table: { id: 'w' }, seats: [{ seat: 'player1', token: 'seat-token' }] };
+
+test('with accounts off the offer asks through the waiting game\'s seat: ready once its key is read, and Turn on registers the browser with that seat (#1127)', async () => {
+  const browser = pushingBrowser(), host = seatAnswering();
+  let told = 0;
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport, onChange: () => { told++; } });
+  assert.equal(source.state().ready, false, 'no game waits: nothing to offer through');
+
+  await source.setSeat(waiting);
+  assert.deepEqual(source.state(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
+  assert.ok(told > 0, 'the offer is told the seat was read');
+  assert.deepEqual(host.asked, [['key', 'player1', 'seat-token']]);
+
+  const after = await source.turnOn();
+  assert.deepEqual(after, { ready: true, keyed: true, subscribed: true, permission: 'granted', hotseat: false });
+  assert.deepEqual(browser.calls, [['register', '/sw.js'], ['permission'], ['subscribe']]);
+  assert.deepEqual(host.asked.at(-1), ['push', 'player1', 'seat-token', 'made']);
+});
+
+test('with accounts off a subscription the browser already holds is told to the seat, and the offer is not made', async () => {
+  const browser = pushingBrowser({ held: 'kept', permission: 'granted' }), host = seatAnswering();
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().subscribed, true);
+  assert.deepEqual(host.asked.at(-1), ['push', 'player1', 'seat-token', 'kept']);
+});
+
+test('with accounts off a host without keys, or no game waiting any more, offers nothing through the seat', async () => {
+  const browser = pushingBrowser(), host = seatAnswering({ publicKey: null });
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, false);
+  await source.setSeat(null);
+  assert.equal(source.state().ready, false);
+});
+
+test('with accounts off a seat that could not be read is read again with the next list of games', async () => {
+  const browser = pushingBrowser(), host = seatAnswering();
+  let down = true;
+  const transport = (seat, token) => { const real = host.transport(seat, token); return { ...real, pushKey: async () => { if (down) throw new Error('offline'); return real.pushKey(); } }; };
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, false);
+  down = false;
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, true);
+});
+
+test('with accounts off a subscription gone from its push service is let go of, so the next Turn on makes a fresh one', async () => {
+  const browser = pushingBrowser({ held: 'dead', permission: 'granted' }), host = seatAnswering({ ok: false, status: 410 });
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().subscribed, false);
+  assert.deepEqual(browser.calls.at(-1), ['unsubscribe', 'dead']);
+});
+
+test('with accounts off a seat the page cannot speak for is no seat, and nothing is thrown', async () => {
+  const browser = pushingBrowser(), host = seatAnswering();
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: () => { throw new Error('neither player1 nor player2'); } });
+  await source.setSeat({ table: { id: 'x' }, seats: [{ seat: 'player3', token: 't' }] });
+  assert.equal(source.state().ready, false);
+  assert.deepEqual(host.asked, []);
+});
+
+test('with accounts off a key the host could not give (a 503) is asked again with the next list of games', async () => {
+  const browser = pushingBrowser(), host = seatAnswering();
+  let down = true;
+  const transport = (seat, token) => { const real = host.transport(seat, token); return { ...real, pushKey: async () => (down ? { ok: false, status: 503, body: null } : real.pushKey()) }; };
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, false);
+  down = false;
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, true);
+});
+
+test('with accounts off a refusal of the seat leaves pop-ups off, and lets go of the subscription it made', async () => {
+  const browser = pushingBrowser(), host = seatAnswering({ ok: false });
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport });
+  await source.setSeat(waiting);
+  const after = await source.turnOn();
+  assert.equal(after.subscribed, false);
+  assert.deepEqual(browser.calls.at(-1), ['unsubscribe', 'made']);
 });
 
 test('the latest finished game is the one that ended last among the first game of each group\'s first page', () => {

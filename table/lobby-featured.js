@@ -78,13 +78,10 @@ const held = entry => (entry?.seats ?? []).map(seat => seat.seat);
 const capital = text => (text ? text[0].toUpperCase() + text.slice(1) : '');
 
 /**
- * The lesson to continue: the one Learn to play marks as next (the first in the series' order not done), unless it
- * and every lesson after it were skipped.
+ * The lesson to continue: the one Learn to play marks as next, the first in the series' order neither done nor skipped
+ * (the owner's choice, #987). A skipped lesson waits under Learn to play; once each is done or skipped, none is featured.
  */
-function nextLesson(lessons) {
-  const left = (lessons ?? []).filter(one => !one.done);
-  return left.some(one => !one.skipped) ? left.find(one => one.next) ?? left[0] : null;
-}
+const nextLesson = lessons => (lessons ?? []).find(one => one.next) ?? null;
 
 /**
  * What the featured space shows. `previous` is the table it showed last: it stays while it is still a game at the

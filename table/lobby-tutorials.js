@@ -16,11 +16,12 @@ const TAGS = Object.freeze({ done: 'Done', skipped: 'Skipped' });
 
 /**
  * Each tutorial as a card: its place in the series, its title and goal, its state as the host says it, its link, its
- * painting, and whether it is the next one: the first in the series' order the host does not say done.
+ * painting, and whether it is the next one: the first in the series' order the host says neither done nor skipped.
  */
 export function tutorialCards(answer) {
   const listed = (answer?.tutorials ?? []).filter(one => one?.link);
-  const next = [...listed].sort((one, other) => (one.order ?? 0) - (other.order ?? 0)).find(one => one.state !== 'done');
+  // A skipped lesson is not offered again: it waits on its card (#987).
+  const next = [...listed].sort((one, other) => (one.order ?? 0) - (other.order ?? 0)).find(one => one.state !== 'done' && one.state !== 'skipped');
   return listed.map(one => {
     const done = one.state === 'done';
     return {

@@ -4,6 +4,8 @@ import { mountDoor } from './door.js';
 import { onLobbyChange } from './changes.js';
 import { mountNavigation } from './navigation.js';
 import { mountPushOffer } from './push-offer.js';
+import { keyBytes, pushSupported, sameKey } from './push.js';
+import { httpTransport } from './transport.js';
 import { sinceVisitLine, turnOf } from './players.js';
 export { turnOf } from './players.js';
 export { codePath } from './navigation.js';
@@ -110,6 +112,86 @@ export function waitsOnAnother(entry) {
  */
 export function waitsOnAPerson(entry) {
   return gameKind(entry?.table) === 'players' && (entry?.seats ?? []).length === 1 && waitsOnAnother(entry);
+}
+
+/**
+ * The offer's source on a host with accounts off (#1127): nobody is signed in, so the account's switch has no device
+ * to read. The browser is asked through the seat of the game that waits, as the battle view asks through its own
+ * (battle-services.js): the host's key, the subscription this browser holds told to that seat, and Turn on registers
+ * the subscription with it (`PUT /api/lobby/push`). `setSeat(entry)` is told the game that waits, or null.
+ */
+export function seatPushSource({ nav = globalThis.navigator, win = globalThis, transport = httpTransport, onChange = () => {} } = {}) {
+  const state = { ready: false, keyed: false, subscribed: false, permission: win?.Notification?.permission ?? 'default', busy: false };
+  let seat = null, token = null, registration = null, publicKey = null, reading = 0, failed = false;
+  const snapshot = () => ({ ready: state.ready && !state.busy, keyed: state.keyed, subscribed: state.subscribed, permission: state.permission, hotseat: false });
+
+  async function read() {
+    const ticket = ++reading, asked = seat;
+    state.ready = false; state.keyed = false; state.subscribed = false; failed = false;
+    if (!asked) { onChange(); return; }
+    try {
+      const key = await asked.pushKey();
+      if (ticket !== reading) return;
+      // A host without keys answers with none; an answer that is not a success is read again with the next list.
+      if (!key.ok) failed = true;
+      publicKey = key.ok ? key.body?.publicKey ?? null : null;
+      state.keyed = Boolean(publicKey);
+      if (state.keyed && pushSupported(nav, win)) {
+        await nav.serviceWorker.register('/sw.js');
+        registration = await nav.serviceWorker.ready;
+        const held = await registration.pushManager.getSubscription();
+        // A subscription made with another key is nobody's to send to: it is not on, and Turn on makes a fresh one.
+        if (held && sameKey(held, publicKey) && ticket === reading) {
+          const answer = await asked.push(held.toJSON());
+          state.subscribed = answer.ok;
+          // Gone from its push service (410): let go of, so Turn on makes a fresh one, as the battle view does.
+          if (answer.status === 410) await held.unsubscribe();
+        }
+      }
+    } catch {
+      // Read again with the next list of games: one network hiccup does not cost the visit its offer.
+      state.keyed = false;
+      failed = true;
+    }
+    if (ticket !== reading) return;
+    state.ready = true;
+    onChange();
+  }
+
+  return {
+    state: snapshot,
+    async setSeat(entry) {
+      const held = entry?.seats?.[0] ?? null;
+      if ((held?.token ?? null) === token && !failed) return;
+      token = held?.token ?? null;
+      try { seat = held ? transport(held.seat, held.token) : null; } catch { seat = null; }
+      await read();
+    },
+    async turnOn() {
+      if (state.subscribed || !seat || !registration) return snapshot();
+      const asked = seat;
+      state.busy = true;
+      onChange();
+      try {
+        state.permission = await win.Notification.requestPermission();
+        if (state.permission === 'granted') {
+          const held = await registration.pushManager.getSubscription();
+          if (held && !sameKey(held, publicKey)) await held.unsubscribe();
+          const kept = held && sameKey(held, publicKey) ? held : null;
+          const made = kept ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(publicKey) });
+          const answer = await asked.push(made.toJSON());
+          state.subscribed = answer.ok;
+          // A subscription the browser already held is every page's: only one made here, or one gone from its push
+          // service, is let go of.
+          if (!state.subscribed && (!kept || answer.status === 410)) await made.unsubscribe();
+        }
+      } finally {
+        state.busy = false;
+        onChange();
+      }
+      return snapshot();
+    },
+  };
 }
 
 /**
@@ -954,30 +1036,43 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     hotseat: 'Both players use this device. Pass it between turns.',
   };
   el('opponent').addEventListener('change', showOpponent);
+  function giveBackCreate(submit, words) { busy = false; submit.textContent = words; submit.removeAttribute('aria-busy'); showOpponent(); }
+  /** Sends what the Create window says: an invitation to another friend, or a new table, entered at once. True once the page is leaving. */
+  async function sendCreate() {
+    if (opponentOf() === 'friend' && !el('friend').value) throw new Error('Choose a friend to keep the seat for.');
+    if (reinviting) {
+      await lobbyRequest(`/api/lobby/tables/${encodeURIComponent(reinviting)}/invitation`, { friend: el('friend').value });
+      dialog.close();
+      await refresh();
+      return false;
+    }
+    const opponent = opponentOf(), between = ['person', 'friend'].includes(opponent);
+    enter(await lobbyRequest('/api/lobby/tables', { opponent, format: el('format').value, friend: opponent === 'friend' ? el('friend').value : undefined,
+      // A bot is chosen by how strong it is, never by its name (ADR 0180).
+      ...(opponent === 'bot' ? { level: el('bot-level').value } : {}),
+      ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
+    return true;
+  }
   el('create-table').addEventListener('submit', async event => {
     event.preventDefault();
     if (busy) return;
     busy = true;
-    el('create-submit').disabled = true;
+    // The press is answered at once, as the featured action says Opening…: the window waits for the host.
+    const submit = el('create-submit'), words = submit.textContent;
+    let leaving = false;
+    submit.disabled = true;
+    submit.textContent = reinviting ? 'Inviting…' : 'Creating…';
+    submit.setAttribute('aria-busy', 'true');
     el('create-problem').hidden = true;
     try {
-      if (opponentOf() === 'friend' && !el('friend').value) {
-        throw new Error('Choose a friend to keep the seat for.');
-      }
-
-      if (reinviting) {
-        await lobbyRequest(`/api/lobby/tables/${encodeURIComponent(reinviting)}/invitation`, { friend: el('friend').value });
-        dialog.close();
-        await refresh();
-      } else {
-        const opponent = opponentOf(), between = ['person', 'friend'].includes(opponent);
-        enter(await lobbyRequest('/api/lobby/tables', { opponent, format: el('format').value, friend: opponent === 'friend' ? el('friend').value : undefined,
-          // A bot is chosen by how strong it is, never by its name (ADR 0180).
-          ...(opponent === 'bot' ? { level: el('bot-level').value } : {}),
-          ...(between && !el('ranked').checked ? { ranked: false } : {}), ...(between ? { turnLimit: Number(el('turn-limit').value) } : {}) }));
-      }
+      leaving = await sendCreate();
     } catch (error) { el('create-problem').textContent = error.message || 'Could not create the table. Try again.'; el('create-problem').hidden = false; }
-    finally { busy = false; showOpponent(); }
+    finally {
+      // Once the battle's page is asked for, the window keeps saying Creating… until the page changes; a page brought
+      // back from the back-forward cache gives the action back.
+      if (leaving) globalThis.addEventListener?.('pageshow', event => { if (event.persisted) giveBackCreate(submit, words); }, { once: true });
+      else giveBackCreate(submit, words);
+    }
   });
   void refresh();
   // No clock reads the lists (ADR 0164): the host says when they changed, and the stream's `ready` -- the page
@@ -1056,7 +1151,7 @@ if (typeof document !== 'undefined') {
   const next = nextPath(globalThis.location.search);
   // The offer of pop-ups (N4): made when a game against a person waits on the other player, once the switch has read
   // this browser, whichever of the two comes first.
-  let offer = null, offerMoment = false;
+  let offer = null, offerMoment = false, accountsOff = false, lastWaiting = null;
   const navigation = mountNavigation(document, storage, {
     onDevice: () => { offer?.changed(); if (offerMoment) offer?.consider(); },
     onInvite: lobby.invite,
@@ -1064,6 +1159,12 @@ if (typeof document !== 'undefined') {
     onInbox: () => lobby.refresh(),
     async onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return true; }
+      // Told after the games may have been read: the offer asks through the seat, or the account, from now on.
+      if (accountsOff !== (mode === 'off')) {
+        accountsOff = mode === 'off';
+        void seatPush.setSeat(accountsOff ? lastWaiting : null);
+        offer?.changed();
+      }
       const playable = Boolean(account) || mode === 'off';
       if (!playable) door.signedOut();
       document.getElementById('home-games').hidden = !playable;
@@ -1075,10 +1176,16 @@ if (typeof document !== 'undefined') {
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);
-  offer = mountPushOffer(document, { storage, source: { state: () => navigation.devices.offerState(), turnOn: () => navigation.devices.turnOn() } });
+  // With accounts off nobody is signed in: the offer asks through the waiting game's seat instead (#1127).
+  const seatPush = seatPushSource({ onChange: () => { offer?.changed(); if (offerMoment) offer?.consider(); } });
+  const devices = () => (accountsOff ? { state: seatPush.state, turnOn: seatPush.turnOn } : { state: () => navigation.devices.offerState(), turnOn: () => navigation.devices.turnOn() });
+  offer = mountPushOffer(document, { storage, source: { state: () => devices().state(), turnOn: () => devices().turnOn() } });
   lobby.onMine(mine => {
     navigation.inbox.feed(mine);
-    offerMoment = (mine.tables ?? []).some(waitsOnAPerson);
+    const waiting = (mine.tables ?? []).find(waitsOnAPerson);
+    lastWaiting = waiting ?? null;
+    void seatPush.setSeat(accountsOff ? lastWaiting : null);
+    offerMoment = Boolean(waiting);
     if (offerMoment) offer.consider();
     else offer.withdraw();
   });

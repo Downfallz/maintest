@@ -37,10 +37,12 @@ test('a skipped tutorial says so, and one with no link is left out', () => {
   assert.deepEqual(cards.map(one => [one.id, one.tag]), [[first.id, 'Skipped']]);
 });
 
-test('the next tutorial is the first one not done, in the series\' order: the section\'s one filled action (UX8)', () => {
+test('the next tutorial is the first one neither done nor skipped, in the series\' order: the section\'s one filled action (UX8, #987)', () => {
   const third = { ...first, id: 'c', order: 3, title: 'Grow by mutating', state: 'new' };
   assert.deepEqual(tutorialCards({ tutorials: [third, { ...first, state: 'done' }, second] }).map(one => [one.id, one.next]), [['c', true], [first.id, false], [second.id, false]]);
   assert.deepEqual(tutorialCards({ tutorials: [{ ...first, state: 'done' }, second] }).map(one => one.next), [false, false]);
+  assert.deepEqual(tutorialCards({ tutorials: [third, { ...first, state: 'skipped' }, second] }).map(one => [one.id, one.next]), [['c', true], [first.id, false], [second.id, false]]);
+  assert.deepEqual(tutorialCards({ tutorials: [{ ...first, state: 'skipped' }, second] }).map(one => one.next), [false, false]);
 });
 
 test('the progress counts the tutorials the host says done, in words', () => {
@@ -110,11 +112,12 @@ test('an account that skipped it finds the series under Learn to play, each to p
   assert.equal(picture.attributes.alt, '');
   assert.equal(picture.attributes.loading, 'lazy');
   assert.match(picture.attributes.src, /^\/page-art\/lesson-base-/);
-  // Every card's action is an outline (UX9): the next one not done is marked, and filled once, in the featured space.
+  // Every card's action is an outline (UX9): the next one new is marked, and filled once, in the featured space. A
+  // skipped lesson is not the next one (#987).
   const action = node => node.children.find(child => child.className?.includes('card-ways')).children[0];
   assert.doesNotMatch(action(one).className, /primary/);
   assert.doesNotMatch(action(two).className, /primary/);
-  assert.equal(one.dataset.next, 'true');
+  assert.equal(one.dataset.next, undefined);
   assert.equal(two.dataset.next, undefined);
   assert.equal(doc.ids['tutorial-progress'].textContent, '1 of 2 done');
 });

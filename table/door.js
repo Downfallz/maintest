@@ -20,6 +20,9 @@ function gameLine(format) {
     : 'A turn-based duel: your creatures mutate against another player\'s.';
 }
 
+/** The widest name a player can take: twenty characters (`nameProblem` in account.js) of the widest letter. */
+const LONGEST_NAME = 'W'.repeat(20);
+
 /**
  * What the panel says. `invitation` is null for a plain visit; an object for an invitation, holding `inviter` and
  * `format` once the host has described it, and nothing while it has not or cannot.
@@ -138,7 +141,11 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
   const draw = () => {
     const words = doorWords(invitation, { left });
     el('sign-in-eyebrow').textContent = words.eyebrow;
-    el('sign-in-heading').textContent = words.title;
+    el('sign-in-title').textContent = words.title;
+    // An invitation's title waits for the host to name who invites: its room is held for the longest it can be, a
+    // name of twenty of the widest letters (account.js), so a late answer never moves the sign-in under 1280 px (#973).
+    // The format is not known before the host answers either: the room assumes one. A spent link keeps the room too.
+    el('sign-in-title-room').textContent = invitation ? doorWords({ inviter: LONGEST_NAME, format: invitation.format ?? '3v3' }).title : '';
     el('sign-in-game').textContent = words.game;
     el('sign-in-account').textContent = words.account;
     el('sign-in-panel').dataset.door = invitation ? 'invited' : left ? 'left' : 'plain';
