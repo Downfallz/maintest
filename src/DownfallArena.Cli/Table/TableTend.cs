@@ -95,7 +95,7 @@ internal static class TableTend
     }
 
     /// <summary>What one pass works with, composed as the job composes it, not yet run: the tables, the lobby and the door every notice goes through (ADR 0201).</summary>
-    internal sealed record Tending(TableRegistry Registry, LobbyApi Lobby, TableComposer Composer, IChangeRelay? Relay) : IDisposable
+    internal sealed record Tending(TableRegistry Registry, LobbyApi Lobby, TableComposer Composer, IChangeRelay? Relay, TimeProvider Clock) : IDisposable
     {
         /// <summary>The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</summary>
         public SuspendedSeats? Suspended { get; init; }
@@ -108,13 +108,10 @@ internal static class TableTend
         /// <summary>The accounts' notice logs (ADR 0201), the bell's news kept whether or not the job can push; none on a host that signs nobody in.</summary>
         public AccountNoticeLog? Notices { get; init; }
 
-        public TimeProvider Clock { get; init; } = TimeProvider.System;
-
         /// <summary>What the job's pass tends, every stage of it.</summary>
-        public Chores Chores => new(Registry, Lobby)
+        public Chores Chores => new(Registry, Lobby, Clock)
         {
             Composer = Composer,
-            Clock = Clock,
             Suspended = Suspended,
             Feedback = Feedback,
             FeedbackIndex = FeedbackStore,
@@ -183,7 +180,7 @@ internal static class TableTend
         var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby, Notifier = composer.Notifier };
         var suspended = suspendedAccounts is null ? null : new SuspendedSeats(suspendedAccounts, lobby);
 
-        return new Tending(registry, lobby, composer, relay) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log, Clock = clock };
+        return new Tending(registry, lobby, composer, relay, clock) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log };
     }
 
     /// <summary>What a pass did, a line for the pass and one for each table, account or feedback it touched.</summary>
@@ -349,12 +346,10 @@ internal static class TableTend
     /// What one pass tends: the tables and the lobby, and the parts each later stage needs, a stage left out where its
     /// part is none. The hourly job's (<see cref="Tending.Chores" />), a pass run from the panel, and the tests'.
     /// </summary>
-    internal sealed record Chores(TableRegistry Registry, LobbyApi Lobby)
+    internal sealed record Chores(TableRegistry Registry, LobbyApi Lobby, TimeProvider Clock)
     {
         /// <summary>What reads a table's last move; none, and no game is timed out, ended or warned.</summary>
         public TableComposer? Composer { get; init; }
-
-        public TimeProvider Clock { get; init; } = TimeProvider.System;
 
         /// <summary>The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</summary>
         public SuspendedSeats? Suspended { get; init; }

@@ -67,7 +67,7 @@ internal static class TableHost
         }
 
         using var sender = keys is null ? null : new WebPushSender(keys);
-        await using var host = await ComposeAsync(services, options, rules, sender is null ? null : new Pushing(sender, keys!.PublicKey), TableDirectory, stopping.Token);
+        await using var host = await ComposeAsync(services, options, rules, sender is null ? null : new Pushing(sender, keys!.PublicKey), TableDirectory, WebPubSubRelay.FromEnvironment(), stopping.Token);
         if (host is null)
         {
             return 1;
@@ -216,14 +216,15 @@ internal static class TableHost
     /// </summary>
     /// <param name="pushing">The sender and the public key of a host given push keys; none on a host without.</param>
     /// <param name="files">The directory the pages are served from.</param>
-    internal static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, CancellationToken cancellationToken)
+    /// <param name="relay">Where what moved is said (ADR 0165): the one the environment names, a recording one in the tests (#1153); none.</param>
+    internal static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, IChangeRelay? relay, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
         var kept = new ComposedHost.Kept();
         try
         {
-            var composed = await ComposeAsync(services, options, rules, pushing, files, kept, cancellationToken);
+            var composed = await ComposeAsync(services, options, rules, pushing, new Composing(services, options, files, kept, services.GetRequiredService<TimeProvider>()) { Relay = relay }, cancellationToken);
             if (composed is null)
             {
                 await kept.DisposeAsync();
@@ -238,9 +239,9 @@ internal static class TableHost
         }
     }
 
-    private static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, ComposedHost.Kept kept, CancellationToken cancellationToken)
+    private static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, Composing composing, CancellationToken cancellationToken)
     {
-        var clock = services.GetRequiredService<TimeProvider>();
+        var (kept, clock) = (composing.Kept, composing.Clock);
         var tables = await ComposeTablesAsync(services, options, rules, pushing, kept, cancellationToken);
         var (composer, registry) = (tables.Composer, tables.Registry);
         if (await GateAsync(options) is not { } gate)
@@ -279,10 +280,10 @@ internal static class TableHost
         admin.Lobby.Devices = accounts?.Devices;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
         composer.Notifier = signedIn?.Notifier;
-        var (relay, lobbyChanges) = Relayed(composer, admin.Lobby, signedIn);
+        var (relay, lobbyChanges) = (composing.Relay, Relayed(composing.Relay, composer, admin.Lobby, signedIn));
         var tabs = await ComposeTabsAsync(tables, admin, signedIn, relay, kept, clock, cancellationToken);
         composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id, CancellationToken.None))?.Username.Value;
-        var server = kept.Add(await ServerAsync(new Composing(services, options, files, kept, clock), tables, admin, signedIn, tabs, gate, cancellationToken));
+        var server = kept.Add(await ServerAsync(composing, tables, admin, signedIn, tabs, gate, cancellationToken));
         return new ComposedHost(kept)
         {
             Server = server,
@@ -305,11 +306,15 @@ internal static class TableHost
             Turns = tables.Queues.Turns,
             Notices = tables.Queues.Notices,
             NoticeCounts = tabs.NoticeCounts,
+            Chores = tabs.Chores,
         };
     }
 
     /// <summary>What a host is composed from, the same for every part: the services, the options, the pages' directory, what is disposed with it, and the clock.</summary>
-    private sealed record Composing(IServiceProvider Services, CliOptions Options, string Files, ComposedHost.Kept Kept, TimeProvider Clock);
+    private sealed record Composing(IServiceProvider Services, CliOptions Options, string Files, ComposedHost.Kept Kept, TimeProvider Clock)
+    {
+        public IChangeRelay? Relay { get; init; }
+    }
 
     /// <summary>Where the bots' turns and the notices go (ADR 0159, 0162, 0203): through the queues, or in this process.</summary>
     private sealed record Queues(TurnsMode Mode, IWorkChannels? Channels, IWorkChannel? Turns, IWorkChannel? Notices);
@@ -333,7 +338,11 @@ internal static class TableHost
     private sealed record SignedInParts(AccountApi Api, IAccountStore Store, AccountNotifier Notifier, Friends Friendships, FriendsApi Friends, PlayerDirectory Directory, PlayersApi Players);
 
     /// <summary>The admin tabs' parts the server is built with too: the turns' queues, the notices' counts, feedback and notes.</summary>
-    private sealed record Tabs(TurnQueues? Queues, NoticeCounts? NoticeCounts, FeedbackIndex? FeedbackIndex, FeedbackWrites FeedbackWrites, FeedbackMutes FeedbackMutes, OperatorNotes Notes);
+    private sealed record Tabs(TurnQueues? Queues, NoticeCounts? NoticeCounts, FeedbackIndex? FeedbackIndex, FeedbackWrites FeedbackWrites, FeedbackMutes FeedbackMutes, OperatorNotes Notes)
+    {
+        /// <summary>What a pass run from the Jobs tab tends; none without the tab.</summary>
+        public TableTend.Chores? Chores { get; init; }
+    }
 
     private static async Task<Tables> ComposeTablesAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, ComposedHost.Kept kept, CancellationToken cancellationToken)
     {
@@ -475,9 +484,8 @@ internal static class TableHost
     /// is also said to every page and process through it, whichever replica they reach, and pages connect to it rather
     /// than to this process's streams.
     /// </summary>
-    private static (IChangeRelay? Relay, LobbyChanges Changes) Relayed(TableComposer composer, LobbyApi lobby, SignedInParts? signedIn)
+    private static LobbyChanges Relayed(IChangeRelay? relay, TableComposer composer, LobbyApi lobby, SignedInParts? signedIn)
     {
-        var relay = WebPubSubRelay.FromEnvironment();
         Console.WriteLine(relay is null
             ? $"  Relay: none. Pages read this process's own streams, and it looks at the tables it holds every second for what other processes wrote ({WebPubSubRelay.Environment} names a Web PubSub endpoint)."
             : "  Relay: on. Pages and processes hear what moved through Web PubSub, and nothing is looked at on a clock.");
@@ -489,7 +497,7 @@ internal static class TableHost
         signedIn?.Friends.Changes = lobbyChanges;
         signedIn?.Notifier.Changes = lobbyChanges;
         signedIn?.Api.Changes = lobbyChanges;
-        return (relay, lobbyChanges);
+        return lobbyChanges;
     }
 
     /// <summary>The admin panel's tabs: the queues (A3b, N6), feedback (ADR 0189), the Jobs (A3), the notes (A6) and the Overview (A5).</summary>
@@ -509,7 +517,7 @@ internal static class TableHost
             accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString(), CancellationToken.None);
         }
 
-        await JobsTabAsync(tables, admin, signedIn, relay, feedbackIndex, clock, cancellationToken);
+        var chores = await JobsTabAsync(tables, admin, signedIn, relay, feedbackIndex, clock, cancellationToken);
 
         // What operators do from the panel (A6), kept beside the recordings and read in the Activity tab. A log that
         // cannot be opened leaves the actions on the console alone, never the panel without them.
@@ -533,7 +541,7 @@ internal static class TableHost
         };
 
         // The Feedback tab (feedback plan, R3) reads an account's mute kept with its activity, a guest's in this process's memory.
-        return new Tabs(queues, noticeCounts, feedbackIndex, feedbackWrites, new FeedbackMutes(accounts?.Activity), notes);
+        return new Tabs(queues, noticeCounts, feedbackIndex, feedbackWrites, new FeedbackMutes(accounts?.Activity), notes) { Chores = chores };
     }
 
     /// <summary>
@@ -575,25 +583,23 @@ internal static class TableHost
     /// as the job's does. A store of runs that cannot be opened leaves the panel without its Jobs tab, never the players
     /// without the host.
     /// </summary>
-    private static async Task JobsTabAsync(Tables tables, AdminApi admin, SignedInParts? signedIn, IChangeRelay? relay, FeedbackIndex? feedbackIndex, TimeProvider clock, CancellationToken cancellationToken)
+    private static async Task<TableTend.Chores?> JobsTabAsync(Tables tables, AdminApi admin, SignedInParts? signedIn, IChangeRelay? relay, FeedbackIndex? feedbackIndex, TimeProvider clock, CancellationToken cancellationToken)
     {
         if (tables.Store is null || await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(tables.Target, cancellationToken)) is not { } tendLog)
         {
-            return;
+            return null;
         }
 
-        var suspendedSeats = signedIn is null ? null : new SuspendedSeats(signedIn.Store, admin.Lobby);
+        var chores = new TableTend.Chores(tables.Registry, admin.Lobby, clock)
+        {
+            Composer = tables.Composer,
+            Suspended = signedIn is null ? null : new SuspendedSeats(signedIn.Store, admin.Lobby),
+            Feedback = feedbackIndex is null ? null : new LetGoOfClosedFeedback(feedbackIndex.Records, clock),
+            FeedbackIndex = feedbackIndex,
+            Notices = signedIn?.Api.NoticeLog,
+        };
         admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
         {
-            var chores = new TableTend.Chores(tables.Registry, admin.Lobby)
-            {
-                Composer = tables.Composer,
-                Clock = clock,
-                Suspended = suspendedSeats,
-                Feedback = feedbackIndex is null ? null : new LetGoOfClosedFeedback(feedbackIndex.Records, clock),
-                FeedbackIndex = feedbackIndex,
-                Notices = signedIn?.Api.NoticeLog,
-            };
             var tended = await TableTend.TendAsync(chores, now, progress);
             if (relay is not null)
             {
@@ -602,6 +608,7 @@ internal static class TableHost
 
             return tended;
         });
+        return chores;
     }
 
     /// <summary>

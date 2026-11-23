@@ -79,7 +79,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         // The job: a registry of its own over the same store and index, and a lobby over it.
         using var job = await _hosted.RestartedAsync();
-        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, _clock) { Friends = _friends }), _clock.GetUtcNow());
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, _clock) { Friends = _friends }, _clock), _clock.GetUtcNow());
 
         tended.Expired.ShouldBe(1);
         var stored = (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();

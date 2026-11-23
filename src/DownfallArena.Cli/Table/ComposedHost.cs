@@ -6,7 +6,7 @@ using DownfallArena.Application.Work;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// What <see cref="TableHost.ComposeAsync(IServiceProvider, CliOptions, Domain.Matches.RuleSet, TableHost.Pushing?, string, CancellationToken)" />
+/// What <see cref="TableHost.ComposeAsync(IServiceProvider, CliOptions, Domain.Matches.RuleSet, TableHost.Pushing?, string, IChangeRelay?, CancellationToken)" />
 /// composed: the <c>table</c> command's parts, wired as they serve, and what they hold, let go of together.
 /// </summary>
 internal sealed class ComposedHost(ComposedHost.Kept kept) : IAsyncDisposable
@@ -59,6 +59,9 @@ internal sealed class ComposedHost(ComposedHost.Kept kept) : IAsyncDisposable
 
     /// <summary>What the notices worker sent, had refused and found gone (N6); none where nothing is counted.</summary>
     public NoticeCounts? NoticeCounts { get; init; }
+
+    /// <summary>What a pass run from the admin panel's Jobs tab tends (A3): the hourly job's stages over this host's tables; none without the tab.</summary>
+    public TableTend.Chores? Chores { get; init; }
 
     public ValueTask DisposeAsync() => kept.DisposeAsync();
 

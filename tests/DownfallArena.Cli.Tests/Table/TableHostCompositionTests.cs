@@ -60,7 +60,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>The host the command line composes over a directory, signing players in, with push keys or without.</summary>
-    private async Task<ComposedHost> ComposeAsync(bool push = false, TurnsMode? turns = null)
+    private async Task<ComposedHost> ComposeAsync(bool push = false, TurnsMode? turns = null, IChangeRelay? relay = null)
     {
         var options = new CliOptions
         {
@@ -72,7 +72,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             Port = FreePort(),
             Turns = turns,
         };
-        _host = (await TableHost.ComposeAsync(_hosted.Services, options, HostedTables.Rules, push ? new TableHost.Pushing(_sender, "BP8") : null, Path.Combine(AppContext.BaseDirectory, "table"), Cancel)).ShouldNotBeNull();
+        _host = (await TableHost.ComposeAsync(_hosted.Services, options, HostedTables.Rules, push ? new TableHost.Pushing(_sender, "BP8") : null, Path.Combine(AppContext.BaseDirectory, "table"), relay, Cancel)).ShouldNotBeNull();
         return _host;
     }
 
@@ -334,6 +334,33 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await stopping.CancelAsync();
         await running;
         table.Session.Outcome.IsCompleted.ShouldBeTrue("the understudies' turns went on the queue and the host's worker took them");
+    }
+
+    [Fact]
+    public async Task With_a_relay_a_notice_the_host_s_door_keeps_is_said_to_the_account_s_pages_through_it()
+    {
+        var relay = new RecordedRelay();
+        var host = await ComposeAsync(relay: relay);
+        var mark = await SignInAsync(host, "MarkF");
+        relay.Said.Clear();
+
+        await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
+
+        relay.Said.ShouldBe([$"account {mark.Id.Value}"]);
+    }
+
+    [Fact]
+    public async Task A_pass_run_from_the_panel_tends_with_every_part_the_host_composed()
+    {
+        var host = await ComposeAsync();
+
+        var chores = host.Chores.ShouldNotBeNull();
+
+        (chores.Registry, chores.Lobby, chores.Composer).ShouldBe((host.Registry, host.Admin.Lobby, host.Composer));
+        chores.Suspended.ShouldNotBeNull();
+        chores.Feedback.ShouldNotBeNull();
+        chores.FeedbackIndex.ShouldNotBeNull();
+        chores.Notices.ShouldNotBeNull().ShouldBeSameAs(host.Accounts!.NoticeLog);
     }
 
     [Fact]
