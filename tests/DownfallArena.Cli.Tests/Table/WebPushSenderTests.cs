@@ -93,13 +93,13 @@ public sealed class WebPushSenderTests
     [Fact]
     public async Task A_push_service_that_asks_to_be_tried_again_later_is_given_up_on_within_the_send_limit()
     {
-        using var service = new PushService(429, retryAfter: "30");
-        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere, sendFor: TimeSpan.FromMilliseconds(500));
-        var watch = System.Diagnostics.Stopwatch.StartNew();
+        using var service = new PushService(429, retryAfter: "1");
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere, sendFor: TimeSpan.FromSeconds(3));
 
-        await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken));
+        var failure = await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken));
 
-        watch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5), "the library's own retry after a 429 waits as long as the service asks");
+        failure.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests, "the 429 is this send's failure, not a wait inside it");
+        service.Received.Count.ShouldBe(1, "the library's own retry after a 429 waits as long and as often as the service asks");
     }
 
     [Fact]

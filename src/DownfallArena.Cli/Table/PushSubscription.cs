@@ -24,8 +24,9 @@ internal sealed record PushSubscription(string Endpoint, string P256dh, string A
 
     /// <summary>
     /// Whether the endpoint is on a push service the browsers use (#1132): Firebase for Chromium, Mozilla's, Windows'
-    /// notification service, Apple's. Checked when a browser subscribes and again at each send (<see cref="WebPushSender" />),
-    /// so a server a player controls can neither hold the notices worker's time nor have the host call it. An https address on its default port, named by its host alone.
+    /// notification service, Apple's. Checked when a browser subscribes and again at
+    /// each send (<see cref="WebPushSender" />), so a server a player controls can neither hold the notices worker's
+    /// time nor have the host call it. An https address on its default port, named by its host alone.
     /// </summary>
     public static bool OnKnownService(string? endpoint) =>
         Uri.TryCreate(endpoint, UriKind.Absolute, out var address) && address.Scheme == Uri.UriSchemeHttps && address.IsDefaultPort

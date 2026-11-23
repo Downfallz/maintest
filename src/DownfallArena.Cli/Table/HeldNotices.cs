@@ -29,8 +29,9 @@ internal sealed class HeldNotices
     /// <summary>
     /// Runs the work, then gives the notices it held, once it has let go of the gate, whether it finished or failed: a
     /// release that fails at its third table has told the players at the first two. A notice that cannot go is a line on
-    /// <paramref name="said" />. Inside work whose scope is still open, the outer one gives them; work begun inside a
-    /// scope that has closed since (a loop a route started) opens one of its own.
+    /// <paramref name="said" />. Work begun inside a scope still open joins it, and the outer one gives them; work begun
+    /// inside a scope that has closed since (a loop a route started) opens one of its own. Joining is decided when the
+    /// work begins: a notice given after the scope it joined has closed goes at once.
     /// </summary>
     public static async Task<T> AfterAsync<T>(Func<Task<T>> work, Action<string> said)
     {
@@ -73,8 +74,9 @@ internal sealed class HeldNotices
             {
                 await notifier.NotifyAsync(to, notice);
             }
-            catch (Exception failure) when (failure is not OperationCanceledException)
+            catch (Exception failure)
             {
+                // Given in a finally: a cancellation here would hide the work's own failure and drop the notices after it.
                 said($"  Account {to}: a notice could not be given: {HttpHost.OneLine(failure)}");
             }
         }

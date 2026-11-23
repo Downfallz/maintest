@@ -268,7 +268,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     [InlineData("""{"opponent":"bot"}""")]
     [InlineData("""{"opponent":"hotseat"}""")]
     [InlineData("""{"opponent":"person","ranked":false,"format":"1v1"}""")]
-    public async Task A_game_against_a_bot_on_a_shared_device_or_in_another_format_is_not_ranked(string opening)
+    public async Task A_game_against_a_bot_on_a_shared_device_or_opened_unranked_is_not_ranked(string opening)
     {
         var rook = await PlayerAsync("Rook");
 
