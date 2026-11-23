@@ -12,6 +12,9 @@ public static class TutorialErrors
     public static DomainError SeriesTooShort(int of, int order) =>
         new("Tutorial.SeriesTooShort", $"The series length ({of}) is less than this tutorial's order ({order}).");
 
+    public static DomainError OrderTooHigh(int order) =>
+        new("Tutorial.OrderTooHigh", $"The tutorial's order ({order}) is more than the {TutorialLesson.LongestSeries} tutorials a series holds.");
+
     public static DomainError SeriesTooLong(int of) =>
         new("Tutorial.SeriesTooLong", $"The series length ({of}) is more than the {TutorialLesson.LongestSeries} tutorials a series holds.");
 

@@ -47,6 +47,10 @@ public sealed class TutorialLessonTests
         TutorialLesson.Create(1, "A title", Action, [Step(PlayerOptionsKind.Action)], of: TutorialLesson.LongestSeries + 1).Error.Code.ShouldBe("Tutorial.SeriesTooLong");
 
     [Fact]
+    public void An_order_past_what_a_series_holds_is_refused_even_without_a_length() =>
+        TutorialLesson.Create(TutorialLesson.LongestSeries + 1, "A title", Action, [Step(PlayerOptionsKind.Action)]).Error.Code.ShouldBe("Tutorial.OrderTooHigh");
+
+    [Fact]
     public void A_lesson_keeps_the_length_of_the_series_it_names_and_none_when_it_names_none()
     {
         var named = TutorialLesson.Create(4, "A title", Action, [Step(PlayerOptionsKind.Action)], of: 4).Value;

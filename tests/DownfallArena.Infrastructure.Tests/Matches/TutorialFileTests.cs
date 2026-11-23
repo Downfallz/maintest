@@ -257,7 +257,8 @@ public sealed class TutorialFileTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void A_length_of_the_series_short_of_the_lesson_s_place_is_refused(int of)
+    [InlineData(TutorialLesson.LongestSeries + 1)]
+    public void A_length_of_the_series_short_of_the_lesson_s_place_or_past_what_a_series_holds_is_refused(int of)
     {
         var file = JsonNode.Parse(First)!.AsObject();
         file["tutorial"]!["of"] = of;

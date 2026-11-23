@@ -113,12 +113,17 @@ internal sealed class RepositoryScenarios
         var lengths = Tutorials.Select(one => one.Document.Tutorial!.Of).OfType<int>().Distinct().Order().ToList();
         if (lengths.Count > 1)
         {
-            said($"  Tutorials disagree on the series length ({string.Join(", ", lengths)}): using the longest, {Series}.");
+            said($"  Tutorials disagree on the series length ({string.Join(", ", lengths)}): the series is {Series}.");
+        }
+
+        if (lengths.Count > 0 && Series > lengths[^1])
+        {
+            said($"  Tutorials give a series length of {lengths[^1]}, short of tutorial {Series}: the series is {Series}.");
         }
 
         foreach (var silent in lengths.Count == 0 ? [] : Tutorials.Where(one => one.Document.Tutorial!.Of is null))
         {
-            said($"  Tutorial file {silent.File} gives no series length (of), where the others give {Series}.");
+            said($"  Tutorial file {silent.File} gives no series length (of); the series is {Series}.");
         }
 
         foreach (var order in Enumerable.Range(1, Series).Where(order => !Tutorials.Any(one => one.Document.Tutorial!.Order == order)))

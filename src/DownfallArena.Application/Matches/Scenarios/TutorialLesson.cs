@@ -13,7 +13,7 @@ public sealed record TutorialLesson
     /// <summary>The longest line a coach card holds on a phone.</summary>
     public const int LongestLine = 160;
 
-    /// <summary>The most tutorials a series holds: a typo in a file's length must not make the host count to it (#1186).</summary>
+    /// <summary>The most tutorials a series holds: a typo in a file's length or order must not make the host count to it (#1186).</summary>
     public const int LongestSeries = 20;
 
     private static readonly PlayerOptionsKind[] Asked =
@@ -54,6 +54,11 @@ public sealed record TutorialLesson
         if (order < 1)
         {
             return Result.Failure<TutorialLesson>(TutorialErrors.OrderNotPositive);
+        }
+
+        if (order > LongestSeries)
+        {
+            return Result.Failure<TutorialLesson>(TutorialErrors.OrderTooHigh(order));
         }
 
         if (of is { } length && length < order)

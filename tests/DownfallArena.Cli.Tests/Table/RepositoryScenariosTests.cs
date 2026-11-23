@@ -118,9 +118,11 @@ public sealed class RepositoryScenariosTests : IDisposable
     [Fact]
     public void Lessons_that_name_no_length_make_a_series_that_ends_with_the_last_of_them()
     {
+        var said = new List<string>();
         CopyTutorialsBut("to-the-end.json", without: "of");
 
-        RepositoryScenarios.Read(_root, _ => { }).Series.ShouldBe(3);
+        RepositoryScenarios.Read(_root, said.Add).Series.ShouldBe(3);
+        said.ShouldBeEmpty();
     }
 
     /// <summary>Two lessons that disagree on the series' length: it is said, and the longer is kept, so none is lost.</summary>
@@ -155,6 +157,23 @@ public sealed class RepositoryScenariosTests : IDisposable
 
         shipped.Series.ShouldBe(4);
         said.ShouldContain(line => line.Contains("tutorials/your-first-combat.json gives no series length", StringComparison.Ordinal));
+    }
+
+    /// <summary>A lesson added past the length the others give, without one of its own: the series runs to it, and the short length is said.</summary>
+    [Fact]
+    public void A_lesson_past_the_length_the_others_give_is_said_and_the_series_runs_to_it()
+    {
+        var said = new List<string>();
+        CopyTutorialsBut("none");
+        var added = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(_root, "tutorials", "to-the-end.json")))!.AsObject();
+        added["tutorial"]!["order"] = 5;
+        added["tutorial"]!.AsObject().Remove("of");
+        File.WriteAllText(Path.Combine(_root, "tutorials", "fifth.json"), added.ToJsonString());
+
+        var shipped = RepositoryScenarios.Read(_root, said.Add);
+
+        shipped.Series.ShouldBe(5);
+        said.ShouldContain(line => line.Contains("give a series length of 4, short of tutorial 5", StringComparison.Ordinal));
     }
 
     /// <summary>The repository's tutorials, copied under this test's directory, but for one file, and with a field taken out of each block.</summary>
