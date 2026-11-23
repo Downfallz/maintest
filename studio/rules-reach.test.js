@@ -58,12 +58,24 @@ const LESSONS = [
   {
     issue: '#979, a changed visible string is grepped in the real-engine journeys and the walk',
     words: /old text in every suite: `studio\/browser\/`.*?`scripts\/ux\/`/,
-    paths: ['table/lobby-tutorials.js', 'table/battle.html', 'studio/browser/battle.tutorials.js', 'scripts/ux/play.mjs', 'scripts/ux/journeys.mjs'],
+    paths: [
+      'table/lobby-tutorials.js',
+      'table/battle.html',
+      'studio/browser/battle.tutorials.js',
+      'scripts/ux/play.mjs',
+      'scripts/ux/journeys.mjs',
+    ],
   },
   {
     issue: '#979, a window that fades is read by `open`, not `isVisible`, in every suite',
     words: /`isVisible`/,
-    paths: ['table/battle.css', 'table/battle-tutorial.js', 'studio/browser/battle.tutorials.js', 'scripts/ux/play.mjs', 'scripts/ux/journeys.mjs'],
+    paths: [
+      'table/battle.css',
+      'table/battle-tutorial.js',
+      'studio/browser/battle.tutorials.js',
+      'scripts/ux/play.mjs',
+      'scripts/ux/journeys.mjs',
+    ],
   },
 ];
 

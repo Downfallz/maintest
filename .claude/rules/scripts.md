@@ -19,3 +19,4 @@ paths:
 - The journey walk (`scripts/ux/`) reads the pages as a player does. A change to a visible string greps the old
   text in every suite: `studio/browser/` (the real-engine `battle.*.js` and `table.*.js` too) and `scripts/ux/`
   (#979). A `<dialog>` that fades stays displayed while it leaves: read `open`, never `isVisible` (#979).
+  The same lessons are in `pages.md`: a change to one changes the other.
