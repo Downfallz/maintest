@@ -954,7 +954,7 @@ public sealed class ScenariosApiTests : IDisposable
         var kept = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var resuming = practices.ResumeAsync(account, Tutorial, () => { writing.TrySetResult(); return kept.Task; });
+        var resuming = practices.ResumeAsync(account, Tutorial, (_, _) => { writing.TrySetResult(); return kept.Task; });
         await writing.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
         var other = await practices.CurrentAsync("someone-else", Tutorial).WaitAsync(TimeSpan.FromSeconds(5), Cancel);
         kept.SetResult();
@@ -999,9 +999,9 @@ public sealed class ScenariosApiTests : IDisposable
         var kept = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var resuming = practices.ResumeAsync(account, Tutorial, () => { writing.TrySetResult(); return kept.Task; });
+        var resuming = practices.ResumeAsync(account, Tutorial, (_, _) => { writing.TrySetResult(); return kept.Task; });
         await writing.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
-        var (opened, _) = await practices.OpenAsync(Tutorial, account, Cancel);
+        var (opened, _) = await practices.OpenAsync(Tutorial, account, cancellationToken: Cancel);
         kept.SetResult();
         await resuming;
 
@@ -1038,6 +1038,202 @@ public sealed class ScenariosApiTests : IDisposable
         Encoding.UTF8.GetString(answer.Body).ShouldNotContain("The store is out.");
         said.ShouldContain(line => line.Contains("could not be kept", StringComparison.Ordinal));
         practices.ByToken(play.Token).ShouldNotBeNull();
+    }
+
+    /// <summary>
+    /// Opening a practice stops the account's last one: Next opens the following lesson, Play again the same one from
+    /// its cut. A tutorial done is kept done on the account first, whatever the page's own word reached (#1138).
+    /// </summary>
+    [Theory]
+    [InlineData(Tutorial)]
+    [InlineData("sc-repo-tutorial-who-acts-first")]
+    public async Task A_tutorial_done_is_kept_done_before_the_next_practice_opened_replaces_it(string opened)
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+
+        var answer = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{opened}/practice", learner);
+
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        practices.ByToken(play.Token).ShouldBeNull();
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>
+    /// A store that cannot keep the last tutorial done refuses the new practice with 503, as a Leave does, and the
+    /// done practice stays: the page's next try keeps it done and opens the new one (#1138).
+    /// </summary>
+    [Fact]
+    public async Task A_practice_opened_while_the_store_cannot_keep_the_last_tutorial_done_is_refused_until_it_can()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts, preferences) = await FailingOnceAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+        preferences.Failures = 1;
+
+        var refused = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+        var kept = practices.Count;
+        var opened = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        (refused.Status, Read(refused).GetProperty("error").GetString(), kept).ShouldBe((503, "Tutorial.Unavailable", 1));
+        opened.Status.ShouldBe(200, Encoding.UTF8.GetString(opened.Body));
+        practices.ByToken(play.Token).ShouldBeNull();
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>
+    /// A tutorial done that nobody reads for an hour is kept done on its account before the sweep lets it go, outside
+    /// the gate, whoever's request swept it (#1138).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_done_nobody_reads_for_an_hour_is_kept_done_before_it_is_let_go_of()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var other = await SignedInAsync(accounts, "other");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+        _clock.Advance(ScenarioPractices.Idle);
+
+        var swept = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
+
+        swept.Status.ShouldBe(404);
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>
+    /// The sweep cannot keep a tutorial done: it says so on the console and keeps the practice, without failing the
+    /// request that swept it, and the next sweep keeps it done and lets it go (#1138).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_done_the_sweep_cannot_keep_is_kept_for_the_next_sweep()
+    {
+        var store = Shipping();
+        var said = new List<string>();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock) { Said = said.Add };
+        var (api, accounts, preferences) = await FailingOnceAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var other = await SignedInAsync(accounts, "other");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, Finished);
+        _clock.Advance(ScenarioPractices.Idle);
+        preferences.Failures = 1;
+
+        var first = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
+        var kept = practices.Count;
+        var second = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", other);
+
+        (first.Status, kept, second.Status).ShouldBe((404, 1, 404));
+        said.ShouldContain(line => line.Contains("could not be kept", StringComparison.Ordinal));
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>
+    /// The seat's view names the lesson that follows, its title and its link, so the end card needs no second request
+    /// (#980); the last of the series names none.
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_s_view_names_the_next_lesson_and_the_last_names_none()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var first = await OpenTutorialAsync(store, practices, "learner");
+        var next = Lesson(await first.Api.HandleAsync("GET", "/api/seat/player1", "", first.Token)).GetProperty("next");
+        var last = await OpenedPlayAsync(api, practices, learner, Series[^1]);
+
+        (next.GetProperty("title").GetString(), next.GetProperty("link").GetString()).ShouldBe(("Who acts first", $"/battle?scenario={Series[1]}"));
+        Lesson(await last.Api.HandleAsync("GET", "/api/seat/player1", "", last.Token)).GetProperty("next").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    /// <summary>
+    /// The seat's view says whether the account had done every other tutorial when this one opened: the last lesson's
+    /// end says the series is finished from it, with no second request (#980). One skipped is not done.
+    /// </summary>
+    [Theory]
+    [InlineData(TutorialState.Done, true)]
+    [InlineData(TutorialState.Skipped, false)]
+    public async Task A_tutorial_s_view_says_whether_every_other_tutorial_was_done(TutorialState earlier, bool othersDone)
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var id = (await accounts.WhoAsync(learner, Cancel)).ShouldNotBeNull().Account.Id;
+        foreach (var one in Series[..^2])
+        {
+            await accounts.NoteTutorialAsync(id, one, TutorialState.Done, Cancel);
+        }
+
+        await accounts.NoteTutorialAsync(id, Series[^2], earlier, Cancel);
+
+        var last = await OpenedPlayAsync(api, practices, learner, Series[^1]);
+
+        Lesson(await last.Api.HandleAsync("GET", "/api/seat/player1", "", last.Token)).GetProperty("othersDone").GetBoolean().ShouldBe(othersDone);
+    }
+
+    private static JsonElement Lesson(StudioResponse view) => Read(view).GetProperty("practice").GetProperty("tutorial");
+
+    /// <summary>The scenario opened as a practice through the route, by the signed-in player.</summary>
+    private static async Task<ScenarioPlay> OpenedPlayAsync(ScenariosApi api, ScenarioPractices practices, AccountRequest player, string id)
+    {
+        var answer = await api.HandleAsync("POST", $"{ScenariosApi.Prefix}/{id}/practice", player);
+        answer.Status.ShouldBe(200, Encoding.UTF8.GetString(answer.Body));
+        return practices.ByToken(Read(answer).GetProperty("token").GetString()).ShouldNotBeNull().Play;
+    }
+
+    /// <summary>The scenarios' API over accounts whose game settings are kept by a store that fails as often as it is told.</summary>
+    private async Task<(ScenariosApi Api, AccountApi Accounts, FailingPreferences Preferences)> FailingOnceAsync(ScenarioStore store, ScenarioPractices practices)
+    {
+        var accounts = await AccountsAsync();
+        var preferences = new FailingPreferences(new FilePreferenceStore(_root));
+        accounts.Preferences = preferences;
+        return (new ScenariosApi(store, practices, accounts) { Said = _ => { } }, accounts, preferences);
+    }
+
+    /// <summary>A preference store whose tutorials' read fails <see cref="Failures" /> times, then reads as the one it wraps.</summary>
+    private sealed class FailingPreferences(Application.Accounts.Ports.IPreferenceStore inner) : Application.Accounts.Ports.IPreferenceStore
+    {
+        public int Failures { get; set; }
+
+        public Task<GamePreferences?> GetAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.GetAsync(account, cancellationToken);
+
+        public Task SaveAsync(SharedKernel.Identifiers.AccountId account, GamePreferences preferences, CancellationToken cancellationToken = default) => inner.SaveAsync(account, preferences, cancellationToken);
+
+        public Task<TutorialProgress> GetTutorialsAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default)
+        {
+            if (Failures > 0)
+            {
+                Failures--;
+                throw new IOException("The store is out.");
+            }
+
+            return inner.GetTutorialsAsync(account, cancellationToken);
+        }
+
+        public Task SaveTutorialsAsync(SharedKernel.Identifiers.AccountId account, TutorialProgress tutorials, CancellationToken cancellationToken = default) => inner.SaveTutorialsAsync(account, tutorials, cancellationToken);
+
+        public Task<NoticePreferences> GetNoticesAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.GetNoticesAsync(account, cancellationToken);
+
+        public Task SaveNoticesAsync(SharedKernel.Identifiers.AccountId account, NoticePreferences notices, CancellationToken cancellationToken = default) => inner.SaveNoticesAsync(account, notices, cancellationToken);
+
+        public Task ForgetAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.ForgetAsync(account, cancellationToken);
     }
 
     /// <summary>

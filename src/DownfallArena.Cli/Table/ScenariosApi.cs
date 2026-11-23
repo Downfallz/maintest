@@ -95,13 +95,12 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
             }
         }
 
-        var account = who.Account.Id.ToString();
         var name = who.Account.Username.Value;
         var answer = (method, segments) switch
         {
             ("GET", [_]) => await DescribeAsync(id),
             ("GET", [_, "practice"]) => await ResumeAsync(who.Account.Id, id, name),
-            ("POST", [_, "practice"]) => await OpenAsync(id, account, name),
+            ("POST", [_, "practice"]) => await OpenAsync(id, who.Account.Id, name),
             ("DELETE", [_, "practice"]) => await ForgetAsync(who.Account.Id, id),
             _ => NoRoute(method, path),
         };
@@ -137,7 +136,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         }
 
         var state = segments[1] == "done" ? TutorialState.Done : TutorialState.Skipped;
-        if (state == TutorialState.Done && (await practices.CurrentAsync(account.ToString(), id))?.Play.Api.Practice?.Tutorial is not { Done: true })
+        if (state == TutorialState.Done && (await practices.CurrentAsync(account.ToString(), id, KeepDoneAsync))?.Play.Api.Practice?.Tutorial is not { Done: true })
         {
             return Error("Tutorial.NotDone", "This tutorial is not finished yet.", 409);
         }
@@ -259,21 +258,26 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     }
 
     /// <summary>
-    /// What keeps that the account finished a tutorial, handed to the practices, which run it when its practice here
-    /// says it is done, before that practice is let go of: the page says it too, but a Leave or a reload can reach the
-    /// host first, and once the practice is gone nothing shows it was done. The practices read whether it is done under
-    /// their gate, and again where they let it go, so a match that ends meanwhile is not let go of unkept (#931). None
-    /// for a scenario that teaches nothing.
+    /// Keeps that the account finished a tutorial, handed to the practices, which run it when its practice here says
+    /// it is done, before that practice is let go of: the page says it too, but a Leave, a reload, the next practice
+    /// opened or the idle sweep can reach the host first, and once the practice is gone nothing shows it was done. The
+    /// practices read whether it is done under their gate, and again where they let it go, so a match that ends
+    /// meanwhile is not let go of unkept (#931, #1138). Nothing for a scenario that teaches nothing.
     /// </summary>
-    private Func<Task>? KeepDone(AccountId account, string id) =>
-        store.Teaches(id) ? () => accounts.NoteTutorialAsync(account, id, TutorialState.Done) : null;
+    private async Task KeepDoneAsync(string account, string id)
+    {
+        if (store.Teaches(id) && AccountId.TryParse(account, out var who))
+        {
+            await accounts.NoteTutorialAsync(who, id, TutorialState.Done);
+        }
+    }
 
     /// <summary>The account's practice of the scenario to go on with; a tutorial that is done is kept done and let go of.</summary>
     private async Task<StudioResponse> ResumeAsync(AccountId account, string id, string name)
     {
         try
         {
-            return await practices.ResumeAsync(account.ToString(), id, KeepDone(account, id)) is { } current
+            return await practices.ResumeAsync(account.ToString(), id, KeepDoneAsync) is { } current
                 ? Opened(current, name)
                 : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
         }
@@ -286,14 +290,13 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// <summary>
     /// Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204,
     /// whether there was one or not. A tutorial done that the account's store cannot keep done answers 503 and keeps
-    /// the practice: a Leave or a reload of the same tutorial within the idle hour tries again. Opening another
-    /// practice, Play again or the idle sweep lets it go without trying.
+    /// the practice: a Leave, a reload or another practice opened tries again, and so does each idle sweep (#1138).
     /// </summary>
     private async Task<StudioResponse> ForgetAsync(AccountId account, string id)
     {
         try
         {
-            await practices.ForgetAsync(account.ToString(), id, KeepDone(account, id));
+            await practices.ForgetAsync(account.ToString(), id, KeepDoneAsync);
             return new StudioResponse(204, StudioResponse.Plain, []);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
@@ -309,10 +312,50 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         return Error("Tutorial.Unavailable", "Your progress could not be saved just now. Try again in a moment.", 503);
     }
 
-    private async Task<StudioResponse> OpenAsync(string id, string account, string name)
+    /// <summary>
+    /// Opens the practice in place of the account's last one, which is kept done first when it is a tutorial done: a
+    /// store that cannot keep it answers 503 and opens nothing, as a Leave does (#1138). A tutorial opened says whether
+    /// the account had done every other one (#980).
+    /// </summary>
+    private async Task<StudioResponse> OpenAsync(string id, AccountId who, string name)
     {
-        var (opened, refused) = await practices.OpenAsync(id, account);
-        return opened is not null ? Opened(opened, name) : Error(refused!.Error, refused.Message, refused.Status);
+        var account = who.ToString();
+        ScenarioPractices.Practice? opened;
+        ScenarioPractices.Refusal? refused;
+        try
+        {
+            (opened, refused) = await practices.OpenAsync(id, account, KeepDoneAsync);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            return NotKept(failure);
+        }
+
+        if (opened is null)
+        {
+            return Error(refused!.Error, refused.Message, refused.Status);
+        }
+
+        if (opened.Play.Api.Practice?.Tutorial is { } tutorial)
+        {
+            tutorial.OthersDone = await OthersDoneAsync(who, id);
+        }
+
+        return Opened(opened, name);
+    }
+
+    /// <summary>Whether the account has done every tutorial of the series but this one; false when its store cannot say.</summary>
+    private async Task<bool> OthersDoneAsync(AccountId account, string id)
+    {
+        try
+        {
+            return await accounts.TutorialsAsync(account) is { } kept && store.Tutorials.Where(one => one.Id != id).All(one => kept.StateOf(one.Id) == TutorialState.Done);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            Said($"  Whether an account finished the other tutorials could not be read: {HttpHost.OneLine(failure)}");
+            return false;
+        }
     }
 
     /// <summary>

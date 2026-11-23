@@ -11,6 +11,12 @@ namespace DownfallArena.Cli.Table;
 /// <see cref="Idle" /> is let go of; past <see cref="Most" /> a new one is refused. A practice does not survive the
 /// process: a restart or a deploy ends it, and the page offers to start the round again.
 /// </summary>
+/// <remarks>
+/// A tutorial that is done is kept done on its account before its practice is let go of, whichever way it goes: a
+/// reload or a Leave, another practice opened in its place (Next, Play again), or the idle sweep (#931, #1138). The
+/// keeping is a store write, given by the caller as <c>keepDone</c> (the account, the scenario), and made outside the
+/// gate every account's practices wait on.
+/// </remarks>
 internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore store, TimeProvider clock) : IAsyncDisposable
 {
     /// <summary>How many practices this process keeps at once: a bound on what memory they take, far above an onboarding's.</summary>
@@ -18,6 +24,15 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
 
     /// <summary>How long a practice nobody reads is kept.</summary>
     public static readonly TimeSpan Idle = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// How long past <see cref="Idle" /> a tutorial done whose keeping fails is still kept for the next sweep: past it,
+    /// it is let go of unkept, so a store that keeps failing for one account does not hold its practice forever.
+    /// </summary>
+    public static readonly TimeSpan KeptFor = TimeSpan.FromHours(1);
+
+    /// <summary>Where its console lines go: the host's console unless a test reads them.</summary>
+    public Action<string> Said { get; init; } = Console.WriteLine;
 
     /// <summary>The journal each practice is played on, kept in memory: a test gives one that cannot be played on (#931).</summary>
     internal Func<IDecisionJournal> Journals { get; init; } = () => new InMemoryDecisionJournal();
@@ -57,18 +72,24 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     }
 
     /// <summary>The account's practice of a scenario, when it is the one it has; none otherwise.</summary>
-    public async Task<Practice?> CurrentAsync(string account, string scenario)
+    /// <param name="keepDone">Keeps a tutorial done on its account before the sweep lets it go (#1138).</param>
+    public async Task<Practice?> CurrentAsync(string account, string scenario, Func<string, string, Task>? keepDone = null)
     {
+        IReadOnlyList<Practice> held;
+        Practice? current;
         await _gate.WaitAsync();
         try
         {
-            await SweepAsync();
-            return _byAccount.TryGetValue(account, out var practice) && practice.Scenario == scenario ? practice : null;
+            held = await SweepAsync(keepDone is not null);
+            current = _byAccount.TryGetValue(account, out var practice) && practice.Scenario == scenario ? practice : null;
         }
         finally
         {
             _gate.Release();
         }
+
+        await KeepSweptAsync(held, keepDone);
+        return current;
     }
 
     /// <summary>
@@ -78,14 +99,15 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// with nothing kept on the account: it is not done, and there is nothing left to play (#912).
     /// </summary>
     /// <param name="keepDone">
-    /// Keeps on the account that the tutorial is done, before a done tutorial is let go of. Whether it is done is read
-    /// under this gate, once to decide and again where it is let go of, so a match that ends meanwhile is never let go
-    /// of unkept (#931). The keeping itself is a store write, made outside the gate, which every account's practices
-    /// wait on: if it fails, the practice is kept, for a reload or a Leave of the same tutorial within the idle hour.
+    /// Keeps on the account (the first argument) that the tutorial (the second) is done, before a done tutorial is let
+    /// go of. Whether it is done is read under this gate, once to decide and again where it is let go of, so a match
+    /// that ends meanwhile is never let go of unkept (#931). The keeping itself is a store write, made outside the gate,
+    /// which every account's practices wait on: if it fails, the practice is kept for the next try: a reload, a Leave,
+    /// another practice opened or a sweep.
     /// </param>
-    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<Task>? keepDone = null)
+    public async Task<Practice?> ResumeAsync(string account, string scenario, Func<string, string, Task>? keepDone = null)
     {
-        var (practice, done, over) = await ReadAsync(account, scenario, sweep: true);
+        var (practice, done, over) = await ReadAsync(account, scenario, sweep: true, keepDone);
         if (practice is null || practice.Play.Api.Practice?.Tutorial is null)
         {
             return practice;
@@ -96,22 +118,22 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             return practice;
         }
 
-        await KeepAsync(done, keepDone);
+        await KeepAsync(practice, done, keepDone);
         await LetGoAsync(practice, done, keepDone);
         return null;
     }
 
     /// <summary>Lets go of the account's practice of a scenario, when it is the one it has: whether there was one.</summary>
     /// <param name="keepDone">As <see cref="ResumeAsync" />'s: run outside the gate before a done tutorial is let go of.</param>
-    public async Task<bool> ForgetAsync(string account, string scenario, Func<Task>? keepDone = null)
+    public async Task<bool> ForgetAsync(string account, string scenario, Func<string, string, Task>? keepDone = null)
     {
-        var (practice, done, _) = await ReadAsync(account, scenario, sweep: false);
+        var (practice, done, _) = await ReadAsync(account, scenario, sweep: false, keepDone);
         if (practice is null)
         {
             return false;
         }
 
-        await KeepAsync(done, keepDone);
+        await KeepAsync(practice, done, keepDone);
         await LetGoAsync(practice, done, keepDone);
         return true;
     }
@@ -121,35 +143,45 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// no more, read once under the gate. Over is read first: a table whose match ended has its board's outcome before
     /// it says it is over, so a tutorial read over and not done did not end its match.
     /// </summary>
-    private async Task<(Practice? Practice, bool Done, bool Over)> ReadAsync(string account, string scenario, bool sweep)
+    private async Task<(Practice? Practice, bool Done, bool Over)> ReadAsync(string account, string scenario, bool sweep, Func<string, string, Task>? keepDone)
     {
+        IReadOnlyList<Practice> held = [];
+        (Practice?, bool, bool) read;
         await _gate.WaitAsync();
         try
         {
             if (sweep)
             {
-                await SweepAsync();
+                held = await SweepAsync(keepDone is not null);
             }
 
             if (!_byAccount.TryGetValue(account, out var practice) || practice.Scenario != scenario)
             {
-                return (null, false, false);
+                read = (null, false, false);
             }
-
-            var over = practice.Play.Session.IsOver;
-            return (practice, practice.Play.Api.Practice?.Tutorial?.Done == true, over);
+            else
+            {
+                var over = practice.Play.Session.IsOver;
+                read = (practice, Done(practice), over);
+            }
         }
         finally
         {
             _gate.Release();
         }
+
+        await KeepSweptAsync(held, keepDone);
+        return read;
     }
 
-    private static async Task KeepAsync(bool done, Func<Task>? keepDone)
+    /// <summary>Whether the practice is a tutorial that is done.</summary>
+    private static bool Done(Practice practice) => practice.Play.Api.Practice?.Tutorial?.Done == true;
+
+    private static async Task KeepAsync(Practice practice, bool done, Func<string, string, Task>? keepDone)
     {
         if (done && keepDone is not null)
         {
-            await keepDone();
+            await keepDone(practice.Account, practice.Scenario);
         }
     }
 
@@ -158,11 +190,11 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// done is read again there: a match that ended since the first read is kept done first, outside the gate, and
     /// the practice is let go of on that second read (#931).
     /// </summary>
-    private async Task LetGoAsync(Practice practice, bool kept, Func<Task>? keepDone)
+    private async Task LetGoAsync(Practice practice, bool kept, Func<string, string, Task>? keepDone)
     {
         while (!await LetGoUnlessDoneSinceAsync(practice, kept || keepDone is null))
         {
-            await keepDone!();
+            await keepDone!(practice.Account, practice.Scenario);
             kept = true;
         }
     }
@@ -178,7 +210,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
                 return true;
             }
 
-            if (!kept && practice.Play.Api.Practice?.Tutorial?.Done == true)
+            if (!kept && Done(practice))
             {
                 return false;
             }
@@ -196,24 +228,57 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// A new practice of the scenario for the account, from its cut, in place of whatever practice the account had:
     /// the practice, or why there is none.
     /// </summary>
-    public async Task<(Practice? Opened, Refusal? Refused)> OpenAsync(string scenario, string account, CancellationToken cancellationToken = default)
+    /// <param name="keepDone">
+    /// Keeps the last practice done on the account before it is replaced, when it is a tutorial that is done (Next, Play
+    /// again, #1138). Read under the gate, kept outside it, then read again where it is replaced, as a Leave does. A
+    /// store that cannot keep it throws here: nothing is opened, and the last practice is kept for the next try.
+    /// </param>
+    public async Task<(Practice? Opened, Refusal? Refused)> OpenAsync(string scenario, string account, Func<string, string, Task>? keepDone = null, CancellationToken cancellationToken = default)
     {
+        Practice? kept = null;
+        while (true)
+        {
+            var (opened, refused, unkept, held) = await OpenUnlessDoneUnkeptAsync(scenario, account, kept, keepDone is not null, cancellationToken);
+            await KeepSweptAsync(held, keepDone);
+            if (unkept is null)
+            {
+                return (opened, refused);
+            }
+
+            await keepDone!(unkept.Account, unkept.Scenario);
+            kept = unkept;
+        }
+    }
+
+    /// <summary>
+    /// Opens the practice under the gate, unless the account's last one is a tutorial done that was not kept done
+    /// yet: that one is answered instead, still the account's, for the caller to keep outside the gate.
+    /// </summary>
+    private async Task<(Practice? Opened, Refusal? Refused, Practice? Unkept, IReadOnlyList<Practice> Held)> OpenUnlessDoneUnkeptAsync(
+        string scenario, string account, Practice? kept, bool keeps, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Practice> held = [];
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await SweepAsync();
+            held = await SweepAsync(keeps);
             if (await store.GetAsync(scenario, cancellationToken) is not { } document)
             {
-                return (null, new Refusal("Scenario.NotFound", "This scenario does not exist, or was removed.", 404));
+                return (null, new Refusal("Scenario.NotFound", "This scenario does not exist, or was removed.", 404), null, held);
             }
 
             if (_byAccount.TryGetValue(account, out var previous))
             {
+                if (keeps && !ReferenceEquals(previous, kept) && Done(previous))
+                {
+                    return (null, null, previous, held);
+                }
+
                 await StopAsync(previous);
             }
             else if (_byToken.Count >= Most)
             {
-                return (null, new Refusal("Scenario.Busy", "Too many practices are being played on this host right now. Try again in a few minutes.", 503));
+                return (null, new Refusal("Scenario.Busy", "Too many practices are being played on this host right now. Try again in a few minutes.", 503), null, held);
             }
 
             var (content, shared) = await composer.PlayedOnAsync(document.Content, cancellationToken);
@@ -223,14 +288,14 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             var stepped = shared with { Turns = _turns };
             if (!string.Equals(content.Version, document.Content, StringComparison.Ordinal))
             {
-                return (null, new Refusal("Scenario.ContentGone", "The content this scenario was cut on is no longer kept at this host.", 409));
+                return (null, new Refusal("Scenario.ContentGone", "The content this scenario was cut on is no longer kept at this host.", 409), null, held);
             }
 
             var cut = document.Scenario.Cut;
             var label = new PracticeLabel(scenario, document.Title ?? $"Round {cut.Round}", document.Goal, cut.Round)
             {
                 Tutorial = document.Tutorial is { } lesson
-                    ? new TutorialPlay(lesson, AssistedSeat.Of(document.Scenario, document.Seat, lesson), document.Seat, store.Series)
+                    ? new TutorialPlay(lesson, AssistedSeat.Of(document.Scenario, document.Seat, lesson), document.Seat, store.Series) { Next = NextOf(lesson.Order) }
                     : null,
             };
             ScenarioPlay play;
@@ -241,13 +306,13 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
             catch (InvalidDataException failure)
             {
                 Console.WriteLine($"  Scenario {scenario} could not be practised: {failure.Message}");
-                return (null, new Refusal("Scenario.Diverged", "This scenario no longer plays on this version of the game.", 409));
+                return (null, new Refusal("Scenario.Diverged", "This scenario no longer plays on this version of the game.", 409), null, held);
             }
 
             var practice = new Practice(account, scenario, play, clock.GetUtcNow());
             _byAccount[account] = practice;
             _byToken[play.Token] = practice;
-            return (practice, null);
+            return (practice, null, null, held);
         }
         finally
         {
@@ -255,13 +320,82 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
     }
 
-    /// <summary>Lets go of the practices nobody read for <see cref="Idle" />.</summary>
-    private async Task SweepAsync()
+    /// <summary>The lesson that follows the one of this place in the series, as the seat's view names it (#980); none after the last.</summary>
+    private TutorialPlay.Lesson? NextOf(int order) =>
+        store.Tutorials.FirstOrDefault(one => one.Document.Tutorial!.Order == order + 1) is { } next
+            ? new TutorialPlay.Lesson(next.Document.Tutorial!.Title, $"/battle?scenario={next.Id}")
+            : null;
+
+    /// <summary>
+    /// Lets go of the practices nobody read for <see cref="Idle" />, under the gate. When the caller keeps tutorials
+    /// done, a tutorial done is held instead, for <see cref="KeepSweptAsync" /> to keep done outside the gate and let
+    /// go of; one whose keeping failed for <see cref="KeptFor" /> more is let go of unkept, and said (#1138).
+    /// </summary>
+    private async Task<IReadOnlyList<Practice>> SweepAsync(bool keeps)
     {
         var now = clock.GetUtcNow();
+        var held = new List<Practice>();
         foreach (var idle in _byAccount.Values.Where(one => now - one.Seen >= Idle).ToList())
         {
+            if (keeps && Done(idle) && now - idle.Seen < Idle + KeptFor)
+            {
+                held.Add(idle);
+                continue;
+            }
+
+            if (keeps && Done(idle))
+            {
+                Said($"  A tutorial done was let go of unkept: its account's store could not keep it for {KeptFor.TotalMinutes:0} minutes.");
+            }
+
             await StopAsync(idle);
+        }
+
+        return held;
+    }
+
+    /// <summary>
+    /// Keeps done, outside the gate, the tutorials the sweep held, and lets each go once kept, unless it was read
+    /// meanwhile or replaced. A store that cannot keep one is said on the console, not answered to whoever's request
+    /// swept it: the practice stays for the next sweep.
+    /// </summary>
+    private async Task KeepSweptAsync(IReadOnlyList<Practice> held, Func<string, string, Task>? keepDone)
+    {
+        if (keepDone is null)
+        {
+            return;
+        }
+
+        foreach (var practice in held)
+        {
+            try
+            {
+                await keepDone(practice.Account, practice.Scenario);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  A tutorial done could not be kept on its account before it was let go of; the next sweep tries again: {Hosting.HttpHost.OneLine(failure)}");
+                continue;
+            }
+
+            await LetGoIdleAsync(practice);
+        }
+    }
+
+    /// <summary>Lets go of a practice kept done by the sweep, under the gate, while it is still the account's and still idle.</summary>
+    private async Task LetGoIdleAsync(Practice practice)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (_byAccount.TryGetValue(practice.Account, out var current) && ReferenceEquals(current, practice) && clock.GetUtcNow() - practice.Seen >= Idle)
+            {
+                await StopAsync(practice);
+            }
+        }
+        finally
+        {
+            _gate.Release();
         }
     }
 

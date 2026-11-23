@@ -170,13 +170,13 @@ test('a tutorial\'s first card says its round in a few words, under the brief\'s
   assert.equal(tutorialBrief(lesson()).start, 'Against a bot.');
 });
 
-test('the series is finished only when the last lesson is done and the host lists every other one done', () => {
-  const others = state => [1, 2, 3].map(order => ({ order, state }));
-  assert.equal(finishedSeries({ tutorials: [...others('done'), { order: 4, state: 'new' }] }, lesson({ order: 4 })), true);
-  assert.equal(finishedSeries({ tutorials: [...others('done').slice(0, 2), { order: 3, state: 'skipped' }, { order: 4 }] }, lesson({ order: 4 })), false);
-  assert.equal(finishedSeries(null, lesson({ order: 4 })), false);
-  assert.equal(finishedSeries({ tutorials: others('done') }, lesson({ order: 3 })), false);
-  assert.equal(finishedSeries({ tutorials: others('done') }, lesson({ order: 4, of: undefined })), false);
+test('the series is finished only when the last lesson is done and the host says every other one was done', () => {
+  assert.equal(finishedSeries(lesson({ order: 4, othersDone: true })), true);
+  assert.equal(finishedSeries(lesson({ order: 4, othersDone: false })), false);
+  assert.equal(finishedSeries(lesson({ order: 4 })), false);
+  assert.equal(finishedSeries(lesson({ order: 3, othersDone: true })), false);
+  assert.equal(finishedSeries(lesson({ order: 4, of: undefined, othersDone: true })), false);
+  assert.equal(finishedSeries(null), false);
 });
 
 test('the end card says how the board stands, read from the host\'s board', () => {
@@ -185,15 +185,18 @@ test('the end card says how the board stands, read from the host\'s board', () =
   assert.deepEqual(done.lines, ['You finished Your first combat.', 'Your team: 2 of 3 standing. Opponent: 2 of 3.']);
 });
 
-test('the end card names the next lesson the host lists, and none after the last', () => {
-  const series = { tutorials: [{ order: 1, title: 'Your first combat', link: '/battle?scenario=a' }, { order: 2, title: 'Who acts first', link: '/battle?scenario=b' }] };
-  assert.deepEqual(nextLesson(series, lesson()), { label: 'Next: Who acts first', link: '/battle?scenario=b' });
-  // The series not read, or the next one not listed: its place, and Learn to play, which lists it.
-  assert.deepEqual(nextLesson(null, lesson()), { label: 'Next: tutorial 2 of 4', link: '/#learn-to-play' });
-  assert.deepEqual(nextLesson({ tutorials: [{ order: 2, title: 'X', link: 'https://elsewhere.example/' }] }, lesson()), { label: 'Next: tutorial 2 of 4', link: '/#learn-to-play' });
-  assert.equal(nextLesson(series, lesson({ order: 4 })), null);
-  // A link the browser would read as another site is not followed.
-  assert.equal(nextLesson({ tutorials: [{ order: 2, title: 'X', link: '/\\elsewhere.example/' }] }, lesson()).link, '/#learn-to-play');
+test('the end card names the next lesson the seat\'s view names, and none after the last (#980)', () => {
+  const next = { title: 'Who acts first', link: '/battle?scenario=b' };
+  assert.deepEqual(nextLesson(lesson({ next })), { label: 'Next: Who acts first', link: '/battle?scenario=b' });
+  // A view that names none: the last lesson, or a host that does not say it. No second request, no guess.
+  assert.equal(nextLesson(lesson({ order: 4, next: null })), null);
+  assert.equal(nextLesson(lesson()), null);
+  assert.equal(nextLesson(null), null);
+  // A link the browser would read as another site is not followed: Learn to play lists the lesson.
+  assert.deepEqual(nextLesson(lesson({ next: { title: 'X', link: 'https://elsewhere.example/' } })), { label: 'Next: X', link: '/#learn-to-play' });
+  assert.equal(nextLesson(lesson({ next: { title: 'X', link: '/\\elsewhere.example/' } })).link, '/#learn-to-play');
+  // A title missing says the lesson's place.
+  assert.equal(nextLesson(lesson({ next: { link: '/battle?scenario=b' } })).label, 'Next: tutorial 2 of 4');
 });
 
 test('a hint names the control the step asks for, by its own words, and nothing without one', () => {

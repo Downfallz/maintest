@@ -94,6 +94,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             HostedTables.Rules,
             null,
             Path.Combine(AppContext.BaseDirectory, "table"),
+            null,
             Cancel);
 
     [Fact]
@@ -335,7 +336,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
         await stopping.CancelAsync();
         await running;
-        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF"]);
     }
 
     [Fact]
