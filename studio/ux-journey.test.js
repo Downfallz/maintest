@@ -175,7 +175,7 @@ const child = (code = '') => new Promise((done, fail) => {
   one.once('error', fail);
   one.stdout.once('data', () => done(one));
 });
-test('closing a process a signal already killed returns at once', async () => {
+test('closing a process a signal already killed returns at once', { timeout: 5000 }, async () => {
   const one = await child();
   const gone = new Promise(done => one.once('exit', done));
   one.kill('SIGKILL');
@@ -183,7 +183,7 @@ test('closing a process a signal already killed returns at once', async () => {
   assert.equal(one.exitCode, null);
   await stopProcess(one, { grace: 60000 });
 });
-test('a process that ignores the interrupt is killed after its grace', async () => {
+test('a process that ignores the interrupt is killed after its grace', { timeout: 5000 }, async () => {
   const one = await child("process.on('SIGINT', () => {})");
   await stopProcess(one, { grace: 200 });
   assert.equal(one.signalCode, 'SIGKILL');

@@ -51,6 +51,8 @@ test('a strip films one interaction on a held clock, the same frames twice', asy
   const first = await film(), second = await film();
   expect(first).toHaveLength(6);
   expect(second).toHaveLength(6);
+  // The menu's opening plays on the held clock: some frame catches it running, and both films at the same frames.
+  expect(first.some(shot => shot.animating > 0)).toBe(true);
   expect(first.map(shot => shot.animating)).toEqual(second.map(shot => shot.animating));
   // The menu is open on the last frame and closed on the first: the interaction was filmed, not its aftermath.
   expect(first[0].png.equals(first.at(-1).png)).toBe(false);
@@ -58,7 +60,8 @@ test('a strip films one interaction on a held clock, the same frames twice', asy
 });
 
 // A picture is measured by the file the browser chose, not by `naturalWidth`, which a srcset divides by its density
-// (#966): a file over twice its drawn width, or under it, is counted whatever `sizes` says; a drawing never is.
+// (#966), and against the width `object-fit` draws it at, not its box: a file over twice that width, or under it, is
+// counted whatever `sizes` says; a drawing never is.
 test('the measure counts a picture sent over twice its size or under it, by the file the srcset chose', async ({ browser }, info) => {
   test.skip(info.project.name !== 'table-phone', 'A fixture page at its own density: one project reads it.');
   const context = await browser.newContext({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 1 });
@@ -79,12 +82,16 @@ test('the measure counts a picture sent over twice its size or under it, by the 
         <img alt="" srcset="/big.png 2x" style="width:100px;display:block">
         <img alt="" srcset="/small.png 50w" sizes="300px" style="width:300px;display:block">
         <img alt="" srcset="/right.png 400w" sizes="200px" style="width:200px;display:block">
-        <img alt="" src="/drawing.svg" style="width:50px;display:block">` });
+        <img alt="" src="/drawing.svg" style="width:50px;display:block">
+        <img alt="" srcset="/right.png 400w" sizes="100px" style="width:100px;height:200px;object-fit:cover;display:block">
+        <img alt="" srcset="/big.png 800w" sizes="450px" style="width:450px;height:10px;object-fit:contain;display:block">` });
     });
     await page.goto('http://fixture.test/');
     await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
     const { pictures } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
-    expect(pictures).toMatchObject({ img: 5, oversized: 2, undersized: 1 });
+    // Cover draws the 400 px file 2000 px wide in its 100 px box: under its size. Contain draws the 800 px file 200 px
+    // wide in its 450 px box: over twice its size.
+    expect(pictures).toMatchObject({ img: 7, oversized: 3, undersized: 2 });
   } finally {
     await context.close();
   }
