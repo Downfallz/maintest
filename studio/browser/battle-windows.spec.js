@@ -393,15 +393,16 @@ test('a window opened over a new round\'s announcement leaves nothing animating 
 // A round that opens on its upkeep: the docked receipt (shown modal, as battle/src/upkeep.ts shows it) leaves the top of
 // the field in view, so the announcement plays on.
 test('a new round announced while its upkeep sheet is open still plays at the top of the field', async ({ page }) => {
-  const state = await mount(page); await page.clock.resume();
+  const state = await mount(page);
   await state.publish({ board: { ...state.view.board, roundNumber: 3, subPhase: 'Speed' }, waitingFor: null, waitingAsked: null, options: {} });
   await expect(page.locator('#round-toast')).toHaveClass(/showing/);
   // Under 620 px the toast is never drawn, so it never plays (table/battle.css, #1000): the sheet changes nothing there.
   const wide = page.viewportSize().width >= 620;
-  // Read before and after the sheet opens in one task: the toast leaves after 2.6 s of real time, which a loaded
-  // runner can spend between two calls (#1131's CI).
+  // A loaded runner can spend the toast's 2.6 s before the reads (#1135): the page clock stays paused, so its timer
+  // never hides it, and its animation, which runs on real time, is held in its plateau before it is read.
   const [before, after] = await page.locator('#upkeep-dialog').evaluate(dialog => {
     const toast = document.getElementById('round-toast');
+    for (const animation of toast.getAnimations()) { animation.pause(); animation.currentTime = 1300; }
     const played = () => [toast.getAnimations().length, getComputedStyle(toast).opacity !== '0'];
     const shown = played(); dialog.showModal(); return [shown, played()];
   });
