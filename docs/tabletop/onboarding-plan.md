@@ -95,8 +95,8 @@ give what is said and when. It reuses everything ADR 0179 built, and the regress
   tutorial from the first second, and leave in one tap: the band says **Tutorial 1 of 4** where a practice says
   Practice, the first card says what it is and offers **Start** and **Skip the tutorial**, and **Leave** stays in
   the band on every step. A skipped tutorial never opens by itself again. The home page shows **Learn to play**, the series with each one's state (new, skipped, done) and its painting, open to play again
-  at any time. The next lesson, the one the home features, is the first neither done nor skipped: a skipped one
-  waits on its card (#987). The main menu has **Learn to play** too, and the game settings **Show the first tutorial again**.
+  at any time. The next lesson, the one the home features, is the first that is neither done nor skipped. A
+  skipped lesson waits on its card (#987). The main menu has **Learn to play** too, and the game settings **Show the first tutorial again**.
 
 ## Stages
 

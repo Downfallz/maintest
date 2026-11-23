@@ -83,7 +83,7 @@ What holds for every screen of the journey:
   beyond what `turnOf` in `table/players.js` and the host's lists already say.
 - **Room held.** Every line of the featured space keeps its room in every state: the title and the detail two
   lines at least, the status line kept unseen when it is empty, the two actions. On a phone the text stands at the
-  foot of a full-screen space, the actions last, so a status that wraps when a turn arrives moves no button.
+  foot of a full-screen space and the actions come last, so a status that wraps when a turn arrives moves no button.
   Until the first read the words and actions are there but unseen, and the space is `aria-busy`. The eclipse ground
   is asked for as soon as the host says someone can play, the creature only once the choice is known; a picture
   that arrives late never moves the button. The footer waits until the lists' first read is in. Budget: shift under
@@ -134,9 +134,11 @@ The walk's `home-menu` is briefed lightly: the menu is the navigation's, and the
 ### Job
 
 The home a new player reaches after leaving tutorial 1 from its brief: signed in, no game, the four lessons listed,
-the first skipped. The featured space offers the lesson to continue (rank 3), with the creature a team starts from.
+the first skipped. The featured space offers the lesson to continue (rank 3), with that lesson's creature: the Brute
+of tutorial 2 since #987 (the creature a team starts from before it).
 
-- **Filled action**: Play →, on the featured lesson (tutorial 2 here: a skipped lesson is not featured again, #987). ＋ New battle is the quiet action under it;
+- **Filled action**: Play →, on the featured lesson (tutorial 2 here, because a skipped lesson is not featured
+  again, #987). ＋ New battle is the quiet action under it;
   Learn to play's Play on the same lesson and the empty lists' Play a bot → and Open a table → are outlines.
 
 ### Words
@@ -256,8 +258,8 @@ cards arrive as UX8 staged them.
 - The greeting ("Welcome back, Walker") is gone: the featured space's eyebrow takes its place, and the account
   button carries the name. `home-navigation.md`'s "Signed in" line was amended with the build.
 - The featured block was 360 px tall at least on a phone, with about 90 px of slate between the status and the
-  action. The owner chose a tighter card (#987); the scene of #1062 had already given that room back: the text
-  stands at the space's foot, the status 18 px above the action at 390 by 844.
+  action. The owner asked for a tighter card (#987). The scene of #1062 had already given that room back: the text
+  now stands at the space's foot, and the status sits 18 px above the action at 390 by 844.
 
 ## The menu (`home-menu`)
 
@@ -352,7 +354,7 @@ None: a form. A picture would push Create & play → further below the first scr
   Create & play → is disabled (today's behaviour).
 - **Loaded**: Multiplayer or Solo, as filmed.
 - **Waiting**: after Create & play →: the action says `Creating…` (`Inviting…` on Invite →), disabled and
-  `aria-busy`, until the host answers, then the battle page opens; a refusal gives it back (#987).
+  `aria-busy`, until the host answers, then the battle page opens; a refusal gives the action back its words (#987).
 - **Error**: the host refuses: the window's own alert says why (`#create-problem`), the window stays open. At the most
   games of a kind, the line says so before the press, and the action is disabled. Read, not seen.
 - **Offline**: the request fails and the alert says so. Read, not seen.

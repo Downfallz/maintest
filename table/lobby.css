@@ -134,10 +134,12 @@
 html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 #action-heading.scene-head { margin: -28px -28px 18px; } /* the dialog's padding, .lobby-page dialog above */
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; }
-/* The Create window's actions are held at its foot, over the window's padding: its options scroll under them, so at
-   320 by 568 Create & play → stays on the first screen (#987). */
-#create-table > .dialog-actions { position: sticky; z-index: 1; bottom: -28px; margin: 26px -28px -28px; padding: 14px 28px 28px;
+/* The Create window's actions, and the host's refusal above them, are held at its foot, over the window's padding
+   (.lobby-page dialog): its options scroll under them, so at 320 by 568 Create & play → stays on the first screen,
+   and a refusal is never under them (#987). */
+#create-table > .create-foot { position: sticky; z-index: 1; bottom: -28px; margin: 26px -28px -28px; padding: 14px 28px 28px;
   border-top: 1px solid var(--line-soft); background: var(--panel); }
+#create-table .create-foot > .problem { margin: 0 0 12px; } #create-table .create-foot > .dialog-actions { margin-top: 0; }
 .lobby-page .problem { margin: 12px 0; }
 .account { position: relative; }
 .account-chip { display: flex; align-items: center; gap: 9px; min-height: 40px; padding: 4px 12px 4px 4px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--raised); list-style: none; font-weight: 650; }

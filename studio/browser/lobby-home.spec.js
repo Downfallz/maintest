@@ -1346,6 +1346,10 @@ test('at 320 by 568 the Create window keeps Cancel and Create & play → at its 
   await expect(submit).toBeDisabled();
   release();
   await expect(page.locator('#create-problem')).toHaveText('All tables are occupied.');
+  // The refusal is held at the foot with the actions, never under them.
+  await expect(page.locator('#create-problem')).toBeInViewport({ ratio: 1 });
+  await window.evaluate(node => { node.scrollTop = 0; });
+  await expect(page.locator('#create-problem')).toBeInViewport({ ratio: 1 });
   await expect(submit).toHaveText('Create & play →');
   await expect(submit).not.toHaveAttribute('aria-busy', 'true');
   await expect(submit).toBeEnabled();
@@ -1721,17 +1725,17 @@ test('a signed-in player\'s home loads none of the door\'s paintings', async ({ 
 // filled action, following what the host says of the player's games and lessons.
 const filledOnTheHome = page => page.locator('#home-games :is(button, a).primary:visible');
 
-test('a new account is featured its first lesson on the ancestral creature, the home\'s one filled action, within reach at 320 px', async ({ page }, info) => {
+test('a new account that skipped its first lesson is featured the first new one, the home\'s one filled action, within reach at 320 px (#987)', async ({ page }, info) => {
   await page.setViewportSize({ width: 320, height: 568 });
   const state = await home(page, { games: [], tutorials: series('skipped', 'new') });
   const featured = page.locator('#featured');
 
   await expect(featured).toHaveAttribute('data-featured', 'lesson');
-  await expect(page.locator('#featured-eyebrow')).toHaveText('Tutorial 1 of 4');
-  await expect(page.locator('#welcome')).toHaveText('Your first combat');
+  await expect(page.locator('#featured-eyebrow')).toHaveText('Tutorial 2 of 4');
+  await expect(page.locator('#welcome')).toHaveText('Who acts first');
   await expect(page.locator('#featured-action')).toHaveText('Play →');
   await expect(featured.locator('img.featured-ground')).toHaveAttribute('fetchpriority', 'high');
-  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/lesson-base-/);
+  await expect(featured.locator('img.featured-creature')).toHaveAttribute('src', /\/page-art\/lesson-brute-/);
   await expect(filledOnTheHome(page)).toHaveCount(1);
   await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
   await expect(page.locator('#featured-action')).toBeInViewport({ ratio: 1 });

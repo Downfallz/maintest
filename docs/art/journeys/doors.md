@@ -675,7 +675,7 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
   `<img>` with `fetchpriority="high"`, in the first HTML, not waiting for `table/lobby.css`.
 - **Shift**: 0.04 in the paint runs, 0.00 in the walk. The panel's room and Google's box are held before the
   host and Google answer. Under 1280 px, where the words stand under the duel, the invited title holds the room of
-  the longest it can be, twenty of the widest letters for the inviter (#973), so a late answer moves no sign-in.
+  its longest form, an inviter's name of twenty of the widest letters (#973), so a late answer moves nothing.
 
 ### Left
 
@@ -690,7 +690,8 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - The first paint does not hold the panel's room: a signed-in player would see the sign-in flash before their
   home. Holding it needs the host to say who is signed in with the page itself, which is not this stage's.
 - From 1280 px the invited title does not hold the longest name's room: beside the painting it would leave about
-  180 px of slate under a short name's title. A late answer naming a long inviter can still move the sign-in there.
+  180 px of empty slate under a short name's title. A late answer that names a long inviter can still move the
+  sign-in there.
 - Settled by the owner on 2026-11-20: Google's button is asked `rectangular` (`table/account.js`), the nearest to
   the identity's square buttons.
 - The panel's arrival, once the host says signed out, is not one of the kit's five uses: it appears at once in

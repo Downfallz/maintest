@@ -122,12 +122,12 @@ export function waitsOnAPerson(entry) {
  */
 export function seatPushSource({ nav = globalThis.navigator, win = globalThis, transport = httpTransport, onChange = () => {} } = {}) {
   const state = { ready: false, keyed: false, subscribed: false, permission: win?.Notification?.permission ?? 'default', busy: false };
-  let seat = null, token = null, registration = null, publicKey = null, reading = 0;
+  let seat = null, token = null, registration = null, publicKey = null, reading = 0, failed = false;
   const snapshot = () => ({ ready: state.ready && !state.busy, keyed: state.keyed, subscribed: state.subscribed, permission: state.permission, hotseat: false });
 
   async function read() {
     const ticket = ++reading, asked = seat;
-    state.ready = false; state.keyed = false; state.subscribed = false;
+    state.ready = false; state.keyed = false; state.subscribed = false; failed = false;
     if (!asked) { onChange(); return; }
     try {
       const key = await asked.pushKey();
@@ -142,7 +142,9 @@ export function seatPushSource({ nav = globalThis.navigator, win = globalThis, t
         if (held && sameKey(held, publicKey) && ticket === reading) state.subscribed = (await asked.push(held.toJSON())).ok;
       }
     } catch {
+      // Read again with the next list of games: one network hiccup does not cost the visit its offer.
       state.keyed = false;
+      failed = true;
     }
     if (ticket !== reading) return;
     state.ready = true;
@@ -153,7 +155,7 @@ export function seatPushSource({ nav = globalThis.navigator, win = globalThis, t
     state: snapshot,
     async setSeat(entry) {
       const held = entry?.seats?.[0] ?? null;
-      if ((held?.token ?? null) === token) return;
+      if ((held?.token ?? null) === token && !failed) return;
       token = held?.token ?? null;
       seat = held ? transport(held.seat, held.token) : null;
       await read();
@@ -1139,7 +1141,7 @@ if (typeof document !== 'undefined') {
   const next = nextPath(globalThis.location.search);
   // The offer of pop-ups (N4): made when a game against a person waits on the other player, once the switch has read
   // this browser, whichever of the two comes first.
-  let offer = null, offerMoment = false, accountsOff = false;
+  let offer = null, offerMoment = false, accountsOff = false, lastWaiting = null;
   const navigation = mountNavigation(document, storage, {
     onDevice: () => { offer?.changed(); if (offerMoment) offer?.consider(); },
     onInvite: lobby.invite,
@@ -1147,7 +1149,12 @@ if (typeof document !== 'undefined') {
     onInbox: () => lobby.refresh(),
     async onChange(account, mode) {
       if (account && next) { globalThis.location.assign(next); return true; }
-      accountsOff = mode === 'off';
+      // Told after the games may have been read: the offer asks through the seat, or the account, from now on.
+      if (accountsOff !== (mode === 'off')) {
+        accountsOff = mode === 'off';
+        void seatPush.setSeat(accountsOff ? lastWaiting : null);
+        offer?.changed();
+      }
       const playable = Boolean(account) || mode === 'off';
       if (!playable) door.signedOut();
       document.getElementById('home-games').hidden = !playable;
@@ -1166,7 +1173,8 @@ if (typeof document !== 'undefined') {
   lobby.onMine(mine => {
     navigation.inbox.feed(mine);
     const waiting = (mine.tables ?? []).find(waitsOnAPerson);
-    void seatPush.setSeat(accountsOff ? waiting ?? null : null);
+    lastWaiting = waiting ?? null;
+    void seatPush.setSeat(accountsOff ? lastWaiting : null);
     offerMoment = Boolean(waiting);
     if (offerMoment) offer.consider();
     else offer.withdraw();

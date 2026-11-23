@@ -214,6 +214,18 @@ test('with accounts off a host without keys, or no game waiting any more, offers
   assert.equal(source.state().ready, false);
 });
 
+test('with accounts off a seat that could not be read is read again with the next list of games', async () => {
+  const browser = pushingBrowser(), host = seatAnswering();
+  let down = true;
+  const transport = (seat, token) => { const real = host.transport(seat, token); return { ...real, pushKey: async () => { if (down) throw new Error('offline'); return real.pushKey(); } }; };
+  const source = seatPushSource({ nav: browser.nav, win: browser.win, transport });
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, false);
+  down = false;
+  await source.setSeat(waiting);
+  assert.equal(source.state().keyed, true);
+});
+
 test('with accounts off a refusal of the seat leaves pop-ups off, and lets go of the subscription it made', async () => {
   const browser = pushingBrowser(), host = seatAnswering({ ok: false });
   const source = seatPushSource({ nav: browser.nav, win: browser.win, transport: host.transport });
