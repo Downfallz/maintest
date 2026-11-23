@@ -16,8 +16,10 @@ diff: `git diff origin/main...HEAD`, or the range you are given.
 When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
 copy, never in the checkout, which the author's session may be editing, and start your report with
 `Reviewed: <sha>`. Only your memory stays in the checkout.
-Before you write the report, run `git rev-parse HEAD` in the checkout: if it moved past the sha you reviewed,
-read `git diff <reviewed sha>..HEAD`, re-check each finding there and name both shas (R2, R4).
+Before you write the report, read the tip of the branch you reviewed again (`git rev-parse HEAD` for the
+checkout's branch, `git fetch origin <branch>` and `FETCH_HEAD` for a pull request reviewed from elsewhere): if
+it moved past the sha you reviewed, read `git diff <reviewed sha>..<tip>`, re-check each finding there and name
+both shas (R2, R4).
 
 For every route the diff adds or changes, answer:
 
