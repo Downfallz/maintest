@@ -70,7 +70,7 @@ internal static class TableTend
         using var sender = keys is null ? null : new WebPushSender(keys);
         try
         {
-            using var tending = await ComposeAsync(services, options, rules, sender, target);
+            using var tending = await ComposeAsync(services, options, rules, sender, target, WebPubSubRelay.FromEnvironment());
             var (registry, lobby, composer, relay) = (tending.Registry, tending.Lobby, tending.Composer, tending.Relay);
             var (suspended, feedback, feedbackStore, notices) = (tending.Suspended, tending.Feedback, tending.FeedbackStore, tending.Notices);
 
@@ -117,7 +117,8 @@ internal static class TableTend
     /// with, and what the tests compose to see the door is built and handed to the lobby (#1109).
     /// </summary>
     /// <param name="sender">What sends a notice to a device; none on a job without push keys, whose bell still keeps the news.</param>
-    internal static async Task<Tending> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, IPushSender? sender, string target)
+    /// <param name="relay">Where what the pass moves is said (ADR 0165): the one the environment names, a recording one in the tests (#1153); none.</param>
+    internal static async Task<Tending> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, IPushSender? sender, string target, IChangeRelay? relay = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
@@ -161,7 +162,6 @@ internal static class TableTend
 
         // What the pass closes and lets go of is said to the pages and the API through the relay, when there is one
         // (ADR 0165), and the job waits for it to have gone before it exits.
-        var relay = WebPubSubRelay.FromEnvironment();
         composer.Relay = relay;
         composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
         composer.Notifier?.Changes = composer.Lobby;

@@ -27,6 +27,8 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
 
     private static AccountRequest Signed(string session) => new(session, Secure: true);
 
+    private static Notice News => new(NoticeKind.FriendAccepted, "A new friend", "bastien accepted your friend request.", "/lobby#friends", "friend:test");
+
     public async ValueTask DisposeAsync()
     {
         foreach (var held in Enumerable.Reverse(_held))
@@ -61,11 +63,11 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         return _host;
     }
 
-    /// <summary>The job as the command line composes it over the host's store, with no push keys.</summary>
-    private async Task<TableTend.Tending> JobAsync(RecordedPush? sender = null)
+    /// <summary>The job as the command line composes it over the host's store, with no push keys and no relay unless given.</summary>
+    private async Task<TableTend.Tending> JobAsync(RecordedPush? sender = null, RecordedRelay? relay = null)
     {
         var options = new CliOptions { Command = CliOptions.TendCommand, Output = "out.csv", Record = Record, Accounts = AccountsMode.Development };
-        var job = await TableTend.ComposeAsync(_hosted.Services, options, HostedTables.Rules, sender, Record);
+        var job = await TableTend.ComposeAsync(_hosted.Services, options, HostedTables.Rules, sender, Record, relay);
         _held.Add(job);
         return job;
     }
@@ -137,6 +139,42 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         tended.TimedOut.ShouldBe([table.Id]);
         (await KindsAsync(host, mark.Session)).ShouldBe(["match-over"]);
         (await KindsAsync(host, bastien.Session)).ShouldBe(["match-over"]);
+    }
+
+    [Fact]
+    public async Task With_a_relay_a_notice_the_job_s_door_keeps_is_said_to_the_account_s_pages_through_it()
+    {
+        var host = await HostAsync();
+        var mark = await SignInAsync(host, "MarkF");
+        var relay = new RecordedRelay();
+        var job = await JobAsync(relay: relay);
+
+        await job.Composer.Notifier.ShouldNotBeNull().NotifyAsync(mark.Id, News, Cancel);
+
+        relay.Said.ShouldBe([$"account {mark.Id.Value}"]);
+        (await KindsAsync(host, mark.Session)).ShouldBe(["friend-accepted"]);
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_the_host_sees_a_game_the_job_timed_out_end_at_the_table_it_holds()
+    {
+        var host = await HostAsync();
+        var mark = await SignInAsync(host, "MarkF");
+        var bastien = await SignInAsync(host, "bastien");
+        var table = await BegunAsync(host, mark.Id, bastien.Id);
+        var job = await JobAsync();
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+
+        (await TableTend.TendAsync(job.Registry, job.Lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(25), job.Composer)).TimedOut.ShouldBe([table.Id]);
+        for (var attempt = 0; attempt < 600 && !table.Session.Outcome.IsCompleted; attempt++)
+        {
+            await Task.Delay(50, Cancel);
+        }
+
+        await stopping.CancelAsync();
+        await running;
+        table.Session.Outcome.IsCompleted.ShouldBeTrue("the host's watch read the job's end of the game into the table it holds");
     }
 
     [Fact]

@@ -74,9 +74,7 @@ internal static class TableHost
         }
 
         var (server, registry, composer, store, stored) = (host.Server, host.Registry, host.Composer, host.Store, host.Stored);
-        var (accounts, push, gate, relay, described) = (host.Accounts, host.Push, host.Gate, host.Relay, host.Described);
-        var (mode, channels, turns, notices) = (host.Mode, host.Channels, host.Turns, host.Notices);
-        var noticeCounts = host.NoticeCounts;
+        var (accounts, push, gate, described) = (host.Accounts, host.Push, host.Gate, host.Described);
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -126,15 +124,7 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
-            var working = mode == TurnsMode.Worker && turns is not null
-                ? TakenByTheWorker(turns)
-                : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
-            var noticing = await StartNoticesAsync(channels, notices, push, registry, clock, stopping.Token, noticeCounts);
-
-            // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
-            // expiries -- is heard through the relay when there is one, and looked for every second when there is not
-            // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
-            var watching = stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(registry, clock), relay, clock, stopping.Token);
+            var running = await StartAsync(host, clock, stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
@@ -174,9 +164,7 @@ internal static class TableHost
             // than vanishing: the host keeps serving after a match so its players can read the end screen. The
             // workers stop with it.
             await serving;
-            await working;
-            await noticing;
-            await watching;
+            await running;
             return 0;
         }
         catch (System.Net.HttpListenerException exception)
@@ -195,6 +183,26 @@ internal static class TableHost
         {
             Console.CancelKeyPress -= stop;
         }
+    }
+
+    /// <summary>
+    /// What a composed host runs beside its server, until stopped: the workers of the bots' turns (unless table-worker
+    /// takes them), the notices' workers, and the watch of the tables it holds. What <see cref="RunAsync" /> starts, and
+    /// what the tests start to see each is started (#1159).
+    /// </summary>
+    internal static async Task<Task> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        var working = host.Mode == TurnsMode.Worker && host.Turns is not null
+            ? TakenByTheWorker(host.Turns)
+            : await StartWorkersAsync(host.Channels, host.Turns, host.Registry, clock, stopping);
+        var noticing = await StartNoticesAsync(host.Channels, host.Notices, host.Push, host.Registry, clock, stopping, host.NoticeCounts);
+
+        // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
+        // expiries -- is heard through the relay when there is one, and looked for every second when there is not
+        // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
+        var watching = host.Stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(host.Registry, clock), host.Relay, clock, stopping);
+        return Task.WhenAll(working, noticing, watching);
     }
 
     /// <summary>What sends a notice to a device, and the public key a page subscribes with: a host given push keys.</summary>

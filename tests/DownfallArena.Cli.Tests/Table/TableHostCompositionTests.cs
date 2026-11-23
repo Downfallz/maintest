@@ -277,6 +277,66 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task A_friend_request_moves_the_asker_s_own_lists_on_their_other_pages()
+    {
+        var host = await ComposeAsync();
+        var mark = await SignInAsync(host, "MarkF");
+        await SignInAsync(host, "bastien");
+        var before = host.Changes.VersionOf(mark.Id);
+
+        (await host.Friends!.HandleAsync("POST", "/api/friends/requests", """{"username":"bastien"}""", Signed(mark.Session))).Status.ShouldBe(200);
+
+        host.Changes.VersionOf(mark.Id).ShouldBeGreaterThan(before, "the request is told to the asker's pages, which no notice is");
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_the_host_sends_what_its_notices_queue_holds()
+    {
+        var host = await ComposeAsync(push: true, turns: TurnsMode.Queue);
+        var mark = await SignInAsync(host, "MarkF", phone: true);
+        await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        for (var attempt = 0; attempt < 600 && _sender.Count == 0; attempt++)
+        {
+            await Task.Delay(50, Cancel);
+        }
+
+        await stopping.CancelAsync();
+        await running;
+        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_on_a_queue_the_host_takes_the_bots_turns_it_puts_there()
+    {
+        var host = await ComposeAsync(turns: TurnsMode.Queue);
+        var table = await host.Composer.ComposeAsync(TwoPeople, Cancel);
+        _tables.Add(table);
+        using (var place = (await host.Registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await host.Registry.AddAsync(table, place, Cancel);
+        }
+
+        foreach (var seat in table.Seats)
+        {
+            seat.Person!.Arrive();
+        }
+
+        table.Session.Begin();
+        await table.RecordAsync(Cancel);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        await Task.WhenAny(table.Session.Outcome, Task.Delay(TimeSpan.FromSeconds(60), Cancel));
+
+        await stopping.CancelAsync();
+        await running;
+        table.Session.Outcome.IsCompleted.ShouldBeTrue("the understudies' turns went on the queue and the host's worker took them");
+    }
+
+    [Fact]
     public async Task A_table_opened_for_a_friend_tells_the_friend_s_devices()
     {
         var host = await ComposeAsync(push: true);
