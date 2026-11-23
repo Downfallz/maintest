@@ -20,7 +20,7 @@ function row(screen, axe) {
   const drawn = [pictures.img ? `${pictures.img} img` : null, pictures.background ? `${pictures.background} background` : null, pictures.canvas ? 'the canvas' : null].filter(Boolean).join(', ');
   return [
     `${screen.screen}${screen.staged ? ' (staged)' : ''}`, `${screen.height} px${screen.window ? ', a window' : ''}`, screen.words, screen.filled,
-    `${drawn || 'none'}${pictures.oversized ? `; ${pictures.oversized} sent over twice their size` : ''}`, text.smallest === null ? 'none' : `${text.smallest} px`, text.under,
+    `${drawn || 'none'}${pictures.oversized ? `; ${pictures.oversized} sent over twice their size` : ''}${pictures.undersized ? `; ${pictures.undersized} sent under their size` : ''}`, text.smallest === null ? 'none' : `${text.smallest} px`, text.under,
     `${targets.under} of ${targets.all}`, targets.tiny, screen.overlaps, screen.animating, screen.shift.toFixed(2),
     screen.contrast ? `${screen.contrast.under} of ${screen.contrast.texts} under 4.5:1, lowest ${screen.contrast.lowest}` : 'none', axe ? found || 'nothing' : 'not run',
   ];
@@ -77,7 +77,11 @@ export function readWalks(folder) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const [folder, ...rest] = process.argv.slice(2);
-    const named = flag => (rest.includes(flag) ? rest[rest.indexOf(flag) + 1] : null);
+    // A flag's value is the next word, unless that word is itself a flag (#1093).
+    const named = flag => {
+      const value = rest.includes(flag) ? rest[rest.indexOf(flag) + 1] : null;
+      return value && !value.startsWith('--') ? value : null;
+    };
     if (!folder || !named('--commit') || !named('--date')) throw new Error('Usage: node scripts/ux/baseline.mjs <folder> --commit <sha> --date <day>');
     const { walks, paint } = readWalks(resolve(folder));
     process.stdout.write(baselineMarkdown(walks, paint, { commit: named('--commit'), date: named('--date') }));

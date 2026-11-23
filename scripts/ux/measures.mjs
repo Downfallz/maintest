@@ -86,8 +86,41 @@ export function measureInPage({ floor, target, minimum }) {
       if (/url\("?(?!data:)/.test(image)) backgrounds++;
     }
   }
-  // A drawing has no pixels to send twice: an SVG is never sent over its size, whatever its own width says.
-  const oversized = images.filter(image => !/\.svg(?:[?#]|$)/.test(image.currentSrc) && image.naturalWidth > 2 * Math.max(1, image.getBoundingClientRect().width) * devicePixelRatio).length;
+  // The width of the file the browser chose (#966). `naturalWidth` is already divided by the density of the srcset's
+  // candidate, so for a `w` candidate it is the width `sizes` names: the candidate's own descriptor says the file's.
+  const candidates = text => {
+    const found = [];
+    for (let at = 0; at < text.length;) {
+      while (at < text.length && /[\s,]/.test(text[at])) at++;
+      let end = at;
+      while (end < text.length && !/\s/.test(text[end])) end++;
+      let url = text.slice(at, end), descriptor = '';
+      at = end;
+      if (url.endsWith(',')) url = url.replace(/,+$/, '');
+      else {
+        end = text.indexOf(',', at);
+        if (end === -1) end = text.length;
+        descriptor = text.slice(at, end).trim();
+        at = end + 1;
+      }
+      if (url) found.push({ url: new URL(url, document.baseURI).href, descriptor });
+    }
+    return found;
+  };
+  const sentWidth = image => {
+    const sources = image.parentElement?.tagName === 'PICTURE' ? [...image.parentElement.querySelectorAll('source'), image] : [image];
+    const chosen = sources.flatMap(source => candidates(source.getAttribute('srcset') ?? '')).find(one => one.url === image.currentSrc);
+    const width = /^(\d+)w$/.exec(chosen?.descriptor ?? ''), density = /^(\d+(?:\.\d+)?)x$/.exec(chosen?.descriptor ?? '');
+    if (width) return Number(width[1]);
+    return density ? image.naturalWidth * Number(density[1]) : image.naturalWidth;
+  };
+  // A file over twice the pixels it is drawn on is sent too large; one under them is drawn blurred. A drawing has no
+  // pixels to send: an SVG is neither, whatever its own width says. A picture not loaded yet (lazy) is not read.
+  const sized = images.filter(image => image.complete && image.naturalWidth > 0 && !/\.svg(?:[?#]|$)/.test(image.currentSrc))
+    .map(image => ({ sent: sentWidth(image), drawn: Math.max(1, image.getBoundingClientRect().width) * devicePixelRatio }));
+  const oversized = sized.filter(one => one.sent > 2 * one.drawn).length;
+  // A pixel of rounding is not a blurred picture.
+  const undersized = sized.filter(one => one.sent < one.drawn - 1).length;
 
   const shift = globalThis.__journeyShift?.value ?? 0;
   const root = document.documentElement;
@@ -97,7 +130,7 @@ export function measureInPage({ floor, target, minimum }) {
     wide: root.scrollWidth > root.clientWidth,
     words,
     filled,
-    pictures: { img: images.length, background: backgrounds, canvas: [...scope.querySelectorAll('canvas')].filter(shown).length, oversized },
+    pictures: { img: images.length, background: backgrounds, canvas: [...scope.querySelectorAll('canvas')].filter(shown).length, oversized, undersized },
     text: { smallest, under: small },
     targets: { all: controls.length, under, tiny },
     overlaps,
