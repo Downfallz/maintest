@@ -52,6 +52,12 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 /** A derived file's name: its own bytes are in it, since the host lets a browser keep a picture for a day. */
 export const fileName = (name, width, bytes) => `${name}-${width}.${sha(bytes).slice(0, 8)}.webp`;
 
+/**
+ * The encoding a picture is derived with: the kit's, or with the picture's own `quality` where it carries one (#1137).
+ * A picture without one is encoded, and has its origin, as before.
+ */
+export const encodingOf = (picture, encoding) => (picture.quality === undefined ? encoding : { ...encoding, quality: picture.quality });
+
 /** What a picture was derived from: its declaration, its paintings' bytes and the encoding. A change to any is a new origin. */
 export function origin(picture, paintings, encoding) {
   const hash = createHash('sha256').update(JSON.stringify([picture.name, picture.source ?? picture.frames, picture.drawn, encoding]));
@@ -116,6 +122,8 @@ function declared(picture) {
   if (picture.frames && !(Array.isArray(picture.frames) && picture.frames.length >= 2)) problems.push(`${name}: a strip has at least two frames`);
   if (!(Array.isArray(picture.drawn) && picture.drawn.length && picture.drawn.every(width => Number.isInteger(width) && width > 0)))
     problems.push(`${name}: the width it is drawn at, in whole pixels, the phone's first`);
+  if ('quality' in picture && !(Number.isInteger(picture.quality) && picture.quality >= 1 && picture.quality <= 100))
+    problems.push(`${name}: its quality is a whole number from 1 to 100, the kit's encoding's own for this picture`);
   for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first, lazy or wide, not ${role}`);
   return [...problems, ...phoneProblems(picture, name), ...groupProblems(picture, name), ...focusProblems(picture, name)];
 }
@@ -167,7 +175,7 @@ function pictureProblems(picture, entry, { authored, read, files }) {
   let paintings, widths;
   try { paintings = paintingsOf(picture).map(read); } catch { return [`${picture.name}: a painting it names is not in the repository`]; }
   const problems = [], frames = paintings.length, same = (one, other) => JSON.stringify(one) === JSON.stringify(other);
-  if (entry.from !== origin(picture, paintings, authored.encoding)) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: ${again}`);
+  if (entry.from !== origin(picture, paintings, encodingOf(picture, authored.encoding))) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: ${again}`);
   if (!same(entry.pages, picture.pages ?? {}) || !same(entry.drawn, picture.drawn) || !same(entry.phone, picture.phone) || !same(entry.group, picture.group) || entry.focus !== picture.focus || entry.frames !== frames)
     problems.push(`${picture.name}: the module does not say what the declaration says: ${again}`);
   try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => paintingSize(one).width))); } catch { return [...problems, `${picture.name}: a painting it names is neither a PNG nor a WebP file`]; }
@@ -281,11 +289,11 @@ async function derive() {
   mkdirSync(new URL(FOLDER, ROOT), { recursive: true });
   try {
     for (const picture of authored.pictures) {
-      const paintings = paintingsOf(picture), bytes = paintings.map(read), from = origin(picture, bytes, authored.encoding);
+      const paintings = paintingsOf(picture), bytes = paintings.map(read), encoding = encodingOf(picture, authored.encoding), from = origin(picture, bytes, encoding);
       const kept = before[picture.name];
       if (kept?.from === from && kept.sizes.every(size => list().includes(size.file))) { art[picture.name] = { from, frames: kept.frames, drawn: picture.drawn, pages: picture.pages ?? {}, ...carried(picture), sizes: kept.sizes }; continue; }
       const widths = widthsOf(picture.drawn, Math.min(...bytes.map(one => paintingSize(one).width)));
-      const jobs = widths.map(width => ({ sources: paintings.map(path => fileURLToPath(new URL(path, ROOT))), width, out: join(work, `${picture.name}-${width}.webp`), ...authored.encoding }));
+      const jobs = widths.map(width => ({ sources: paintings.map(path => fileURLToPath(new URL(path, ROOT))), width, out: join(work, `${picture.name}-${width}.webp`), ...encoding }));
       // NOSONAR S4036: python3 is found on the PATH of whoever derives a picture; nothing a visitor sends reaches this.
       const ran = spawnSync('python3', [fileURLToPath(new URL('encode.py', import.meta.url))], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR
       if (ran.status !== 0) throw new Error(`python3 scripts/ux/encode.py failed (it needs Pillow: python3 -m pip install pillow)\n${ran.stderr ?? ran.error}`);

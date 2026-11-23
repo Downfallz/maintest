@@ -85,7 +85,7 @@
     {
       "name": "colossus",
       "source": "table/battle-art/evolutions/brute-stage3-colossus.webp",
-      "drawn": [308, 620, 850],
+      "drawn": [243, 620, 850],
       "pages": { "showcase/home": "largest" }
     },
     {
@@ -184,6 +184,7 @@
       "name": "home-ground-eclipse",
       "source": "docs/art/sources/pages/eclipse-portrait.webp",
       "drawn": [390, 760],
+      "quality": 70,
       "pages": { "table/home": "largest" }
     },
     {

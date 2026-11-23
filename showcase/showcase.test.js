@@ -521,6 +521,47 @@ test('every width a page\'s sizes give a painting, in pixels, is one its declara
   }
 });
 
+/**
+ * The width a `sizes` gives on a screen `screen` px wide, as a browser reads it: the first length whose media
+ * condition holds, in px, vw, min() and max(). A calc() is not read: null.
+ */
+function sizesAt(sizes, screen) {
+  const holds = condition => [...condition.matchAll(/\((max|min)-width:\s*(\d+)px\)/g)]
+    .every(([, side, width]) => (side === 'max' ? screen <= Number(width) : screen >= Number(width)));
+  const entry = sizes.split(/,(?![^(]*\))/).map(one => one.trim())
+    .find(one => !one.startsWith('(') || holds(one.slice(0, one.lastIndexOf(')') + 1)));
+  const length = entry.startsWith('(') ? entry.slice(entry.lastIndexOf(')') + 1).trim() : entry;
+  const value = one => {
+    const unit = /^(\d+(?:\.\d+)?)(px|vw)$/.exec(one.trim());
+    if (unit) return unit[2] === 'px' ? Number(unit[1]) : Number(unit[1]) * screen / 100;
+    const call = /^(min|max)\((.*)\)$/.exec(one.trim());
+    if (!call) return null;
+    const values = lengthsOf(call[2]).map(value);
+    return values.includes(null) ? null : Math[call[1]](...values);
+  };
+  return value(length);
+}
+
+test('the width a sizes gives on a screen is the first length whose media condition holds', () => {
+  assert.equal(sizesAt('(max-width: 600px) 62vw, min(54vw, 850px)', 390), 241.8);
+  assert.equal(sizesAt('(max-width: 600px) 62vw, min(54vw, 850px)', 1000), 540);
+  assert.equal(sizesAt('(max-width: 650px) 315px, min(465px, 46vw)', 320), 315);
+  assert.equal(sizesAt('(min-width: 1316px) 1280px, calc(100vw - 36px)', 390), null);
+});
+
+// The Colossus is shown whole in its box (object-fit: contain): on a phone its box is wider than it, and its height
+// decides its width. Its sizes is that width, or the phone takes a file twice what it draws (#1179).
+test('on a phone, the Colossus\'s sizes is the width its height draws it at, not its box\'s (#1179)', () => {
+  const css = readFileSync(fileURLToPath(new URL('./showcase.css', import.meta.url)), 'utf8');
+  const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
+  const [, height] = /\.hero-beast \{[^}]*height: clamp\(\d+px, (\d+(?:\.\d+)?)vw, \d+px\)/.exec(phone);
+  const painting = PAGE_ART.colossus.sizes[0], ratio = painting.width / painting.height;
+  const tag = picturesOf(read('index.html')).find(one => /class="picture hero-beast/.test(one));
+  const [, phoneWidth] = /^\(max-width: 600px\) (\d+)vw,/.exec(attribute(tag, 'sizes'));
+  assert.equal(Number(phoneWidth), Math.ceil(Number(height) * ratio), 'its height times its painting\'s ratio, rounded up');
+  assert.ok(PAGE_ART.colossus.drawn[0] >= sizesAt(attribute(tag, 'sizes'), 390), 'its declaration draws it at that width on a 390 px phone');
+});
+
 test('a picture on the first screen drawn again lower down is lazy there: the budget counts its first use alone before any scroll (#1082)', () => {
   for (const [file, page] of [['index.html', 'showcase/home'], ['mutations/index.html', 'showcase/mutations']]) {
     for (const [name, entry] of Object.entries(PAGE_ART)) {

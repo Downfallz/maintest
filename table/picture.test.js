@@ -283,6 +283,14 @@ test('a page\'s head is the band its HTML holds, dressed with its painting on th
   wearPageHead({ querySelector: () => null }, 'scene', { page: 'home', art: ART });
 });
 
+test('a page\'s head holds its eyebrow at the pages\' 11 px floor in its own rule, and no page raises it again (#1150)', () => {
+  // The shared .eyebrow is 10 px (table.css); a page's head is read on a painting, at the floor of the pages' words.
+  assert.match(read('table/identity.css'), /\n\.page-head \.eyebrow \{[^}]*font-size: 11px;[^}]*\}/);
+  for (const sheet of readdirSync(new URL('table/', root)).filter(file => file.endsWith('.css') && file !== 'identity.css')) {
+    assert.doesNotMatch(read(`table/${sheet}`), /\.(?:page-head|rules-hero) \.eyebrow \{[^}]*font-size/, `${sheet} raises a page head's eyebrow on its own`);
+  }
+});
+
 test('the ladder, the statistics and the rulebook hold their head in their HTML, its eyebrow and title on it, and wear their scene', () => {
   // docs/art/journeys/pages.md: the band's room and words are there at first paint; the script adds the painting.
   for (const [html, script, name, page, title] of [

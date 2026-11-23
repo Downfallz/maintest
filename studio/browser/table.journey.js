@@ -61,7 +61,7 @@ test('a strip films one interaction on a held clock, the same frames twice', asy
 
 // A picture is measured by the file the browser chose, not by `naturalWidth`, which a srcset divides by its density
 // (#966), and against the width `object-fit` draws it at, not its box: a file over twice that width, or under it, is
-// counted whatever `sizes` says; a drawing never is.
+// counted whatever `sizes` says; a drawing never is, nor a file another picture of the screen draws at its size.
 test('the measure counts a picture sent over twice its size or under it, by the file the srcset chose', async ({ browser }, info) => {
   test.skip(info.project.name !== 'table-phone', 'A fixture page at its own density: one project reads it.');
   const context = await browser.newContext({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 1 });
@@ -84,14 +84,18 @@ test('the measure counts a picture sent over twice its size or under it, by the 
         <img alt="" srcset="/right.png 400w" sizes="200px" style="width:200px;display:block">
         <img alt="" src="/drawing.svg" style="width:50px;display:block">
         <img alt="" srcset="/right.png 400w" sizes="100px" style="width:100px;height:200px;object-fit:cover;display:block">
-        <img alt="" srcset="/big.png 800w" sizes="450px" style="width:450px;height:10px;object-fit:contain;display:block">` });
+        <img alt="" srcset="/big.png 800w" sizes="450px" style="width:450px;height:10px;object-fit:contain;display:block">
+        <img alt="" srcset="/right.png 400w" sizes="400px" style="width:400px;display:block">
+        <img alt="" srcset="/right.png 400w" sizes="100px" style="width:100px;display:block">` });
     });
     await page.goto('http://fixture.test/');
     await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
     const { pictures } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
     // Cover draws the 400 px file 2000 px wide in its 100 px box: under its size. Contain draws the 800 px file 200 px
-    // wide in its 450 px box: over twice its size.
-    expect(pictures).toMatchObject({ img: 7, oversized: 3, undersized: 2 });
+    // wide in its 450 px box: over twice its size. The last two share a file: one draws it at its size, so the other,
+    // which draws it at 100 px, is sent nothing more, as the showcase's eclipse is the hero's file again lower down
+    // (#1082, #1179).
+    expect(pictures).toMatchObject({ img: 9, oversized: 3, undersized: 2 });
   } finally {
     await context.close();
   }

@@ -116,8 +116,11 @@ export function measureInPage({ floor, target, minimum }) {
   // A file over twice the pixels it is drawn on is sent too large; one under them is drawn blurred. A drawing has no
   // pixels to send: an SVG is neither, whatever its own width says. A picture not loaded yet (lazy) is not read.
   const sized = images.filter(image => image.complete && image.naturalWidth > 0 && !/\.svg(?:[?#]|$)/.test(image.currentSrc))
-    .map(image => ({ sent: sentWidth(image), drawn: drawnWidth(image) * devicePixelRatio }));
-  const oversized = sized.filter(one => one.sent > 2 * one.drawn).length;
+    .map(image => ({ file: image.currentSrc, sent: sentWidth(image), drawn: drawnWidth(image) * devicePixelRatio }));
+  // A file another picture of the screen draws at its size is sent for that one: the browser draws it again from its
+  // cache where a smaller use takes it, as the showcase's eclipse, the hero's ground, is lower down (#1082, #1179).
+  const needed = new Set(sized.filter(one => one.sent <= 2 * one.drawn).map(one => one.file));
+  const oversized = sized.filter(one => one.sent > 2 * one.drawn && !needed.has(one.file)).length;
   // A pixel of rounding is not a blurred picture.
   const undersized = sized.filter(one => one.sent < one.drawn - 1).length;
 
