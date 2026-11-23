@@ -177,7 +177,7 @@ public sealed class DiscordSignIn : ISignInProvider, IDisposable
             throw new SignInUnavailableException("Discord asked the host to slow down.");
         }
 
-        if ((int)response.StatusCode >= 500 || (int)response.StatusCode < 400)
+        if ((int)response.StatusCode is >= 500 or < 400)
         {
             throw new SignInUnavailableException($"Discord answered {(int)response.StatusCode}.");
         }

@@ -16,8 +16,9 @@ export const KEPT_FOR_MS = 10 * 60 * 1000;
 /** Bytes as base64url without padding, the alphabet of a PKCE verifier and challenge (RFC 7636). */
 export function base64Url(bytes) {
   let text = '';
-  for (const byte of bytes) text += String.fromCharCode(byte);
-  return btoa(text).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
+  for (const byte of bytes) text += String.fromCodePoint(byte);
+  // '=' is only ever the padding at the end.
+  return btoa(text).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 }
 
 /** A fresh verifier (32 random bytes, 43 characters) and its S256 challenge. */
@@ -83,7 +84,7 @@ export function discordReturn(search, kept, now = Date.now()) {
   // The player saying no goes straight back; any other error (a misconfigured app, Discord failing) is said.
   if (query.get('error') === 'access_denied') return { problem: 'cancelled', next };
   if (query.get('error')) return { problem: 'failed', next };
-  if (!kept || typeof kept.state !== 'string' || typeof kept.verifier !== 'string' || !(now - kept.at < KEPT_FOR_MS)) return { problem: 'lapsed', next: null };
+  if (!kept || typeof kept.state !== 'string' || typeof kept.verifier !== 'string' || typeof kept.at !== 'number' || now - kept.at >= KEPT_FOR_MS) return { problem: 'lapsed', next: null };
   const code = query.get('code');
   if (!code || query.get('state') !== kept.state) return { problem: 'mismatch', next: null };
   return { code, verifier: kept.verifier, next };

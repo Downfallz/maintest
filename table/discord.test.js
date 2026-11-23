@@ -44,6 +44,7 @@ test('a return this tab did not start, or started too long ago, is never posted'
   assert.equal(discordReturn('?code=abc&state=s', null).problem, 'lapsed');
   assert.equal(discordReturn('?code=abc&state=s', kept, KEPT_FOR_MS).problem, 'lapsed');
   assert.equal(discordReturn('?code=abc&state=s', { ...kept, verifier: 7 }, 1).problem, 'lapsed');
+  assert.equal(discordReturn('?code=abc&state=s', { ...kept, at: 'yesterday' }, 1).problem, 'lapsed');
   assert.equal(discordReturn('?code=abc&state=s', kept, KEPT_FOR_MS - 1).code, 'abc');
 });
 

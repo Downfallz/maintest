@@ -40,4 +40,4 @@ export async function finishDiscord({ win = globalThis, doc = globalThis.documen
 }
 
 // Run on the return page itself; a test imports the module without a page.
-if (globalThis.document?.getElementById('signin-state')) finishDiscord();
+if (globalThis.document?.getElementById('signin-state')) await finishDiscord();
