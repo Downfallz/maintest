@@ -1,4 +1,4 @@
-# 0204. Show the game filmed in promotion, and label what a model makes
+# 0205. Show the game filmed in promotion, and label what a model makes
 
 Date: 2026-11-23
 Status: Accepted
@@ -17,8 +17,8 @@ The owner settled what a model may make (questions 1 and 2 of the plan).
 
 **What promotion shows as the game is the game, filmed.** A shot (`promo/shots/*.json`) names what the game shows,
 never pixels: a scenario of `scenarios/` played on a real table host, and the ratios to frame it at.
-`scripts/promo/shoot.mjs` serves it, signs in, opens it in Chromium with the page's clocks and randomness pinned,
-and saves what the battle view draws. The same shot gives the same bytes on one machine and one build.
+`scripts/promo/shoot.mjs` starts a table host, signs a new account in, opens the scenario in Chromium with the
+page's clock and randomness pinned, and saves what the battle view draws. The same shot gives the same bytes on one machine and one build.
 
 **What a model may make**: key art, backgrounds, transitions, styled stills, thumbnails, and a clip of filmed
 gameplay restyled (video to video). A restyled clip always starts from a shot of the real game, and its post says
@@ -36,8 +36,8 @@ session calls a model's API only once the owner says the prompts are proven.
   game is one the game holds.
 - Good: the label and the provenance are written where the file comes in, not remembered at posting time.
 - Bad: a shot needs what a walk needs: the engine built, the content consolidated, the battle bundle and
-  Chromium. A still takes seconds, not milliseconds, and the gate does not shoot one.
-- Bad: the bytes hold for one build of Chromium and one renderer: a new Playwright changes them, as it changes
+  Chromium. A still takes seconds, and the gate does not shoot one.
+- Bad: the bytes hold for one build of Chromium and one renderer. A new Playwright changes them, as it changes
   the browser suite's screenshots.
 - Neutral: a shot plays a scenario, so a moment the owner wants is first cut as a scenario (`scenario-generate`,
   `scenario-cut`), which is also a regression test.
@@ -45,7 +45,8 @@ session calls a model's API only once the owner says the prompts are proven.
 ## Alternatives considered
 
 - Film the effects bench's fixture: deterministic already, but it is an illustrative board, not a match.
-- Record the live page in real time: a session's software renderer drops frames (BC10), and two takes differ.
+- Record the live page in real time: a session's software renderer drops frames
+  ([battle-acceptance.md](../art/battle-acceptance.md)), and two takes differ.
 - Let a model make gameplay from a prompt: cheaper and prettier, refused by the stores and untrue to a player.
 
 ## Follow-up

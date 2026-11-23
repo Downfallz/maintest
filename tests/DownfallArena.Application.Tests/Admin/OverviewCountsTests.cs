@@ -12,7 +12,7 @@ public sealed class OverviewCountsTests
 
     private static PlayerSummary Player(int madeDaysAgo, int? seenDaysAgo, bool suspended = false)
     {
-        var account = new Account(AccountId.New(), new ExternalIdentity(ExternalIdentity.Google, Guid.NewGuid().ToString()), Username.Create("Somebody").Value, Now.AddDays(-madeDaysAgo), 1)
+        var account = new Account(AccountId.New(), AccountIdentities.Of(new ExternalIdentity(ExternalIdentity.Google, Guid.NewGuid().ToString())), Username.Create("Somebody").Value, Now.AddDays(-madeDaysAgo), 1)
         {
             Suspension = suspended ? new AccountSuspension("Spamming invitations to strangers.", "op", Now) : null,
         };

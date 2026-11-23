@@ -39,7 +39,7 @@ An area marked * has its own `AGENTS.md` (and a `CLAUDE.md` that imports it): re
 | `learning/` * | The Python training project (uv, ruff, pytest) and the heuristic weights files. See docs/learning/. |
 | `scenarios/` | Match scenarios the admin panel lists and plays, one file each, and the tutorials under `tutorials/` (`scenarios/README.md`, ADR 0179, 0187). |
 | `rules/` | The official rulebook, the app's edition, in English and French, built into `table/rules*.json` (ADR 0188, 0193). See `rules/README.md`. |
-| `promo/` | Promotion: the shots of the real game a post shows, and what a model may make of them (`promo/README.md`, ADR 0204). |
+| `promo/` | Promotion: the shots of the real game a post shows, and what a model may make of them (`promo/README.md`, ADR 0205). |
 | `models/` | Trained policies (`policy.json`, small, committed with their evaluation). See `models/README.md`. |
 | `infra/` * | The hosted table on Azure behind Cloudflare: `main.bicep`, `bootstrap.sh`, `README.md` (ADR 0080-0082, 0162, 0175). |
 | `Dockerfile` | The table's image, built and tried by `.github/workflows/image.yml` before it is pushed and deployed. |

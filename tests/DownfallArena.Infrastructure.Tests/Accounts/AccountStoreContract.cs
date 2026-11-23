@@ -15,7 +15,7 @@ public abstract class AccountStoreContract
     protected abstract Task<IAccountStore> StoreAsync();
 
     private static Account AnAccount(string name = "MarkF") =>
-        new(AccountId.New(), Mark, Username.Create(name).Value, Now, Generation: 1);
+        new(AccountId.New(), AccountIdentities.Of(Mark), Username.Create(name).Value, Now, Generation: 1);
 
     [Fact]
     public async Task A_suspension_reads_back_as_it_was_saved_and_a_restore_clears_it()
@@ -44,10 +44,24 @@ public abstract class AccountStoreContract
         var read = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();
 
         read.Id.ShouldBe(account.Id);
-        read.Identity.ShouldBe(Mark);
+        read.Identities.All.ShouldBe([Mark]);
         read.Username.Value.ShouldBe("MarkF");
         read.CreatedAt.ShouldBe(Now);
         read.Generation.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task An_account_with_several_identities_reads_them_back_in_order()
+    {
+        var store = await StoreAsync();
+        var discord = new ExternalIdentity("discord", "80351110224678912");
+        var account = AnAccount() with { Identities = AccountIdentities.Of(Mark).With(discord) };
+        await store.SaveAsync(account, Cancel);
+
+        var read = (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull();
+
+        read.Identities.All.ShouldBe([Mark, discord]);
+        read.ShouldBe(account);
     }
 
     [Fact]

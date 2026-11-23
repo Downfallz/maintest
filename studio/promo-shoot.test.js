@@ -1,4 +1,4 @@
-// The promotion's still (docs/art/promotion-plan.md, P1; ADR 0204): scripts/promo/shoot.mjs, held without a
+// The promotion's still (docs/art/promotion-plan.md, P1; ADR 0205): scripts/promo/shoot.mjs, held without a
 // browser. That two stills of one shot give the same bytes is the real-engine journey's (studio/browser/table.promo.js).
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -25,7 +25,7 @@ function withShot(shot, read = readShot) {
   }
 }
 
-test('every shot of the repository reads, and names a scenario the host lists', () => {
+test('every shot of the repository reads, with its scenario\'s id', () => {
   const files = readdirSync(shots).filter(name => name.endsWith('.json'));
   assert.ok(files.length > 0, 'promo/shots/ holds a shot');
   for (const file of files) {
@@ -47,6 +47,25 @@ test('a shot naming a missing scenario is refused', () => {
 test('a shot naming a tutorial, a bug or a path outside scenarios/ is refused', () => {
   for (const scenario of ['tutorials/to-the-end.json', '../package.json', 'greedy-1v1-round-3', '']) {
     assert.throws(() => withShot({ ...good, scenario }), /names a file directly under scenarios\//, scenario);
+  }
+});
+
+test('a shot naming a file the host leaves out of its scenarios is refused', () => {
+  const scenarios = mkdtempSync(join(tmpdir(), 'promo-scenarios-'));
+  try {
+    const read = path => readShot(path, { scenarios });
+    for (const scenario of ['tutorial-a.json', 'bug-812-round-4.json']) {
+      writeFileSync(join(scenarios, scenario), '{}');
+      assert.throws(() => withShot({ ...good, scenario }, read), /the host leaves out/, scenario);
+    }
+    const long = `${'a'.repeat(56)}.json`;
+    writeFileSync(join(scenarios, long), '{}');
+    assert.throws(() => withShot({ ...good, scenario: long }, read), /past 55 characters/);
+    const longest = `${'a'.repeat(55)}.json`;
+    writeFileSync(join(scenarios, longest), '{}');
+    assert.equal(withShot({ ...good, scenario: longest }, read).id, `sc-repo-${'a'.repeat(55)}`);
+  } finally {
+    rmSync(scenarios, { recursive: true, force: true });
   }
 });
 
@@ -94,16 +113,28 @@ test('the command takes one shot and --still, and refuses the rest', () => {
   assert.throws(() => parseArguments(['a.json', '--still', '--film']), /Unknown option --film/);
 });
 
-test('the command refuses a shot naming a missing scenario before it starts a browser, with exit 1', () => {
+// The command run on a shot written to a folder of its own, with these arguments after it.
+function shoot(shot, ...rest) {
   const folder = mkdtempSync(join(tmpdir(), 'promo-shot-'));
   try {
-    const path = join(folder, 'missing.json');
-    writeFileSync(path, JSON.stringify({ ...good, scenario: 'no-such-scenario.json' }));
-    const run = spawnSync(process.execPath, [script, path, '--still'], { encoding: 'utf8' });
-    assert.equal(run.status, 1);
-    assert.match(run.stderr, /scenarios\/no-such-scenario\.json does not exist/);
-    assert.equal(run.stdout, '');
+    const path = join(folder, 'the-shot.json');
+    writeFileSync(path, JSON.stringify(shot));
+    return spawnSync(process.execPath, [script, path, '--still', ...rest], { encoding: 'utf8' });
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }
+}
+
+test('the command refuses a shot naming a missing scenario before it starts a browser, with exit 1', () => {
+  const run = shoot({ ...good, scenario: 'no-such-scenario.json' });
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /scenarios\/no-such-scenario\.json does not exist/);
+  assert.equal(run.stdout, '');
+});
+
+test('the command refuses a --ratio the shot does not name, with exit 1', () => {
+  const run = shoot({ ...good, ratios: ['9:16'] }, '--ratio', '1:1');
+  assert.equal(run.status, 1);
+  assert.match(run.stderr, /--ratio 1:1 is not one of the shot's: 9:16/);
+  assert.equal(run.stdout, '');
 });

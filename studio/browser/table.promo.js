@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { onHost, readShot, root, shootStill } from '../../scripts/promo/shoot.mjs';
 import { startHost } from '../../scripts/ux/set.mjs';
 
-// The promotion's still on the real engine (docs/art/promotion-plan.md, P1; ADR 0204): a shot of the repository
+// The promotion's still on the real engine (docs/art/promotion-plan.md, P1; ADR 0205): a shot of the repository
 // opened on a real host gives the same bytes twice, and a picture of the size its ratio asks. The still sets its
 // own size, so one project plays it.
 test.describe.configure({ mode: 'default' });

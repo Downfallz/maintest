@@ -1237,14 +1237,14 @@ node scripts/promo/shoot.mjs promo/shots/brute-mirror-round-3.json --still
 node scripts/promo/shoot.mjs promo/shots/<shot>.json --still --ratio 9:16 --out <folder>
 ```
 
-Takes the still of a promotion's shot (docs/art/promotion-plan.md, P1; ADR 0204): the shot's scenario opened on a
+Takes the still of a promotion's shot (docs/art/promotion-plan.md, P1; ADR 0205): the shot's scenario opened on a
 real table host by a new account, in Chromium framed at each ratio the shot names (`9:16` as a 360 by 640 phone,
 `16:9` as 1280 by 720, `1:1` as 720 by 720) at the density that makes its short side the shot's `size` (1080 or
-720 pixels). The page's clock and `Math.random` are pinned, less motion is asked, the briefing is begun and the
-windows a first visit opens are closed, and the practice's band is hidden. It writes `still-<ratio>.png` under
+720 pixels). The page's clock and `Math.random` are pinned, reduced motion is requested, the briefing is started
+and the windows a first visit opens are closed, and the practice's banner is hidden. It writes `still-<ratio>.png` under
 `artifacts/promo/<shot>/` (`--out` elsewhere) and prints each file with its SHA-256. One shot gives the same bytes
-each time on one machine and one build. `--ratio` takes one ratio of the shot. Only `--still` is taken today. It
-needs what `ux/journey.mjs` needs, and exits 1 on a shot it refuses (promo/README.md) before it starts a browser.
+each time on one machine and one build. `--ratio` shoots one of the shot's ratios, and refuses another. `--still`
+is the only mode today. It needs what `ux/journey.mjs` needs, and exits 1 on a shot it refuses (promo/README.md) before it starts a browser.
 
 ### recap-fixture.py
 

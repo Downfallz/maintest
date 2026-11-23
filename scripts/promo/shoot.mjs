@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The still of a shot (docs/art/promotion-plan.md, P1; ADR 0204): what promotion shows as the game is the game,
+// The still of a shot (docs/art/promotion-plan.md, P1; ADR 0205): what promotion shows as the game is the game,
 // filmed. A shot (`promo/shots/*.json`) names a scenario of `scenarios/` and the ratios to frame it at; this
 // script raises a real table host, signs in, opens the scenario in Chromium as a player opens it, and saves what
 // the battle view draws, one PNG a ratio. The page's clocks and randomness are pinned and the clock moves only
@@ -36,6 +36,11 @@ export const SIZES = Object.freeze([720, 1080]);
 
 const KEYS = new Set(['format', 'title', 'scenario', 'ratios', 'size']);
 
+// What the host leaves out of the scenarios it lists (`RepositoryScenarios.cs`): a file directly under
+// `scenarios/` named as a tutorial's or a bug's, and a name past the 55 characters an id keeps.
+const LONGEST_NAME = 55;
+const LEFT_OUT = ['tutorial-', 'bug-'];
+
 /** The id the host gives a scenario file directly under `scenarios/` (scenarios/README.md). */
 export function scenarioId(file) {
   return `sc-repo-${basename(file, '.json')}`;
@@ -63,6 +68,9 @@ export function readShot(path, { scenarios = join(root, 'scenarios') } = {}) {
   if (typeof shot.scenario !== 'string' || !/^[a-z0-9][a-z0-9-]*\.json$/.test(shot.scenario)) {
     refuse('"scenario" names a file directly under scenarios/, such as "greedy-1v1-round-3.json".');
   }
+  const named = basename(shot.scenario, '.json');
+  if (LEFT_OUT.some(prefix => named.startsWith(prefix))) refuse(`the host leaves out a file directly under scenarios/ named ${LEFT_OUT.map(one => `"${one}..."`).join(' or ')}.`);
+  if (named.length > LONGEST_NAME) refuse(`the host cuts a scenario's name past ${LONGEST_NAME} characters: name the file shorter.`);
   if (!existsSync(join(scenarios, shot.scenario))) refuse(`the scenario scenarios/${shot.scenario} does not exist.`);
   const ratios = shot.ratios ?? Object.keys(RATIOS);
   if (!Array.isArray(ratios) || ratios.length === 0) refuse(`"ratios" lists one or more of ${Object.keys(RATIOS).join(', ')}.`);
@@ -137,11 +145,13 @@ export async function shootStill(browser, origin, shot, ratio) {
       const late = setTimeout(() => fail(new Error(`The page still waits for ${[...open].map(one => one.url()).join(', ')}.`)), 30000);
       waiting.push(() => { clearTimeout(late); answered(); });
     });
+    // A request the page has made may not have reached this process yet: one round trip to the page first.
+    const caughtUp = () => page.evaluate(() => 0).then(settled);
     // The page's clock moves only here, a tick at a time, once what the last tick asked for has come.
     const tick = async (times = 1) => {
       for (let one = 0; one < times; one++) {
         await page.clock.runFor(TICK_MS);
-        await settled();
+        await caughtUp();
       }
     };
     await page.addInitScript(pinRandom);
@@ -162,6 +172,7 @@ export async function shootStill(browser, origin, shot, ratio) {
     }
     if (await page.locator('dialog[open]').count() > 0) throw new Error('A window stayed open over the field.');
     // The practice's band says this is a practice: a match has none, and a post shows the match.
+    if (await page.locator('#practice-band').count() !== 1) throw new Error('The practice\'s band (#practice-band) is not on the page: the still would show what it hides.');
     await page.addStyleTag({ content: '#practice-band { display: none !important; }' });
     await tick(30);
     return await page.screenshot();
@@ -188,6 +199,7 @@ const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 async function main(argv) {
   const options = parseArguments(argv);
   const shot = readShot(resolve(options.shot));
+  if (options.ratio && !shot.ratios.includes(options.ratio)) throw new Error(`--ratio ${options.ratio} is not one of the shot's: ${shot.ratios.join(', ')}.`);
   const ratios = options.ratio ? [options.ratio] : shot.ratios;
   // Loaded here, not at the top: the checks above need no browser and no engine.
   const { missing, startHost } = await import('../ux/set.mjs');
