@@ -30,6 +30,24 @@ public sealed class GoogleIdTokenVerifierTests : IDisposable
     }
 
     [Fact]
+    public async Task As_a_way_to_sign_in_it_is_google_and_reads_the_posted_credential()
+    {
+        var google = Verifier();
+
+        var identity = await google.SignInAsync(SignInProof.Of((GoogleIdTokenVerifier.CredentialField, _tokens.Sign(TestIdTokens.Claims(Now)))), Cancel);
+
+        google.Name.ShouldBe("google");
+        google.ClientId.ShouldBe(TestIdTokens.ClientId);
+        identity.ShouldBe(new ExternalIdentity("google", "109876543210987654321"));
+    }
+
+    [Fact]
+    public async Task A_sign_in_that_posts_no_credential_is_nobody()
+    {
+        (await Verifier().SignInAsync(SignInProof.Of(("token", _tokens.Sign(TestIdTokens.Claims(Now)))), Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task The_issuer_may_be_written_without_its_scheme()
     {
         (await VerifyAsync(claims => claims["iss"] = "accounts.google.com")).ShouldNotBeNull();

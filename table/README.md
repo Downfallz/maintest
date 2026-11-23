@@ -464,14 +464,22 @@ one of them differs from the module.
 
 ## Signing in (ADR 0122)
 
-`table --accounts google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`) lets players sign in on the
-home page with Google; `--accounts dev` signs in by a typed name instead, on a loopback host only. The page shows
-Google's own button, then asks a first-time player for a unique name (3 to 20 letters, digits, `_` or `-`; bot
+`table --sign-in google --google-client-id <id>` (or `DOWNFALL_GOOGLE_CLIENT_ID`) lets players sign in on the
+home page with Google. `--accounts google` is the older spelling. `--accounts dev` signs in by a typed name
+instead, on a loopback host only. `--sign-in` lists the providers, comma-separated, in the order the page draws
+their buttons, and each provider signs in at `POST /api/account/<provider>` (docs/tabletop/sign-in-methods-plan.md,
+P2). The page shows a button for each provider `/api/me` lists (Google's own
+button, for Google), then asks a first-time player for a unique name (3 to 20 letters, digits, `_` or `-`; bot
 names reserved), and puts the account in the masthead with *Sign out* and *Sign out everywhere*. The host checks
 Google's ID token itself and keeps its own `HttpOnly` session cookie for thirty days. Accounts are kept beside the
 recordings: `runs/accounts/`, or the `accounts` container next to the recordings' one. Nothing else is kept: no
-email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts`, `googleClientId`
-and `account`.
+email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev`, or `google` for
+any host that signs in through providers, the name the page of the release before reads), `signIn` (each provider
+as `{"provider", "clientId"}`, in order), `googleClientId` (also for that older page) and `account`. Each sign-in writes one console line per step, `Sign-in started (<provider>).` when
+the proof reaches the host, then `Sign-in finished (<provider>).` once a session is issued (after the name window,
+for a new player) or `Sign-in refused (<provider>).` (the provider said no, the account is suspended, or
+registration is closed). Counted by provider, the lines show where people stop. A request with a forged proof
+writes its two lines too.
 
 With accounts on, playing needs a sign-in, and a seat belongs to the account that took it: opening a table, taking
 an open place and accepting an invitation answer `401` to nobody, and a seat's token alone is refused (`401`
@@ -771,6 +779,9 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/rules`, `/rules.json`, `/rules.fr.json` | anyone | The official rulebook (ADR 0188) and the books it reads, English and French (ADR 0193); `/rules#<id>` opens a section, `?lang=fr` or `?lang=en` its language. |
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
+| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 409 `Account.RegistrationClosed` for a new player while registration is closed. |
+| `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
+| `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
 | `DELETE /api/account` | account | Deletes the account. |
 | `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187) and what pops up (`notices`, ADR 0202). |
 | `PUT /api/account/preferences/notices` | account | What pops up on the account's devices (ADR 0202): `{"turns", "invitations", "results"}`, each `true` or `false`, a choice left out on. The bell keeps everything whatever they say. 404 on a host that keeps no settings. |

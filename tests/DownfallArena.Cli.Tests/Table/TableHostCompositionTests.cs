@@ -76,6 +76,36 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         return _host;
     }
 
+    /// <summary>The host the command line composes with the providers <c>--sign-in</c> lists (sign-in methods plan, P2).</summary>
+    private async Task<ComposedHost?> ComposeSigningInAsync(string? googleClientId) =>
+        await TableHost.ComposeAsync(
+            _hosted.Services,
+            new CliOptions
+            {
+                Command = "table",
+                Output = "out.csv",
+                Record = Path.Combine(_root, "playtest"),
+                Accounts = AccountsMode.SignIn,
+                SignIn = ["google"],
+                GoogleClientId = googleClientId,
+                Lobby = true,
+                Port = FreePort(),
+            },
+            HostedTables.Rules,
+            null,
+            Path.Combine(AppContext.BaseDirectory, "table"),
+            Cancel);
+
+    [Fact]
+    public async Task The_host_signs_in_with_each_provider_sign_in_lists_and_answers_none_it_does_not()
+    {
+        _host = (await ComposeSigningInAsync("1234.apps.googleusercontent.com")).ShouldNotBeNull();
+
+        _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([("google", "1234.apps.googleusercontent.com")]);
+        (await _host.Accounts.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(401);
+        (await _host.Accounts.HandleAsync("POST", "/api/account/discord", """{"code":"x"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(404);
+    }
+
     /// <summary>Signs the name in through the host's own sign-in, and answers its session and its account.</summary>
     private static async Task<(string Session, AccountId Id)> SignInAsync(ComposedHost host, string name, bool phone = false)
     {

@@ -10,9 +10,10 @@ using DownfallArena.SharedKernel.Primitives;
 namespace DownfallArena.Cli.Table;
 
 /// <summary>
-/// Signing in and registering (ADR 0122): Google's ID token in, the host's own session cookie out, and a name chosen
-/// in between when the sign-in has no account yet. <c>--accounts dev</c> skips Google and signs in by a typed name,
-/// on a loopback host only. Every route is behind the table's same-origin fence, which is what makes a cookie safe
+/// Signing in and registering (ADR 0122): a provider's proof in at <c>POST /api/account/&lt;provider&gt;</c> (Google's
+/// ID token, for one), the host's own session cookie out, and a name chosen in between when the sign-in has no
+/// account yet. Each provider <c>--sign-in</c> lists is one <see cref="ISignInProvider" /> (sign-in methods plan, P2).
+/// <c>--accounts dev</c> skips them all and signs in by a typed name, on a loopback host only. Every route is behind the table's same-origin fence, which is what makes a cookie safe
 /// to act on: another site cannot send this host a JSON write.
 /// </summary>
 internal sealed class AccountApi
@@ -39,9 +40,9 @@ internal sealed class AccountApi
 
     private readonly AccountRegistry _registry;
     private readonly AccountSessions _sessions;
-    private readonly IIdentityTokenVerifier? _verifier;
+    private readonly Dictionary<string, ISignInProvider> _providers;
 
-    public AccountApi(AccountRegistry registry, AccountSessions sessions, AccountsMode mode, IIdentityTokenVerifier? verifier = null, string? googleClientId = null)
+    public AccountApi(AccountRegistry registry, AccountSessions sessions, AccountsMode mode, IReadOnlyList<ISignInProvider>? providers = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(sessions);
@@ -50,16 +51,32 @@ internal sealed class AccountApi
             throw new ArgumentException("A host with accounts off has no account API.", nameof(mode));
         }
 
-        if (mode == AccountsMode.Google && (verifier is null || string.IsNullOrWhiteSpace(googleClientId)))
+        providers ??= [];
+        if (mode == AccountsMode.SignIn && providers.Count == 0)
         {
-            throw new ArgumentException("A Google sign-in needs its verifier and its client id.", nameof(verifier));
+            throw new ArgumentException("A host that signs in with providers needs at least one.", nameof(providers));
+        }
+
+        if (mode != AccountsMode.SignIn && providers.Count > 0)
+        {
+            throw new ArgumentException("Only a host that signs in with providers is given any.", nameof(providers));
+        }
+
+        if (providers.FirstOrDefault(provider => string.IsNullOrEmpty(provider.Name) || !provider.Name.All(char.IsAsciiLetterLower)) is { } misnamed)
+        {
+            throw new ArgumentException($"A provider is named in lower-case letters, as its route is: not '{misnamed.Name}'.", nameof(providers));
+        }
+
+        if (providers.DistinctBy(provider => provider.Name, StringComparer.Ordinal).Count() != providers.Count)
+        {
+            throw new ArgumentException("Each provider signs in at its own route: one of them is given twice.", nameof(providers));
         }
 
         _registry = registry;
         _sessions = sessions;
-        _verifier = verifier;
+        _providers = providers.ToDictionary(provider => provider.Name, StringComparer.Ordinal);
+        SignIn = [.. providers];
         Mode = mode;
-        GoogleClientId = mode == AccountsMode.Google ? googleClientId : null;
     }
 
     public AccountsMode Mode { get; }
@@ -73,8 +90,24 @@ internal sealed class AccountApi
     /// <summary>The host's clock, as the sessions read it: when the operator suspends an account, among others.</summary>
     public TimeProvider Clock => _sessions.Clock;
 
+    /// <summary>The providers this host signs in with, in the order the page draws their buttons; none in the other modes.</summary>
+    public IReadOnlyList<ISignInProvider> SignIn { get; }
+
     /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
-    public string? GoogleClientId { get; }
+    public string? GoogleClientId => _providers.GetValueOrDefault(ExternalIdentity.Google)?.ClientId;
+
+    /// <summary>
+    /// The providers as <c>/api/me</c> tells them to a page: each one's name and the public id its button is drawn for,
+    /// in order. Nothing secret: a client id is on the provider's own pages.
+    /// </summary>
+    public object[] Offered() => [.. SignIn.Select(provider => new { provider = provider.Name, clientId = provider.ClientId })];
+
+    /// <summary>
+    /// Where a sign-in's lines go, one per step: started when a provider's proof reaches the host, then finished when
+    /// a session is issued, or refused. The console by default, which the ops report's logs keep; a line names the
+    /// provider and nothing about the person, so a count per provider reads where people stop.
+    /// </summary>
+    public Action<string> Said { get; set; } = Console.WriteLine;
 
     /// <summary>
     /// The devices an account can be told on (friends plan, stage 1), set by the host that keeps them; none on a
@@ -191,10 +224,14 @@ internal sealed class AccountApi
     /// </summary>
     public AccountActivityLog? Activity { get; set; }
 
-    /// <summary>How <c>/api/me</c> names the mode to a page.</summary>
+    /// <summary>
+    /// How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list. A host that signs
+    /// in through providers still says <c>google</c>, the name the page of the release before checks before it draws
+    /// Google's button: renaming it waits until every page reads <c>signIn</c> (sign-in methods plan, P3).
+    /// </summary>
     public static string Named(AccountsMode mode) => mode switch
     {
-        AccountsMode.Google => "google",
+        AccountsMode.SignIn => "google",
         AccountsMode.Development => "dev",
         _ => "off",
     };
@@ -398,7 +435,6 @@ internal sealed class AccountApi
             {
                 ("GET", Prefix) => await MeAsync(request),
                 ("POST", Prefix) => await RegisterAsync(body, request),
-                ("POST", Prefix + "/google") => await GoogleAsync(body, request),
                 ("POST", Prefix + "/dev") => await DevelopmentAsync(body, request),
                 ("POST", Prefix + "/signout") => await SignOutAsync(body, request),
                 ("DELETE", Prefix) => await DeleteAsync(body, request),
@@ -411,6 +447,7 @@ internal sealed class AccountApi
                 ("PUT", PreferencesRoute) => await SavePreferencesAsync(body, request),
                 ("PUT", NoticePreferencesRoute) => await SaveNoticePreferencesAsync(body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
+                ("POST", _) when ProviderOf(path) is { } provider => await ProviderAsync(provider, body, request),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
             };
         }
@@ -429,28 +466,45 @@ internal sealed class AccountApi
         return Answer(new { account = who is null ? null : Describe(who.Account) }, who?.Renewed);
     }
 
-    private async Task<StudioResponse> GoogleAsync(string body, AccountRequest request)
+    /// <summary>The one path segment after the prefix, as a provider names itself; null for any other path.</summary>
+    private static string? ProviderOf(string path) =>
+        path.Length > Prefix.Length + 1 && path.StartsWith(Prefix + "/", StringComparison.Ordinal) && path[(Prefix.Length + 1)..] is var name && name.All(char.IsAsciiLetterLower)
+            ? name
+            : null;
+
+    private async Task<StudioResponse> ProviderAsync(string name, string body, AccountRequest request)
     {
-        if (Mode != AccountsMode.Google)
+        if (!_providers.TryGetValue(name, out var provider))
         {
-            return Problem(404, "Account.NoGoogle", "This host does not sign in with Google.");
+            return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
         }
 
-        var credential = Read<CredentialBody>(body)?.Credential;
-        if (string.IsNullOrWhiteSpace(credential) || await _verifier!.VerifyAsync(credential) is not { } identity)
+        var proof = Proof(body);
+        if (proof is null)
         {
-            return Problem(401, "Account.SignInRejected", "Google's sign-in could not be checked. Sign in again.");
+            return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
+        }
+
+        Counted(StepStarted, name);
+        if (await provider.SignInAsync(proof) is not { } identity || identity.Provider != name)
+        {
+            Counted(StepRefused, name);
+            return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
         }
 
         if (await _registry.FindAsync(identity) is { } account)
         {
-            return await SignedInAsync(account, request);
+            return await SignedInAsync(account, request, name);
         }
 
         // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
-        return await RegistrationClosedAsync()
-            ? Refused(AccountErrors.RegistrationClosed)
-            : Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
+        if (await RegistrationClosedAsync())
+        {
+            Counted(StepRefused, name);
+            return Refused(AccountErrors.RegistrationClosed);
+        }
+
+        return Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
 
     /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
@@ -467,12 +521,51 @@ internal sealed class AccountApi
         // A ticket handed out before the operator closed registration is refused too (ADR 0177).
         if (await RegistrationClosedAsync())
         {
+            Counted(StepRefused, identity.Provider);
             return Refused(AccountErrors.RegistrationClosed);
         }
 
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
-        return registered.IsSuccess ? await SignedInAsync(registered.Value, request) : Refused(registered.Error);
+        return registered.IsSuccess ? await SignedInAsync(registered.Value, request, identity.Provider) : Refused(registered.Error);
     }
+
+    /// <summary>
+    /// The string fields of a posted object, which is all a provider is given; null for a body that is not one object.
+    /// A field that is not text is left out, so the provider reads it as missing. Names are read whatever their case,
+    /// as the route's JSON was before providers (<c>Credential</c> signed in then too).
+    /// </summary>
+    private static SignInProof? Proof(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return SignInProof.Of();
+        }
+
+        using var posted = JsonDocument.Parse(body);
+        if (posted.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var fields = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in posted.RootElement.EnumerateObject())
+        {
+            if (field.Value.ValueKind == JsonValueKind.String)
+            {
+                fields[field.Name] = field.Value.GetString()!;
+            }
+        }
+
+        return new SignInProof(fields);
+    }
+
+    /// <summary>One step of a sign-in, said as a line the ops report can count by provider.</summary>
+    private void Counted(string step, string provider) => Said($"  Sign-in {step} ({provider}).");
+
+    // The steps a sign-in's lines name, as the ops report reads them.
+    private const string StepStarted = "started";
+    private const string StepFinished = "finished";
+    private const string StepRefused = "refused";
 
     private async Task<StudioResponse> DevelopmentAsync(string body, AccountRequest request)
     {
@@ -490,13 +583,14 @@ internal sealed class AccountApi
         // The name is the identity: whoever types it again is that account again, which is what a laptop's
         // table and a test want, and why this mode is refused anywhere but the loopback address.
         var identity = new ExternalIdentity(ExternalIdentity.Development, name.Value.Key);
+        Counted(StepStarted, identity.Provider);
         if (await _registry.FindAsync(identity) is { } account)
         {
-            return await SignedInAsync(account, request);
+            return await SignedInAsync(account, request, identity.Provider);
         }
 
         var registered = await _registry.RegisterAsync(identity, name.Value.Value);
-        return registered.IsSuccess ? await SignedInAsync(registered.Value, request) : Refused(registered.Error);
+        return registered.IsSuccess ? await SignedInAsync(registered.Value, request, identity.Provider) : Refused(registered.Error);
     }
 
     private async Task<StudioResponse> SignOutAsync(string body, AccountRequest request)
@@ -812,11 +906,12 @@ internal sealed class AccountApi
             : Answer(new { available = false, error = check.Error.Code, message = check.Error.Message });
     }
 
-    private async Task<StudioResponse> SignedInAsync(Account account, AccountRequest request)
+    private async Task<StudioResponse> SignedInAsync(Account account, AccountRequest request, string provider)
     {
         // A suspended account is told why, and given no session (ADR 0178).
         if (account.Suspension is { } suspension)
         {
+            Counted(StepRefused, provider);
             var refused = AccountErrors.Suspended(suspension);
             return Problem(403, refused.Code, refused.Message);
         }
@@ -826,7 +921,9 @@ internal sealed class AccountApi
             await activity.SignedInAsync(account.Id);
         }
 
-        return Answer(new { account = Describe(account) }, AccountSessions.SetCookie(_sessions.Issue(account), request.Secure));
+        var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
+        Counted(StepFinished, provider);
+        return Answer(new { account = Describe(account) }, cookie);
     }
 
     private static StudioResponse Refused(DomainError error) => Problem(
@@ -842,8 +939,6 @@ internal sealed class AccountApi
 
     private static StudioResponse Problem(int status, string code, string message) =>
         StudioResponse.OfJson(new { error = code, message }, Web, status);
-
-    private sealed record CredentialBody(string? Credential);
 
     private sealed record NoticePreferencesBody(bool? Turns, bool? Invitations, bool? Results);
 

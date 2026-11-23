@@ -89,8 +89,8 @@ internal static class TableHost
         // game (ADR 0054).
         Console.WriteLine($"  {described}");
         Console.WriteLine(accounts is null
-            ? "  Accounts: off. Seats are their tokens and codes; --accounts google signs players in (ADR 0122)."
-            : $"  Accounts: {AccountApi.Named(accounts.Mode)}{(accounts.GoogleClientId is { } id ? $" (client {id})" : "")}, kept in '{AccountsLocation(options)}'.");
+            ? "  Accounts: off. Seats are their tokens and codes; --sign-in google signs players in (ADR 0122)."
+            : $"  Accounts: {AccountApi.Named(accounts.Mode)}{WaysIn(accounts)}, kept in '{AccountsLocation(options)}'.");
         Console.WriteLine(push is null
             ? $"  Notices: off. A phone is told \"your turn\" when the host has push keys: --push-keys <file>, or {PushKeys.Environment} (push-keys prints a pair)."
             : accounts is null
@@ -250,20 +250,24 @@ internal static class TableHost
         }
 
         var described = RuleSetFile.Describe(rules, options.Rules);
-        // The players' sign-in (ADR 0122), kept beside the recordings. A Google sign-in without its client id is
-        // one line here rather than a page whose button never draws.
+        // The players' sign-in (ADR 0122), kept beside the recordings, through each provider --sign-in lists
+        // (sign-in methods plan, P2). A provider without its client id is one line here rather than a page whose
+        // button never draws.
         var googleClientId = options.GoogleClientId ?? Environment.GetEnvironmentVariable(GoogleClientIdEnvironment);
-        if (options.Accounts == AccountsMode.Google && string.IsNullOrWhiteSpace(googleClientId))
+        var (providers, signInProblem) = SignInProviders.Build(
+            options.SignIn,
+            googleClientId,
+            () => kept.Add(new GoogleSigningKeys(kept.Add(new HttpClient()), clock)),
+            clock);
+        if (signInProblem is not null)
         {
-            await Console.Error.WriteLineAsync($"'--accounts google' needs the Google client id: --google-client-id <id>, or {GoogleClientIdEnvironment}.");
+            await Console.Error.WriteLineAsync(signInProblem);
             return null;
         }
 
-        var google = kept.Add(options.Accounts == AccountsMode.Google ? new HttpClient() : null);
-        var signingKeys = kept.Add(google is null ? null : new GoogleSigningKeys(google, clock));
         var signedIn = options.Accounts == AccountsMode.Off
             ? null
-            : await ComposeAccountsAsync(tables, pushing, await OpenAccountsAsync(options, googleClientId, signingKeys, clock, cancellationToken), clock, cancellationToken);
+            : await ComposeAccountsAsync(tables, pushing, await OpenAccountsAsync(options, providers, clock, cancellationToken), clock, cancellationToken);
         var accounts = signedIn?.Api;
         var admin = new AdminApi(registry, composer, gate, clock, described, tables.Stored, tables.Agents, tables.Push)
         {
@@ -430,7 +434,7 @@ internal static class TableHost
         var (admins, adminProblem) = OperatorGate.ParseAdmins(options.Admins ?? Environment.GetEnvironmentVariable(AdminsEnvironment));
         if (adminProblem is not null || (admins.Count > 0 && options.Accounts == AccountsMode.Off))
         {
-            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--accounts google' or '--accounts dev'.");
+            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--sign-in google' or '--accounts dev'.");
             return null;
         }
 
@@ -954,6 +958,11 @@ internal static class TableHost
     /// <summary>The variable a host reads its admin accounts from when <c>--admins</c> is not given (ADR 0172).</summary>
     public const string AdminsEnvironment = "DOWNFALL_ADMINS";
 
+    /// <summary>The providers a host signs in with, as its banner names them: each with its public client id, if any.</summary>
+    private static string WaysIn(AccountApi accounts) => accounts.SignIn.Count == 0
+        ? ""
+        : " with " + string.Join(", ", accounts.SignIn.Select(provider => provider.ClientId is { } id ? $"{provider.Name} (client {id})" : provider.Name));
+
     private static string AccountsLocation(CliOptions options)
     {
         var record = options.Record ?? DefaultRunsDirectory;
@@ -962,12 +971,11 @@ internal static class TableHost
             : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(record).TrimEnd(Path.DirectorySeparatorChar)) ?? record, ArtifactStores.AccountsContainer);
     }
 
-    private static async Task<(AccountApi Api, IAccountStore Store)> OpenAccountsAsync(CliOptions options, string? googleClientId, GoogleSigningKeys? keys, TimeProvider clock, CancellationToken cancellationToken)
+    private static async Task<(AccountApi Api, IAccountStore Store)> OpenAccountsAsync(CliOptions options, IReadOnlyList<ISignInProvider> providers, TimeProvider clock, CancellationToken cancellationToken)
     {
         var store = await ArtifactStores.OpenAccountsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken);
         var sessions = new AccountSessions(await store.SessionKeyAsync(cancellationToken), clock);
-        var verifier = keys is null ? null : new GoogleIdTokenVerifier(googleClientId!, keys, clock);
-        return (new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, verifier, googleClientId), store);
+        return (new AccountApi(new AccountRegistry(store, clock), sessions, options.Accounts, providers), store);
     }
 
     /// <summary>What another process wrote to the tables held, heard through the relay or looked for every second.</summary>

@@ -273,6 +273,20 @@ public sealed class CliOptionsTests
     }
 
     [Fact]
+    public void Sign_in_lists_the_providers_in_the_order_given_and_accounts_google_is_google_alone()
+    {
+        var listed = CliOptions.Parse(["table", "--sign-in", "google", "--google-client-id", "1234.apps.googleusercontent.com"]);
+        var older = CliOptions.Parse(["table", "--accounts", "google"]);
+
+        listed.Accounts.ShouldBe(AccountsMode.SignIn);
+        listed.SignIn.ShouldBe(["google"]);
+        older.Accounts.ShouldBe(AccountsMode.SignIn);
+        older.SignIn.ShouldBe(["google"]);
+        CliOptions.Parse(["table", "--accounts", "dev"]).SignIn.ShouldBeEmpty();
+        CliOptions.Parse(["table"]).SignIn.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Players_do_not_sign_in_unless_asked_and_the_client_id_is_taken_as_given()
     {
         CliOptions.Parse(["table"]).Accounts.ShouldBe(AccountsMode.Off);
@@ -299,6 +313,13 @@ public sealed class CliOptionsTests
     [InlineData("table", "--admins", "acct_abcdefghijklmnop")]
     [InlineData("table-tend", "--accounts", "dev", "--admins", "acct_abcdefghijklmnop")]
     [InlineData("table", "--accounts", "dev", "--admins", "downfallz")]
+    [InlineData("table", "--sign-in", "facebook")]
+    [InlineData("table", "--sign-in", "dev")]
+    [InlineData("table", "--sign-in", "google,google")]
+    [InlineData("table", "--sign-in", "")]
+    [InlineData("table", "--sign-in", "google", "--accounts", "google")]
+    [InlineData("play", "--sign-in", "google")]
+    [InlineData("table", "--sign-in", "google", "--no-record")]
     public void A_sign_in_the_table_cannot_have_is_refused_by_name(params string[] args)
     {
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");
@@ -338,7 +359,7 @@ public sealed class CliOptionsTests
         var options = CliOptions.Parse([CliOptions.WorkerCommand, "--record", "https://downfall.blob.core.windows.net/playtests", "--accounts", "google", "--push-keys", "keys.json"]);
 
         options.Command.ShouldBe("table-worker");
-        options.Accounts.ShouldBe(AccountsMode.Google);
+        options.Accounts.ShouldBe(AccountsMode.SignIn);
         options.PushKeys.ShouldBe("keys.json");
     }
 
@@ -375,7 +396,7 @@ public sealed class CliOptionsTests
 
         options.Command.ShouldBe("table-tend");
         options.Record.ShouldBe("runs/playtest");
-        options.Accounts.ShouldBe(AccountsMode.Google);
+        options.Accounts.ShouldBe(AccountsMode.SignIn);
     }
 
     /// <summary>Asking for both is asking for opposite things, and is refused by name rather than resolved.</summary>

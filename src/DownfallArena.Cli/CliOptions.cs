@@ -1,4 +1,5 @@
 using System.Globalization;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Agents;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Table;
@@ -85,10 +86,14 @@ internal sealed record CliOptions
     public string? PushKeys { get; init; }
 
     /// <summary>
-    /// Whether players sign in, and how (ADR 0122): <c>off</c>, the default, <c>google</c>, or <c>dev</c>, a typed name
-    /// on a loopback host. Accounts are kept beside the recordings, so a host that records nothing has none.
+    /// Whether players sign in, and how (ADR 0122): off, the default; with the providers <c>--sign-in</c> lists
+    /// (<c>--accounts google</c> is the older spelling of <c>--sign-in google</c>); or <c>--accounts dev</c>, a typed
+    /// name on a loopback host. Accounts are kept beside the recordings, so a host that records nothing has none.
     /// </summary>
     public AccountsMode Accounts { get; init; }
+
+    /// <summary>The providers players sign in with, in the order their buttons are drawn; empty unless <see cref="Accounts" /> is sign-in.</summary>
+    public IReadOnlyList<string> SignIn { get; init; } = [];
 
     /// <summary>
     /// Where the turns a table's bots owe are taken (ADR 0159, phase 5; ADR 0162): through a queue to a worker in this
@@ -227,7 +232,7 @@ internal sealed record CliOptions
     /// <summary>A redacted scenario from a bug's issue checked and written under <c>scenarios/bugs/</c> (docs/tabletop/feedback-plan.md, R6).</summary>
     public const string ScenarioImportCommand = "scenario-import";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--sign-in google] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -247,6 +252,8 @@ internal sealed record CliOptions
     private const string FormatOption = "--format";
 
     private const string AccountsOption = "--accounts";
+
+    private const string SignInOption = "--sign-in";
 
     private const string TurnsOption = "--turns";
 
@@ -276,7 +283,7 @@ internal sealed record CliOptions
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", TraceOption, "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, GoogleClientIdOption, TurnsOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, SignInOption, GoogleClientIdOption, TurnsOption,
         AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal", ZipOption, IssueOption,
     ];
 
@@ -322,7 +329,8 @@ internal sealed record CliOptions
             PlatformAuth = flags.Contains(PlatformAuthOption),
             Tended = flags.Contains(TendedOption),
             PushKeys = values.GetValueOrDefault(PushKeysOption),
-            Accounts = values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off,
+            Accounts = ModeOf(values),
+            SignIn = ProvidersOf(values),
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
             Admins = values.GetValueOrDefault(AdminsOption),
             Turns = values.TryGetValue(TurnsOption, out var turns) ? ParseTurns(turns) : null,
@@ -548,30 +556,55 @@ internal sealed record CliOptions
             return admins;
         }
 
-        if (!values.TryGetValue(AccountsOption, out var accounts))
+        var (option, given) = SignInOptionOf(values);
+        if (option is null)
         {
-            return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--accounts google'." : null;
+            return given;
         }
 
         if (command is not ("table" or TendCommand or WorkerCommand))
         {
-            return "'--accounts' is for table, table-tend and table-worker only: it says how players sign in.";
+            return $"'{option}' is for table, table-tend and table-worker only: it says how players sign in.";
         }
 
-        var mode = ParseAccounts(accounts);
+        var mode = ModeOf(values);
         if (mode != AccountsMode.Off && (flags.Contains("--no-record") || flags.Contains(PracticeOption)))
         {
-            return "'--accounts' needs a recording host: accounts are kept beside the recordings, and --no-record and --practice keep nothing.";
+            return $"'{option}' needs a recording host: accounts are kept beside the recordings, and --no-record and --practice keep nothing.";
         }
 
         if (mode == AccountsMode.Development && values.TryGetValue("--bind", out var bind) && HttpHost.Bindable(bind) != HttpHost.Loopback)
         {
-            return "'--accounts dev' signs in whoever types a name, so it serves this machine only: drop '--bind', or sign in with '--accounts google'.";
+            return "'--accounts dev' signs in whoever types a name, so it serves this machine only: drop '--bind', or sign in with '--sign-in google'.";
         }
 
-        return values.ContainsKey(GoogleClientIdOption) && mode != AccountsMode.Google
-            ? "'--google-client-id' goes with '--accounts google'."
+        return values.ContainsKey(GoogleClientIdOption) && !ProvidersOf(values).Contains(ExternalIdentity.Google)
+            ? "'--google-client-id' goes with '--sign-in google'."
             : null;
+    }
+
+    /// <summary>
+    /// The option that says how players sign in, or, when none can be read, what is wrong: both given, or a client id
+    /// with neither. Neither and nothing else is no option and no problem.
+    /// </summary>
+    private static (string? Option, string? Problem) SignInOptionOf(Dictionary<string, string> values)
+    {
+        if (values.ContainsKey(AccountsOption) && values.ContainsKey(SignInOption))
+        {
+            return (null, "'--sign-in' and '--accounts' both say how players sign in: give one ('--accounts google' is '--sign-in google').");
+        }
+
+        if (values.ContainsKey(SignInOption))
+        {
+            return (SignInOption, null);
+        }
+
+        if (values.ContainsKey(AccountsOption))
+        {
+            return (AccountsOption, null);
+        }
+
+        return (null, values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--sign-in google'." : null);
     }
 
     /// <summary>What admin accounts cannot be had with (ADR 0172): a host that signs nobody in, or an id that is not one.</summary>
@@ -582,9 +615,9 @@ internal sealed record CliOptions
             return null;
         }
 
-        if (command != "table" || ParseAccounts(values.GetValueOrDefault(AccountsOption) ?? "off") == AccountsMode.Off)
+        if (command != "table" || ModeOf(values) == AccountsMode.Off)
         {
-            return "'--admins' is for table only, with '--accounts google' or '--accounts dev': it names the accounts that are the operator once signed in.";
+            return "'--admins' is for table only, with '--sign-in' or '--accounts dev': it names the accounts that are the operator once signed in.";
         }
 
         return OperatorGate.ParseAdmins(admins).Problem is { } problem ? $"'--admins': {problem}" : null;
@@ -606,10 +639,50 @@ internal sealed record CliOptions
     private static AccountsMode ParseAccounts(string text) => text switch
     {
         "off" => AccountsMode.Off,
-        "google" => AccountsMode.Google,
+        "google" => AccountsMode.SignIn,
         "dev" => AccountsMode.Development,
         _ => throw new ArgumentException($"'--accounts' takes off, google or dev, not '{text}'.", nameof(text)),
     };
+
+    /// <summary>How players sign in, from <c>--sign-in</c> or, failing it, <c>--accounts</c>; off when neither is given.</summary>
+    private static AccountsMode ModeOf(Dictionary<string, string> values)
+    {
+        if (values.TryGetValue(SignInOption, out var providers))
+        {
+            ParseProviders(providers);
+            return AccountsMode.SignIn;
+        }
+
+        return values.TryGetValue(AccountsOption, out var accounts) ? ParseAccounts(accounts) : AccountsMode.Off;
+    }
+
+    /// <summary>The providers <c>--sign-in</c> lists, or Google alone for <c>--accounts google</c>; none otherwise.</summary>
+    private static IReadOnlyList<string> ProvidersOf(Dictionary<string, string> values)
+    {
+        if (values.TryGetValue(SignInOption, out var providers))
+        {
+            return ParseProviders(providers);
+        }
+
+        return ModeOf(values) == AccountsMode.SignIn ? [ExternalIdentity.Google] : [];
+    }
+
+    /// <summary>
+    /// A comma-separated list of the providers this release can sign in with (<see cref="SignInProviders.Known" />),
+    /// each once, in the order their buttons are drawn. <c>dev</c> is not one: it is <c>--accounts dev</c>.
+    /// </summary>
+    internal static IReadOnlyList<string> ParseProviders(string text)
+    {
+        var names = text.Split(',', StringSplitOptions.TrimEntries);
+        if (names.FirstOrDefault(name => !SignInProviders.Known.Contains(name, StringComparer.Ordinal)) is { } unknown)
+        {
+            throw new ArgumentException($"'--sign-in' takes a comma-separated list of {string.Join(", ", SignInProviders.Known)}, not '{unknown}'.", nameof(text));
+        }
+
+        return names.Distinct(StringComparer.Ordinal).Count() == names.Length
+            ? names
+            : throw new ArgumentException($"'--sign-in' names each provider once, not '{text}'.", nameof(text));
+    }
 
     /// <summary>A combat declaration as a command line names it (ADR 0110); anything else is one line, not a stack.</summary>
     private static CombatDeclaration ParseDeclaration(string text) =>

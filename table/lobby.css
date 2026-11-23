@@ -299,6 +299,8 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .sign-in-content .sign-in-game { margin: 0 0 6px; color: var(--bone); font-size: 15px; line-height: 1.6; }
 .sign-in-content .muted { margin: 0; font-size: 15px; line-height: 1.6; }
 .sign-in-actions { display: grid; gap: 8px; margin-top: 26px; min-width: 0; }
+.sign-in-ways { display: grid; gap: 8px; min-width: 0; }
+.sign-in-ways[hidden] { display: none; }
 .sign-in-actions .google-button:not([hidden]) { display: flex; align-items: center; min-width: 200px; }
 .sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
 .sign-in-policy:hover { color: var(--gold); }
