@@ -40,7 +40,7 @@ test('removing a way in says the other devices are signed out', () => {
   const words = removeWords('discord');
 
   assert.equal(words.title, 'Remove Discord?');
-  assert.match(words.detail, /signed out on every other device/);
+  assert.match(words.detail, /Every other device is signed out/);
   assert.equal(wayName('dev'), 'A typed name');
 });
 

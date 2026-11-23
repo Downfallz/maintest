@@ -35,7 +35,7 @@ export function removeWords(provider) {
   const name = wayName(provider);
   return {
     title: `Remove ${name}?`,
-    detail: `You will no longer sign in with ${name}. You stay signed in here, and are signed out on every other device.`,
+    detail: `You will not be able to sign in with ${name} any more. You stay signed in here. Every other device is signed out.`,
     action: `Remove ${name}`,
   };
 }
@@ -78,7 +78,7 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
       const name = doc.createElement('strong');
       name.textContent = row.name;
       const hint = doc.createElement('small');
-      hint.textContent = row.held ? (row.removable ? 'You sign in with it.' : 'Your only way to sign in. Add another to remove it.') : 'Not used yet.';
+      hint.textContent = row.held ? (row.removable ? 'You sign in with it.' : 'Your only way to sign in. Add another before you can remove it.') : 'You do not sign in with it yet.';
       words.append(name, hint);
       item.append(words);
       if (row.held && row.removable) item.append(removeButton(row.provider));

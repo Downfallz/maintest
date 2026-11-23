@@ -20,9 +20,9 @@ public static class AccountErrors
 
     /// <summary>
     /// A second identity from a provider the account already signs in with (sign-in methods plan, P4): one way in per
-    /// provider, so a player names a way by its provider, and an account lists at most as many as the host offers.
+    /// provider, so a player names a way by its provider. An account lists at most one way per provider the host offers.
     /// </summary>
-    public static readonly DomainError ProviderLinked = new("Account.ProviderLinked", "This account already signs in that way. Remove that one first to use another.");
+    public static readonly DomainError ProviderLinked = new("Account.ProviderLinked", "This account already has a way to sign in with that service. Remove it first to add another.");
 
     /// <summary>Removing the only way into an account (ADR 0204): deleting the account is how it goes.</summary>
     public static readonly DomainError LastIdentity = new("Account.LastIdentity", "This is the only way to sign in to this account. Add another way before you remove it.");

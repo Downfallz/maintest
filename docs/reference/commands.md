@@ -660,7 +660,7 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
   `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
   identity that provider's proof vouches for (one per provider; `409 Account.IdentityTaken` when another account
-  uses it), and `DELETE /api/account/identities/<provider>` removes one but the last (`409 Account.LastIdentity`).
+  uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`).
   A removal ends every other session of the account and forgets its devices. The console says
   `Way in added (<provider>).` and `Way in removed (<provider>).`.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
