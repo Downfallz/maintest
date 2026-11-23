@@ -126,7 +126,8 @@ test('an icon takes the colour and the size of its text, and says nothing of its
 
 /**
  * A scene of each form, its painting a white canvas made in the page: the worst painting there is under bone
- * words. `scrim: false` takes the scrim away, to show what the measure finds without it.
+ * words. `scrim: false` takes the scrim away, the band's and the words' own soot, to show what the measure finds
+ * without it.
  */
 const addScene = (page, form, { scrim = true, saveData = false, side, title: named = 'Invite a friend', size, below = false, role = 'first' } = {}) => page.evaluate(async ({ form, scrim, saveData, side, named, size, below, role }) => {
   const canvas = Object.assign(document.createElement('canvas'), { width: 900, height: 300 });
@@ -143,7 +144,7 @@ const addScene = (page, form, { scrim = true, saveData = false, side, title: nam
   scene.id = 'kit-scene';
   if (below) scene.style.marginTop = '4000px';
   document.body.replaceChildren(scene);
-  if (!scrim) document.head.append(Object.assign(document.createElement('style'), { textContent: '#kit-scene::before { content: none; }' }));
+  if (!scrim) document.head.append(Object.assign(document.createElement('style'), { textContent: '#kit-scene::before { content: none; } #kit-scene > .scene-words { background: none; box-shadow: none; }' }));
   if (!below) await image?.decode();
   const box = scene.getBoundingClientRect();
   return { width: Math.round(box.width), height: Math.round(box.height), images: scene.querySelectorAll('img').length };
