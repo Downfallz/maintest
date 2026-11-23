@@ -118,6 +118,7 @@ public static class ScenarioFile
 
     private static TutorialShape Block(TutorialLesson lesson) => new(
         lesson.Order,
+        lesson.Of,
         lesson.Title,
         [.. lesson.Teaches.Select(kind => kind.ToString())],
         [.. lesson.Steps.Select(step => new StepShape(
@@ -135,7 +136,7 @@ public static class ScenarioFile
             return new LessonStep(Kind(at.Kind), at.Round, Creature(at.Creature), step.Says ?? [], step.Concepts ?? [],
                 step.PointsAt is { } pointer ? new LessonPointer(Creature(pointer.Creature), pointer.Control) : null);
         }).ToList();
-        var lesson = TutorialLesson.Create(block.Order, block.Title, [.. (block.Teaches ?? throw Missing("tutorial.teaches")).Select(Kind)], steps);
+        var lesson = TutorialLesson.Create(block.Order, block.Title, [.. (block.Teaches ?? throw Missing("tutorial.teaches")).Select(Kind)], steps, block.Of);
         return lesson.IsSuccess ? lesson.Value : throw new InvalidDataException($"The scenario's tutorial is not a lesson: {lesson.Error.Message}");
     }
 
@@ -232,7 +233,7 @@ public static class ScenarioFile
 
     private sealed record CheckpointShape(int Round, string? Player1, string? Player2);
 
-    private sealed record TutorialShape(int Order, string? Title, string?[]? Teaches, StepShape?[]? Steps);
+    private sealed record TutorialShape(int Order, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Of, string? Title, string?[]? Teaches, StepShape?[]? Steps);
 
     private sealed record StepShape(AtShape? At, string[]? Says, string[]? Concepts, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] PointerShape? PointsAt);
 

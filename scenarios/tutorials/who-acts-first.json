@@ -5,6 +5,7 @@
   "seat": "player1",
   "tutorial": {
     "order": 2,
+    "of": 4,
     "title": "Who acts first",
     "teaches": [
       "Speed",

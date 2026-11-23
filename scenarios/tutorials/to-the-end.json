@@ -5,6 +5,7 @@
   "seat": "player1",
   "tutorial": {
     "order": 4,
+    "of": 4,
     "title": "To the end",
     "teaches": [
       "Evolution",

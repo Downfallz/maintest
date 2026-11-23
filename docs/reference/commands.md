@@ -399,7 +399,9 @@ parsed, or 503 `Scenario.Unavailable` when the store cannot say), and `GET /api/
 leaves off one whose game the store cannot read just then, said in one console line for the list (#833).
 
 `GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
-each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
+each one's `id`, `order`, `of` (the series length the tutorial files give, which a lesson missing at this host,
+even the last, does not shorten; the host names a missing lesson on its console at start-up, #1186), `title`,
+`goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
 practice by the routes above, and is never listed under Practice. Once a tutorial is done the host answers nothing
 more for the person and the page draws no question: its end card offers Play again and Leave. A done tutorial is
 not resumed, and leaving one, done or not, lets go of its practice (`DELETE`), so it opens from its cut the next
@@ -428,7 +430,8 @@ The seat's view says the lesson under `practice.tutorial`:
 - `done`: the last step's question was asked and its round ended, or the match ended.
 - `next`: the lesson that follows in the series, its `title` and `link`; null after the last (#980).
 - `othersDone`: whether the account has done every other tutorial of the series, as of when this one opened; false
-  when its store cannot say, or when a tutorial of the series is missing at this host (#980).
+  when its store cannot say, or when a tutorial of the series, even the last, is missing at this host (#980,
+  #1186).
 
 #### The admin panel: Overview, Activity and Settings
 

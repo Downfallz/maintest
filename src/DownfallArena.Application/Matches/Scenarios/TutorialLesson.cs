@@ -13,12 +13,16 @@ public sealed record TutorialLesson
     /// <summary>The longest line a coach card holds on a phone.</summary>
     public const int LongestLine = 160;
 
+    /// <summary>The most tutorials a series holds: a typo in a file's length or order must not make the host count to it (#1186).</summary>
+    public const int LongestSeries = 20;
+
     private static readonly PlayerOptionsKind[] Asked =
         [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Intent, PlayerOptionsKind.Target, PlayerOptionsKind.Action];
 
-    private TutorialLesson(int order, string title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps)
+    private TutorialLesson(int order, int? of, string title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps)
     {
         Order = order;
+        Of = of;
         Title = title;
         Teaches = teaches;
         Steps = steps;
@@ -26,6 +30,9 @@ public sealed record TutorialLesson
 
     /// <summary>Its place in the series, from 1.</summary>
     public int Order { get; }
+
+    /// <summary>How many tutorials the series has, as this lesson states it (#1186); null in a file written before #1186.</summary>
+    public int? Of { get; }
 
     public string Title { get; }
 
@@ -39,13 +46,29 @@ public sealed record TutorialLesson
     public bool Assists(PlayerOptionsKind kind) => Asked.Contains(kind) && !Teaches.Contains(kind);
 
     /// <summary>The lesson, or the first thing that keeps it from being one. Steps are numbered from 1.</summary>
-    public static Result<TutorialLesson> Create(int order, string? title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps)
+    /// <param name="of">How many tutorials the series has; none when the file does not say. Never short of <paramref name="order" />.</param>
+    public static Result<TutorialLesson> Create(int order, string? title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps, int? of = null)
     {
         ArgumentNullException.ThrowIfNull(teaches);
         ArgumentNullException.ThrowIfNull(steps);
         if (order < 1)
         {
             return Result.Failure<TutorialLesson>(TutorialErrors.OrderNotPositive);
+        }
+
+        if (order > LongestSeries)
+        {
+            return Result.Failure<TutorialLesson>(TutorialErrors.OrderTooHigh(order));
+        }
+
+        if (of is { } length && length < order)
+        {
+            return Result.Failure<TutorialLesson>(TutorialErrors.SeriesTooShort(length, order));
+        }
+
+        if (of > LongestSeries)
+        {
+            return Result.Failure<TutorialLesson>(TutorialErrors.SeriesTooLong(of.Value));
         }
 
         if (string.IsNullOrWhiteSpace(title))
@@ -71,7 +94,7 @@ public sealed record TutorialLesson
             }
         }
 
-        return Result.Success(new TutorialLesson(order, title.Trim(), [.. teaches], [.. steps]));
+        return Result.Success(new TutorialLesson(order, of, title.Trim(), [.. teaches], [.. steps]));
     }
 
     private static DomainError? Refused(IReadOnlyList<LessonStep> steps, int index, IReadOnlyList<PlayerOptionsKind> teaches)
