@@ -21,5 +21,9 @@ paths:
   S11, #1090, #1103).
 - A CSS change is checked in the cascade: a later or more specific rule can win over it, and a fit check measures
   the element itself, not a neighbour's box (#1035, #1087, UX12).
+- A change to a visible string greps the old text in every suite: `studio/browser/` (the real-engine
+  `battle.*.js` and `table.*.js` too, which only CI plays) and `scripts/ux/` (the journey walk) (#979).
+- A `<dialog>` that fades stays displayed while it leaves: a script or a spec reads `open`, never `isVisible` or
+  `display`. A change that makes one fade greps `isVisible` on it in `studio/browser/` and `scripts/ux/` (#979).
 - The page shows what the host decided. A rule, a legal option or a card text computed in a page is a bug.
 - Read what changed from the host's streams or the relay, never on a timer (ADR 0164).

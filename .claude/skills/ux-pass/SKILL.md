@@ -94,7 +94,9 @@ dotnet build && dotnet run --project tools/DownfallArena.DataBuilder -- data dat
   reader says or how a phone holds in a hand. Say so when reporting; UX13 and UX14 hold what a test can.
 - A pattern the craft book lacks is added to the book first, with its six lines and its source, in its own
   change. A brief does not carry a pattern nobody wrote down.
-- The identity is settled (ADR 0158): a pass adds no shade and no face. A token or a part the kit lacks is
-  UX4's or UX5's to add, not a page's.
+- The identity is settled (ADR 0158): a pass adds no shade and no face. A value a brief writes as `*Kit*:` is
+  added by the pass that needs it, as a token in `docs/art/branding.css` named in ADR 0197's vocabulary
+  (`--motion-<name>`, a duration or a curve), then `node scripts/sync-branding.mjs`; never as a number in a
+  page's sheet (#957). A picture the kit lacks is asked of the owner.
 - Nothing here changes a rule, who may play, what a lesson teaches or what the host sends. A screen that would
   need one stops the pass: say which plan it amends, and ask.

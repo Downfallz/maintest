@@ -539,7 +539,7 @@ None of the lobby's: the field and its creatures are the canvas's, the `battle-d
 
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
-| The waiting mark | The room is shown: three dots pulse (`.reading-dots` in `table/battle.css`). | `transform`, `opacity` | [Design the wait](../ux-craft.md#design-the-wait), [Ambience](../ux-craft.md#ambience) | *UX4*: a duration for an ambient mark of waiting, 1.2 s today, written as a number in the battle's sheet |
+| The waiting mark | The room is shown: three dots pulse (`.reading-dots` in `table/battle.css`). | `transform`, `opacity` | [Design the wait](../ux-craft.md#design-the-wait), [Ambience](../ux-craft.md#ambience) | *Kit*: a duration for an ambient mark of waiting, 1.2 s today, written as a number in the battle's sheet |
 
 The 3 animations the measures find at rest are the three dots: ambience, the screen's one.
 
@@ -987,7 +987,7 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
   free: the round's bar and the header's tools are under it until it is answered.
 - "Done, briefly, then the card goes": briefed as Done and a quiet Close, with no clock. A card that left by
   itself would be the page's one timer that moves something; if the owner wants it, the hold is a value the kit
-  lacks, asked of UX4.
+  lacks, asked of the kit (`*Kit*:`).
 - The page's filled action under the card taking its outline while the card stands, so one gold shows a screen:
   proposed, not built.
 - The battle view's other player's turn, and the end of lesson 1, are briefed here and not in `match.md` or

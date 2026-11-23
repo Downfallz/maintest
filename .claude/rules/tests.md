@@ -23,5 +23,8 @@ paths:
 - A fixture or a mock is shaped as the host sends it: copy its shape from the route's own test, never by hand
   (#1073). A test that lists exact items (paths, files, scenarios) and a rename are grepped in every suite,
   `studio/browser/` and the pages' tests included (#1016, #1087, #1092).
+- A field added to a route's answer gets one test through the route, even when the field starts in
+  Application or Infrastructure: a projection's test and a browser fixture that writes it by hand do not see the
+  host drop it (#812, #1017; `.claude/rules/host.md`).
 - Never delete or skip a failing test to get green. Fix the code or fix the test, and say which.
 - If a layering rule changes, update `tests/DownfallArena.Architecture.Tests` in the same change as the ADR.

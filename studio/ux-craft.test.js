@@ -181,3 +181,29 @@ test('the documentation index lists the book, and the notes it replaces are gone
     assert.ok(!read(path).includes('ux-craft-research'), `${path} still links to the notes`);
   }
 });
+
+const entry = title => groups.flatMap(section => section.entries).find(found => found.title === title);
+const lineOf = (title, label) => labelled(entry(title)?.body ?? '').find(line => line.label === label)?.text ?? '';
+
+test('the book names the axe tag that turns the target-size rule on, and the measures run with it (#929)', async () => {
+  const { AXE_TAGS } = await import('../scripts/ux/measures.mjs');
+  const here = lineOf('What a test can see', 'Here');
+  assert.match(here, /`target-size`[^.]*`wcag22aa`/, 'the entry names the rule and its tag');
+  assert.ok(AXE_TAGS.includes('wcag22aa'), 'scripts/ux/measures.mjs runs the tag the book names');
+  const unopened = cut.find(section => section.title === 'What could not be opened')?.body ?? '';
+  assert.doesNotMatch(unopened, /axe's own list of tags/, 'the tags were read: they are no longer unopened');
+});
+
+test('the hint at the moment of need says what a stall is on the pages: the question still asked, a sheet closed (#981)', () => {
+  const body = entry('A hint at the moment of need')?.body ?? '';
+  assert.match(body, /`waitingAsked`/, 'the entry names what the stream says');
+  assert.match(body, /never (?:on|by) a clock/, 'the entry says a clock never starts it');
+});
+
+test('the plan\'s walk says the classic sheet held the motion tokens and a rule for less motion (#928)', () => {
+  const rows = new Map(read('docs/art/ux-craft-plan.md').split('\n')
+    .map(line => /^\| ([^|]+?) \| (.+) \|$/.exec(line)).filter(Boolean).map(([, concern, holds]) => [concern, holds]));
+  assert.match(rows.get('Motion on the pages') ?? '', /`--motion-[a-z]+`/, 'the row names the tokens table.css declared');
+  assert.match(rows.get('Less motion') ?? '', /`prefers-reduced-motion: reduce`/, 'the row names the blanket rule');
+  assert.doesNotMatch(rows.get('Less motion') ?? '', /nothing to reduce/);
+});

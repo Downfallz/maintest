@@ -170,9 +170,13 @@ These come from decisions already taken. No pattern below is an exception to the
   paper the page links.
 - **Pages**: the hint is a line beside the control it is about, shown when the stream says the player has not
   acted, and removed at the next action.
-- **Cost**: a line of text. What "stalled" means is the host's to say (rule 2).
+- **Cost**: a line of text. What "stalled" means is read from the host's stream and the player's own gesture,
+  never on a clock (rule 2): the view still asks the same question (`waitingAsked` unchanged) and the player
+  closed that question's sheet with nothing sent. A tap on the field that selects nothing is not a stall. A hint
+  after some seconds idle would need this entry and ADR 0197 to change first; the owner chose against it (UX8).
 - **Less motion and screen reader**: the hint fades in without travel. It is in a polite live region, said once.
-- **Here**: no hint follows a stall today. UX8 builds it. The study's games were two Flash puzzles in a browser
+- **Here**: the lessons' coach shows it (`coachHint` in `table/battle-tutorial.js`, UX8): the pointed control's
+  words, until another question is asked or the choice is sent ([the lessons' brief](journeys/lessons.md)). The study's games were two Flash puzzles in a browser
   and one desktop program, none a tactics game on a phone: the direction is borrowed, not the number.
 
 ### A tutorial where trying does not teach
@@ -905,8 +909,10 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Less motion and screen reader**: the suite runs the journeys once more under `reducedMotion: 'reduce'`.
 - **Here**: the suite holds Playwright alone. The plan's walk ran axe by hand over 14 screens: two rules fail,
   the round's button whose name differs from its label (`#recap-open`) and a rulebook table that scrolls and
-  cannot be focused at 320 px. Which of axe's tags turns the target-size rule on is to be read in axe's own
-  documentation, which this book did not open. UX2 measures, UX13 gates.
+  cannot be focused at 320 px. axe's `target-size` rule carries the tags `wcag22aa` and `wcag258` and is off by
+  default: a scan turns it on by naming one of its tags in `runOnly`, which `scripts/ux/measures.mjs` does with
+  `wcag22aa`. Read in the axe-core 4.14.1 package the suite pins (`getRules()` and `ruleShouldRun`) on
+  2026-11-23. UX2 measures, UX13 gates.
 
 ### What stays for a person
 
@@ -1011,6 +1017,6 @@ Cited nowhere above.
   practice first is not in this book.
 - The Material Design 2 and 3 motion pages and Apple's page on motion, which render by script. The talks
   themselves: write-ups and a transcript were read, not the videos. lichess's guide to its blind mode (403).
-  Celia Hodent's book. axe's own list of tags.
+  Celia Hodent's book.
 - Nothing was found on the home screens of Words With Friends, Polytopia or Marvel Snap. The costs of
   `backdrop-filter` and of a large shadow have no primary source here.

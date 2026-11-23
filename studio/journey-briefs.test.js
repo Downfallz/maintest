@@ -44,7 +44,8 @@ export const COLUMNS = {
 const MOVES = new Set(['transform', 'opacity']);
 // A picture the library lacks, and a token the kit has not declared yet, are said in these words.
 const ASKED = 'asked of the owner';
-const NO_TOKEN_YET = /^\*UX4\*:\s*\S/;
+// The marker names the kit, not a stage: the pass that needs the value adds the token (ADR 0197, #957).
+const NO_TOKEN_YET = /^\*Kit\*:\s*\S/;
 
 /** A brief cut at its headings: { opening, screens: [{ title, parts: [{ title, body }] }] }. */
 export function brief(markdown) {
@@ -151,7 +152,7 @@ export function screenProblems(screen, known) {
       else if (!known.anchors.has(anchor)) problems.push(`Motion, ${name}: the craft book has no entry #${anchor}`);
     }
     const tokens = [...(row.Token ?? '').matchAll(/`(--[a-z][a-z0-9-]*)`/g)].map(([, token]) => token);
-    if (tokens.length === 0 && !NO_TOKEN_YET.test(row.Token ?? '')) problems.push(`Motion, ${name}: a token in backticks, or *UX4*: and what the kit must declare`);
+    if (tokens.length === 0 && !NO_TOKEN_YET.test(row.Token ?? '')) problems.push(`Motion, ${name}: a token in backticks, or *Kit*: and what the kit must declare`);
     for (const token of tokens) if (!known.tokens.has(token)) problems.push(`Motion, ${name}: ${token} is declared in no sheet`);
   }
   const beats = rows => rows.map(row => row.Beat).sort();
@@ -192,7 +193,7 @@ const SAMPLE = [
   '- **Waiting**: a mark.', '- **Error**: a line.', '- **Offline**: the offline page.',
   '### Motion', '', '| Beat | When | Moves | Pattern | Token |', '| --- | --- | --- | --- | --- |',
   '| The press | On a press | `transform` | [Answer](../ux-craft.md#answer) | `--motion-fast` |',
-  '| The window | It opens | `transform`, `opacity` | [A window](../ux-craft.md#a-window) | *UX4*: a duration of 240 ms |',
+  '| The window | It opens | `transform`, `opacity` | [A window](../ux-craft.md#a-window) | *Kit*: a duration of 240 ms |',
   '### Less motion', '', '| Beat | Form |', '| --- | --- |', '| The window | A fade. |', '| The press | The same. |',
   '### Accessibility', '- **Focus**: the action first.', '- **Names**: the action says New battle.', '- **Announced**: nothing.', '- **Targets**: 44 px.',
   '### Cost', '- **Bytes**: one painting.', '- **Largest paint**: the title.', '- **Shift**: none.',
@@ -245,8 +246,9 @@ test('a beat is refused when it moves a layout, names no pattern of the book, no
   assert.match(changed('../ux-craft.md#answer', '../ux-craft.md#gone')[0], /no entry #gone/);
   assert.match(changed('../ux-craft.md#answer', '../battle-craft.md#answer')[0], /not \.\.\/battle-craft\.md/);
   assert.match(changed('| `--motion-fast` |', '| `--motion-quick` |')[0], /--motion-quick is declared in no sheet/);
-  assert.match(changed('*UX4*: a duration of 240 ms', '240 ms')[0], /a token in backticks, or \*UX4\*/);
-  assert.match(changed('*UX4*: a duration of 240 ms', '*UX4*')[0], /a token in backticks, or \*UX4\*/);
+  assert.match(changed('*Kit*: a duration of 240 ms', '240 ms')[0], /a token in backticks, or \*Kit\*/);
+  assert.match(changed('*Kit*: a duration of 240 ms', '*UX4*: a duration of 240 ms')[0], /a token in backticks, or \*Kit\*/);
+  assert.match(changed('*Kit*: a duration of 240 ms', '*Kit*')[0], /a token in backticks, or \*Kit\*/);
   assert.match(changed('[Answer](../ux-craft.md#answer)', '[Answer](../ux-craft.md#answer), [Other](../battle-craft.md)')[0], /not \.\.\/battle-craft\.md/);
   assert.match(changed('[Answer](../ux-craft.md#answer)', '[Answer](../ux-craft.md)')[0], /by its anchor/);
   assert.match(changed('| The window | A fade. |\n', '')[0], /gives a form to each beat of Motion/);

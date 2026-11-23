@@ -51,8 +51,8 @@ its folder, and a host started with developer accounts (`table --lobby --account
 | The pages of the journeys | `table/lobby.html`: the sign-in panel, the name window, the home and its Create window. `table/battle.html`: the match, the tutorials, and 18 windows (its dialogs). `table/rules.html`. Static, no build step (`table/AGENTS.md`). |
 | The identity | Settled: ADR 0158, `docs/art/branding.md`, `table/identity.css` loaded last, the published design system (`docs/art/design-system/`). |
 | Pictures | 56 WebP files under `table/battle-art`, 25 MB: 22 evolutions, 24 hybrids, 4 horizon plates, 6 others. The pages show two, on the sign-in panel, as CSS backgrounds (`table/lobby.css`). No page holds an `<img>`. On the battle page, 23 controls carry an emoji as their icon. |
-| Motion on the pages | `identity.css`, `lobby.css`, `rules.css` and `leaderboard.css` hold no animation; `lobby.css` holds no transition. On every screen walked, `document.getAnimations()` was empty at rest. No view transition, no `@starting-style`. `battle.css` has 9 keyframes, for the match's frame. `table.css`, which the lobby loads too, has 16, for the classic table; ten controls of the home take a hover transition from it. |
-| Less motion | The battle has a setting, kept with the account (ADR 0140), and reads the system's. The pages have one rule, for scrolling: there is nothing to reduce. |
+| Motion on the pages | `identity.css`, `lobby.css`, `rules.css` and `leaderboard.css` hold no animation; `lobby.css` holds no transition. On every screen walked, `document.getAnimations()` was empty at rest. No view transition, no `@starting-style`. `battle.css` has 9 keyframes, for the match's frame. `table.css`, which the lobby loads too, has 16, for the classic table; ten controls of the home take a hover transition from it. It also declares seven motion tokens, used 27 times in that sheet: four durations (`--motion-instant`, `--motion-fast`, `--motion-normal`, `--motion-slow`) and three curves (`--motion-enter`, `--motion-exit`, `--motion-standard`). The walk missed them (#928). |
+| Less motion | The battle has a setting, kept with the account (ADR 0140), and reads the system's. `table.css`, which the lobby loads too, holds a blanket rule under `prefers-reduced-motion: reduce`: the four durations at 0, and every element's `animation-duration` and `transition-duration` cut to 0.01 ms with `!important`. The account's setting does not reach the pages. The walk missed it (#928). |
 | The first door: the showcase | `showcase/`, built into ten pages, English and French, published at the apex (`showcase/README.md`). Its home at 390 px: 754 words over 6,305 px, five parts (how a round works, the battlefield, the mutations, the creator's note, who you play), 12 pictures each with its dimensions, nine of them lazy, no layout shift. Play now three times, each to the game's origin in the same tab. The field guide and the rulebook are whole and need no account. |
 | What the showcase lacks | No picture of the battle view and no turn seen played: a round is three sentences. `showcase.css` holds no transition and no animation. A creature of 1536 by 1024 is drawn 308 px wide. One run on a slow phone's network and processor: first paint at 1.2 s, largest at 4.4 s, the hero's ground, a CSS background; 763 KB of pictures before any scroll. |
 | The second door: the game's sign-in | Signing in is required to play (`docs/tabletop/accounts-plan.md`, question 5). The signed-out page is a panel of 41 words: a title, the same painting, one creature, the button. `accounts-plan.md` describes an introduction in three steps there; `docs/tabletop/home-navigation.md` says sign-in at once. The two disagree. The page follows `home-navigation.md`, and that is right for a visitor who comes from the showcase: the introduction is behind them. A visitor who comes by a friend's invitation (`/j/<code>`) never saw it, and meets the panel alone. |
@@ -189,11 +189,12 @@ the table's parts in `table/identity.css` and one small module, the showcase's i
 and UX5 build it. An ADR written in UX4 holds its decisions, since no ADR covers a page's motion, pictures,
 budget or level of accessibility today.
 
-- **Motion.** Tokens beside the palette's: three durations and three curves. Five uses, each with one form: a
-  press, a window that enters and leaves (`@starting-style`), a page that changes (`@view-transition`), a thing
-  that arrives in a list, a number that changes. Only `transform` and `opacity` move.
-- **Less motion.** The system's preference and the account's setting (ADR 0140) both reach the pages. Travel
-  becomes a fade. Ambience stops.
+- **Motion.** Tokens beside the palette's: the classic sheet's seven, kept, renamed or moved, not a second
+  vocabulary beside them. Five uses, each with one form: a press, a window that enters and leaves
+  (`@starting-style`), a page that changes (`@view-transition`), a thing that arrives in a list, a number that
+  changes. Only `transform` and `opacity` move.
+- **Less motion.** The system's preference and the account's setting (ADR 0140) both reach the pages, in place of
+  the classic sheet's blanket rule. Travel becomes a fade. Ambience stops.
 - **Ambience.** What moves by itself, such as a creature breathing on the home, is the one kind that plays
   unasked. It stops under less motion and out of view.
 - **Pictures.** A creature on a page is an `<img>` with its width and height, at sizes derived once from the
@@ -329,8 +330,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    player, after it has closed. UX12 stages them. The classic table's mutation tree is not a window of the kit.
    No page places an arrival, a number or a breath yet, and the showcase does not load the module: UX6 and UX9
    place them. The account's setting is read from the browser's copy, by a module that runs after the first
-   paint: a new device shows full motion until the settings are read there once. A brief still writes `*UX4*`
-   for a value the kit lacks. The budget's bytes wait for UX5's file. The design system's page was not
+   paint: a new device shows full motion until the settings are read there once. A brief now writes `*Kit*:`
+   for a value the kit lacks, and the pass that needs it adds the token (#957). The budget's bytes wait for UX5's file. The design system's page was not
    republished: the session's guard refused the publish, and the owner runs `/design-system` after the merge.
 5. **UX5, the picture kit.** The script that derives a page's sizes from the library, the `<img>` form, a still
    moved by code and the form of a strip of frames, the icon set, the budget file and its test, and how a brief's

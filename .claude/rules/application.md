@@ -9,6 +9,9 @@ paths:
 
 - Application declares ports as interfaces it owns (`IMatchRepository`, `IGameResources`). Infrastructure
   implements them. Domain never references a port.
+- A field added to a route's answer gets one test through the route (`PackageTagsTests` reads the catalogue's),
+  not only the projection's test and a spec whose mocked route writes the field by hand. A record the host
+  sends (`SpellVisual`, `MutationVisual`, `CardMark`) gaining a field is such a change (#812, #1017).
 - A use case is one class with one public method, named after the intent (`StartMatchHandler.Handle`).
   No generic "MatchService" bag of methods.
 - Use cases load an aggregate, call one aggregate method, persist, and dispatch domain events. They do not
