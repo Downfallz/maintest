@@ -40,6 +40,9 @@ internal sealed class RepositoryScenarios
         All = all;
         Tutorials = [.. all.Where(one => one.Document.Tutorial is not null).OrderBy(one => one.Document.Tutorial!.Order)];
         _byId = all.ToDictionary(one => one.Id, StringComparer.Ordinal);
+        Series = Tutorials.Count == 0
+            ? 0
+            : Tutorials.Max(one => Math.Max(one.Document.Tutorial!.Of ?? 0, one.Document.Tutorial!.Order));
     }
 
     /// <summary>A scenario the repository ships: its id, the file it is, and what it holds.</summary>
@@ -57,11 +60,19 @@ internal sealed class RepositoryScenarios
     /// <summary>The scenarios of <c>tutorials/</c> that carry a lesson (ADR 0187), in the order of the series.</summary>
     public IReadOnlyList<Shipped> Tutorials { get; }
 
+    /// <summary>
+    /// How many tutorials the series has: the longest its lessons say (#1186), or, from lessons that say none, the
+    /// place of the last one. A lesson missing at this host, the last one too, leaves it as long.
+    /// </summary>
+    public int Series { get; }
+
     public Shipped? Get(string? id) => id is not null && _byId.TryGetValue(id, out var shipped) ? shipped : null;
 
     /// <summary>The scenarios of a directory; none for a directory that is not there.</summary>
-    public static RepositoryScenarios Read(string directory)
+    /// <param name="said">Where its console lines go: the host's console unless a test reads them.</param>
+    public static RepositoryScenarios Read(string directory, Action<string>? said = null)
     {
+        said ??= Console.WriteLine;
         if (!Directory.Exists(directory))
         {
             return None;
@@ -70,7 +81,7 @@ internal sealed class RepositoryScenarios
         var all = new List<Shipped>();
         foreach (var path in Directory.EnumerateFiles(directory, "*.json").Order(StringComparer.Ordinal))
         {
-            Add(all, path, Path.GetFileName(path), IdOf(Path.GetFileName(path)), Kind.Plain);
+            Add(all, said, path, Path.GetFileName(path), IdOf(Path.GetFileName(path)), Kind.Plain);
         }
 
         var tutorials = Path.Combine(directory, TutorialsDirectory);
@@ -78,7 +89,7 @@ internal sealed class RepositoryScenarios
         {
             foreach (var path in Directory.EnumerateFiles(tutorials, "*.json").Order(StringComparer.Ordinal))
             {
-                Add(all, path, $"{TutorialsDirectory}/{Path.GetFileName(path)}", IdOf($"tutorial-{Path.GetFileName(path)}"), Kind.Tutorial);
+                Add(all, said, path, $"{TutorialsDirectory}/{Path.GetFileName(path)}", IdOf($"tutorial-{Path.GetFileName(path)}"), Kind.Tutorial);
             }
         }
 
@@ -87,11 +98,28 @@ internal sealed class RepositoryScenarios
         {
             foreach (var path in Directory.EnumerateFiles(bugs, "*.json").Order(StringComparer.Ordinal))
             {
-                Add(all, path, $"{BugsDirectory}/{Path.GetFileName(path)}", IdOf($"bug-{Path.GetFileName(path)}"), Kind.Bug);
+                Add(all, said, path, $"{BugsDirectory}/{Path.GetFileName(path)}", IdOf($"bug-{Path.GetFileName(path)}"), Kind.Bug);
             }
         }
 
-        return new RepositoryScenarios(all);
+        var shipped = new RepositoryScenarios(all);
+        shipped.SayWhatTheSeriesMisses(said);
+        return shipped;
+    }
+
+    /// <summary>Says each lesson the series misses at this host, and lessons that disagree on its length (#1186).</summary>
+    private void SayWhatTheSeriesMisses(Action<string> said)
+    {
+        var lengths = Tutorials.Select(one => one.Document.Tutorial!.Of).OfType<int>().Distinct().Order().ToList();
+        if (lengths.Count > 1)
+        {
+            said($"  Tutorials disagree on the length of the series ({string.Join(", ", lengths)}): it is taken as {Series}.");
+        }
+
+        foreach (var order in Enumerable.Range(1, Series).Where(order => !Tutorials.Any(one => one.Document.Tutorial!.Order == order)))
+        {
+            said($"  Tutorial {order} of {Series} is missing: no file under {TutorialsDirectory}/ is that lesson.");
+        }
     }
 
     /// <summary>
@@ -100,30 +128,30 @@ internal sealed class RepositoryScenarios
     /// as one there, another tutorial already has its place in the series, or it is a bug's not named after its issue
     /// or teaching a lesson.
     /// </summary>
-    private static void Add(List<Shipped> all, string path, string file, string id, Kind kind)
+    private static void Add(List<Shipped> all, Action<string> said, string path, string file, string id, Kind kind)
     {
         var tutorial = kind == Kind.Tutorial;
         if (kind == Kind.Plain && id.StartsWith(TutorialPrefix, StringComparison.Ordinal))
         {
-            Console.WriteLine($"  Scenario file {file} is left out: the id {id} is a tutorial's, and it is not under {TutorialsDirectory}/.");
+            said($"  Scenario file {file} is left out: the id {id} is a tutorial's, and it is not under {TutorialsDirectory}/.");
             return;
         }
 
         if (kind == Kind.Plain && id.StartsWith(BugPrefix, StringComparison.Ordinal))
         {
-            Console.WriteLine($"  Scenario file {file} is left out: the id {id} belongs to a bug scenario, but the file is not under {BugsDirectory}/.");
+            said($"  Scenario file {file} is left out: the id {id} belongs to a bug scenario, but the file is not under {BugsDirectory}/.");
             return;
         }
 
         if (kind == Kind.Bug && BugOf(file) is null)
         {
-            Console.WriteLine($"  Scenario file {file} is left out: a bug scenario is named after its issue, <number>-<slug>.json.");
+            said($"  Scenario file {file} is left out: a bug scenario is named after its issue, <number>-<slug>.json.");
             return;
         }
 
         if (all.Exists(one => one.Id == id))
         {
-            Console.WriteLine($"  Scenario file {file} is left out: another file already has the id {id}.");
+            said($"  Scenario file {file} is left out: another file already has the id {id}.");
             return;
         }
 
@@ -133,32 +161,32 @@ internal sealed class RepositoryScenarios
             if (document.Schema is null)
             {
                 // It would play only while this host's content is the one it was cut on, and stop at the next change.
-                Console.WriteLine($"  Scenario file {file} is left out: it does not carry its content (scenario-generate does, and scenario-cut --with-content).");
+                said($"  Scenario file {file} is left out: it does not carry its content (scenario-generate does, and scenario-cut --with-content).");
                 return;
             }
 
             if (document.Tutorial is not null && kind == Kind.Plain)
             {
                 // Only the tutorials' directory is held step by step by the tests; a lesson elsewhere would be offered unchecked.
-                Console.WriteLine($"  Scenario file {file} is left out: it has a tutorial block, and a tutorial is kept under {TutorialsDirectory}/.");
+                said($"  Scenario file {file} is left out: it has a tutorial block, and a tutorial is kept under {TutorialsDirectory}/.");
                 return;
             }
 
             if (document.Tutorial is not null && kind == Kind.Bug)
             {
-                Console.WriteLine($"  Scenario file {file} is left out: it is under {BugsDirectory}/ and has a tutorial block.");
+                said($"  Scenario file {file} is left out: it is under {BugsDirectory}/ and has a tutorial block.");
                 return;
             }
 
             if (document.Tutorial is null && tutorial)
             {
-                Console.WriteLine($"  Scenario file {file} is left out: it is under {TutorialsDirectory}/ and has no tutorial block.");
+                said($"  Scenario file {file} is left out: it is under {TutorialsDirectory}/ and has no tutorial block.");
                 return;
             }
 
             if (document.Tutorial is { } lesson && all.Find(one => one.Document.Tutorial?.Order == lesson.Order) is { } taken)
             {
-                Console.WriteLine($"  Scenario file {file} is left out: {taken.File} is already tutorial {lesson.Order}.");
+                said($"  Scenario file {file} is left out: {taken.File} is already tutorial {lesson.Order}.");
                 return;
             }
 
@@ -166,7 +194,7 @@ internal sealed class RepositoryScenarios
         }
         catch (Exception failure) when (failure is InvalidDataException or IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
-            Console.WriteLine($"  Scenario file {file} is left out: {failure.Message}");
+            said($"  Scenario file {file} is left out: {failure.Message}");
         }
     }
 

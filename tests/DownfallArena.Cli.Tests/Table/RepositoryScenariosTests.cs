@@ -85,6 +85,78 @@ public sealed class RepositoryScenariosTests : IDisposable
         RepositoryScenarios.Read(_root).Tutorials.Select(one => one.File).ShouldBe(["tutorials/b-first.json", "tutorials/a-second.json"]);
     }
 
+    /// <summary>
+    /// The series is as long as its lessons say, whatever files this host has: a lesson missing, the last one too, is
+    /// said on the console when the host starts, and the series keeps its length (#1186).
+    /// </summary>
+    [Theory]
+    [InlineData("to-the-end.json", 4)]
+    [InlineData("who-acts-first.json", 2)]
+    public void A_lesson_missing_from_the_series_is_said_and_the_series_keeps_its_length(string left, int order)
+    {
+        var said = new List<string>();
+        CopyTutorialsBut(left);
+
+        var shipped = RepositoryScenarios.Read(_root, said.Add);
+
+        (shipped.Tutorials.Count, shipped.Series).ShouldBe((3, 4));
+        said.ShouldContain(line => line.Contains($"Tutorial {order} of 4 is missing", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_series_whose_lessons_are_all_there_says_nothing_missing()
+    {
+        var said = new List<string>();
+
+        var shipped = RepositoryScenarios.Read(Path.Combine(AppContext.BaseDirectory, "scenarios"), said.Add);
+
+        (shipped.Tutorials.Count, shipped.Series).ShouldBe((4, 4));
+        said.ShouldNotContain(line => line.Contains("missing", StringComparison.Ordinal));
+    }
+
+    /// <summary>Lessons written before #1186 name no length: the series ends with the last of them, as it did.</summary>
+    [Fact]
+    public void Lessons_that_name_no_length_make_a_series_that_ends_with_the_last_of_them()
+    {
+        CopyTutorialsBut("to-the-end.json", without: "of");
+
+        RepositoryScenarios.Read(_root, _ => { }).Series.ShouldBe(3);
+    }
+
+    /// <summary>Two lessons that disagree on the series' length: it is said, and the longer is kept, so none is lost.</summary>
+    [Fact]
+    public void Lessons_that_disagree_on_the_length_of_the_series_are_said_and_the_longer_is_kept()
+    {
+        var said = new List<string>();
+        CopyTutorialsBut("to-the-end.json");
+        var path = Path.Combine(_root, "tutorials", "your-first-combat.json");
+        var first = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+        first["tutorial"]!["of"] = 5;
+        File.WriteAllText(path, first.ToJsonString());
+
+        var shipped = RepositoryScenarios.Read(_root, said.Add);
+
+        shipped.Series.ShouldBe(5);
+        said.ShouldContain(line => line.Contains("disagree", StringComparison.Ordinal));
+    }
+
+    /// <summary>The repository's tutorials, copied under this test's directory, but for one file, and with a field taken out of each block.</summary>
+    private void CopyTutorialsBut(string left, string? without = null)
+    {
+        var tutorials = Path.Combine(_root, "tutorials");
+        Directory.CreateDirectory(tutorials);
+        foreach (var file in Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "scenarios", "tutorials"), "*.json").Where(file => Path.GetFileName(file) != left))
+        {
+            var document = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(file))!.AsObject();
+            if (without is not null)
+            {
+                document["tutorial"]!.AsObject().Remove(without);
+            }
+
+            File.WriteAllText(Path.Combine(tutorials, Path.GetFileName(file)), document.ToJsonString());
+        }
+    }
+
     [Fact]
     public void A_tutorial_whose_lesson_is_not_one_is_left_out()
     {

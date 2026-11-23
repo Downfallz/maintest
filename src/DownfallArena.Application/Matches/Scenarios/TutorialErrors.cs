@@ -9,6 +9,9 @@ public static class TutorialErrors
 {
     public static readonly DomainError OrderNotPositive = new("Tutorial.OrderNotPositive", "A tutorial's order must be 1 or more.");
 
+    public static DomainError SeriesTooShort(int of, int order) =>
+        new("Tutorial.SeriesTooShort", $"A tutorial's series of {of} is short of its own place, {order}.");
+
     public static readonly DomainError NoTitle = new("Tutorial.NoTitle", "A tutorial needs a title.");
 
     public static readonly DomainError TeachesNothing =

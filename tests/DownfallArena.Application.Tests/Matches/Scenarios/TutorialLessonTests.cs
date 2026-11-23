@@ -39,6 +39,20 @@ public sealed class TutorialLessonTests
         TutorialLesson.Create(0, "A title", Action, [Step(PlayerOptionsKind.Action)]).Error.Code.ShouldBe("Tutorial.OrderNotPositive");
 
     [Fact]
+    public void A_series_shorter_than_the_lesson_s_own_place_is_refused() =>
+        TutorialLesson.Create(3, "A title", Action, [Step(PlayerOptionsKind.Action)], of: 2).Error.Code.ShouldBe("Tutorial.SeriesTooShort");
+
+    [Fact]
+    public void A_lesson_keeps_the_length_of_the_series_it_names_and_none_when_it_names_none()
+    {
+        var named = TutorialLesson.Create(4, "A title", Action, [Step(PlayerOptionsKind.Action)], of: 4).Value;
+
+        var unnamed = TutorialLesson.Create(4, "A title", Action, [Step(PlayerOptionsKind.Action)]).Value;
+
+        (named.Of, unnamed.Of).ShouldBe((4, (int?)null));
+    }
+
+    [Fact]
     public void A_lesson_without_a_title_is_refused() =>
         TutorialLesson.Create(1, " ", Action, [Step(PlayerOptionsKind.Action)]).Error.Code.ShouldBe("Tutorial.NoTitle");
 

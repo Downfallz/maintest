@@ -16,9 +16,10 @@ public sealed record TutorialLesson
     private static readonly PlayerOptionsKind[] Asked =
         [PlayerOptionsKind.Evolution, PlayerOptionsKind.Speed, PlayerOptionsKind.TieOrder, PlayerOptionsKind.Intent, PlayerOptionsKind.Target, PlayerOptionsKind.Action];
 
-    private TutorialLesson(int order, string title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps)
+    private TutorialLesson(int order, int? of, string title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps)
     {
         Order = order;
+        Of = of;
         Title = title;
         Teaches = teaches;
         Steps = steps;
@@ -26,6 +27,9 @@ public sealed record TutorialLesson
 
     /// <summary>Its place in the series, from 1.</summary>
     public int Order { get; }
+
+    /// <summary>How many tutorials the series has, as this lesson says it (#1186); none in a file written before it.</summary>
+    public int? Of { get; }
 
     public string Title { get; }
 
@@ -39,13 +43,19 @@ public sealed record TutorialLesson
     public bool Assists(PlayerOptionsKind kind) => Asked.Contains(kind) && !Teaches.Contains(kind);
 
     /// <summary>The lesson, or the first thing that keeps it from being one. Steps are numbered from 1.</summary>
-    public static Result<TutorialLesson> Create(int order, string? title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps)
+    /// <param name="of">How many tutorials the series has; none when the file does not say. Never short of <paramref name="order" />.</param>
+    public static Result<TutorialLesson> Create(int order, string? title, IReadOnlyList<PlayerOptionsKind> teaches, IReadOnlyList<LessonStep> steps, int? of = null)
     {
         ArgumentNullException.ThrowIfNull(teaches);
         ArgumentNullException.ThrowIfNull(steps);
         if (order < 1)
         {
             return Result.Failure<TutorialLesson>(TutorialErrors.OrderNotPositive);
+        }
+
+        if (of is { } length && length < order)
+        {
+            return Result.Failure<TutorialLesson>(TutorialErrors.SeriesTooShort(length, order));
         }
 
         if (string.IsNullOrWhiteSpace(title))
@@ -71,7 +81,7 @@ public sealed record TutorialLesson
             }
         }
 
-        return Result.Success(new TutorialLesson(order, title.Trim(), [.. teaches], [.. steps]));
+        return Result.Success(new TutorialLesson(order, of, title.Trim(), [.. teaches], [.. steps]));
     }
 
     private static DomainError? Refused(IReadOnlyList<LessonStep> steps, int index, IReadOnlyList<PlayerOptionsKind> teaches)

@@ -5,6 +5,7 @@
   "seat": "player1",
   "tutorial": {
     "order": 3,
+    "of": 4,
     "title": "Grow by mutating",
     "teaches": [
       "Evolution",

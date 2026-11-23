@@ -5,6 +5,7 @@
   "seat": "player1",
   "tutorial": {
     "order": 1,
+    "of": 4,
     "title": "Your first combat",
     "teaches": [
       "Action"

@@ -222,6 +222,50 @@ public sealed class TutorialFileTests
     }
 
     /// <summary>
+    /// Every tutorial the repository ships says how long the series is, and they agree with each other and with the
+    /// files there: a lesson missing at a host is then seen, the last one too (#1186).
+    /// </summary>
+    [Fact]
+    public void Every_kept_tutorial_names_the_length_of_the_series_and_they_agree()
+    {
+        var lessons = System.IO.Directory.GetFiles(Directory, "*.json").Select(file => ScenarioFile.Read(File.ReadAllText(file)).Tutorial.ShouldNotBeNull()).ToList();
+
+        lessons.Select(lesson => lesson.Of).Distinct().ShouldBe([lessons.Count]);
+    }
+
+    [Fact]
+    public void A_tutorial_block_s_length_of_the_series_is_written_back_as_it_was_read()
+    {
+        var document = ScenarioFile.Read(First);
+
+        var again = ScenarioFile.Read(ScenarioFile.Write(document));
+
+        (document.Tutorial!.Of, again.Tutorial!.Of).ShouldBe((4, 4));
+    }
+
+    /// <summary>A file written before #1186 names no length: it is read, and says none.</summary>
+    [Fact]
+    public void A_tutorial_block_that_names_no_length_of_the_series_is_read_with_none()
+    {
+        var file = JsonNode.Parse(First)!.AsObject();
+        file["tutorial"]!.AsObject().Remove("of").ShouldBeTrue();
+
+        ScenarioFile.Read(file.ToJsonString()).Tutorial.ShouldNotBeNull().Of.ShouldBeNull();
+    }
+
+    /// <summary>A series shorter than the lesson's own place in it is not a series: the file is refused by name.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void A_length_of_the_series_short_of_the_lesson_s_place_is_refused(int of)
+    {
+        var file = JsonNode.Parse(First)!.AsObject();
+        file["tutorial"]!["of"] = of;
+
+        Should.Throw<InvalidDataException>(() => ScenarioFile.Read(file.ToJsonString())).Message.ShouldContain("series");
+    }
+
+    /// <summary>
     /// The series of docs/tabletop/onboarding-plan.md (O5): four tutorials in the rulebook's order from the combat
     /// out, the first two each teaching some kinds of question, the last two every kind.
     /// </summary>

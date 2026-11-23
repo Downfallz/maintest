@@ -36,8 +36,8 @@ internal sealed class ScenarioStore(IArtifactStore store, TimeProvider clock, Re
     /// <summary>The tutorials the repository ships (ADR 0187), in the order of the series: every signed-in account's, where its other scenarios are the admin panel's.</summary>
     public IReadOnlyList<RepositoryScenarios.Shipped> Tutorials => _shipped.Tutorials;
 
-    /// <summary>How many tutorials the series says it has: as many as are shipped, or the last one's place when one is missing before it.</summary>
-    public int Series => _shipped.Tutorials.Count == 0 ? 0 : Math.Max(_shipped.Tutorials.Count, _shipped.Tutorials[^1].Document.Tutorial!.Order);
+    /// <summary>How many tutorials the series has, as its lessons say it (#1186), whichever of them this host misses.</summary>
+    public int Series => _shipped.Series;
 
     /// <summary>Whether an id names a tutorial the repository ships.</summary>
     public bool Teaches(string? id) => _shipped.Get(id)?.Document.Tutorial is not null;

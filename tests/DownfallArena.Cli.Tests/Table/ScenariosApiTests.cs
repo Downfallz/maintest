@@ -1343,6 +1343,27 @@ public sealed class ScenariosApiTests : IDisposable
         Lesson(await last.Api.HandleAsync("GET", "/api/seat/player1", "", last.Token)).GetProperty("othersDone").GetBoolean().ShouldBeFalse();
     }
 
+    /// <summary>
+    /// The last lesson of the series missing at this host: the one before it is not the last, names no next lesson,
+    /// and does not say the series is finished, whatever the account did (#1186).
+    /// </summary>
+    [Fact]
+    public async Task A_series_missing_its_last_lesson_is_never_finished()
+    {
+        var store = ShippingAllBut("to-the-end.json");
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var id = (await accounts.WhoAsync(learner, Cancel)).ShouldNotBeNull().Account.Id;
+        await accounts.NoteTutorialAsync(id, Series[0], TutorialState.Done, Cancel);
+        await accounts.NoteTutorialAsync(id, Series[1], TutorialState.Done, Cancel);
+
+        var third = await OpenedPlayAsync(api, practices, learner, Series[2]);
+        var lesson = Lesson(await third.Api.HandleAsync("GET", "/api/seat/player1", "", third.Token));
+
+        (lesson.GetProperty("of").GetInt32(), lesson.GetProperty("othersDone").GetBoolean()).ShouldBe((4, false));
+    }
+
     /// <summary>The repository's scenarios, but for one tutorial file left out.</summary>
     private ScenarioStore ShippingAllBut(string left)
     {
