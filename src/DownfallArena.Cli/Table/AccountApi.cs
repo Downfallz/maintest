@@ -28,6 +28,9 @@ internal sealed class AccountApi
     private const string NoticesRoute = Prefix + "/notices";
     private const string IdentitiesRoute = Prefix + "/identities";
 
+    // What a route that needs a signed-in account answers to nobody.
+    private const string SignInRequiredCode = "Account.SignInRequired";
+
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     /// <summary>
@@ -703,16 +706,27 @@ internal sealed class AccountApi
     private static StudioResponse WaysUnavailable() =>
         Problem(503, "Account.Unavailable", "Your ways to sign in cannot be changed right now. Try again in a minute.");
 
-    private static StudioResponse WayRefused(DomainError error) => error == AccountErrors.SessionEnded
-        ? SignInRequired(error.Message)
-        : Problem(
-        error == AccountErrors.IdentityNotLinked || error == AccountErrors.NotFound ? 404
-        : error == AccountErrors.IdentityTaken || error == AccountErrors.ProviderLinked || error == AccountErrors.LastIdentity ? 409
-        : 403,
-        error.Code,
-        error.Message);
+    private static StudioResponse WayRefused(DomainError error)
+    {
+        if (error == AccountErrors.SessionEnded)
+        {
+            return SignInRequired(error.Message);
+        }
 
-    private static StudioResponse SignInRequired(string message) => Problem(401, "Account.SignInRequired", message);
+        var status = 403;
+        if (error == AccountErrors.IdentityNotLinked || error == AccountErrors.NotFound)
+        {
+            status = 404;
+        }
+        else if (error == AccountErrors.IdentityTaken || error == AccountErrors.ProviderLinked || error == AccountErrors.LastIdentity)
+        {
+            status = 409;
+        }
+
+        return Problem(status, error.Code, error.Message);
+    }
+
+    private static StudioResponse SignInRequired(string message) => Problem(401, SignInRequiredCode, message);
 
     /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
     private async Task<bool> RegistrationClosedAsync() => Settings is { } settings && !(await settings.CurrentAsync()).RegistrationOpen;
@@ -832,7 +846,7 @@ internal sealed class AccountApi
     {
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in to delete your account.");
+            return Problem(401, SignInRequiredCode, "Sign in to delete your account.");
         }
 
         if (!string.Equals(Read<RegisterBody>(body)?.Username?.Trim(), who.Account.Username.Value, StringComparison.OrdinalIgnoreCase))
@@ -858,7 +872,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+            return Problem(401, SignInRequiredCode, "Sign in to be notified on this device.");
         }
 
         var sent = Read<BrowserSubscription>(body);
@@ -886,7 +900,7 @@ internal sealed class AccountApi
         if (await WhoAsync(request) is null)
         {
             await devices.RemoveAsync(who.Account.Id, subscription.Endpoint);
-            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+            return Problem(401, SignInRequiredCode, "Sign in to be notified on this device.");
         }
 
         return Answer(new { notices = true, devices = held.Count }, who.Renewed);
@@ -902,7 +916,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         if (Read<BrowserSubscription>(body)?.Endpoint is not { Length: > 0 } endpoint)
@@ -924,7 +938,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         var test = await notices.TestAsync(who.Account.Id, Read<BrowserSubscription>(body)?.Endpoint);
@@ -944,7 +958,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         try
@@ -969,7 +983,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         if (Read<ReadNoticesBody>(body)?.UpTo is not { } upTo)
@@ -1015,7 +1029,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         var saved = await store.GetAsync(who.Account.Id);
@@ -1037,7 +1051,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         var asked = Read<NoticePreferencesBody>(body);
@@ -1082,7 +1096,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return Problem(401, SignInRequiredCode, "Sign in first.");
         }
 
         var asked = Read<PreferencesBody>(body);

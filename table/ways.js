@@ -25,12 +25,18 @@ export function wayName(provider) {
  */
 export function wayRows(held, me) {
   const kept = (Array.isArray(held) ? held : []).filter(way => typeof way?.provider === 'string');
-  const used = kept.map(way => way.provider);
+  const used = new Set(kept.map(way => way.provider));
   const offered = signInWays(me);
   return [
     ...kept.map(way => ({ provider: way.provider, name: wayName(way.provider), held: true, removable: way.removable === true })),
-    ...offered.filter(way => !used.includes(way.provider)).map(way => ({ provider: way.provider, name: wayName(way.provider), held: false, clientId: way.clientId })),
+    ...offered.filter(way => !used.has(way.provider)).map(way => ({ provider: way.provider, name: wayName(way.provider), held: false, clientId: way.clientId })),
   ];
+}
+
+/** The line under a way's name: whether the account signs in with it, and whether it can go. */
+export function wayHint(row) {
+  if (!row.held) return 'You do not sign in with it yet.';
+  return row.removable ? 'You sign in with it.' : 'Your only way to sign in. Add another before you can remove it.';
 }
 
 /** What removing a way in asks first: the player is signed out on every other device, and pop-ups stop. */
@@ -124,7 +130,7 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
       const name = doc.createElement('strong');
       name.textContent = row.name;
       const hint = doc.createElement('small');
-      hint.textContent = row.held ? (row.removable ? 'You sign in with it.' : 'Your only way to sign in. Add another before you can remove it.') : 'You do not sign in with it yet.';
+      hint.textContent = wayHint(row);
       words.append(name, hint);
       item.append(words);
       if (row.held && row.removable) item.append(removeButton(row.provider));
