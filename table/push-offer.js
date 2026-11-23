@@ -132,9 +132,8 @@ const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-l
 /**
  * The card, added once to the page's body. `source` is the page's own switch: `state()` says where it stands
  * (`keyed`, `subscribed`, `permission`, `hotseat`, `ready` once it has read the browser, and `where` the switch is
- * when it is not in Settings), and `turnOn()` asks
- * the browser and registers the device, the same as the switch does. The page calls `consider()` at its moments; the
- * card shows only when it is due, once a page.
+ * when it is not in Settings), and `turnOn()` asks the browser and registers the device, the same as the switch
+ * does. The page calls `consider()` at its moments; the card shows only when it is due, once a page.
  * @param {Document} doc
  * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number }} options
  */
