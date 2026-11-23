@@ -61,14 +61,15 @@ ContainerAppConsoleLogs_CL
 KQL
 
 # What the notices worker did in the last 24 hours (N6), from its own lines: "Notice sent (turn): ...", "Notice refused
-# (friend): ..." and "Notice gone (match): ...", counted by outcome and kind, and those given up on among the refused.
+# (friend): ..." and "Notice gone (match): ...", counted by outcome and kind; and every notice given up on, a push or
+# a "your turn", by the words the alert hears ("tries, onto"), whether or not its line names an outcome.
 read -r -d '' NOTICES <<'KQL'
 ContainerAppConsoleLogs_CL
 | where TimeGenerated > ago(1d)
 | where Log_s has 'Notice'
 | extend outcome = extract(@'Notice (sent|refused|gone) \(', 1, Log_s), kind = extract(@'Notice (?:sent|refused|gone) \(([a-z-]+)\)', 1, Log_s)
-| where isnotempty(outcome)
-| summarize n = count(), givenUp = countif(Log_s has 'given up on after') by outcome, kind
+| where isnotempty(outcome) or Log_s has 'tries, onto'
+| summarize n = countif(isnotempty(outcome)), givenUp = countif(Log_s has 'tries, onto') by outcome, kind
 KQL
 
 # The month to date, as Cost Management reads it for the resource group.

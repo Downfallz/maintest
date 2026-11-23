@@ -646,7 +646,10 @@ internal static class TableHost
 
         try
         {
-            return new NoticeCounts(await ArtifactStores.OpenNoticeCountsAsync(target, cancellationToken), clock);
+            return new NoticeCounts(await ArtifactStores.OpenNoticeCountsAsync(target, cancellationToken), clock)
+            {
+                ForgetFailed = failure => Console.WriteLine($"  The notices' counts older than a week could not be let go of; tried again tomorrow: {HttpHost.OneLine(failure)}"),
+            };
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
         {

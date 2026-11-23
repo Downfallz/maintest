@@ -88,6 +88,19 @@ public sealed class NoticeCountsTests
         (await _counts.WeekAsync(Cancel)).Week.ShouldBe([new NoticeCount("turn", 1, 0, 0)]);
     }
 
+    [Fact]
+    public async Task Counts_kept_before_a_clean_up_that_failed_are_still_kept_and_the_failure_is_told()
+    {
+        _store.ForgetFails = true;
+        Exception? told = null;
+        var counts = new NoticeCounts(_store, _clock) { ForgetFailed = failure => told = failure };
+
+        (await counts.AddAsync([new("turn", 1, 0, 0)], Cancel)).ShouldBeTrue();
+
+        told.ShouldBeOfType<IOException>();
+        (await counts.WeekAsync(Cancel)).Day.ShouldBe([new NoticeCount("turn", 1, 0, 0)]);
+    }
+
     private sealed class SteppedClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;
@@ -110,6 +123,8 @@ public sealed class NoticeCountsTests
         public int Writes { get; private set; }
 
         public List<DateOnly> Forgotten { get; } = [];
+
+        public bool ForgetFails { get; set; }
 
         public Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default) =>
             Task.FromResult(_held.TryGetValue(day, out var held) ? new NoticeCountRead(held.Counts, held.Version) : new NoticeCountRead([], null));
@@ -134,6 +149,11 @@ public sealed class NoticeCountsTests
 
         public Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
         {
+            if (ForgetFails)
+            {
+                throw new IOException("The listing failed.");
+            }
+
             Forgotten.Add(day);
             foreach (var old in _held.Keys.Where(held => held < day).ToArray())
             {

@@ -159,8 +159,8 @@ function givenUp(reading) {
 
 /**
  * What the notices worker did in the 24 hours (N6), from the notices reading: how many reached a device, how many
- * tries a push service refused, how many were for a device that is gone, and how many were given up on, a kind each
- * and in all. The kinds are the push topics, which name no person.
+ * tries a push service refused, how many were for a device that is gone, and how many notices were given up on,
+ * a push's tries among the refused, a "your turn" with no outcome of its own. The kinds are push topics: no person.
  */
 export function noticeCounts(reading) {
   const table = reading?.tables?.[0];
@@ -305,7 +305,7 @@ function noticeLines(reading) {
   if (!usable(reading)) return [];
   const counted = noticeCounts(reading);
   return [
-    `Notifications 24 h : ${plural(counted.sent, 'envoyée')}, ${plural(counted.refused, 'refusée')}, ${plural(counted.gone, 'disparue')}, ${plural(counted.givenUp, 'abandonnée')}`,
+    `Notifications 24 h : ${plural(counted.sent, 'envoyée')}, ${plural(counted.refused, 'refusée')} (dont ${plural(counted.givenUp, 'abandonnée')}), ${plural(counted.gone, 'disparue')}`,
   ];
 }
 

@@ -712,8 +712,6 @@ test('the bots\' turn queues show in the Jobs tab, and their dead letters are re
   await expect(page.locator('#tab-jobs-count')).toHaveText('');
 });
 
-// Voiding a match (A3c, ADR 0176): from a session row, only with a category and an explanation, and the session then
-// says it is void.
 // The notices in the Jobs tab (notifications plan, N6): the three queues and the worker's counts, a kind each.
 test('the notices\' queues and counts show in the Jobs tab, and a notice given up on marks the tab', async ({ page }, info) => {
   await page.route(/\/api\/admin\/jobs\/notices$/, route => route.fulfill({ json: {
@@ -734,6 +732,8 @@ test('the notices\' queues and counts show in the Jobs tab, and a notice given u
   await page.locator('#notices-on').screenshot({ path: info.outputPath('admin-notices.png') });
 });
 
+// Voiding a match (A3c, ADR 0176): from a session row, only with a category and an explanation, and the session then
+// says it is void.
 test('a session is voided only with a reason, and then says it is void', async ({ page }, info) => {
   let voided = null;
   const listed = () => ({ sessions: [{ ...session('people-finished', 'human:mk', 'human:jo', true), voidable: !voided, voided: voided?.category ?? null }] });

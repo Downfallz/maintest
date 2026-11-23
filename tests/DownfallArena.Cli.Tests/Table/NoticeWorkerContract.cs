@@ -1,4 +1,5 @@
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Application.Ports;
 using DownfallArena.Application.Work;
 using DownfallArena.Cli.Table;
@@ -212,6 +213,49 @@ public abstract class NoticeWorkerContract
         _said.ShouldContain(line => line.StartsWith("  The notices' counts of this look could not be kept: ", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task A_device_store_that_is_out_is_no_push_service_s_refusal_and_is_tried_again_unrefused()
+    {
+        var notices = await ChannelAsync(QueuedNotice.Queue);
+        var poison = await ChannelAsync(PoisonedWork.QueueOf(QueuedNotice.Queue));
+        var worker = new NoticeWorker(notices, poison, TimeProvider.System)
+        {
+            Devices = new AccountNotices(_sender, new AccountDevices(new UnreachableDevices(), TimeProvider.System)),
+            FirstRetry = TimeSpan.Zero,
+            Counts = _counts,
+            Said = Say,
+        };
+        await QueueAsync(notices);
+
+        await worker.RunOnceAsync(Cancel);
+
+        (await _counts.WeekAsync(Cancel)).Day.ShouldBeEmpty();
+        _said.ShouldContain(line => line.StartsWith("  Notice ", StringComparison.Ordinal) && line.Contains("failed on delivery 1", StringComparison.Ordinal));
+        _said.ShouldNotContain(line => line.Contains("Notice refused", StringComparison.Ordinal));
+        (await notices.CountAsync(Cancel)).ShouldBe(1, "it comes back");
+    }
+
+    [Fact]
+    public async Task A_notice_that_reached_its_device_and_then_could_not_be_deleted_is_counted_sent_and_not_refused()
+    {
+        var notices = new DeleteFailsOnce(await ChannelAsync(QueuedNotice.Queue));
+        var poison = await ChannelAsync(PoisonedWork.QueueOf(QueuedNotice.Queue));
+        var worker = new NoticeWorker(notices, poison, TimeProvider.System)
+        {
+            Devices = new AccountNotices(_sender, _devices),
+            FirstRetry = TimeSpan.Zero,
+            Counts = _counts,
+            Said = Say,
+        };
+        await PhoneAsync();
+        await QueueAsync(notices);
+
+        await worker.RunOnceAsync(Cancel);
+
+        (await _counts.WeekAsync(Cancel)).Day.ShouldBe([new NoticeCount("friend", 1, 0, 0)]);
+        _said.ShouldNotContain(line => line.Contains("Notice refused", StringComparison.Ordinal));
+    }
+
     private async Task<(NoticeWorker Worker, IWorkChannel Notices, IWorkChannel Poison)> WorkerAsync()
     {
         var notices = await ChannelAsync(QueuedNotice.Queue);
@@ -226,6 +270,49 @@ public abstract class NoticeWorkerContract
         {
             _said.Add(line);
         }
+    }
+
+    /// <summary>A device store that is out.</summary>
+    private sealed class UnreachableDevices : IDeviceStore
+    {
+        public Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+
+        public Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+
+        public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+
+        public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+    }
+
+    /// <summary>A queue whose first delete fails, as a storage queue out for a moment does.</summary>
+    private sealed class DeleteFailsOnce(IWorkChannel inner) : IWorkChannel
+    {
+        private bool _failed;
+
+        public string Name => inner.Name;
+
+        public Task<QueuedWork> SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default) =>
+            inner.SendAsync(body, keptFor, hiddenFor, cancellationToken);
+
+        public Task<IReadOnlyList<QueuedWork>> ReceiveAsync(int most, TimeSpan hiddenFor, CancellationToken cancellationToken = default) =>
+            inner.ReceiveAsync(most, hiddenFor, cancellationToken);
+
+        public Task DeleteAsync(QueuedWork work, CancellationToken cancellationToken = default)
+        {
+            if (!_failed)
+            {
+                _failed = true;
+                throw new IOException("The queue is out.");
+            }
+
+            return inner.DeleteAsync(work, cancellationToken);
+        }
+
+        public Task RetryAsync(QueuedWork work, TimeSpan after, CancellationToken cancellationToken = default) => inner.RetryAsync(work, after, cancellationToken);
+
+        public Task<IReadOnlyList<PeekedWork>> PeekAsync(int most, CancellationToken cancellationToken = default) => inner.PeekAsync(most, cancellationToken);
+
+        public Task<int> CountAsync(CancellationToken cancellationToken = default) => inner.CountAsync(cancellationToken);
     }
 
     /// <summary>A store of counts that is out.</summary>

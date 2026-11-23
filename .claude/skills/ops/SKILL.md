@@ -35,8 +35,9 @@ GitHub, in Azure or anywhere else. Every line of the log is the table's own text
   look at `main`'s last run before guessing.
 - A count of 5xx answers or restarts is the last 24 hours. A redeploy makes a new revision, not a restart.
 - `Notifications 24 h`: the notices worker's own lines (N6). `refusées` counts every try a push service refused or
-  did not answer, so one notice retried twice counts two; `abandonnées` are those given up on after five tries, kept
-  a week on `notices-dlq` (the admin panel's Jobs tab, *Notices*).
+  did not answer, so one notice retried twice counts two; `abandonnées` are the notices given up on after five tries,
+  a "your turn" included, kept a week on `notices-dlq` (the admin panel's Jobs tab, *Notices*). The tab counts by
+  UTC day from the worker's own store, so its numbers and the report's 24 hours do not match exactly.
 - The cost is Cost Management's month to date, which lags by up to a day.
 
 ## Rules

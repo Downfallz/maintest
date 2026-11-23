@@ -118,7 +118,7 @@ input[type="text"] { font: inherit; min-height: 44px; border: 1px solid var(--li
 .turn-queue.warning .turn-queue-count { color: var(--refused); }
 /* The notices (N6): the queues as the turns' are, and the counts as the players' table is, a number a cell. */
 .player-table .notice-count { text-align: right; font-variant-numeric: tabular-nums; }
-.player-table .notice-count.warning { color: var(--refused); }
+.player-table .notice-count.warning { color: var(--refused); font-weight: 700; }
 .player-table .notice-total :is(th, td) { font-weight: 700; border-bottom: 0; }
 #notices-on[hidden], #notices-table[hidden] { display: none; }
 .letter-row .run-error { color: var(--refused); overflow-wrap: anywhere; }

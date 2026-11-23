@@ -47,7 +47,7 @@ public sealed class NoticeCounts
             {
                 if (read.Version is null)
                 {
-                    await _store.ForgetBeforeAsync(day.AddDays(1 - Days), cancellationToken);
+                    await ForgetOldDaysAsync(day, cancellationToken);
                 }
 
                 return true;
@@ -56,6 +56,22 @@ public sealed class NoticeCounts
 
         return false;
     }
+
+    // The counts are kept: a clean-up that fails says nothing of them, and the next day's first count tries again.
+    private async Task ForgetOldDaysAsync(DateOnly day, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _store.ForgetBeforeAsync(day.AddDays(1 - Days), cancellationToken);
+        }
+        catch (Exception failure) when (!cancellationToken.IsCancellationRequested)
+        {
+            ForgetFailed?.Invoke(failure);
+        }
+    }
+
+    /// <summary>What is told when the days nobody reads could not be let go of: kept counts are no less kept.</summary>
+    public Action<Exception>? ForgetFailed { get; init; }
 
     /// <summary>Today's counts and the last <see cref="Days" /> days', today included.</summary>
     public async Task<NoticeWeek> WeekAsync(CancellationToken cancellationToken = default)

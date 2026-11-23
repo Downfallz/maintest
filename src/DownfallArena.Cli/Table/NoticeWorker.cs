@@ -168,15 +168,18 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
         catch (Exception failure)
         {
             // A push service that does not answer in time is a TaskCanceledException too: a failure like any other,
-            // retried and then given up on, never the end of the worker.
+            // retried and then given up on, never the end of the worker. Only the push service's own is a refusal (N6):
+            // the device store or the queue failing around a send is no push service's doing.
             var named = $"Notice {work.Id}";
-            if (notice.Push is { } refused)
+            var cause = failure;
+            if (failure is PushRefusedException { InnerException: { } inner } && notice.Push is { } refused)
             {
                 tally.Refused(refused.Topic);
                 named = $"Notice refused ({refused.Topic}): {work.Id}";
+                cause = inner;
             }
 
-            await FailedAsync(work, named, Cut($"{failure.GetType().Name}: {Hosting.HttpHost.OneLine(failure)}"), cancellationToken);
+            await FailedAsync(work, named, Cut($"{cause.GetType().Name}: {Hosting.HttpHost.OneLine(cause)}"), cancellationToken);
         }
     }
 
@@ -249,7 +252,7 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
         public void Pushed(string kind, DeviceSend outcome) =>
             Add(kind, outcome == DeviceSend.Sent ? (1, 0, 0) : (0, 0, 1));
 
-        /// <summary>A try its push service refused, or did not answer in time.</summary>
+        /// <summary>A try its push service refused, or did not answer in time; a store or a queue that failed is not one.</summary>
         public void Refused(string kind) => Add(kind, (0, 1, 0));
 
         private void Add(string kind, (long Sent, long Refused, long Gone) by)

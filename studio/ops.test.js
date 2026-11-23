@@ -64,7 +64,7 @@ test('a healthy table says so on its first line and fits a phone', () => {
   assert.match(text, /downfall-table--new \(active, 1 réplica, saine\)/);
   assert.match(text, /Image : ghcr\.io\/downfallz\/downfall-table:7b37d70/);
   assert.match(text, /Maintenance 24 h : 2 passes, 0 en échec/);
-  assert.match(text, /Notifications 24 h : 15 envoyées, 0 refusée, 1 disparue, 0 abandonnée/);
+  assert.match(text, /Notifications 24 h : 15 envoyées, 0 refusée \(dont 0 abandonnée\), 1 disparue/);
   assert.match(text, /Coût du mois : 0,42 CAD sur 5 CAD \(8\u00a0%\)/);
   assert.ok(lines.length <= 20, `${lines.length} lines`);
   assert.ok(lines.every((line) => line.length <= 200));
@@ -121,10 +121,10 @@ test('a notice given up on is said in its own words, and the alert hears them wh
 });
 
 test('the notices are counted by outcome, and those given up on among the refused are a concern', () => {
-  const reading = notices(['sent', 'friend', 4, 0], ['refused', 'friend', 7, 1], ['refused', 'turn', 2, 0], ['gone', 'match', 2, 0], ['other', 'x', 9, 0]);
-  assert.deepEqual(noticeCounts(reading), { sent: 4, refused: 9, gone: 2, givenUp: 1 });
+  const reading = notices(['sent', 'friend', 4, 0], ['refused', 'friend', 7, 1], ['refused', 'turn', 2, 0], ['gone', 'match', 2, 0], ['', '', 0, 1]);
+  assert.deepEqual(noticeCounts(reading), { sent: 4, refused: 9, gone: 2, givenUp: 2 }, 'a "your turn" given up on names no outcome');
   assert.deepEqual(noticeCounts({ tables: [] }), { sent: 0, refused: 0, gone: 0, givenUp: 0 });
-  assert.deepEqual(concerns({ ...healthy(), notices: reading }, NOW), ['1 notification abandonnée']);
+  assert.deepEqual(concerns({ ...healthy(), notices: reading }, NOW), ['2 notifications abandonnées']);
   assert.match(render({ ...healthy(), notices: { error: 'no' } }, NOW), /Non lu : notifications/);
 });
 
@@ -134,10 +134,11 @@ test('the notices reading counts the worker\'s own lines, in their own words', (
   for (const outcome of ['sent', 'refused', 'gone']) {
     assert.ok(worker.includes(`Notice ${outcome} ({`), outcome);
   }
-  assert.ok(worker.includes('given up on after {work.Delivered} tries'), 'the give-up the reading counts');
+  assert.ok(worker.includes('tries, onto {poison.Name}'), 'the give-up the reading counts, a push or a turn');
   const query = read('scripts/ops/read.sh');
   assert.ok(query.includes("Notice (sent|refused|gone) \\("), 'the outcome');
-  assert.ok(query.includes("countif(Log_s has 'given up on after')"), 'the give-ups');
+  assert.ok(query.includes("givenUp = countif(Log_s has 'tries, onto')"), 'the give-ups, as the alert hears them');
+  assert.ok(read('infra/main.bicep').includes('Log_s has "tries, onto"'), 'the alert');
 });
 
 test('the cost is a concern from 80 % of the budget', () => {
