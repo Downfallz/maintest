@@ -6,7 +6,8 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 
-const STATIC = /(?:^|[\s;}])(?:import|export)\s+(?:[^'";]*?\s+from\s+)?['"]((?:\.{1,2})?\/[^'"]+)['"]/g;
+// A static path follows `from` (import or export) or a bare `import`, then a quote: no dynamic import('...') has one.
+const STATIC = /\b(?:from|import)\s*['"](\.{0,2}\/[^'"]+)['"]/g;
 const DYNAMIC = /\bimport\s*\(/;
 
 /** The paths a module's source imports statically, in the order they appear. */
