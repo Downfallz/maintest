@@ -58,7 +58,7 @@ public sealed class LobbyInvitationsTests : IDisposable
     private async Task<SignedIn> PlayerAsync(string name)
     {
         var account = (await _accounts.RegisterAsync(new ExternalIdentity(ExternalIdentity.Development, name.ToLowerInvariant()), name, Cancel)).Value;
-        await _devices.AddAsync(account.Id, new PushDevice($"https://push.example/{name}", Key, Auth, default), Cancel);
+        await _devices.AddAsync(account.Id, new PushDevice($"https://fcm.googleapis.com/fcm/send/{name}", Key, Auth, default), Cancel);
         return new SignedIn(account, null);
     }
 
@@ -123,7 +123,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         await (await LobbyAsync()).HandleAsync(method, $"/api/lobby/tables/{table.Id}{suffix}", body, player: player);
 
     private string? LastNoticeBody(string to) =>
-        _sender.Sent.LastOrDefault(sent => sent.Endpoint == $"https://push.example/{to}") is { } sent ? JsonDocument.Parse(sent.Payload).RootElement.GetProperty("body").GetString() : null;
+        _sender.Sent.LastOrDefault(sent => sent.Endpoint == $"https://fcm.googleapis.com/fcm/send/{to}") is { } sent ? JsonDocument.Parse(sent.Payload).RootElement.GetProperty("body").GetString() : null;
 
     [Fact]
     public async Task A_table_opened_for_a_friend_keeps_its_seat_for_them_and_tells_their_phone()
@@ -196,7 +196,100 @@ public sealed class LobbyInvitationsTests : IDisposable
         seats[0].GetProperty("seat").GetString().ShouldBe("player1");
         seats[0].GetProperty("kind").GetString().ShouldBe("person");
         seats[0].GetProperty("name").GetString().ShouldBe("Rook", "the signed-out door names who invites from this answer");
+        seats[0].TryGetProperty("account", out _).ShouldBeFalse("whoever the link was forwarded to holds no seat, so no account id (#971)");
         seats[1].GetProperty("kind").GetString().ShouldBe("open");
+    }
+
+    [Fact]
+    public async Task A_listed_table_names_its_player_to_a_visitor_and_to_a_signed_in_player_without_a_seat_there_but_gives_neither_an_account_id()
+    {
+        var rook = await PlayerAsync("Rook");
+        var stranger = await PlayerAsync("third");
+        var lobby = await LobbyAsync();
+        (await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: rook)).Status.ShouldBe(201);
+
+        var signedOut = Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items")[0].GetProperty("seats")[0];
+        var signedIn = Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "", player: stranger)).GetProperty("items")[0].GetProperty("seats")[0];
+
+        signedOut.GetProperty("name").GetString().ShouldBe("Rook");
+        signedOut.TryGetProperty("account", out _).ShouldBeFalse();
+        signedIn.GetProperty("name").GetString().ShouldBe("Rook");
+        signedIn.TryGetProperty("account", out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_seated_player_reads_the_other_seat_s_account_for_a_rematch()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        (await ActAsync("POST", table, "/accept", bastien)).Status.ShouldBe(200);
+
+        var seats = (await MineAsync(mark)).GetProperty("tables")[0].GetProperty("table").GetProperty("seats");
+
+        seats[1].GetProperty("account").GetString().ShouldBe(bastien.Account.Id.Value);
+    }
+
+    [Fact]
+    public async Task An_account_seated_at_one_table_and_only_invited_at_another_reads_an_account_id_at_the_first_alone()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        await InvitedTableAsync(mark, bastien);
+        (await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: bastien)).Status.ShouldBe(201);
+
+        var mine = await MineAsync(bastien);
+
+        mine.GetProperty("tables")[0].GetProperty("table").GetProperty("seats")[0].GetProperty("account").GetString().ShouldBe(bastien.Account.Id.Value);
+        var invitedTo = mine.GetProperty("invitations")[0].GetProperty("table").GetProperty("seats")[0];
+        invitedTo.GetProperty("name").GetString().ShouldBe("MarkF");
+        invitedTo.TryGetProperty("account", out _).ShouldBeFalse("an invitation is not a seat");
+    }
+
+    [Fact]
+    public async Task The_ranked_badge_is_the_host_s_word_and_no_seat_on_the_public_list_carries_an_account_id()
+    {
+        var rook = await PlayerAsync("Rook");
+        var casual = await PlayerAsync("Casual");
+        var lobby = await LobbyAsync();
+        var ranked = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person"}""", player: rook)).GetProperty("table").GetProperty("id").GetString();
+        var unranked = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"person","ranked":false}""", player: casual)).GetProperty("table").GetProperty("id").GetString();
+
+        var items = Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", "")).GetProperty("items").EnumerateArray().ToArray();
+
+        items.Single(item => item.GetProperty("id").GetString() == ranked).GetProperty("ranked").GetBoolean().ShouldBeTrue();
+        items.Single(item => item.GetProperty("id").GetString() == unranked).GetProperty("ranked").GetBoolean().ShouldBeFalse();
+        items.SelectMany(item => item.GetProperty("seats").EnumerateArray()).Count(seat => seat.TryGetProperty("account", out _)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task A_deleted_account_s_seat_whose_notice_is_still_on_its_way_holds_no_other_claim_waiting()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var table = await InvitedTableAsync(mark, bastien);
+        (await ActAsync("POST", table, "/accept", bastien)).Status.ShouldBe(200);
+        foreach (var seat in table.Seats)
+        {
+            seat.Person!.Arrive();
+        }
+
+        table.Session.Begin();
+        var lobby = await LobbyAsync();
+        var sender = new Sender { Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+        lobby.Notifier = new AccountNotifier(_log, new AccountNotices(sender, _devices));
+
+        var releasing = lobby.ReleaseAsync(bastien.Account.Id);
+        await sender.Began.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        (await lobby.ExpireInvitationsNowAsync().WaitAsync(TimeSpan.FromSeconds(5), Cancel)).ShouldBe(0, "the claim gate was let go of before the notice");
+        releasing.IsCompleted.ShouldBeFalse("the release returns once its notice is given");
+        sender.Hold.SetResult();
+        (await releasing).ShouldBe(1);
+        sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldEndWith("/MarkF");
     }
 
     [Fact]
@@ -346,14 +439,14 @@ public sealed class LobbyInvitationsTests : IDisposable
         var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
         var table = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!;
         var token = table.Seats[0].Token;
-        var browser = JsonSerializer.Serialize(new { endpoint = "https://push.example/laptop", keys = new { p256dh = Key, auth = Auth } });
+        var browser = JsonSerializer.Serialize(new { endpoint = "https://fcm.googleapis.com/fcm/send/laptop", keys = new { p256dh = Key, auth = Auth } });
 
         (await lobby.HandleAsync("PUT", "/api/lobby/push", browser, token, mark)).Status.ShouldBe(200);
         var joined = (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ToList();
         (await lobby.HandleAsync("DELETE", "/api/lobby/push", "", token, mark)).Status.ShouldBe(200);
 
-        joined.ShouldBe(["https://push.example/MarkF", "https://push.example/laptop"], ignoreOrder: true);
-        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+        joined.ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF", "https://fcm.googleapis.com/fcm/send/laptop"], ignoreOrder: true);
+        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF"]);
     }
 
     [Fact]
@@ -365,10 +458,10 @@ public sealed class LobbyInvitationsTests : IDisposable
         var token = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!.Seats[0].Token;
         static string Browser(string endpoint) => JsonSerializer.Serialize(new { endpoint, keys = new { p256dh = Key, auth = Auth } });
 
-        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://push.example/old"), token, mark)).Status.ShouldBe(200);
-        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://push.example/new"), token, mark)).Status.ShouldBe(200);
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://fcm.googleapis.com/fcm/send/old"), token, mark)).Status.ShouldBe(200);
+        (await lobby.HandleAsync("PUT", "/api/lobby/push", Browser("https://fcm.googleapis.com/fcm/send/new"), token, mark)).Status.ShouldBe(200);
 
-        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/MarkF", "https://push.example/new"], ignoreOrder: true);
+        (await _devices.ListAsync(mark.Account.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF", "https://fcm.googleapis.com/fcm/send/new"], ignoreOrder: true);
     }
 
     /// <summary>The account's sender heard the push service say the endpoint is gone: the seat's page is told 410 and subscribes again, rather than adding it back.</summary>
@@ -380,10 +473,10 @@ public sealed class LobbyInvitationsTests : IDisposable
         var lobby = new LobbyApi(_registry, _hosted.Composer, _clock, new PushNotices(_sender, "BP8", _clock)) { Accounts = (await LobbyAsync()).Accounts, Devices = _devices, Notifier = door };
         var opened = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", """{"opponent":"bot"}""", player: mark));
         var token = (await _registry.ByIdAsync(opened.GetProperty("table").GetProperty("id").GetString()!, Cancel))!.Seats[0].Token;
-        _sender.Gone.Add("https://push.example/MarkF");
+        _sender.Gone.Add("https://fcm.googleapis.com/fcm/send/MarkF");
         await door.NotifyAsync(mark.Account.Id, new Notice(NoticeKind.Invitation, "An invitation", "bastien invites you.", "/lobby", "invite:t1"), Cancel);
 
-        var again = await lobby.HandleAsync("PUT", "/api/lobby/push", JsonSerializer.Serialize(new { endpoint = "https://push.example/MarkF", keys = new { p256dh = Key, auth = Auth } }), token, mark);
+        var again = await lobby.HandleAsync("PUT", "/api/lobby/push", JsonSerializer.Serialize(new { endpoint = "https://fcm.googleapis.com/fcm/send/MarkF", keys = new { p256dh = Key, auth = Auth } }), token, mark);
 
         again.Status.ShouldBe(410);
         (await _devices.ListAsync(mark.Account.Id, Cancel)).ShouldBeEmpty();
@@ -425,7 +518,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         var left = await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/leave", "{}", token, bastien);
 
         left.Status.ShouldBe(200);
-        _sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/MarkF");
+        _sender.Sent.ShouldHaveSingleItem().Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/MarkF");
         var notice = JsonDocument.Parse(_sender.Sent[0].Payload).RootElement;
         notice.GetProperty("title").GetString().ShouldBe("bastien left the table");
         notice.GetProperty("url").GetString().ShouldBe($"/play?table={table.Id}");

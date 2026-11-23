@@ -37,9 +37,14 @@ by the API on the next page load (`docs/tabletop/notifications-plan.md`, "Sendin
   heard it, `PUT /api/account/push` and a signed-in seat's `PUT /api/lobby/push` answer 410 for it. An entry without
   keys reads as gone, so an older image that drops the flag leaves no device that cannot be told. Nothing is written
   for an endpoint the account no longer holds. A seat with no account keeps ADR 0118's list in the API's memory.
-- **No notice under the claim gate, on a lobby route.** The notices a lobby route gives are held until the route let
-  go of the gate, then given before the request is answered. A notice that cannot go is a line, never a 500. A queue
-  that is out sends the push in the request instead.
+- **No notice under the claim gate.** The notices a lobby route gives are held until the route let go of the gate,
+  then given before the request is answered. So are those of the work that takes the gate outside a route: the
+  release of a deleted or suspended account's seats (`LobbyApi.ReleaseAsync`) and an operator's change under
+  `LobbyApi.ExclusivelyAsync`, a void's notices among them (#1133). A notice that cannot go is a line, never a 500.
+  A queue that is out sends the push in the request instead.
+- **Only the browsers' push services.** A subscription names Firebase, Mozilla's, Windows' or Apple's push service,
+  or it is refused with a 400 (`Account.UnknownPushService`, `Lobby.UnknownPushService`), and one send gives up after
+  five seconds: a server a player controls holds neither the worker's time nor makes the host call it (#1132).
 - **Where no queue is, nothing changes.** A host whose bots' turns are taken in its own process (`--turns
   process`), or with no push keys, sends in the request as before. The hourly job sends in its own process: no
   request rides on it, and it runs to its end.

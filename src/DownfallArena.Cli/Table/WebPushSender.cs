@@ -15,6 +15,12 @@ internal sealed class WebPushSender : IPushSender, IDisposable
     /// <summary>How long a push service keeps a notice for a phone that is off: a turn is worth waiting ten minutes for, not a day.</summary>
     public static readonly TimeSpan KeptFor = TimeSpan.FromMinutes(10);
 
+    /// <summary>
+    /// How long one send may take before it is given up: a push service answers in well under a second, and the notices
+    /// worker sends one look's items side by side, so a slow one must not hold its time (#1132).
+    /// </summary>
+    public static readonly TimeSpan SendFor = TimeSpan.FromSeconds(5);
+
     private readonly PushServiceClient _client;
     private readonly VapidAuthentication _authentication;
     private readonly HttpClient? _owned;
@@ -24,7 +30,7 @@ internal sealed class WebPushSender : IPushSender, IDisposable
     {
         ArgumentNullException.ThrowIfNull(keys);
         _authentication = new VapidAuthentication(keys.PublicKey, keys.PrivateKey) { Subject = keys.Subject };
-        _owned = http is null ? new HttpClient { Timeout = TimeSpan.FromSeconds(10) } : null;
+        _owned = http is null ? new HttpClient { Timeout = SendFor } : null;
         _client = new PushServiceClient(http ?? _owned!)
         {
             DefaultAuthentication = _authentication,

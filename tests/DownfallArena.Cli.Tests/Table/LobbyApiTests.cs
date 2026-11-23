@@ -616,7 +616,7 @@ public sealed class LobbyApiTests : IDisposable
         var answer = Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
 
         answer.GetProperty("notices").GetBoolean().ShouldBeTrue();
-        table.Seats[0].Push.ShouldBe(new PushSubscription("https://push.example/one", BrowserKey, BrowserAuth));
+        table.Seats[0].Push.ShouldBe(new PushSubscription("https://fcm.googleapis.com/fcm/send/one", BrowserKey, BrowserAuth));
         (await _hosted.Stored!.RecordAsync(id, TestContext.Current.CancellationToken)).ShouldNotBeNull().Seats[0].Push.ShouldBe(table.Seats[0].Push);
 
         using var restored = await _hosted.RestartedAsync();
@@ -649,10 +649,10 @@ public sealed class LobbyApiTests : IDisposable
 
     [Theory]
     [InlineData("http://push.example/one", BrowserKey, BrowserAuth)]
-    [InlineData("https://push.example/one", "not base64url!", BrowserAuth)]
-    [InlineData("https://push.example/one", "BP8", BrowserAuth)]
-    [InlineData("https://push.example/one", BrowserKey, "YWJj")]
-    [InlineData("https://push.example/one", null, null)]
+    [InlineData("https://fcm.googleapis.com/fcm/send/one", "not base64url!", BrowserAuth)]
+    [InlineData("https://fcm.googleapis.com/fcm/send/one", "BP8", BrowserAuth)]
+    [InlineData("https://fcm.googleapis.com/fcm/send/one", BrowserKey, "YWJj")]
+    [InlineData("https://fcm.googleapis.com/fcm/send/one", null, null)]
     [InlineData(null, null, null)]
     public async Task A_subscription_that_is_not_one_is_refused_and_nothing_is_kept(string? endpoint, string? p256dh, string? auth)
     {
@@ -662,6 +662,21 @@ public sealed class LobbyApiTests : IDisposable
         var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
 
         (await lobby.HandleAsync("PUT", "/api/lobby/push", body, table.Seats[0].Token)).Status.ShouldBe(400);
+        table.Seats[0].Push.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_subscription_on_a_push_service_the_host_does_not_know_is_refused_and_nothing_is_kept()
+    {
+        var body = JsonSerializer.Serialize(new { endpoint = "https://slow.example/one", keys = new { p256dh = BrowserKey, auth = BrowserAuth } });
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(new NothingSent(), "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
+
+        var refused = await lobby.HandleAsync("PUT", "/api/lobby/push", body, table.Seats[0].Token);
+
+        refused.Status.ShouldBe(400);
+        JsonDocument.Parse(refused.Body).RootElement.GetProperty("error").GetString().ShouldBe("Lobby.UnknownPushService");
         table.Seats[0].Push.ShouldBeNull();
     }
 
@@ -715,7 +730,7 @@ public sealed class LobbyApiTests : IDisposable
         table.Seats[0].Push.ShouldBeNull();
         notices.IsDead(held.Endpoint).ShouldBeTrue();
 
-        var replacement = held with { Endpoint = "https://push.example/two" };
+        var replacement = held with { Endpoint = "https://fcm.googleapis.com/fcm/send/two" };
         table.Seats[0].Push = replacement;
         sender.Replace = () => table.Seats[0].Push = replacement with { Auth = "AAECAwQFBgcICQoLDA0ODx" };
         (await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token)).Status.ShouldBe(502);
@@ -764,7 +779,7 @@ public sealed class LobbyApiTests : IDisposable
 
     private const string BrowserAuth = "AAECAwQFBgcICQoLDA0ODw";
 
-    private static readonly string Browser = JsonSerializer.Serialize(new { endpoint = "https://push.example/one", expirationTime = (object?)null, keys = new { p256dh = BrowserKey, auth = BrowserAuth } });
+    private static readonly string Browser = JsonSerializer.Serialize(new { endpoint = "https://fcm.googleapis.com/fcm/send/one", expirationTime = (object?)null, keys = new { p256dh = BrowserKey, auth = BrowserAuth } });
 
     /// <summary>The race ADR 0118 guards: a subscription sent for a seat whose token was just replaced must not reach the next player's seat.</summary>
     [Fact]

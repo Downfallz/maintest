@@ -109,6 +109,31 @@ public sealed class OperatorVoidTests : IDisposable
         _said.ShouldAllBe(line => !line.Contains("Zelda_42") && !line.Contains("failed to answer"));
     }
 
+    [Fact]
+    public async Task A_void_s_notice_still_on_its_way_holds_no_other_claim_waiting()
+    {
+        var (id, _) = await OpenedAsync();
+        await OwnedAsync(id);
+        var asked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var hold = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _composer.Notifier = new AccountNotifier(new AccountNoticeLog(new InMemoryNoticeStore(), TimeProvider.System), push: null)
+        {
+            Exists = (_, _) =>
+            {
+                asked.TrySetResult();
+                return hold.Task;
+            },
+        };
+
+        var voiding = VoidAsync(id, Reason());
+        await asked.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        (await new LobbyApi(_registry, _composer, TimeProvider.System).ExpireInvitationsNowAsync().WaitAsync(TimeSpan.FromSeconds(5), Cancel)).ShouldBe(0, "the claim gate was let go of before the notice");
+        voiding.IsCompleted.ShouldBeFalse("the void answers once its notices are given");
+        hold.SetResult(true);
+        (await voiding).Status.ShouldBe(200);
+    }
+
     /// <summary>A body that is not JSON is a void without a reason: 400 with the fixed sentence, never the parser's words (#847).</summary>
     [Fact]
     public async Task A_void_whose_body_is_not_json_is_refused_as_one_without_a_reason()
