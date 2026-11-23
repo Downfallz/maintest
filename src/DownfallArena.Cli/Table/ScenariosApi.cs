@@ -261,9 +261,9 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// <summary>
     /// What keeps that the account finished a tutorial, handed to the practices, which run it when its practice here
     /// says it is done, before that practice is let go of: the page says it too, but a Leave or a reload can reach the
-    /// host first, and once the practice is gone nothing shows it was done. The practices read whether it is done once,
-    /// and let it go on that read, so a match that ends between two reads is not let go of unkept (#931). None for a
-    /// scenario that teaches nothing.
+    /// host first, and once the practice is gone nothing shows it was done. The practices read whether it is done under
+    /// their gate, and again where they let it go, so a match that ends meanwhile is not let go of unkept (#931). None
+    /// for a scenario that teaches nothing.
     /// </summary>
     private Func<Task>? KeepDone(AccountId account, string id) =>
         store.Teaches(id) ? () => accounts.NoteTutorialAsync(account, id, TutorialState.Done) : null;
@@ -286,7 +286,8 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// <summary>
     /// Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204,
     /// whether there was one or not. A tutorial done that the account's store cannot keep done answers 503 and keeps
-    /// the practice, so the next Leave or reload tries again.
+    /// the practice: a Leave or a reload of the same tutorial within the idle hour tries again. Opening another
+    /// practice, Play again or the idle sweep lets it go without trying.
     /// </summary>
     private async Task<StudioResponse> ForgetAsync(AccountId account, string id)
     {

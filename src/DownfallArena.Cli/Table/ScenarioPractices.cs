@@ -81,7 +81,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// Keeps on the account that the tutorial is done, before a done tutorial is let go of. Whether it is done is read
     /// under this gate, once to decide and again where it is let go of, so a match that ends meanwhile is never let go
     /// of unkept (#931). The keeping itself is a store write, made outside the gate, which every account's practices
-    /// wait on: if it fails, the practice is kept for the next reload or Leave.
+    /// wait on: if it fails, the practice is kept, for a reload or a Leave of the same tutorial within the idle hour.
     /// </param>
     public async Task<Practice?> ResumeAsync(string account, string scenario, Func<Task>? keepDone = null)
     {
