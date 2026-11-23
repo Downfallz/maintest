@@ -2,7 +2,7 @@
 # The one-time setup the hosted table needs before .github/workflows/deploy.yml can deploy it (ADR 0082),
 # run by the subscription's owner in Azure Cloud Shell (or anywhere `az login` has been run as them).
 #
-#   infra/bootstrap.sh setup      # the resource group, the deploying identity, the reading identity, the sign-in registration
+#   infra/bootstrap.sh setup      # the resource group, the deploying, reading and promo identities, the sign-in registration
 #   infra/bootstrap.sh redirect   # after the first deployment: the sign-in's redirect URIs (DOMAIN=<host> adds the table's own)
 #
 # Safe to run again: everything it makes it looks for first. It creates no secret. What it prints at the
@@ -20,11 +20,14 @@ RESOURCE_GROUP="${RESOURCE_GROUP:-downfall-table}"
 PREFIX="${PREFIX:-downfall}"
 DEPLOYER_NAME="${PREFIX}-table-deploy"
 OPS_NAME="${PREFIX}-table-ops"
+PROMO_NAME="${PREFIX}-table-promo"
 SIGN_IN_NAME="${PREFIX}-table-signin"
 APP_NAME="${PREFIX}-table"
 ENVIRONMENT="azure"
 # The environment ops-report.yml runs in (ADR 0186): the reading identity trusts it and nothing else.
 OPS_ENVIRONMENT="ops"
+# The environment promo-film.yml runs in (ADR 0206): the promo identity trusts it and nothing else.
+PROMO_ENVIRONMENT="promo"
 
 # The template's own bounds, and a storage account's alphabet: its name is the prefix and a hash.
 if [[ ! "$PREFIX" =~ ^[a-z0-9]{3,11}$ ]]; then
@@ -148,7 +151,7 @@ variable() {
 }
 
 setup() {
-  local subscription tenant scope deployer deployer_principal ops ops_principal role sign_in operator condition
+  local subscription tenant scope deployer deployer_principal ops ops_principal promo promo_principal role sign_in operator condition
 
   subscription="$(az account show --query id --output tsv)"
   tenant="$(az account show --query tenantId --output tsv)"
@@ -184,6 +187,14 @@ setup() {
   done
   main_only_environment "$OPS_ENVIRONMENT"
 
+  # The promo identity (ADR 0206): trusted for the `promo` environment alone, and holding no role here. The
+  # template gives it Storage Blob Data Contributor on the promo container, and on nothing else, once its
+  # principal id is the AZURE_PROMO_PRINCIPAL_ID variable.
+  promo="$(registration "$PROMO_NAME")"
+  promo_principal="$(principal "$promo")"
+  federate "$promo" "$PROMO_ENVIRONMENT"
+  main_only_environment "$PROMO_ENVIRONMENT"
+
   # The registration the platform signs the operator in with. No client secret: the platform uses the
   # implicit flow, which needs ID tokens issued, and only the people listed may hold a session (ADR 0082).
   sign_in="$(registration "$SIGN_IN_NAME" --enable-id-token-issuance true)"
@@ -194,6 +205,8 @@ setup() {
   echo "Repository variables (Settings > Secrets and variables > Actions > Variables):"
   variable AZURE_CLIENT_ID "$deployer"
   variable AZURE_OPS_CLIENT_ID "$ops"
+  variable AZURE_PROMO_CLIENT_ID "$promo"
+  variable AZURE_PROMO_PRINCIPAL_ID "$promo_principal"
   variable AZURE_TENANT_ID "$tenant"
   variable AZURE_SUBSCRIPTION_ID "$subscription"
   variable AZURE_RESOURCE_GROUP "$RESOURCE_GROUP"

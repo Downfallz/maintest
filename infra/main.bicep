@@ -60,6 +60,9 @@ param budgetAmount int = 5
 @description('The first day of the month the budget starts, yyyy-MM-01, set once (the TABLE_BUDGET_START variable): Azure takes a past start only within its own month, and a start that moves may not be accepted on an existing budget. Empty, no budget is deployed.')
 param budgetStart string = ''
 
+@description('The principal id of the promo identity (ADR 0206, the AZURE_PROMO_PRINCIPAL_ID variable): it alone writes the promo container. Empty, nobody writes it but its readers.')
+param promoWriter string = ''
+
 var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
 
@@ -78,6 +81,8 @@ var adminArgs = empty(googleClientId) || empty(trim(adminAccounts)) ? [] : [
 ]
 var suffix = uniqueString(resourceGroup().id)
 var containerName = 'playtests'
+// The promotion's films and pictures (ADR 0206): not the recordings, so the processes of the table never see them.
+var promoContainerName = 'promo'
 var rulesFile = 'docs/tabletop/playtest.rules.json'
 var recordings = '${storage.properties.primaryEndpoints.blob}${containerName}'
 
@@ -284,6 +289,17 @@ resource blobs 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
 resource playtests 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: blobs
   name: containerName
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// The promotion's media (ADR 0206, the promotion plan's question 3): the films, sheets and generated pictures a
+// post shows, too large for the repository, which keeps their hashes. Private like the recordings: the promo
+// identity writes it, and the operators read it in the portal, by identity, as every credential here works.
+resource promo 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blobs
+  name: promoContainerName
   properties: {
     publicAccess: 'None'
   }
@@ -589,6 +605,28 @@ resource tendRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for r
     principalId: tend.identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId(roleDefinitions, role)
+  }
+}]
+
+// On the promo container alone, never the account: the promo identity, which a workflow of `main` signs in as,
+// writes the media; the operators read and tidy them. Neither reaches a recording, an index or a queue.
+resource promoWriterRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(promoWriter)) {
+  scope: promo
+  name: guid(promo.id, promoWriter, storageBlobDataContributor)
+  properties: {
+    principalId: promoWriter
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, storageBlobDataContributor)
+  }
+}
+
+resource promoReaderRoles 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for operator in operatorIds: {
+  scope: promo
+  name: guid(promo.id, operator, storageBlobDataContributor)
+  properties: {
+    principalId: operator
+    principalType: 'User'
+    roleDefinitionId: subscriptionResourceId(roleDefinitions, storageBlobDataContributor)
   }
 }]
 
@@ -906,6 +944,9 @@ output customDomainVerificationId string = appEnvironment.properties.customDomai
 
 @description('Where sessions are recorded.')
 output recordings string = recordings
+
+@description('The promo container (ADR 0206): where the films and pictures of the posts are written.')
+output promo string = '${storage.properties.primaryEndpoints.blob}${promoContainerName}'
 
 @description('The app that takes the bots\' turns.')
 output worker string = worker.name

@@ -1,0 +1,108 @@
+name: Film a promotion shot
+
+# The film of a promotion's shot (docs/art/promotion-plan.md, P2; ADR 0205, ADR 0206): the shot played on a real
+# table host in Chromium, its frames encoded into an MP4 with ffmpeg, and the film and its sheet written to the
+# promo container under their SHA-256, by the promo identity, which may write that container and nothing else.
+# The summary lists each file with its hash and size, which a session records in the repository. By hand only:
+# a film takes minutes, and nothing judges a change by it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      shot:
+        description: The shot's file, e.g. promo/shots/brute-pummel-round-3.json.
+        type: string
+        required: true
+      ratio:
+        description: The ratio to film, one of the shot's.
+        type: choice
+        options: ['9:16', '16:9', '1:1']
+        default: '9:16'
+
+permissions:
+  contents: read
+
+jobs:
+  film:
+    name: promo-film
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: promo
+    concurrency:
+      group: promo-film
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHOT: ${{ inputs.shot }}
+      RATIO: ${{ inputs.ratio }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Refuse a shot outside promo/shots/
+        run: |
+          if [[ ! "$SHOT" =~ ^promo/shots/[a-z0-9][a-z0-9-]*\.json$ || ! -f "$SHOT" ]]; then
+            echo "::error::The shot is a file of promo/shots/, such as promo/shots/brute-pummel-round-3.json."
+            exit 1
+          fi
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Build the engine, the content and the battle bundle
+        run: |
+          npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
+          dotnet build src/DownfallArena.Cli
+          dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
+
+      - name: Install Chromium
+        working-directory: studio/browser
+        run: |
+          npm ci --ignore-scripts
+          node node_modules/playwright/cli.js install --with-deps chromium
+
+      - name: Film the shot
+        run: |
+          ffmpeg -version | head -1
+          node scripts/promo/shoot.mjs "$SHOT" --film --ratio "$RATIO" --out "$RUNNER_TEMP/promo"
+
+      - name: Sign in to Azure as the promo identity
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_PROMO_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      # Each file is named by its hash under the shot's name, so a film written twice is one blob, and the
+      # repository's record names the bytes it means.
+      - name: Write the film and its sheet to the promo container
+        env:
+          PROMO_URL: ${{ vars.TABLE_PROMO_URL }}
+        run: |
+          if [[ -z "$PROMO_URL" ]]; then
+            echo "::error::The TABLE_PROMO_URL variable is not set (infra/runbooks/promo-identity.md, step 5)."
+            exit 1
+          fi
+          name="$(basename "$SHOT" .json)"
+          tag="${RATIO/:/x}"
+          {
+            echo "### ${name}, ${RATIO}"
+            echo
+            echo "| File | SHA-256 | Bytes | Blob |"
+            echo "| --- | --- | --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for file in "film-${tag}.mp4" "sheet-${tag}.png"; do
+            path="$RUNNER_TEMP/promo/$file"
+            hash="$(sha256sum "$path" | cut -d' ' -f1)"
+            bytes="$(stat -c %s "$path")"
+            blob="${name}/${hash}.${file##*.}"
+            type="video/mp4"; [[ "$file" == *.png ]] && type="image/png"
+            if [[ "$(az storage blob exists --auth-mode login --blob-url "$PROMO_URL/$blob" --query exists --output tsv)" != "true" ]]; then
+              az storage blob upload --auth-mode login --blob-url "$PROMO_URL/$blob" --file "$path" --content-type "$type" --no-progress --output none
+            fi
+            echo "| ${file} | ${hash} | ${bytes} | ${blob} |" >> "$GITHUB_STEP_SUMMARY"
+          done

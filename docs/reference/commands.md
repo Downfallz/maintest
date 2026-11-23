@@ -1239,6 +1239,7 @@ look before replacing), the sources `pictures.mjs` then derives. It needs what `
 ```bash
 node scripts/promo/shoot.mjs promo/shots/brute-mirror-round-3.json --still
 node scripts/promo/shoot.mjs promo/shots/<shot>.json --still --ratio 9:16 --out <folder>
+node scripts/promo/shoot.mjs promo/shots/brute-pummel-round-3.json --film --ratio 9:16
 ```
 
 Takes the still of a promotion's shot (docs/art/promotion-plan.md, P1; ADR 0205): the shot's scenario opened on a
@@ -1247,8 +1248,31 @@ real table host by a new account, in Chromium framed at each ratio the shot name
 720 pixels). The page's clock and `Math.random` are pinned, reduced motion is requested, the briefing is started
 and the windows a first visit opens are closed, and the practice's banner is hidden. It writes `still-<ratio>.png` under
 `artifacts/promo/<shot>/` (`--out` elsewhere) and prints each file with its SHA-256. One shot gives the same bytes
-each time on one machine and one build. `--ratio` shoots one of the shot's ratios, and refuses another. `--still`
-is the only mode today. It needs what `ux/journey.mjs` needs, and exits 1 on a shot it refuses (promo/README.md) before it starts a browser.
+each time on one machine and one build. `--ratio` shoots one of the shot's ratios, and refuses another.
+
+`--film` films a shot that has a `film` (docs/art/promotion-plan.md, P2): the scenario opened as for a still, then
+the page's clock moved one frame of the film at a time for `film.seconds` at `film.fps`, a PNG a frame under
+`frames-<ratio>/`, encoded by `ffmpeg` into `film-<ratio>.mp4` (H.264, yuv420p, no date written), and
+`sheet-<ratio>.png`, twelve of its frames with the margins a feed covers hatched. The seat plays as a player:
+it closes a window opened over the field, presses OK and Continue, and answers the host's question through the
+seat's route, each 800 ms after it is on screen; it buys no Mutation, takes a Standard tempo and casts the first
+spell of `film.casts` it can. The page's streams are held, so it reads only once the host has finished with an
+answer. It prints the film's SHA-256, its frame count and one digest of its frames. It needs `ffmpeg` and
+`ffprobe` besides, and exits 1 on a shot without a `film`, or with both `--still` and `--film`, before it starts a
+browser. A 20-second film takes about two minutes here.
+
+It needs what `ux/journey.mjs` needs, and exits 1 on a shot it refuses (promo/README.md) before it starts a browser.
+
+### promo/media.mjs
+
+```bash
+node scripts/promo/media.mjs
+```
+
+Checks `promo/media.json`, the record of the films and sheets written to the `promo` container (ADR 0206): each
+names a shot of `promo/shots/`, its file, its SHA-256 and size, and the blob, its hash under the shot's name. Exit 1
+on a line it refuses. The lines come from the summary of `.github/workflows/promo-film.yml` (*Film a promotion
+shot*, by hand), which films a shot on a runner and writes the film and its sheet as the promo identity.
 
 ### recap-fixture.py
 
