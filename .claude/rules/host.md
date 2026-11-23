@@ -70,6 +70,9 @@ paths:
 - A store kept per account is emptied by `ForgetAsync`, and a write that lands after it does not create the
   account's record again. A sentence about what is kept or deleted is read against what is deleted at rest,
   dead letters and logs included (#1108, #1117, #1129).
+- A write that another writer can race (another process, another tab, a revoked device, a sign out everywhere)
+  is conditional on what was read (the store's ETag, a revision, a revocation mark), and its test plays the other
+  writer between the read and the write (#1094, #1108, #1117, #1121, #1129).
 - A document read, changed and written back (`NoticeDocuments`, `DeviceRecord`) keeps the fields it does not
   know: the revision before it runs beside it during a deploy and writes over them otherwise (#1108, #1129).
 - A new route has a host test in `tests/DownfallArena.Cli.Tests/Table`, a line in `table/README.md#routes`,

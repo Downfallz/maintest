@@ -29,6 +29,9 @@ Look for, in this order:
    route's answer is tested through the route, not only by the page's mapper, whose fixture writes it by hand (#812).
 4. Convention drift: naming outside the glossary, public setters in the domain, logic in Infrastructure.
 5. Docs left stale: glossary, ADR needed but absent, `AGENTS.md` now wrong.
+6. A line of the `AGENTS.md` of each area the diff touches that the new code breaks (motion in transform and
+   opacity only, a picture through the picture kit, a new module in the browser plan): read those files, they are
+   not loaded for you (#1004, #1049, #1104, #1130).
 
 Verify claims by reading code, not by trusting the PR description. Run `dotnet build` and `dotnet test` in the
 copy if the SDK is available and report the actual output; copy the checkout's `table/battle-build/` in first,
