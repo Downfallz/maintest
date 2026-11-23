@@ -602,7 +602,7 @@ internal sealed class AccountApi
         Result<Account> linked;
         try
         {
-            linked = await _registry.LinkAsync(who.Account.Id, identity);
+            linked = await _registry.LinkAsync(who.Account.Id, identity, who.Account.Generation);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {
@@ -648,7 +648,7 @@ internal sealed class AccountApi
         Result<Account> unlinked;
         try
         {
-            unlinked = await _registry.UnlinkAsync(who.Account.Id, identity);
+            unlinked = await _registry.UnlinkAsync(who.Account.Id, identity, who.Account.Generation);
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure))
         {
@@ -703,7 +703,9 @@ internal sealed class AccountApi
     private static StudioResponse WaysUnavailable() =>
         Problem(503, "Account.Unavailable", "Your ways to sign in cannot be changed right now. Try again in a minute.");
 
-    private static StudioResponse WayRefused(DomainError error) => Problem(
+    private static StudioResponse WayRefused(DomainError error) => error == AccountErrors.SessionEnded
+        ? SignInRequired(error.Message)
+        : Problem(
         error == AccountErrors.IdentityNotLinked || error == AccountErrors.NotFound ? 404
         : error == AccountErrors.IdentityTaken || error == AccountErrors.ProviderLinked || error == AccountErrors.LastIdentity ? 409
         : 403,

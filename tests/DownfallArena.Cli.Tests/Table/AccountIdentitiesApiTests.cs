@@ -193,6 +193,22 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_sign_out_everywhere_while_the_provider_is_asked_adds_nothing()
+    {
+        var registry = Registry();
+        var slow = new SignsOutMeanwhile("other", registry);
+        var api = await ApiAsync(slow);
+        var session = await MarkSignedInAsync(api);
+        slow.Account = (await registry.FindAsync(Mark, Cancel))!.Id;
+
+        var answer = await api.HandleAsync("POST", Route + "/other", Proof("7"), Signed(session));
+
+        answer.Status.ShouldBe(401);
+        Error(answer).ShouldBe("Account.SignInRequired");
+        (await registry.FindAsync(new ExternalIdentity("other", "7"), Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task A_provider_the_host_does_not_offer_cannot_be_added()
     {
         var api = await ApiAsync();
@@ -355,7 +371,7 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         var api = await ApiAsync();
         var session = await MarkSignedInAsync(api);
         var account = await Registry().FindAsync(Mark, Cancel);
-        await Registry().LinkAsync(account!.Id, new ExternalIdentity("retired", "1"), Cancel);
+        await Registry().LinkAsync(account!.Id, new ExternalIdentity("retired", "1"), cancellationToken: Cancel);
 
         Providers(await api.HandleAsync("GET", Route, "", Signed(session))).ShouldBe(["google", "retired"]);
         var removed = await api.HandleAsync("DELETE", Route + "/retired", Recent(), Signed(session));
@@ -391,6 +407,22 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         public string? ClientId => null;
 
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) => Task.FromResult<ExternalIdentity?>(Mark);
+    }
+
+    /// <summary>A provider whose answer comes after the account signed out everywhere, from another device.</summary>
+    private sealed class SignsOutMeanwhile(string name, AccountRegistry registry) : ISignInProvider
+    {
+        public SharedKernel.Identifiers.AccountId? Account { get; set; }
+
+        public string Name => name;
+
+        public string? ClientId => null;
+
+        public async Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default)
+        {
+            await registry.SignOutEverywhereAsync(Account!.Value, cancellationToken);
+            return new ExternalIdentity(name, proof["subject"]!);
+        }
     }
 
     /// <summary>A provider that cannot be asked right now.</summary>

@@ -24,6 +24,12 @@ public static class AccountErrors
     /// </summary>
     public static readonly DomainError ProviderLinked = new("Account.ProviderLinked", "This account already has a way to sign in with that service. Remove it first to add another.");
 
+    /// <summary>
+    /// A change asked by a session the account no longer honours: a sign out everywhere, or another change of the
+    /// ways in, raised its generation while the request was under way.
+    /// </summary>
+    public static readonly DomainError SessionEnded = new("Account.SessionEnded", "This session has ended. Sign in again.");
+
     /// <summary>Removing the only way into an account (ADR 0204): deleting the account is how it goes.</summary>
     public static readonly DomainError LastIdentity = new("Account.LastIdentity", "This is the only way to sign in to this account. Add another way before you remove it.");
 
