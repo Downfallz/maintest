@@ -32,6 +32,13 @@ test('a strip is filmed at a screen its journey names', () => {
   }
 });
 
+// The lessons film their first cast (#978): the coach and its ring, the spell chosen, the coach aside, then the blow,
+// from the first step's screen, where the spell choice is open.
+test('the lessons film the first cast from the first step', () => {
+  const lessons = JOURNEYS.find(journey => journey.id === 'lessons');
+  assert.equal(lessons.strips['first-cast']?.at, 'lesson-1-first-step');
+});
+
 // A control the walk could not press at 320 px is pressed by script and named as blocked (play.mjs, choose): a strip
 // that presses Settings bare timed out there instead of being filmed (#1021).
 test('the match\'s settings-window strip presses Settings as the walk does, so a covered button is named, not a timeout', async () => {

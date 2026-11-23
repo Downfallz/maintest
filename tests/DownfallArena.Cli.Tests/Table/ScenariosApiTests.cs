@@ -911,6 +911,56 @@ public sealed class ScenariosApiTests : IDisposable
         Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
     }
 
+    /// <summary>
+    /// A reload reads once whether the tutorial is done, under the practices' gate, and lets its practice go on that
+    /// same read, keeping it done first. Read twice, a match that ended between the two reads was let go of unkept,
+    /// and the page's later word that it is done was refused (#931). Here the match ends after the first look at it.
+    /// </summary>
+    [Fact]
+    public async Task A_reload_lets_a_tutorial_go_only_on_the_read_that_kept_it_done()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        var tutorial = play.Api.Practice.ShouldNotBeNull().Tutorial.ShouldNotBeNull();
+        var looks = new int[1];
+        tutorial.Follow(new TutorialPlay.Seat(() => null, () => Interlocked.Increment(ref looks[0]) > 1, (_, _) => throw new InvalidOperationException("Nothing is answered.")));
+
+        var playing = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+        var states = Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).State;
+        var ended = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        (playing.Status, states).ShouldBe((200, "new"));
+        ended.Status.ShouldBe(404);
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>
+    /// A tutorial whose session could not go on (a bot's turn that throws) has no outcome: it plays on no more and did
+    /// not end its match. It is not resumed, and nothing is kept on the account: it is neither done nor skipped (#931).
+    /// </summary>
+    [Fact]
+    public async Task A_tutorial_whose_session_could_not_go_on_is_not_resumed_and_is_kept_as_new()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock) { Journals = () => new FaultingJournal() };
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await Task.WhenAny(play.Session.Outcome, Task.Delay(TimeSpan.FromSeconds(10), Cancel));
+
+        (play.Session.IsOver, play.Session.HasEnded).ShouldBe((true, false));
+        play.Api.Practice!.Tutorial!.Done.ShouldBeFalse();
+        var reopened = await api.HandleAsync("GET", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        reopened.Status.ShouldBe(404);
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).State.ShouldBe("new");
+    }
+
     [Fact]
     public async Task Leaving_another_scenario_leaves_the_account_s_practice_where_it_is()
     {

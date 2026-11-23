@@ -108,14 +108,15 @@ test('the page loads the book it is served beside, and goes on with no card when
 });
 
 // The lessons' brief (docs/art/journeys/lessons.md) gives a card 60 words at 320 px, its title, eyebrow and link
-// included; the card's own words, the title, the lines and the example, keep 10 of them for that frame. #977 brought
-// Mutation and Conditions, the two its measure found over, to 50; the others are held at 60 of their own until a
-// follow-up brings them to 50 as well, the French edition with them.
+// included; the card's own words, the title, the lines and the example, keep 10 of them for that frame. Every card
+// is held to 50, in both editions (#977, #1086). Counted as the issue counts them: split on whitespace, so in French
+// a space before a colon or a semicolon counts as a word.
 const CARD_WORDS = 50;
 const wordsOf = card => [card.title, ...card.lines, card.example].join(' ').trim().split(/\s+/).length;
-test('the cards a lesson opens first fit the brief\'s word budget', () => {
-  for (const id of ['mutation', 'conditions']) {
-    assert.ok(wordsOf(concepts.card(id)) <= CARD_WORDS, `${id}: ${wordsOf(concepts.card(id))} words`);
-  }
-  for (const card of concepts.all) assert.ok(wordsOf(card) <= 60, `${card.id}: ${wordsOf(card)} words`);
+const french = conceptsOf(JSON.parse(readFileSync(join(root, 'table/rules.fr.json'), 'utf8')));
+test('every card, in English and in French, fits the brief\'s word budget', () => {
+  assert.deepEqual(french.all.map(card => card.id), concepts.all.map(card => card.id));
+  const over = [...concepts.all.map(card => ['en', card]), ...french.all.map(card => ['fr', card])]
+    .filter(([, card]) => wordsOf(card) > CARD_WORDS).map(([edition, card]) => `${edition} ${card.id}: ${wordsOf(card)} words`);
+  assert.deepEqual(over, []);
 });

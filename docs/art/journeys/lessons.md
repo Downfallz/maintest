@@ -300,8 +300,10 @@ ring, not a painting ([Do, do not read](../ux-craft.md#do-do-not-read)).
 | The hint | The question's sheet closed with nothing sent, while the same question is asked. | `opacity` | [A hint at the moment of need](../ux-craft.md#a-hint-at-the-moment-of-need) | `--motion-normal`, `--motion-enter` |
 | The press | A pointer down on an ⓘ, Restart the round, or the sheet's controls. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
-The ring of what the step points at shows at once and stays still, as before UX8; it does not loop, so it is no
-ambience and the screen has none. The order the clip must show: the coach and the ring, the choice, the coach
+The ring of what the step points at fades in once, over `--motion-normal` on `--motion-enter`, and then stays still;
+it does not loop, so it is no ambience and the screen has none. It is an outline, so what fades is its colour, not an
+`opacity`: paint alone, once, with no layout, and the same under less motion. The coach steps aside from the field in a fade during which it takes no tap (`pointer-events`)
+and no focus (`inert`, or `visibility` once faded); in a sheet or the dock it leaves at once, with them (#978). The order the clip must show: the coach and the ring, the choice, the coach
 aside, the blow (the canvas's, at `table/battle-timing.js`'s pace), then the next step. The measure reads nothing
 animating at rest on these screens, and must still.
 
@@ -354,12 +356,10 @@ animating at rest on these screens, and must still.
   it, and the craft book's entry and the ADR would change first. The craft book's entry says "What 'stalled'
   means is the host's to say": it gains, in its own change, the reading above (the question still open, and a
   press that turned away from it).
-- The ring's one-time fade and the strip `first-cast` were left out of UX8 on purpose: the ring shows at once, and
-  the beat from the coach to the blow is read on the clip alone. A strip, if the owner wants one, is added to
-  `scripts/ux/journeys.mjs` in its own change.
-- The coach steps aside at once, not in a fade: a card that fades out stays displayed, and could take a tap, for
-  the length of the fade (`battle-tutorial.spec.js` holds that a hidden card is not displayed). The fade waits for
-  UX12, which stages how the match's parts leave.
+- The ring's one-time fade, the coach's fade as it steps aside and the strip `first-cast` were left out of UX8 and
+  built in #978. The strip is filmed with `node scripts/ux/journey.mjs lessons --strip first-cast --frames 24
+  --interval 80`. Under 760 px the coach stands in the spell choice's sheet, so the strip shows it leaving at once
+  with the sheet; the fade is seen on a wider screen, where the coach stands on the field.
 - The film's shift on `lesson-2-complete` and `lesson-3-complete` stays past 0.1: 0.32 and 0.42 at 320, 0.41 and
   0.38 at 390. It is summed over the whole lesson, the round's sheets and playback included, and the end card no
   longer adds to it (it is laid over the dock). What moves is the match's frame's, UX11's.

@@ -116,6 +116,11 @@ async function playStep(page, state, index, capture) {
   for (const line of step.says) await expect(page.locator('#coach-lines')).toContainText(line);
   await expect(page.locator('#coach-cards button')).toHaveCount(step.concepts.length);
   await expect(page.locator(`[data-creature="${step.pointsAt.creature}"]`)).toHaveAttribute('data-coach', 'true');
+  // The ring rises once, its colour faded in, and is still after it (#978).
+  expect(await page.locator(`[data-creature="${step.pointsAt.creature}"]`).evaluate(node => {
+    const style = getComputedStyle(node);
+    return [style.animationName, style.animationIterationCount];
+  })).toEqual(['coach-ring', '1']);
   await expect(page.locator('#practice-detail')).toHaveText(`Step ${index + 1} of ${lesson.steps.length}`);
   // The phase tips stay silent, and the spell choice opens by itself once the cards are read.
   await expect(page.locator('#help-dialog')).toBeHidden();
@@ -137,6 +142,8 @@ async function playStep(page, state, index, capture) {
   await page.locator('[data-spell="shock"]').click();
   // Targets are chosen on the field: the coach card steps aside, and the creature the step points at stays ringed.
   await expect(page.locator('#battle')).toHaveAttribute('data-combat', 'targets');
+  // It steps aside in a fade, and takes no tap while it fades (#978).
+  expect(await coach.evaluate(node => [getComputedStyle(node).pointerEvents, getComputedStyle(node).transitionProperty.includes('visibility')])).toEqual(['none', true]);
   await expect(coach).toBeHidden();
   await expect(page.locator(`[data-creature="${step.pointsAt.creature}"]`)).toHaveAttribute('data-coach', 'true');
   if (index === 0 && capture) await capture('coach-targets');
@@ -564,6 +571,12 @@ test('a match over before the host says the tutorial done is not called complete
   for (let index = 0; index < lesson.steps.length; index++) await playStep(page, state, index);
   await matchResult(page);
   await expect(page.locator('#match-eyebrow')).not.toHaveText(/^TUTORIAL .* COMPLETE/);
+  // The coach agrees with the result (#931): no card says the tutorial complete; it has left, and while it faded
+  // it took no tap and no focus (#978).
+  await expect(page.locator('#coach')).toBeHidden();
+  await expect(page.locator('#coach')).not.toHaveAttribute('data-done', 'true');
+  await expect(page.locator('#coach')).toHaveJSProperty('inert', true);
+  await expect(page.locator('#coach-step')).not.toHaveText(/COMPLETE/);
   await expect(page.locator('#match-again')).toBeVisible(); await expect(page.locator('#match-leave')).toBeVisible();
   await expect(page.locator('#match-rematch')).toBeHidden(); await expect(page.locator('#match-lobby')).toBeHidden();
   await page.route('**/', route => route.fulfill({ contentType: 'text/html', body: '<title>Home</title>' }));

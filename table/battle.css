@@ -1945,6 +1945,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .match-series { margin: 4px 0 0; color: var(--gold); font-size: 13px; line-height: 1.4; }
 .match-series[hidden] { display: none; }
 [data-coach="true"]:not(:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
+/* The ring rises once where a step points (#978): its colour fades in, then it stays still. A fade, so the same
+   under less motion; on the element itself, so a focus that comes and goes does not play it again. */
+[data-coach="true"] { animation: coach-ring var(--motion-normal) var(--motion-enter); }
+@keyframes coach-ring { from { outline-color: transparent; } }
 /* The card's eyebrow, title, lines and example are identity.css's .concept-card, shared with the rulebook (#699). */
 .concept-rulebook { margin: 0 0 8px; font-size: 12px; }
 /* The card's section in the rulebook, opened in a new tab so the battle stays on its question (rulebook-plan.md R4). */
@@ -1985,8 +1989,9 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #planning-dialog[open]:has(> .coach.in-sheet) > :is(.coach, .planning-header) { flex: none; }
 #planning-dialog[open]:has(> .coach.in-sheet) #planning-choices { flex: none; overflow: visible; }
 #planning-dialog[open]:has(> .coach.in-sheet) .planning-footer { position: sticky; bottom: 0; z-index: 3; margin-top: auto; }
-/* Targets are chosen on the field itself: the coach card steps aside, and the creature it points at stays ringed. */
-#battle[data-combat="targets"] .coach { display: none; }
+/* Targets are chosen on the field itself: the coach card steps aside in a fade, and the creature it points at stays
+   ringed. It takes no tap while it fades, and once faded it is hidden, so it takes no focus either (#978). */
+#battle[data-combat="targets"] .coach { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--motion-fast) var(--motion-exit), visibility var(--motion-fast); }
 /* A tutorial's band stands in the header, not over the field: there it hid the top row of creatures, worst on a phone
    held upright. It takes the place of what a tutorial has no use for: the opponent, History, Help, the reactions and
    the notifications. It says its place in the series (and the step, where there is room), Restart the round (Play
@@ -2053,6 +2058,13 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The coach arrives with its step (UX8): a fade, and under full motion a short rise. */
 .coach:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter); }
 @starting-style { .coach:not([hidden]) { opacity: 0; } }
+/* The coach steps aside from the field (#978): the same fade under less motion. Still displayed while it fades, it
+   takes no tap, and the script makes it inert, so it takes no focus. A card in a sheet or in the dock leaves at once,
+   with them (no data-fade), and a browser without allow-discrete hides it at once. */
+@supports (transition-behavior: allow-discrete) {
+  .coach[hidden][data-fade="true"] { opacity: 0; pointer-events: none;
+    transition: opacity var(--motion-fast) var(--motion-exit), display var(--motion-fast) allow-discrete; }
+}
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-motion="less"]) .coach:not([hidden]) { transition: opacity var(--motion-normal) var(--motion-enter), translate var(--motion-normal) var(--motion-enter); }
   @starting-style { :root:not([data-motion="less"]) .coach:not([hidden]) { translate: 0 6px; } }

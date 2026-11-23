@@ -119,8 +119,8 @@
             "id": "health",
             "title": "Health",
             "lines": [
-              "At zero Health a creature is defeated, for the rest of the match.",
-              "When a team has no creature left, the match ends at once, even in the middle of a round.",
+              "At zero Health a creature is defeated for good.",
+              "When a team has no creature left, the match ends, even mid-round.",
               "Healing never takes a creature above the Health it started the match with."
             ],
             "example": "A creature starts at 30 Health. A hit of 7 leaves it at 23."
@@ -1253,8 +1253,8 @@
             "title": "Tempo",
             "lines": [
               "Each round, every creature that is not stunned takes a tempo: Instinct or Precision.",
-              "Instinct acts before every Precision creature, and cannot roll a critical this round.",
-              "Precision acts after every Instinct creature, and keeps the critical roll."
+              "Instinct acts before every Precision creature, but cannot roll a critical this round.",
+              "Precision acts after, and keeps the critical roll."
             ],
             "example": "An Instinct creature at 5 initiative acts before a Precision creature at 9."
           }
@@ -1365,10 +1365,10 @@
             "title": "Initiative",
             "lines": [
               "Initiative orders the creatures inside their tempo: the highest acts first.",
-              "A creature starts with its base initiative. Each mutation adds its bonus, for the rest of the match.",
+              "Each mutation adds its bonus to the base initiative, for good.",
               "A tie between the two teams is settled by a d20 roll-off."
             ],
-            "example": "Two Precision creatures at 7 and 5 initiative: the one at 7 acts first."
+            "example": "In Precision, the creature at 7 initiative acts before the one at 5."
           }
         },
         {
@@ -1477,10 +1477,10 @@
             "id": "intent",
             "title": "Choosing a spell",
             "lines": [
-              "No spell is declared in advance: a creature chooses its spell when its turn comes.",
-              "You choose the spell and its targets on the board as it stands, and it resolves at once."
+              "No spell is declared in advance.",
+              "When its turn comes, you choose its spell and targets on the board as it stands. It resolves at once."
             ],
-            "example": "A creature at 3 Energy, at its turn, may cast any spell it knows that costs 3 or less."
+            "example": "A creature at 3 Energy may cast, at its turn, any spell it knows that costs 3 or less."
           }
         },
         {
@@ -1746,9 +1746,9 @@
             "lines": [
               "Defense lowers the damage of every hit a creature takes, never below zero.",
               "Defense buffs add at most 10 to it, however many it holds.",
-              "Only damage over time, applied at Upkeep, ignores it."
+              "Only damage over time, at Upkeep, ignores it."
             ],
-            "example": "A hit of 7 on a creature with 2 Defense deals 5. A creature starts at 0 Defense: the same hit on it deals 7."
+            "example": "A creature starts at 0 Defense. A hit of 7 deals 7, or 5 at 2."
           }
         },
         {
@@ -2051,8 +2051,8 @@
             "id": "fizzle",
             "title": "A skipped turn",
             "lines": [
-              "A creature that cannot act when its turn comes is skipped: nothing resolves, and nothing is spent.",
-              "It happens when the creature was defeated or stunned earlier in the round."
+              "A creature that cannot act when its turn comes is skipped. Nothing resolves, nothing is spent.",
+              "It was defeated or stunned earlier in the round."
             ],
             "example": "A creature stunned by an earlier turn is skipped when its own comes, and keeps all its Energy."
           }
@@ -2350,7 +2350,7 @@
             "lines": [
               "A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.",
               "On a critical, the spell's damage and healing on its targets are multiplied.",
-              "An Instinct creature never rolls."
+              "Instinct never rolls."
             ],
             "example": "A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 14."
           }
@@ -2973,6 +2973,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-23",
+      "text": "The Health, Tempo, Initiative, Choosing a spell, Defense, A skipped turn and Critical cards are shorter, and in French the Energy card too, with no rule changed.",
+      "adrs": []
+    },
     {
       "date": "2026-11-22",
       "text": "The reference has a section on the ladder: what a ranked game is, what moves a rating and by how much, that a draw counts as half a win and a voided game never counts, what the ± says and when a rating is provisional. The Mutation and Conditions cards are shorter, with no rule changed (ADR 0124, ADR 0176).",

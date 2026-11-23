@@ -248,7 +248,12 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     const lesson = tutorialOf(view);
     if (lesson) drawLesson(view, lesson);
     shown = lesson ? coachCard(view, { held, concepts }) : null;
+    // A card leaving the field fades (battle.css), still displayed: inert, it takes no tap and no focus meanwhile.
+    // One in a sheet or the dock leaves at once, with them (#978).
+    if (shown) delete coach.dataset.fade;
+    else if (!coach.hidden) coach.dataset.fade = String(!coach.classList.contains('in-sheet') && !coach.classList.contains('in-dock'));
     coach.hidden = !shown;
+    coach.inert = !shown;
     coach.dataset.done = String(shown?.done === true);
     const nextKey = shown?.key ?? '';
     if (shown && nextKey !== key) drawCard(shown, lesson);

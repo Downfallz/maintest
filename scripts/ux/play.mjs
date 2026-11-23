@@ -140,6 +140,15 @@ async function answerAction(page, view, next, look, blocked) {
   await confirm(page, '#combat-confirm');
 }
 
+/**
+ * The lesson's action asked now, cast with the person's recorded answer, its spell choice open: the spell, its
+ * targets, Cast. What the lessons' first-cast strip films (#978).
+ */
+export async function castRecorded(page, lesson, blocked = async () => {}) {
+  const view = await asked(page, ['Action']);
+  await answerAction(page, view, recordedAnswers(lesson.file), async () => {}, blocked);
+}
+
 /** Answer what the seat is asked, its sheet open first. `look` is called once the sheet is open, and once targets are asked. */
 export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {}, tempo } = {}) {
   if (view.waitingFor === 'Action') await openSpells(page); else await openPlanning(page);
