@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -6,13 +8,15 @@ namespace DownfallArena.Cli.Table;
 /// <summary>
 /// The sign-ins posted from each network address (#1193), counted before a provider is asked: a provider's own budget
 /// (Discord's thirty exchanges a minute) is shared by every player, and one address posting well-shaped proofs would
-/// otherwise spend it for all. As the guests' feedback is counted (ADR 0189): in this process's memory only, each
-/// address hashed with a salt the process draws, so what is held names nobody and a restart forgets it. Thread-safe:
-/// the count is read and the attempt noted under one gate, so two requests cannot both pass on the same last place.
+/// otherwise spend it for all. A sign-in the provider vouches for is given back, so a room of players behind one address
+/// is not held to five a minute. An IPv6 address is counted by its /48, which one customer of an ISP holds, not by the
+/// /64 <see cref="RequestAddress" /> gives. As the guests' feedback is counted (ADR 0189): in this process's memory
+/// only, each address hashed with a salt the process draws, so what is held names nobody and a restart forgets it.
+/// Thread-safe: the count is read and the attempt noted under one gate, so two requests cannot both take the last place.
 /// </summary>
 internal sealed class SignInAttempts
 {
-    /// <summary>How many sign-ins one address may post in a <see cref="Window" />: a player needs one, a retry or two more.</summary>
+    /// <summary>How many sign-ins one address may post in a <see cref="Window" /> that its provider does not vouch for.</summary>
     public const int PerAddress = 5;
 
     /// <summary>The window the attempts are counted over, the same as the provider's own budget.</summary>
@@ -20,8 +24,20 @@ internal sealed class SignInAttempts
 
     private readonly byte[] _salt = RandomNumberGenerator.GetBytes(16);
     private readonly Lock _gate = new();
-    private readonly Dictionary<string, Queue<DateTimeOffset>> _posted = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<DateTimeOffset>> _posted = new(StringComparer.Ordinal);
     private DateTimeOffset _swept = DateTimeOffset.MinValue;
+
+    /// <summary>How many addresses the count holds: what the sweep lets go of.</summary>
+    internal int Held
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _posted.Count;
+            }
+        }
+    }
 
     /// <summary>
     /// Notes one attempt from the address and lets it through, or refuses it, noting nothing, with how long until the
@@ -35,21 +51,30 @@ internal sealed class SignInAttempts
             Sweep(now);
             if (!_posted.TryGetValue(key, out var times))
             {
-                _posted[key] = times = new Queue<DateTimeOffset>();
+                _posted[key] = times = [];
             }
 
-            while (times.Count > 0 && times.Peek() <= now - Window)
-            {
-                times.Dequeue();
-            }
-
+            times.RemoveAll(at => at <= now - Window);
             if (times.Count >= PerAddress)
             {
-                return times.Peek() + Window - now;
+                return times.Min() + Window - now;
             }
 
-            times.Enqueue(now);
+            times.Add(now);
             return null;
+        }
+    }
+
+    /// <summary>Gives back the attempt taken at <paramref name="at" />: the provider vouched for it, so it spent nobody's budget in vain.</summary>
+    public void GiveBack(string address, DateTimeOffset at)
+    {
+        var key = Key(address);
+        lock (_gate)
+        {
+            if (_posted.TryGetValue(key, out var times))
+            {
+                times.Remove(at);
+            }
         }
     }
 
@@ -63,11 +88,25 @@ internal sealed class SignInAttempts
         }
 
         _swept = now;
-        foreach (var stale in _posted.Where(pair => pair.Value.All(at => at <= now - Window)).Select(pair => pair.Key).ToList())
+        foreach (var stale in _posted.Where(pair => pair.Value.TrueForAll(at => at <= now - Window)).Select(pair => pair.Key).ToList())
         {
             _posted.Remove(stale);
         }
     }
 
-    private string Key(string address) => Convert.ToHexStringLower(HMACSHA256.HashData(_salt, Encoding.UTF8.GetBytes(address)));
+    private string Key(string address) => Convert.ToHexStringLower(HMACSHA256.HashData(_salt, Encoding.UTF8.GetBytes(Counted(address))));
+
+    /// <summary>The address as it is counted: an IPv6 network by its /48, any other address as it is.</summary>
+    private static string Counted(string address)
+    {
+        var network = IPNetwork.TryParse(address, out var parsed) ? parsed : IPAddress.TryParse(address, out var one) ? new IPNetwork(one, one.AddressFamily == AddressFamily.InterNetworkV6 ? 128 : 32) : (IPNetwork?)null;
+        if (network is not { BaseAddress.AddressFamily: AddressFamily.InterNetworkV6 } v6 || v6.PrefixLength < 48)
+        {
+            return address;
+        }
+
+        var bytes = v6.BaseAddress.GetAddressBytes();
+        Array.Clear(bytes, 6, 10);
+        return $"{new IPNetwork(new IPAddress(bytes), 48)}";
+    }
 }

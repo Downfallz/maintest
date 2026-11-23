@@ -1001,6 +1001,21 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Sign_ins_the_provider_vouches_for_spend_nothing_of_their_address_s_count()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var api = await ApiAsync();
+        for (var posted = 0; posted < 2 * SignInAttempts.PerAddress; posted++)
+        {
+            (await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", From("203.0.113.7"))).Status.ShouldBe(200);
+        }
+
+        var forged = await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", From("203.0.113.7"));
+
+        forged.Status.ShouldBe(401);
+    }
+
+    [Fact]
     public async Task An_address_that_spent_its_count_signs_in_again_once_its_minute_is_over()
     {
         await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
@@ -1102,7 +1117,6 @@ public sealed class AccountApiTests : IDisposable
         }
     }
 
-    /// <summary>Google, as far as these tests need it: one token is Mark's, every other one is nobody's.</summary>
     /// <summary>A provider that refuses every proof and counts how often it was asked.</summary>
     private sealed class CountingProvider : ISignInProvider
     {
@@ -1119,6 +1133,7 @@ public sealed class AccountApiTests : IDisposable
         }
     }
 
+    /// <summary>Google, as far as these tests need it: one token is Mark's, every other one is nobody's.</summary>
     private sealed class OneToken : ISignInProvider
     {
         public string Name => ExternalIdentity.Google;

@@ -654,11 +654,12 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   code to the page `/signin/discord`. A hosted table takes that return over https only; a loopback one also over
   http. Discord out of service, slow or rate-limiting is `503 Account.ProviderUnavailable` and a line of its own,
   `Sign-in unavailable (discord): <why>.`, once a minute; the host asks Discord at most 30 times a minute, 4 at once,
-  and not at all until a 429's `Retry-After` has passed. One network address may post five sign-ins a minute to
-  `POST /api/account/<provider>`, counted before the provider is asked; past that it is answered
-  `429 Account.TooManySignIns` with `Retry-After` (#1193). The host writes its sign-in counts as one console line a
-  minute per provider, `Sign-ins (<provider>): … started, … finished, … refused, … unavailable, … limited.`, which the
-  ops report sums (#1171). A code is used once: a second post of the same code is refused. A client
+  and not at all until a 429's `Retry-After` has passed. One network address (an IPv6 one by its /48) may post five
+  sign-ins a minute to `POST /api/account/<provider>` that its provider does not vouch for, counted before the
+  provider is asked; past that it is answered `429 Account.TooManySignIns` with `Retry-After` (#1193). The host
+  writes its sign-in counts as one console line a minute per provider, and when it stops,
+  `Sign-ins (<provider>): … started, … finished, … refused, … unavailable, … limited.`, which the ops report sums
+  (#1171). A code is used once: a second post of the same code is refused. A client
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is

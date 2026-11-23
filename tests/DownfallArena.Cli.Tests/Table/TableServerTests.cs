@@ -508,7 +508,8 @@ public sealed class TableServerTests : IAsyncDisposable
         var root = Path.Combine(Path.GetTempPath(), $"server-accounts-{Guid.CreateVersion7():N}");
         try
         {
-            var url = await ServeWithAccountsAsync(root, new Refusing());
+            var refusing = new Refusing();
+            var url = await ServeWithAccountsAsync(root, refusing);
             for (var posted = 0; posted < SignInAttempts.PerAddress; posted++)
             {
                 (await PostSignInAsync(url, "203.0.113.7")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
@@ -520,6 +521,7 @@ public sealed class TableServerTests : IAsyncDisposable
             spent.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
             spent.Headers.RetryAfter.ShouldNotBeNull();
             other.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+            refusing.Asked.ShouldBe(SignInAttempts.PerAddress + 1, "the spent address's sixth post never reached the provider");
         }
         finally
         {
@@ -545,6 +547,32 @@ public sealed class TableServerTests : IAsyncDisposable
             _clock.Now += SignInCounts.Every;
 
             (await Get(url, token: null)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+            said.ShouldBe(["  Sign-ins (dev): 1 started, 1 finished, 0 refused, 0 unavailable, 0 limited."]);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>A host that stops says the counts its minute had not said yet: the table scales to zero after a quiet minute.</summary>
+    [Fact]
+    public async Task A_host_that_stops_says_the_sign_in_counts_it_still_holds()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"server-accounts-{Guid.CreateVersion7():N}");
+        try
+        {
+            var url = await ServeWithAccountsAsync(root);
+            var said = new List<string>();
+            _accounts!.Said = said.Add;
+            await SignInAsync(url, "MarkF");
+
+            await _stopping.CancelAsync();
+            await _serving!;
 
             said.ShouldBe(["  Sign-ins (dev): 1 started, 1 finished, 0 refused, 0 unavailable, 0 limited."]);
         }
@@ -669,15 +697,22 @@ public sealed class TableServerTests : IAsyncDisposable
         return ((IPEndPoint)probe.LocalEndpoint).Port;
     }
 
-    /// <summary>A provider that refuses every proof.</summary>
+    /// <summary>A provider that refuses every proof, and counts how often it was asked.</summary>
     private sealed class Refusing : Application.Accounts.Ports.ISignInProvider
     {
+        private int _asked;
+
+        public int Asked => _asked;
+
         public string Name => "refusing";
 
         public string? ClientId => null;
 
-        public Task<Application.Accounts.ExternalIdentity?> SignInAsync(Application.Accounts.SignInProof proof, CancellationToken cancellationToken = default) =>
-            Task.FromResult<Application.Accounts.ExternalIdentity?>(null);
+        public Task<Application.Accounts.ExternalIdentity?> SignInAsync(Application.Accounts.SignInProof proof, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _asked);
+            return Task.FromResult<Application.Accounts.ExternalIdentity?>(null);
+        }
     }
 
     /// <summary>A clock a test moves, so a sweep is a fact rather than a wait.</summary>

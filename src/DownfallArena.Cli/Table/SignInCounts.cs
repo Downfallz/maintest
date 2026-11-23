@@ -10,7 +10,7 @@ namespace DownfallArena.Cli.Table;
 /// </summary>
 internal sealed class SignInCounts
 {
-    /// <summary>How often the counts are said: the first count opens a minute, and the first request after it says them.</summary>
+    /// <summary>How often the counts are said: the first count opens a minute, and the first request after it says them; a host that stops says them at once.</summary>
     public static readonly TimeSpan Every = TimeSpan.FromMinutes(1);
 
     private readonly Lock _gate = new();
@@ -43,11 +43,16 @@ internal sealed class SignInCounts
     }
 
     /// <summary>The lines of the minute, a provider each, once it is over, and the counts begun again; none before.</summary>
-    public IReadOnlyList<string> Due(DateTimeOffset now)
+    public IReadOnlyList<string> Due(DateTimeOffset now) => Said(opened => now - opened >= Every);
+
+    /// <summary>The lines of what is counted, whether or not its minute is over: what a host that stops says.</summary>
+    public IReadOnlyList<string> All() => Said(_ => true);
+
+    private List<string> Said(Func<DateTimeOffset, bool> due)
     {
         lock (_gate)
         {
-            if (_opened is not { } opened || now - opened < Every)
+            if (_opened is not { } opened || !due(opened))
             {
                 return [];
             }

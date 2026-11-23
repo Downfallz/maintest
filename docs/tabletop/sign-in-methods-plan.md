@@ -155,14 +155,13 @@ and 4. The recommended answer:
      `accounts` waits for P3, once every page reads `signIn`.
    - The page draws the button of each listed provider it knows (`DRAWN_WAYS`, the row `#sign-in-ways`) and hides
      the others.
-   - The count: each sign-in writes one console line per step, `Sign-in started|finished|refused (<provider>).`
-     It is finished once a session is issued, after the name window for a new player, and refused when the
-     provider says no, the account is suspended or registration is closed. Since #1171 the host counts the steps
-     in memory and writes one line a minute per provider, `Sign-ins (<provider>): … started, … finished, …`, which
-     the ops report sums; since #1193 one address may post five sign-ins a minute.
+   - The count: each sign-in's steps are counted by provider. A sign-in is finished once a session is issued, after
+     the name window for a new player, and refused when the provider says no, the account is suspended or
+     registration is closed. P2 wrote a console line per step; since #1171 the host counts the steps in memory and
+     writes one line a minute per provider, and when it stops, `Sign-ins (<provider>): … started, … finished, …`.
    - The account tests pass with the mode renamed (`AccountsMode.SignIn`) and their fake Google behind the new
      port. A credential that is not text is now a 401 rather than a 400.
-   - Left: the ops report reads the count, and a forged proof stops writing a line each (#1171).
+   - Since built: the ops report sums the count, and a forged proof no longer writes a line each (#1171).
      `infra/main.bicep` still passes `--accounts google`; P3 changes it with `discordClientId`.
 3. **P3, Discord.** `DiscordSignIn` (PKCE, public client, scope `identify`), `/signin/discord`, the state check,
    `discordClientId` in `infra/main.bicep`, and the owner's steps in `infra/README.md` (the app, the redirect
@@ -179,7 +178,7 @@ and 4. The recommended answer:
      (or over http on a loopback table only).
    - Discord that cannot be asked is not a refusal: out of reach, slower than ten seconds, a 5xx or a 429 throws
      `SignInUnavailableException`, which the route answers `503 Account.ProviderUnavailable` with the line
-     `Sign-in unavailable (discord): <why>.`. The host asks Discord at most 30 times a minute and 4 at once, and not at
+     `Sign-in unavailable (discord): <why>.`, said once a minute (#1171). The host asks Discord at most 30 times a minute and 4 at once, and not at
      all until a 429's `Retry-After` has passed, so a script cannot get the table's address banned by Discord.
    - The host: `--sign-in google,discord`, `--discord-client-id` or `DOWNFALL_DISCORD_CLIENT_ID`; a client id given
      without its provider is refused. `/api/me` now says `accounts: "signin"` and no longer `googleClientId`. The P2
@@ -195,9 +194,10 @@ and 4. The recommended answer:
    - Infra: `discordClientId` in `infra/main.bicep` from the `TABLE_DISCORD_CLIENT_ID` variable; unset, nothing
      changes. The owner's steps are in `infra/README.md` (*Player sign-in*), and the redirect per address in
      `infra/runbooks/sign-ins.md`.
-   - Left: creating the Discord application and the variable (the owner's steps); the Discord journey in the browser
-     suite against a mock of Discord's pages; a count of sign-ins per network address, so one address cannot spend
-     the minute's 30 exchanges for everybody (with #1171).
+   - Since built: the Discord journey in the browser suite against a mock of Discord's pages
+     (`studio/browser/signin-discord.spec.js`, #1194); a count of sign-ins per network address, so one address
+     cannot spend the minute's 30 exchanges for everybody (#1193).
+   - Left: creating the Discord application and the variable (the owner's steps).
 
 4. **P4, ways to sign in.** Ships once P1's release is the only one running (ADR 0204). Settings lists the
    account's providers, adds one (the provider's own flow, then `POST /api/account/identities/<provider>`) and

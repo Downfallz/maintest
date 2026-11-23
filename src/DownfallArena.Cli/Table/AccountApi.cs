@@ -122,6 +122,15 @@ internal sealed class AccountApi
         }
     }
 
+    /// <summary>Says every count held, its minute over or not: the host stops, and would otherwise take them with it.</summary>
+    public void SayCounts()
+    {
+        foreach (var line in _counts.All())
+        {
+            Said(line);
+        }
+    }
+
     /// <summary>
     /// The devices an account can be told on (friends plan, stage 1), set by the host that keeps them; none on a
     /// host without a store. Forgotten with "sign out everywhere" and with the account.
@@ -493,7 +502,8 @@ internal sealed class AccountApi
         }
 
         // Counted by address before the provider is asked (#1193): its budget is every player's, not one address's.
-        if (request.Address is { } address && _attempts.Take(address, Clock.GetUtcNow()) is { } wait)
+        var taken = Clock.GetUtcNow();
+        if (request.Address is { } address && _attempts.Take(address, taken) is { } wait)
         {
             Counted(SignInCounts.Step.Limited, name);
             var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -531,6 +541,12 @@ internal sealed class AccountApi
         {
             Counted(SignInCounts.Step.Refused, name);
             return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
+        }
+
+        // A person the provider vouched for spent the budget on what it is for: a room behind one address signs in.
+        if (request.Address is { } vouchedFrom)
+        {
+            _attempts.GiveBack(vouchedFrom, taken);
         }
 
         if (await _registry.FindAsync(identity) is { } account)

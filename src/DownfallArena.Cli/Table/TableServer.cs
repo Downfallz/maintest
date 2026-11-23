@@ -59,6 +59,10 @@ internal sealed class TableServer : IDisposable
         _stored = stored;
         _clock = clock;
         _accounts = accounts;
+        if (accounts is not null)
+        {
+            AppDomain.CurrentDomain.ProcessExit += SayCountsOnExit;
+        }
         _friends = friends;
         _leaderboard = leaderboard;
         _stats = stats;
@@ -99,9 +103,28 @@ internal sealed class TableServer : IDisposable
     /// <summary>Whether only this machine can reach the table, which is a thing its players are told.</summary>
     public bool IsLoopback => _host.IsLoopback;
 
-    public Task RunAsync(CancellationToken cancellationToken) => _host.RunAsync(cancellationToken);
+    /// <summary>Serves until stopped, then says the sign-in counts the minute had not said yet (#1171).</summary>
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _host.RunAsync(cancellationToken);
+        }
+        finally
+        {
+            _accounts?.SayCounts();
+        }
+    }
 
-    public void Dispose() => _host.Dispose();
+    public void Dispose()
+    {
+        AppDomain.CurrentDomain.ProcessExit -= SayCountsOnExit;
+        _host.Dispose();
+    }
+
+    // The platform stops a replica that scales to zero with SIGTERM, which ends the process without unwinding RunAsync:
+    // the counts it holds are said on the way out.
+    private void SayCountsOnExit(object? sender, EventArgs e) => _accounts?.SayCounts();
 
     /// <summary>
     /// The finished session in the viewer, the way the studio serves a run (ADR 0015). It carries the trace,

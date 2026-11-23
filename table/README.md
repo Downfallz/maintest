@@ -476,15 +476,19 @@ recordings: `runs/accounts/`, or the `accounts` container next to the recordings
 email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev`, or `signin` for
 any host that signs in through providers), `signIn` (each provider as `{"provider", "clientId"}`, in order) and
 `account`. The host counts each sign-in's steps in memory and writes one console line a minute per provider
-(#1171), `Sign-ins (<provider>): 3 started, 2 finished, 1 refused, 0 unavailable, 0 limited.`: started when the
-proof reaches the host, finished once a session is issued (after the name window, for a new player), refused when
-the provider said no, the account is suspended or registration is closed, unavailable when the provider is out of
-service, limited when the address had posted too many. The line is written on the first request after the minute,
-so a restart loses at most the minute's counts. Summed by provider in the ops report, the lines show where people
-stop; a script posting forged proofs adds to the counts, not to the log. Each network address may post five sign-ins
-a minute to `POST /api/account/<provider>`, counted before the provider is asked; past that it is answered
-`429 Account.TooManySignIns` with `Retry-After` (#1193), so one address cannot spend a provider's budget (Discord's
-thirty a minute) for every player.
+(#1171): `Sign-ins (<provider>): 3 started, 2 finished, 1 refused, 0 unavailable, 0 limited.` The steps are:
+started when the proof reaches the host; finished once a session is issued (after the name window, for a new
+player); refused when the provider says no, the account is suspended or registration is closed; unavailable when
+the provider is out of service; limited when the address had already posted five that minute. The line is written
+on the first request after the minute, and when the host stops. Summed by provider in the ops report, the lines
+show where people stop; a script posting forged proofs adds to the counts, not to the log.
+
+Each network address may post five sign-ins a minute to `POST /api/account/<provider>` that its provider does not
+vouch for. They are counted before the provider is asked, and an IPv6 address is counted by its /48. Past that
+the post is answered `429 Account.TooManySignIns` with `Retry-After` (#1193). A sign-in the provider vouches for
+is not counted, so players behind one address still sign in. One address cannot spend a provider's budget
+(Discord's thirty a minute) for every player; several addresses still can, and Discord's own limit then answers
+`503 Account.ProviderUnavailable`.
 
 `--sign-in discord --discord-client-id <id>` (or `DOWNFALL_DISCORD_CLIENT_ID`) adds Discord (P3). Its button
 leaves for Discord's authorize page with a PKCE challenge and the scope `identify`. The state and the verifier stay
@@ -794,7 +798,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `/signin/discord` | anyone | The page Discord returns a sign-in to (sign-in methods plan, P3): it checks the tab's state, posts the code and goes back to the lobby. |
-| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past five a minute from one address (#1193). |
+| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past five refused sign-ins a minute from one address, an IPv6 one by its /48 (#1193). |
 | `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
 | `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
 | `DELETE /api/account` | account | Deletes the account. |
