@@ -1,6 +1,6 @@
 # Plan: promotion, from the real game to a published post
 
-Status: accepted, 2026-11-23 (the owner settled the questions at the end). Nothing is built.
+Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 is built; P2 is next.
 
 ## What the owner asked for
 
@@ -98,6 +98,19 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    and how it is labelled and recorded. `promo/README.md`, the shot's format, `scripts/promo/shoot.mjs --still`
    for one frame at each ratio. Tests (`node --test`): the shot's file is refused when it names a missing
    scenario or ratio; two shots of one still give the same bytes.
+
+   *Built (2026-11-23)*: [ADR 0204](../adr/0204-show-the-game-filmed-in-promotion-and-label-what-a-model-makes.md),
+   [promo/README.md](../../promo/README.md), one shot (`promo/shots/brute-mirror-round-3.json`, on the greedy 1v1
+   scenario) and `scripts/promo/shoot.mjs --still`. A still raises a real host, signs a new account in, opens the
+   scenario as a practice in Chromium at 360 by 640, 1280 by 720 or 720 by 720 CSS pixels at the density that
+   makes the short side 1080, and saves the screen. The page's clock is Playwright's, moved 100 ms at a time once
+   every request it made is answered; `Math.random` is seeded. Less motion is asked: with the embers and the breath
+   on, two takes differed, because the ambient clock counts from when the seat's view arrived. A film (P2) needs
+   another answer to that. The briefing is begun, the first visit's windows closed with Escape, and the practice's
+   band hidden. Three takes of the vertical still gave the same SHA-256. The shot names a scenario directly under
+   `scenarios/` only: a tutorial opens on its lesson. The seed form of a shot is left to P2, which plays a stretch
+   of a match. Tests: `studio/promo-shoot.test.js` (the refusals, the framing, the exit code) and the real-engine
+   journey `studio/browser/table.promo.js` (two stills, the same bytes, the sizes).
 2. **P2, the film.** The clock stepped over a stretch of a match, frames to MP4 with `ffmpeg`, the safe zones on
    the sheet. The `promo` container (Bicep, ADR on who may write it, `infra-reviewer`, `security-reviewer`) and
    the upload with its hash. Measures first whether the replay or a scenario played by bots can be stepped like the bench; if

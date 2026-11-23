@@ -75,6 +75,12 @@ test('the journey film plays its real-engine journey', () => {
   assert.equal(plan(['showcase/showcase.test.js'], specs).realEngine, false);
 });
 
+test('the promotion\'s still plays its real-engine journey, from the script and from the shots it reads', () => {
+  assert.deepEqual(plan(['scripts/promo/shoot.mjs'], specs), { ...nothing, realEngine: true });
+  assert.deepEqual(plan(['promo/shots/brute-mirror-round-3.json'], specs), { ...nothing, realEngine: true });
+  assert.deepEqual(plan(['promo/README.md'], specs), nothing);
+});
+
 test('the contrast measure plays the picture kit\'s spec, the rulebook\'s and the real-engine journey that walks with it', () => {
   assert.deepEqual(plan(['scripts/ux/contrast.mjs'], specs), { ...nothing, journeys: 'picture-kit.spec.js rules.spec.js', realEngine: true });
 });
