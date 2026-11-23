@@ -30,6 +30,7 @@ internal sealed class AccountApi
 
     // What a route that needs a signed-in account answers to nobody.
     private const string SignInRequiredCode = "Account.SignInRequired";
+    private const string SignInFirst = "Sign in first.";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -916,7 +917,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         if (Read<BrowserSubscription>(body)?.Endpoint is not { Length: > 0 } endpoint)
@@ -938,7 +939,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var test = await notices.TestAsync(who.Account.Id, Read<BrowserSubscription>(body)?.Endpoint);
@@ -958,7 +959,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         try
@@ -983,7 +984,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         if (Read<ReadNoticesBody>(body)?.UpTo is not { } upTo)
@@ -1029,7 +1030,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var saved = await store.GetAsync(who.Account.Id);
@@ -1051,7 +1052,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var asked = Read<NoticePreferencesBody>(body);
@@ -1096,7 +1097,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, SignInRequiredCode, "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var asked = Read<PreferencesBody>(body);
