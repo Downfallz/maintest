@@ -31,6 +31,7 @@ const AZURE_READINGS = {
   executions: 'maintenance',
   queue: 'files',
   logs: 'journal',
+  notices: 'notifications',
   cost: 'coût',
   budget: 'budget',
 };
@@ -156,6 +157,25 @@ function givenUp(reading) {
   return table.rows.filter((row) => String(row[line]).includes(GIVEN_UP)).reduce((sum, row) => sum + (Number(row[count]) || 0), 0);
 }
 
+/**
+ * What the notices worker did in the 24 hours (N6), from the notices reading: how many reached a device, how many
+ * tries a push service refused, how many were for a device that is gone, and how many notices were given up on,
+ * a push's tries among the refused, a "your turn" with no outcome of its own. The kinds are push topics: no person.
+ */
+export function noticeCounts(reading) {
+  const table = reading?.tables?.[0];
+  const all = { sent: 0, refused: 0, gone: 0, givenUp: 0 };
+  if (!table) return all;
+  const column = (name) => table.columns.findIndex((each) => each.name === name);
+  const [outcome, count, givenUp] = [column('outcome'), column('n'), column('givenUp')];
+  for (const row of table.rows) {
+    const key = row[outcome];
+    if (key in all && key !== 'givenUp') all[key] += Number(row[count]) || 0;
+    all.givenUp += Number(row[givenUp]) || 0;
+  }
+  return all;
+}
+
 /** The month to date from Cost Management, whatever the account calls its cost column. */
 export function cost(reading) {
   const columns = (reading?.properties?.columns ?? []).map((column) => column.name);
@@ -196,11 +216,13 @@ export function concerns(readings, now) {
   const failedPasses = usable(readings.executions) ? tending(readings.executions, now).failed : 0;
   const turns = usable(readings.logs) ? givenUp(readings.logs) : 0;
   const errors = usable(readings['5xx']) ? metricTotal(readings['5xx']) : 0;
+  const notices = usable(readings.notices) ? noticeCounts(readings.notices).givenUp : 0;
   const tendConcern = countConcern(failedPasses, 'passe');
   return [
     lobbyConcern(readings.lobby),
     tendConcern && `${tendConcern} de maintenance en échec`,
     countConcern(turns, 'tour abandonné', 'tours abandonnés'),
+    countConcern(notices, 'notification abandonnée', 'notifications abandonnées'),
     countConcern(errors, 'erreur 5xx', 'erreurs 5xx'),
     countConcern(restartsOf(readings), 'redémarrage'),
     budgetConcern(readings),
@@ -279,6 +301,14 @@ function journalLines(reading) {
   ];
 }
 
+function noticeLines(reading) {
+  if (!usable(reading)) return [];
+  const counted = noticeCounts(reading);
+  return [
+    `Notifications 24 h : ${plural(counted.sent, 'envoyée')}, ${plural(counted.refused, 'refusée')} (dont ${plural(counted.givenUp, 'abandonnée')}), ${plural(counted.gone, 'disparue')}`,
+  ];
+}
+
 function costLines(readings) {
   const spent = cost(readings.cost);
   if (!spent) return [];
@@ -311,6 +341,7 @@ export function render(readings, now) {
         ...tendLines(readings.executions, now),
         usable(readings.queue) && `Files : ${plural(metricLatest(readings.queue), 'message')} en attente`,
         ...journalLines(readings.logs),
+        ...noticeLines(readings.notices),
         ...costLines(readings),
       ]
     : ["Azure non lu : pas d'identité ops (infra/runbooks/ops-identity.md)"];

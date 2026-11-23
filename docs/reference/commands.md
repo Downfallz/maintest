@@ -348,7 +348,12 @@ Its Jobs tab lists the tending runs twenty a page with the last day's and week's
 process (`POST /api/admin/jobs/tend`, kept as manual with the operator's name), and, on a host whose bots' turns
 go through queues, shows each queue's length and oldest item and the dead letters, first 32 first
 (`GET /api/admin/jobs/turns`), and puts a letter's turn back on the queue or drops it
-(`POST /api/admin/jobs/turns/requeue {"ids"}` or `{"all":true}`, `POST .../drop {"ids"}`).
+(`POST /api/admin/jobs/turns/requeue {"ids"}` or `{"all":true}`, `POST .../drop {"ids"}`). On a host that sends its
+notices from a queue (ADR 0203), it shows the three notices queues' lengths and what the notices worker sent, had
+refused and found gone, for each kind, today (UTC) and over the last seven days, whichever process sent them
+(`GET /api/admin/jobs/notices`; 404 where the notices are sent in the request, 503 `Notices.Unavailable` when the
+queues or the counts cannot be read). The counts are kept one document a day beside the recordings
+(`notice-counts/`, a directory or a container), in memory on a host that records nothing.
 
 #### The admin panel: Scenarios, and practice from a scenario
 

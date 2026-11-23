@@ -102,20 +102,42 @@ internal static class ArtifactStores
     /// </summary>
     public static async Task<ITendLog> OpenTendLogAsync(string target, CancellationToken cancellationToken = default)
     {
+        var (directory, container) = Beside(target, TendContainer);
+        return container is null ? new FileTendLog(directory!) : await BlobTendLog.OpenAsync(container, cancellationToken);
+    }
+
+    /// <summary>
+    /// A directory or a container of that name beside what <c>--record</c> names: next to the runs' directory, or in the
+    /// same storage account. Never inside the recordings: the session store reads everything at the top of it as a session.
+    /// </summary>
+    private static (string? Directory, BlobContainerClient? Container) Beside(string target, string name)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(target);
         if (!IsContainerUrl(target))
         {
             var runs = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            return new FileTendLog(Path.Combine(Path.GetDirectoryName(runs) ?? runs, TendContainer));
+            return (Path.Combine(Path.GetDirectoryName(runs) ?? runs, name), null);
         }
 
         var recordings = new Uri(target, UriKind.Absolute);
         var path = recordings.AbsolutePath.TrimEnd('/');
-        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{TendContainer}", Query = string.Empty }.Uri;
-        var container = IsEmulator(uri)
+        var uri = new UriBuilder(recordings) { Path = $"{path[..path.LastIndexOf('/')]}/{name}", Query = string.Empty }.Uri;
+        return (null, IsEmulator(uri)
             ? new BlobContainerClient(uri, new StorageSharedKeyCredential(DevelopmentAccount, DevelopmentKey))
-            : new BlobContainerClient(uri, new DefaultAzureCredential());
-        return await BlobTendLog.OpenAsync(container, cancellationToken);
+            : new BlobContainerClient(uri, new DefaultAzureCredential()));
+    }
+
+    /// <summary>The container the notices worker's counts are kept in (notifications plan, N6), next to the recordings' one.</summary>
+    public const string NoticeCountsContainer = "notice-counts";
+
+    /// <summary>
+    /// Where the notices worker's counts are kept (N6), one document a day: a directory <c>notice-counts</c> next to the
+    /// runs' directory, or a container of that name in the same storage account, which the API and the worker app share.
+    /// </summary>
+    public static async Task<INoticeCountStore> OpenNoticeCountsAsync(string target, CancellationToken cancellationToken = default)
+    {
+        var (directory, container) = Beside(target, NoticeCountsContainer);
+        return container is null ? new FileNoticeCountStore(directory!) : await BlobNoticeCountStore.OpenAsync(container, cancellationToken);
     }
 
     /// <summary>The container the operators' actions are kept in (admin plan, A6), next to the recordings' one.</summary>

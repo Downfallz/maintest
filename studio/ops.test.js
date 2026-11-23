@@ -9,13 +9,14 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, w
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricMax, metricTotal, render, revisions, tending } from '../scripts/ops/report.mjs';
+import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricMax, metricTotal, noticeCounts, render, revisions, tending } from '../scripts/ops/report.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const NOW = '2026-11-16T10:23:00Z';
 
 const metric = (...values) => ({ value: [{ timeseries: [{ data: values.map((total) => ({ total, average: total, maximum: total })) }] }] });
 const logs = (...rows) => ({ tables: [{ columns: [{ name: 'app' }, { name: 'line' }, { name: 'n' }], rows }] });
+const notices = (...rows) => ({ tables: [{ columns: [{ name: 'outcome' }, { name: 'kind' }, { name: 'n' }, { name: 'givenUp' }], rows }] });
 
 const healthy = () => ({
   azure: { signedIn: true },
@@ -49,6 +50,7 @@ const healthy = () => ({
     ],
   },
   logs: logs(),
+  notices: notices(['sent', 'turn', 12, 0], ['sent', 'match', 3, 0], ['gone', 'turn', 1, 0]),
   cost: { properties: { columns: [{ name: 'Cost' }, { name: 'Currency' }], rows: [[0.42, 'CAD']] } },
   budget: { value: [{ properties: { amount: 5, currentSpend: { amount: 0.42, unit: 'CAD' } } }] },
 });
@@ -62,6 +64,7 @@ test('a healthy table says so on its first line and fits a phone', () => {
   assert.match(text, /downfall-table--new \(active, 1 réplica, saine\)/);
   assert.match(text, /Image : ghcr\.io\/downfallz\/downfall-table:7b37d70/);
   assert.match(text, /Maintenance 24 h : 2 passes, 0 en échec/);
+  assert.match(text, /Notifications 24 h : 15 envoyées, 0 refusée \(dont 0 abandonnée\), 1 disparue/);
   assert.match(text, /Coût du mois : 0,42 CAD sur 5 CAD \(8\u00a0%\)/);
   assert.ok(lines.length <= 20, `${lines.length} lines`);
   assert.ok(lines.every((line) => line.length <= 200));
@@ -114,6 +117,27 @@ test('a notice given up on is said in its own words, and the alert hears them wh
   assert.ok(read('src/DownfallArena.Cli/Table/NoticeWorker.cs').includes('tries, onto {poison.Name}'));
   assert.ok(!read('src/DownfallArena.Cli/Table/TableHost.cs').includes('tries, onto'), 'the hosts\' banner');
   assert.ok(!read('src/DownfallArena.Application/Work/DeadLetterWorker.cs').includes('tries, onto'), 'the dead-letter worker');
+  assert.ok(read('infra/main.bicep').includes('Log_s has "tries, onto"'), 'the alert');
+});
+
+test('the notices are counted by outcome, and those given up on among the refused are a concern', () => {
+  const reading = notices(['sent', 'friend', 4, 0], ['refused', 'friend', 7, 1], ['refused', 'turn', 2, 0], ['gone', 'match', 2, 0], ['', '', 0, 1]);
+  assert.deepEqual(noticeCounts(reading), { sent: 4, refused: 9, gone: 2, givenUp: 2 }, 'a "your turn" given up on names no outcome');
+  assert.deepEqual(noticeCounts({ tables: [] }), { sent: 0, refused: 0, gone: 0, givenUp: 0 });
+  assert.deepEqual(concerns({ ...healthy(), notices: reading }, NOW), ['2 notifications abandonnées']);
+  assert.match(render({ ...healthy(), notices: { error: 'no' } }, NOW), /Non lu : notifications/);
+});
+
+test('the notices reading counts the worker\'s own lines, in their own words', () => {
+  const read = (path) => readFileSync(join(root, path), 'utf8');
+  const worker = read('src/DownfallArena.Cli/Table/NoticeWorker.cs');
+  for (const outcome of ['sent', 'refused', 'gone']) {
+    assert.ok(worker.includes(`Notice ${outcome} ({`), outcome);
+  }
+  assert.ok(worker.includes('tries, onto {poison.Name}'), 'the give-up the reading counts, a push or a turn');
+  const query = read('scripts/ops/read.sh');
+  assert.ok(query.includes("Notice (sent|refused|gone) \\("), 'the outcome');
+  assert.ok(query.includes("givenUp = countif(Log_s has 'tries, onto')"), 'the give-ups, as the alert hears them');
   assert.ok(read('infra/main.bicep').includes('Log_s has "tries, onto"'), 'the alert');
 });
 
@@ -272,7 +296,7 @@ test('the readings go one file each, and one that fails is written as its error 
     assert.match(tools.read('executions').error, /AuthorizationFailed/);
     assert.deepEqual(tools.read('revisions-table'), { value: [] });
     assert.deepEqual(tools.read('lobby'), { url: 'https://downfall-table.example.test', status: 200, seconds: 0.5 });
-    for (const name of ['5xx', 'budget', 'cost', 'logs', 'queue', 'restarts-table', 'restarts-worker', 'revisions-worker']) {
+    for (const name of ['5xx', 'budget', 'cost', 'logs', 'notices', 'queue', 'restarts-table', 'restarts-worker', 'revisions-worker']) {
       assert.ok(tools.files().includes(`${name}.json`), name);
     }
     assert.match(tools.log('az'), /api\.loganalytics\.io\/v1\/workspaces\/ws-1\/query/);

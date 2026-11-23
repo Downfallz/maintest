@@ -456,6 +456,33 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_notices_are_the_operators_alone_and_none_on_a_host_that_sends_them_in_the_request()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+
+        (await admin.HandleAsync("GET", NoticesApi.Prefix, "", "a-seat-s-token", principal: null)).Status.ShouldBe(403);
+        (await admin.HandleAsync("GET", NoticesApi.Prefix, "", OperatorToken, principal: null)).Status.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task The_notices_queues_and_counts_are_answered_to_the_operator_on_a_host_that_queues_them()
+    {
+        var admin = Admin(OperatorGate.WithToken(OperatorToken));
+        var channels = new Infrastructure.Work.InMemoryWorkChannels(TimeProvider.System);
+        admin.Notices = new NoticesApi(
+            new Application.Work.TurnQueues(
+                await channels.OpenAsync(QueuedNotice.Queue, TestContext.Current.CancellationToken),
+                await channels.OpenAsync(Application.Work.PoisonedWork.QueueOf(QueuedNotice.Queue), TestContext.Current.CancellationToken),
+                await channels.OpenAsync(Application.Work.DeadLetter.QueueOf(QueuedNotice.Queue), TestContext.Current.CancellationToken)),
+            new Application.Work.NoticeCounts(new Infrastructure.Work.InMemoryNoticeCountStore(), TimeProvider.System));
+
+        var answer = await admin.HandleAsync("GET", NoticesApi.Prefix, "", OperatorToken, principal: null);
+
+        answer.Status.ShouldBe(200);
+        JsonDocument.Parse(Text(answer)).RootElement.GetProperty("queues").GetArrayLength().ShouldBe(3);
+    }
+
+    [Fact]
     public async Task The_jobs_are_the_operators_alone_and_none_on_a_host_that_keeps_no_runs()
     {
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
