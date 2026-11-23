@@ -228,5 +228,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0203](0203-send-the-notices-from-a-queue-and-your-turn-as-a-delayed-message.md) | Send the notices from a queue, and "your turn" as a delayed message | Accepted. Amends [0118](0118-your-turn-reaches-a-phone-nobody-is-looking-at.md) ("your turn" waits on the queue, not in the process) and [0201](0201-send-every-account-notice-through-one-door-and-keep-the-news-in-the-bell.md) (the door puts the push on the queue) |
 | [0204](0204-let-one-account-hold-several-ways-to-sign-in.md) | Let one account hold several ways to sign in | Accepted. Amends [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) (an account is keyed by one or more identities, not by Google's `sub` alone). |
 | [0205](0205-show-the-game-filmed-in-promotion-and-label-what-a-model-makes.md) | Show the game filmed in promotion, and label what a model makes | Accepted |
+| [0206](0206-write-the-promotion-media-to-a-private-container-as-their-own-identity.md) | Write the promotion's media to a private container, as an identity of their own | Accepted |
 
 <!-- index:end -->

@@ -1,6 +1,7 @@
 # Plan: promotion, from the real game to a published post
 
-Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 is built; P2 is next.
+Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 and P2 are built, P2's upload
+unproven until the owner's runbook is done; P3 is next.
 
 ## What the owner asked for
 
@@ -122,6 +123,45 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    neither can, the film is of a scenario played through the browser suite's real-engine journey, and the
    stage says what that costs in smoothness. Tests: a three-second shot gives the same frame hashes twice; the
    film's length and size are those the shot asks.
+
+   *Built (2026-11-23)*: measured first. The battle view's replay (`/battle?replay=`) shows the settled view at
+   each step and stages nothing (`battle/AGENTS.md`): a slideshow, not a film. A table of two bots plays to its end
+   on the host's clock before a page opens, so the page sees the end. Neither is filmed.
+
+   The film is a scenario played on from its cut, as a practice (`scripts/promo/shoot.mjs --film`, a shot's new
+   `film`: seconds, rate, the spells cast). The scripted opponent answers on the host. The script plays the
+   person's seat through the seat's own route, not by the browser suite's taps: it looks 800 ms at what is on
+   screen, then closes a window opened over the field, presses OK or Continue, or answers. The page's clock moves
+   one frame at a time, so a slow renderer loses nothing: smoothness costs wall time instead, about two minutes for
+   20 seconds at 720, a minute and a half for 12 seconds at 1080. Five things a take could drift on are held, listed
+   in [promo/README.md](../../promo/README.md#a-film). With all five, three pairs of 20-second takes at 720, on a
+   machine loaded with three other runs, each gave the same 600 frames. Before the last two were held, one pair in
+   three differed in 2 frames.
+
+   Frames become an MP4 with `ffmpeg` (H.264, yuv420p, no date and no note of the encoder's version). The sheet
+   shows twelve frames, with the margins the vertical feeds cover hatched (`SAFE_ZONES`, the widest of what Shorts,
+   TikTok and Reels publish). At 9:16 those margins cover the dock of the battle view's phone layout, where its
+   questions are: a choice for P3's cut, not a change to the game.
+
+   Storage: [ADR 0206](../adr/0206-write-the-promotion-media-to-a-private-container-as-their-own-identity.md). A
+   private `promo` container in `main.bicep`, and a `downfall-table-promo` identity (`bootstrap.sh`) trusted for the
+   `promo` environment alone. It holds Storage Blob Data Contributor on that container and nothing else, as the
+   operators do. `.github/workflows/promo-film.yml`, by hand, films a shot on a runner in a job with no token, then
+   writes the film and its sheet under their SHA-256 from a job that runs none of the repository's code; its summary
+   gives each file's line of `promo/media.json` (`scripts/promo/media.mjs`). The owner's steps are in
+   [promo-identity.md](../../infra/runbooks/promo-identity.md). The workflow is unproven: its environment admits
+   only `main`, no upload has run, and the Bicep was not compiled here (no `az` in a session): #1190.
+
+   Tests: `studio/promo-shoot.test.js` (the film's refusals, the seat's answer to each question, the frames' ends,
+   the sheet's frames, the margins, and an MP4 of 90 frames at the length, size and count asked, the same bytes
+   twice and no note of x264), `studio/promo-media.test.js` (the record), and the real-engine journey
+   `studio/browser/table.promo.js` (two takes of a three-second film give the same 90 frames, encoded at 720 by
+   1280; a seven-second film casts Pummel, as the shot asks).
+
+   Left to later stages: the seat buys no Mutation and plays a Standard tempo, so a shot cannot yet ask for a
+   Mutation or a tempo; the film starts at the cut, so a later moment of a round is a scenario cut there; one seat
+   is filmed, the scenario's own (#1191).
+
 3. **P3, the cut.** `promo/cuts/`, title and end cards from the brand, captions in English and French,
    assembled. Tests: a cut naming a missing shot or a caption over its card is refused; a raw colour in a card
    fails as the pages' do.
