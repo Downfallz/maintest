@@ -225,23 +225,26 @@ Jobs tab show the counts and the queue's length.
    the `infra-reviewer`.
 
    *Built (2026-11-23)*: ADR 0203. The queue is `notices`, beside the turns', with `notices-poison` and `notices-dlq`.
-   The door still writes the bell's entry in the request; the push goes on the queue as one item a device
-   (`DevicePush`: the account, the endpoint and the payload, never the keys, read again at send time so a device let
-   go of since is told nothing). `NoticeWorker` sends it, in the API and in `table-worker` both: 2 seconds, then twice
-   as long, up to a minute, and at five deliveries onto the poison queue, which the dead-letter worker keeps. A 410
-   forgets the device and is done with. "Your turn" is a `DueTurn` hidden on the queue for the grace; the send's
-   receipt lets the host delete it when the page draws the question in time, and the process that reads it when it
-   comes due picks the table up and tells the seat only if it is still on that asking. The 410 list moved to the
-   account's devices document, a `gone` entry without keys among the five latest, read by `PUT /api/account/push`
-   and a signed-in seat's `PUT /api/lobby/push`; an anonymous seat keeps ADR 0118's list in memory. The lobby's
-   notices are held until the route let go of the claim gate (left by N1). `main.bicep` wakes the worker on `notices`
-   and `notices-poison`; no new role, the API and the worker hold the queue role already. A host with no queue
-   (`--turns process`) and the hourly job send in process, as before. Tests: `NoticeWorkerContract` (a retry, a 410,
-   a give-up kept as a dead letter, a device let go of, an item that is no notice) in memory and on Azurite, the
-   queued "your turn" in `PushNoticesTests` (sent when due, taken back when drawn, sent by another process), the
-   door, the gone list in the devices and their stores, and the claim gate let go of before a slow notice. Left: a
-   "your turn" drawn on another replica than the one that queued it is not taken back (the API runs one at most);
-   the counts are N6.
+   The door writes the bell's entry in the request and puts the push on the queue, one item a device, with no keys.
+   `NoticeWorker` sends it, in the API and in `table-worker`: retried with a back-off, given up on at five deliveries,
+   and kept a week as a dead letter with the account and the kind only. A 410 forgets the device, and the item is
+   finished.
+
+   A signed-in seat's "your turn" is a delayed message. The host deletes it when the page draws the question in time,
+   and the process that reads it when it comes due tells the account's devices only if the seat is still on that
+   asking. A seat without an account keeps ADR 0118's wait in the API.
+
+   The 410 list moved to the account's devices document, a `gone` entry without keys. The lobby's notices leave the
+   claim gate (left by N1). `main.bicep` wakes the worker on `notices` and `notices-poison`, and the give-up alert
+   hears a notice too. No new role. Without a queue, and in the hourly job, notices are sent in process, as before.
+
+   Tests: `NoticeWorkerContract` in memory and on Azurite (a retry, a timeout, a 410, a give-up kept without its
+   words, a device let go of), the queued turn in `PushNoticesTests`, the door with a queue that is out, the gone
+   list and its stores, the claim gate, and the notices worker the host starts.
+
+   Left: a "your turn" drawn on another replica than the one that queued it is not taken back (the API runs one at
+   most). An operator's release of seats and a void still notify under the claim gate. The counts are N6.
+
 6. **N6, the counts.** The worker's counts in the ops report and in the admin's Jobs tab. Tests: Cli tests on
    the counts, `ops.test.js`, `admin.test.js`.
 

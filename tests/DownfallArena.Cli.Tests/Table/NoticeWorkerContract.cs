@@ -78,8 +78,25 @@ public abstract class NoticeWorkerContract
         letter.Queue.ShouldBe(notices.Name);
         letter.Delivered.ShouldBe(NoticeWorker.MostDeliveries);
         letter.Error.ShouldContain("503");
-        QueuedNotice.Parse(letter.Body)!.Push!.Endpoint.ShouldBe(Phone);
+        letter.Body.ShouldContain(_mark.Value);
+        letter.Body.ShouldNotContain(Phone, Case.Insensitive, "the endpoint is not kept for an operator to read");
+        letter.Body.ShouldNotContain("A friend", Case.Insensitive, "nor what the notice said");
         (await _devices.ListAsync(_mark, Cancel)).ShouldHaveSingleItem();
+    }
+
+    [Fact]
+    public async Task A_push_service_that_does_not_answer_in_time_is_a_failure_retried_and_not_the_end_of_the_worker()
+    {
+        var (worker, notices, _) = await WorkerAsync();
+        await PhoneAsync();
+        _sender.TimesOut = 1;
+        await QueueAsync(notices);
+
+        await worker.RunOnceAsync(Cancel);
+        await worker.RunOnceAsync(Cancel);
+
+        _sender.Sent.ShouldHaveSingleItem().ShouldBe(Phone);
+        (await notices.CountAsync(Cancel)).ShouldBe(0);
     }
 
     [Fact]
@@ -127,6 +144,9 @@ public abstract class NoticeWorkerContract
 
         public bool Gone { get; set; }
 
+        /// <summary>How many sends wait out the client's timeout, which an HttpClient says as a TaskCanceledException.</summary>
+        public int TimesOut { get; set; }
+
         public List<string> Sent { get; } = [];
 
         public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
@@ -135,6 +155,12 @@ public abstract class NoticeWorkerContract
             {
                 Failures--;
                 throw new HttpRequestException("The push service answered 503.");
+            }
+
+            if (TimesOut > 0)
+            {
+                TimesOut--;
+                throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout of 10 seconds elapsing.");
             }
 
             if (Gone)

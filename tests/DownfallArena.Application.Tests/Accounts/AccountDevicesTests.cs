@@ -136,6 +136,25 @@ public sealed class AccountDevicesTests
         (await _devices.IsGoneAsync(_mark, $"https://push.example/dead-{AccountDevices.MostGone + 1}", Cancel)).ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task A_gone_endpoint_the_account_no_longer_holds_writes_nothing()
+    {
+        (await _devices.MarkGoneAsync(_mark, "https://push.example/forgotten", Cancel)).ShouldBeFalse();
+
+        (await _store.ReadAsync(_mark, Cancel)).Version.ShouldBeNull("a list forgotten meanwhile does not come back");
+    }
+
+    [Fact]
+    public async Task Forgetting_a_gone_endpoint_keeps_it_remembered_as_gone()
+    {
+        await _devices.AddAsync(_mark, Phone("one"), Cancel);
+        await _devices.MarkGoneAsync(_mark, "https://push.example/one", Cancel);
+
+        (await _devices.RemoveAsync(_mark, "https://push.example/one", Cancel)).ShouldBeFalse();
+
+        (await _devices.IsGoneAsync(_mark, "https://push.example/one", Cancel)).ShouldBeTrue();
+    }
+
     private sealed class MovableClock(DateTimeOffset start) : TimeProvider
     {
         private DateTimeOffset _now = start;

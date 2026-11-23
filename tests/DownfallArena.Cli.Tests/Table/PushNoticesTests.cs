@@ -393,22 +393,21 @@ public sealed class PushNoticesTests : IDisposable
     }
 
     [Fact]
-    public async Task With_a_queue_a_question_nobody_drew_waits_on_it_for_the_grace_and_is_sent_when_it_comes_due()
+    public async Task With_a_queue_a_signed_in_seat_s_question_nobody_drew_waits_on_it_for_the_grace_and_is_told_when_it_comes_due()
     {
         var (table, notices) = await Seated();
-        var (outbox, worker) = Queued(notices, table);
-        table.Seats[0].Push = Phone;
+        var (outbox, worker) = await QueuedAsync(notices, table);
 
         await Arrive(table);
-        var asked = await Asked(table);
+        await Asked(table);
         await QueuedOnce(outbox);
         (await worker.RunOnceAsync(TestContext.Current.CancellationToken)).ShouldBe(0, "hidden for the grace");
         _clock.Advance(Grace);
         await worker.RunOnceAsync(TestContext.Current.CancellationToken);
 
         var (to, payload) = await _sender.Next();
-        to.ShouldBe(Phone);
-        JsonDocument.Parse(payload).RootElement.GetProperty("asked").GetInt64().ShouldBe(asked);
+        to.Endpoint.ShouldBe(Laptop);
+        JsonDocument.Parse(payload).RootElement.GetProperty("tag").GetString().ShouldBe($"turn:{table.Id}");
         (await outbox.CountAsync(TestContext.Current.CancellationToken)).ShouldBe(0);
     }
 
@@ -416,45 +415,66 @@ public sealed class PushNoticesTests : IDisposable
     public async Task With_a_queue_a_question_the_page_drew_in_time_is_taken_back_from_it()
     {
         var (table, notices) = await Seated();
-        var (outbox, worker) = Queued(notices, table);
-        table.Seats[0].Push = Phone;
+        var (outbox, _) = await QueuedAsync(notices, table);
 
         await Arrive(table);
         var asked = await Asked(table);
         await QueuedOnce(outbox);
         (await table.Api.HandleAsync("GET", "/api/seat/player1", "", table.Seats[0].Token, null, $"?shown={asked}")).Status.ShouldBe(200);
-        await Settled();
-        _clock.Advance(Grace);
-        await worker.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        (await outbox.CountAsync(TestContext.Current.CancellationToken)).ShouldBe(0);
-        _sender.Sent.ShouldBeEmpty();
+        for (var attempt = 0; attempt < 250 && outbox.Bodies.Count > 0; attempt++)
+        {
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+
+        outbox.Bodies.ShouldBeEmpty("taken back while still hidden, before the grace is over");
     }
 
     [Fact]
     public async Task A_turn_queued_by_a_process_that_stopped_is_told_by_the_next_one_and_not_once_answered()
     {
         var (table, notices) = await Seated();
-        var (outbox, _) = Queued(notices, table);
-        table.Seats[0].Push = Phone;
+        var (outbox, _) = await QueuedAsync(notices, table);
         await Arrive(table);
         var asked = await Asked(table);
         await QueuedOnce(outbox);
 
         // Another process, which never saw the asking, reads the item once it comes due.
-        var next = new PushNotices(_sender, "BP8", _clock, Grace);
+        var next = new PushNotices(_sender, "BP8", _clock, Grace) { Accounts = notices.Accounts };
         var worker = new NoticeWorker(outbox, new InMemoryWorkChannel("notices-poison", _clock), _clock) { Turns = (due, _) => next.TurnDueAsync(table, due) };
         _clock.Advance(Grace);
         await worker.RunOnceAsync(TestContext.Current.CancellationToken);
         await next.TurnDueAsync(table, new DueTurn(table.Id, "player1", asked - 1, 1));
 
         var (to, _) = await _sender.Next();
-        to.ShouldBe(Phone);
+        to.Endpoint.ShouldBe(Laptop);
         _sender.Sent.Count.ShouldBe(1, "an asking the seat is no longer on is owed nothing");
     }
 
-    private (InMemoryWorkChannel Outbox, NoticeWorker Worker) Queued(PushNotices notices, PlayedTable table)
+    [Fact]
+    public async Task With_a_queue_a_seat_without_an_account_still_waits_here_and_is_told_on_its_own_phone()
     {
+        var (table, notices) = await Seated();
+        var outbox = new InMemoryWorkChannel(QueuedNotice.Queue, _clock);
+        notices.Outbox = outbox;
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
+
+        (await _sender.Next()).To.ShouldBe(Phone);
+        outbox.Bodies.ShouldBeEmpty("its 410 is heard where its page subscribed it");
+    }
+
+    private const string Laptop = "https://push.example/laptop";
+
+    /// <summary>A queue for the notices, the first seat signed in with a laptop as its account's device, and a worker over the queue.</summary>
+    private async Task<(InMemoryWorkChannel Outbox, NoticeWorker Worker)> QueuedAsync(PushNotices notices, PlayedTable table)
+    {
+        var account = AccountId.New();
+        notices.Accounts = new AccountNotifier(log: null, new AccountNotices(_sender, await DevicesAsync(account, Laptop)));
+        table.Seats[0].Account = account;
         var outbox = new InMemoryWorkChannel(QueuedNotice.Queue, _clock);
         notices.Outbox = outbox;
         return (outbox, new NoticeWorker(outbox, new InMemoryWorkChannel("notices-poison", _clock), _clock) { Turns = (due, _) => notices.TurnDueAsync(table, due) });

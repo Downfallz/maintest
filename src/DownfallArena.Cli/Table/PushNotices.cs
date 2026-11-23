@@ -103,8 +103,9 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     }
 
     /// <summary>
-    /// "Your turn" come due on the notices queue (ADR 0203): sent unless the table is over, the seat was answered or
-    /// asked something else meanwhile, or its page here drew it. A failure is thrown, for the queue to try again.
+    /// "Your turn" come due on the notices queue (ADR 0203), for a seat that belongs to an account: told on the
+    /// account's devices unless the table is over, the seat was answered or asked something else meanwhile, or its page
+    /// here drew it. A failure is thrown, for the queue to try again.
     /// </summary>
     public async Task TurnDueAsync(PlayedTable table, DueTurn due)
     {
@@ -115,12 +116,12 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             return;
         }
 
-        if (_shown.TryGetValue(person, out var shown) && shown.Value >= question.Asked)
+        if ((_shown.TryGetValue(person, out var shown) && shown.Value >= question.Asked) || seat.Account is not { } account || Accounts is not { } door)
         {
             return;
         }
 
-        await TellAsync(table, seat, question, due.Round);
+        await NoticeAccountAsync(door, account, table, seat, question, due.Round);
     }
 
     // The seat's "your turn" still hidden on the queue, when it is for this asking or an earlier one: taken back, since
@@ -148,13 +149,13 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         {
             await outbox.DeleteAsync(queued);
         }
-        catch (Azure.RequestFailedException gone) when (gone.Status == 404)
+        catch (Azure.RequestFailedException gone) when (gone.Status == 404 || gone.ErrorCode == "PopReceiptMismatch")
         {
-            // Already come due and sent, or found nothing owed: nothing to take back.
+            // Already received by a worker, here or in table-worker: it has come due, and is told or found owed nothing.
         }
         catch (Exception failure)
         {
-            Console.WriteLine($"  A \"your turn\" drawn in time could not be taken back from {outbox.Name}; it comes due and finds nothing owed: {HttpHost.OneLine(failure)}");
+            Console.WriteLine($"  A \"your turn\" drawn in time could not be taken back from {outbox.Name}, so it may still be sent: {HttpHost.OneLine(failure)}");
         }
     }
 
@@ -289,7 +290,10 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
     {
         try
         {
-            if (Outbox is { } outbox && seat.Person is { } asked && await QueuedAsync(outbox, table, seat, asked, question, round))
+            // Only a seat that belongs to an account waits on the queue: it is told on the account's devices, whose
+            // gone endpoints every process reads (ADR 0203). A seat without one keeps ADR 0118's wait here, where the
+            // page that subscribed it is answered 410.
+            if (Outbox is { } outbox && seat.Account is not null && Accounts is not null && seat.Person is { } asked && await QueuedAsync(outbox, table, seat, asked, question, round))
             {
                 return;
             }

@@ -50,9 +50,11 @@ public sealed class AccountDevices
         var gone = new PushDevice(endpoint, string.Empty, string.Empty, _clock.GetUtcNow(), Gone: true);
         await ChangeAsync(account, held =>
         {
+            // Nothing is written for an endpoint the account no longer holds: a list forgotten meanwhile (signed out
+            // everywhere, the account deleted) must not come back holding it.
             was = held.Any(known => !known.Gone && string.Equals(known.Endpoint, endpoint, StringComparison.Ordinal));
             var others = held.Where(known => !string.Equals(known.Endpoint, endpoint, StringComparison.Ordinal)).ToList();
-            return Trimmed([.. others, gone]);
+            return was ? Trimmed([.. others, gone]) : null;
         }, cancellationToken);
         return was;
     }
@@ -87,7 +89,8 @@ public sealed class AccountDevices
         var removed = false;
         await ChangeAsync(account, held =>
         {
-            var kept = held.Where(known => !string.Equals(known.Endpoint, endpoint, StringComparison.Ordinal)).ToList();
+            // A gone endpoint is no device: it stays remembered as gone, so its page is still answered 410.
+            var kept = held.Where(known => known.Gone || !string.Equals(known.Endpoint, endpoint, StringComparison.Ordinal)).ToList();
             removed = kept.Count != held.Count;
             return removed ? kept : null;
         }, cancellationToken);

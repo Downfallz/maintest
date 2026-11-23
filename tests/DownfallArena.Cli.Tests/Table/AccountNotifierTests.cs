@@ -69,6 +69,22 @@ public sealed class AccountNotifierTests
     }
 
     [Fact]
+    public async Task A_queue_that_is_out_sends_the_push_in_the_request_instead()
+    {
+        var outbox = Substitute.For<DownfallArena.Application.Ports.IWorkChannel>();
+        outbox.SendAsync(Arg.Any<string>(), Arg.Any<TimeSpan?>(), Arg.Any<TimeSpan?>(), Arg.Any<CancellationToken>())
+            .Returns<Task<DownfallArena.Application.Ports.QueuedWork>>(_ => throw new Azure.RequestFailedException(503, "The queue is out."));
+        List<string> said = [];
+        var notifier = new AccountNotifier(_log, await PushAsync()) { Outbox = outbox, Said = said.Add };
+
+        var reached = await notifier.NotifyAsync(_mark, Over, Cancel);
+
+        reached.ShouldBe(1);
+        _sender.Sent.ShouldHaveSingleItem();
+        said.ShouldHaveSingleItem().ShouldContain("could not be queued");
+    }
+
+    [Fact]
     public async Task What_waits_is_pushed_and_not_kept_as_news()
     {
         var notifier = new AccountNotifier(_log, await PushAsync());

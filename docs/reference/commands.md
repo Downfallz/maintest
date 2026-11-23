@@ -735,11 +735,12 @@ mark and the host's (ADR 0194).
   run in the host.
 - `--turns worker` (or `DOWNFALL_TURNS=worker`) puts them on the queue and runs no worker, for table-worker to
   take in a process of its own (ADR 0162; a container's queues only).
-- With either, and push keys, the notices go through the `notices` queue too (ADR 0203): the bell's entry is
-  written in the request, the push is one item a device, and "your turn" waits on the queue for its grace and is
-  taken back when the seat's page draws the question. The host and table-worker both send them; one that keeps
-  failing goes on `notices-poison` at five deliveries and is kept for good on `notices-dlq`. Without a queue
-  (`--turns process`, the default) the host sends in the request, as before; table-tend always does.
+- With `--turns queue` or `--turns worker`, and push keys, the notices go through the `notices` queue too (ADR
+  0203): the bell's entry is written in the request, the push is one item a device, and a signed-in seat's "your
+  turn" waits on the queue for its grace and is taken back when the seat's page draws the question. The host and
+  table-worker both send them. One that keeps failing goes on `notices-poison` at five deliveries and is kept a week
+  on `notices-dlq`, with its account and kind only. Without a queue (`--turns process`, the default), the host sends
+  in the request, as before. table-tend always does.
 - `--tended` says the hourly table-tend job tends the tables, so no request closes a table that never began or
   lets an invitation go (a request still lets go of the tables the process holds that nobody is at, and an
   invitation past its day is no longer listed nor in the way), which is the hosted API's shape with the worker
@@ -798,8 +799,8 @@ a host told `--turns worker` puts on the queue, taken at tables picked up from t
 ends is written once, by whichever process claims it (`closing.json`); with `--accounts google|dev` the result
 is kept for the ladder and the finished games, and with `--push-keys` (or `DOWNFALL_PUSH_KEYS`) too each seat's
 account is told how it ended, so it takes the same `--accounts` and keys as the host it works for. It raises no
-seat's "your turn", the host serving the seat does; with keys it sends what the `notices` queue holds, "your turn"
-included once its grace is over, beside the host (ADR 0203). What the worker app runs.
+"your turn"; the host serving the seat does. With keys it sends what the `notices` queue holds, a signed-in seat's
+"your turn" included once its grace is over, beside the host (ADR 0203). What the worker app runs.
 
 ### push-keys
 

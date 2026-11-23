@@ -109,6 +109,14 @@ test('the line that counts a turn given up on is the worker\'s alone, in the rep
   assert.ok(read('scripts/ops/read.sh').includes(`Log_s has '${GIVEN_UP}'`), 'the error lines');
 });
 
+test('a notice given up on is said in its own words, and the alert hears them where no banner says them', () => {
+  const read = (path) => readFileSync(join(root, path), 'utf8');
+  assert.ok(read('src/DownfallArena.Cli/Table/NoticeWorker.cs').includes('tries, onto {poison.Name}'));
+  assert.ok(!read('src/DownfallArena.Cli/Table/TableHost.cs').includes('tries, onto'), 'the hosts\' banner');
+  assert.ok(!read('src/DownfallArena.Application/Work/DeadLetterWorker.cs').includes('tries, onto'), 'the dead-letter worker');
+  assert.ok(read('infra/main.bicep').includes('Log_s has "tries, onto"'), 'the alert');
+});
+
 test('the cost is a concern from 80 % of the budget', () => {
   const readings = { ...healthy(), cost: { properties: { columns: [{ name: 'Cost' }, { name: 'Currency' }], rows: [[4.1, 'CAD']] } } };
   assert.deepEqual(concerns(readings, NOW), ['82\u00a0% du budget']);

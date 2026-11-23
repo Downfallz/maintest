@@ -72,9 +72,29 @@ internal sealed class AccountNotifier(AccountNoticeLog? log, AccountNotices? pus
         }
 
         var payload = AccountNotices.Payload(notice.Title, notice.Body, notice.Url, notice.Tag);
-        return Outbox is { } outbox
-            ? await push.EnqueueAsync(outbox, to, payload, TopicOf(notice.Kind), except, cancellationToken)
-            : await push.SendAsync(to, payload, TopicOf(notice.Kind), except, cancellationToken);
+        try
+        {
+            if (Outbox is { } outbox)
+            {
+                try
+                {
+                    return await push.EnqueueAsync(outbox, to, payload, TopicOf(notice.Kind), except, cancellationToken);
+                }
+                catch (Exception failure) when (Unreachable(failure))
+                {
+                    // A queue that is out is no reason to lose the notice: it goes in the request, as on a host with none.
+                    Said($"  Account {to}: a notice could not be queued, so it is sent now: {Hosting.HttpHost.OneLine(failure)}");
+                }
+            }
+
+            return await push.SendAsync(to, payload, TopicOf(notice.Kind), except, cancellationToken);
+        }
+        catch (Exception failure) when (Unreachable(failure) || failure is System.Text.Json.JsonException or InvalidDataException)
+        {
+            // The devices could not be read: what the request did is done, and the notice is a line, never a 500.
+            Said($"  Account {to}: a notice could not be pushed: {Hosting.HttpHost.OneLine(failure)}");
+            return 0;
+        }
     }
 
     // A choice that cannot be read is no reason to keep a notice from the phone: it goes, as it did before the choice.
@@ -114,6 +134,9 @@ internal sealed class AccountNotifier(AccountNoticeLog? log, AccountNotices? pus
 
         Changes?.Account(to);
     }
+
+    private static bool Unreachable(Exception failure) =>
+        TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException or HttpRequestException;
 
     /// <summary>The push service's topic a kind is sent under: a later notice of one topic replaces an earlier one still queued.</summary>
     internal static string TopicOf(NoticeKind kind) => kind switch

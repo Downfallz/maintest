@@ -16,6 +16,9 @@ public sealed class DeadLetterWorker(IWorkChannel poison, IWorkChannel deadLette
     /// <summary>How often the poison queue is looked at.</summary>
     public static readonly TimeSpan LookEvery = TimeSpan.FromSeconds(30);
 
+    /// <summary>How long a dead letter is kept: for ever, unless its queue says otherwise (a notice's is a week, ADR 0203).</summary>
+    public TimeSpan KeptFor { get; init; } = Timeout.InfiniteTimeSpan;
+
     /// <summary>What a set-aside item is said with: the host's console.</summary>
     public Action<string> Said { get; init; } = _ => { };
 
@@ -26,7 +29,7 @@ public sealed class DeadLetterWorker(IWorkChannel poison, IWorkChannel deadLette
         foreach (var work in await poison.ReceiveAsync(16, HiddenFor, cancellationToken))
         {
             var letter = LetterOf(work);
-            await deadLetters.SendAsync(letter.ToJson(), Timeout.InfiniteTimeSpan, cancellationToken: cancellationToken);
+            await deadLetters.SendAsync(letter.ToJson(), KeptFor, cancellationToken: cancellationToken);
             await poison.DeleteAsync(work, cancellationToken);
             Said($"  Dead letter on {deadLetters.Name}: {letter.Body} from {letter.Queue}, given up on after {letter.Delivered} deliveries: {letter.Error}");
             kept++;

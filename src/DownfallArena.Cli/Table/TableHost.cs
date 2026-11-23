@@ -634,8 +634,22 @@ internal static class TableHost
             return Task.CompletedTask;
         }
 
-        var poison = await channels.OpenAsync(PoisonedWork.QueueOf(notices.Name), stopping);
-        var deadLetters = await channels.OpenAsync(DeadLetter.QueueOf(notices.Name), stopping);
+        IWorkChannel poison;
+        IWorkChannel deadLetters;
+        try
+        {
+            poison = await channels.OpenAsync(PoisonedWork.QueueOf(notices.Name), stopping);
+            deadLetters = await channels.OpenAsync(DeadLetter.QueueOf(notices.Name), stopping);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            // Nothing here would read what the door queues: it sends in the request instead.
+            push.Outbox = null;
+            push.Accounts?.Outbox = null;
+            Console.WriteLine($"  The queues beside {notices.Name} could not be opened ({HttpHost.OneLine(failure)}); the notices are sent in the request that gives them.");
+            return Task.CompletedTask;
+        }
+
         var worker = new NoticeWorker(notices, poison, clock)
         {
             Devices = push.Accounts?.Push,
@@ -654,8 +668,8 @@ internal static class TableHost
             },
             Said = Console.WriteLine,
         };
-        var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
-        Console.WriteLine($"  Notices: through the queue {notices.Name}, given up on after {NoticeWorker.MostDeliveries} tries onto {poison.Name}, kept for good on {deadLetters.Name}.");
+        var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine, KeptFor = NoticeWorker.DeadLettersKeptFor };
+        Console.WriteLine($"  Notices: through the queue {notices.Name}, given up on after {NoticeWorker.MostDeliveries} tries onto {poison.Name}, kept a week on {deadLetters.Name}.");
         return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
     }
 

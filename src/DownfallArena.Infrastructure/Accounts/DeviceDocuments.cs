@@ -23,10 +23,13 @@ internal static class DeviceDocuments
     public static IReadOnlyList<PushDevice> Read(string json)
     {
         var record = JsonSerializer.Deserialize<DevicesRecord>(json, Web) ?? throw new InvalidDataException("A devices record is empty.");
-        return [.. (record.Devices ?? []).Select(device => new PushDevice(device.Endpoint, device.P256dh, device.Auth, device.AddedAt, device.Gone))];
+        // An entry without keys is gone whether or not it says so: an image from before ADR 0203 drops the flag when
+        // it writes the list over, and a device without keys could never be told anyway.
+        return [.. (record.Devices ?? []).Select(device => new PushDevice(device.Endpoint, device.P256dh ?? string.Empty, device.Auth ?? string.Empty, device.AddedAt,
+            device.Gone || string.IsNullOrEmpty(device.P256dh) || string.IsNullOrEmpty(device.Auth)))];
     }
 
     private sealed record DevicesRecord(IReadOnlyList<DeviceRecord>? Devices);
 
-    private sealed record DeviceRecord(string Endpoint, string P256dh, string Auth, DateTimeOffset AddedAt, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Gone = false);
+    private sealed record DeviceRecord(string Endpoint, string? P256dh, string? Auth, DateTimeOffset AddedAt, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Gone = false);
 }

@@ -116,7 +116,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             {
                 await Notifier!.NotifyAsync(to, notice);
             }
-            catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is HttpRequestException)
+            catch (Exception failure) when (failure is not OperationCanceledException)
             {
                 // What the request did is done and answered: a notice that cannot go is a line, never a 500.
                 Said($"  Account {to}: a notice could not be given: {HttpHost.OneLine(failure)}");
@@ -913,6 +913,26 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
+    // Whether the account's devices remember this endpoint as gone; a list that cannot be read says not, rather than
+    // refusing the switch: the push to a gone endpoint is answered 410 again and forgotten again.
+    private async Task<bool> GoneForAsync(AccountId account, string endpoint)
+    {
+        if (Notifier?.Push is not { } accountPush)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await accountPush.IsGoneAsync(account, endpoint);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+        {
+            Said($"  Account {account}: its devices could not be read to check a subscription: {HttpHost.OneLine(failure)}");
+            return false;
+        }
+    }
+
     // The notices of the request being answered, given once it has; none outside a request (the tending job's expiries).
     private readonly AsyncLocal<HeldNotices?> _held = new();
 
@@ -1166,8 +1186,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a
             // push service say an endpoint is gone (ADR 0202), in whichever process sent it, and the account's devices
             // remember it (ADR 0203): either one's word makes the page subscribe again.
-            if (push.IsDead(subscription.Endpoint)
-                || (account is { } signedIn && Notifier?.Push is { } accountPush && await accountPush.IsGoneAsync(signedIn, subscription.Endpoint)))
+            if (push.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
             {
                 return Problem(410, "This subscription is gone from its push service. Subscribe again.");
             }

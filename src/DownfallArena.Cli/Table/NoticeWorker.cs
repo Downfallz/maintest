@@ -52,12 +52,24 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
     public async Task<int> RunOnceAsync(CancellationToken cancellationToken = default)
     {
         var received = await notices.ReceiveAsync(MostAtOnce, HiddenFor, cancellationToken);
-        foreach (var work in received)
+
+        // Side by side: a push service that answers slowly holds its own items, not the others' of the batch.
+        await Task.WhenAll(received.Select(work => HandleOrSayAsync(work, cancellationToken)));
+        return received.Count;
+    }
+
+    // Whatever one item throws, even while it is retried or set aside, ends neither the batch nor the worker: the item
+    // comes back once its time is up.
+    private async Task HandleOrSayAsync(QueuedWork work, CancellationToken cancellationToken)
+    {
+        try
         {
             await HandleAsync(work, cancellationToken);
         }
-
-        return received.Count;
+        catch (Exception failure) when (!cancellationToken.IsCancellationRequested)
+        {
+            Said($"  Notice {work.Id} could not be handled; it comes back: {Hosting.HttpHost.OneLine(failure)}");
+        }
     }
 
     /// <summary>
@@ -74,9 +86,9 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
             {
                 found = await RunOnceAsync(cancellationToken);
             }
-            catch (Exception failure) when (failure is not OperationCanceledException)
+            catch (Exception failure) when (!cancellationToken.IsCancellationRequested)
             {
-                Said($"  The queue {notices.Name} could not be read: {failure.Message}");
+                Said($"  The queue {notices.Name} could not be read: {Hosting.HttpHost.OneLine(failure)}");
             }
 
             if (found > 0)
@@ -123,9 +135,11 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
         {
             // Stopping: the item comes back once its time is up, for whoever looks next.
         }
-        catch (Exception failure) when (failure is not OperationCanceledException)
+        catch (Exception failure)
         {
-            await FailedAsync(work, $"{failure.GetType().Name}: {Hosting.HttpHost.OneLine(failure)}", cancellationToken);
+            // A push service that does not answer in time is a TaskCanceledException too: a failure like any other,
+            // retried and then given up on, never the end of the worker.
+            await FailedAsync(work, Cut($"{failure.GetType().Name}: {Hosting.HttpHost.OneLine(failure)}"), cancellationToken);
         }
     }
 
@@ -167,11 +181,26 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
     }
 
     // Kept on the poison queue first, then deleted: a failure between the two leaves the item to come back, not lost.
+    // What is set aside says which account and which kind, never the endpoint nor what the notice said (ADR 0203).
     private async Task PoisonAsync(QueuedWork work, string error, CancellationToken cancellationToken)
     {
-        var poisoned = new PoisonedWork(notices.Name, work.Body, error, work.Delivered, work.QueuedAt, clock.GetUtcNow());
-        await poison.SendAsync(poisoned.ToJson(), cancellationToken: cancellationToken);
+        var poisoned = new PoisonedWork(notices.Name, SetAside(work.Body), error, work.Delivered, work.QueuedAt, clock.GetUtcNow());
+        await poison.SendAsync(poisoned.ToJson(), DeadLettersKeptFor, cancellationToken: cancellationToken);
         await notices.DeleteAsync(work, cancellationToken);
-        Said(string.Create(CultureInfo.InvariantCulture, $"  Notice {work.Id} given up on after {work.Delivered} tries, set aside on {poison.Name}: {error}"));
+        Said(string.Create(CultureInfo.InvariantCulture, $"  Notice {work.Id} given up on after {work.Delivered} tries, onto {poison.Name}: {error}"));
     }
+
+    /// <summary>How long a notice given up on is kept, on the poison queue and as a dead letter: a week, for an operator to read.</summary>
+    public static readonly TimeSpan DeadLettersKeptFor = TimeSpan.FromDays(7);
+
+    /// <summary>What a notice given up on keeps of itself: the account and the topic of a push, the table, seat and asking of a turn.</summary>
+    internal static string SetAside(string body) => QueuedNotice.Parse(body) switch
+    {
+        { Push: { } push } => System.Text.Json.JsonSerializer.Serialize(new { push = new { account = push.Account, topic = push.Topic } }),
+        { Turn: { } turn } => QueuedNotice.Of(turn).ToJson(),
+        _ => "(not a notice)",
+    };
+
+    // A push service's refusal is its own text, and the endpoint may be anybody's: a line, and a short one.
+    private static string Cut(string error) => error.Length <= 200 ? error : error[..200] + "…";
 }
