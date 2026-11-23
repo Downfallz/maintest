@@ -13,7 +13,7 @@ kit of [the pages' craft plan](ux-craft-plan.md), UX5). The patterns and their s
 | `docs/art/page-pictures.json` | The declaration: each picture a page draws, its painting, the width it is drawn at, the pages that draw it. | A session, by hand |
 | `table/page-art/` | Each picture at the sizes it is sent, as WebP, named by its own bytes. | `scripts/ux/pictures.mjs` |
 | `table/page-art.js` | The module the pages and the showcase's build read: each file, its width, its height, its bytes. | `scripts/ux/pictures.mjs` |
-| `table/battle-page-art.js` | The entries of `page-art.js` declared for `table/battle`, alone: what the battle bundle carries (#1016). | `scripts/ux/pictures.mjs` |
+| `table/battle-page-art.js` | The pictures declared for `table/battle`: what the battle bundle carries, and what `page-art.js` imports, so each entry is written once (#1016). | `scripts/ux/pictures.mjs` |
 | `table/picture-form.js` | The form: the `<img>`, the strip, and a scene as a head, a ground or a plate, drawn from the pictures it is handed (`art`). | A session |
 | `table/picture.js` | The form as the pages use it, drawing from `page-art.js`. | A session |
 | `table/picture-focus.js` | Where a cut picture centres: the check of a `focus`, which imports nothing, so the script runs on a broken `page-art.js`. | A session |

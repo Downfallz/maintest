@@ -5,7 +5,7 @@
 // page is read as the host serves it, with no script but the kit's own modules.
 import { test, expect } from '@playwright/test';
 
-const KIT = ['/motion.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/icons.js'];
+const KIT = ['/motion.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/battle-page-art.js', '/icons.js'];
 
 async function open(page) {
   await page.route('**/*.js', route => (KIT.some(name => new URL(route.request().url()).pathname.endsWith(name)) ? route.continue() : route.abort()));

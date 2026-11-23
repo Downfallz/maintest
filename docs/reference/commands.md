@@ -1188,12 +1188,12 @@ node scripts/ux/pictures.mjs --asked
 
 The picture kit's script (ADR 0198, docs/art/page-pictures.md). With no argument it derives the pictures of
 `docs/art/page-pictures.json` at the size each is drawn, at one and at two times the density, into
-`table/page-art/`, and writes `table/page-art.js` and `table/battle-page-art.js`, the battle page's entries alone,
-which the battle bundle imports (#1016). It removes the files no picture needs and prints each page's
+`table/page-art/`, and writes `table/battle-page-art.js`, the battle page's pictures, which the battle bundle imports,
+and `table/page-art.js`, which imports them and adds every other page's (#1016). It removes the files no picture needs and prints each page's
 bytes against its budget. It
 encodes only a picture whose painting, declaration or encoding changed, through `scripts/ux/encode.py`, which
 needs `python3` with Pillow. `--check` encodes nothing: it holds the committed files against the declaration
-(every file, its dimensions, its bytes, its painting, and `table/battle-page-art.js` against `table/page-art.js`) and exits 1 with what is wrong, as
+(every file, its dimensions, its bytes, its painting, and both modules against what it writes) and exits 1 with what is wrong, as
 `studio/ux-pictures.test.js` does in the gate. `--budget` prints each page of `docs/art/page-budget.json`, as a
 phone 390 px wide at twice the density takes its pictures, and exits 1 when one is over. `--asked` prints the
 pictures the briefs of `docs/art/journeys/` ask of the owner, each with its screen, its size, the painting that

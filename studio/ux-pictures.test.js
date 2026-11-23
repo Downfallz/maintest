@@ -8,6 +8,7 @@ import test from 'node:test';
 import { PAGE_ART } from '../table/page-art.js';
 import { asked, battleArt, battleModuleText, budgetOf, check, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
 import { everyPagesPictures } from '../battle/live-guard.mjs';
+import { BATTLE_PAGE_ART } from '../table/battle-page-art.js';
 
 const root = new URL('../', import.meta.url);
 const read = path => readFileSync(new URL(path, root));
@@ -117,9 +118,12 @@ test('the battle bundle carries the battle\'s own pictures, never every page\'s 
   const own = battleArt(PAGE_ART), names = Object.keys(own);
   assert.deepEqual(names, Object.keys(PAGE_ART).filter(name => PAGE_ART[name].pages['table/battle']));
   assert.ok(names.length > 0 && names.length < Object.keys(PAGE_ART).length);
-  for (const name of names) assert.deepEqual(own[name].sizes, PAGE_ART[name].sizes, `${name}: every file, for the browser to choose`);
-  assert.deepEqual(own['mutation-brute-base'].pages, { 'table/battle': 'lazy' });
-  assert.equal(own['ironhide-scar'].focus, PAGE_ART['ironhide-scar'].focus);
+  assert.deepEqual(Object.keys(BATTLE_PAGE_ART), names);
+  for (const name of names) assert.equal(PAGE_ART[name], BATTLE_PAGE_ART[name], `${name}: one entry, which page-art.js imports`);
+  // Each entry is written in one module: page-art.js imports the battle's, so no line of data is written twice.
+  const text = read('table/page-art.js').toString('utf8');
+  assert.match(text, /^import \{ BATTLE_PAGE_ART \} from '\.\/battle-page-art\.js';$/m);
+  for (const name of names) assert.doesNotMatch(text, new RegExp(`^  '${name}': \\{`, 'm'), `${name} is written in battle-page-art.js alone`);
   for (const path of ['../table/page-art.js', '/home/x/table/page-art.js', 'table/page-art.js']) assert.equal(everyPagesPictures(path), true, path);
   for (const path of ['../table/battle-page-art.js', '../table/picture-form.js', 'src/spell-portrait.ts']) assert.equal(everyPagesPictures(path), false, path);
   assert.match(read('battle/build.mjs').toString('utf8'), /\.some\(everyPagesPictures\)/);
