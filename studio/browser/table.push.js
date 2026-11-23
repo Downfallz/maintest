@@ -162,3 +162,47 @@ test('the lobby offers pop-ups when a game against a person waits, and keeps the
     }
   }
 });
+
+// A host with accounts off (a local or LAN host, #1127): nobody is signed in, so the lobby asks through the seat of
+// the game that waits, as the battle view does, and the card is made all the same.
+test('a keyed host with accounts off offers pop-ups in the lobby, through the waiting game\'s seat', async ({ page, context }) => {
+  const probe = createServer();
+  await new Promise(done => probe.listen(0, '127.0.0.1', done));
+  const lobbyPort = probe.address().port;
+  await new Promise(done => probe.close(done));
+  const lobbyHost = run(['table', '--p2', 'greedy', '--record', mkdtempSync(join(keysDirectory, 'sessions-')), '--seed', '7', '--accounts', 'off', '--port', String(lobbyPort), '--push-keys', keysFile]);
+  let log = '';
+  lobbyHost.stdout.on('data', data => { log += data.toString(); });
+  lobbyHost.stderr.on('data', data => { log += data.toString(); });
+  try {
+    await expect.poll(() => log, { timeout: 20000, message: 'Table host starts' }).toContain('joins at');
+    const origin = `http://127.0.0.1:${lobbyPort}`;
+    await context.addInitScript(() => {
+      Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'default' });
+      Notification.requestPermission = async () => 'default';
+    });
+    const keyReads = [];
+    page.on('request', request => { if (new URL(request.url()).pathname === '/api/lobby/push') keyReads.push(request.headers()['x-seat-token'] ?? null); });
+    // A table opened for another player from this browser, which keeps its seat; the battle page is not needed here.
+    // This suite keeps the classic presentation (classicTable): the seat opens on /play.
+    await page.route(/\/(battle|play)\?player1=/, route => route.fulfill({ contentType: 'text/html', body: '<title>Seat</title>' }));
+    await page.goto(`${origin}/`);
+    await page.locator('#new-table').click();
+    await page.locator('#create-submit').click();
+    await page.waitForURL(/\/(battle|play)\?player1=/);
+    await page.goto(`${origin}/`);
+
+    const offer = page.locator('#push-offer');
+    await expect(offer).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
+    expect(keyReads.some(token => token)).toBe(true);
+    await page.locator('#push-offer-on').click();
+    await expect(page.locator('#push-offer-said')).toHaveText('Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.', { timeout: 10000 });
+  } finally {
+    if (lobbyHost.exitCode === null) {
+      const closed = new Promise(done => lobbyHost.once('exit', done));
+      lobbyHost.kill('SIGINT');
+      await closed;
+    }
+  }
+});

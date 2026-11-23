@@ -216,8 +216,8 @@ Jobs tab show the counts and the queue's length.
    Close; no clock. The classic page's offer, and its `offerShown`, are removed.
 
    Left: the card is not on the journey's walk, because its host has no push keys and headless Chromium refuses the
-   permission; the spec shows it with a browser never asked. A host with accounts off makes no offer in the lobby,
-   whose switch is the account's; the battle view still does. The brief's **Left** holds the owner's choices on the
+   permission; the spec shows it with a browser never asked. A host with accounts off now offers in the lobby too,
+   through the waiting game's seat (`seatPushSource` in `table/lobby.js`, #1127). The brief's **Left** holds the owner's choices on the
    card over the lobby's featured space at 320 px.
 
 5. **N5, the queue.** ADR: notices are sent by the worker from a queue; "your turn" is a delayed message.

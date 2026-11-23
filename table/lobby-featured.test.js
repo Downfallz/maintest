@@ -13,7 +13,8 @@ function game(id, { round = 1, mine = true, against = rook, waiting = false, ove
 }
 const lesson = (order, { done = false, skipped = false } = {}) => ({ id: `t${order}`, title: `Lesson ${order}`, place: `Tutorial ${order} of 4`, goal: `Goal ${order}.`,
   done, skipped, next: false, tag: done ? 'Done' : skipped ? 'Skipped' : 'New', action: done ? 'Play again' : 'Play', link: `/battle?scenario=t${order}`, picture: ['lesson-base', 'lesson-brute', 'lesson-ironhide', 'lesson-colossus'][order - 1] });
-const series = (...states) => states.map((state, index) => lesson(index + 1, { done: state === 'done', skipped: state === 'skipped' }));
+// Learn to play marks as next the first lesson neither done nor skipped (lobby-tutorials.js).
+const series = (...states) => states.map((state, index) => ({ ...lesson(index + 1, { done: state === 'done', skipped: state === 'skipped' }), next: index === states.indexOf('new') }));
 
 test('the ground follows the round: the duel to round 5, then the Great Rupture from round 6 (docs/art/scene-replacement-plan.md)', () => {
   assert.deepEqual([1, 5, 6, 9, 10, 14, undefined].map(groundOf), ['mist-duel', 'mist-duel', 'great-rupture', 'great-rupture', 'great-rupture', 'great-rupture', 'mist-duel']);
@@ -35,9 +36,11 @@ test('a finished game is never featured', () => {
   assert.deepEqual(featuredChoice({ mine: [game('done', { over: true })], lessons: [] }), { kind: 'new' });
 });
 
-test('a new account is shown its first lesson, even one it skipped from its brief, and a returning learner the next one not done', () => {
-  assert.equal(featuredChoice({ mine: [], lessons: series('skipped', 'new', 'new', 'new') }).lesson.id, 't1');
+test('a skipped lesson is not featured again: the first new one is, and a returning learner the next one not done (#987)', () => {
+  assert.equal(featuredChoice({ mine: [], lessons: series('skipped', 'new', 'new', 'new') }).lesson.id, 't2');
+  assert.equal(featuredChoice({ mine: [], lessons: series('done', 'skipped', 'new', 'new') }).lesson.id, 't3');
   assert.equal(featuredChoice({ mine: [], lessons: series('done', 'done', 'new', 'new') }).lesson.id, 't3');
+  assert.equal(featuredChoice({ mine: [], lessons: series('new', 'new', 'new', 'new') }).lesson.id, 't1');
 });
 
 test('a player who skipped every lesson left, or did them all, is offered a new battle', () => {

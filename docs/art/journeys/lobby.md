@@ -72,7 +72,7 @@ What holds for every screen of the journey:
   1. a game whose turn is the player's, a game against a person before a game against a bot, then the order of
      `waitingGames` (the time to answer that runs out soonest first);
   2. a game of theirs that waits on someone else: the other player's turn, or a seat not yet taken;
-  3. a lesson to continue: the next lesson not done, unless it and every lesson after it were skipped;
+  3. a lesson to continue: the first lesson neither done nor skipped (the owner's choice, #987);
   4. a new battle: "Your next battle.", "A bot answers at once. Or challenge a friend, or take an open seat.", and
      **Multiplayer** filled and first, which opens the Create window on Multiplayer; Play a bot →, beside it, opens it on Solo.
 
@@ -82,8 +82,8 @@ What holds for every screen of the journey:
   place, never drawn again, so the focus and the target stay. Which game is featured, and why, is never computed
   beyond what `turnOf` in `table/players.js` and the host's lists already say.
 - **Room held.** Every line of the featured space keeps its room in every state: the title and the detail two
-  lines at least, the status line kept unseen when it is empty, the two actions. On a phone the text block is
-  360 px tall at least, with the actions at its foot, so a status that wraps when a turn arrives moves nothing.
+  lines at least, the status line kept unseen when it is empty, the two actions. On a phone the text stands at the
+  foot of a full-screen space, the actions last, so a status that wraps when a turn arrives moves no button.
   Until the first read the words and actions are there but unseen, and the space is `aria-busy`. The eclipse ground
   is asked for as soon as the host says someone can play, the creature only once the choice is known; a picture
   that arrives late never moves the button. The footer waits until the lists' first read is in. Budget: shift under
@@ -136,7 +136,7 @@ The walk's `home-menu` is briefed lightly: the menu is the navigation's, and the
 The home a new player reaches after leaving tutorial 1 from its brief: signed in, no game, the four lessons listed,
 the first skipped. The featured space offers the lesson to continue (rank 3), with the creature a team starts from.
 
-- **Filled action**: Play →, on the featured lesson (tutorial 1 here). ＋ New battle is the quiet action under it;
+- **Filled action**: Play →, on the featured lesson (tutorial 2 here: a skipped lesson is not featured again, #987). ＋ New battle is the quiet action under it;
   Learn to play's Play on the same lesson and the empty lists' Play a bot → and Open a table → are outlines.
 
 ### Words
@@ -249,16 +249,15 @@ cards arrive as UX8 staged them.
 
 ### Left
 
-- A skipped tutorial 1 is featured again while the next three are new: it is the next lesson not done, as Learn to
-  play's filled Play is today. A player who skipped it may want the first new lesson instead: the owner's choice,
-  and `onboarding-plan.md`'s if it changes what "next" means.
+- Settled (#987): a skipped lesson is not featured again; the first new one is, and Learn to play marks it as next.
 - "Continue →" meaning the series continues is mine; the host keeps no place inside a lesson.
-- The plan's "ash passing behind a still creature" is not in the kit: the breath stands in for it. A strip of ash
-  would be a picture asked of the owner, and is not asked until the owner says so.
+- The plan's "ash passing behind a still creature" is not in the kit: the breath stands in for it. Settled (#987):
+  no strip of ash.
 - The greeting ("Welcome back, Walker") is gone: the featured space's eyebrow takes its place, and the account
   button carries the name. `home-navigation.md`'s "Signed in" line was amended with the build.
-- The featured block is 360 px tall at least on a phone: on a game, about 90 px of slate stands between the status
-  and the action, the price of a turn that arrives moving nothing. The owner may prefer a tighter card that moves.
+- The featured block was 360 px tall at least on a phone, with about 90 px of slate between the status and the
+  action. The owner chose a tighter card (#987); the scene of #1062 had already given that room back: the text
+  stands at the space's foot, the status 18 px above the action at 390 by 844.
 
 ## The menu (`home-menu`)
 
@@ -352,8 +351,8 @@ None: a form. A picture would push Create & play → further below the first scr
 - **Empty**: no friend yet, with A friend chosen: the line says to ask a player from the Friends panel first, and
   Create & play → is disabled (today's behaviour).
 - **Loaded**: Multiplayer or Solo, as filmed.
-- **Waiting**: after Create & play →: the action is disabled until the host answers, then the battle page opens. It
-  could say `Creating…` as the featured action says `Opening…`; asked under **Left**.
+- **Waiting**: after Create & play →: the action says `Creating…` (`Inviting…` on Invite →), disabled and
+  `aria-busy`, until the host answers, then the battle page opens; a refusal gives it back (#987).
 - **Error**: the host refuses: the window's own alert says why (`#create-problem`), the window stays open. At the most
   games of a kind, the line says so before the press, and the action is disabled. Read, not seen.
 - **Offline**: the request fails and the alert says so. Read, not seen.
@@ -394,10 +393,8 @@ pauses while it is open: the creature is under the backdrop, out of view as ambi
 
 ### Left
 
-- At 320 by 568, on Multiplayer, the window is 791 px tall (827 before) and Create & play → is below its first screen: the player scrolls
-  inside the window to reach it. Holding Cancel and Create & play → at the window's foot is beyond this stage's build;
-  asked for UX9's next round or UX12's family of windows.
-- `Creating…` on the press, as `Opening…`, is beyond the build.
+- Settled (#987): Cancel and Create & play → are held at the window's foot, over its padding, and the options scroll
+  under them, so at 320 by 568 the action is on the first screen. The press says `Creating…`.
 - "A player who lets it run out loses the game." under Time to answer says a rule (ADR 0169); it stays as it is,
   and the rulebook-writer may want it linked instead.
 

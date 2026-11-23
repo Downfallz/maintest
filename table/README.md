@@ -512,7 +512,8 @@ behind another app or a locked screen counts as nobody looking, even while it st
 "your turn", the round and the question. After a last visit it also says how many spells were cast since
 (*Round 4: choose a spell. 3 casts since your last visit.*). Nothing else. On an iPhone the button says to add the table to the home screen
 first. The offer of pop-ups (`push-offer.js`, notifications plan N4) is a card of the page, never the browser's
-prompt first. The lobby shows it when a game against a person waits on the other player. The battle view shows it
+prompt first. The lobby shows it when a game against a person waits on the other player; on a host with accounts
+off, where nobody is signed in, it asks through that game's seat (`PUT /api/lobby/push`), as the battle view does. The battle view shows it
 on the other player's turn and at the end of the first tutorial, through the account's switch there, since a
 practice seat answers no push route. Its answers: **Turn on**, **Not now** (asked again a week later at the
 earliest, three times at most; a Turn on that leaves pop-ups off counts as an asking too), **Don't ask again**, and
