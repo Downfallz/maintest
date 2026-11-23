@@ -714,6 +714,26 @@ test('the bots\' turn queues show in the Jobs tab, and their dead letters are re
 
 // Voiding a match (A3c, ADR 0176): from a session row, only with a category and an explanation, and the session then
 // says it is void.
+// The notices in the Jobs tab (notifications plan, N6): the three queues and the worker's counts, a kind each.
+test('the notices\' queues and counts show in the Jobs tab, and a notice given up on marks the tab', async ({ page }, info) => {
+  await page.route(/\/api\/admin\/jobs\/notices$/, route => route.fulfill({ json: {
+    queues: [{ name: 'notices', count: 0, oldest: null }, { name: 'notices-poison', count: 0, oldest: null }, { name: 'notices-dlq', count: 1, oldest: '2026-11-13T17:00:00Z' }],
+    counted: true, today: '2026-11-13', days: 7,
+    day: [{ kind: 'turn', sent: 12, refused: 1, gone: 0 }],
+    week: [{ kind: 'turn', sent: 80, refused: 6, gone: 2 }, { kind: 'invitation', sent: 9, refused: 0, gone: 1 }, { kind: 'match', sent: 30, refused: 0, gone: 0 }],
+  } }));
+  await page.reload();
+  await page.locator('#tab-jobs').click();
+
+  await expect(page.locator('#notices-on')).toBeVisible();
+  await expect(page.locator('#notices-queues li.warning')).toHaveText(/1\s*Given up on, kept a week/);
+  await expect(page.locator('#tab-jobs-count')).toHaveText('!');
+  await expect(page.locator('#notices-counts tr')).toHaveCount(4);
+  await expect(page.locator('#notices-counts tr').last()).toHaveText(/All\s*12\s*1\s*0\s*119\s*6\s*3/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(widthOf(page));
+  await page.locator('#notices-on').screenshot({ path: info.outputPath('admin-notices.png') });
+});
+
 test('a session is voided only with a reason, and then says it is void', async ({ page }, info) => {
   let voided = null;
   const listed = () => ({ sessions: [{ ...session('people-finished', 'human:mk', 'human:jo', true), voidable: !voided, voided: voided?.category ?? null }] });

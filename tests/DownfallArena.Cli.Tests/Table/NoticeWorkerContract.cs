@@ -19,6 +19,8 @@ public abstract class NoticeWorkerContract
     private readonly AccountId _mark = AccountId.New();
     private readonly FailingSender _sender = new();
     private readonly AccountDevices _devices = new(new InMemoryDeviceStore(), TimeProvider.System);
+    private readonly NoticeCounts _counts = new(new DownfallArena.Infrastructure.Work.InMemoryNoticeCountStore(), TimeProvider.System);
+    private readonly List<string> _said = [];
 
     /// <summary>A fresh, empty queue of this name.</summary>
     protected abstract Task<IWorkChannel> ChannelAsync(string name);
@@ -124,18 +126,123 @@ public abstract class NoticeWorkerContract
         PoisonedWork.Parse((await poison.PeekAsync(1, Cancel)).ShouldHaveSingleItem().Body)!.Error.ShouldContain("Not a notice");
     }
 
+    [Fact]
+    public async Task What_a_look_sent_is_counted_by_kind_and_said_on_a_line_the_ops_report_reads()
+    {
+        var (worker, notices, _) = await WorkerAsync();
+        await PhoneAsync();
+        await QueueAsync(notices);
+        await QueueAsync(notices, "turn");
+
+        await worker.RunOnceAsync(Cancel);
+
+        (await _counts.WeekAsync(Cancel)).Day.ShouldBe([new NoticeCount("friend", 1, 0, 0), new NoticeCount("turn", 1, 0, 0)]);
+        _said.ShouldContain(line => line.StartsWith("  Notice sent (friend): ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Each_try_a_push_service_refused_is_counted_and_the_send_that_went_after_it_too()
+    {
+        var (worker, notices, _) = await WorkerAsync();
+        await PhoneAsync();
+        _sender.Failures = 2;
+        await QueueAsync(notices);
+
+        for (var look = 0; look < 3; look++)
+        {
+            await worker.RunOnceAsync(Cancel);
+        }
+
+        (await _counts.WeekAsync(Cancel)).Day.ShouldBe([new NoticeCount("friend", 1, 2, 0)]);
+        _said.Count(line => line.StartsWith("  Notice refused (friend): ", StringComparison.Ordinal)).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task A_notice_given_up_on_counts_every_try_refused_and_says_so_once_as_given_up()
+    {
+        var (worker, notices, _) = await WorkerAsync();
+        await PhoneAsync();
+        _sender.Failures = int.MaxValue;
+        await QueueAsync(notices);
+
+        for (var delivery = 0; delivery < NoticeWorker.MostDeliveries; delivery++)
+        {
+            await worker.RunOnceAsync(Cancel);
+        }
+
+        (await _counts.WeekAsync(Cancel)).Day.ShouldBe([new NoticeCount("friend", 0, NoticeWorker.MostDeliveries, 0)]);
+        _said.Where(line => line.Contains("given up on after", StringComparison.Ordinal)).ShouldHaveSingleItem()
+            .ShouldStartWith("  Notice refused (friend): ");
+    }
+
+    [Fact]
+    public async Task A_device_gone_from_its_push_service_or_let_go_of_by_its_account_is_counted_gone()
+    {
+        var (worker, notices, _) = await WorkerAsync();
+        await PhoneAsync();
+        _sender.Gone = true;
+        await QueueAsync(notices);
+        await worker.RunOnceAsync(Cancel);
+
+        await QueueAsync(notices);
+        await worker.RunOnceAsync(Cancel);
+
+        (await _counts.WeekAsync(Cancel)).Day.ShouldBe([new NoticeCount("friend", 0, 0, 2)]);
+        _said.Count(line => line.StartsWith("  Notice gone (friend): ", StringComparison.Ordinal)).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Counts_that_cannot_be_kept_are_a_line_and_the_notice_is_still_done_with()
+    {
+        var notices = await ChannelAsync(QueuedNotice.Queue);
+        var poison = await ChannelAsync(PoisonedWork.QueueOf(QueuedNotice.Queue));
+        var worker = new NoticeWorker(notices, poison, TimeProvider.System)
+        {
+            Devices = new AccountNotices(_sender, _devices),
+            Counts = new NoticeCounts(new UnreachableCounts(), TimeProvider.System),
+            Said = Say,
+        };
+        await PhoneAsync();
+        await QueueAsync(notices);
+
+        await worker.RunOnceAsync(Cancel);
+
+        _sender.Sent.ShouldHaveSingleItem();
+        (await notices.CountAsync(Cancel)).ShouldBe(0);
+        _said.ShouldContain(line => line.StartsWith("  The notices' counts of this look could not be kept: ", StringComparison.Ordinal));
+    }
+
     private async Task<(NoticeWorker Worker, IWorkChannel Notices, IWorkChannel Poison)> WorkerAsync()
     {
         var notices = await ChannelAsync(QueuedNotice.Queue);
         var poison = await ChannelAsync(PoisonedWork.QueueOf(QueuedNotice.Queue));
-        return (new NoticeWorker(notices, poison, TimeProvider.System) { Devices = new AccountNotices(_sender, _devices), FirstRetry = TimeSpan.Zero }, notices, poison);
+        return (new NoticeWorker(notices, poison, TimeProvider.System) { Devices = new AccountNotices(_sender, _devices), FirstRetry = TimeSpan.Zero, Counts = _counts, Said = Say }, notices, poison);
+    }
+
+    // The items of a look are sent side by side, and each says its line.
+    private void Say(string line)
+    {
+        lock (_said)
+        {
+            _said.Add(line);
+        }
+    }
+
+    /// <summary>A store of counts that is out.</summary>
+    private sealed class UnreachableCounts : INoticeCountStore
+    {
+        public Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+
+        public Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+
+        public Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private Task<IReadOnlyList<PushDevice>> PhoneAsync() =>
         _devices.AddAsync(_mark, new PushDevice(Phone, InMemoryDeviceStore.Key, InMemoryDeviceStore.Auth, default), Cancel);
 
-    private Task<QueuedWork> QueueAsync(IWorkChannel notices) =>
-        notices.SendAsync(QueuedNotice.Of(new DevicePush(_mark.Value, Phone, """{"title":"A friend"}""", "friend")).ToJson(), cancellationToken: Cancel);
+    private Task<QueuedWork> QueueAsync(IWorkChannel notices, string topic = "friend") =>
+        notices.SendAsync(QueuedNotice.Of(new DevicePush(_mark.Value, Phone, """{"title":"A friend"}""", topic)).ToJson(), cancellationToken: Cancel);
 
     /// <summary>A push service that refuses as it is told to: so many times out, or the subscription gone.</summary>
     private sealed class FailingSender : IPushSender

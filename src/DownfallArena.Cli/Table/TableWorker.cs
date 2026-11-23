@@ -39,6 +39,9 @@ internal static class TableWorker
         /// <summary>Where each account's choices of what pops up are kept (ADR 0202): a result it turned off is not pushed.</summary>
         public IPreferenceStore? Preferences { get; init; }
 
+        /// <summary>What <c>--record</c> names, beside which the notices' counts are kept (N6); none keeps them in memory.</summary>
+        public string? NoticeCountsAt { get; init; }
+
         /// <summary>Where the content the tables began on is kept (ADR 0163), or nowhere.</summary>
         public IArtifactStore? Contents { get; init; }
     }
@@ -91,6 +94,7 @@ internal static class TableWorker
                 ArtifactStores.OpenChannels(target, clock))
             {
                 Contents = await TableHost.OpenContentsAsync(target, stopping.Token),
+                NoticeCountsAt = target,
             };
             if (options.Accounts != AccountsMode.Off)
             {
@@ -187,7 +191,9 @@ internal static class TableWorker
         try
         {
             var working = await TableHost.StartWorkersAsync(over.Channels, turns, registry, clock, running.Token);
-            var noticing = await TableHost.StartNoticesAsync(over.Channels, outbox, push, registry, clock, running.Token);
+            // What it sent is counted beside the API's (N6), in the store the Jobs tab reads.
+            var counts = outbox is null ? null : await TableHost.OpenNoticeCountsAsync(over.NoticeCountsAt, clock, running.Token);
+            var noticing = await TableHost.StartNoticesAsync(over.Channels, outbox, push, registry, clock, running.Token, counts);
 
             // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
             // hands -- is seen as the host sees the worker's (ADR 0162); and a finished table nobody is at any more is

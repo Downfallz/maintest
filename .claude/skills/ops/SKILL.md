@@ -34,6 +34,9 @@ GitHub, in Azure or anywhere else. Every line of the log is the table's own text
 - `la table ne répond pas`: the deploy's own probe (`rollout.yml`, *The table answers*) would have gone red too;
   look at `main`'s last run before guessing.
 - A count of 5xx answers or restarts is the last 24 hours. A redeploy makes a new revision, not a restart.
+- `Notifications 24 h`: the notices worker's own lines (N6). `refusées` counts every try a push service refused or
+  did not answer, so one notice retried twice counts two; `abandonnées` are those given up on after five tries, kept
+  a week on `notices-dlq` (the admin panel's Jobs tab, *Notices*).
 - The cost is Cost Management's month to date, which lags by up to a day.
 
 ## Rules
