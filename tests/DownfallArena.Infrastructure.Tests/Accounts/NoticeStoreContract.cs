@@ -41,6 +41,42 @@ public abstract class NoticeStoreContract
         (await store.ReadAsync(account, Cancel)).Version.ShouldBeNull();
     }
 
+    /// <summary>When a log was last written, read with it: what the hourly job erases a log by once it is 90 days past (#1118).</summary>
+    [Fact]
+    public async Task A_log_reads_with_when_it_was_last_written()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var before = DateTimeOffset.UtcNow.AddMinutes(-1);
+
+        await store.WriteAsync(account, [Entry(1)], null, Cancel);
+
+        var written = (await store.ReadAsync(account, Cancel)).Written.ShouldNotBeNull();
+        written.ShouldBeGreaterThan(before);
+        written.ShouldBeLessThan(DateTimeOffset.UtcNow.AddMinutes(1));
+    }
+
+    [Fact]
+    public async Task The_accounts_with_a_log_are_listed_and_one_whose_log_went_is_not()
+    {
+        var store = await StoreAsync();
+        var kept = AccountId.New();
+        var emptied = AccountId.New();
+        var forgotten = AccountId.New();
+        foreach (var account in new[] { kept, emptied, forgotten })
+        {
+            await store.WriteAsync(account, [Entry(1)], null, Cancel);
+        }
+
+        await store.WriteAsync(emptied, [], (await store.ReadAsync(emptied, Cancel)).Version, Cancel);
+        await store.ForgetAsync(forgotten, Cancel);
+
+        var listed = await store.AccountsAsync(Cancel);
+        listed.ShouldContain(kept);
+        listed.ShouldNotContain(emptied);
+        listed.ShouldNotContain(forgotten);
+    }
+
     [Fact]
     public async Task A_write_over_a_version_another_write_replaced_is_refused_and_leaves_that_write()
     {

@@ -345,7 +345,8 @@ no account (ADR 0178).
 
 Its Jobs tab lists the tending runs twenty a page with the last day's and week's totals
 (`GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>` a run's sheet) and runs a pass now in this
-process (`POST /api/admin/jobs/tend`, kept as manual with the operator's name), and, on a host whose bots' turns
+process (`POST /api/admin/jobs/tend`, kept as manual with the operator's name; the `table-tend` pass, the
+notice logs' sweep included on a host that signs players in), and, on a host whose bots' turns
 go through queues, shows each queue's length and oldest item and the dead letters, first 32 first
 (`GET /api/admin/jobs/turns`), and puts a letter's turn back on the queue or drops it
 (`POST /api/admin/jobs/turns/requeue {"ids"}` or `{"all":true}`, `POST .../drop {"ids"}`). On a host that sends its
@@ -790,8 +791,10 @@ One pass of what is due on the tables, then exit (ADR 0162), kept as a run for t
 - every begun game between two players whose journal was not written for longer than its time to answer ended
   for whoever it still asks, its result kept and its seats told with `--push-keys`, and the player asked at a
   game whose time reaches its last quarter in the pass told so once (ADR 0169);
-- every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170).
-- every piece of feedback closed more than 180 days ago deleted (ADR 0189).
+- every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170);
+- every piece of feedback closed more than 180 days ago deleted (ADR 0189);
+- with `--accounts google|dev`, every notice older than 90 days erased from its account's notice log, and a log left
+  empty removed (ADR 0201, #1118).
 
 What the hourly job runs. The tables it picks up take no bot turn.
 

@@ -22,6 +22,16 @@ internal static class ConditionalFile
     }
 
     /// <summary>
+    /// The file's text, its version and when it was last written, or none for a file that is not there. The time is
+    /// read after the text: a write between the two makes it later, never earlier, than the text read.
+    /// </summary>
+    public static async Task<(string? Text, string? Version, DateTimeOffset? Written)> ReadWrittenAsync(string path, CancellationToken cancellationToken)
+    {
+        var (text, version) = await ReadAsync(path, cancellationToken);
+        return text is null ? (null, null, null) : (text, version, new DateTimeOffset(File.GetLastWriteTimeUtc(path), TimeSpan.Zero));
+    }
+
+    /// <summary>
     /// Writes the text beside its place and moves it there, or deletes the file for none, only if it is still at that
     /// version. False when another write came first.
     /// </summary>

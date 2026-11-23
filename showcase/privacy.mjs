@@ -5,7 +5,7 @@ const address = 'contact@downfallinstinct.com';
 const retention = { logDays: 30, deletedBlobDays: 7 };
 const policies = {
   en: {
-    label: 'Player information', date: 'Updated November 16, 2026',
+    label: 'Player information', date: 'Updated November 23, 2026',
     intro: 'You can read the showcase and explore mutations without an account. When you sign in to play, the game needs a small account record to recognise you, keep your seats and run your matches.',
     index: 'On this page', contact: 'Privacy contact', responsibility: 'The person responsible for privacy at Downfall Instinct handles questions, access requests, corrections and complaints at this address.',
     sections: [
@@ -26,7 +26,7 @@ const policies = {
       ]],
       ['notifications', 'Optional notifications', [
         'If you enable notifications on a device, the game stores that browser’s push endpoint and encryption keys. Your browser’s push service delivers events such as a turn or an invitation. This is optional and uses no email address. Turning on pop-ups in a game’s settings while signed in registers that browser with your account too. The account also keeps which kinds pop up (your turn, invitations and friends, results). Turn off pop-ups in the game to remove that subscription, sign out on that browser to remove it from your account, or use Sign out everywhere to remove the account’s registered devices. When a push service says a subscription no longer exists, the game keeps its address without the keys (the five latest), so that browser is asked to subscribe again; Sign out everywhere and deleting the account remove them too. A notice that could not be delivered is kept for a week at most, with your internal ID and its kind only.',
-        'Whether or not you enable them, the game keeps the latest 100 notices from the last 90 days for your account’s bell, such as a friend who accepted your request, an invited friend who took the seat, a player who left or a match result. Each notice keeps the other player’s name as it was when it was sent, even if they rename or delete their account later. A notice older than 90 days is no longer shown, and is erased the next time a notice is kept for your account, or when you delete your account.',
+        'Whether or not you enable them, the game keeps the latest 100 notices from the last 90 days for your account’s bell, such as a friend who accepted your request, an invited friend who took the seat, a player who left or a match result. Each notice keeps the other player’s name as it was when it was sent, even if they rename or delete their account later. A notice is erased within the hour once it is 90 days old, or when you delete your account.',
       ]],
       ['providers', 'Service providers and retention', [
         'Cloudflare handles traffic for the public domains. Microsoft Azure hosts the game and stores account and game records. Google handles sign-in, and your browser’s push provider handles notifications if you enable them. In delivering or protecting a request, a provider can process technical information such as an IP address, the time, the requested page and browser information. Providers may process information outside Québec.',
@@ -40,7 +40,7 @@ const policies = {
     ],
   },
   fr: {
-    label: 'Renseignements des joueurs', date: 'Mise à jour le 16 novembre 2026',
+    label: 'Renseignements des joueurs', date: 'Mise à jour le 23 novembre 2026',
     intro: 'Tu peux lire la vitrine et explorer les mutations sans compte. Quand tu te connectes pour jouer, le jeu a besoin de quelques renseignements pour te reconnaître, te redonner tes places et gérer tes parties.',
     index: 'Dans cette politique', contact: 'Nous joindre', responsibility: 'La personne responsable de la protection des renseignements personnels chez Downfall Instinct répond aux questions, aux demandes d’accès ou de rectification et aux plaintes à cette adresse.',
     sections: [
@@ -61,7 +61,7 @@ const policies = {
       ]],
       ['notifications', 'Les notifications facultatives', [
         'Si tu actives les notifications sur un appareil, le jeu conserve l’adresse de livraison du navigateur et ses clés de chiffrement. Le service de notification du navigateur peut alors t’aviser lors de ton tour ou d’une invitation. Cette option est facultative et ne requiert aucune adresse courriel. Activer les notifications dans les réglages d’une partie, une fois connecté, inscrit aussi ce navigateur à ton compte. Le compte conserve aussi les types de notifications que tu acceptes (ton tour, les invitations et les amis, les résultats). Désactive les notifications dans le jeu pour retirer cet abonnement, déconnecte-toi sur ce navigateur pour le retirer de ton compte, ou utilise « Sign out everywhere » pour retirer les appareils inscrits à ton compte. Quand un service de notification indique qu’un abonnement n’existe plus, le jeu garde son adresse sans les clés (les cinq plus récentes), pour que ce navigateur soit invité à s’abonner de nouveau ; « Sign out everywhere » et la suppression du compte les retirent aussi. Une notification qui n’a pas pu être livrée est gardée une semaine au plus, avec seulement ton identifiant interne et son type.',
-        'Que tu les actives ou non, le jeu conserve pour la cloche de ton compte les 100 derniers avis des 90 derniers jours, par exemple un ami qui a accepté ta demande, un ami invité qui a pris la place, un joueur qui a quitté la table ou le résultat d’une partie. Chaque avis garde le nom de l’autre joueur tel qu’il était à l’envoi, même s’il change de nom ou supprime son compte par la suite. Un avis de plus de 90 jours n’est plus affiché. Il est effacé au prochain avis conservé pour ton compte, ou à la suppression de ton compte.',
+        'Que tu les actives ou non, le jeu conserve pour la cloche de ton compte les 100 derniers avis des 90 derniers jours, par exemple un ami qui a accepté ta demande, un ami invité qui a pris la place, un joueur qui a quitté la table ou le résultat d’une partie. Chaque avis garde le nom de l’autre joueur tel qu’il était à l’envoi, même s’il change de nom ou supprime son compte par la suite. Un avis est effacé dans l’heure qui suit ses 90 jours, ou à la suppression de ton compte.',
       ]],
       ['providers', 'Les fournisseurs et la conservation', [
         'Cloudflare achemine le trafic des domaines publics. Microsoft Azure héberge le jeu et conserve les comptes et les parties. Google assure la connexion. Le service de notification de ton navigateur intervient si tu actives cette option. Pour acheminer ou protéger une requête, un fournisseur peut traiter des renseignements techniques comme l’adresse IP, l’heure, la page demandée et des informations sur le navigateur. Les fournisseurs peuvent traiter des renseignements à l’extérieur du Québec.',
@@ -83,7 +83,7 @@ const indexLink = ([id, title]) => `<a href="#${id}">${title}</a>`;
 export function privacyPage(c, app) {
   const p = policies[c.lang];
   return layout(c, 'privacy', app, c.privacy, p.intro, `<div class="policy contain">
-    <header><p class="kicker">${p.label}</p><h1>${c.privacy}</h1><p class="policy-date"><time datetime="2026-11-16">${p.date}</time></p><p class="lead">${escape(p.intro)}</p></header>
+    <header><p class="kicker">${p.label}</p><h1>${c.privacy}</h1><p class="policy-date"><time datetime="2026-11-23">${p.date}</time></p><p class="lead">${escape(p.intro)}</p></header>
     <div class="policy-grid"><nav aria-label="${p.index}"><h2>${p.index}</h2>
       ${[...p.sections, ['contact', p.contact]].map(indexLink).join('')}</nav>
       <div class="policy-body">${p.sections.map(section).join('')}

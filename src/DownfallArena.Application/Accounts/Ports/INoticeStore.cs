@@ -19,6 +19,9 @@ public interface INoticeStore
     /// </summary>
     Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default);
 
+    /// <summary>The accounts that have a log: what the hourly job sweeps for entries past their time (#1118).</summary>
+    Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Removes the account's log: the account is being deleted.</summary>
     Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default);
 }

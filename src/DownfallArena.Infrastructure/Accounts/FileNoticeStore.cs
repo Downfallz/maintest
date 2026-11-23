@@ -20,14 +20,25 @@ public sealed class FileNoticeStore : INoticeStore
 
     public async Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        var (text, version) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
-        return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version);
+        var (text, version, written) = await ConditionalFile.ReadWrittenAsync(FullPath(account), cancellationToken);
+        return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version) { Written = written };
     }
 
     public Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
         return ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries), version, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var directory = Path.Combine(RootDirectory, NoticeDocuments.Prefix);
+        IReadOnlyList<AccountId> accounts = !Directory.Exists(directory)
+            ? []
+            : [.. Directory.EnumerateFiles(directory)
+                .Select(file => NoticeDocuments.AccountOf(NoticeDocuments.Prefix + Path.GetFileName(file)))
+                .OfType<AccountId>()];
+        return Task.FromResult(accounts);
     }
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>

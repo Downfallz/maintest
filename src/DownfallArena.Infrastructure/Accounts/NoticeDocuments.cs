@@ -15,7 +15,18 @@ internal static class NoticeDocuments
 {
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
-    public static string PathOf(AccountId account) => $"notices/{account.Value}.json";
+    /// <summary>Where every log is, ahead of its account's id.</summary>
+    public const string Prefix = "notices/";
+
+    private const string Extension = ".json";
+
+    public static string PathOf(AccountId account) => $"{Prefix}{account.Value}{Extension}";
+
+    /// <summary>The account a log's name is the log of, or none for a name no log has.</summary>
+    public static AccountId? AccountOf(string name) =>
+        name.StartsWith(Prefix, StringComparison.Ordinal) && name.EndsWith(Extension, StringComparison.Ordinal) && AccountId.TryParse(name[Prefix.Length..^Extension.Length], out var account)
+            ? account
+            : null;
 
     public static string Write(IReadOnlyList<NoticeEntry> entries) =>
         JsonSerializer.Serialize(new NoticesRecord([.. entries.Select(entry => new EntryRecord(entry.Id, NoticeKinds.Name(entry.Kind), entry.Title, entry.Body, entry.Url, entry.Tag, entry.At, entry.Read))]), Web);
