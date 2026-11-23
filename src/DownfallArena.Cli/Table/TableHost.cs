@@ -560,7 +560,8 @@ internal static class TableHost
             admin.Turns = queues is null ? null : new TurnsApi(queues);
         }
 
-        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(tables.Store is null ? null : tables.Target, clock, cancellationToken);
+        var countsAt = tables.Store is null ? null : tables.Target;
+        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(countsAt, clock, cancellationToken);
         if (channels is not null && notices is not null && await TurnQueuesAsync(channels, notices, cancellationToken) is { } noticeQueues)
         {
             admin.Notices = new NoticesApi(noticeQueues, noticeCounts);
