@@ -65,6 +65,13 @@ paths:
 - A console line is one line (the ops report reads it a line at a time) and names an operator as `by <name>:`,
   `by <name>.` or `by <name> (`, the shapes `mask()` in `scripts/ops/report.mjs` hides. It never prints a
   path that carries a credential (`/j/<code>`).
+- What the composition root wires (a setter, a sink, a queue handed to an API) has a test that fails when that
+  line is deleted, not only a test of what it carries (#1109, N2 to N5).
+- A store kept per account is emptied by `ForgetAsync`, and a write that lands after it does not create the
+  account's record again. A sentence about what is kept or deleted is read against what is deleted at rest,
+  dead letters and logs included (#1108, #1117, #1129).
+- A document read, changed and written back (`NoticeDocuments`, `DeviceRecord`) keeps the fields it does not
+  know: the revision before it runs beside it during a deploy and writes over them otherwise (#1108, #1129).
 - A new route has a host test in `tests/DownfallArena.Cli.Tests/Table`, a line in `table/README.md#routes`,
   and its behaviour in `docs/reference/commands.md`.
 - What a seat holds face down never reaches the other seat's view, a log, or a notification.

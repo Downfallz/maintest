@@ -15,6 +15,10 @@ When you are given a sha and a copy of that commit (`/reviewers` gives both), re
 copy, never in the checkout, which the author's session may be editing, and start your report with
 `Reviewed: <sha>`. Given none, copy `HEAD` yourself (`git archive HEAD | tar -x` into an empty temporary folder)
 and name its sha. Only your memory and `table/battle-build/` come from the checkout.
+Before you write the report, run `git rev-parse HEAD` in the checkout: if it is no longer the sha you reviewed,
+read `git diff <reviewed sha>..HEAD`, re-check each finding on the new sha and name both shas (seen more than
+twenty times, `lessons.md`). A `git archive` copy holds no ignored file: build what the gate reads there
+(`table/battle-build/`, `battle/node_modules`) before you trust a red test in it.
 
 Look for, in this order:
 
