@@ -98,9 +98,47 @@ Services, Credentials, *Create OAuth client ID*, type *Web application*. It need
 secret: the button hands the page an ID token directly. Its *Authorized JavaScript origins* list every address the table
 answers at; adding one is a runbook: [runbooks/sign-ins.md](runbooks/sign-ins.md).
 
+Discord is a second way in (sign-in methods plan, P3), offered once the `TABLE_DISCORD_CLIENT_ID` variable names a
+Discord application; unset, the lobby shows Google's button alone. The application is a *public client*: the page
+proves itself with a PKCE verifier and the host exchanges Discord's code without a secret, so there is still no
+secret to keep. It asks for the `identify` scope only: no email. The host keeps the Discord user's id. Setting it up,
+once:
+
+1. **Discord Developer Portal**: <https://discord.com/developers/applications>, *New Application*, named after the
+   game, *Create*. Its *General Information* page can carry the game's icon: players see it on Discord's consent page.
+
+2. **OAuth2**, under *Redirects*, *Add Redirect* for each address the table answers at, with `/signin/discord`
+   after it (the platform's address comes from [runbooks/sign-ins.md](runbooks/sign-ins.md), step 3):
+
+   ```text
+   https://play.downfallinstinct.com/signin/discord
+   ```
+
+   *Save Changes*. Never list `localhost` here: a laptop's table gets an application of its own, made the same way
+   with `http://localhost:5099/signin/discord` as its one redirect. A hosted table refuses a return over http.
+
+3. **OAuth2**, *Public Client*: on. *Save Changes*. Without it Discord refuses the exchange, which carries no secret,
+   and every Discord sign-in answers *Your sign-in could not be checked*.
+
+4. **OAuth2**, *Client information*, *Client ID*: *Copy*. Public: it is in Discord's own authorize address.
+
+5. **GitHub**, the repository, *Settings*, *Secrets and variables*, *Actions*, *Variables*, *New repository
+   variable*: name `TABLE_DISCORD_CLIENT_ID`, value the id of step 4.
+
+   ```text
+   TABLE_DISCORD_CLIENT_ID
+   ```
+
+6. **GitHub**, *Actions*, *Deploy the table*, *Run workflow* on `main`, or wait for the next merge.
+
+7. **Check**: the lobby in a private window shows *Continue with Discord* under Google's button; it leaves for
+   Discord, comes back to the lobby, and a first sign-in asks for a player name. A Discord page that says
+   *Invalid OAuth2 redirect_uri* means step 2 does not list that address.
+
 Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
-internal id and Google's subject id for the sign-in. No email is kept. A player deletes their account from the
-account menu on the home page; the lobby's *What we keep* panel says the same to players.
+internal id and the provider's id for each way in (Google's subject, Discord's user id). No email is kept. A player
+deletes their account from the account menu on the home page; the lobby's *What we keep* panel says the same to
+players.
 
 ## The showcase at the apex
 

@@ -1,6 +1,6 @@
 # Plan: more ways to sign in, and a guest
 
-Status: accepted, 2026-11-23. The owner settled the four questions (at the end). P1 and P2 are built; P3 to P6 are
+Status: accepted, 2026-11-23. The owner settled the four questions (at the end). P1 to P3 are built; P4 to P6 are
 not.
 
 ## What the owner asked for
@@ -77,7 +77,7 @@ turning what the page sends into an identity or null:
 | Provider | What the page sends | What the host does | Secret |
 | --- | --- | --- | --- |
 | `google` | The ID token. | Checks it, as today. | None. |
-| `discord` | `{ code, verifier, redirect }` after Discord's authorize page, code flow with PKCE, the app marked *public client*. | Exchanges the code at `discord.com/api/oauth2/token` with the verifier, reads `GET /users/@me`, keeps the `id`. Scope `identify` only. | None. |
+| `discord` | `{ code, verifier, redirect }` after Discord's authorize page, code flow with PKCE, the app marked *public client*. | Exchanges the code at `discord.com/api/v10/oauth2/token` with the verifier, reads `GET /oauth2/@me` (the app and the user), keeps the user's `id`. Scope `identify` only. | None. |
 | `microsoft` | The same shape, against personal Microsoft accounts. | Exchanges, checks the ID token as Google's. | None. |
 | `facebook` (not planned) | The access token from Facebook's SDK. | Asks `debug_token` whether it was issued to this app, keeps the user id. | The app secret, as a Container App secret. |
 | `guest` | Nothing. | Makes one (below). | None. |
@@ -166,6 +166,37 @@ and 4. The recommended answer:
    `discordClientId` in `infra/main.bicep`, and the owner's steps in `infra/README.md` (the app, the redirect
    addresses, *public client* on). Tests: a fake Discord answers the exchange and `@me`; a wrong state, a reused
    code, a token for another app are refused. `security-reviewer` and `host-reviewer` read it.
+
+   *Built (2026-11-23)*:
+
+   - The provider: `DiscordSignIn` (Infrastructure) reads `code`, `verifier` and `redirect`. It exchanges them at
+     `discord.com/api/v10/oauth2/token` with the client id and no secret, asks `oauth2/@me`, which names the app the
+     token was issued to and the user, and revokes the token. A token of another app, an answer without a user or a
+     snowflake, and a refused or reused code are each a refusal (401). A proof of the wrong shape is refused before
+     Discord is asked: a verifier outside RFC 7636, or a redirect that is not this host's `/signin/discord` over https
+     (or over http on a loopback table only).
+   - Discord that cannot be asked is not a refusal: out of reach, slower than ten seconds, a 5xx or a 429 throws
+     `SignInUnavailableException`, which the route answers `503 Account.ProviderUnavailable` with the line
+     `Sign-in unavailable (discord): <why>.`. The host asks Discord at most 30 times a minute and 4 at once, and not at
+     all until a 429's `Retry-After` has passed, so a script cannot get the table's address banned by Discord.
+   - The host: `--sign-in google,discord`, `--discord-client-id` or `DOWNFALL_DISCORD_CLIENT_ID`; a client id given
+     without its provider is refused. `/api/me` now says `accounts: "signin"` and no longer `googleClientId`. The P2
+     page reads `signIn` instead. The service worker does not serve a cached page while the network answers, so no
+     old page meets the new host.
+   - The page: `discord.js` makes the verifier and the state and keeps them with `next` in the tab's
+     `sessionStorage`, for ten minutes at most. It then leaves for Discord's authorize page (`identify`, S256,
+     `prompt=none`). The button is the table's plain button, under Google's, and comes back after Back at Discord.
+   - The return: `/signin/discord` (`signin.html`, `signin.js`) takes the code off the address and refuses a state the
+     tab did not send. It posts the code and goes back to the lobby with `next`. A new player's ticket reaches the
+     lobby's name window through the tab's storage. The player saying no goes straight back; any other error is said.
+   - The privacy policy names Discord in both languages.
+   - Infra: `discordClientId` in `infra/main.bicep` from the `TABLE_DISCORD_CLIENT_ID` variable; unset, nothing
+     changes. The owner's steps are in `infra/README.md` (*Player sign-in*), and the redirect per address in
+     `infra/runbooks/sign-ins.md`.
+   - Left: creating the Discord application and the variable (the owner's steps); the Discord journey in the browser
+     suite against a mock of Discord's pages; a count of sign-ins per network address, so one address cannot spend
+     the minute's 30 exchanges for everybody (with #1171).
+
 4. **P4, ways to sign in.** Ships once P1's release is the only one running (ADR 0204). Settings lists the
    account's providers, adds one (the provider's own flow, then `POST /api/account/identities/<provider>`) and
    removes one. Tests: the routes; the journey at 320 px.

@@ -726,6 +726,50 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Discord_signs_a_new_player_in_at_its_route_through_the_code_exchange()
+    {
+        using var http = new HttpClient(new DiscordAnswers(accepts: "the-code"));
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
+        var answer = await api.HandleAsync("POST", "/api/account/discord", DiscordProof("the-code"), Nobody);
+        var ticket = Json(answer).GetProperty("ticket").GetString();
+
+        var registered = await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"Kodiak"}""", Nobody);
+
+        registered.Status.ShouldBe(200);
+        (await new AccountRegistry(_store, _clock).FindAsync(new ExternalIdentity("discord", "80351110224678912"), TestContext.Current.CancellationToken))!.Username.Value.ShouldBe("Kodiak");
+    }
+
+    [Fact]
+    public async Task A_code_discord_refuses_is_a_rejected_sign_in()
+    {
+        using var http = new HttpClient(new DiscordAnswers(accepts: "the-code"));
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
+        var said = new List<string>();
+        api.Said = said.Add;
+
+        var answer = await api.HandleAsync("POST", "/api/account/discord", DiscordProof("a-forged-code"), Nobody);
+
+        answer.Status.ShouldBe(401);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.SignInRejected");
+        said.ShouldBe(["  Sign-in started (discord).", "  Sign-in refused (discord)."]);
+    }
+
+    [Fact]
+    public async Task Discord_out_of_service_is_unavailable_and_counted_apart_from_a_refusal()
+    {
+        using var http = new HttpClient(new DiscordDown());
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
+        var said = new List<string>();
+        api.Said = said.Add;
+
+        var answer = await api.HandleAsync("POST", "/api/account/discord", DiscordProof("the-code"), Nobody);
+
+        answer.Status.ShouldBe(503);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.ProviderUnavailable");
+        said.ShouldBe(["  Sign-in started (discord).", "  Sign-in unavailable (discord): Discord answered 503."]);
+    }
+
+    [Fact]
     public async Task A_provider_answers_only_its_own_proof()
     {
         var api = await ApiAsync(AccountsMode.SignIn, new AnyCode("other"));
@@ -962,6 +1006,37 @@ public sealed class AccountApiTests : IDisposable
 
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
             Task.FromResult(proof["code"] is { Length: > 0 } code ? new ExternalIdentity(name, code) : (ExternalIdentity?)null);
+    }
+
+    private const string DiscordApp = "1311111111111111111";
+
+    private static string DiscordProof(string code) =>
+        $$"""{"code":"{{code}}","verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk","redirect":"https://play.downfallinstinct.com/signin/discord"}""";
+
+    /// <summary>Discord in an incident: every call answers 503.</summary>
+    private sealed class DiscordDown : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
+    }
+
+    /// <summary>Discord's token exchange and current authorization, shaped as Discord answers them: one code is good.</summary>
+    private sealed class DiscordAnswers(string accepts) : HttpMessageHandler
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
+            return request.RequestUri!.AbsolutePath switch
+            {
+                "/api/v10/oauth2/token" when body.Contains($"code={accepts}&", StringComparison.Ordinal) =>
+                    Answer(System.Net.HttpStatusCode.OK, """{"access_token":"access","token_type":"Bearer","expires_in":604800,"scope":"identify"}"""),
+                "/api/v10/oauth2/@me" => Answer(System.Net.HttpStatusCode.OK, $$$"""{"application":{"id":"{{{DiscordApp}}}"},"scopes":["identify"],"user":{"id":"80351110224678912","username":"kodiak"}}"""),
+                _ => Answer(System.Net.HttpStatusCode.BadRequest, """{"error":"invalid_grant"}"""),
+            };
+        }
+
+        private static HttpResponseMessage Answer(System.Net.HttpStatusCode status, string json) =>
+            new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
     }
 
     /// <summary>A device store that runs something once, just before its next save: another request landing in between.</summary>

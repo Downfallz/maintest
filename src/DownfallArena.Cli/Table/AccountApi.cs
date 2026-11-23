@@ -93,9 +93,6 @@ internal sealed class AccountApi
     /// <summary>The providers this host signs in with, in the order the page draws their buttons; none in the other modes.</summary>
     public IReadOnlyList<ISignInProvider> SignIn { get; }
 
-    /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
-    public string? GoogleClientId => _providers.GetValueOrDefault(ExternalIdentity.Google)?.ClientId;
-
     /// <summary>
     /// The providers as <c>/api/me</c> tells them to a page: each one's name and the public id its button is drawn for,
     /// in order. Nothing secret: a client id is on the provider's own pages.
@@ -225,13 +222,12 @@ internal sealed class AccountApi
     public AccountActivityLog? Activity { get; set; }
 
     /// <summary>
-    /// How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list. A host that signs
-    /// in through providers still says <c>google</c>, the name the page of the release before checks before it draws
-    /// Google's button: renaming it waits until every page reads <c>signIn</c> (sign-in methods plan, P3).
+    /// How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list. A page tells off and
+    /// dev apart and reads anything else as signing in through the providers listed (sign-in methods plan, P3).
     /// </summary>
     public static string Named(AccountsMode mode) => mode switch
     {
-        AccountsMode.SignIn => "google",
+        AccountsMode.SignIn => "signin",
         AccountsMode.Development => "dev",
         _ => "off",
     };
@@ -486,7 +482,19 @@ internal sealed class AccountApi
         }
 
         Counted(StepStarted, name);
-        if (await provider.SignInAsync(proof) is not { } identity || identity.Provider != name)
+        ExternalIdentity? vouched;
+        try
+        {
+            vouched = await provider.SignInAsync(proof);
+        }
+        catch (SignInUnavailableException exception)
+        {
+            // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
+            Said($"  Sign-in unavailable ({name}): {exception.Message}");
+            return Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
+        }
+
+        if (vouched is not { } identity || identity.Provider != name)
         {
             Counted(StepRefused, name);
             return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
@@ -562,7 +570,7 @@ internal sealed class AccountApi
     /// <summary>One step of a sign-in, said as a line the ops report can count by provider.</summary>
     private void Counted(string step, string provider) => Said($"  Sign-in {step} ({provider}).");
 
-    // The steps a sign-in's lines name, as the ops report reads them.
+    // The steps a sign-in's lines name, as the ops report reads them; an unavailable provider is a line of its own.
     private const string StepStarted = "started";
     private const string StepFinished = "finished";
     private const string StepRefused = "refused";

@@ -4,12 +4,13 @@
 // only checks a name's shape before asking, so a keystroke that cannot be a name costs no request.
 
 import { undressScene, wearScene } from './picture.js';
+import { startDiscord, takeTicket } from './discord.js';
 
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{2,19}$/;
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
-// The providers this page can draw a button for, each in its element `<provider>-button` (sign-in methods plan, P2).
+// The providers this page can draw a button for, each in its element `<provider>-button` (sign-in methods plan, P2, P3).
 // A provider the host lists that is not here is left undrawn: a page older than its host.
-export const DRAWN_WAYS = ['google'];
+export const DRAWN_WAYS = ['google', 'discord'];
 
 /** What the page can say about a name before asking the host, or null when only the host can tell. */
 export function nameProblem(value) {
@@ -178,7 +179,7 @@ export function confirmAction(doc, title, detail, label, { filled = false, keep 
   });
 }
 
-function mountSignIn(doc, { request, google, refresh, say }) {
+function mountSignIn(doc, { request, google, refresh, say, session, win }) {
   const el = id => doc.getElementById(id);
   let ticket = null;
   let checking = 0;
@@ -195,8 +196,34 @@ function mountSignIn(doc, { request, google, refresh, say }) {
     return (await refresh()).leaving;
   }
 
-  async function withGoogle(state) {
-    const way = state.mode === 'dev' || state.mode === 'off' ? null : state.ways.find(each => each.provider === 'google');
+  // Discord's button leaves for Discord's authorize page; its return page (signin.js) comes back here with `next`.
+  let discord = null;
+  el('discord-button')?.addEventListener('click', async () => {
+    if (!discord?.clientId) return;
+    say('sign-in-problem');
+    el('discord-button').disabled = true;
+    // A page brought back from the back-forward cache, the player having pressed Back at Discord, gives the button back.
+    win.addEventListener?.('pageshow', event => { if (event.persisted) el('discord-button').disabled = false; }, { once: true });
+    try {
+      await startDiscord({ clientId: discord.clientId, origin: win.location.origin, next: nextPath(win.location.search), storage: session, go: url => win.location.assign(url) });
+    } catch (error) {
+      say('sign-in-problem', error.message);
+      el('discord-button').disabled = false;
+    }
+  });
+
+  // The ways in, once the host has said which: Discord's button is ours, Google's is drawn by Google's script. A name
+  // to choose that a return page handed over opens the name window, as a first sign-in on this page does.
+  async function withWays(state) {
+    const offered = state.mode === 'dev' || state.mode === 'off' ? [] : state.ways;
+    discord = offered.find(each => each.provider === 'discord') ?? null;
+    // Taken only where the window can open: a host that could not be read keeps it for the reload it asks for.
+    const handed = state.account || offered.length === 0 ? null : takeTicket(session);
+    if (handed) await signedIn({ needsUsername: true, ticket: handed });
+    await withGoogle(offered.find(each => each.provider === 'google'));
+  }
+
+  async function withGoogle(way) {
     if (!way?.clientId) return;
     try {
       const id = await google();
@@ -276,7 +303,7 @@ function mountSignIn(doc, { request, google, refresh, say }) {
   });
   el('name-cancel').addEventListener('click', () => el('name-dialog').close());
 
-  return withGoogle;
+  return withWays;
 }
 
 function tabStorage() {
@@ -288,10 +315,10 @@ function tabStorage() {
  * between. `onChange` is told the account (or null) whenever it changes, so the lobby can redraw what it shows.
  * `signOutPage` is the page's name in docs/art/page-budget.json when its sign out's confirmation wears its head.
  */
-export function mountAccount(doc, { request = accountRequest, readMe = () => request('/api/me'), google = () => loadGoogle(doc), onChange = () => {}, signOutPage = null, session = tabStorage() } = {}) {
+export function mountAccount(doc, { request = accountRequest, readMe = () => request('/api/me'), google = () => loadGoogle(doc), onChange = () => {}, signOutPage = null, session = tabStorage(), win = globalThis } = {}) {
   const el = id => doc.getElementById(id);
   const say = (id, text = '') => { el(id).textContent = text; el(id).hidden = !text; };
-  const signIn = el('sign-in-panel') ? mountSignIn(doc, { request, google, refresh, say }) : null;
+  const signIn = el('sign-in-panel') ? mountSignIn(doc, { request, google, refresh, say, session, win }) : null;
 
   async function refresh() {
     const state = accountState(await readMe().catch(() => ({ accounts: 'unavailable' })));

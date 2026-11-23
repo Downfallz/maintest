@@ -7,7 +7,7 @@ import { ago } from './admin-players.js';
 /** What registration open or closed means, in a line under the choice. */
 export function registrationLine(open) {
   return open
-    ? 'Open: a first sign-in with Google chooses a player name and has an account.'
+    ? 'Open: a first sign-in chooses a player name and has an account.'
     : 'Closed: a first sign-in is told new accounts are closed for now. Existing players sign in as before.';
 }
 

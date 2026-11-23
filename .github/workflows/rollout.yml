@@ -81,6 +81,9 @@ jobs:
           # The Google OAuth client players sign in with (ADR 0122). Public: Google's own pages show it. A fork sets
           # its own in the TABLE_GOOGLE_CLIENT_ID variable.
           GOOGLE_CLIENT_ID: ${{ vars.TABLE_GOOGLE_CLIENT_ID || '809377988923-jsaqtfo92r9ria75s9g8cd53o1iurc6b.apps.googleusercontent.com' }}
+          # The Discord application players may also sign in with (sign-in methods plan, P3), a public client. Public: it
+          # is in Discord's own authorize address. Unset, Discord is not offered.
+          DISCORD_CLIENT_ID: ${{ vars.TABLE_DISCORD_CLIENT_ID }}
           # The player accounts that are the operator once signed in (ADR 0175), by id, comma-separated; unset, none.
           ADMIN_ACCOUNTS: ${{ vars.TABLE_ADMIN_ACCOUNTS }}
           NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
@@ -112,7 +115,7 @@ jobs:
             --name "table-${GITHUB_RUN_ID}" \
             --template-file infra/main.bicep \
             --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
-              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
+              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" discordClientId="$DISCORD_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
               customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" promoWriter="$PROMO_WRITER" \
             --parameters @"$RUNNER_TEMP/alerts.parameters.json" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"

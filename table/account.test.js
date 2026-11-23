@@ -10,13 +10,14 @@ test('a name the host could never take is said at once, without asking it', () =
 test('a host that says nothing about accounts has them off', () => {
   assert.deepEqual(accountState({ operator: false }), { mode: 'off', account: null, clientId: null, ways: [] });
   assert.deepEqual(accountState(null), { mode: 'off', account: null, clientId: null, ways: [] });
-  const signedIn = accountState({ accounts: 'google', signIn: [{ provider: 'google', clientId: 'id' }], googleClientId: 'id', account: { id: 'acct_x', username: 'MarkF' } });
+  const signedIn = accountState({ accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], account: { id: 'acct_x', username: 'MarkF' } });
   assert.equal(signedIn.account.username, 'MarkF');
   assert.equal(signedIn.clientId, 'id');
 });
 
 test('the ways in are the providers the host lists, in its order, that this page can draw', () => {
-  assert.deepEqual(signInWays({ signIn: [{ provider: 'discord', clientId: null }, { provider: 'google', clientId: 'id' }] }), [{ provider: 'google', clientId: 'id' }]);
+  assert.deepEqual(signInWays({ signIn: [{ provider: 'microsoft', clientId: 'ms' }, { provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }] }),
+    [{ provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }]);
   assert.deepEqual(signInWays({ signIn: [null, { provider: 7 }, 'google', { provider: 'google', clientId: 9 }] }), [{ provider: 'google', clientId: null }]);
   assert.deepEqual(signInWays({ accounts: 'dev' }), []);
   assert.deepEqual(signInWays({ signIn: 'google' }), []);
@@ -32,7 +33,7 @@ test('a host of the release before, which lists no ways, still draws Google\'s b
 
 test('the page draws the button of each way /api/me lists and hides the others', () => {
   const doc = anyPage();
-  const me = { accounts: 'google', signIn: [{ provider: 'google', clientId: 'id' }], account: null };
+  const me = { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], account: null };
 
   assert.deepEqual(drawWays(doc, accountState(me)), ['google']);
   assert.equal(doc.getElementById('google-button').hidden, false);
@@ -44,6 +45,18 @@ test('the page draws the button of each way /api/me lists and hides the others',
 
   assert.deepEqual(drawWays(doc, accountState({ accounts: 'dev', signIn: [{ provider: 'google', clientId: 'id' }] })), [], 'a developer\'s host draws the typed name, not a provider');
   assert.equal(doc.getElementById('google-button').hidden, true);
+});
+
+test('Discord\'s button is drawn beside Google\'s, in the order the host lists them', () => {
+  const doc = anyPage();
+  const appended = [];
+  doc.getElementById('sign-in-ways').append = (...buttons) => appended.push(...buttons);
+
+  const shown = drawWays(doc, accountState({ accounts: 'signin', signIn: [{ provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }], account: null }));
+
+  assert.deepEqual(shown, ['discord', 'google']);
+  assert.equal(doc.getElementById('discord-button').hidden, false);
+  assert.deepEqual(appended, [doc.getElementById('discord-button'), doc.getElementById('google-button')]);
 });
 
 test('a refusal keeps the hosts code so the page can tell a lapsed sign-in from a taken name', async () => {
@@ -147,4 +160,64 @@ test('a sign-out on this browser names the push endpoint it holds, and everywher
   assert.deepEqual(await signOutBody(false, {}), { everywhere: false }, 'a browser without a worker');
   assert.deepEqual(await signOutBody(false, { serviceWorker: { getRegistration: async () => { throw new Error('blocked'); } } }), { everywhere: false });
   assert.deepEqual(await signOutBody(true, nav('https://push.example/laptop')), { everywhere: true });
+});
+
+function tabStore(entries = {}) {
+  const kept = new Map(Object.entries(entries));
+  return { getItem: key => kept.get(key) ?? null, setItem: (key, value) => kept.set(key, String(value)), removeItem: key => kept.delete(key), kept };
+}
+
+test('Discord\'s button keeps the tab\'s state and verifier, then leaves for Discord with the next page kept', async () => {
+  const { mountAccount } = await import('./account.js');
+  const doc = anyPage();
+  const session = tabStore();
+  const went = [];
+  const win = { location: { origin: 'https://play.example', search: '?next=%2Fj%2Fabc', assign: url => went.push(url) } };
+  await mountAccount(doc, { readMe: async () => ({ accounts: 'signin', signIn: [{ provider: 'discord', clientId: '1311' }], account: null }), google: async () => ({}), session, win });
+
+  await doc.getElementById('discord-button').listeners.click();
+
+  const url = new URL(went.at(-1));
+  const kept = JSON.parse(session.kept.get('downfall.discordSignIn'));
+  assert.equal(`${url.origin}${url.pathname}`, 'https://discord.com/oauth2/authorize');
+  assert.equal(url.searchParams.get('client_id'), '1311');
+  assert.equal(url.searchParams.get('redirect_uri'), 'https://play.example/signin/discord');
+  assert.equal(url.searchParams.get('state'), kept.state);
+  assert.equal(kept.next, '/j/abc');
+  assert.notEqual(url.searchParams.get('code_challenge'), kept.verifier, 'the verifier never leaves the tab');
+});
+
+test('a name to choose handed over by Discord\'s return opens the name window once', async () => {
+  const { mountAccount } = await import('./account.js');
+  const doc = anyPage();
+  const session = tabStore({ 'downfall.signInTicket': 'ticket-1' });
+  const me = async () => ({ accounts: 'signin', signIn: [{ provider: 'discord', clientId: '1311' }], account: null });
+
+  await mountAccount(doc, { readMe: me, google: async () => ({}), session, win: { location: { origin: 'https://play.example', search: '' } } });
+
+  assert.equal(doc.getElementById('name-dialog').open, true);
+  assert.equal(session.kept.has('downfall.signInTicket'), false);
+});
+
+test('a page brought back from the cache after leaving for Discord gives its button back', async () => {
+  const { mountAccount } = await import('./account.js');
+  const doc = anyPage();
+  const heard = {};
+  const win = { location: { origin: 'https://play.example', search: '', assign() {} }, addEventListener: (kind, listener) => { heard[kind] = listener; } };
+  await mountAccount(doc, { readMe: async () => ({ accounts: 'signin', signIn: [{ provider: 'discord', clientId: '1311' }], account: null }), google: async () => ({}), session: tabStore(), win });
+  await doc.getElementById('discord-button').listeners.click();
+  assert.equal(doc.getElementById('discord-button').disabled, true);
+
+  heard.pageshow({ persisted: true });
+
+  assert.equal(doc.getElementById('discord-button').disabled, false);
+});
+
+test('a name to choose is kept while the host cannot be read, for the reload', async () => {
+  const { mountAccount } = await import('./account.js');
+  const session = tabStore({ 'downfall.signInTicket': 'ticket-1' });
+
+  await mountAccount(anyPage(), { readMe: async () => { throw new Error('down'); }, google: async () => ({}), session, win: { location: { origin: 'https://play.example', search: '' } } });
+
+  assert.equal(session.kept.get('downfall.signInTicket'), 'ticket-1');
 });

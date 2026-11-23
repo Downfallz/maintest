@@ -379,7 +379,7 @@ async function serveTheRules(context) {
     const path = new URL(route.request().url()).pathname;
     return route.fulfill({ path: new URL(`../../table${path === '/rules' ? '/rules.html' : path}`, import.meta.url).pathname });
   });
-  await context.route('**/api/me', route => route.fulfill({ json: { accounts: 'google', signIn: [{ provider: 'google', clientId: 'test-client' }], account: null, googleClientId: 'test-client', operator: false, notice: null } }));
+  await context.route('**/api/me', route => route.fulfill({ json: { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'test-client' }], account: null, operator: false, notice: null } }));
 }
 
 test('a concept card links to its section of the rulebook, which opens in a new tab and leaves the battle on its question', async ({ page, context }) => {

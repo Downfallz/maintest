@@ -7,6 +7,7 @@ namespace DownfallArena.Application.Accounts;
 public readonly record struct ExternalIdentity
 {
     public const string Google = "google";
+    public const string Discord = "discord";
     public const string Development = "dev";
 
     public ExternalIdentity(string provider, string subject)

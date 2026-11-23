@@ -24,6 +24,9 @@ param operators string
 @description('The Google OAuth client id players sign in with (ADR 0122). Public, not a secret. Empty, players do not sign in.')
 param googleClientId string = ''
 
+@description('The Discord application id players sign in with (sign-in methods plan, P3), the app a public client. Public, not a secret. Empty, Discord is not offered.')
+param discordClientId string = ''
+
 @description('The player accounts that are the operator once signed in (ADR 0175), by their ids (acct_...), comma-separated. Empty, only the operators above reach the admin panel.')
 param adminAccounts string = ''
 
@@ -66,16 +69,22 @@ param promoWriter string = ''
 var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
 
-// The players' sign-in (ADR 0122): the host checks Google's ID token itself, so the id is all it takes.
-var accountArgs = empty(googleClientId) ? [] : [
-  '--accounts'
-  'google'
+// The players' sign-in (ADR 0122), through each provider given its client id, Google's button first (sign-in methods
+// plan, P3). The host checks Google's ID token itself and exchanges Discord's code with PKCE, so the ids are all it takes.
+var signInProviders = concat(empty(googleClientId) ? [] : ['google'], empty(discordClientId) ? [] : ['discord'])
+var accountArgs = concat(empty(signInProviders) ? [] : [
+  '--sign-in'
+  join(signInProviders, ',')
+], empty(googleClientId) ? [] : [
   '--google-client-id'
   googleClientId
-]
+], empty(discordClientId) ? [] : [
+  '--discord-client-id'
+  discordClientId
+])
 // The admin accounts (ADR 0175), on the API alone: it is the one process that serves the panel, and only with players
 // signing in at all.
-var adminArgs = empty(googleClientId) || empty(trim(adminAccounts)) ? [] : [
+var adminArgs = empty(signInProviders) || empty(trim(adminAccounts)) ? [] : [
   '--admins'
   trim(adminAccounts)
 ]

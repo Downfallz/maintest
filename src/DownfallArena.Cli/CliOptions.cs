@@ -115,6 +115,12 @@ internal sealed record CliOptions
     public string? GoogleClientId { get; init; }
 
     /// <summary>
+    /// The Discord application id the sign-in is for (sign-in methods plan, P3); <c>DOWNFALL_DISCORD_CLIENT_ID</c> when not
+    /// given. Public, not a secret: the app is a public client.
+    /// </summary>
+    public string? DiscordClientId { get; init; }
+
+    /// <summary>
     /// The accounts that are the operator when signed in, by their ids, comma-separated (ADR 0172);
     /// <c>DOWNFALL_ADMINS</c> when not given.
     /// </summary>
@@ -232,7 +238,7 @@ internal sealed record CliOptions
     /// <summary>A redacted scenario from a bug's issue checked and written under <c>scenarios/bugs/</c> (docs/tabletop/feedback-plan.md, R6).</summary>
     public const string ScenarioImportCommand = "scenario-import";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--sign-in google] [--google-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--sign-in google,discord] [--google-client-id id] [--discord-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -260,6 +266,7 @@ internal sealed record CliOptions
     private const string TendedOption = "--tended";
 
     private const string GoogleClientIdOption = "--google-client-id";
+    private const string DiscordClientIdOption = "--discord-client-id";
     private const string AdminsOption = "--admins";
 
     private const string DeclarationOption = "--declaration";
@@ -283,7 +290,7 @@ internal sealed record CliOptions
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", TraceOption, "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, SignInOption, GoogleClientIdOption, TurnsOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, SignInOption, GoogleClientIdOption, DiscordClientIdOption, TurnsOption,
         AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal", ZipOption, IssueOption,
     ];
 
@@ -332,6 +339,7 @@ internal sealed record CliOptions
             Accounts = ModeOf(values),
             SignIn = ProvidersOf(values),
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
+            DiscordClientId = values.GetValueOrDefault(DiscordClientIdOption),
             Admins = values.GetValueOrDefault(AdminsOption),
             Turns = values.TryGetValue(TurnsOption, out var turns) ? ParseTurns(turns) : null,
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
@@ -578,8 +586,19 @@ internal sealed record CliOptions
             return "'--accounts dev' signs in whoever types a name, so it serves this machine only: drop '--bind', or sign in with '--sign-in google'.";
         }
 
-        return values.ContainsKey(GoogleClientIdOption) && !ProvidersOf(values).Contains(ExternalIdentity.Google)
-            ? "'--google-client-id' goes with '--sign-in google'."
+        return ClientIdContradiction(values, ProvidersOf(values));
+    }
+
+    /// <summary>A provider's client id given without that provider in <c>--sign-in</c>: one line, as it would be unused.</summary>
+    private static string? ClientIdContradiction(Dictionary<string, string> values, IReadOnlyList<string> providers)
+    {
+        if (values.ContainsKey(GoogleClientIdOption) && !providers.Contains(ExternalIdentity.Google))
+        {
+            return "'--google-client-id' goes with '--sign-in google'.";
+        }
+
+        return values.ContainsKey(DiscordClientIdOption) && !providers.Contains(ExternalIdentity.Discord)
+            ? "'--discord-client-id' goes with '--sign-in discord'."
             : null;
     }
 
@@ -604,7 +623,7 @@ internal sealed record CliOptions
             return (AccountsOption, null);
         }
 
-        return (null, values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--sign-in google'." : null);
+        return (null, ClientIdContradiction(values, []));
     }
 
     /// <summary>What admin accounts cannot be had with (ADR 0172): a host that signs nobody in, or an id that is not one.</summary>

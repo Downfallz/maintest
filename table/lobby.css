@@ -302,6 +302,8 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .sign-in-ways { display: grid; gap: 8px; min-width: 0; }
 .sign-in-ways[hidden] { display: none; }
 .sign-in-actions .google-button:not([hidden]) { display: flex; align-items: center; min-width: 200px; }
+/* Discord's button is the table's own plain button (identity.css), the width of Google's beside it: one filled action a screen. */
+.sign-in-actions .discord-button { min-width: 200px; justify-self: start; }
 .sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
 .sign-in-policy:hover { color: var(--gold); }
 .name-check-room { min-height: 30px; }

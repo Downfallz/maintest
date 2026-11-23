@@ -473,13 +473,22 @@ button, for Google), then asks a first-time player for a unique name (3 to 20 le
 names reserved), and puts the account in the masthead with *Sign out* and *Sign out everywhere*. The host checks
 Google's ID token itself and keeps its own `HttpOnly` session cookie for thirty days. Accounts are kept beside the
 recordings: `runs/accounts/`, or the `accounts` container next to the recordings' one. Nothing else is kept: no
-email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev`, or `google` for
-any host that signs in through providers, the name the page of the release before reads), `signIn` (each provider
-as `{"provider", "clientId"}`, in order), `googleClientId` (also for that older page) and `account`. Each sign-in writes one console line per step, `Sign-in started (<provider>).` when
+email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev`, or `signin` for
+any host that signs in through providers), `signIn` (each provider as `{"provider", "clientId"}`, in order) and
+`account`. Each sign-in writes one console line per step, `Sign-in started (<provider>).` when
 the proof reaches the host, then `Sign-in finished (<provider>).` once a session is issued (after the name window,
 for a new player) or `Sign-in refused (<provider>).` (the provider said no, the account is suspended, or
 registration is closed). Counted by provider, the lines show where people stop. A request with a forged proof
 writes its two lines too.
+
+`--sign-in discord --discord-client-id <id>` (or `DOWNFALL_DISCORD_CLIENT_ID`) adds Discord (P3). Its button
+leaves for Discord's authorize page with a PKCE challenge and the scope `identify`. The state and the verifier stay
+in the tab's `sessionStorage`. Discord returns to `/signin/discord`, whose page checks the state, posts
+`{"code", "verifier", "redirect"}` and goes back to the lobby. The lobby opens the name window for a new player.
+
+The host exchanges the code at Discord with the verifier and no secret, since the app is a public client. It
+refuses a token Discord issued to another app, keeps the Discord user's id and revokes the token. A Discord that
+cannot be asked is `503 Account.ProviderUnavailable`, never a refused sign-in.
 
 With accounts on, playing needs a sign-in, and a seat belongs to the account that took it: opening a table, taking
 an open place and accepting an invitation answer `401` to nobody, and a seat's token alone is refused (`401`
@@ -779,7 +788,8 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/rules`, `/rules.json`, `/rules.fr.json` | anyone | The official rulebook (ADR 0188) and the books it reads, English and French (ADR 0193); `/rules#<id>` opens a section, `?lang=fr` or `?lang=en` its language. |
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
-| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 409 `Account.RegistrationClosed` for a new player while registration is closed. |
+| `/signin/discord` | anyone | The page Discord returns a sign-in to (sign-in methods plan, P3): it checks the tab's state, posts the code and goes back to the lobby. |
+| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed. |
 | `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
 | `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
 | `DELETE /api/account` | account | Deletes the account. |
