@@ -38,11 +38,15 @@ public sealed class AccountRegistry
         _newId = newId ?? AccountId.New;
     }
 
-    /// <summary>The account this sign-in registered, or null when it has none yet.</summary>
+    /// <summary>
+    /// The account this sign-in reaches, or null when it has none. A binding to an account that does not list the
+    /// identity (a link or a removal that stopped between its writes, ADR 0204) reaches nothing: the account's list,
+    /// which the player sees, is the whole of its ways in.
+    /// </summary>
     public async Task<Account?> FindAsync(ExternalIdentity identity, CancellationToken cancellationToken = default)
     {
         var id = await _store.FindBySubjectAsync(identity, cancellationToken);
-        return id is { } bound ? await _store.FindAsync(bound, cancellationToken) : null;
+        return id is { } bound && await _store.FindAsync(bound, cancellationToken) is { } account && account.Identities.Contains(identity) ? account : null;
     }
 
     public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) => _store.FindAsync(id, cancellationToken);
@@ -121,10 +125,12 @@ public sealed class AccountRegistry
     }
 
     /// <summary>
-    /// Adds a way into the account (ADR 0204), for a player signed in to it: the identity's binding is written first,
-    /// create-only-if-absent, so an identity another account holds is refused however close the race, then the
-    /// account. A binding already naming this account is a link that stopped between its writes, finished now; one
-    /// naming an account that no longer exists holds nobody and is taken back. Sessions are left alone.
+    /// Adds a way into the account (ADR 0204), for a player signed in to it. The identity must come from a provider's
+    /// sign-in completed in the same request, never from what the request says it is. The identity's binding is
+    /// written first, create-only-if-absent, so an identity another account holds is refused however close the race,
+    /// then the account. A binding already naming this account is a link that stopped between its writes, finished
+    /// now; one naming an account that is gone or does not list it holds nobody and is taken back. A suspended
+    /// account links nothing. Sessions are left alone.
     /// </summary>
     public async Task<Result<Account>> LinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
     {
@@ -134,6 +140,11 @@ public sealed class AccountRegistry
             if (await _store.FindAsync(id, cancellationToken) is not { } account)
             {
                 return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            if (account.Suspension is { } suspension)
+            {
+                return Result.Failure<Account>(AccountErrors.Suspended(suspension));
             }
 
             if (account.Identities.Contains(identity))
@@ -158,9 +169,10 @@ public sealed class AccountRegistry
 
     /// <summary>
     /// Removes a way into the account (ADR 0204); the last one stays, since deleting the account is how that goes.
-    /// The account is written first, then the binding removed, so a removal that stops between the two leaves a
-    /// binding that still signs in to this account -- never one another account could take while this one lists
-    /// it -- and removing it again finishes the job.
+    /// The removal raises the generation in the same write, so whoever signed in through the identity removed is
+    /// signed out with every other session. The account is written first, then the binding removed. If the removal
+    /// stops between the two, the binding reaches nothing, since the account no longer lists it, and no other
+    /// account can take the identity while this one lists it. Removing it again finishes the job.
     /// </summary>
     public async Task<Result<Account>> UnlinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
     {
@@ -180,7 +192,7 @@ public sealed class AccountRegistry
                     : Result.Failure<Account>(remaining.Error);
             }
 
-            var unlinked = account with { Identities = remaining.Value };
+            var unlinked = account with { Identities = remaining.Value, Generation = account.Generation + 1 };
             await _store.SaveAsync(unlinked, cancellationToken);
             await _store.UnbindSubjectAsync(identity, id, cancellationToken);
             return Result.Success(unlinked);
@@ -191,8 +203,8 @@ public sealed class AccountRegistry
         }
     }
 
-    // Binds the identity to the account; true when it now names it, already or once a binding to an account that no
-    // longer exists is taken back, false when another account holds it.
+    // Binds the identity to the account; true when it now names it, already or once a binding that holds nobody is
+    // taken back, false when another account holds it.
     private async Task<bool> BindAsync(ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
         if (await _store.TryBindSubjectAsync(identity, id, cancellationToken))
@@ -208,7 +220,7 @@ public sealed class AccountRegistry
 
         if (holder is { } other)
         {
-            if (await _store.FindAsync(other, cancellationToken) is not null)
+            if (!await HoldsNobodyAsync(identity, other, cancellationToken))
             {
                 return false;
             }
@@ -319,16 +331,9 @@ public sealed class AccountRegistry
             return Result.Failure<Account>(name.Error);
         }
 
-        if (await _store.FindBySubjectAsync(identity, cancellationToken) is { } bound)
+        if (await _store.FindBySubjectAsync(identity, cancellationToken) is { } bound && !await ReleaseIfHoldsNobodyAsync(identity, bound, cancellationToken))
         {
-            if (await _store.FindAsync(bound, cancellationToken) is not null)
-            {
-                return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
-            }
-
-            // A binding to an account that no longer exists holds nobody: the account was deleted and the
-            // deletion stopped before its binding went.
-            await _store.UnbindSubjectAsync(identity, bound, cancellationToken);
+            return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
         }
 
         var now = _clock.GetUtcNow();
@@ -371,6 +376,34 @@ public sealed class AccountRegistry
 
         return Result.Success(account);
     }
+
+    /// <summary>
+    /// Removes a binding that holds nobody, and says whether it did: one to an account that is gone (a deletion
+    /// stopped before its bindings went) or that does not list the identity (a link or a removal that stopped between
+    /// its writes, ADR 0204). Under the lock links and removals take, so a link in progress is never taken for one
+    /// that stopped.
+    /// </summary>
+    private async Task<bool> ReleaseIfHoldsNobodyAsync(ExternalIdentity identity, AccountId bound, CancellationToken cancellationToken)
+    {
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (!await HoldsNobodyAsync(identity, bound, cancellationToken))
+            {
+                return false;
+            }
+
+            await _store.UnbindSubjectAsync(identity, bound, cancellationToken);
+            return true;
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
+    private async Task<bool> HoldsNobodyAsync(ExternalIdentity identity, AccountId bound, CancellationToken cancellationToken) =>
+        await _store.FindAsync(bound, cancellationToken) is not { } account || !account.Identities.Contains(identity);
 
     /// <summary>
     /// The reservation that holds the name for this registration: its own, or one an interrupted registration of

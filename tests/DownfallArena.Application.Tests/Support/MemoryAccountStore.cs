@@ -21,6 +21,9 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public bool FailNextBinding { get; set; }
 
+    /// <summary>Makes the next removal of a binding throw: a host that stopped before it.</summary>
+    public bool FailNextUnbinding { get; set; }
+
     /// <summary>Runs once just before the next binding: somebody else's write landing between a check and the bind.</summary>
     public Action? BeforeNextBinding { get; set; }
 
@@ -98,8 +101,16 @@ internal sealed class MemoryAccountStore : IAccountStore
         return Task.FromResult(Subjects.TryAdd(identity, account));
     }
 
-    public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Subjects.TryGetValue(identity, out var held) && held == account && Subjects.Remove(identity));
+    public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
+    {
+        if (FailNextUnbinding)
+        {
+            FailNextUnbinding = false;
+            throw new IOException("The store went away.");
+        }
+
+        return Task.FromResult(Subjects.TryGetValue(identity, out var held) && held == account && Subjects.Remove(identity));
+    }
 
     public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) =>
         Task.FromResult(Names.GetValueOrDefault(username.Key));

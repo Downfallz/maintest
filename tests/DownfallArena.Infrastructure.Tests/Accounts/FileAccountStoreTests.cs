@@ -37,6 +37,24 @@ public sealed class FileAccountStoreTests : AccountStoreContract, IDisposable
         read.Generation.ShouldBe(2);
     }
 
+    [Theory]
+    [InlineData("""[ { "provider": "google", "subject": "1098" }, { "provider": "google", "subject": "1098" } ]""")]
+    [InlineData("""[ null ]""")]
+    [InlineData("""[ { "provider": "Google", "subject": "1098" } ]""")]
+    [InlineData("""[ { "provider": "google", "subject": "" } ]""")]
+    public async Task A_broken_list_of_identities_is_refused_as_broken_data(string identities)
+    {
+        var store = await StoreAsync();
+        var id = SharedKernel.Identifiers.AccountId.New();
+        Directory.CreateDirectory(Path.Combine(_root, "accounts"));
+        await File.WriteAllTextAsync(
+            Path.Combine(_root, "accounts", $"{id.Value}.json"),
+            $$"""{ "id": "{{id.Value}}", "provider": "google", "subject": "1098", "username": "MarkF", "createdAt": "2026-11-03T20:14:00+00:00", "generation": 2, "identities": {{identities}} }""",
+            Cancel);
+
+        await Should.ThrowAsync<InvalidDataException>(() => store.FindAsync(id, Cancel));
+    }
+
     [Fact]
     public async Task An_account_is_written_so_the_image_before_several_identities_still_reads_its_first()
     {

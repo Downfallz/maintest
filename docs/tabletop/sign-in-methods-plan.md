@@ -122,15 +122,17 @@ and 4. The recommended answer:
    cannot be removed.
 
    *Built (2026-11-23)*: [ADR 0204](../adr/0204-let-one-account-hold-several-ways-to-sign-in.md) amends ADR 0122.
-   `AccountIdentities` (never empty, never one twice, in the order added) replaces `Account.Identity`;
-   `AccountRegistry.LinkAsync` binds the index first, create-only-if-absent, and refuses an identity another account
-   holds (`Account.IdentityTaken`), takes back a binding to a deleted account, and finishes a link that stopped
-   between its writes; `UnlinkAsync` writes the account first, refuses the last identity (`Account.LastIdentity`) and
-   one the account does not hold (`Account.IdentityNotLinked`), and finishes a removal that stopped. Deleting an
-   account unbinds every identity; a name is abandoned only when none of its account's identities is bound. The
-   stores write `identities` and keep the first as `provider` and `subject`, so the image before reads them; a record
-   without `identities` reads as one. Left to P4: the routes over `LinkAsync` and `UnlinkAsync`, and the revision
-   before running beside a deploy, which rewrites an account without its `identities` (ADR 0204, Consequences).
+   `AccountIdentities` (never empty, never one twice, in the order added) replaces `Account.Identity`. An identity
+   signs in only when its entry names the account and the account lists it. `AccountRegistry.LinkAsync` binds the
+   index first, create-only-if-absent. It refuses an identity another account lists (`Account.IdentityTaken`) and
+   a suspended account, and takes back an entry that holds nobody. `UnlinkAsync` writes the account first and
+   raises its generation, so every session is signed out. It refuses the last identity (`Account.LastIdentity`) and
+   one the account does not hold (`Account.IdentityNotLinked`). Deleting an account unbinds every identity it
+   lists. The stores write `identities` and keep the first as `provider` and `subject`, so the previous release
+   reads them; a record without `identities` reads as one. Left to P4: the routes over `LinkAsync` and
+   `UnlinkAsync`, shipped once this release is the only one running (ADR 0204, Consequences), and a cap on the
+   number of identities an account lists.
+
 2. **P2, providers behind one port.** `ISignInProvider`, Google moved behind it unchanged, `--sign-in` with
    `--accounts` kept as an alias, `POST /api/account/<provider>`, `/api/me` listing the providers, the page
    drawing a button per provider, a count of sign-ins started and finished per provider. Tests: every existing
@@ -139,8 +141,9 @@ and 4. The recommended answer:
    `discordClientId` in `infra/main.bicep`, and the owner's steps in `infra/README.md` (the app, the redirect
    addresses, *public client* on). Tests: a fake Discord answers the exchange and `@me`; a wrong state, a reused
    code, a token for another app are refused. `security-reviewer` and `host-reviewer` read it.
-4. **P4, ways to sign in.** Settings lists the account's providers, adds one (the provider's own flow, then
-   `POST /api/account/identities/<provider>`) and removes one. Tests: the routes; the journey at 320 px.
+4. **P4, ways to sign in.** Ships once P1's release is the only one running (ADR 0204). Settings lists the
+   account's providers, adds one (the provider's own flow, then `POST /api/account/identities/<provider>`) and
+   removes one. Tests: the routes; the journey at 320 px.
 5. **P5, the guest.** The ADR UX15 asks for, amending accounts-plan question 5: what a guest is, the routes it
    reaches, its lifetime, the per-address count, the upgrade. `MakeGuestAsync`, `UpgradeAsync`,
    `POST /api/account/guest`, the route list, `table-tend` removing old guests. No page: UX15 builds the journey

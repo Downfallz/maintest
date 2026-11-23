@@ -69,14 +69,18 @@ public sealed class AccountLinkTests
     public async Task An_identity_registered_by_somebody_else_while_it_was_being_linked_is_refused()
     {
         var mark = await RegisteredAsync(Google, "MarkF");
-        var bastien = await RegisteredAsync(Bastien, "Bastien");
-        _store.BeforeNextBinding = () => _store.Subjects[Discord] = bastien.Id;
+        var stranger = new Account(AccountId.New(), AccountIdentities.Of(Discord), Username.Create("Stranger").Value, FixedTimeProvider.Default, 1);
+        _store.BeforeNextBinding = () =>
+        {
+            _store.Accounts[stranger.Id] = stranger;
+            _store.Subjects[Discord] = stranger.Id;
+        };
 
         var lost = await Registry().LinkAsync(mark.Id, Discord, Cancel);
 
         lost.Error.ShouldBe(AccountErrors.IdentityTaken);
         _store.Accounts[mark.Id].Identities.All.ShouldBe([Google]);
-        _store.Subjects[Discord].ShouldBe(bastien.Id);
+        _store.Subjects[Discord].ShouldBe(stranger.Id);
     }
 
     [Fact]
@@ -109,14 +113,42 @@ public sealed class AccountLinkTests
     }
 
     [Fact]
-    public async Task A_link_interrupted_after_its_binding_is_finished_by_linking_again()
+    public async Task A_link_interrupted_after_its_binding_signs_in_to_nothing_until_it_is_finished()
     {
         var mark = await RegisteredAsync(Google, "MarkF");
         _store.Subjects[Discord] = mark.Id;
 
+        var before = await Registry().FindAsync(Discord, Cancel);
         var linked = await Registry().LinkAsync(mark.Id, Discord, Cancel);
 
+        before.ShouldBeNull();
         linked.Value.Identities.All.ShouldBe([Google, Discord]);
+        (await Registry().FindAsync(Discord, Cancel)).ShouldNotBeNull().Id.ShouldBe(mark.Id);
+    }
+
+    [Fact]
+    public async Task A_binding_the_account_does_not_list_can_register_a_new_account()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.Subjects[Discord] = mark.Id;
+
+        var registered = await Registry().RegisterAsync(Discord, "Bastien", Cancel);
+
+        registered.Value.Id.ShouldNotBe(mark.Id);
+        _store.Subjects[Discord].ShouldBe(registered.Value.Id);
+    }
+
+    [Fact]
+    public async Task A_suspended_account_links_nothing()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        var suspension = new AccountSuspension("Spamming invitations to strangers.", "op", FixedTimeProvider.Default);
+        await Registry().SuspendAsync(mark.Id, suspension, Cancel);
+
+        var refused = await Registry().LinkAsync(mark.Id, Discord, Cancel);
+
+        refused.Error.Code.ShouldBe("Account.Suspended");
+        _store.Subjects.ShouldNotContainKey(Discord);
     }
 
     [Fact]
@@ -136,6 +168,7 @@ public sealed class AccountLinkTests
         var unlinked = await Registry().UnlinkAsync(mark.Id, Discord, Cancel);
 
         unlinked.Value.Identities.All.ShouldBe([Google]);
+        _store.Subjects.ShouldNotContainKey(Discord);
         (await Registry().FindAsync(Discord, Cancel)).ShouldBeNull();
         (await Registry().FindAsync(Google, Cancel)).ShouldNotBeNull().Id.ShouldBe(mark.Id);
         var bastien = await RegisteredAsync(Bastien, "Bastien");
@@ -178,13 +211,32 @@ public sealed class AccountLinkTests
     }
 
     [Fact]
-    public async Task An_unlink_interrupted_before_its_binding_went_is_finished_by_unlinking_again()
+    public async Task Removing_an_identity_signs_out_every_session_of_the_account()
     {
         var mark = await RegisteredAsync(Google, "MarkF");
-        _store.Subjects[Discord] = mark.Id;
+        var linked = (await Registry().LinkAsync(mark.Id, Discord, Cancel)).Value;
 
-        (await Registry().UnlinkAsync(mark.Id, Discord, Cancel)).Value.Identities.All.ShouldBe([Google]);
+        var unlinked = await Registry().UnlinkAsync(mark.Id, Discord, Cancel);
 
+        unlinked.Value.Generation.ShouldBe(linked.Generation + 1);
+        _store.Accounts[mark.Id].Generation.ShouldBe(linked.Generation + 1);
+    }
+
+    [Fact]
+    public async Task An_unlink_interrupted_before_its_binding_went_signs_in_to_nothing_and_is_finished_by_unlinking_again()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        await Registry().LinkAsync(mark.Id, Discord, Cancel);
+        _store.FailNextUnbinding = true;
+
+        await Should.ThrowAsync<IOException>(() => Registry().UnlinkAsync(mark.Id, Discord, Cancel));
+        var stopped = _store.Accounts[mark.Id];
+        var reached = await Registry().FindAsync(Discord, Cancel);
+        var again = await Registry().UnlinkAsync(mark.Id, Discord, Cancel);
+
+        stopped.Identities.All.ShouldBe([Google]);
+        reached.ShouldBeNull();
+        again.Value.Identities.All.ShouldBe([Google]);
         _store.Subjects.ShouldNotContainKey(Discord);
     }
 

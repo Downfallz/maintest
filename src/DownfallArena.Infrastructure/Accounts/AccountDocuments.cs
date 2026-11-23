@@ -65,12 +65,22 @@ internal static class AccountDocuments
     }
 
     // A record written before ADR 0204 holds one identity as provider and subject; a later one also lists them all.
-    private static AccountIdentities ReadIdentities(AccountRecord record) =>
-        record.Identities is { Count: > 0 } identities
-            ? AccountIdentities.Restore(identities.Select((identity, index) => identity is null
-                ? throw new InvalidDataException($"Account {record.Id}: identities[{index}] is null.")
-                : new ExternalIdentity(identity.Provider, identity.Subject)))
-            : AccountIdentities.Of(new ExternalIdentity(record.Provider, record.Subject));
+    // A broken list is an InvalidDataException, as every other broken record is, whichever check refuses it.
+    private static AccountIdentities ReadIdentities(AccountRecord record)
+    {
+        try
+        {
+            return record.Identities is { Count: > 0 } identities
+                ? AccountIdentities.Restore(identities.Select((identity, index) => identity is null
+                    ? throw new InvalidDataException($"Account {record.Id}: identities[{index}] is null.")
+                    : new ExternalIdentity(identity.Provider, identity.Subject)))
+                : AccountIdentities.Of(new ExternalIdentity(record.Provider, record.Subject));
+        }
+        catch (ArgumentException broken)
+        {
+            throw new InvalidDataException($"Account {record.Id}: its identities do not read.", broken);
+        }
+    }
 
     public static string Write(UsernameReservation reservation) =>
         JsonSerializer.Serialize(new NameRecord(reservation.Username.Value, reservation.Account.Value, reservation.ReservedAt), Web);
