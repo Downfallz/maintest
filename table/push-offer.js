@@ -54,7 +54,10 @@ export function neverAgain(memory) {
 export function offerPlatform(nav = globalThis.navigator, win = globalThis) {
   const agent = nav?.userAgent ?? '';
   const iphone = /iPhone|iPad|iPod/.test(agent);
-  if (pushSupported(nav, win)) return iphone ? 'iphone' : /Android/.test(agent) ? 'android' : 'browser';
+  if (pushSupported(nav, win)) {
+    if (iphone) return 'iphone';
+    return /Android/.test(agent) ? 'android' : 'browser';
+  }
   if (!iphone || win?.isSecureContext === false) return null;
   const standalone = nav?.standalone === true || Boolean(win?.matchMedia?.('(display-mode: standalone)')?.matches);
   // At the home screen and still no push: an iOS too old to push, which no step changes.

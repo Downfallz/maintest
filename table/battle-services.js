@@ -20,7 +20,15 @@ export function createBattleServices({ onChange, scope = globalThis }) {
   }
   // A practice's seat is the practice's own token, which no lobby route answers: no switch there, and no offer
   // through it (the end of a tutorial is offered through the account's switch, push-offer.js).
-  function receive(next) { view = next; if (!next) reset(); else { if (current) current.push.practice = Boolean(next.practice); onChange(); } }
+  function receive(next) {
+    view = next;
+    if (!next) {
+      reset();
+      return;
+    }
+    if (current) current.push.practice = Boolean(next.practice);
+    onChange();
+  }
   function setOnline(value) {
     online = value;
     const context = current;
