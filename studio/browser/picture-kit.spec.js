@@ -4,8 +4,24 @@
 // screen's ambience and is its first frame under less motion, and an icon takes the colour of its text. The
 // page is read as the host serves it, with no script but the kit's own modules.
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 
 const KIT = ['/motion.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/battle-page-art.js', '/icons.js'];
+
+// The modules a kit's module reaches by its static imports, each from the root as the host serves it.
+function importsOf(path, seen = new Set()) {
+  if (seen.has(path)) return seen;
+  seen.add(path);
+  const text = readFileSync(new URL(`../../table${path}`, import.meta.url), 'utf8');
+  for (const [, from] of text.matchAll(/^\s*(?:import|export)\s(?:[^'";]*?\sfrom\s)?['"](\.\/[^'"]+)['"]/gm)) importsOf(`/${from.slice(2)}`, seen);
+  return seen;
+}
+
+// The allowlist aborts any other script: a module the kit imports and KIT omits fails every test below (#1125, #1136).
+test('the kit\'s allowlist holds every module its modules import', () => {
+  const reached = new Set(KIT.flatMap(path => [...importsOf(path)]));
+  expect([...reached].filter(path => !KIT.includes(path))).toEqual([]);
+});
 
 async function open(page) {
   await page.route('**/*.js', route => (KIT.some(name => new URL(route.request().url()).pathname.endsWith(name)) ? route.continue() : route.abort()));

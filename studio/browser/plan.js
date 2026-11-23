@@ -129,8 +129,10 @@ const RULES = [
   // The journey film is played by its own real-engine journey (table.journey.js), which walks with it; and it
   // walks the showcase it builds, so a change to the showcase's own files plays it too.
   { matches: (path) => path.startsWith('showcase/') && !path.endsWith('.test.js'), calls: () => ({ realEngine: true }) },
-  // The contrast measure is also played by the picture kit's spec, which measures each form of a scene with it.
-  { matches: (path) => path === 'scripts/ux/contrast.mjs', calls: () => ({ journeys: (spec) => spec === 'picture-kit.spec.js', realEngine: true }) },
+  // The contrast measure is also played by the picture kit's spec, which measures each form of a scene with it, and by
+  // the rulebook's, which measures its head in French; the screen's measures by the rulebook's, at every width (#1059).
+  { matches: (path) => path === 'scripts/ux/contrast.mjs', calls: () => ({ journeys: (spec) => spec === 'picture-kit.spec.js' || spec === 'rules.spec.js', realEngine: true }) },
+  { matches: (path) => path === 'scripts/ux/measures.mjs', calls: () => ({ journeys: (spec) => spec === 'rules.spec.js', realEngine: true }) },
   { matches: (path) => path.startsWith('scripts/ux/'), calls: () => ({ realEngine: true }) },
   { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
   { matches: (path) => /^(table|studio)\/.*\.(test\.js|fixture\.json)$/.test(path), calls: () => ({}) },
