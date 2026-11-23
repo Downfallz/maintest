@@ -269,20 +269,43 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
         store.Teaches(id) ? () => accounts.NoteTutorialAsync(account, id, TutorialState.Done) : null;
 
     /// <summary>The account's practice of the scenario to go on with; a tutorial that is done is kept done and let go of.</summary>
-    private async Task<StudioResponse> ResumeAsync(AccountId account, string id, string name) =>
-        await practices.ResumeAsync(account.ToString(), id, KeepDone(account, id)) is { } current
-            ? Opened(current, name)
-            : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
+    private async Task<StudioResponse> ResumeAsync(AccountId account, string id, string name)
+    {
+        try
+        {
+            return await practices.ResumeAsync(account.ToString(), id, KeepDone(account, id)) is { } current
+                ? Opened(current, name)
+                : Error("Scenario.NoPractice", "You have no practice of this scenario open.", 404);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            return NotKept(failure);
+        }
+    }
 
     /// <summary>
     /// Lets go of the account's practice of the scenario, as the page does when the person leaves a tutorial: 204,
-    /// whether there was one or not. A tutorial done that the account's store cannot keep done fails the request and
-    /// keeps the practice, so the next Leave or reload tries again.
+    /// whether there was one or not. A tutorial done that the account's store cannot keep done answers 503 and keeps
+    /// the practice, so the next Leave or reload tries again.
     /// </summary>
     private async Task<StudioResponse> ForgetAsync(AccountId account, string id)
     {
-        await practices.ForgetAsync(account.ToString(), id, KeepDone(account, id));
-        return new StudioResponse(204, StudioResponse.Plain, []);
+        try
+        {
+            await practices.ForgetAsync(account.ToString(), id, KeepDone(account, id));
+            return new StudioResponse(204, StudioResponse.Plain, []);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            return NotKept(failure);
+        }
+    }
+
+    /// <summary>A tutorial done that the account's store could not keep: said on the console, answered 503, the practice kept.</summary>
+    private StudioResponse NotKept(Exception failure)
+    {
+        Said($"  A tutorial done could not be kept on its account: {HttpHost.OneLine(failure)}");
+        return Error("Tutorial.Unavailable", "Your progress could not be saved just now. Try again in a moment.", 503);
     }
 
     private async Task<StudioResponse> OpenAsync(string id, string account, string name)

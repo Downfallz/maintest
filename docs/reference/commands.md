@@ -373,7 +373,8 @@ reproduces (`"bug": 812`), and the tab marks it *Bug #812*; every other row says
 
 Its link `/battle?scenario=<id>` a signed-in player opens as practice (`GET /api/scenarios/<id>`,
 `GET`/`POST /api/scenarios/<id>/practice`: resumed, or started from the cut in place of the account's last
-practice; `DELETE /api/scenarios/<id>/practice` lets go of it, 204 whether there was one or not; in this process's memory, never recorded, indexed or in the ladder, one an account, 200 at most, let
+practice; `DELETE /api/scenarios/<id>/practice` lets go of it, 204 whether there was one or not; a tutorial done that
+the account's store cannot keep done answers 503 `Tutorial.Unavailable` to either route and keeps the practice (#931); in this process's memory, never recorded, indexed or in the ladder, one an account, 200 at most, let
 go of after an idle hour, gone with a restart), the battle view saying it is practice in a band with Briefing,
 Restart the round and Leave, and opening a practice started from its cut on a briefing card (its title, goal,
 seat and round). `GET /api/scenarios` lists the scenarios listed under Practice, which a signed-in player's home

@@ -964,9 +964,31 @@ public sealed class ScenariosApiTests : IDisposable
         practices.Count.ShouldBe(0);
     }
 
-    /// <summary>A store that cannot keep the tutorial done fails the request, and the practice is kept for the next try.</summary>
+    /// <summary>
+    /// A Leave reads the tutorial not done, and its match ends before the practice is let go of: it is read again where
+    /// it is let go of, and kept done first (#931).
+    /// </summary>
     [Fact]
-    public async Task A_tutorial_done_that_the_store_cannot_keep_is_kept_for_the_next_reload()
+    public async Task A_tutorial_whose_match_ends_while_it_is_left_is_kept_done()
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var (api, accounts) = await KeepingAsync(store, practices);
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        var looks = new int[1];
+        play.Api.Practice!.Tutorial!.Follow(new TutorialPlay.Seat(() => null, () => Interlocked.Increment(ref looks[0]) > 1, (_, _) => throw new InvalidOperationException("Nothing is answered.")));
+
+        var left = await api.HandleAsync("DELETE", $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        left.Status.ShouldBe(204);
+        practices.Count.ShouldBe(0);
+        Standing(await api.HandleAsync("GET", ScenariosApi.TutorialsRoute, learner)).ShouldBe((null, "done"));
+    }
+
+    /// <summary>The account opens the tutorial again while its done is being kept: the new practice is not let go of.</summary>
+    [Fact]
+    public async Task A_practice_opened_while_the_last_one_is_kept_done_is_not_let_go_of()
     {
         var store = Shipping();
         await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
@@ -974,10 +996,48 @@ public sealed class ScenariosApiTests : IDisposable
         await AnswerTheLessonAsync(store, play);
         await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
         var account = practices.ByToken(play.Token).ShouldNotBeNull().Account;
+        var kept = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var writing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await Should.ThrowAsync<IOException>(() => practices.ResumeAsync(account, Tutorial, () => Task.FromException(new IOException("The store is out."))));
+        var resuming = practices.ResumeAsync(account, Tutorial, () => { writing.TrySetResult(); return kept.Task; });
+        await writing.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        var (opened, _) = await practices.OpenAsync(Tutorial, account, Cancel);
+        kept.SetResult();
+        await resuming;
 
-        (await practices.CurrentAsync(account, Tutorial)).ShouldNotBeNull();
+        practices.ByToken(opened.ShouldNotBeNull().Play.Token).ShouldNotBeNull();
+        practices.ByToken(play.Token).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// A store that cannot keep the tutorial done answers 503 with a code of its own, not a bug's 500, and the practice
+    /// is kept for the next reload or Leave.
+    /// </summary>
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("DELETE")]
+    public async Task A_tutorial_done_that_the_store_cannot_keep_answers_unavailable_and_is_kept_for_the_next_try(string method)
+    {
+        var store = Shipping();
+        await using var practices = new ScenarioPractices(_hosted.Composer, store, _clock);
+        var accounts = await AccountsAsync();
+        var preferences = Substitute.For<Application.Accounts.Ports.IPreferenceStore>();
+        preferences.GetTutorialsAsync(Arg.Any<SharedKernel.Identifiers.AccountId>(), Arg.Any<CancellationToken>()).Returns<Task<TutorialProgress>>(_ => throw new IOException("The store is out."));
+        accounts.Preferences = preferences;
+        var said = new List<string>();
+        var api = new ScenariosApi(store, practices, accounts) { Said = said.Add };
+        var learner = await SignedInAsync(accounts, "learner");
+        var play = await OpenTutorialAsync(store, practices, "learner");
+        await AnswerTheLessonAsync(store, play);
+        await WaitingForAsync(play, one => one.GetProperty("practice").GetProperty("tutorial").GetProperty("done").GetBoolean());
+
+        var answer = await api.HandleAsync(method, $"{ScenariosApi.Prefix}/{Tutorial}/practice", learner);
+
+        answer.Status.ShouldBe(503);
+        Read(answer).GetProperty("error").GetString().ShouldBe("Tutorial.Unavailable");
+        Encoding.UTF8.GetString(answer.Body).ShouldNotContain("The store is out.");
+        said.ShouldContain(line => line.Contains("could not be kept", StringComparison.Ordinal));
+        practices.ByToken(play.Token).ShouldNotBeNull();
     }
 
     /// <summary>

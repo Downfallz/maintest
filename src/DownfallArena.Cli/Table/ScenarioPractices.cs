@@ -79,9 +79,9 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// </summary>
     /// <param name="keepDone">
     /// Keeps on the account that the tutorial is done, before a done tutorial is let go of. Whether it is done is read
-    /// once, under this gate, so a match that ends meanwhile is never let go of unkept (#931). The keeping itself is a
-    /// store write, made outside the gate, which every account's practices wait on: if it fails, the practice is kept
-    /// for the next reload or Leave.
+    /// under this gate, once to decide and again where it is let go of, so a match that ends meanwhile is never let go
+    /// of unkept (#931). The keeping itself is a store write, made outside the gate, which every account's practices
+    /// wait on: if it fails, the practice is kept for the next reload or Leave.
     /// </param>
     public async Task<Practice?> ResumeAsync(string account, string scenario, Func<Task>? keepDone = null)
     {
@@ -97,7 +97,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
 
         await KeepAsync(done, keepDone);
-        await LetGoAsync(practice);
+        await LetGoAsync(practice, done, keepDone);
         return null;
     }
 
@@ -112,7 +112,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
 
         await KeepAsync(done, keepDone);
-        await LetGoAsync(practice);
+        await LetGoAsync(practice, done, keepDone);
         return true;
     }
 
@@ -153,16 +153,38 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
         }
     }
 
-    /// <summary>Lets go of a practice read before, under the gate, unless the account opened another meanwhile.</summary>
-    private async Task LetGoAsync(Practice practice)
+    /// <summary>
+    /// Lets go of a practice read before, under the gate, unless the account opened another meanwhile. Whether it is
+    /// done is read again there: a match that ended since the first read is kept done first, outside the gate, and
+    /// the practice is let go of on that second read (#931).
+    /// </summary>
+    private async Task LetGoAsync(Practice practice, bool kept, Func<Task>? keepDone)
+    {
+        while (!await LetGoUnlessDoneSinceAsync(practice, kept || keepDone is null))
+        {
+            await keepDone!();
+            kept = true;
+        }
+    }
+
+    /// <summary>Lets go of the practice under the gate, and says so; false, keeping it, when it became done unkept.</summary>
+    private async Task<bool> LetGoUnlessDoneSinceAsync(Practice practice, bool kept)
     {
         await _gate.WaitAsync();
         try
         {
-            if (_byAccount.TryGetValue(practice.Account, out var current) && ReferenceEquals(current, practice))
+            if (!_byAccount.TryGetValue(practice.Account, out var current) || !ReferenceEquals(current, practice))
             {
-                await StopAsync(practice);
+                return true;
             }
+
+            if (!kept && practice.Play.Api.Practice?.Tutorial?.Done == true)
+            {
+                return false;
+            }
+
+            await StopAsync(practice);
+            return true;
         }
         finally
         {
