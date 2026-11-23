@@ -16,21 +16,34 @@ const RULEBOOK_OWN = new Set([RULEBOOK, '/rules.js', '/rules.css', '/rules.json'
 // so that no other page is drawn with an older deploy's style.
 // The motion kit's module is one of them (ADR 0197): without it the account's less motion would not reach the book.
 const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/motion.js', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
-// What the offline page draws its plate with (ADR 0200): its script, the picture kit and the sizes it derived, and the
-// plate's own files, which page-art.js names. Given only when the network cannot answer at all. The kit is refreshed
-// each time a page loads it; offline.js only when the worker installs again, since no page loads it online.
-const OFFLINE_SCRIPTS = ['/offline.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/battle-page-art.js'];
+// What the offline page draws its plate with (ADR 0200): its script, the picture kit and the sizes it derived. Given
+// only when the network cannot answer at all. The kit is refreshed each time a page loads it, and offline.js, which no
+// page loads online, with page-art.js (#1061): the script and the kit it imports stay one deploy's.
+// Every module offline.js imports is here: sw.test.js walks its imports.
+const OFFLINE_SCRIPT = '/offline.js';
+const OFFLINE_SCRIPTS = [OFFLINE_SCRIPT, '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/battle-page-art.js'];
 const PAGE_ART = '/page-art.js';
-const PLATE = 'parasite-offline';
 const KEPT_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED, ...OFFLINE_SCRIPTS]);
 
-// The plate's files, as page-art.js names them (scripts/ux/pictures.mjs writes one entry a picture, its sizes listed
-// under it): a worker cannot import a module, so it reads the text. A test reads the real file with it.
-function plateFiles(pageArt) {
-  const entry = pageArt.match(new RegExp(`'${PLATE}': \\{[\\s\\S]*?sizes: \\[([^\\]]*)\\]`));
-  return entry ? [...entry[1].matchAll(/file: '([^']+)'/g)].map(found => `/page-art/${found[1]}`) : [];
+// The paintings kept with them, as page-art.js names their files: the offline page's plate, every size of it, and the
+// rulebook's head (#1060) at the sizes a phone asks for, its phone width and twice it, so a book read offline on a phone
+// wears its painting. A wider screen asks for a wider file, which is not kept: its band is soot with its words.
+const KEPT_PICTURES = [{ name: 'parasite-offline' }, { name: 'latch-under-the-arch', phone: 'table/rules' }];
+
+// The files of the kept paintings, as page-art.js names them (scripts/ux/pictures.mjs writes one entry a picture, its
+// sizes listed under it): a worker cannot import a module, so it reads the text. A test reads the real file with it.
+function pictureFiles(pageArt) {
+  return KEPT_PICTURES.flatMap(({ name, phone }) => {
+    const entry = pageArt.match(new RegExp(`'${name}': \\{([\\s\\S]*?)sizes: \\[([^\\]]*)\\]`));
+    if (!entry) return [];
+    const sizes = [...entry[2].matchAll(/file: '([^']+)', width: (\d+)/g)].map(([, file, width]) => ({ file, width: Number(width) }));
+    if (!phone) return sizes.map(size => `/page-art/${size.file}`);
+    const widths = entry[1].match(new RegExp(`phone: \\{[^}]*"${phone}":\\[([\\d,]+)\\]`));
+    const widest = widths ? 2 * Math.max(...widths[1].split(',').map(Number)) : 0;
+    return sizes.filter(size => size.width <= widest).map(size => `/page-art/${size.file}`);
+  });
 }
-const isPlateFile = path => path.startsWith(`/page-art/${PLATE}-`);
+const isPictureFile = path => KEPT_PICTURES.some(({ name }) => path.startsWith(`/page-art/${name}-`));
 
 const ICON = '/icon-192.png';
 const BADGE = '/notification-badge.png';
@@ -138,11 +151,11 @@ function read(event) {
 }
 
 // The path a request is kept under when it is one the worker keeps, or null: same site, read, and named in the list
-// or one of the offline plate's files.
+// or a file of a kept painting.
 function keptPath(request) {
   if (request.method && request.method !== 'GET') return null;
   const url = new URL(request.url);
-  return url.origin === self.location.origin && (KEPT_FILES.has(url.pathname) || isPlateFile(url.pathname)) ? url.pathname : null;
+  return url.origin === self.location.origin && (KEPT_FILES.has(url.pathname) || isPictureFile(url.pathname)) ? url.pathname : null;
 }
 
 // A successful answer is kept as the copy of its path; anything else is the network's to show, and never kept. A
@@ -168,22 +181,22 @@ async function keep(path, response) {
   try {
     const cache = await caches.open(CACHE);
     // The sizes are read before the copy is put: a response's body is read once.
-    const plate = path === PAGE_ART ? plateFiles(await response.clone().text()) : null;
+    const pictures = path === PAGE_ART ? pictureFiles(await response.clone().text()) : null;
     await cache.put(path, response);
-    if (plate) await keepPlate(cache, plate);
+    if (pictures) await keepPictures(cache, pictures);
   } catch {
     // A full or refused cache keeps the copy it had: the page itself was answered.
   }
 }
 
-// The plate's files a fresh page-art.js names, kept when they are not yet, and the files of an older derivation let
-// go, so the copy of page-art.js and the plate it names stay one.
-async function keepPlate(cache, files) {
+// The paintings' files a fresh page-art.js names, kept when they are not yet, and the files of an older derivation
+// let go, so the copy of page-art.js and the paintings it names stay one.
+async function keepPictures(cache, files) {
   if (files.length === 0) return;
   const named = new Set(files);
   for (const request of await cache.keys()) {
     const path = new URL(request.url ?? request, self.location.origin).pathname;
-    if (isPlateFile(path) && !named.has(path)) await cache.delete(request);
+    if (isPictureFile(path) && !named.has(path)) await cache.delete(request);
   }
   await Promise.allSettled(files.map(async path => { if (!(await cache.match(path))) { const response = await fetch(path); if (keepable(response)) await cache.put(path, response); } }));
 }
@@ -203,11 +216,14 @@ async function navigate(event) {
   }
 }
 
-// One of the files kept: the network's answer, its copy refreshed, or the copy when the network cannot answer.
+// One of the files kept: the network's answer, its copy refreshed, or the copy when the network cannot answer. A
+// painting's file is named by its content and kept with page-art.js, never on its own: a size this worker does not
+// keep goes to the network and stays there. A fresh page-art.js brings a fresh offline.js with it (#1061).
 async function keptFile(event, path) {
   try {
     const response = await fetch(event.request);
-    if (keepable(response)) event.waitUntil(keep(path, response.clone()));
+    if (keepable(response) && !isPictureFile(path)) event.waitUntil(keep(path, response.clone()));
+    if (keepable(response) && path === PAGE_ART) event.waitUntil(fetch(OFFLINE_SCRIPT).then(fresh => keep(OFFLINE_SCRIPT, fresh)).catch(() => {}));
     if (unanswered(response) && RULEBOOK_OWN.has(path)) return (await copyOf(path)) ?? response;
     return response;
   } catch {
@@ -216,8 +232,8 @@ async function keptFile(event, path) {
 }
 
 // The offline page must be kept, or the worker does not install; the rulebook and the offline plate are kept as well
-// as they can be, so a host that cannot serve one of their files still has a worker that shows its notices. The plate's
-// files are kept with page-art.js, which names them.
+// as they can be, so a host that cannot serve one of their files still has a worker that shows its notices. The
+// paintings' files are kept with page-art.js, which names them.
 async function install() {
   const cache = await caches.open(CACHE);
   await cache.add(OFFLINE);

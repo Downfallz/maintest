@@ -257,6 +257,25 @@ function drawBlock(doc, block) {
   return scroll;
 }
 
+/**
+ * A table wider than the screen scrolls sideways: it is then a stop of the keyboard, named by its section, so a reader
+ * without a pointer can scroll it (#1059, axe's scrollable-region-focusable). One that fits is no stop.
+ */
+export function reachScrolls(doc) {
+  for (const scroll of doc.querySelectorAll('#rules-book .rules-table')) {
+    if (scroll.scrollWidth > scroll.clientWidth) {
+      scroll.tabIndex = 0;
+      scroll.setAttribute('role', 'region');
+      const heading = scroll.closest('[data-section]')?.querySelector('h3') ?? scroll.closest('[data-part]')?.querySelector('h2');
+      if (heading) scroll.setAttribute('aria-label', heading.textContent.trim());
+    } else {
+      scroll.removeAttribute('tabindex');
+      scroll.removeAttribute('role');
+      scroll.removeAttribute('aria-label');
+    }
+  }
+}
+
 // A concept card, as the battle draws it in a tutorial: its title, its lines and its example.
 function drawCard(doc, card, words) {
   const aside = node(doc, 'aside', 'rules-card concept-card');
@@ -413,7 +432,8 @@ export function land(doc, book, hash, { win = globalThis, focus = true } = {}) {
 export function mountRules(doc, book, win = globalThis) {
   const state = { book };
   const filter = doc.getElementById('rules-filter');
-  filter.addEventListener('input', () => applyFilter(doc, state.book, filter.value));
+  filter.addEventListener('input', () => { applyFilter(doc, state.book, filter.value); reachScrolls(doc); });
+  win.addEventListener('resize', () => reachScrolls(doc));
   doc.getElementById('rules-filter-form').addEventListener('submit', event => {
     event.preventDefault();
     const first = doc.querySelector('#rules-book [data-section]:not([hidden])');
@@ -428,6 +448,7 @@ export function mountRules(doc, book, win = globalThis) {
     translatePage(doc, shown.language);
     drawBook(doc, shown);
     applyFilter(doc, shown, filter.value);
+    reachScrolls(doc);
     doc.getElementById('rules-problem').hidden = true;
     doc.getElementById('rules-loading').hidden = true;
     doc.body.dataset.rules = 'ready';
@@ -538,8 +559,8 @@ async function load(doc, win = globalThis) {
 
 if (typeof document !== 'undefined') {
   // The claws on the arch: the rules hold the game up (docs/art/journeys/pages.md). Loaded apart, and its failure let
-  // go, so the book draws whatever the worker kept. Offline it keeps the kit but not this painting (ADR 0200): the
-  // band is soot with its words.
+  // go, so the book draws whatever the worker kept. Offline the worker gives the kit and this painting at a phone's
+  // sizes (#1060); a wider screen's band is soot with its words.
   import('./picture.js').then(({ wearPageHead }) => wearPageHead(document, 'latch-under-the-arch', { page: 'table/rules', focus: '50% 55%' })).catch(() => {});
   await load(document);
 }

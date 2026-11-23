@@ -2975,6 +2975,11 @@
   "changes": [
     {
       "date": "2026-11-23",
+      "text": "In French, the Critical card's example names the d20 again, as the English one does, with no rule changed.",
+      "adrs": []
+    },
+    {
+      "date": "2026-11-23",
       "text": "The Health, Tempo, Initiative, Choosing a spell, Defense, A skipped turn and Critical cards are shorter, and in French the Energy card too, with no rule changed.",
       "adrs": []
     },

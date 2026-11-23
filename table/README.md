@@ -565,9 +565,11 @@ service worker, which serves nothing from a cache but `offline.html`, shown when
 answers, and given only when it cannot answer; the rulebook's own files also when the host answers with a server
 error (a 52x from Cloudflare for a host that is down), never the shared ones, which other pages draw with.
 The worker also keeps the offline page's plate (ADR 0200): `offline.js`, the picture kit (`picture.js`,
-`picture-focus.js`, `page-art.js`) and the plate's two files, which it reads off `page-art.js`, and keeps them again
-when a fresh `page-art.js` names other files. The kit is refreshed whenever a page loads it; `offline.js` only when
-the worker installs again. The offline page names its files from the root: it is shown at the failed page's address.
+`picture-form.js`, `picture-focus.js`, `page-art.js`, `battle-page-art.js`) and the plate's two files, which it reads off
+`page-art.js`, and keeps them again when a fresh `page-art.js` names other files. It keeps the rulebook's head painting
+the same way, at the two sizes a phone asks for (354 and 708 px today, #1060). The kit is refreshed whenever a page
+loads it, and `offline.js` with `page-art.js` (#1061). A painting's file is never kept on its own load. The offline page
+names its files from the root: it is shown at the failed page's address.
 Offline, the rulebook draws without the menu, the brand alone leading home. A rulebook file given from its copy
 carries `X-Rulebook-Copy: kept`, and the page then says the book is the one this device last read (#698).
 

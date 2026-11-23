@@ -1,6 +1,8 @@
 /* The rulebook (/rules): the contents first on a phone, beside the text on a wide screen; the book's own blocks;
    the concept card's frame (its parts are identity.css's .concept-card, shared with the battle). */
 .rules-hero { padding-bottom: 18px; }
+/* The head's eyebrow at the pages' floor of 11 px, as the ladder's (#1059). */
+.rules-hero .eyebrow { font-size: 11px; }
 /* English or French: two buttons, the pressed one the book shown, pressed as the lobby's filters are (lobby.css). */
 .rules-languages { flex: none; align-self: flex-start; display: flex; gap: 6px; margin: 0; padding: 0; border: 0; min-width: 0; }
 .rules-languages > legend { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -46,6 +48,11 @@
 .rules-book :is(ul, ol) { margin: 0 0 12px; padding-left: 22px; }
 .rules-book li + li { margin-top: 6px; }
 .rules-book a { color: var(--gold); }
+/* A link in the text is a target a finger can reach (#1059): its padding reaches 44 px, and its negative margin gives
+   the room back, so the line is laid out as before. */
+.rules-book :is(p, li, td) a { padding: 14px 10px; margin: -14px -10px; }
+/* A table wider than the screen scrolls, and is then reached from the keyboard (rules.js, scrollsReached). */
+.rules-table:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .rules-table { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); }
 .rules-table table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.45; }
 .rules-table th { text-align: left; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); font-weight: 650; padding: 10px 12px; border-bottom: 1px solid var(--line); }

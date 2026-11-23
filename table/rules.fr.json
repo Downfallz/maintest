@@ -2359,9 +2359,9 @@
             "lines": [
               "Quand son sort se résout, une créature en Précision lance un d20 contre le nombre indiqué.",
               "Un critique multiplie dégâts et soins du sort sur ses cibles.",
-              "Instinct ne lance jamais le dé."
+              "Instinct ne lance jamais."
             ],
-            "example": "Un sort indique 11+. Un jet de 14 est critique et ses 7 dégâts deviennent 14."
+            "example": "Un sort indique d20 : 11+. Un jet de 14 est critique : ses 7 dégâts deviennent 14."
           }
         }
       ]
@@ -2991,6 +2991,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-23",
+      "text": "En français, l’exemple de la carte Critique nomme de nouveau le d20, comme en anglais, sans qu’aucune règle ne change.",
+      "adrs": []
+    },
     {
       "date": "2026-11-23",
       "text": "Les cartes Santé, Tempo, Initiative, Choisir un sort, Défense, Un tour sauté et Critique sont plus courtes, et en français la carte Énergie aussi, sans qu’aucune règle ne change.",
