@@ -144,26 +144,23 @@ internal sealed class LobbyChanges
                 continue;
             }
 
-            if (lobby.IsCompletedSuccessfully && lobby.Result > seenLobby)
-            {
-                seenLobby = lobby.Result;
-                await WriteAsync(stream, $"event: changed\ndata: lobby {seenLobby.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
-            }
-
-            if (own is { IsCompletedSuccessfully: true } && own.Result > seenMine)
-            {
-                seenMine = own.Result;
-                await WriteAsync(stream, $"event: changed\ndata: account {seenMine.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
-            }
-
-            if (notices is { IsCompletedSuccessfully: true } && notices.Result > seenBell)
-            {
-                seenBell = notices.Result;
-                await WriteAsync(stream, $"event: changed\ndata: account notices {seenBell.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
-            }
-
+            seenLobby = await TellAsync(stream, lobby, seenLobby, "lobby", cancellationToken);
+            seenMine = await TellAsync(stream, own, seenMine, "account", cancellationToken);
+            seenBell = await TellAsync(stream, notices, seenBell, "account notices", cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
         }
+    }
+
+    /// <summary>Says <c>changed</c> with the word when its wait answered a version past the one seen; answers the version seen now.</summary>
+    private static async Task<long> TellAsync(Stream stream, Task<long>? wait, long seen, string word, CancellationToken cancellationToken)
+    {
+        if (wait is not { IsCompletedSuccessfully: true } || wait.Result <= seen)
+        {
+            return seen;
+        }
+
+        await WriteAsync(stream, $"event: changed\ndata: {word} {wait.Result.ToString(CultureInfo.InvariantCulture)}\n\n", cancellationToken);
+        return wait.Result;
     }
 
     private static async Task WriteAsync(Stream stream, string text, CancellationToken cancellationToken)
