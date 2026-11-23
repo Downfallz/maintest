@@ -602,7 +602,8 @@ The seat's view says the lesson under `practice.tutorial`:
   once, and the admin panel's New invitation cuts off a lost device (ADR 0116).
   `POST /api/lobby/invitations` answers what a link's keys are to whoever holds them, signed in or not, and
   spends nothing: the signed-out door reads from it who invites and to what format. `POST /api/lobby/claim`
-  takes the place and needs an account.
+  takes the place and needs an account. A table described to anyone except an account seated at it names its
+  players but not their account ids. Its `ranked` flag says whether it counts on the ladder (#971).
 
 #### "Your turn" on a phone
 
@@ -616,6 +617,9 @@ With push keys too, Settings offer a signed-in player "Pop-ups on this device" (
 accounts under `devices/` and forgotten with "sign out everywhere" and with the account, which is where a
 friend's request or an invitation reaches a player who holds no seat (docs/tabletop/friends-plan.md, stage 1).
 Off also lets go of the browser's subscription (ADR 0202).
+`PUT /api/account/push` and `PUT /api/lobby/push` take only an endpoint on the browsers' push services (Firebase,
+Mozilla's, Windows', Apple's) and refuse any other host with a 400. A subscription stored before is forgotten at its
+next send, and one send gives up after five seconds (#1132).
 A signed-in seat's subscription (`PUT /api/lobby/push`) is registered as one of its account's devices too, and its
 `DELETE` forgets it there; a signed-in seat is told its turn on the account's devices, not on the seat's own
 subscription, and never on the device that holds the other seat. `PUT /api/account/preferences/notices` with
@@ -1178,8 +1182,11 @@ axe finds failing. On a screen that lays words on a scene's head or ground, the 
 of text in view, the lowest ratio against the lightest pixel under them once the words are hidden, and how many
 fall under 4.5:1 (`scripts/ux/contrast.mjs`). A box under 4.5:1 is counted, as a target under 44 px is; it does
 not stop the walk. Two walks of one journey give the same lines (`studio/browser/table.journey.js`), the shift aside: it
-moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. The walk
-fails when it misses a screen its journey names, or when the page throws.
+moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. A picture
+is counted `oversized` when the width its chosen srcset candidate declares is over twice the pixels it is drawn on
+(`object-fit` included), and `undersized` when it is under them; an SVG is neither. The walk fails when it misses a
+screen its journey names, when a screen never comes to rest (40 reads, 250 ms apart), when the host refuses a setup
+post, or when the page throws. A strip fails on the same page error.
 
 `UX_JOURNEY_VIDEO=<folder>` also records each person's walk as a WebM file under `<folder>/320` and
 `<folder>/390`, at the screen's size: the source of a stage's clip (UX7 to UX12), cut with `ffmpeg`. The walk is
@@ -1193,10 +1200,11 @@ prints on standard error each control it had to press by script. `--paint` loads
 the sign-in panel and a new player's home `--runs` times each (5 by default) with nothing cached, on a slow
 phone's network and processor, and writes the median, the fastest and the slowest of the first and the largest
 paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 when
-nothing is named, when a journey, a width or a strip is unknown, or when a build is missing.
+nothing is named, when a journey, a width or a strip is unknown, or when a build is missing. It also exits 1 when
+`--frames` or `--interval` is given without `--strip`, or `--runs` without `--paint`.
 
 `baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,
-docs/art/journeys/baseline.md; it exits 1 on a folder with no measures.
+docs/art/journeys/baseline.md; it exits 1 on a folder with no measures, or when `--commit` or `--date` has no value.
 
 ### ux/pictures.mjs
 
@@ -1233,6 +1241,22 @@ and `tempo-sheet` screens on a table of seed 7, each cut to 390 by 320 CSS pixel
 film of Pummel, six of its frames. It writes them as WebP under `docs/art/sources/pages/` (`--out` elsewhere, to
 look before replacing), the sources `pictures.mjs` then derives. It needs what `journey.mjs` and
 `battle/filmstrip.mjs` need, and `python3` with Pillow; it exits 1 on an argument it does not take.
+
+### promo/shoot.mjs
+
+```bash
+node scripts/promo/shoot.mjs promo/shots/brute-mirror-round-3.json --still
+node scripts/promo/shoot.mjs promo/shots/<shot>.json --still --ratio 9:16 --out <folder>
+```
+
+Takes the still of a promotion's shot (docs/art/promotion-plan.md, P1; ADR 0205): the shot's scenario opened on a
+real table host by a new account, in Chromium framed at each ratio the shot names (`9:16` as a 360 by 640 phone,
+`16:9` as 1280 by 720, `1:1` as 720 by 720) at the density that makes its short side the shot's `size` (1080 or
+720 pixels). The page's clock and `Math.random` are pinned, reduced motion is requested, the briefing is started
+and the windows a first visit opens are closed, and the practice's banner is hidden. It writes `still-<ratio>.png` under
+`artifacts/promo/<shot>/` (`--out` elsewhere) and prints each file with its SHA-256. One shot gives the same bytes
+each time on one machine and one build. `--ratio` shoots one of the shot's ratios, and refuses another. `--still`
+is the only mode today. It needs what `ux/journey.mjs` needs, and exits 1 on a shot it refuses (promo/README.md) before it starts a browser.
 
 ### recap-fixture.py
 

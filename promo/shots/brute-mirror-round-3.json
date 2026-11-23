@@ -1,0 +1,7 @@
+{
+  "format": "downfall.promo.shot.v1",
+  "title": "Two Brutes face each other at the top of round 3",
+  "scenario": "greedy-1v1-round-3.json",
+  "ratios": ["9:16", "16:9", "1:1"],
+  "size": 1080
+}

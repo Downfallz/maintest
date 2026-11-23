@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { JOURNEYS } from '../../scripts/ux/journeys.mjs';
 import { axeSource, walkJourney } from '../../scripts/ux/journey.mjs';
-import { differences } from '../../scripts/ux/measures.mjs';
+import { TARGET, TARGET_MINIMUM, TEXT_FLOOR, differences, measureInPage } from '../../scripts/ux/measures.mjs';
 import { buildShowcase } from '../../scripts/ux/set.mjs';
 
 // The journey film on the real engine (docs/art/ux-craft-plan.md, UX2): the walk reaches every screen it names,
@@ -31,8 +31,9 @@ test('two walks of the two doors reach every screen and measure the same', async
   const first = await walkJourney(browser, doors, phone, { showcase, axe });
   const second = await walkJourney(browser, doors, phone, { showcase, axe });
   expect(first.map(screen => screen.name)).toEqual(doors.screens);
-  // Every press of the doors is one a player can make.
+  // Every press of the doors is one a player can make, on either walk.
   expect(first.blocked).toEqual([]);
+  expect(second.blocked).toEqual([]);
   expect(differences(first, second)).toEqual([]);
   // A measure that reads nothing would agree with itself too.
   const home = first[0].measures;
@@ -48,9 +49,50 @@ test('a strip films one interaction on a held clock, the same frames twice', asy
   const lobby = JOURNEYS.find(journey => journey.id === 'lobby');
   const film = () => walkJourney(browser, lobby, phone, { showcase, strip: 'menu', frames: 6, interval: 40 });
   const first = await film(), second = await film();
-  expect(first.map(shot => shot.ms)).toEqual([0, 40, 80, 120, 160, 200]);
+  expect(first).toHaveLength(6);
+  expect(second).toHaveLength(6);
+  // The menu's opening plays on the held clock: some frame catches it running, and both films at the same frames.
+  expect(first.some(shot => shot.animating > 0)).toBe(true);
   expect(first.map(shot => shot.animating)).toEqual(second.map(shot => shot.animating));
   // The menu is open on the last frame and closed on the first: the interaction was filmed, not its aftermath.
   expect(first[0].png.equals(first.at(-1).png)).toBe(false);
   expect(first.at(-1).png.equals(second.at(-1).png)).toBe(true);
+});
+
+// A picture is measured by the file the browser chose, not by `naturalWidth`, which a srcset divides by its density
+// (#966), and against the width `object-fit` draws it at, not its box: a file over twice that width, or under it, is
+// counted whatever `sizes` says; a drawing never is.
+test('the measure counts a picture sent over twice its size or under it, by the file the srcset chose', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'table-phone', 'A fixture page at its own density: one project reads it.');
+  const context = await browser.newContext({ viewport: { width: 1000, height: 800 }, deviceScaleFactor: 1 });
+  try {
+    const page = await context.newPage();
+    const file = async width => {
+      await page.setContent(`<div style="width:${width}px;height:40px;background:#a33"></div>`);
+      return page.locator('div').screenshot();
+    };
+    const files = { 'big.png': await file(800), 'small.png': await file(50), 'right.png': await file(400) };
+    const drawing = '<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="400"><rect width="2000" height="400" fill="#3a3"/></svg>';
+    await page.route('http://fixture.test/**', route => {
+      const name = new URL(route.request().url()).pathname.slice(1);
+      if (name === 'drawing.svg') return route.fulfill({ contentType: 'image/svg+xml', body: drawing });
+      if (files[name]) return route.fulfill({ contentType: 'image/png', body: files[name] });
+      return route.fulfill({ contentType: 'text/html', body: `<!doctype html><body style="margin:0">
+        <img alt="" srcset="/big.png 800w" sizes="150px" style="width:100px;display:block">
+        <img alt="" srcset="/big.png 2x" style="width:100px;display:block">
+        <img alt="" srcset="/small.png 50w" sizes="300px" style="width:300px;display:block">
+        <img alt="" srcset="/right.png 400w" sizes="200px" style="width:200px;display:block">
+        <img alt="" src="/drawing.svg" style="width:50px;display:block">
+        <img alt="" srcset="/right.png 400w" sizes="100px" style="width:100px;height:200px;object-fit:cover;display:block">
+        <img alt="" srcset="/big.png 800w" sizes="450px" style="width:450px;height:10px;object-fit:contain;display:block">` });
+    });
+    await page.goto('http://fixture.test/');
+    await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
+    const { pictures } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
+    // Cover draws the 400 px file 2000 px wide in its 100 px box: under its size. Contain draws the 800 px file 200 px
+    // wide in its 450 px box: over twice its size.
+    expect(pictures).toMatchObject({ img: 7, oversized: 3, undersized: 2 });
+  } finally {
+    await context.close();
+  }
 });

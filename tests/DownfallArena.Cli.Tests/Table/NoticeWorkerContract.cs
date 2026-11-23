@@ -214,6 +214,26 @@ public abstract class NoticeWorkerContract
     }
 
     [Fact]
+    public async Task A_worker_stopped_while_it_keeps_its_counts_returns_as_it_does_when_stopped_idle()
+    {
+        var notices = await ChannelAsync(QueuedNotice.Queue);
+        var poison = await ChannelAsync(PoisonedWork.QueueOf(QueuedNotice.Queue));
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+        var worker = new NoticeWorker(notices, poison, TimeProvider.System)
+        {
+            Devices = new AccountNotices(_sender, _devices),
+            Counts = new NoticeCounts(new StoppedWhileRead(stopping), TimeProvider.System),
+            Said = Say,
+        };
+        await PhoneAsync();
+        await QueueAsync(notices);
+
+        await worker.RunAsync(stopping.Token);
+
+        _sender.Sent.ShouldHaveSingleItem();
+    }
+
+    [Fact]
     public async Task A_device_store_that_is_out_is_no_push_service_s_refusal_and_is_tried_again_unrefused()
     {
         var notices = await ChannelAsync(QueuedNotice.Queue);
@@ -321,6 +341,21 @@ public abstract class NoticeWorkerContract
         public Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
 
         public Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default) => throw new IOException("The store is out.");
+
+        public Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    /// <summary>A store of counts read as the process is stopped: the worker is stopped in the middle of keeping them (#1159).</summary>
+    private sealed class StoppedWhileRead(CancellationTokenSource stopping) : INoticeCountStore
+    {
+        public async Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default)
+        {
+            await stopping.CancelAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+            return new NoticeCountRead([], null);
+        }
+
+        public Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default) => Task.FromResult(true);
 
         public Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }

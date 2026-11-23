@@ -26,7 +26,8 @@ public sealed class TableWorkerNoticesTests : IDisposable
     private readonly FileNoticeStore _notices;
     private readonly FileDeviceStore _devices;
     private readonly FilePreferenceStore _preferences;
-    private readonly RecordedPush _sender = new();
+    // A push service that answers in a second: a run under load sends no faster than this (#1162).
+    private readonly RecordedPush _sender = new() { Lag = TimeSpan.FromSeconds(1) };
 
     public TableWorkerNoticesTests()
     {
@@ -47,6 +48,8 @@ public sealed class TableWorkerNoticesTests : IDisposable
         }
     }
 
+    private static Notice News => new(NoticeKind.FriendAccepted, "A new friend", "bastien accepted your friend request.", "/lobby#friends", "friend:test");
+
     private AccountNoticeLog Log => new(_notices, TimeProvider.System);
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
@@ -54,8 +57,9 @@ public sealed class TableWorkerNoticesTests : IDisposable
     /// <summary>Both seats persons played to the end by their understudies, whose turns the worker takes.</summary>
     private static TableRequest TwoPeople => new(null, null, Who: null, Handover: 999, Seed: 7);
 
-    private TableWorker.Over Over(bool devices) => new(new FileArtifactStore(_hosted.RunsDirectory), _hosted.Index, _channels)
+    private TableWorker.Over Over(bool devices, IChangeRelay? relay) => new(new FileArtifactStore(_hosted.RunsDirectory), _hosted.Index, _channels)
     {
+        Relay = relay,
         Accounts = _accounts,
         Notices = _notices,
         Devices = devices ? _devices : null,
@@ -69,8 +73,11 @@ public sealed class TableWorkerNoticesTests : IDisposable
         return account.Id;
     }
 
-    /// <summary>A match between the two accounts, recorded by the host and played to its end by the worker, until it is.</summary>
-    private async Task WorkedToItsEndAsync(AccountId first, AccountId second, IPushSender? sender, bool devices)
+    /// <summary>
+    /// A match between the two accounts, recorded by the host and played to its end by the worker, until it is; with a
+    /// sender, until the pushes it put on the notices queue are sent, as many as <paramref name="pushes" /> at least.
+    /// </summary>
+    private async Task WorkedToItsEndAsync(AccountId first, AccountId second, RecordedPush? sender, bool devices, int pushes = 0)
     {
         using var host = _hosted.Registry();
         var table = await _hosted.Composer.ComposeAsync(TwoPeople, Cancel);
@@ -89,15 +96,20 @@ public sealed class TableWorkerNoticesTests : IDisposable
         table.Session.Begin();
         await table.RecordAsync(Cancel);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
-        var working = TableWorker.WorkAsync(_hosted.Services, HostedTables.Rules, Over(devices), sender, stopping.Token);
+        var working = TableWorker.WorkAsync(_hosted.Services, HostedTables.Rules, Over(devices, relay: null), sender, stopping.Token);
         var episodes = Path.Combine(_hosted.RunsDirectory, table.Id, RunRecorder.EpisodesFile);
         for (var waited = 0; waited < 600 && (await Log.ListAsync(first, Cancel)).Count == 0; waited++)
         {
             await Task.Delay(100, Cancel);
         }
 
-        // The pushes leave the worker after the bell's write: a moment for those still on their way.
-        await Task.Delay(sender is null ? 0 : 500, Cancel);
+        // The pushes leave the worker after the bell's write, and are sent from the queue after that: waited for until
+        // every one put on the queue is sent, never for a time (#1162).
+        for (var waited = 0; waited < 600 && sender is not null && (sender.Count < pushes || sender.Count < _channels.SentOn(QueuedNotice.Queue)); waited++)
+        {
+            await Task.Delay(100, Cancel);
+        }
+
         await stopping.CancelAsync();
         await working;
         File.Exists(episodes).ShouldBeTrue("the worker played the match to its end");
@@ -135,7 +147,7 @@ public sealed class TableWorkerNoticesTests : IDisposable
         var bastien = await PlayerAsync("bastien");
         await _preferences.SaveNoticesAsync(mark, NoticePreferences.Default with { Results = false }, Cancel);
 
-        await WorkedToItsEndAsync(mark, bastien, _sender, devices: true);
+        await WorkedToItsEndAsync(mark, bastien, _sender, devices: true, pushes: 1);
 
         _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/bastien"]);
         (await Log.ListAsync(mark, Cancel)).ShouldHaveSingleItem().Kind.ShouldBe(NoticeKind.MatchOver);
@@ -147,10 +159,22 @@ public sealed class TableWorkerNoticesTests : IDisposable
         var mark = await PlayerAsync("MarkF");
         var bastien = await PlayerAsync("bastien");
 
-        await WorkedToItsEndAsync(mark, bastien, _sender, devices: true);
+        await WorkedToItsEndAsync(mark, bastien, _sender, devices: true, pushes: 2);
 
         _channels.SentOn(QueuedNotice.Queue).ShouldBe(2);
         _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/MarkF", "https://push.example/bastien"], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task With_a_relay_a_notice_the_worker_s_door_keeps_is_said_to_the_account_s_pages_through_it()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var relay = new RecordedRelay();
+        var worked = await TableWorker.ComposeAsync(_hosted.Services, HostedTables.Rules, Over(devices: false, relay), sender: null, Cancel);
+
+        await worked.Composer.Notifier.ShouldNotBeNull().NotifyAsync(mark, News, Cancel);
+
+        relay.Said.ShouldBe([$"account {mark.Value}"]);
     }
 
     /// <summary>The queues, counting what is put on each.</summary>

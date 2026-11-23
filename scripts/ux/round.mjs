@@ -88,8 +88,7 @@ export const ROUND = {
     await tabs.reduce((pressed, tab) => pressed
       .then(() => choose(page, `[data-tempo-tab="${tab}"]`, blocked))
       .then(() => choose(page, `[data-speed="${tempo(tab)}"]`, blocked)), Promise.resolve());
-    await confirm(page, '#planning-confirm');
-    await page.locator('#planning-dialog').waitFor({ state: 'hidden', timeout: 20000 });
+    await confirm(page, '#planning-confirm', { until: '#planning-dialog' });
     await waitAnswered(view, () => latest(page), { timeout: 15000 });
     // The order is revealed once both teams' ties are settled: pictured before its Continue is pressed.
     const look = async () => {

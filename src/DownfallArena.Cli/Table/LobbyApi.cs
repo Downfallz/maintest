@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
 using DownfallArena.Application.Agents;
@@ -79,51 +80,32 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     public static bool Names(string path) => path == Prefix || path.StartsWith(Prefix + "/", StringComparison.Ordinal);
 
-    /// <summary>An admin close or deletion must not race a claim writing the same table record.</summary>
-    public static async Task<StudioResponse> ExclusivelyAsync(Func<Task<StudioResponse>> change)
-    {
-        await Claims.WaitAsync();
-        try
-        {
-            return await change();
-        }
-        finally
-        {
-            Claims.Release();
-        }
-    }
+    /// <summary>
+    /// An admin close or deletion must not race a claim writing the same table record. The notices it gives, a void's,
+    /// go once the gate is let go of (ADR 0203, #1133); one that cannot go is a line on <paramref name="said" />.
+    /// </summary>
+    public static Task<StudioResponse> ExclusivelyAsync(Func<Task<StudioResponse>> change, Action<string> said) =>
+        HeldNotices.AfterAsync(
+            async () =>
+            {
+                await Claims.WaitAsync();
+                try
+                {
+                    return await change();
+                }
+                finally
+                {
+                    Claims.Release();
+                }
+            },
+            said);
 
     /// <param name="player">Who the request's session says is signed in, when this host signs players in.</param>
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token = null, SignedIn? player = null)
     {
         // The notices a route gives are kept until it has answered, so none is written under the claim gate, where every
-        // other claim would wait on the bell's write and the push (ADR 0203).
-        var held = new HeldNotices();
-        _held.Value = held;
-        StudioResponse answer;
-        try
-        {
-            answer = await RouteAsync(method, path, body, token, player);
-        }
-        finally
-        {
-            _held.Value = null;
-        }
-
-        foreach (var (to, notice) in held.Close())
-        {
-            try
-            {
-                await Notifier!.NotifyAsync(to, notice);
-            }
-            catch (Exception failure) when (failure is not OperationCanceledException)
-            {
-                // What the request did is done and answered: a notice that cannot go is a line, never a 500.
-                Said($"  Account {to}: a notice could not be given: {HttpHost.OneLine(failure)}");
-            }
-        }
-
-        return answer;
+        // other claim would wait on the bell's write and the push (ADR 0203). One that cannot go is a line, never a 500.
+        return await HeldNotices.AfterAsync(() => RouteAsync(method, path, body, token, player), Said);
     }
 
     private async Task<StudioResponse> RouteAsync(string method, string path, string body, string? token, SignedIn? player)
@@ -207,7 +189,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // Listed off the index, described off the tables themselves: a page is eight of them, picked up when
         // this host does not hold them yet. One that cannot be is left off its page.
         var unread = new UnreadMoves();
-        var items = await Task.WhenAll((await HeldAsync(tables.Skip(at * PageSize).Take(PageSize))).Select(table => DescribeAsync(table, unread.Of(table))));
+        var items = await Task.WhenAll((await HeldAsync(tables.Skip(at * PageSize).Take(PageSize))).Select(table => DescribeAsync(table, account, unread.Of(table))));
         unread.Say(Said);
         return Json(new { total = tables.Length, pages, page = at + 1, items });
     }
@@ -297,7 +279,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         var unread = new UnreadMoves();
         var tables = await Task.WhenAll(held.Select(async group => (object)new
         {
-            table = await DescribeAsync(group.Key, unread.Of(group.Key)),
+            table = await DescribeAsync(group.Key, account, unread.Of(group.Key)),
             seats = group.Select(one => new { seat = group.Key.Seats.Single(seat => FixedTime.Same(one.Token, seat.Token)).Name, token = one.Token }).ToArray(),
         }));
         unread.Say(Said);
@@ -455,7 +437,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
             return Json(new
             {
-                table = await DescribeAsync(table),
+                table = await DescribeAsync(table, account),
                 seats = handed.Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
             }, 201);
         }
@@ -631,7 +613,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 await NoticeAsync(inviter, NoticeKind.SeatTaken, $"{player.Account.Username.Value} accepted", "Take your seat: the battle begins when you are both there.", $"/play?table={Uri.EscapeDataString(table.Id)}", $"invite:{table.Id}");
             }
 
-            return Json(new { table = await DescribeAsync(table), seats = new[] { new { seat = seat.Name, token = seat.Token } } });
+            return Json(new { table = await DescribeAsync(table, me), seats = new[] { new { seat = seat.Name, token = seat.Token } } });
         }
         finally
         {
@@ -786,7 +768,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             return await OfferToEveryoneAsync(table, seat)
-                ? Json(new { table = await DescribeAsync(table) })
+                ? Json(new { table = await DescribeAsync(table, player.Account.Id) })
                 : Problem(409, "Lobby.Gone", "This table is no longer available: it was closed.");
         }
         finally
@@ -906,11 +888,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return;
         }
 
-        var notice = new Notice(kind, title, body, url, tag);
-        if (_held.Value?.Hold(to, notice) != true)
-        {
-            await notifier.NotifyAsync(to, notice);
-        }
+        await HeldNotices.NotifyAsync(notifier, to, new Notice(kind, title, body, url, tag));
     }
 
     // Whether the account's devices remember this endpoint as gone; a list that cannot be read says not, rather than
@@ -930,39 +908,6 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             Said($"  Account {account}: its devices could not be read to check a subscription: {HttpHost.OneLine(failure)}");
             return false;
-        }
-    }
-
-    // The notices of the request being answered, given once it has; none outside a request (the tending job's expiries).
-    private readonly AsyncLocal<HeldNotices?> _held = new();
-
-    /// <summary>A request's notices, held until it has answered; one held after that is given at once.</summary>
-    private sealed class HeldNotices
-    {
-        private readonly List<(AccountId To, Notice Notice)> _held = [];
-        private bool _closed;
-
-        public bool Hold(AccountId to, Notice notice)
-        {
-            lock (_held)
-            {
-                if (_closed)
-                {
-                    return false;
-                }
-
-                _held.Add((to, notice));
-                return true;
-            }
-        }
-
-        public IReadOnlyList<(AccountId To, Notice Notice)> Close()
-        {
-            lock (_held)
-            {
-                _closed = true;
-                return [.. _held];
-            }
         }
     }
 
@@ -1029,7 +974,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             table.Touch(clock.GetUtcNow());
-            return Json(new { table = await DescribeAsync(table), seats = new[] { new { seat = seat.Name, token = seat.Token } } });
+            return Json(new { table = await DescribeAsync(table, account), seats = new[] { new { seat = seat.Name, token = seat.Token } } });
         }
         finally
         {
@@ -1117,7 +1062,10 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// now. A finished table is history and keeps the id it was played under, as its recording and its result do;
     /// a card names it "Player", since the account is gone. The number of seats offered.
     /// </summary>
-    public async Task<int> ReleaseAsync(AccountId account)
+    /// <remarks>Its notices, to the players left at those tables, go once the claim gate is let go of (#1133).</remarks>
+    public Task<int> ReleaseAsync(AccountId account) => HeldNotices.AfterAsync(() => ReleaseUnderClaimsAsync(account), Said);
+
+    private async Task<int> ReleaseUnderClaimsAsync(AccountId account)
     {
         await Claims.WaitAsync();
         try
@@ -1125,32 +1073,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             var offered = 0;
             foreach (var table in await TablesAsync(summary => summary.Seats.Any(seat => seat.Account == account.Value || seat.InvitedAccount == account.Value)))
             {
-                // A seat kept for the account is kept for nobody now, and a seat the account kept for a friend is
-                // offered to everyone, as the account's own seat is about to be (ADR 0129): the friend was waiting on
-                // a player who is gone.
-                foreach (var kept in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken && !table.IsOver).ToArray())
-                {
-                    if (kept.InvitedAccount == account)
-                    {
-                        await LetGoAsync(table, kept, declinedBy: null);
-                    }
-                    else if (Inviter(table, account))
-                    {
-                        await OfferToEveryoneAsync(table, kept);
-                    }
-                }
-
-                foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null && !table.IsOver).ToArray())
-                {
-                    if (table.Run is not null && await VacateAsync(table, seat))
-                    {
-                        offered++;
-                    }
-                    else
-                    {
-                        seat.Account = null;
-                    }
-                }
+                offered += await ReleaseAtAsync(table, account);
             }
 
             return offered;
@@ -1159,6 +1082,65 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         {
             Claims.Release();
         }
+    }
+
+    /// <summary>Under the claim gate: the account's seats at one table let go of; how many were offered to another player.</summary>
+    private async Task<int> ReleaseAtAsync(PlayedTable table, AccountId account)
+    {
+        // A seat kept for the account is kept for nobody now, and a seat the account kept for a friend is offered to
+        // everyone, as the account's own seat is about to be (ADR 0129): the friend was waiting on a player who is gone.
+        foreach (var kept in table.Seats.Where(seat => seat.InvitedAccount is not null && !seat.Taken && !table.IsOver).ToArray())
+        {
+            if (kept.InvitedAccount == account)
+            {
+                await LetGoAsync(table, kept, declinedBy: null);
+            }
+            else if (Inviter(table, account))
+            {
+                await OfferToEveryoneAsync(table, kept);
+            }
+        }
+
+        var offered = 0;
+        foreach (var seat in table.Seats.Where(seat => seat.Account == account && seat.Person is not null && !table.IsOver).ToArray())
+        {
+            if (table.Run is not null && await VacateAsync(table, seat))
+            {
+                offered++;
+            }
+            else
+            {
+                seat.Account = null;
+            }
+        }
+
+        return offered;
+    }
+
+    /// <summary>The subscription a browser sent, or why it is refused: not one, on no push service the host sends to, or gone.</summary>
+    private async Task<(PushSubscription? Subscription, StudioResponse? Refused)> SentSubscriptionAsync(PushNotices notices, string body, AccountId? account)
+    {
+        var sent = JsonSerializer.Deserialize<BrowserSubscription>(body, Web);
+        var subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
+        if (subscription is null)
+        {
+            return (null, Problem(400, "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16."));
+        }
+
+        if (!PushSubscription.OnKnownService(subscription.Endpoint))
+        {
+            return (null, Problem(400, "Lobby.UnknownPushService", "This browser's push service is not one this host sends to."));
+        }
+
+        // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a push
+        // service say an endpoint is gone (ADR 0202), in whichever process sent it, and the account's devices remember
+        // it (ADR 0203): either one's word makes the page subscribe again.
+        if (notices.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
+        {
+            return (null, Problem(410, "This subscription is gone from its push service. Subscribe again."));
+        }
+
+        return (subscription, null);
     }
 
     /// <summary>
@@ -1176,20 +1158,13 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         PushSubscription? subscription = null;
         if (body is not null)
         {
-            var sent = JsonSerializer.Deserialize<BrowserSubscription>(body, Web);
-            subscription = PushSubscription.From(sent?.Endpoint, sent?.Keys?.P256dh, sent?.Keys?.Auth);
-            if (subscription is null)
+            var (sent, refused) = await SentSubscriptionAsync(push, body, account);
+            if (refused is not null)
             {
-                return Problem(400, "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16.");
+                return refused;
             }
 
-            // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a
-            // push service say an endpoint is gone (ADR 0202), in whichever process sent it, and the account's devices
-            // remember it (ADR 0203): either one's word makes the page subscribe again.
-            if (push.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
-            {
-                return Problem(410, "This subscription is gone from its push service. Subscribe again.");
-            }
+            subscription = sent;
         }
 
         // Under the claim gate, and the seat found under it: a leave, a claim or a new invitation replaces the
@@ -1298,12 +1273,12 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             // A seat kept for a friend answers that friend alone (ADR 0129); to anybody else its key is spent.
             if (await registry.ByInvitationAsync(token) is { Table.IsOver: false } offered && (offered.Seat.InvitedAccount is null || offered.Seat.InvitedAccount == account))
             {
-                return new { token, kind = "invitation", seat = (string?)offered.Seat.Name, table = (object?)await DescribeAsync(offered.Table) };
+                return new { token, kind = "invitation", seat = (string?)offered.Seat.Name, table = (object?)await DescribeAsync(offered.Table, account) };
             }
 
             if (await registry.ByTokenAsync(token) is { } table && table.Seats.FirstOrDefault(seat => FixedTime.Same(token, seat.Token) && seat.Person is not null) is { } held)
             {
-                return new { token, kind = "seat", seat = (string?)held.Name, table = (object?)await DescribeAsync(table) };
+                return new { token, kind = "seat", seat = (string?)held.Name, table = (object?)await DescribeAsync(table, account) };
             }
 
             // Spent, replaced, closed or never minted: which one is not told to whoever holds it.
@@ -1352,7 +1327,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             table.Touch(clock.GetUtcNow());
-            return Json(new { table = await DescribeAsync(table), seats = seats.Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray() });
+            return Json(new { table = await DescribeAsync(table, account), seats = seats.Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray() });
         }
         finally
         {
@@ -1459,13 +1434,20 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
     }
 
+    /// <param name="viewer">
+    /// Who asks, signed in or not. A person's seat carries its account's id only to an account that holds a seat at this
+    /// table, whose page offers the rematch (ADR 0129); to anybody else, a visitor holding a forwarded link or a player
+    /// reading the lobby, a seat is its name alone (#971).
+    /// </param>
     /// <param name="lastMove">
     /// The table's last move, read once and shared by every field of the list entry that needs it (#775). Without
     /// one, the card reads its own.
     /// </param>
-    private async Task<object> DescribeAsync(PlayedTable table, LastMove? lastMove = null)
+    private async Task<object> DescribeAsync(PlayedTable table, AccountId? viewer, LastMove? lastMove = null)
     {
-        var seats = await Task.WhenAll(table.Seats.Select(seat => SeatAsync(table, seat)));
+        var held = await Task.WhenAll(table.Seats.Select(seat => SeatAsync(table, seat)));
+        var seated = viewer is { } me && table.Seats.Any(seat => seat.Account == me);
+        var seats = seated ? held : [.. held.Select(seat => seat with { Account = null })];
         return new
         {
             id = table.Id,
@@ -1478,9 +1460,28 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             over = table.IsOver,
             round = await AdminApi.RoundNowAsync(table),
             openSeats = OpenSeatCount(table),
+            ranked = CountsOnTheLadder(table, held),
             players = seats.Select(seat => seat.Name).ToArray(),
             seats,
         };
+    }
+
+    /// <summary>
+    /// Whether the game counts on the ladder once played: the rule of <c>MatchResult.Ranked</c> (ADR 0124), between
+    /// people, not opened unranked, each person's seat held by an account of its own, and 3v3, the one ranked format
+    /// (ADR 0171), which the host already holds a ranked game to when it opens it. A seat still open, or kept for a
+    /// friend, is taken by an account when it is taken. Decided here so the card reads a badge, not the seats'
+    /// account ids (#971).
+    /// </summary>
+    private static bool CountsOnTheLadder(PlayedTable table, IReadOnlyList<SeatSummary> seats)
+    {
+        if (table.Casual || table.Session.Rules.Format != MatchFormat.ThreeOnThree || seats.Any(seat => seat.Kind == "bot"))
+        {
+            return false;
+        }
+
+        var accounts = seats.Where(seat => seat.Kind == "person").Select(seat => seat.Account).ToArray();
+        return accounts.Length > 0 && accounts.All(account => account is not null) && accounts.Distinct(StringComparer.Ordinal).Count() == accounts.Length;
     }
 
     /// <summary>
@@ -1511,7 +1512,8 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             return new SeatSummary(seat.Name, "invited", await NameAsync(invited), turn);
         }
 
-        // The account's id travels with a person's seat, so the other player's page can offer a rematch (ADR 0129).
+        // The account's id travels with a person's seat, so the other player's page can offer a rematch (ADR 0129);
+        // DescribeAsync leaves it out for whoever holds no seat at the table (#971).
         var name = seat.Account is { } id && Accounts is { } accounts ? (await accounts.AccountAsync(id))?.Username.Value : null;
         return new SeatSummary(seat.Name, "person", name ?? "Player", turn, seat.Account?.Value);
     }
@@ -1719,7 +1721,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 var lastMove = unread.Of(table);
                 return (object)new
                 {
-                    table = await DescribeAsync(table, lastMove),
+                    table = await DescribeAsync(table, account, lastMove),
                     seats = table.Seats.Where(seat => seat.Account == account).Select(seat => new { seat = seat.Name, token = seat.Token }).ToArray(),
                     invited = table.IsOver || !Inviter(table, account.Value) ? null : await InvitedOfAsync(table, table.Seats.FirstOrDefault(seat => seat.Person is not null && !seat.Taken) ?? table.Seats[1]),
                     recap = await RecapAsync(table, account.Value, lastMove),
@@ -1735,7 +1737,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
                 var from = table.Seats.FirstOrDefault(other => other != seat && other.Account is not null)?.Account;
                 return (object)new
                 {
-                    table = await DescribeAsync(table, unread.Of(table)),
+                    table = await DescribeAsync(table, account, unread.Of(table)),
                     from = from is { } inviter ? new { id = inviter.Value, username = await NameAsync(inviter) } : null,
                     sentAt = seat.InvitedAt,
                 };
@@ -1895,7 +1897,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
     /// <param name="Turn">Whether this seat's player is being asked something now: whose turn it is.</param>
     /// <param name="Level">A bot's level (ADR 0180), which a rematch asks for again; none for a person or a bot no level seats.</param>
-    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, string? Account = null, string? Level = null);
+    private sealed record SeatSummary(string Seat, string Kind, string Name, bool Turn, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Account = null, string? Level = null);
 
     private sealed record ResumeRequest(IReadOnlyList<string>? Tokens);
 

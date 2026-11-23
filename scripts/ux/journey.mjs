@@ -46,18 +46,25 @@ export async function axeSource() {
   return null;
 }
 
-/** Wait until the screen measures the same twice: its fonts, its pictures and what the host sent are in. */
-async function settle(page) {
+/** How many reads, 250 ms apart, a screen has to measure the same twice. */
+const SETTLE_READS = 40;
+
+/**
+ * Wait until the screen measures the same twice: its fonts, its pictures and what the host sent are in. A screen
+ * still moving after SETTLE_READS reads stops the walk: it is not measured as if it had come to rest (#1093).
+ */
+export async function settle(page) {
   await page.evaluate(() => document.fonts.ready.then(() => Promise.all([...document.images].filter(image => image.loading !== 'lazy' && !image.complete)
     .map(image => new Promise(done => { image.addEventListener('load', done, { once: true }); image.addEventListener('error', done, { once: true }); })))));
   const read = () => page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
-  let last = JSON.stringify(await read());
-  for (let calm = 0, tries = 0; calm < 2 && tries < 40; tries++) {
+  let last = JSON.stringify(await read()), calm = 0;
+  for (let tries = 0; calm < 2 && tries < SETTLE_READS; tries++) {
     await page.waitForTimeout(250);
     const now = JSON.stringify(await read());
     calm = now === last ? calm + 1 : 0;
     last = now;
   }
+  if (calm < 2) throw new Error(`The screen never came to rest in ${SETTLE_READS} reads: its last measures were ${last}`);
   return JSON.parse(last);
 }
 
@@ -155,19 +162,27 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
       if (error !== STOP && process.env.UX_JOURNEY_DEBUG) await page.screenshot({ path: process.env.UX_JOURNEY_DEBUG }).catch(() => {});
       if (error !== STOP) throw new Error(`The ${journey.id} journey stopped after "${screens.at(-1)?.name ?? 'nothing'}" at ${viewport.width} px: ${error.message}`, { cause: error });
     }
-    if (strip) {
-      if (!shots) throw new Error(`The ${journey.id} journey never reached "${filmed.at}", where ${strip} is filmed.`);
-      return walked(shots, blocks);
-    }
-    const missed = journey.screens.filter(name => !walk.seen(name));
-    if (missed.length) throw new Error(`The ${journey.id} journey never reached: ${missed.join(', ')}.`);
-    if (errors.length) throw new Error(`The ${journey.id} journey's page threw: ${errors.join(' | ')}`);
-    // What the walk could not press rides on the screens: a walk with none is one a player can make.
-    return walked(screens, blocks);
+    return ended(journey, { strip, shots, screens, errors, blocks });
   } finally {
     for (const context of contexts) await context.close().catch(() => {});
     await set.close();
   }
+}
+
+/**
+ * What a walk or a strip returns once it has ended: its screens, or the strip's frames, carrying what it pressed by
+ * script. It throws when a screen it names was missed, when the strip's screen was never reached, or when the page
+ * threw: a strip whose page threw does not write its sheet as if nothing happened (#1093).
+ */
+export function ended(journey, { strip = null, shots = null, screens, errors, blocks }) {
+  if (strip && !shots) throw new Error(`The ${journey.id} journey never reached "${journey.strips[strip].at}", where ${strip} is filmed.`);
+  if (!strip) {
+    const missed = journey.screens.filter(name => !screens.some(screen => screen.name === name));
+    if (missed.length) throw new Error(`The ${journey.id} journey never reached: ${missed.join(', ')}.`);
+  }
+  if (errors.length) throw new Error(`The ${journey.id} journey's page threw: ${errors.join(' | ')}`);
+  // What the walk could not press rides on the screens: a walk with none is one a player can make.
+  return walked(strip ? shots : screens, blocks);
 }
 
 const escape = text => String(text).replace(/[&<>"]/g, mark => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[mark]);
@@ -230,6 +245,7 @@ export function blockedLines(id, viewport, taken) {
 
 export function parseArguments(argv) {
   const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, runs: PAINT_RUNS };
+  const given = new Set();
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
     if (Object.hasOwn(SWITCHES, word)) options[SWITCHES[word]] = true;
@@ -237,11 +253,15 @@ export function parseArguments(argv) {
       index += 1;
       if (index >= argv.length) throw new Error(`${word} needs a value.`);
       VALUED[word](argv[index], options);
+      given.add(word.slice(2));
     } else if (word.startsWith('--')) throw new Error(`Unknown option ${word}.`);
     else if (JOURNEYS.some(journey => journey.id === word)) options.journeys.push(word);
     else throw new Error(`No journey is named ${word}: ${JOURNEYS.map(journey => journey.id).join(', ')}.`);
   }
   if (options.list) return options;
+  // An option the chosen mode ignores is refused, not taken in silence (#1093).
+  for (const flag of ['frames', 'interval']) if (given.has(flag) && !options.strip) throw new Error(`--${flag} films a strip: name --strip.`);
+  if (given.has('runs') && !options.paint) throw new Error('--runs counts the paints: name --paint.');
   if (options.all && options.journeys.length) throw new Error('Name journeys, or --all, not both.');
   if (!options.all && !options.journeys.length && !options.paint) throw new Error(`Name a journey (${JOURNEYS.map(journey => journey.id).join(', ')}), --all, --paint or --list.`);
   if (options.strip) {

@@ -600,7 +600,7 @@ internal sealed class TableComposer
         {
             foreach (var account in accounts)
             {
-                await notifier.NotifyAsync(AccountId.Parse(account), new Notice(NoticeKind.MatchOver, explanation is null ? "Match ended" : "Match voided", explanation ?? VoidNotice, "/lobby", $"match:{id}"));
+                await HeldNotices.NotifyAsync(notifier, AccountId.Parse(account), new Notice(NoticeKind.MatchOver, explanation is null ? "Match ended" : "Match voided", explanation ?? VoidNotice, "/lobby", $"match:{id}"));
             }
         }
         catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or JsonException or FormatException or Azure.RequestFailedException or HttpRequestException)

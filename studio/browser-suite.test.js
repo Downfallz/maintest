@@ -75,6 +75,15 @@ test('the journey film plays its real-engine journey', () => {
   assert.equal(plan(['showcase/showcase.test.js'], specs).realEngine, false);
 });
 
+test('the promotion\'s still plays its real-engine journey, from the script and from the shots it reads', () => {
+  assert.deepEqual(plan(['scripts/promo/shoot.mjs'], specs), { ...nothing, realEngine: true });
+  assert.deepEqual(plan(['promo/shots/brute-mirror-round-3.json'], specs), { ...nothing, realEngine: true });
+  assert.deepEqual(plan(['promo/README.md'], specs), nothing);
+  // The scenario a shot plays, directly under scenarios/: the still opens it on the host.
+  assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, realEngine: true, image: true });
+  assert.deepEqual(plan(['scenarios/README.md'], specs), nothing);
+});
+
 test('the contrast measure plays the picture kit\'s spec, the rulebook\'s and the real-engine journey that walks with it', () => {
   assert.deepEqual(plan(['scripts/ux/contrast.mjs'], specs), { ...nothing, journeys: 'picture-kit.spec.js rules.spec.js', realEngine: true });
 });
@@ -104,14 +113,14 @@ test('content plays everything', () => {
 
 test('a tutorial file plays the tutorial journey and the windows\' contract, which read its lesson, and the real engine, which plays it to its end', () => {
   assert.deepEqual(plan(['scenarios/tutorials/your-first-combat.json'], specs), { ...nothing, journeys: 'battle-tutorial.spec.js battle-windows.spec.js', realEngine: true, image: true });
-  assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, image: true });
+  // A scenario of its own reads no lesson: the promotion's still plays it on the real engine.
+  assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, realEngine: true, image: true });
 });
 
 test('the infrastructure builds the image and plays nothing', () => {
   assert.deepEqual(plan(['infra/main.bicep'], specs), { ...nothing, image: true });
   assert.deepEqual(plan(['Dockerfile'], specs), { ...nothing, image: true });
   assert.deepEqual(plan(['learning/weights/greedy.json'], specs), { ...nothing, image: true });
-  assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, image: true });
 });
 
 test('the workflows that play the journeys play everything', () => {

@@ -166,7 +166,7 @@ internal sealed class AdminApi
         if (Under(path, SessionsPrefix))
         {
             return method == "DELETE"
-                ? await LobbyApi.ExclusivelyAsync(() => SessionsAsync(method, path[SessionsPrefix.Length..].Trim('/'), body, operatorName))
+                ? await LobbyApi.ExclusivelyAsync(() => SessionsAsync(method, path[SessionsPrefix.Length..].Trim('/'), body, operatorName), Said)
                 : await SessionsAsync(method, path[SessionsPrefix.Length..].Trim('/'), body, operatorName);
         }
 
@@ -175,9 +175,9 @@ internal sealed class AdminApi
         {
             ("GET", "") => await ListAsync(),
             ("POST", "") => await OpenAsync(body, operatorName),
-            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => CloseAsync(id, operatorName)),
-            ("POST", _) when Voided(rest) is { } voided => await LobbyApi.ExclusivelyAsync(() => VoidAsync(voided, body, operatorName)),
-            ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName)),
+            ("DELETE", { Length: > 0 } id) => await LobbyApi.ExclusivelyAsync(() => CloseAsync(id, operatorName), Said),
+            ("POST", _) when Voided(rest) is { } voided => await LobbyApi.ExclusivelyAsync(() => VoidAsync(voided, body, operatorName), Said),
+            ("POST", _) when Reinvited(rest) is { } seat => await LobbyApi.ExclusivelyAsync(() => ReinviteAsync(seat.Table, seat.Slot, operatorName), Said),
             _ => StudioResponse.OfPlainText(404, $"No such route: {method} {path}"),
         };
     }

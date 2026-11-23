@@ -404,7 +404,7 @@ public sealed class AdminApiTests : IDisposable
         {
             var opened = JsonDocument.Parse(Text(await admin.HandleAsync("POST", "/api/tables", """{"player1":"person","player2":"greedy"}""", OperatorToken, principal: null))).RootElement;
             var id = opened.GetProperty("id").GetString().ShouldNotBeNull();
-            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress));
+            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(new(_registry, admin.Lobby, TimeProvider.System), now, progress));
             clock.Advance(TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(5));
 
             var answer = await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null);
@@ -432,7 +432,7 @@ public sealed class AdminApiTests : IDisposable
         var said = new List<string>();
         try
         {
-            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(_registry, admin.Lobby, now, progress: progress)) { Said = said.Add };
+            admin.Jobs = new JobsApi(new Infrastructure.Tables.FileTendLog(tend), clock, (now, progress) => TableTend.TendAsync(new(_registry, admin.Lobby, TimeProvider.System), now, progress)) { Said = said.Add };
 
             (await admin.HandleAsync("POST", JobsApi.TendRoute, "", OperatorToken, principal: null)).Status.ShouldBe(200);
 

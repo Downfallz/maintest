@@ -44,6 +44,12 @@ internal static class TableWorker
 
         /// <summary>Where the content the tables began on is kept (ADR 0163), or nowhere.</summary>
         public IArtifactStore? Contents { get; init; }
+
+        /// <summary>
+        /// Where what the worker moves is said, and what the host moves heard (ADR 0165): the one the environment names
+        /// in <see cref="RunAsync" />, a recording one in the tests (#1153); none, and the host looks at the tables.
+        /// </summary>
+        public IChangeRelay? Relay { get; init; }
     }
 
     public static async Task<int> RunAsync(IServiceProvider services, CliOptions options, RuleSet rules)
@@ -95,6 +101,7 @@ internal static class TableWorker
             {
                 Contents = await TableHost.OpenContentsAsync(target, stopping.Token),
                 NoticeCountsAt = target,
+                Relay = WebPubSubRelay.FromEnvironment(),
             };
             if (options.Accounts != AccountsMode.Off)
             {
@@ -130,10 +137,16 @@ internal static class TableWorker
     }
 
     /// <summary>
-    /// The two workers over what is opened, and the watch of the tables they hold, until stopped: a turn owed after
-    /// the ones an item takes goes back on the queue, for this worker or another.
+    /// What the worker works with, composed as it runs, not yet working: the composer and the door every notice goes
+    /// through (ADR 0201), the turns' queue, and the notices' queue and sender when it can push.
     /// </summary>
-    internal static async Task WorkAsync(IServiceProvider services, RuleSet rules, Over over, IPushSender? sender, CancellationToken stopping)
+    internal sealed record Worked(TableComposer Composer, IWorkChannel Turns, IWorkChannel? Outbox, PushNotices? Push);
+
+    /// <summary>
+    /// The worker's parts over what is opened, wired as <see cref="WorkAsync" /> runs them: what the tests compose to see
+    /// the door is built and said through the relay (#1109, #1153).
+    /// </summary>
+    internal static async Task<Worked> ComposeAsync(IServiceProvider services, RuleSet rules, Over over, IPushSender? sender, CancellationToken stopping)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(over);
@@ -169,7 +182,7 @@ internal static class TableWorker
 
         // The turns taken here move tables whose seats are served elsewhere: said through the relay when there is one,
         // with the lobbies' lists they move (ADR 0165).
-        var relay = WebPubSubRelay.FromEnvironment();
+        var relay = over.Relay;
         composer.Relay = relay;
         composer.Lobby = relay is null ? null : new LobbyChanges { Relay = relay };
         composer.Notifier?.Changes = composer.Lobby;
@@ -186,6 +199,19 @@ internal static class TableWorker
         // Only a signed-in seat's turn is queued, and told on its account's devices: this worker writes no table's record for it.
         var push = sender is null ? null : new PushNotices(sender, string.Empty, clock) { Accounts = composer.Notifier };
         composer.Notifier?.Outbox = outbox;
+        return new Worked(composer, turns, outbox, push);
+    }
+
+    /// <summary>
+    /// The two workers over what is opened, and the watch of the tables they hold, until stopped: a turn owed after
+    /// the ones an item takes goes back on the queue, for this worker or another.
+    /// </summary>
+    internal static async Task WorkAsync(IServiceProvider services, RuleSet rules, Over over, IPushSender? sender, CancellationToken stopping)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(over);
+        var clock = services.GetRequiredService<TimeProvider>();
+        var (composer, turns, outbox, push) = await ComposeAsync(services, rules, over, sender, stopping);
         using var registry = new TableRegistry(over.Index) { Loader = new TableLoader(new StoredSessions(over.Store), composer, clock), Basis = composer.Basis };
         using var running = CancellationTokenSource.CreateLinkedTokenSource(stopping);
         try
@@ -198,7 +224,7 @@ internal static class TableWorker
             // What the host writes to the tables this worker holds -- a seat's tap, a closed table, a seat changing
             // hands -- is seen as the host sees the worker's (ADR 0162); and a finished table nobody is at any more is
             // let go of, as a host lets go of it, or a worker that never stops would hold every table it ever took.
-            var watching = TableHost.WatchAsync(new TableWatch(registry, clock), relay, clock, running.Token);
+            var watching = TableHost.WatchAsync(new TableWatch(registry, clock), over.Relay, clock, running.Token);
             var letting = LetGoOfIdleAsync(registry, clock, running.Token);
             await working;
             await noticing;

@@ -661,6 +661,11 @@ internal sealed class AccountApi
             return Problem(400, "Account.BadSubscription", "Send the subscription as the browser serialises it: an https endpoint, a p256dh key of 65 bytes and an auth secret of 16.");
         }
 
+        if (!PushSubscription.OnKnownService(subscription.Endpoint))
+        {
+            return Problem(400, "Account.UnknownPushService", "This browser's push service is not one this host sends to.");
+        }
+
         if (await notices.IsGoneAsync(who.Account.Id, subscription.Endpoint))
         {
             return Problem(410, "Account.DeviceGone", "This subscription is gone from its push service. Subscribe again.");
