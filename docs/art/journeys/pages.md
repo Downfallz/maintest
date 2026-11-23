@@ -67,7 +67,8 @@ What holds for every screen of the journey:
   action is filled because it is the only thing a player with nothing can do there. A page with something on it has
   no filled action: it is read.
 - **Readable text.** Nothing under 11 px: the eyebrows of the ladder and the statistics (10 px today, 10 and 6
-  words), the ladder's provisional tag (10 px). The rulebook's three words at 10 px are now at 11 (#1059). The Glicko-2 panel goes behind a disclosure: the ladder's 204 words
+  words), the ladder's provisional tag (10 px). The rulebook's three words at 10 px are now 11 px (#1059).
+  The Glicko-2 panel goes behind a disclosure: the ladder's 204 words
   are mostly its explanation, which is ADR 0124's.
 - **Words.** The words of `docs/domain/player-terminology.md`: a mutation is acquired, not bought ("Bought" becomes
   "Acquired"). No rule is restated; how the ladder counts is said once, closed, under its disclosure.
@@ -1101,7 +1102,8 @@ last read (ADR 0191).
 The head is the ladder's form ([the ladder before a ranked game](#the-ladder-before-a-ranked-game-leaderboard)): the
 eyebrow and the title on the band, at 28 px on a phone. The detail line and the languages stay under the band, in
 that order. At 320 the band is 102 px tall in English, its eyebrow on two lines. The French eyebrow is longer and still
-fits: `studio/browser/rules.spec.js` holds the French band within 120 px, its words at 4.5:1 on the painting (#1060).
+fits: `studio/browser/rules.spec.js` holds the French band within 120 px, its words at a contrast of at least 4.5:1 on
+the painting (#1060).
 
 - **Focus `50% 55%`**, passed by the page, not the declaration's: the showcase's 404 draws the painting whole. At 390
   the band shows the painting from 22% to 82% of its height, the eye and the claws' tips in the stone; at 320, 102 px
@@ -1112,8 +1114,9 @@ fits: `studio/browser/rules.spec.js` holds the French band within 120 px, its wo
 - **Lazy**, as on the ladder.
 - **Offline.** `rules.js` imports nothing of its own today. It loads `picture.js` with a dynamic `import()` whose failure
   is caught, so a book read offline draws whatever is kept. The worker keeps the picture kit for the offline plate, so
-  the module loads, and the head's painting at the two sizes a phone asks for, 354 and 708 px, about 37 KB (#1060,
-  the owner's choice). A wider screen asks for a wider file, which is not kept: its band is soot with its words.
+  the module loads, and the head's painting at its phone width and twice it, 354 and 708 px, about 37 KB (#1060, the
+  owner's choice). A screen that asks for a wider file, a phone of density 3 among them (it asks for the 1280), has a
+  band of soot with its words.
 
 ### States
 
@@ -1124,7 +1127,8 @@ fits: `studio/browser/rules.spec.js` holds the French band within 120 px, its wo
 - **Waiting**: none: a language is drawn from the book already read, or read once.
 - **Error**: the book could not be read: `#rules-problem` says so (alert); the head stays. Read, not seen.
 - **Offline**: the worker gives the copy this device kept, and `#rules-kept` says the table may play a newer one. On a
-  phone the band wears its painting, which the worker keeps; on a wider screen it is soot with its words. Read in
+  phone of density 2 or less the band wears its painting, which the worker keeps; on a screen that asks for a wider
+  file it is soot with its words. Read in
   `table/sw.js` and `table/rules.js`, and held by `sw.test.js`, not seen.
 
 ### Motion
@@ -1149,7 +1153,8 @@ The head has no beat. The contents' disclosures open at once.
 - **Announced**: the search's count through `#rules-status` (`aria-live="polite"`); the kept copy through `#rules-kept`
   (`role="status"`); a failure through `#rules-problem` (`role="alert"`).
 - **Targets**: none under 44 px (#1059). A link in the text reaches 44 px by its padding, which its negative margin gives
-  back to the line. A table wider than the screen is a stop of the keyboard, named by its section, so it can be scrolled
+  back to the line; its focus ring stays near its words. Two links on lines next to each other would overlap: the
+  spec's overlap count says so, and the text is then rewritten or the links set apart. A table wider than the screen is a stop of the keyboard, named by its section, so it can be scrolled
   without a pointer (axe's `scrollable-region-focusable`). `studio/browser/rules.spec.js` holds the page to the walk's
   measures in both languages at every width.
 
@@ -1168,7 +1173,8 @@ The head has no beat. The contents' disclosures open at once.
 - Done (#1059): the eyebrow is at 11 px, as the ladder's; no target is under 44 px; axe finds nothing at 320. The
   baseline's lines are the walk's of `987374a`, before this; the next walk writes them again.
 - The head's choices are the ladder's. Here too the `start` side is the brighter one, chosen for the eye.
-- Done (#1060): with no network the band wears its painting on a phone.
+- Done (#1060): with no network the band wears its painting on a phone of density 2 or less. A phone of density 3
+  asks for the 1280 px file, which is not kept: keeping it is about 68 KB more, the owner's to decide.
 
 ## The offline page (`offline`)
 

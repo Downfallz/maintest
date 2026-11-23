@@ -16,7 +16,8 @@ name them in its own source. ADR 0166 keeps one page; ADR 0191 adds the rulebook
 ## Decision
 
 We will keep, beside the offline page and the rulebook, the offline page's script (`/offline.js`), the picture kit
-(`/picture.js`, `/picture-focus.js`, `/page-art.js`) and the plate's own files. The plate is a declaration of its own,
+(`/picture.js`, `/picture-form.js`, `/picture-focus.js`, `/page-art.js`, `/battle-page-art.js`) and the plate's own
+files. The rulebook's head painting is kept the same way, at its phone width and twice it (#1060). The plate is a declaration of its own,
 `parasite-offline`, with only the two files it is drawn from. The worker reads their names off the text of
 `page-art.js` at install, and each time the network answers a fresh copy of it keeps the files it names and lets go
 of the older ones. These are given from their copy only when the network cannot answer at all, as ADR 0191's shared
@@ -30,10 +31,12 @@ the address of whatever navigation failed.
 - Good: a failure anywhere leaves the page as it was: a missing script or file removes the plate's room.
 - Bad: the worker reads a module's text to find file names, a coupling to the form `scripts/ux/pictures.mjs` writes;
   a test reads the real `page-art.js` with it.
-- Bad: `offline.js` is fetched at install only, like `offline.html`, while the kit is refreshed on every page that
-  loads it. After a deploy that changes the kit and not the worker, an older `offline.js` may meet a newer kit; it
-  fails to the page's words.
-- Neutral: other pages read offline (the rulebook) now find the kit; their paintings are not kept, and stay empty.
+- Bad: no page loads `offline.js` online, so the worker asks for it again each time it keeps a `page-art.js` that
+  differs from its copy (#1061): one request a deploy. If that request fails, an older `offline.js` meets a newer kit
+  until the next one; it fails to the page's words.
+- Neutral: other pages read offline (the rulebook) now find the kit. The rulebook's head is kept at 354 and 708 px,
+  about 37 KB; a screen that asks for a wider file, a phone of density 3 among them, shows the band without it. Other
+  pages' paintings are not kept, and stay empty.
 
 ## Alternatives considered
 

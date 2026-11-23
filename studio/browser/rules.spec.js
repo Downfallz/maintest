@@ -336,3 +336,22 @@ test('in French the head\'s band holds its words at 4.5:1 and stays within 120 p
   expect(contrast.texts).toBeGreaterThanOrEqual(2);
   expect(contrast.under, JSON.stringify(contrast)).toBe(0);
 });
+
+// A table hidden by the filter measures no width; the landing that clears the filter brings it back, and with it its
+// stop of the keyboard when it is wider than the screen (#1059).
+test('a table wider than the screen is a stop of the keyboard again once a landing clears the filter that hid it', async ({ page }) => {
+  // At 320 the capstones' table is wider than the screen.
+  await page.setViewportSize({ width: 320, height: 740 });
+  await guest(page);
+  await open(page);
+  const capstones = page.locator('#capstones .rules-table');
+  await expect(capstones).toHaveAttribute('tabindex', '0');
+  await expect(capstones).toHaveAttribute('role', 'region');
+
+  await page.getByLabel('Find a rule').fill('provisional');
+  await expect(capstones).toBeHidden();
+  await page.goto('/table/rules.html#what-changed');
+
+  await expect(capstones).toBeVisible();
+  await expect(capstones).toHaveAttribute('tabindex', '0');
+});

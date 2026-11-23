@@ -391,6 +391,8 @@ export function applyFilter(doc, book, query) {
     if (details && kept) details.open = kept.parts.has(element.dataset.part);
   }
   doc.getElementById('rules-changes').hidden = Boolean(kept);
+  // A table the filter hid measured no width: what it shows again is measured again, whoever cleared it.
+  reachScrolls(doc);
   const status = doc.getElementById('rules-status');
   if (!kept) status.textContent = words.total(book.parts.length, total);
   else if (kept.sections.size === 0 && kept.parts.size === 0) status.textContent = words.noMatch;
@@ -432,8 +434,10 @@ export function land(doc, book, hash, { win = globalThis, focus = true } = {}) {
 export function mountRules(doc, book, win = globalThis) {
   const state = { book };
   const filter = doc.getElementById('rules-filter');
-  filter.addEventListener('input', () => { applyFilter(doc, state.book, filter.value); reachScrolls(doc); });
+  filter.addEventListener('input', () => applyFilter(doc, state.book, filter.value));
   win.addEventListener('resize', () => reachScrolls(doc));
+  // The display face can widen a table once it has loaded.
+  doc.fonts?.ready.then(() => reachScrolls(doc));
   doc.getElementById('rules-filter-form').addEventListener('submit', event => {
     event.preventDefault();
     const first = doc.querySelector('#rules-book [data-section]:not([hidden])');
@@ -448,7 +452,6 @@ export function mountRules(doc, book, win = globalThis) {
     translatePage(doc, shown.language);
     drawBook(doc, shown);
     applyFilter(doc, shown, filter.value);
-    reachScrolls(doc);
     doc.getElementById('rules-problem').hidden = true;
     doc.getElementById('rules-loading').hidden = true;
     doc.body.dataset.rules = 'ready';
@@ -559,8 +562,8 @@ async function load(doc, win = globalThis) {
 
 if (typeof document !== 'undefined') {
   // The claws on the arch: the rules hold the game up (docs/art/journeys/pages.md). Loaded apart, and its failure let
-  // go, so the book draws whatever the worker kept. Offline the worker gives the kit and this painting at a phone's
-  // sizes (#1060); a wider screen's band is soot with its words.
+  // go, so the book draws whatever the worker kept. Offline the worker gives the kit and this painting's 354 and 708 px
+  // files (#1060): a screen that asks for a wider one, a phone of density 3 among them, has a band of soot and words.
   import('./picture.js').then(({ wearPageHead }) => wearPageHead(document, 'latch-under-the-arch', { page: 'table/rules', focus: '50% 55%' })).catch(() => {});
   await load(document);
 }

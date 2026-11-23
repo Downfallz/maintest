@@ -51,6 +51,8 @@
 /* A link in the text is a target a finger can reach (#1059): its padding reaches 44 px, and its negative margin gives
    the room back, so the line is laid out as before. */
 .rules-book :is(p, li, td) a { padding: 14px 10px; margin: -14px -10px; }
+/* Its ring stays near its words, not around its padding, which reaches into the lines above and below. */
+.rules-book :is(p, li, td) a:focus-visible { outline-offset: -9px; }
 /* A table wider than the screen scrolls, and is then reached from the keyboard (rules.js, scrollsReached). */
 .rules-table:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .rules-table { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: var(--radius-soft); background: var(--panel); }

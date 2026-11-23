@@ -420,6 +420,32 @@ test('a fresh page-art.js refreshes the kept offline.js with it, so the offline 
   assert.equal(w.store.get('/offline.js').body, 'fresh /offline.js');
 });
 
+test('a page-art.js the same as the kept one asks nothing more of the network: offline.js is already its deploy\'s', async () => {
+  const pageArt = pageArtNaming('parasite-offline-358.11111111.webp');
+  const asked = [];
+  const w = offlineWorker({
+    network: async path => { asked.push(path); return { ...answer(`fresh ${path}`), text: async () => pageArt }; },
+    kept: { '/offline.js': 'kept offline.js', '/page-art.js': pageArt, '/page-art/parasite-offline-358.11111111.webp': 'the plate' },
+  });
+  const f = fetched('cors', { url: 'https://table.example/page-art.js' });
+
+  w.handlers.fetch(f.event);
+  await f.answered();
+  await f.settled();
+
+  assert.deepEqual(asked.map(request => request.url ?? request), ['https://table.example/page-art.js']);
+  assert.equal(await w.store.get('/offline.js').text(), 'kept offline.js');
+});
+
+test('installing asks for offline.js once', async () => {
+  const asked = [];
+  const w = offlineWorker({ network: async path => { asked.push(path); return { ...answer(`installed ${path}`), text: async () => pageArtNaming('parasite-offline-358.11111111.webp') }; }, kept: { '/page-art.js': 'old' } });
+
+  await install(w);
+
+  assert.equal(asked.filter(path => path === '/offline.js').length, 1);
+});
+
 test('a fresh page-art.js keeps the plate it names and lets go of the older derivation\'s', async () => {
   const pageArt = pageArtNaming('parasite-offline-358.33333333.webp');
   const w = offlineWorker({

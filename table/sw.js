@@ -18,7 +18,7 @@ const RULEBOOK_OWN = new Set([RULEBOOK, '/rules.js', '/rules.css', '/rules.json'
 const RULEBOOK_SHARED = ['/table.css', '/lobby.css', '/identity.css', '/motion.js', '/brand-mark.svg', '/fonts/marcellus-latin-400.woff2'];
 // What the offline page draws its plate with (ADR 0200): its script, the picture kit and the sizes it derived. Given
 // only when the network cannot answer at all. The kit is refreshed each time a page loads it, and offline.js, which no
-// page loads online, with page-art.js (#1061): the script and the kit it imports stay one deploy's.
+// page loads online, each time a page-art.js that differs from the kept one is kept (#1061), when the network answers.
 // Every module offline.js imports is here: sw.test.js walks its imports.
 const OFFLINE_SCRIPT = '/offline.js';
 const OFFLINE_SCRIPTS = [OFFLINE_SCRIPT, '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/battle-page-art.js'];
@@ -26,8 +26,8 @@ const PAGE_ART = '/page-art.js';
 const KEPT_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED, ...OFFLINE_SCRIPTS]);
 
 // The paintings kept with them, as page-art.js names their files: the offline page's plate, every size of it, and the
-// rulebook's head (#1060) at the sizes a phone asks for, its phone width and twice it, so a book read offline on a phone
-// wears its painting. A wider screen asks for a wider file, which is not kept: its band is soot with its words.
+// rulebook's head (#1060) at its phone width and twice it, the owner's choice: 354 and 708 px, about 37 KB. A screen that
+// asks for a wider file, a phone of density 3 among them, has a band of soot with its words.
 const KEPT_PICTURES = [{ name: 'parasite-offline' }, { name: 'latch-under-the-arch', phone: 'table/rules' }];
 
 // The files of the kept paintings, as page-art.js names them (scripts/ux/pictures.mjs writes one entry a picture, its
@@ -176,16 +176,31 @@ async function copyOf(path) {
   return new Response(copy.body, { status: copy.status, statusText: copy.statusText, headers });
 }
 
-async function keep(path, response) {
+// At install every file is fetched anyway: `follow` is false there, so offline.js is not asked for twice.
+async function keep(path, response, { follow = true } = {}) {
   if (!keepable(response)) return;
   try {
     const cache = await caches.open(CACHE);
     // The sizes are read before the copy is put: a response's body is read once.
-    const pictures = path === PAGE_ART ? pictureFiles(await response.clone().text()) : null;
+    const text = path === PAGE_ART ? await response.clone().text() : null;
+    const changed = text !== null && (await (await cache.match(path))?.text?.()) !== text;
     await cache.put(path, response);
-    if (pictures) await keepPictures(cache, pictures);
+    if (text === null) return;
+    await keepPictures(cache, pictureFiles(text));
+    // A page-art.js of another deploy brings that deploy's offline.js, which no page loads online (#1061).
+    if (changed && follow) await keepFresh(cache, OFFLINE_SCRIPT);
   } catch {
     // A full or refused cache keeps the copy it had: the page itself was answered.
+  }
+}
+
+// A path asked of the network and kept when it answers; a failure keeps the copy there was.
+async function keepFresh(cache, path) {
+  try {
+    const response = await fetch(path);
+    if (keepable(response)) await cache.put(path, response);
+  } catch {
+    // No network: the kept copy stays until the next page-art.js.
   }
 }
 
@@ -223,7 +238,6 @@ async function keptFile(event, path) {
   try {
     const response = await fetch(event.request);
     if (keepable(response) && !isPictureFile(path)) event.waitUntil(keep(path, response.clone()));
-    if (keepable(response) && path === PAGE_ART) event.waitUntil(fetch(OFFLINE_SCRIPT).then(fresh => keep(OFFLINE_SCRIPT, fresh)).catch(() => {}));
     if (unanswered(response) && RULEBOOK_OWN.has(path)) return (await copyOf(path)) ?? response;
     return response;
   } catch {
@@ -237,7 +251,7 @@ async function keptFile(event, path) {
 async function install() {
   const cache = await caches.open(CACHE);
   await cache.add(OFFLINE);
-  await Promise.allSettled([...KEPT_FILES].map(async path => keep(path, await fetch(path))));
+  await Promise.allSettled([...KEPT_FILES].map(async path => keep(path, await fetch(path), { follow: false })));
   await self.skipWaiting();
 }
 
