@@ -10,7 +10,8 @@ namespace DownfallArena.Infrastructure.Work;
 /// day, <c>&lt;yyyy-MM-dd&gt;.json</c>, holding its counts a kind each. A document that does not parse, or a count
 /// without its kind, reads as nothing counted, so the next addition writes over it instead of failing on it for good.
 /// A field this revision does not know, on the day or on a kind, is written back as it was read: during a deploy the
-/// revision before runs beside the next, and would otherwise wipe a count the next one added (#1151).
+/// revision before runs beside the next, and would otherwise wipe a count the next one added (#1151). A kind whose
+/// only counts are ones this revision does not know is not read: it is kept, and the admin panel leaves it out.
 /// </summary>
 internal static class NoticeCountDocuments
 {
@@ -54,7 +55,7 @@ internal static class NoticeCountDocuments
         return [.. (Parse(json)?.Kinds ?? [])
             .Where(count => !string.IsNullOrWhiteSpace(count?.Kind))
             .Select(count => new NoticeCount(count!.Kind!, Math.Max(0, count.Sent), Math.Max(0, count.Refused), Math.Max(0, count.Gone)))
-            // A kind that counts only what this revision does not know is kept on the next write, not read as zeros.
+            // A kind whose only counts are ones this revision does not know is kept on the next write, not read as zeros.
             .Where(count => !count.IsEmpty)];
     }
 

@@ -52,15 +52,38 @@ internal sealed class WebPubSubRelay : IChangeRelay
         return bar <= 0 || bar == message.Length - 1 ? null : (message[..bar], message[(bar + 1)..]);
     }
 
+    /// <summary>The keys sends are coalesced by: the public lists, one account's lists, one account's notices alone.</summary>
+    public const string LobbyKey = "l:";
+
+    public static string AccountKey(AccountId account) => $"a:{account.Value}";
+
+    public static string NoticesKey(AccountId account) => $"n:{account.Value}";
+
+    /// <summary>
+    /// Who a lobby's key is said to, and the word: the lobby's group (no user) or one account. A page from before
+    /// <c>account notices</c> reads it as <c>account</c>, its prefix (#1152).
+    /// </summary>
+    public static (string? User, string Word) Addressed(string key)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        return key[0] switch
+        {
+            'l' => (null, "lobby"),
+            'n' => (key[2..], "account notices"),
+            'a' => (key[2..], "account"),
+            _ => throw new ArgumentException($"No lobby key: {key}.", nameof(key)),
+        };
+    }
+
     public Task SentAsync() => _sends.Idle;
 
     public void Table(string table) => _sends.Post($"t:{table}");
 
-    public void Lobby() => _sends.Post("l:");
+    public void Lobby() => _sends.Post(LobbyKey);
 
-    public void Account(AccountId account) => _sends.Post($"a:{account.Value}");
+    public void Account(AccountId account) => _sends.Post(AccountKey(account));
 
-    public void Notices(AccountId account) => _sends.Post($"n:{account.Value}");
+    public void Notices(AccountId account) => _sends.Post(NoticesKey(account));
 
     public async Task<Uri> SeatAsync(string table, CancellationToken cancellationToken = default) =>
         await _client.GetClientAccessUriAsync(Lifetime, userId: null, roles: null, groups: [TableGroup(table)], cancellationToken);
@@ -80,15 +103,17 @@ internal sealed class WebPubSubRelay : IChangeRelay
                 await _client.SendToGroupAsync(TableGroup(value), "changed", ContentType.TextPlain);
                 await _client.SendToGroupAsync(HostsGroup, $"{Origin}|{value}", ContentType.TextPlain);
                 break;
-            case 'l':
-                await _client.SendToGroupAsync(LobbyGroup, "lobby", ContentType.TextPlain);
-                break;
-            case 'n':
-                // A page from before this word reads it as "account", its prefix (#1152).
-                await _client.SendToUserAsync(value, "account notices", ContentType.TextPlain);
-                break;
             default:
-                await _client.SendToUserAsync(value, "account", ContentType.TextPlain);
+                var (user, word) = Addressed(key);
+                if (user is null)
+                {
+                    await _client.SendToGroupAsync(LobbyGroup, word, ContentType.TextPlain);
+                }
+                else
+                {
+                    await _client.SendToUserAsync(user, word, ContentType.TextPlain);
+                }
+
                 break;
         }
     }

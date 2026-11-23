@@ -31,7 +31,7 @@ public sealed class BlobNoticeCountStore : INoticeCountStore
 
     /// <summary>
     /// Reads the day again to write back what this revision does not know of it (#1151): a write over a version that
-    /// has moved since is refused there, without trying it.
+    /// has moved since is refused here, without being tried.
     /// </summary>
     public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {

@@ -106,7 +106,7 @@ test('a push service the host does not send to is said without asking for a retr
   h.transport.push = async () => ({ ok: false, status: 400, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' } });
   await tick();
   await h.control.toggle();
-  assert.equal(h.control.model().message, 'This browser\'s notifications are not supported here.');
+  assert.equal(h.control.model().message, 'This browser\'s push service is not one this table sends to. Try another browser.');
   assert.doesNotMatch(h.control.model().message, /try again/i);
   assert.ok(h.calls.includes('unsubscribe'), 'the subscription this page made is let go of');
 });

@@ -25,9 +25,9 @@ have missed something:
 
 - **The lobby's stream.** `GET /api/lobby/events` (`LobbyChanges`) streams `ready`, then `changed` with
   `lobby <n>` when the public lists moved and `account <n>` when the signed-in player's own lists moved, and a
-  keep-alive every twenty seconds. `account notices <n>` says only the player's notices moved (marked read on
-  another page): the bell alone reads again, and a page from before it reads every list, as its prefix says
-  (#1152). Anybody may open it; only a signed-in player hears of their own lists.
+  keep-alive every twenty seconds. `account notices <n>` says that only the player's notices moved, because they
+  were marked read on another page. Only the bell reads again. A page from before this word reads every list,
+  because it matches the prefix `account` (#1152). Anybody may open it; only a signed-in player hears of their own lists.
   - The public lists move when a held table's *shape* changes: whether it is over, and per seat who holds it, who
     it is kept for, who declined it, whether it is open, whether its person has arrived and whether they are being
     asked something. A step of a match moves none of that, so a lobby in view reads when a game begins, ends,

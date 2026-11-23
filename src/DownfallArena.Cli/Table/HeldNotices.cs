@@ -29,9 +29,9 @@ internal sealed class HeldNotices
     /// <summary>
     /// Runs the work, then gives the notices it held, once it has let go of the gate, whether it finished or failed: a
     /// release that fails at its third table has told the players at the first two. A notice that cannot go is a line on
-    /// <paramref name="said" />. Work begun inside another scope holds its notices in a scope of its own all the same, and
-    /// at its end hands them to the outer scope while that one is still open, or gives them itself once it has closed: a
-    /// loop a route started runs on after the route answered, and its notices still wait for its own work (#1178).
+    /// <paramref name="said" />. Work begun inside another scope holds its notices in a scope of its own. At its end it hands
+    /// them to the outer scope if that one is still open, or gives them itself if it has closed. A loop a route started
+    /// runs on after the route answered, and its notices still wait for its own work (#1178).
     /// </summary>
     public static async Task<T> AfterAsync<T>(Func<Task<T>> work, Action<string> said)
     {
