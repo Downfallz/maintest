@@ -202,6 +202,8 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
     if (!discord?.clientId) return;
     say('sign-in-problem');
     el('discord-button').disabled = true;
+    // A page brought back from the back-forward cache, the player having pressed Back at Discord, gives the button back.
+    win.addEventListener?.('pageshow', event => { if (event.persisted) el('discord-button').disabled = false; }, { once: true });
     try {
       await startDiscord({ clientId: discord.clientId, origin: win.location.origin, next: nextPath(win.location.search), storage: session, go: url => win.location.assign(url) });
     } catch (error) {
@@ -215,8 +217,9 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
   async function withWays(state) {
     const offered = state.mode === 'dev' || state.mode === 'off' ? [] : state.ways;
     discord = offered.find(each => each.provider === 'discord') ?? null;
-    const handed = state.account ? null : takeTicket(session);
-    if (handed && offered.length) await signedIn({ needsUsername: true, ticket: handed });
+    // Taken only where the window can open: a host that could not be read keeps it for the reload it asks for.
+    const handed = state.account || offered.length === 0 ? null : takeTicket(session);
+    if (handed) await signedIn({ needsUsername: true, ticket: handed });
     await withGoogle(offered.find(each => each.provider === 'google'));
   }
 

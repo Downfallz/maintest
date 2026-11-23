@@ -4,7 +4,8 @@ namespace DownfallArena.Application.Accounts.Ports;
 /// One way to sign in (ADR 0122, ADR 0204): a provider that names itself, as its identities and its route do
 /// (<c>google</c>, <c>/api/account/google</c>), and turns what the page sent into who the provider says sent it.
 /// Null for anything that is not a proof the provider gave, so a forged, expired or foreign proof is a refusal and
-/// never an exception. Owned by Application, implemented by Infrastructure, one per provider.
+/// never an exception. A provider that must call out and cannot throws <see cref="SignInUnavailableException" />
+/// instead: that is not the player's fault. Owned by Application, implemented by Infrastructure, one per provider.
 /// </summary>
 public interface ISignInProvider
 {

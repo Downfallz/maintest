@@ -260,8 +260,9 @@ internal static class TableHost
             options.SignIn,
             clients,
             () => kept.Add(new GoogleSigningKeys(kept.Add(new HttpClient()), clock)),
-            () => kept.Add(new HttpClient { Timeout = SignInProviders.Patience }),
-            clock);
+            () => kept.Add(new HttpClient()),
+            clock,
+            loopback: options.Bind == HttpHost.Loopback);
         if (signInProblem is not null)
         {
             await Console.Error.WriteLineAsync(signInProblem);

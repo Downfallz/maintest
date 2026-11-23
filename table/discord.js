@@ -74,13 +74,15 @@ export function takeKept(storage) {
 
 /**
  * What Discord's return says, against what the tab kept: the code and its verifier to post, or why not. `cancelled`
- * is the player saying no at Discord; `lapsed` a return this tab did not start, or started too long ago; `mismatch` a
+ * is the player saying no at Discord; `failed` any other error Discord returned with; `lapsed` a return this tab did not start, or started too long ago; `mismatch` a
  * return whose state is not the one this tab sent, which is somebody else's code and is never posted.
  */
 export function discordReturn(search, kept, now = Date.now()) {
   const query = new URLSearchParams(search ?? '');
   const next = typeof kept?.next === 'string' ? kept.next : null;
-  if (query.get('error')) return { problem: 'cancelled', next };
+  // The player saying no goes straight back; any other error (a misconfigured app, Discord failing) is said.
+  if (query.get('error') === 'access_denied') return { problem: 'cancelled', next };
+  if (query.get('error')) return { problem: 'failed', next };
   if (!kept || typeof kept.state !== 'string' || typeof kept.verifier !== 'string' || !(now - kept.at < KEPT_FOR_MS)) return { problem: 'lapsed', next: null };
   const code = query.get('code');
   if (!code || query.get('state') !== kept.state) return { problem: 'mismatch', next: null };

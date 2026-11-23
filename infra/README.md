@@ -107,15 +107,14 @@ once:
    game, *Create*. Its *General Information* page can carry the game's icon: players see it on Discord's consent page.
 
 2. **OAuth2**, under *Redirects*, *Add Redirect* for each address the table answers at, with `/signin/discord`
-   after it (the platform's address comes from [runbooks/sign-ins.md](runbooks/sign-ins.md), step 3), and the
-   laptop's:
+   after it (the platform's address comes from [runbooks/sign-ins.md](runbooks/sign-ins.md), step 3):
 
    ```text
    https://play.downfallinstinct.com/signin/discord
-   http://localhost:5099/signin/discord
    ```
 
-   *Save Changes*.
+   *Save Changes*. Never list `localhost` here: a laptop's table gets an application of its own, made the same way
+   with `http://localhost:5099/signin/discord` as its one redirect. A hosted table refuses a return over http.
 
 3. **OAuth2**, *Public Client*: on. *Save Changes*. Without it Discord refuses the exchange, which carries no secret,
    and every Discord sign-in answers *Your sign-in could not be checked*.
@@ -136,8 +135,9 @@ once:
    *Invalid OAuth2 redirect_uri* means step 2 does not list that address.
 
 Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
-internal id and the provider's id for each way in (Google's subject, Discord's user id). No email is kept. A player deletes their account from the
-account menu on the home page; the lobby's *What we keep* panel says the same to players.
+internal id and the provider's id for each way in (Google's subject, Discord's user id). No email is kept. A player
+deletes their account from the account menu on the home page; the lobby's *What we keep* panel says the same to
+players.
 
 ## The showcase at the apex
 

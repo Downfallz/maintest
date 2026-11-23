@@ -77,7 +77,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>The host the command line composes with the providers <c>--sign-in</c> lists (sign-in methods plan, P2).</summary>
-    private async Task<ComposedHost?> ComposeSigningInAsync(string? googleClientId) =>
+    private async Task<ComposedHost?> ComposeSigningInAsync(string? googleClientId, string? discordClientId = null) =>
         await TableHost.ComposeAsync(
             _hosted.Services,
             new CliOptions
@@ -86,8 +86,9 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
                 Output = "out.csv",
                 Record = Path.Combine(_root, "playtest"),
                 Accounts = AccountsMode.SignIn,
-                SignIn = ["google"],
+                SignIn = discordClientId is null ? ["google"] : ["google", "discord"],
                 GoogleClientId = googleClientId,
+                DiscordClientId = discordClientId,
                 Lobby = true,
                 Port = FreePort(),
             },
@@ -105,6 +106,17 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([("google", "1234.apps.googleusercontent.com")]);
         (await _host.Accounts.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(401);
         (await _host.Accounts.HandleAsync("POST", "/api/account/discord", """{"code":"x"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task The_host_signs_in_with_discord_for_the_application_it_was_given()
+    {
+        _host = (await ComposeSigningInAsync("1234.apps.googleusercontent.com", "1311111111111111111")).ShouldNotBeNull();
+
+        _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId))
+            .ShouldBe([("google", "1234.apps.googleusercontent.com"), ("discord", "1311111111111111111")]);
+        // A proof of the wrong shape is refused before Discord is asked, so this asks nobody.
+        (await _host.Accounts.HandleAsync("POST", "/api/account/discord", """{"code":"x"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(401);
     }
 
     /// <summary>Signs the name in through the host's own sign-in, and answers its session and its account.</summary>

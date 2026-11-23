@@ -729,7 +729,7 @@ public sealed class AccountApiTests : IDisposable
     public async Task Discord_signs_a_new_player_in_at_its_route_through_the_code_exchange()
     {
         using var http = new HttpClient(new DiscordAnswers(accepts: "the-code"));
-        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http));
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
         var answer = await api.HandleAsync("POST", "/api/account/discord", DiscordProof("the-code"), Nobody);
         var ticket = Json(answer).GetProperty("ticket").GetString();
 
@@ -743,7 +743,7 @@ public sealed class AccountApiTests : IDisposable
     public async Task A_code_discord_refuses_is_a_rejected_sign_in()
     {
         using var http = new HttpClient(new DiscordAnswers(accepts: "the-code"));
-        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http));
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
         var said = new List<string>();
         api.Said = said.Add;
 
@@ -752,6 +752,21 @@ public sealed class AccountApiTests : IDisposable
         answer.Status.ShouldBe(401);
         Json(answer).GetProperty("error").GetString().ShouldBe("Account.SignInRejected");
         said.ShouldBe(["  Sign-in started (discord).", "  Sign-in refused (discord)."]);
+    }
+
+    [Fact]
+    public async Task Discord_out_of_service_is_unavailable_and_counted_apart_from_a_refusal()
+    {
+        using var http = new HttpClient(new DiscordDown());
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
+        var said = new List<string>();
+        api.Said = said.Add;
+
+        var answer = await api.HandleAsync("POST", "/api/account/discord", DiscordProof("the-code"), Nobody);
+
+        answer.Status.ShouldBe(503);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.ProviderUnavailable");
+        said.ShouldBe(["  Sign-in started (discord).", "  Sign-in unavailable (discord): Discord answered 503."]);
     }
 
     [Fact]
@@ -997,6 +1012,13 @@ public sealed class AccountApiTests : IDisposable
 
     private static string DiscordProof(string code) =>
         $$"""{"code":"{{code}}","verifier":"dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk","redirect":"https://play.downfallinstinct.com/signin/discord"}""";
+
+    /// <summary>Discord in an incident: every call answers 503.</summary>
+    private sealed class DiscordDown : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
+    }
 
     /// <summary>Discord's token exchange and current authorization, shaped as Discord answers them: one code is good.</summary>
     private sealed class DiscordAnswers(string accepts) : HttpMessageHandler

@@ -51,6 +51,12 @@ test('a player who says no at Discord is cancelled, and goes back where they wer
   assert.deepEqual(discordReturn('?error=access_denied&state=s', { state: 's', verifier: 'v', next: '/play?x=1', at: 0 }, 1), { problem: 'cancelled', next: '/play?x=1' });
 });
 
+test('any other error Discord returns with is a failure the page says, not a cancel', () => {
+  for (const error of ['invalid_scope', 'unauthorized_client', 'invalid_request', 'server_error']) {
+    assert.equal(discordReturn(`?error=${error}&state=s`, { state: 's', verifier: 'v', next: null, at: 0 }, 1).problem, 'failed', error);
+  }
+});
+
 test('a tab that keeps nothing cannot leave for Discord and says why', async () => {
   const storage = { setItem() { throw new Error('denied'); } };
   let went = false;

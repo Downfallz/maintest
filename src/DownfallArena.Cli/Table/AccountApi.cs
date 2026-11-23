@@ -482,7 +482,19 @@ internal sealed class AccountApi
         }
 
         Counted(StepStarted, name);
-        if (await provider.SignInAsync(proof) is not { } identity || identity.Provider != name)
+        ExternalIdentity? vouched;
+        try
+        {
+            vouched = await provider.SignInAsync(proof);
+        }
+        catch (SignInUnavailableException exception)
+        {
+            // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
+            Said($"  Sign-in unavailable ({name}): {exception.Message}");
+            return Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
+        }
+
+        if (vouched is not { } identity || identity.Provider != name)
         {
             Counted(StepRefused, name);
             return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
@@ -558,7 +570,7 @@ internal sealed class AccountApi
     /// <summary>One step of a sign-in, said as a line the ops report can count by provider.</summary>
     private void Counted(string step, string provider) => Said($"  Sign-in {step} ({provider}).");
 
-    // The steps a sign-in's lines name, as the ops report reads them.
+    // The steps a sign-in's lines name, as the ops report reads them; an unavailable provider is a line of its own.
     private const string StepStarted = "started";
     private const string StepFinished = "finished";
     private const string StepRefused = "refused";

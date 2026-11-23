@@ -1,6 +1,6 @@
 # The sign-ins' addresses
 
-Two sign-ins have to know every address the table answers at, and neither learns it by itself:
+Three sign-ins have to know every address the table answers at, and none learns it by itself:
 
 - the **admin panel**'s sign-in, the platform's Entra one (ADR 0081): its redirect URIs, one per address, set by
   `infra/bootstrap.sh redirect`;
@@ -63,7 +63,7 @@ Run this runbook when the table gets an address:
 
 5. **Discord**, when the table offers it: <https://discord.com/developers/applications>, the table's application,
    *OAuth2*, *Redirects*, *Add Redirect* for each address of step 3 not listed yet, with `/signin/discord` after it,
-   and remove the old platform address's. *Save Changes*. For the domain:
+   and remove the redirect of the platform address it replaces. *Save Changes*. For the domain:
 
    ```text
    https://play.downfallinstinct.com/signin/discord

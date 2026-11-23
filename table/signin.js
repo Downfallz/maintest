@@ -12,9 +12,9 @@ export function lobbyPath(next) {
 
 /** What the page says when it cannot sign the player in, by why. */
 export function returnProblem(problem) {
-  return problem === 'mismatch'
-    ? 'This sign-in was not started from this tab, so it was not used. Sign in again from the lobby.'
-    : 'This sign-in ran out. Sign in again from the lobby.';
+  if (problem === 'mismatch') return 'This sign-in was not started from this tab, so it was not used. Sign in again from the lobby.';
+  if (problem === 'failed') return 'Discord could not sign you in. Try again from the lobby.';
+  return 'This sign-in ran out. Sign in again from the lobby.';
 }
 
 export async function finishDiscord({ win = globalThis, doc = globalThis.document, storage = win.sessionStorage, request = accountRequest } = {}) {

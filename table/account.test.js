@@ -198,3 +198,26 @@ test('a name to choose handed over by Discord\'s return opens the name window on
   assert.equal(doc.getElementById('name-dialog').open, true);
   assert.equal(session.kept.has('downfall.signInTicket'), false);
 });
+
+test('a page brought back from the cache after leaving for Discord gives its button back', async () => {
+  const { mountAccount } = await import('./account.js');
+  const doc = anyPage();
+  const heard = {};
+  const win = { location: { origin: 'https://play.example', search: '', assign() {} }, addEventListener: (kind, listener) => { heard[kind] = listener; } };
+  await mountAccount(doc, { readMe: async () => ({ accounts: 'signin', signIn: [{ provider: 'discord', clientId: '1311' }], account: null }), google: async () => ({}), session: tabStore(), win });
+  await doc.getElementById('discord-button').listeners.click();
+  assert.equal(doc.getElementById('discord-button').disabled, true);
+
+  heard.pageshow({ persisted: true });
+
+  assert.equal(doc.getElementById('discord-button').disabled, false);
+});
+
+test('a name to choose is kept while the host cannot be read, for the reload', async () => {
+  const { mountAccount } = await import('./account.js');
+  const session = tabStore({ 'downfall.signInTicket': 'ticket-1' });
+
+  await mountAccount(anyPage(), { readMe: async () => { throw new Error('down'); }, google: async () => ({}), session, win: { location: { origin: 'https://play.example', search: '' } } });
+
+  assert.equal(session.kept.get('downfall.signInTicket'), 'ticket-1');
+});

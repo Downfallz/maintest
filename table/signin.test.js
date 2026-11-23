@@ -79,3 +79,12 @@ test('a player who said no at Discord goes straight back', async () => {
   assert.equal(win.replaced, '/lobby?next=%2Fj%2Fabc');
   assert.equal(lobbyPath(null), '/lobby');
 });
+
+test('an error Discord returns with other than the player saying no is said, with the way back', async () => {
+  const doc = page();
+  const win = windowAt('?error=invalid_scope&state=st');
+
+  assert.equal(await finishDiscord({ win, doc, storage: tab(kept), request: async () => ({}) }), 'failed');
+  assert.equal(win.replaced, null);
+  assert.equal(doc.getElementById('signin-state').textContent, returnProblem('failed'));
+});

@@ -501,7 +501,7 @@ public sealed class AdminApiTests : IDisposable
             var store = new Infrastructure.Accounts.FileAccountStore(root);
             var google = new Infrastructure.Accounts.GoogleIdTokenVerifier("1234.apps.googleusercontent.com", Substitute.For<Infrastructure.Accounts.ISigningKeySource>(), TimeProvider.System);
             using var http = new HttpClient();
-            var discord = new Infrastructure.Accounts.DiscordSignIn("1311111111111111111", http);
+            var discord = new Infrastructure.Accounts.DiscordSignIn("1311111111111111111", http, TimeProvider.System);
             var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, TimeProvider.System), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), TimeProvider.System), AccountsMode.SignIn, [discord, google]);
             var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules", _hosted.Stored) { Accounts = accounts };
 
