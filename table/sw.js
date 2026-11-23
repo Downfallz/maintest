@@ -34,11 +34,11 @@ const KEPT_PICTURES = [{ name: 'parasite-offline' }, { name: 'latch-under-the-ar
 // sizes listed under it): a worker cannot import a module, so it reads the text. A test reads the real file with it.
 function pictureFiles(pageArt) {
   return KEPT_PICTURES.flatMap(({ name, phone }) => {
-    const entry = pageArt.match(new RegExp(`'${name}': \\{([\\s\\S]*?)sizes: \\[([^\\]]*)\\]`));
+    const entry = pageArt.match(new RegExp(String.raw`'${name}': \{([\s\S]*?)sizes: \[([^\]]*)\]`));
     if (!entry) return [];
     const sizes = [...entry[2].matchAll(/file: '([^']+)', width: (\d+)/g)].map(([, file, width]) => ({ file, width: Number(width) }));
     if (!phone) return sizes.map(size => `/page-art/${size.file}`);
-    const widths = entry[1].match(new RegExp(`phone: \\{[^}]*"${phone}":\\[([\\d,]+)\\]`));
+    const widths = entry[1].match(new RegExp(String.raw`phone: \{[^}]*"${phone}":\[([\d,]+)\]`));
     const widest = widths ? 2 * Math.max(...widths[1].split(',').map(Number)) : 0;
     return sizes.filter(size => size.width <= widest).map(size => `/page-art/${size.file}`);
   });
@@ -209,10 +209,11 @@ async function keepFresh(cache, path) {
 async function keepPictures(cache, files) {
   if (files.length === 0) return;
   const named = new Set(files);
-  for (const request of await cache.keys()) {
+  const older = (await cache.keys()).filter(request => {
     const path = new URL(request.url ?? request, self.location.origin).pathname;
-    if (isPictureFile(path) && !named.has(path)) await cache.delete(request);
-  }
+    return isPictureFile(path) && !named.has(path);
+  });
+  await Promise.all(older.map(request => cache.delete(request)));
   await Promise.allSettled(files.map(async path => { if (!(await cache.match(path))) { const response = await fetch(path); if (keepable(response)) await cache.put(path, response); } }));
 }
 
