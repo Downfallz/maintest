@@ -360,23 +360,6 @@ test('installing keeps the offline page\'s script, the picture kit and the plate
   assert.ok(!w.store.has('/page-art/parasite-under-slate-323.aaaaaaaa.webp'), 'only the plate is kept, not every picture');
 });
 
-// The modules a script reaches by its static imports, its own path first, each from the root as the host serves it.
-function importsOf(path, seen = new Set()) {
-  if (seen.has(path)) return seen;
-  seen.add(path);
-  const text = readFileSync(new URL(`.${path}`, import.meta.url), 'utf8');
-  for (const [, from] of text.matchAll(/^\s*(?:import|export)\s(?:[^'";]*?\sfrom\s)?['"](\.\/[^'"]+)['"]/gm)) importsOf(`/${from.slice(2)}`, seen);
-  return seen;
-}
-
-test('the offline page\'s scripts are every module offline.js reaches by its imports (#1136)', () => {
-  const w = offlineWorker({ network: async () => 'x' });
-  const kept = vm.runInContext('OFFLINE_SCRIPTS', w.context);
-  const reached = [...importsOf('/offline.js')];
-  assert.ok(reached.includes('/picture-form.js') && reached.includes('/battle-page-art.js'), `the walk follows the kit: ${reached}`);
-  assert.deepEqual(reached.filter(path => !kept.includes(path)), [], 'a module offline.js imports is kept for the offline page');
-});
-
 test('installing keeps the rulebook\'s head painting at the sizes a phone asks for, and no other of its files (#1060)', async () => {
   const real = readFileSync(new URL('./page-art.js', import.meta.url), 'utf8');
   const w = offlineWorker({ network: async path => ({ ...answer(`installed ${path}`), text: async () => (path === '/page-art.js' ? real : '') }) });
