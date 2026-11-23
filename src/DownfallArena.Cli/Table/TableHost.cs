@@ -655,6 +655,10 @@ internal static class TableHost
             Devices = push.Accounts?.Push,
             Turns = async (due, cancellationToken) =>
             {
+                // A table held here may not have been looked at for a while (TableWatch looks only at those asked for
+                // lately): brought up to date first, or let go of and picked up again, so a later asking is not read as
+                // an answered one. A look that cannot be made throws, and the item is tried again.
+                await new TableWatch(registry, clock).MovedAsync(due.Table, cancellationToken);
                 var found = await registry.FindAsync(due.Table, cancellationToken);
                 if (found.Unavailable is { } why)
                 {
