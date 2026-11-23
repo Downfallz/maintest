@@ -48,14 +48,15 @@ export function discordAuthorizeUrl({ clientId, redirect, state, challenge }) {
 export const discordRedirect = origin => `${origin}${DISCORD_RETURN}`;
 
 /**
- * Leaves for Discord: keeps the state, the verifier and `next` in the tab, then goes. A tab without storage cannot
+ * Leaves for Discord: keeps the state, the verifier, `next` and the purpose in the tab, then goes. The purpose is
+ * `signin`, or `link` when a signed-in player adds Discord from Settings (sign-in methods plan, P4). A tab without storage cannot
  * come back signed in, so it says so rather than leaving.
  */
-export async function startDiscord({ clientId, origin, next = null, storage, cryptoImpl = globalThis.crypto, now = Date.now(), go }) {
+export async function startDiscord({ clientId, origin, next = null, purpose = 'signin', storage, cryptoImpl = globalThis.crypto, now = Date.now(), go }) {
   const { verifier, challenge } = await pkcePair(cryptoImpl);
   const state = base64Url(cryptoImpl.getRandomValues(new Uint8Array(16)));
   try {
-    storage.setItem(KEPT, JSON.stringify({ state, verifier, next, at: now }));
+    storage.setItem(KEPT, JSON.stringify({ state, verifier, next, purpose, at: now }));
   } catch {
     throw new Error('This browser keeps nothing for the page, so Discord cannot bring you back signed in. Try another browser.');
   }
@@ -87,7 +88,7 @@ export function discordReturn(search, kept, now = Date.now()) {
   if (!kept || typeof kept.state !== 'string' || typeof kept.verifier !== 'string' || typeof kept.at !== 'number' || now - kept.at >= KEPT_FOR_MS) return { problem: 'lapsed', next: null };
   const code = query.get('code');
   if (!code || query.get('state') !== kept.state) return { problem: 'mismatch', next: null };
-  return { code, verifier: kept.verifier, next };
+  return { code, verifier: kept.verifier, next, link: kept.purpose === 'link' };
 }
 
 /** Hands a name to choose to the lobby, in this tab only. */

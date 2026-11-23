@@ -32,6 +32,15 @@ public sealed class AccountIdentitiesTests
     }
 
     [Fact]
+    public void An_identity_is_found_by_its_provider_and_none_for_a_provider_not_held()
+    {
+        var identities = AccountIdentities.Of(Google).With(Discord);
+
+        identities.ByProvider("discord").ShouldBe(Discord);
+        identities.ByProvider("microsoft").ShouldBeNull();
+    }
+
+    [Fact]
     public void Two_lists_of_the_same_identities_are_equal()
     {
         var first = AccountIdentities.Of(Google).With(Discord);

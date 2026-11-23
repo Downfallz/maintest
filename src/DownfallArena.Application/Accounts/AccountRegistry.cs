@@ -130,7 +130,7 @@ public sealed class AccountRegistry
     /// written first, create-only-if-absent, so an identity another account holds is refused however close the race,
     /// then the account. A binding already naming this account is a link that stopped between its writes, finished
     /// now; one naming an account that is gone or does not list it holds nobody and is taken back. A suspended
-    /// account links nothing. Sessions are left alone.
+    /// account links nothing, nor a second identity of a provider it already holds. Sessions are left alone.
     /// </summary>
     public async Task<Result<Account>> LinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
     {
@@ -150,6 +150,11 @@ public sealed class AccountRegistry
             if (account.Identities.Contains(identity))
             {
                 return Result.Success(account);
+            }
+
+            if (account.Identities.ByProvider(identity.Provider) is not null)
+            {
+                return Result.Failure<Account>(AccountErrors.ProviderLinked);
             }
 
             if (!await BindAsync(identity, id, cancellationToken))

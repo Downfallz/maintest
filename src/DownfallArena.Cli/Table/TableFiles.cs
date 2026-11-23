@@ -72,6 +72,8 @@ internal sealed partial class TableFiles
             ["/signin/discord"] = (Path.Combine(tableDirectory, "signin.html"), StudioResponse.Html),
             ["/signin.js"] = (Path.Combine(tableDirectory, "signin.js"), JavaScript),
             ["/discord.js"] = (Path.Combine(tableDirectory, "discord.js"), JavaScript),
+            // Settings' ways to sign in (sign-in methods plan, P4), which the navigation and the return page import.
+            ["/ways.js"] = (Path.Combine(tableDirectory, "ways.js"), JavaScript),
             ["/lobby-practice.js"] = (Path.Combine(tableDirectory, "lobby-practice.js"), JavaScript),
             ["/lobby-tutorials.js"] = (Path.Combine(tableDirectory, "lobby-tutorials.js"), JavaScript),
             ["/lobby-featured.js"] = (Path.Combine(tableDirectory, "lobby-featured.js"), JavaScript),

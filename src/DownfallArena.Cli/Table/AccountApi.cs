@@ -26,6 +26,7 @@ internal sealed class AccountApi
     private const string PreferencesRoute = Prefix + "/preferences";
     private const string NoticePreferencesRoute = PreferencesRoute + "/notices";
     private const string NoticesRoute = Prefix + "/notices";
+    private const string IdentitiesRoute = Prefix + "/identities";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -442,6 +443,9 @@ internal sealed class AccountApi
                 ("GET", PreferencesRoute) => await PreferencesAsync(request),
                 ("PUT", PreferencesRoute) => await SavePreferencesAsync(body, request),
                 ("PUT", NoticePreferencesRoute) => await SaveNoticePreferencesAsync(body, request),
+                ("GET", IdentitiesRoute) => await IdentitiesAsync(request),
+                ("POST", _) when WayOf(path) is { } added => await AddWayAsync(added, body, request),
+                ("DELETE", _) when WayOf(path) is { } removed => await RemoveWayAsync(removed, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 ("POST", _) when ProviderOf(path) is { } provider => await ProviderAsync(provider, body, request),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
@@ -475,29 +479,10 @@ internal sealed class AccountApi
             return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
         }
 
-        var proof = Proof(body);
-        if (proof is null)
+        var (identity, refusal) = await VouchedAsync(provider, body, counted: true);
+        if (refusal is not null)
         {
-            return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
-        }
-
-        Counted(StepStarted, name);
-        ExternalIdentity? vouched;
-        try
-        {
-            vouched = await provider.SignInAsync(proof);
-        }
-        catch (SignInUnavailableException exception)
-        {
-            // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
-            Said($"  Sign-in unavailable ({name}): {exception.Message}");
-            return Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
-        }
-
-        if (vouched is not { } identity || identity.Provider != name)
-        {
-            Counted(StepRefused, name);
-            return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
+            return refusal;
         }
 
         if (await _registry.FindAsync(identity) is { } account)
@@ -514,6 +499,147 @@ internal sealed class AccountApi
 
         return Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
+
+    /// <summary>
+    /// The identity the provider vouches for from what the page posted, or the answer that refuses it: a body that is
+    /// not one object, a proof the provider refuses or answers for another provider, a provider out of reach.
+    /// <paramref name="counted" /> says the sign-in's steps, which only a sign-in counts.
+    /// </summary>
+    private async Task<(ExternalIdentity Identity, StudioResponse? Refusal)> VouchedAsync(ISignInProvider provider, string body, bool counted)
+    {
+        var proof = Proof(body);
+        if (proof is null)
+        {
+            return (default, Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object."));
+        }
+
+        if (counted)
+        {
+            Counted(StepStarted, provider.Name);
+        }
+
+        ExternalIdentity? vouched;
+        try
+        {
+            vouched = await provider.SignInAsync(proof);
+        }
+        catch (SignInUnavailableException exception)
+        {
+            // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
+            Said($"  Sign-in unavailable ({provider.Name}): {exception.Message}");
+            return (default, Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute."));
+        }
+
+        if (vouched is not { } identity || identity.Provider != provider.Name)
+        {
+            if (counted)
+            {
+                Counted(StepRefused, provider.Name);
+            }
+
+            return (default, Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again."));
+        }
+
+        return (identity, null);
+    }
+
+    /// <summary>The provider a ways-to-sign-in path names after <c>/identities/</c>, in lower-case letters; null for any other path.</summary>
+    private static string? WayOf(string path) =>
+        path.StartsWith(IdentitiesRoute + "/", StringComparison.Ordinal) && path[(IdentitiesRoute.Length + 1)..] is { Length: > 0 } name && name.All(char.IsAsciiLetterLower)
+            ? name
+            : null;
+
+    /// <summary>The ways into an account as a page is told them: each one's provider, in the order added, never its identifier.</summary>
+    private static object Ways(Account account) =>
+        new { identities = account.Identities.All.Select(identity => new { provider = identity.Provider }).ToArray() };
+
+    /// <summary>Settings' ways to sign in (sign-in methods plan, P4): the providers the signed-in account uses.</summary>
+    private async Task<StudioResponse> IdentitiesAsync(AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return SignInRequired("Sign in to see how you sign in.");
+        }
+
+        return Answer(Ways(who.Account), who.Renewed);
+    }
+
+    /// <summary>
+    /// Adds a way into the signed-in account (ADR 0204): the identity is the one the provider vouches for from the
+    /// proof posted now, never one the request names. One per provider; one another account uses is refused.
+    /// Sessions are left alone.
+    /// </summary>
+    private async Task<StudioResponse> AddWayAsync(string name, string body, AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return SignInRequired("Sign in to add a way to sign in.");
+        }
+
+        if (!_providers.TryGetValue(name, out var provider))
+        {
+            return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
+        }
+
+        var (identity, refusal) = await VouchedAsync(provider, body, counted: false);
+        if (refusal is not null)
+        {
+            return refusal;
+        }
+
+        var linked = await _registry.LinkAsync(who.Account.Id, identity);
+        if (linked.IsFailure)
+        {
+            return WayRefused(linked.Error);
+        }
+
+        _cache[linked.Value.Id] = (linked.Value, _sessions.Clock.GetUtcNow());
+        Said($"  Way in added ({name}).");
+        return Answer(Ways(linked.Value), who.Renewed);
+    }
+
+    /// <summary>
+    /// Removes a way into the signed-in account (ADR 0204), whether or not the host still offers its provider; never
+    /// the last. Every session of the account ends with it, and its devices are forgotten, as with "sign out
+    /// everywhere": whoever came in through it is out. The browser that asked is handed a new session.
+    /// </summary>
+    private async Task<StudioResponse> RemoveWayAsync(string name, AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return SignInRequired("Sign in to remove a way to sign in.");
+        }
+
+        if (who.Account.Identities.ByProvider(name) is not { } identity)
+        {
+            return WayRefused(AccountErrors.IdentityNotLinked);
+        }
+
+        var unlinked = await _registry.UnlinkAsync(who.Account.Id, identity);
+        if (unlinked.IsFailure)
+        {
+            return WayRefused(unlinked.Error);
+        }
+
+        var account = unlinked.Value;
+        _cache[account.Id] = (account, _sessions.Clock.GetUtcNow());
+        if (Devices is { } devices)
+        {
+            await devices.ForgetAsync(account.Id);
+        }
+
+        Said($"  Way in removed ({name}).");
+        return Answer(Ways(account), AccountSessions.SetCookie(_sessions.Issue(account), request.Secure));
+    }
+
+    private static StudioResponse WayRefused(DomainError error) => Problem(
+        error == AccountErrors.IdentityNotLinked || error == AccountErrors.NotFound ? 404
+        : error == AccountErrors.IdentityTaken || error == AccountErrors.ProviderLinked || error == AccountErrors.LastIdentity ? 409
+        : 403,
+        error.Code,
+        error.Message);
+
+    private static StudioResponse SignInRequired(string message) => Problem(401, "Account.SignInRequired", message);
 
     /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
     private async Task<bool> RegistrationClosedAsync() => Settings is { } settings && !(await settings.CurrentAsync()).RegistrationOpen;

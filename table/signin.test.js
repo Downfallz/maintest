@@ -88,3 +88,27 @@ test('an error Discord returns with other than the player saying no is said, wit
   assert.equal(win.replaced, null);
   assert.equal(doc.getElementById('signin-state').textContent, returnProblem('failed'));
 });
+
+test('a return started from Settings adds Discord to the account and hands Settings its line', async () => {
+  const win = windowAt('?code=abc&state=st');
+  const storage = tab({ ...kept, next: null, purpose: 'link' });
+  const posted = [];
+
+  const outcome = await finishDiscord({ win, doc: page(), storage, request: async (path, body) => { posted.push([path, body]); return { identities: [{ provider: 'google' }, { provider: 'discord' }] }; } });
+
+  assert.equal(outcome, 'linked');
+  assert.deepEqual(posted, [['/api/account/identities/discord', { code: 'abc', verifier: kept.verifier, redirect: 'https://play.example/signin/discord' }]]);
+  assert.equal(win.replaced, '/lobby');
+  assert.equal(storage.store.get('downfall.waysNote'), 'Discord added. You can sign in with it now.');
+});
+
+test('a Discord another account uses is said on the return page, with the way back', async () => {
+  const doc = page();
+  const refused = Object.assign(new Error('Another account already uses this way to sign in.'), { code: 'Account.IdentityTaken' });
+
+  const outcome = await finishDiscord({ win: windowAt('?code=abc&state=st'), doc, storage: tab({ ...kept, purpose: 'link' }), request: async () => { throw refused; } });
+
+  assert.equal(outcome, 'refused');
+  assert.equal(doc.getElementById('signin-state').textContent, refused.message);
+  assert.equal(doc.getElementById('signin-back').hidden, false);
+});

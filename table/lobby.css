@@ -413,6 +413,11 @@ body.classic-page:has(#table:not([hidden])) .home-header .brand { display: flex;
 .app-settings-identity .account-initial { width: 48px; height: 48px; font-size: 22px; flex: none; }
 .app-settings-identity strong { display: block; font-size: 18px; overflow-wrap: anywhere; }
 .app-settings-identity small, .app-settings-row small { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 3px; }
+.app-settings-ways { margin-top: 20px; }
+.app-settings-ways h3 { margin: 0 0 4px; color: var(--muted); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.ways-list { list-style: none; margin: 0; padding: 0; }
+.ways-list .app-settings-row + .app-settings-row { border-top-color: var(--line); }
+.way-google { min-height: 44px; display: flex; align-items: center; }
 .app-settings-danger { margin-top: 28px; padding: 16px; border: 1px solid #6b3b32; border-radius: var(--radius-soft); background: #1f1614; }
 .app-settings-danger h3 { margin: 0 0 4px; color: var(--refused); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
 .app-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; }

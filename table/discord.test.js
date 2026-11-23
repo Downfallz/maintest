@@ -32,7 +32,7 @@ test('the return gives the code and the kept verifier only for the state this ta
   const state = url.searchParams.get('state');
   const kept = takeKept(storage);
 
-  assert.deepEqual(discordReturn(`?code=abc&state=${state}`, kept, 2000), { code: 'abc', verifier: kept.verifier, next: '/j/abc' });
+  assert.deepEqual(discordReturn(`?code=abc&state=${state}`, kept, 2000), { code: 'abc', verifier: kept.verifier, next: '/j/abc', link: false });
   assert.deepEqual(discordReturn('?code=abc&state=another', kept, 2000), { problem: 'mismatch', next: null });
   assert.deepEqual(discordReturn(`?state=${state}`, kept, 2000), { problem: 'mismatch', next: null });
   assert.equal(takeKept(storage), null, 'what the tab kept is read once');
@@ -73,4 +73,13 @@ test('a name to choose is handed over once', () => {
   assert.equal(takeTicket(storage), 't1');
   assert.equal(takeTicket(storage), null);
   assert.equal(takeTicket(null), null);
+});
+
+test('a sign-in started from Settings to add Discord comes back as a link', async () => {
+  const storage = tabStore();
+  let url;
+  await startDiscord({ clientId: '1311', origin: 'https://play.example', purpose: 'link', storage, cryptoImpl: webcrypto, now: 1000, go: went => { url = new URL(went); } });
+  const kept = takeKept(storage);
+
+  assert.equal(discordReturn(`?code=abc&state=${url.searchParams.get('state')}`, kept, 2000).link, true);
 });

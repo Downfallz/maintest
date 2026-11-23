@@ -56,13 +56,26 @@ public sealed class AccountLinkTests
     public async Task An_identity_another_account_holds_is_refused_and_changes_nothing()
     {
         var mark = await RegisteredAsync(Google, "MarkF");
-        var bastien = await RegisteredAsync(Bastien, "Bastien");
+        var bastien = await RegisteredAsync(Discord, "Bastien");
 
-        var taken = await Registry().LinkAsync(mark.Id, Bastien, Cancel);
+        var taken = await Registry().LinkAsync(mark.Id, Discord, Cancel);
 
         taken.Error.ShouldBe(AccountErrors.IdentityTaken);
         _store.Accounts[mark.Id].ShouldBe(mark);
-        _store.Subjects[Bastien].ShouldBe(bastien.Id);
+        _store.Subjects[Discord].ShouldBe(bastien.Id);
+    }
+
+    [Fact]
+    public async Task A_second_identity_from_a_provider_the_account_already_holds_is_refused_and_binds_nothing()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        var otherGoogle = new ExternalIdentity(ExternalIdentity.Google, "305555555555555555555");
+
+        var refused = await Registry().LinkAsync(mark.Id, otherGoogle, Cancel);
+
+        refused.Error.ShouldBe(AccountErrors.ProviderLinked);
+        _store.Accounts[mark.Id].ShouldBe(mark);
+        _store.Subjects.ShouldNotContainKey(otherGoogle);
     }
 
     [Fact]
