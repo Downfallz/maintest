@@ -6,7 +6,8 @@ import { PAGE_ART } from './page-art.js';
 
 export { FOCUS_STEP, PAGE_ART_BASE, PAGE_HEAD_SIZES, SCENE_FORMS, STRIP_FRAMES, focusAttributes, undressScene } from './picture-form.js';
 
-const drawn = options => ({ art: PAGE_ART, ...options });
+// An `art` left undefined is no art handed: every page's, as a parameter's default would read it.
+const drawn = options => ({ ...options, art: options.art ?? PAGE_ART });
 
 export const pictureAttributes = (name, options = {}) => form.pictureAttributes(name, drawn(options));
 export const sourceAttributes = (name, options = {}) => form.sourceAttributes(name, drawn(options));

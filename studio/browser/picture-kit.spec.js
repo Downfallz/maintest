@@ -1,10 +1,11 @@
-// The pages' picture kit as a browser shows it (ADR 0198, table/picture.js, table/icons.js, table/identity.css):
+// The pages' picture kit as a browser shows it (ADR 0198, table/picture.js and the form it wraps, table/picture-form.js,
+// table/icons.js, table/identity.css):
 // a picture holds its room and takes the file its width asks for, a strip steps its frames once while it is the
 // screen's ambience and is its first frame under less motion, and an icon takes the colour of its text. The
 // page is read as the host serves it, with no script but the kit's own modules.
 import { test, expect } from '@playwright/test';
 
-const KIT = ['/motion.js', '/picture.js', '/picture-focus.js', '/page-art.js', '/icons.js'];
+const KIT = ['/motion.js', '/picture.js', '/picture-form.js', '/picture-focus.js', '/page-art.js', '/icons.js'];
 
 async function open(page) {
   await page.route('**/*.js', route => (KIT.some(name => new URL(route.request().url()).pathname.endsWith(name)) ? route.continue() : route.abort()));

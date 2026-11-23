@@ -490,15 +490,44 @@ test('the published site sends no painting whole: the field guide\'s portraits a
   assert.ok(!existsSync(join(root, 'assets/evolutions')));
 });
 
+/** The lengths of a `sizes`, each without its media condition: split on the commas outside any parenthesis. */
+function lengthsOf(sizes) {
+  const parts = [];
+  let depth = 0, part = '';
+  for (const char of sizes) {
+    depth += char === '(' ? 1 : char === ')' ? -1 : 0;
+    if (char === ',' && depth === 0) { parts.push(part); part = ''; } else part += char;
+  }
+  return [...parts, part].map(one => one.trim().replace(/^\([^()]*\)\s*/, ''));
+}
+
+test('the lengths of a sizes keep the widths inside min() and max(), and lose the media conditions', () => {
+  assert.deepEqual(lengthsOf('(max-width: 650px) 258px, min(368px, 31vw)'), ['258px', 'min(368px, 31vw)']);
+  assert.deepEqual(lengthsOf('(min-width: 1316px) 1280px, calc(100vw - 36px)'), ['1280px', 'calc(100vw - 36px)']);
+});
+
 test('every width a page\'s sizes give a painting, in pixels, is one its declaration draws (#967)', () => {
   for (const file of ['index.html', 'mutations/index.html', 'fr/index.html', 'fr/mutations/index.html']) {
     for (const tag of picturesOf(read(file))) {
       const [, name] = /src="\/page-art\/([a-z0-9-]+?)-\d+\.[0-9a-f]{8}\.webp"/.exec(tag) ?? [];
       if (!name) continue;
       const entry = PAGE_ART[name], drawn = entry.drawn.map(width => width * entry.frames);
-      // The media conditions are the screen's width, not the picture's.
-      const widths = [...attribute(tag, 'sizes').replace(/\([^)]*\)/g, '').matchAll(/(\d+)px/g)].map(match => Number(match[1]));
+      // The media condition before each length is the screen's width, not the picture's. A length's min() and
+      // max() hold widths it is drawn at, its cap and its floor; a calc()'s pixels are offsets, not widths.
+      const widths = lengthsOf(attribute(tag, 'sizes')).filter(length => !length.startsWith('calc('))
+        .flatMap(length => [...length.matchAll(/(\d+)px/g)].map(match => Number(match[1])));
       for (const width of widths) assert.ok(drawn.includes(width), `${file}: ${name} is drawn at ${width} px, and its declaration lists ${drawn.join(', ')}`);
+    }
+  }
+});
+
+test('a picture on the first screen drawn again lower down is lazy there: the budget counts its first use alone before any scroll (#1082)', () => {
+  for (const [file, page] of [['index.html', 'showcase/home'], ['mutations/index.html', 'showcase/mutations']]) {
+    for (const [name, entry] of Object.entries(PAGE_ART)) {
+      if (!['largest', 'first'].includes(entry.pages[page]) || (entry.phone?.[page]?.length ?? 1) < 2) continue;
+      const uses = picturesOf(read(file)).filter(tag => new RegExp(`src="/page-art/${name}-\\d+\\.`).test(tag));
+      assert.ok(uses.length > 1, `${page}: ${name} is drawn at ${entry.phone[page].length} widths`);
+      assert.deepEqual(uses.slice(1).map(tag => attribute(tag, 'loading')), uses.slice(1).map(() => 'lazy'), `${page}: ${name} after its first use`);
     }
   }
 });

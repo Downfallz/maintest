@@ -102,7 +102,8 @@ const GUIDE = 'showcase/mutations';
 const SIZES = {
   // A form's portrait, shown whole in its 3:2 box: 258 px on a phone, under its 245 px height (368 px) wider.
   portrait: '(max-width: 650px) 258px, min(368px, 31vw)',
-  // The head's creature, shown whole: 218 px on a phone; wider, under its height of 20vw, from 175 to 290 px.
+  // The head's creature, shown whole: 218 px on a phone; wider, under its height of 20vw, from 175 to 290 px: 263
+  // to 435 px wide.
   head: '(max-width: 650px) 218px, min(435px, max(263px, 30vw))',
 };
 

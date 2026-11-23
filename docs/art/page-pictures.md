@@ -49,8 +49,8 @@ One entry in `docs/art/page-pictures.json`:
   the journal's rows: `"drawn": [40, 24]`, `"phone": { "table/battle": [40, 24] }`. A page it does not name draws it
   at the first width.
 - `group` (optional): for each page that draws one picture of a set at a time, the set's name, in lower case, digits
-  and hyphens. The statistics paint the one mutation the player acquires most, of 21: each is
-  `"group": { "table/stats": "leaned-mutation" }`. The budget counts a group as its heaviest member, not their sum
+  and hyphens. The statistics page draws one mutation, the one the player acquires most, out of 21. Each of
+  the 21 pictures carries `"group": { "table/stats": "leaned-mutation" }`. The budget counts a group as its heaviest member, not their sum
   (#993). A group has two members or more; a page it does not name counts every member.
 - `focus` (optional): where a box that cuts the painting centres the cut, across then down, in steps of 5%:
   `"focus": "30% 60%"` keeps a subject left of centre and low in view. `pictureElement` and `pictureHtml` write it as
@@ -88,8 +88,8 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
   first card (#985). The card, 96 px wide, takes the 150 or 300 px file: a little more than it draws when the
   featured space shows something else. The showcase's eclipse is the hero's ground, its largest paint, and the
   battlefields' first round, lazy (#1082): `battlefield-eclipse` lists both widths in `drawn` and in `phone`. Where a
-  picture is `largest` or `first`, the first width of its `phone` is the first screen's; the budget counts the
-  others' files in `all` only, so each use after the first is drawn with `lazy`.
+  picture is `largest` or `first`, the first width in its `phone` is the one on the first screen. The budget counts
+  the files for the other widths in `all` only, so draw each later use with `lazy`; a test holds the showcase to it.
 - `alt` says what is shown; leave it out for decoration. `sizes` says the width it is drawn at when it is not
   the declaration's first; for a strip it is the width of all its frames. `class` goes on the image.
 - `pictureHtml` and `stripHtml` write the same as text, for a page built before it is served. The showcase's
@@ -100,7 +100,8 @@ hero.append(pictureElement(document, 'colossus', { page: 'showcase/home', sizes:
 - Never write a derived file's name in a page: it changes when the picture is derived again.
 - The battle bundle imports `picture-form.js` and hands it `BATTLE_PAGE_ART` of `table/battle-page-art.js`
   (`battle/src/spell-portrait.ts`, `table/battle-scenes.js`). `battle/build.mjs` refuses a bundle that carries
-  `page-art.js` (`everyPagesPictures` of `battle/live-guard.mjs`), whose entries for every page it would pay for.
+  `page-art.js` (`everyPagesPictures` of `battle/live-guard.mjs`): its entries cover every page, and the battle would
+  pay for all of them.
 
 ## A scene in one of three forms
 
@@ -181,8 +182,8 @@ control that has a name; it is never the only thing that says a fact. A new mean
 before any scroll (`first`), and of all its pictures (`all`). They are counted as a phone takes them: the
 smallest file that fills the width drawn at twice the density, for each width the page draws it at on the phone
 (`phone`), each file once, and a `group` as its heaviest member. `studio/ux-pictures.test.js` fails when a page
-goes over, and when a budget is so loose it holds nothing: either number half again over what the page loads, plus
-4 KiB (#1107). Adding a picture to a page raises its number in the
+goes over, and when a budget is so loose it holds nothing: either number more than 1.5 times what the page loads,
+plus 4 KiB (#1107). Adding a picture to a page raises its number in the
 same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are read by
 `node scripts/ux/journey.mjs --paint`.
 

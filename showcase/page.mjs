@@ -19,6 +19,7 @@ const SIZES = {
   // Under 600 px the ground is 68% of the hero's height, its width following: about 710 px on a phone. It is the
   // battlefields' eclipse, one declaration drawn twice, so the page takes its files once (#1082).
   ground: '(max-width: 600px) 720px, 100vw',
+  // The Colossus stands up to 850 px wide on a wide screen, and its declaration draws it there too.
   beast: '(max-width: 600px) 79vw, min(54vw, 850px)',
   field: '(max-width: 850px) 90vw, min(1250px, 88vw)',
   // Shown whole: 315 px under its 210 px height on a phone; wider, its column, until its 310 px height stops it (#967).

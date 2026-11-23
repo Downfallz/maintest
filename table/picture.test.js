@@ -317,4 +317,5 @@ test('the form alone draws only from the pictures it is handed, so a bundle carr
   assert.throws(() => form.pictureAttributes('beast', { page: 'home' }), /beast: the form draws from the pictures it is handed/);
   assert.deepEqual(form.pictureAttributes('beast', { page: 'home', art: ART }), pictureAttributes('beast', { page: 'home', art: ART }));
   assert.doesNotMatch(read('table/picture-form.js'), /from '[^']*page-art\.js'/, 'it imports no pictures of its own');
+  assert.deepEqual(pictureAttributes('lesson-base', { page: 'table/home', art: undefined }), pictureAttributes('lesson-base', { page: 'table/home' }), 'an art left undefined is every page\'s');
 });

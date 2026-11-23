@@ -116,11 +116,13 @@ export const PAGE_ART = {
     ],
   },
   'colossus': {
-    from: 'a2e04025b4f1fe53', frames: 1, drawn: [308,620], pages: {"showcase/home":"largest"},
+    from: '29f75d9b7aae0da7', frames: 1, drawn: [308,620,850], pages: {"showcase/home":"largest"},
     sizes: [
       { file: 'colossus-308.1855df35.webp', width: 308, height: 205, bytes: 22748 },
       { file: 'colossus-620.1401d6c5.webp', width: 620, height: 413, bytes: 59698 },
+      { file: 'colossus-850.6e9e5752.webp', width: 850, height: 567, bytes: 95322 },
       { file: 'colossus-1240.fe20d153.webp', width: 1240, height: 827, bytes: 171150 },
+      { file: 'colossus-1536.b7a1604f.webp', width: 1536, height: 1024, bytes: 208130 },
     ],
   },
   'revenant': {
@@ -202,11 +204,13 @@ export const PAGE_ART = {
     ],
   },
   'specimen-base-creature': {
-    from: '25be02ccda86e0b1', frames: 1, drawn: [315,218,465,435], pages: {"showcase/home":"lazy","showcase/mutations":"first"}, phone: {"showcase/mutations":[218]},
+    from: '9913162d7d6beb3e', frames: 1, drawn: [315,218,465,435,263], pages: {"showcase/home":"lazy","showcase/mutations":"first"}, phone: {"showcase/mutations":[218]},
     sizes: [
       { file: 'specimen-base-creature-218.3755b35b.webp', width: 218, height: 145, bytes: 15964 },
+      { file: 'specimen-base-creature-263.d7842774.webp', width: 263, height: 175, bytes: 20596 },
       { file: 'specimen-base-creature-315.addf469a.webp', width: 315, height: 210, bytes: 26628 },
       { file: 'specimen-base-creature-465.055fd174.webp', width: 465, height: 310, bytes: 46900 },
+      { file: 'specimen-base-creature-526.4091ddc5.webp', width: 526, height: 351, bytes: 56278 },
       { file: 'specimen-base-creature-630.8f6ca0e7.webp', width: 630, height: 420, bytes: 74230 },
       { file: 'specimen-base-creature-930.9c3e2a1b.webp', width: 930, height: 620, bytes: 142702 },
     ],
