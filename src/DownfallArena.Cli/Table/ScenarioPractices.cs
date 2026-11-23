@@ -430,7 +430,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     private async Task AfterAsync(Task before, List<Practice> held, Func<string, string, Task> keepDone)
     {
         await before.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing | ConfigureAwaitOptions.ForceYielding);
-        await KeepSweptAsync(held, keepDone);
+        await KeepEachAsync(held, keepDone);
     }
 
     /// <summary>
@@ -438,7 +438,7 @@ internal sealed class ScenarioPractices(TableComposer composer, ScenarioStore st
     /// account's write, or the letting go, throws is said on the console and stops nothing else: the practice stays
     /// for the next sweep.
     /// </summary>
-    private async Task KeepSweptAsync(List<Practice> held, Func<string, string, Task> keepDone)
+    private async Task KeepEachAsync(List<Practice> held, Func<string, string, Task> keepDone)
     {
         foreach (var practice in held)
         {
