@@ -1610,7 +1610,10 @@ test('with nothing to resume or learn, the duel opens Solo or multiplayer and li
 
   await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'new');
   await expect(page.locator('#featured-action')).toHaveText('Play a bot →');
-  await expect(page.locator('#new-table')).not.toHaveClass(/primary/);
+  await expect(page.locator('#new-table')).toHaveClass(/primary/);
+  await expect(page.locator('#featured-action')).not.toHaveClass(/primary/);
+  // Multiplayer comes first, in the document as on screen.
+  await expect(page.locator('.featured-actions button').first()).toHaveId('new-table');
   await expect(filledOnTheHome(page)).toHaveCount(1);
   const painting = page.locator('#featured img.featured-ground');
   await expect(painting).toHaveAttribute('src', /mist-duel-/);

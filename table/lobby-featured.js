@@ -159,7 +159,7 @@ function lessonView({ lesson }, started) {
 export function featuredView(choice, { started = false } = {}) {
   if (choice.kind === 'turn' || choice.kind === 'waiting') return gameView(choice);
   if (choice.kind === 'lesson') return lessonView(choice, started);
-  // A match started the quickest way, a bot answering at once; Multiplayer, just under it, opens every other way.
+  // Multiplayer leads, the primary one, and opens every other way; Play a bot, beside it, starts a match at once.
   return { kind: 'new', id: null, eyebrow: 'New battle · Beta', title: 'Choose your opponent', status: '', detail: '',
     action: 'Play a bot →', label: 'Play a bot', ground: DUEL, creature: null, link: null };
 }
@@ -205,6 +205,15 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     ambience();
   }
 
+  // The first button before the second, in the document as on screen, so the keys follow the eyes. The one that
+  // moves is the one without the focus: a focused button moved would lose it.
+  function order(first, second) {
+    const row = first.parentNode;
+    if (!row?.insertBefore || second.previousElementSibling === first) return;
+    if (doc.activeElement === first) row.insertBefore(second, first.nextSibling);
+    else row.insertBefore(first, second);
+  }
+
   function draw() {
     // Under a finger the space holds still; what arrived is drawn once the press is handled or the finger leaves.
     if (games === null || !lessonsRead || opening || pressed) return;
@@ -214,7 +223,12 @@ export function mountFeatured(doc, { enter, openCreate, go, session = null, ambi
     root.removeAttribute('aria-busy');
     el('featured-eyebrow').textContent = view.eyebrow;
     el('welcome').textContent = view.title;
-    el('new-table').textContent = view.kind === 'new' ? 'Multiplayer' : '＋ New battle';
+    const newTable = el('new-table'), duel = view.kind === 'new';
+    newTable.textContent = duel ? 'Multiplayer' : '＋ New battle';
+    // Before a first game Multiplayer is the primary one, first; otherwise the game or the lesson on show is.
+    action.classList.toggle('primary', !duel); action.classList.toggle('secondary', duel);
+    newTable.classList.toggle('primary', duel); newTable.classList.toggle('secondary', !duel);
+    order(duel ? newTable : action, duel ? action : newTable);
     el('featured-detail').textContent = view.detail;
     // Each number kept on one line with its unit.
     const shownStatus = view.status.replace(/(\d) /g, '$1\u00a0');
