@@ -1063,6 +1063,20 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_provider_that_fails_unexpectedly_spends_nothing_of_the_address_s_count()
+    {
+        var api = await ApiAsync(AccountsMode.SignIn, new Failing());
+        for (var posted = 0; posted < 2 * SignInAttempts.PerAddress; posted++)
+        {
+            await Should.ThrowAsync<HttpRequestException>(() => api.HandleAsync("POST", "/api/account/failing", """{"code":"x"}""", From("203.0.113.7")));
+        }
+
+        var forged = await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", From("203.0.113.7"));
+
+        forged.Status.ShouldBe(401);
+    }
+
+    [Fact]
     public async Task Discord_out_of_service_spends_nothing_of_the_address_s_count()
     {
         using var http = new HttpClient(new DiscordDown());
@@ -1201,6 +1215,17 @@ public sealed class AccountApiTests : IDisposable
             await _answer.Task;
             return new ExternalIdentity(Name, proof["code"]!);
         }
+    }
+
+    /// <summary>A provider whose own call fails in a way it does not expect, as a key fetch that cannot reach Google does.</summary>
+    private sealed class Failing : ISignInProvider
+    {
+        public string Name => "failing";
+
+        public string? ClientId => null;
+
+        public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
+            throw new HttpRequestException("The keys could not be fetched.");
     }
 
     /// <summary>A provider that refuses every proof and counts how often it was asked.</summary>

@@ -55,7 +55,7 @@ internal sealed class SignInAttempts
         /// <summary>The provider refused the proof: counted against the address and its network.</summary>
         Refused,
 
-        /// <summary>The provider could not be asked: not counted.</summary>
+        /// <summary>The provider could not be asked, or failed without answering: not counted.</summary>
         Unchecked,
     }
 
@@ -83,14 +83,26 @@ internal sealed class SignInAttempts
             Sweep(now);
             var tally = TallyOf(own, now);
             var wider = network is null ? null : TallyOf(network, now);
+            // What is being checked counts too, or posts kept in flight would pass the count before any refusal is
+            // noted: on the /48 always, and on the address once it has been refused (a clean room keeps its AtOnce).
             if (tally.Refused.Count >= PerAddress)
             {
                 return tally.Refused.Min() + Window - now;
             }
 
+            if (tally.Refused.Count > 0 && tally.Refused.Count + tally.Checking >= PerAddress)
+            {
+                return Moment;
+            }
+
             if (wider is { Refused.Count: >= PerNetwork })
             {
                 return wider.Refused.Min() + Window - now;
+            }
+
+            if (wider is not null && wider.Refused.Count + wider.Checking >= PerNetwork)
+            {
+                return Moment;
             }
 
             if (tally.Vouched.Count >= VouchedPerAddress)
@@ -104,6 +116,11 @@ internal sealed class SignInAttempts
             }
 
             tally.Checking++;
+            if (wider is not null)
+            {
+                wider.Checking++;
+            }
+
             return null;
         }
     }
@@ -116,23 +133,35 @@ internal sealed class SignInAttempts
         lock (_gate)
         {
             var tally = TallyOf(own, now);
+            var wider = network is null ? null : TallyOf(network, now);
             tally.Checking = Math.Max(0, tally.Checking - 1);
+            if (wider is not null)
+            {
+                wider.Checking = Math.Max(0, wider.Checking - 1);
+            }
+
             if (outcome == Outcome.Unchecked)
             {
                 return;
             }
 
-            if (outcome == Outcome.Vouched && who is not null && !tally.Vouched.Exists(one => one.Who == who))
+            if (outcome == Outcome.Vouched && who is not null)
             {
-                tally.Vouched.Add((now, who));
+                // The same person again is a refusal of their own address only: their neighbours did nothing.
+                if (tally.Vouched.Exists(one => one.Who == who))
+                {
+                    tally.Refused.Add(now);
+                }
+                else
+                {
+                    tally.Vouched.Add((now, who));
+                }
+
                 return;
             }
 
             tally.Refused.Add(now);
-            if (network is not null)
-            {
-                TallyOf(network, now).Refused.Add(now);
-            }
+            wider?.Refused.Add(now);
         }
     }
 

@@ -518,18 +518,19 @@ internal sealed class AccountApi
             };
         }
 
-        var outcome = SignInAttempts.Outcome.Refused;
+        // Counted only once the provider answered: a provider that fails unexpectedly cost the address nothing.
+        var outcome = SignInAttempts.Outcome.Unchecked;
         ExternalIdentity? vouched = null;
         try
         {
             Counted(SignInCounts.Step.Started, name);
             vouched = await provider.SignInAsync(proof);
+            outcome = SignInAttempts.Outcome.Refused;
         }
         catch (SignInUnavailableException exception)
         {
             // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
             // Why is said once a minute: every post would otherwise write it again.
-            outcome = SignInAttempts.Outcome.Unchecked;
             if (Counted(SignInCounts.Step.Unavailable, name) == 1)
             {
                 Said($"  Sign-in unavailable ({name}): {exception.Message}");

@@ -477,18 +477,21 @@ email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` 
 any host that signs in through providers), `signIn` (each provider as `{"provider", "clientId"}`, in order) and
 `account`. The host counts each sign-in's steps in memory and writes one console line a minute per provider
 (#1171): `Sign-ins (<provider>): 3 started, 2 finished, 1 refused, 0 unavailable, 0 limited.` The steps are:
-started when the proof reaches the host; finished once a session is issued (after the name window, for a new
+started when the proof is sent to the provider; finished once a session is issued (after the name window, for a new
 player); refused when the provider says no, the account is suspended or registration is closed; unavailable when
-the provider is out of service; limited when the address had already posted five that minute. The line is written
+the provider is out of service; limited when the address had spent its count (below). The line is written
 on the first request after the minute, and when the host stops. Summed by provider in the ops report, the lines
 show where people stop; a script posting forged proofs adds to the counts, not to the log.
 
 `POST /api/account/<provider>` is checked by network address before the provider is asked (#1193). In a minute,
 one address may post five sign-ins its provider does not vouch for (a forged or refused proof, or one person
 signing in again), and the /64s of one IPv6 /48 thirty together. It may be vouched for twenty different people,
-and have eight sign-ins being checked at once. Past any of these the post is answered `429 Account.TooManySignIns`
-with `Retry-After`: one second while its sign-ins are being checked, otherwise until a place frees. A proof that
-is not one JSON object, and a provider out of service, are not counted. So a room of players behind one address
+and have eight sign-ins being checked at once. Sign-ins still being checked count against the /48's thirty, and
+against the address's five once it has been refused. Past any of these the post is answered
+`429 Account.TooManySignIns` with `Retry-After`: one second while its sign-ins are being checked, otherwise until a
+place frees. A proof that is not one JSON object, and a provider out of service or failing, are not counted. One
+person signing in again counts against their own address only; a /48 refused thirty times, though, is refused whole
+for the rest of the minute. So a room of players behind one address
 signs in, and one address cannot spend a provider's budget (Discord's thirty a minute) for every player. Several
 addresses still can; Discord's own limit then answers `503 Account.ProviderUnavailable`.
 
@@ -800,7 +803,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `/signin/discord` | anyone | The page Discord returns a sign-in to (sign-in methods plan, P3): it checks the tab's state, posts the code and goes back to the lobby. |
-| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past an address's count: five sign-ins a minute its provider does not vouch for, twenty people vouched for, eight checked at once (#1193). |
+| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past an address's count: five sign-ins a minute its provider does not vouch for (thirty for an IPv6 /48), twenty people vouched for, eight checked at once (#1193). |
 | `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
 | `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
 | `DELETE /api/account` | account | Deletes the account. |

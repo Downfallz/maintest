@@ -119,6 +119,48 @@ public sealed class SignInAttemptsTests
     }
 
     [Fact]
+    public void An_address_already_refused_counts_its_sign_ins_being_checked_against_its_count()
+    {
+        var attempts = new SignInAttempts();
+        for (var refused = 0; refused < SignInAttempts.PerAddress - 1; refused++)
+        {
+            Refused(attempts, Address, Now);
+        }
+
+        attempts.Admit(Address, Now).ShouldBeNull();
+
+        attempts.Admit(Address, Now).ShouldBe(TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void A_48_counts_the_sign_ins_being_checked_on_all_its_64s()
+    {
+        var attempts = new SignInAttempts();
+        for (var checking = 0; checking < SignInAttempts.PerNetwork; checking++)
+        {
+            attempts.Admit($"2001:db8:aa:{checking:x}::/64", Now).ShouldBeNull();
+        }
+
+        attempts.Admit("2001:db8:aa:ff::/64", Now).ShouldBe(TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void One_person_signing_in_again_counts_against_their_own_64_alone()
+    {
+        var attempts = new SignInAttempts();
+        for (var home = 0; home < SignInAttempts.PerNetwork / SignInAttempts.PerAddress; home++)
+        {
+            for (var again = 0; again <= SignInAttempts.PerAddress; again++)
+            {
+                attempts.Admit($"2001:db8:aa:{home:x}::/64", Now).ShouldBeNull();
+                attempts.Settle($"2001:db8:aa:{home:x}::/64", Now, SignInAttempts.Outcome.Vouched, $"discord:{home}");
+            }
+        }
+
+        attempts.Admit("2001:db8:aa:ff::/64", Now).ShouldBeNull();
+    }
+
+    [Fact]
     public void The_addresses_whose_attempts_all_left_the_window_are_let_go_of()
     {
         var attempts = new SignInAttempts();
