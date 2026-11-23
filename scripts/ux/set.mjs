@@ -106,13 +106,24 @@ export async function startHost(folder, { program = dotnetBinary() } = {}) {
   host.stdout.on('data', data => { log += data; }); host.stderr.on('data', data => { log += data; });
   // A program that cannot be spawned emits an error, and never an exit: without a listener it ends the process.
   host.once('error', error => { failed = error; });
-  const end = Date.now() + 30000;
-  while (!hostLinks(log)) {
-    if (failed || exited(host) || Date.now() > end) {
-      await stopProcess(host, { grace: 2000 });
-      throw new Error(`The table host did not start${failed ? ` (${failed.message})` : ''}:\n${log}`);
+  // Waited on what the host says, or on its end, for 30 s at most.
+  await new Promise(done => {
+    const timer = setTimeout(settled, 30000);
+    function check() { if (hostLinks(log) || failed || exited(host)) settled(); }
+    function settled() {
+      clearTimeout(timer);
+      for (const stream of [host.stdout, host.stderr]) stream.off('data', check);
+      host.off('exit', check); host.off('error', check);
+      done();
     }
-    await new Promise(done => setTimeout(done, 100));
+    for (const stream of [host.stdout, host.stderr]) stream.on('data', check);
+    host.on('exit', check); host.on('error', check);
+    check();
+  });
+  if (!hostLinks(log)) {
+    await stopProcess(host, { grace: 2000 });
+    const why = failed ? ` (${failed.message})` : '';
+    throw new Error(`The table host did not start${why}:\n${log}`);
   }
   const close = () => stopProcess(host);
   return { origin: `http://127.0.0.1:${port}`, invitation: hostLinks(log).join, close };

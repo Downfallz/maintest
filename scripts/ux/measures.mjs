@@ -97,8 +97,7 @@ export function measureInPage({ floor, target, minimum }) {
       while (end < text.length && !/\s/.test(text[end])) end++;
       let url = text.slice(at, end), descriptor = '';
       at = end;
-      if (url.endsWith(',')) url = url.replace(/,+$/, '');
-      else {
+      if (url.endsWith(',')) { while (url.endsWith(',')) url = url.slice(0, -1); } else {
         end = text.indexOf(',', at);
         if (end === -1) end = text.length;
         descriptor = text.slice(at, end).trim();

@@ -17,10 +17,11 @@ const COLUMNS = ['Screen', 'Height', 'Words', 'Filled actions', 'Pictures', 'Sma
 function row(screen, axe) {
   const { pictures, text, targets } = screen;
   const found = Object.entries(screen.axe ?? {}).map(([rule, nodes]) => `${rule} (${nodes})`).join(', ');
+  const sizes = [pictures.oversized ? `${pictures.oversized} sent over twice their size` : null, pictures.undersized ? `${pictures.undersized} sent under their size` : null].filter(Boolean).join('; ');
   const drawn = [pictures.img ? `${pictures.img} img` : null, pictures.background ? `${pictures.background} background` : null, pictures.canvas ? 'the canvas' : null].filter(Boolean).join(', ');
   return [
     `${screen.screen}${screen.staged ? ' (staged)' : ''}`, `${screen.height} px${screen.window ? ', a window' : ''}`, screen.words, screen.filled,
-    `${drawn || 'none'}${pictures.oversized ? `; ${pictures.oversized} sent over twice their size` : ''}${pictures.undersized ? `; ${pictures.undersized} sent under their size` : ''}`, text.smallest === null ? 'none' : `${text.smallest} px`, text.under,
+    [drawn || 'none', sizes].filter(Boolean).join('; '), text.smallest === null ? 'none' : `${text.smallest} px`, text.under,
     `${targets.under} of ${targets.all}`, targets.tiny, screen.overlaps, screen.animating, screen.shift.toFixed(2),
     screen.contrast ? `${screen.contrast.under} of ${screen.contrast.texts} under 4.5:1, lowest ${screen.contrast.lowest}` : 'none', axe ? found || 'nothing' : 'not run',
   ];
