@@ -483,12 +483,14 @@ the provider is out of service; limited when the address had already posted five
 on the first request after the minute, and when the host stops. Summed by provider in the ops report, the lines
 show where people stop; a script posting forged proofs adds to the counts, not to the log.
 
-Each network address may post five sign-ins a minute to `POST /api/account/<provider>` that its provider does not
-vouch for. They are counted before the provider is asked, and an IPv6 address is counted by its /48. Past that
-the post is answered `429 Account.TooManySignIns` with `Retry-After` (#1193). A sign-in the provider vouches for
-is not counted, so players behind one address still sign in. One address cannot spend a provider's budget
-(Discord's thirty a minute) for every player; several addresses still can, and Discord's own limit then answers
-`503 Account.ProviderUnavailable`.
+`POST /api/account/<provider>` is checked by network address before the provider is asked (#1193). In a minute,
+one address may post five sign-ins its provider does not vouch for (a forged or refused proof, or one person
+signing in again), and the /64s of one IPv6 /48 thirty together. It may be vouched for twenty different people,
+and have eight sign-ins being checked at once. Past any of these the post is answered `429 Account.TooManySignIns`
+with `Retry-After`: one second while its sign-ins are being checked, otherwise until a place frees. A proof that
+is not one JSON object, and a provider out of service, are not counted. So a room of players behind one address
+signs in, and one address cannot spend a provider's budget (Discord's thirty a minute) for every player. Several
+addresses still can; Discord's own limit then answers `503 Account.ProviderUnavailable`.
 
 `--sign-in discord --discord-client-id <id>` (or `DOWNFALL_DISCORD_CLIENT_ID`) adds Discord (P3). Its button
 leaves for Discord's authorize page with a PKCE challenge and the scope `identify`. The state and the verifier stay
@@ -798,7 +800,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `/signin/discord` | anyone | The page Discord returns a sign-in to (sign-in methods plan, P3): it checks the tab's state, posts the code and goes back to the lobby. |
-| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past five refused sign-ins a minute from one address, an IPv6 one by its /48 (#1193). |
+| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past an address's count: five sign-ins a minute its provider does not vouch for, twenty people vouched for, eight checked at once (#1193). |
 | `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
 | `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
 | `DELETE /api/account` | account | Deletes the account. |

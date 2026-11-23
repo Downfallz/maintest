@@ -1001,18 +1001,76 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
-    public async Task Sign_ins_the_provider_vouches_for_spend_nothing_of_their_address_s_count()
+    public async Task A_room_of_players_behind_one_address_signs_in_past_the_count()
+    {
+        var api = await ApiAsync(AccountsMode.SignIn, new AnyCode("other"));
+        for (var player = 0; player < 2 * SignInAttempts.PerAddress; player++)
+        {
+            (await api.HandleAsync("POST", "/api/account/other", $$"""{"code":"player-{{player}}"}""", From("203.0.113.7"))).Status.ShouldBe(200);
+        }
+
+        var forged = await api.HandleAsync("POST", "/api/account/other", """{"code":""}""", From("203.0.113.7"));
+
+        forged.Status.ShouldBe(401);
+    }
+
+    [Fact]
+    public async Task One_person_signing_in_again_and_again_from_one_address_is_held_to_the_count()
     {
         await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
         var api = await ApiAsync();
-        for (var posted = 0; posted < 2 * SignInAttempts.PerAddress; posted++)
+        for (var posted = 0; posted <= SignInAttempts.PerAddress; posted++)
         {
             (await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", From("203.0.113.7"))).Status.ShouldBe(200);
+        }
+
+        var again = await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", From("203.0.113.7"));
+
+        again.Status.ShouldBe(429);
+    }
+
+    [Fact]
+    public async Task A_room_signing_in_at_the_same_moment_is_not_refused_while_its_proofs_are_checked()
+    {
+        var held = new HeldProvider();
+        var api = await ApiAsync(AccountsMode.SignIn, held);
+        var posts = Enumerable.Range(0, SignInAttempts.AtOnce)
+            .Select(player => api.HandleAsync("POST", "/api/account/held", $$"""{"code":"player-{{player}}"}""", From("203.0.113.7")))
+            .ToList();
+        await held.AskedAsync(SignInAttempts.AtOnce);
+
+        var one = await api.HandleAsync("POST", "/api/account/held", """{"code":"one-too-many"}""", From("203.0.113.7"));
+        held.Answer();
+
+        one.Status.ShouldBe(429);
+        one.Headers!.Single(header => header.Key == "Retry-After").Value.ShouldBe("1");
+        (await Task.WhenAll(posts)).ShouldAllBe(answer => answer.Status == 200);
+        (await api.HandleAsync("POST", "/api/account/held", """{"code":"after"}""", From("203.0.113.7"))).Status.ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task A_body_that_is_no_proof_spends_nothing_of_the_address_s_count()
+    {
+        var api = await ApiAsync();
+        for (var posted = 0; posted < 2 * SignInAttempts.PerAddress; posted++)
+        {
+            (await api.HandleAsync("POST", "/api/account/google", "[null]", From("203.0.113.7"))).Status.ShouldBe(400);
         }
 
         var forged = await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", From("203.0.113.7"));
 
         forged.Status.ShouldBe(401);
+    }
+
+    [Fact]
+    public async Task Discord_out_of_service_spends_nothing_of_the_address_s_count()
+    {
+        using var http = new HttpClient(new DiscordDown());
+        var api = await ApiAsync(AccountsMode.SignIn, new DiscordSignIn(DiscordApp, http, _clock));
+        for (var posted = 0; posted < 2 * SignInAttempts.PerAddress; posted++)
+        {
+            (await api.HandleAsync("POST", "/api/account/discord", DiscordProof($"code-{posted}"), From("203.0.113.7"))).Status.ShouldBe(503);
+        }
     }
 
     [Fact]
@@ -1114,6 +1172,34 @@ public sealed class AccountApiTests : IDisposable
         if (Directory.Exists(_root))
         {
             Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    /// <summary>A provider that holds every proof until told to answer, then vouches for the person its code names.</summary>
+    private sealed class HeldProvider : ISignInProvider
+    {
+        private readonly TaskCompletionSource _answer = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _asked;
+
+        public string Name => "held";
+
+        public string? ClientId => null;
+
+        public async Task AskedAsync(int count)
+        {
+            while (Volatile.Read(ref _asked) < count)
+            {
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+            }
+        }
+
+        public void Answer() => _answer.TrySetResult();
+
+        public async Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default)
+        {
+            Interlocked.Increment(ref _asked);
+            await _answer.Task;
+            return new ExternalIdentity(Name, proof["code"]!);
         }
     }
 

@@ -196,7 +196,7 @@ and 4. The recommended answer:
      `infra/runbooks/sign-ins.md`.
    - Since built: the Discord journey in the browser suite against a mock of Discord's pages
      (`studio/browser/signin-discord.spec.js`, #1194); a count of sign-ins per network address, so one address
-     cannot spend the minute's 30 exchanges for everybody (#1193).
+     cannot spend the minute's 30 exchanges for everybody, while a room behind one address still signs in (#1193).
    - Left: creating the Discord application and the variable (the owner's steps).
 
 4. **P4, ways to sign in.** Ships once P1's release is the only one running (ADR 0204). Settings lists the

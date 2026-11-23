@@ -501,9 +501,14 @@ internal sealed class AccountApi
             return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
         }
 
-        // Counted by address before the provider is asked (#1193): its budget is every player's, not one address's.
-        var taken = Clock.GetUtcNow();
-        if (request.Address is { } address && _attempts.Take(address, taken) is { } wait)
+        var proof = Proof(body);
+        if (proof is null)
+        {
+            return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
+        }
+
+        // Checked by address before the provider is asked (#1193): its budget is every player's, not one address's.
+        if (request.Address is { } address && _attempts.Admit(address, Clock.GetUtcNow()) is { } wait)
         {
             Counted(SignInCounts.Step.Limited, name);
             var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -513,22 +518,18 @@ internal sealed class AccountApi
             };
         }
 
-        var proof = Proof(body);
-        if (proof is null)
-        {
-            return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
-        }
-
-        Counted(SignInCounts.Step.Started, name);
-        ExternalIdentity? vouched;
+        var outcome = SignInAttempts.Outcome.Refused;
+        ExternalIdentity? vouched = null;
         try
         {
+            Counted(SignInCounts.Step.Started, name);
             vouched = await provider.SignInAsync(proof);
         }
         catch (SignInUnavailableException exception)
         {
             // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
             // Why is said once a minute: every post would otherwise write it again.
+            outcome = SignInAttempts.Outcome.Unchecked;
             if (Counted(SignInCounts.Step.Unavailable, name) == 1)
             {
                 Said($"  Sign-in unavailable ({name}): {exception.Message}");
@@ -536,17 +537,20 @@ internal sealed class AccountApi
 
             return Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
         }
+        finally
+        {
+            // The place is given back however the provider answered, and the answer counted: a person vouched for once.
+            if (request.Address is { } settled)
+            {
+                var person = vouched is { } one && one.Provider == name ? one.ToString() : null;
+                _attempts.Settle(settled, Clock.GetUtcNow(), person is null ? outcome : SignInAttempts.Outcome.Vouched, person);
+            }
+        }
 
         if (vouched is not { } identity || identity.Provider != name)
         {
             Counted(SignInCounts.Step.Refused, name);
             return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
-        }
-
-        // A person the provider vouched for spent the budget on what it is for: a room behind one address signs in.
-        if (request.Address is { } vouchedFrom)
-        {
-            _attempts.GiveBack(vouchedFrom, taken);
         }
 
         if (await _registry.FindAsync(identity) is { } account)
