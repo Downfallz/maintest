@@ -11,13 +11,14 @@ public sealed class StorageWorkChannel(QueueClient queue) : IWorkChannel
 
     public string Name => queue.Name;
 
-    public async Task SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default)
+    public async Task<QueuedWork> SendAsync(string body, TimeSpan? keptFor = null, TimeSpan? hiddenFor = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(body);
 
         // A storage queue says "for ever" as a time to live of minus one second.
         var kept = keptFor == Timeout.InfiniteTimeSpan ? TimeSpan.FromSeconds(-1) : keptFor;
-        await queue.SendMessageAsync(body, visibilityTimeout: hiddenFor, timeToLive: kept, cancellationToken);
+        var sent = (await queue.SendMessageAsync(body, visibilityTimeout: hiddenFor, timeToLive: kept, cancellationToken)).Value;
+        return new QueuedWork(sent.MessageId, sent.PopReceipt, body, 0, sent.InsertionTime);
     }
 
     public async Task<IReadOnlyList<QueuedWork>> ReceiveAsync(int most, TimeSpan hiddenFor, CancellationToken cancellationToken = default)

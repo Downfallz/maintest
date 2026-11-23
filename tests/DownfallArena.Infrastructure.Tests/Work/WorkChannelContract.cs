@@ -45,6 +45,20 @@ public abstract class WorkChannelContract
     }
 
     [Fact]
+    public async Task An_item_still_hidden_since_it_was_sent_is_deleted_by_what_its_send_answered()
+    {
+        var channel = await ChannelAsync();
+        var sent = await channel.SendAsync("your turn", hiddenFor: Briefly, cancellationToken: Cancel);
+
+        sent.Body.ShouldBe("your turn");
+        sent.Delivered.ShouldBe(0);
+        await channel.DeleteAsync(sent, Cancel);
+        await Task.Delay(Briefly * 2, Cancel);
+
+        (await channel.ReceiveAsync(10, TimeSpan.FromMinutes(1), Cancel)).ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_deleted_item_never_comes_back()
     {
         var channel = await ChannelAsync();

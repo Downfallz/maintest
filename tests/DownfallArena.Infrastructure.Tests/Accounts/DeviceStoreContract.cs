@@ -28,6 +28,30 @@ public abstract class DeviceStoreContract
     }
 
     [Fact]
+    public async Task A_gone_endpoint_reads_back_gone_beside_the_devices()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var gone = new PushDevice("https://push.example/dead", string.Empty, string.Empty, new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero), Gone: true);
+
+        (await store.SaveAsync(account, [gone, Phone("one", 1)], null, Cancel)).ShouldBeTrue();
+
+        (await store.ListAsync(account, Cancel)).ShouldBe([gone, Phone("one", 1)]);
+    }
+
+    [Fact]
+    public async Task An_entry_without_keys_reads_gone_though_an_older_image_dropped_its_flag()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var keyless = new PushDevice("https://push.example/dead", string.Empty, string.Empty, new DateTimeOffset(2026, 11, 3, 20, 0, 0, TimeSpan.Zero));
+
+        await store.SaveAsync(account, [keyless], null, Cancel);
+
+        (await store.ListAsync(account, Cancel)).ShouldHaveSingleItem().Gone.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task An_account_with_no_devices_lists_none_and_an_empty_save_leaves_none()
     {
         var store = await StoreAsync();

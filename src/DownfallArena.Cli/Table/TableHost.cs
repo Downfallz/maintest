@@ -100,6 +100,10 @@ internal static class TableHost
 
         var channels = mode == TurnsMode.Process ? null : ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock);
         var turns = channels is null ? null : await OpenChannelAsync(channels, AgentTurnWorker.Queue, stopping.Token);
+        // The notices go through a queue beside the turns' (ADR 0203), sent off the request by this host and by
+        // table-worker; a host whose turns are taken in process sends them in the request, as before.
+        var notices = channels is null || sender is null ? null : await OpenChannelAsync(channels, QueuedNotice.Queue, stopping.Token, "the notices are sent in the request that gives them");
+        push?.Outbox = notices;
         var contents = store is null ? null : await OpenContentsAsync(options.Record ?? DefaultRunsDirectory, stopping.Token);
         var composer = new TableComposer(services, rules, store)
         {
@@ -166,6 +170,7 @@ internal static class TableHost
             {
                 Exists = async (id, token) => await opened!.Value.Store.FindAsync(id, token) is not null,
                 Preferences = accounts.Preferences,
+                Outbox = notices,
             };
             // A signed-in seat's "your turn" goes through the door, to its account's devices (ADR 0202).
             push?.Accounts = notifier;
@@ -368,6 +373,7 @@ internal static class TableHost
             var working = mode == TurnsMode.Worker && turns is not null
                 ? TakenByTheWorker(turns)
                 : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
+            var noticing = await StartNoticesAsync(channels, notices, push, registry, clock, stopping.Token);
 
             // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
             // expiries -- is heard through the relay when there is one, and looked for every second when there is not
@@ -413,6 +419,7 @@ internal static class TableHost
             // workers stop with it.
             await serving;
             await working;
+            await noticing;
             await watching;
             return 0;
         }
@@ -576,7 +583,8 @@ internal static class TableHost
     }
 
     /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
-    internal static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken)
+    /// <param name="otherwise">What happens instead, as the line says it.</param>
+    internal static async Task<IWorkChannel?> OpenChannelAsync(IWorkChannels channels, string name, CancellationToken cancellationToken, string otherwise = "the bots' turns are taken in this process")
     {
         try
         {
@@ -584,7 +592,7 @@ internal static class TableHost
         }
         catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
         {
-            Console.WriteLine($"  The queue {name} could not be opened ({failure.Message}); the bots' turns are taken in this process.");
+            Console.WriteLine($"  The queue {name} could not be opened ({failure.Message}); {otherwise}.");
             return null;
         }
     }
@@ -610,6 +618,62 @@ internal static class TableHost
         };
         var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
         Console.WriteLine($"  Turns: through the queue {turns.Name}, given up on after {AgentTurnWorker.MostDeliveries} deliveries onto {poison.Name}, kept for good on {deadLetters.Name}.");
+        return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
+    }
+
+    /// <summary>
+    /// The two workers of the notices queue (ADR 0203): one sends what it holds -- a notice to one device of an account,
+    /// "your turn" once its grace is over -- and the other keeps for good what the first gave up on. In the API and in
+    /// <c>table-worker</c>; none on a host with no queue or no push keys, which sends in the request.
+    /// </summary>
+    internal static async Task<Task> StartNoticesAsync(IWorkChannels? channels, IWorkChannel? notices, PushNotices? push, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    {
+        if (channels is null || notices is null || push is null)
+        {
+            Console.WriteLine("  Notices: sent in the request that gives them (a queue and --push-keys send them off it).");
+            return Task.CompletedTask;
+        }
+
+        IWorkChannel poison;
+        IWorkChannel deadLetters;
+        try
+        {
+            poison = await channels.OpenAsync(PoisonedWork.QueueOf(notices.Name), stopping);
+            deadLetters = await channels.OpenAsync(DeadLetter.QueueOf(notices.Name), stopping);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            // Nothing here would read what the door queues: it sends in the request instead.
+            push.Outbox = null;
+            push.Accounts?.Outbox = null;
+            Console.WriteLine($"  The queues beside {notices.Name} could not be opened ({HttpHost.OneLine(failure)}); the notices are sent in the request that gives them.");
+            return Task.CompletedTask;
+        }
+
+        var worker = new NoticeWorker(notices, poison, clock)
+        {
+            Devices = push.Accounts?.Push,
+            Turns = async (due, cancellationToken) =>
+            {
+                // A table held here may not have been looked at for a while (TableWatch looks only at those asked for
+                // lately): brought up to date first, or let go of and picked up again, so a later asking is not read as
+                // an answered one. A look that cannot be made throws, and the item is tried again.
+                await new TableWatch(registry, clock).MovedAsync(due.Table, cancellationToken);
+                var found = await registry.FindAsync(due.Table, cancellationToken);
+                if (found.Unavailable is { } why)
+                {
+                    throw new IOException($"Session {due.Table} could not be picked up: {why}");
+                }
+
+                if (found.Table is { } table)
+                {
+                    await push.TurnDueAsync(table, due);
+                }
+            },
+            Said = Console.WriteLine,
+        };
+        var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine, KeptFor = NoticeWorker.DeadLettersKeptFor };
+        Console.WriteLine($"  Notices: through the queue {notices.Name}, given up on after {NoticeWorker.MostDeliveries} tries onto {poison.Name}, kept a week on {deadLetters.Name}.");
         return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
     }
 

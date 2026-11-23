@@ -160,6 +160,24 @@ public sealed class LobbyInvitationsTests : IDisposable
     }
 
     [Fact]
+    public async Task An_invitation_s_notice_still_on_its_way_holds_no_other_claim_waiting()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+        var lobby = await LobbyAsync();
+        _sender.Hold = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var opening = OpenForAsync(mark, bastien);
+        await _sender.Began.Task.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+
+        (await lobby.ExpireInvitationsNowAsync().WaitAsync(TimeSpan.FromSeconds(5), Cancel)).ShouldBe(0, "the claim gate was let go of before the notice");
+        opening.IsCompleted.ShouldBeFalse("the request answers once its notice is given");
+        _sender.Hold.SetResult();
+        (await opening).Status.ShouldBe(201);
+    }
+
+    [Fact]
     public async Task A_link_s_table_is_described_to_a_visitor_who_is_not_signed_in_naming_the_player_who_opened_it()
     {
         var rook = await PlayerAsync("Rook");
@@ -537,10 +555,21 @@ public sealed class LobbyInvitationsTests : IDisposable
         /// <summary>The endpoints a push service says are gone.</summary>
         public HashSet<string> Gone { get; } = [];
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        /// <summary>Set, a send waits on it, once it says it began: what shows a notice in flight holds no gate.</summary>
+        public TaskCompletionSource? Hold { get; set; }
+
+        public TaskCompletionSource Began { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             Sent.Add((to.Endpoint, payload, topic));
-            return Task.FromResult(!Gone.Contains(to.Endpoint));
+            Began.TrySetResult();
+            if (Hold is { } hold)
+            {
+                await hold.Task;
+            }
+
+            return !Gone.Contains(to.Endpoint);
         }
     }
 

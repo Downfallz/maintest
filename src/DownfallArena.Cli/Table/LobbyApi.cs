@@ -96,6 +96,38 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     /// <param name="player">Who the request's session says is signed in, when this host signs players in.</param>
     public async Task<StudioResponse> HandleAsync(string method, string path, string body, string? token = null, SignedIn? player = null)
     {
+        // The notices a route gives are kept until it has answered, so none is written under the claim gate, where every
+        // other claim would wait on the bell's write and the push (ADR 0203).
+        var held = new HeldNotices();
+        _held.Value = held;
+        StudioResponse answer;
+        try
+        {
+            answer = await RouteAsync(method, path, body, token, player);
+        }
+        finally
+        {
+            _held.Value = null;
+        }
+
+        foreach (var (to, notice) in held.Close())
+        {
+            try
+            {
+                await Notifier!.NotifyAsync(to, notice);
+            }
+            catch (Exception failure) when (failure is not OperationCanceledException)
+            {
+                // What the request did is done and answered: a notice that cannot go is a line, never a 500.
+                Said($"  Account {to}: a notice could not be given: {HttpHost.OneLine(failure)}");
+            }
+        }
+
+        return answer;
+    }
+
+    private async Task<StudioResponse> RouteAsync(string method, string path, string body, string? token, SignedIn? player)
+    {
         var account = player?.Account.Id;
         try
         {
@@ -869,9 +901,68 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     private async Task NoticeAsync(AccountId to, NoticeKind kind, string title, string body, string url, string tag)
     {
         Changes?.Account(to);
-        if (Notifier is { } notifier)
+        if (Notifier is not { } notifier)
         {
-            await notifier.NotifyAsync(to, new Notice(kind, title, body, url, tag));
+            return;
+        }
+
+        var notice = new Notice(kind, title, body, url, tag);
+        if (_held.Value?.Hold(to, notice) != true)
+        {
+            await notifier.NotifyAsync(to, notice);
+        }
+    }
+
+    // Whether the account's devices remember this endpoint as gone; a list that cannot be read says not, rather than
+    // refusing the switch: the push to a gone endpoint is answered 410 again and forgotten again.
+    private async Task<bool> GoneForAsync(AccountId account, string endpoint)
+    {
+        if (Notifier?.Push is not { } accountPush)
+        {
+            return false;
+        }
+
+        try
+        {
+            return await accountPush.IsGoneAsync(account, endpoint);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is JsonException or InvalidDataException)
+        {
+            Said($"  Account {account}: its devices could not be read to check a subscription: {HttpHost.OneLine(failure)}");
+            return false;
+        }
+    }
+
+    // The notices of the request being answered, given once it has; none outside a request (the tending job's expiries).
+    private readonly AsyncLocal<HeldNotices?> _held = new();
+
+    /// <summary>A request's notices, held until it has answered; one held after that is given at once.</summary>
+    private sealed class HeldNotices
+    {
+        private readonly List<(AccountId To, Notice Notice)> _held = [];
+        private bool _closed;
+
+        public bool Hold(AccountId to, Notice notice)
+        {
+            lock (_held)
+            {
+                if (_closed)
+                {
+                    return false;
+                }
+
+                _held.Add((to, notice));
+                return true;
+            }
+        }
+
+        public IReadOnlyList<(AccountId To, Notice Notice)> Close()
+        {
+            lock (_held)
+            {
+                _closed = true;
+                return [.. _held];
+            }
         }
     }
 
@@ -1093,8 +1184,9 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
             }
 
             // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a
-            // push service say an endpoint is gone (ADR 0202): either one's word makes the page subscribe again.
-            if (push.IsDead(subscription.Endpoint) || Notifier?.Push?.IsDead(subscription.Endpoint) == true)
+            // push service say an endpoint is gone (ADR 0202), in whichever process sent it, and the account's devices
+            // remember it (ADR 0203): either one's word makes the page subscribe again.
+            if (push.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
             {
                 return Problem(410, "This subscription is gone from its push service. Subscribe again.");
             }

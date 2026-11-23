@@ -85,6 +85,11 @@ var recordings = '${storage.properties.primaryEndpoints.blob}${containerName}'
 var turnsQueue = 'agent-turns'
 var poisonQueue = 'agent-turns-poison'
 
+// The queues the notices go through (ADR 0203): the API and the worker send them, and the worker wakes for them, so a
+// notice outlives the API's replica.
+var noticesQueue = 'notices'
+var noticesPoisonQueue = 'notices-poison'
+
 // The push keys as a secret of each app that sends notices, read by the host as a variable (ADR 0118).
 var pushSecrets = empty(pushKeys) ? [] : [
   {
@@ -179,15 +184,16 @@ var alertsOn = !empty(alertEmail)
 var budgetOn = alertsOn && !empty(budgetStart)
 var alertGroupName = '${namePrefix}-alerts'
 var alertGroupId = resourceId('Microsoft.Insights/actionGroups', alertGroupName)
-// The worker writes "deliveries, onto" as it puts a turn on the poison queue, and the job this line when a pass
-// fails (AgentTurnWorker, TableTend): the console lines are the one place either is said. Not "given up on
-// after", which every host's banner says as it starts (studio/ops.test.js holds both).
-var givenUpQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "deliveries, onto"'
+// The worker writes "deliveries, onto" as it puts a turn on the poison queue, "tries, onto" as it puts a notice
+// there (ADR 0203), and the job this line when a pass fails (AgentTurnWorker, NoticeWorker, TableTend): the console
+// lines are the one place each is said. Not "given up on after", which every host's banner says as it starts
+// (studio/ops.test.js holds them).
+var givenUpQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "deliveries, onto" or Log_s has "tries, onto"'
 var tendFailedQuery = 'ContainerAppConsoleLogs_CL | where Log_s has "The tables could not be tended"'
 var logRules = [
   {
     name: '${namePrefix}-turn-given-up'
-    description: 'The worker gave up on a bot\'s turn and put it on the poison queue (ADR 0186).'
+    description: 'A worker gave up on a bot\'s turn or a notice and put it on a poison queue (ADR 0186, 0203).'
     query: givenUpQuery
   }
   {
@@ -414,8 +420,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
 }
 
 // The worker (ADR 0162): the turn worker and the dead-letter worker, over the same store, picking tables up as
-// the API does. No ingress. Zero replicas while neither queue holds anything, one when either does: a second
-// would only take turns the first is already taking. It closes a match its turn ended, so it keeps the result
+// the API does, and the notices' two (ADR 0203). No ingress. Zero replicas while no queue holds anything, one
+// when one does: a second would only take turns the first is already taking. It closes a match its turn ended, so it keeps the result
 // and tells the accounts as the API would, with the same sign-in and the same keys.
 resource worker 'Microsoft.App/containerApps@2025-01-01' = {
   name: '${namePrefix}-worker'
@@ -473,6 +479,30 @@ resource worker 'Microsoft.App/containerApps@2025-01-01' = {
               metadata: {
                 accountName: storage.name
                 queueName: poisonQueue
+                queueLength: '1'
+              }
+              identity: 'system'
+            }
+          }
+          {
+            name: 'notices-owed'
+            custom: {
+              type: 'azure-queue'
+              metadata: {
+                accountName: storage.name
+                queueName: noticesQueue
+                queueLength: '1'
+              }
+              identity: 'system'
+            }
+          }
+          {
+            name: 'notices-given-up-on'
+            custom: {
+              type: 'azure-queue'
+              metadata: {
+                accountName: storage.name
+                queueName: noticesPoisonQueue
                 queueLength: '1'
               }
               identity: 'system'

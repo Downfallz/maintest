@@ -4,7 +4,8 @@ Date: 2026-10-31
 
 Status: Accepted. Amends ADR 0054 (the page polls) and ADR 0080 (the hosted table's configuration).
 Amended by [0166](0166-serve-the-table-s-files-once-compressed-and-revalidated.md): the worker keeps one page, the
-offline page, and every page registers it.
+offline page, and every page registers it. Amended by [0203](0203-send-the-notices-from-a-queue-and-your-turn-as-a-delayed-message.md):
+where the host has a queue, "your turn" waits on it for the grace rather than in the process.
 
 ## Context
 
