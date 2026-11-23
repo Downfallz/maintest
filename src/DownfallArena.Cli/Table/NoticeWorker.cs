@@ -116,6 +116,11 @@ internal sealed class NoticeWorker(IWorkChannel notices, IWorkChannel poison, Ti
             {
                 found = await RunOnceAsync(cancellationToken);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Stopped in the middle of a look, as while idle: what was taken and not deleted comes back to the queue.
+                return;
+            }
             catch (Exception failure) when (!cancellationToken.IsCancellationRequested)
             {
                 Said($"  The queue {notices.Name} could not be read: {Hosting.HttpHost.OneLine(failure)}");

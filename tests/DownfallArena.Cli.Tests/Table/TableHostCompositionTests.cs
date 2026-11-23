@@ -60,7 +60,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>The host the command line composes over a directory, signing players in, with push keys or without.</summary>
-    private async Task<ComposedHost> ComposeAsync(bool push = false, TurnsMode? turns = null)
+    private async Task<ComposedHost> ComposeAsync(bool push = false, TurnsMode? turns = null, IChangeRelay? relay = null)
     {
         var options = new CliOptions
         {
@@ -72,7 +72,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             Port = FreePort(),
             Turns = turns,
         };
-        _host = (await TableHost.ComposeAsync(_hosted.Services, options, HostedTables.Rules, push ? new TableHost.Pushing(_sender, "BP8") : null, Path.Combine(AppContext.BaseDirectory, "table"), Cancel)).ShouldNotBeNull();
+        _host = (await TableHost.ComposeAsync(_hosted.Services, options, HostedTables.Rules, push ? new TableHost.Pushing(_sender, "BP8") : null, Path.Combine(AppContext.BaseDirectory, "table"), relay, Cancel)).ShouldNotBeNull();
         return _host;
     }
 
@@ -274,6 +274,118 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await noticing;
         beforeTheWorker.ShouldBe(0, "the door queued the notice rather than send it in the request");
         _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF"]);
+    }
+
+    [Fact]
+    public async Task A_friend_request_moves_the_asker_s_own_lists_on_their_other_pages()
+    {
+        var host = await ComposeAsync();
+        var mark = await SignInAsync(host, "MarkF");
+        await SignInAsync(host, "bastien");
+        var before = host.Changes.VersionOf(mark.Id);
+
+        (await host.Friends!.HandleAsync("POST", "/api/friends/requests", """{"username":"bastien"}""", Signed(mark.Session))).Status.ShouldBe(200);
+
+        host.Changes.VersionOf(mark.Id).ShouldBeGreaterThan(before, "the request is told to the asker's pages, which no notice is");
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_the_host_sends_what_its_notices_queue_holds()
+    {
+        var host = await ComposeAsync(push: true, turns: TurnsMode.Queue);
+        var mark = await SignInAsync(host, "MarkF", phone: true);
+        await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        for (var attempt = 0; attempt < 600 && _sender.Count == 0; attempt++)
+        {
+            await Task.Delay(50, Cancel);
+        }
+
+        await stopping.CancelAsync();
+        await running;
+        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_on_a_queue_the_host_takes_the_bots_turns_it_puts_there()
+    {
+        var host = await ComposeAsync(turns: TurnsMode.Queue);
+        var table = await host.Composer.ComposeAsync(TwoPeople, Cancel);
+        _tables.Add(table);
+        using (var place = (await host.Registry.ReserveAsync(Cancel)).ShouldNotBeNull())
+        {
+            await host.Registry.AddAsync(table, place, Cancel);
+        }
+
+        foreach (var seat in table.Seats)
+        {
+            seat.Person!.Arrive();
+        }
+
+        table.Session.Begin();
+        await table.RecordAsync(Cancel);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        await Task.WhenAny(table.Session.Outcome, Task.Delay(TimeSpan.FromSeconds(60), Cancel));
+
+        await stopping.CancelAsync();
+        await running;
+        table.Session.Outcome.IsCompleted.ShouldBeTrue("the understudies' turns went on the queue and the host's worker took them");
+    }
+
+    [Fact]
+    public async Task With_a_relay_a_notice_the_host_s_door_keeps_is_said_to_the_account_s_pages_through_it()
+    {
+        var relay = new RecordedRelay();
+        var host = await ComposeAsync(relay: relay);
+        var mark = await SignInAsync(host, "MarkF");
+        relay.Said.Clear();
+
+        await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
+
+        relay.Said.ShouldBe([$"account {mark.Id.Value}"]);
+    }
+
+    [Fact]
+    public async Task With_a_relay_a_seat_at_a_table_the_host_composes_is_sent_to_its_table_s_group()
+    {
+        var host = await ComposeAsync(relay: new RecordedRelay());
+        var table = await host.Composer.ComposeAsync(HostedTables.OnePerson, Cancel);
+        _tables.Add(table);
+        var seat = table.Seats[0];
+
+        var answer = await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}/negotiate", string.Empty, seat.Token);
+
+        answer.Status.ShouldBe(200);
+        Json(answer).GetProperty("url").GetString().ShouldBe($"wss://relay.example/client/hubs/downfall?group=table-{table.Id}");
+    }
+
+    [Fact]
+    public async Task With_a_relay_the_host_s_lobby_sends_its_pages_to_the_relay()
+    {
+        var host = await ComposeAsync(relay: new RecordedRelay());
+
+        var answer = await host.Admin.Lobby.HandleAsync("GET", "/api/lobby/negotiate", string.Empty);
+
+        answer.Status.ShouldBe(200);
+        Json(answer).GetProperty("url").GetString().ShouldBe("wss://relay.example/client/hubs/downfall?user=nobody");
+    }
+
+    [Fact]
+    public async Task A_pass_run_from_the_panel_tends_with_every_part_the_host_composed()
+    {
+        var host = await ComposeAsync();
+
+        var chores = host.Chores.ShouldNotBeNull();
+
+        (chores.Registry, chores.Lobby, chores.Composer).ShouldBe((host.Registry, host.Admin.Lobby, host.Composer));
+        chores.Suspended.ShouldNotBeNull();
+        chores.Feedback.ShouldNotBeNull();
+        chores.FeedbackIndex.ShouldNotBeNull();
+        chores.Notices.ShouldNotBeNull().ShouldBeSameAs(host.Accounts!.NoticeLog);
     }
 
     [Fact]

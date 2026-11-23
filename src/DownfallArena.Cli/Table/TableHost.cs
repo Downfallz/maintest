@@ -67,16 +67,14 @@ internal static class TableHost
         }
 
         using var sender = keys is null ? null : new WebPushSender(keys);
-        await using var host = await ComposeAsync(services, options, rules, sender is null ? null : new Pushing(sender, keys!.PublicKey), TableDirectory, stopping.Token);
+        await using var host = await ComposeAsync(services, options, rules, sender is null ? null : new Pushing(sender, keys!.PublicKey), TableDirectory, WebPubSubRelay.FromEnvironment(), stopping.Token);
         if (host is null)
         {
             return 1;
         }
 
         var (server, registry, composer, store, stored) = (host.Server, host.Registry, host.Composer, host.Store, host.Stored);
-        var (accounts, push, gate, relay, described) = (host.Accounts, host.Push, host.Gate, host.Relay, host.Described);
-        var (mode, channels, turns, notices) = (host.Mode, host.Channels, host.Turns, host.Notices);
-        var noticeCounts = host.NoticeCounts;
+        var (accounts, push, gate, described) = (host.Accounts, host.Push, host.Gate, host.Described);
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -126,15 +124,7 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             var serving = server.RunAsync(stopping.Token);
-            var working = mode == TurnsMode.Worker && turns is not null
-                ? TakenByTheWorker(turns)
-                : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
-            var noticing = await StartNoticesAsync(channels, notices, push, registry, clock, stopping.Token, noticeCounts);
-
-            // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
-            // expiries -- is heard through the relay when there is one, and looked for every second when there is not
-            // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
-            var watching = stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(registry, clock), relay, clock, stopping.Token);
+            var running = await StartAsync(host, clock, stopping.Token);
             if (serving.IsFaulted)
             {
                 await serving;
@@ -174,9 +164,7 @@ internal static class TableHost
             // than vanishing: the host keeps serving after a match so its players can read the end screen. The
             // workers stop with it.
             await serving;
-            await working;
-            await noticing;
-            await watching;
+            await running;
             return 0;
         }
         catch (System.Net.HttpListenerException exception)
@@ -197,6 +185,26 @@ internal static class TableHost
         }
     }
 
+    /// <summary>
+    /// What a composed host runs beside its server, until stopped: the workers of the bots' turns (unless table-worker
+    /// takes them), the notices' workers, and the watch of the tables it holds. What <see cref="RunAsync" /> starts, and
+    /// what the tests start to see each is started (#1159).
+    /// </summary>
+    internal static async Task<Task> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        var working = host.Mode == TurnsMode.Worker && host.Turns is not null
+            ? TakenByTheWorker(host.Turns)
+            : await StartWorkersAsync(host.Channels, host.Turns, host.Registry, clock, stopping);
+        var noticing = await StartNoticesAsync(host.Channels, host.Notices, host.Push, host.Registry, clock, stopping, host.NoticeCounts);
+
+        // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
+        // expiries -- is heard through the relay when there is one, and looked for every second when there is not
+        // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
+        var watching = host.Stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(host.Registry, clock), host.Relay, clock, stopping);
+        return Task.WhenAll(working, noticing, watching);
+    }
+
     /// <summary>What sends a notice to a device, and the public key a page subscribes with: a host given push keys.</summary>
     internal sealed record Pushing(IPushSender Sender, string PublicKey);
 
@@ -208,14 +216,15 @@ internal static class TableHost
     /// </summary>
     /// <param name="pushing">The sender and the public key of a host given push keys; none on a host without.</param>
     /// <param name="files">The directory the pages are served from.</param>
-    internal static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, CancellationToken cancellationToken)
+    /// <param name="relay">Where what moved is said (ADR 0165): the one the environment names, a recording one in the tests (#1153); none.</param>
+    internal static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, IChangeRelay? relay, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
         var kept = new ComposedHost.Kept();
         try
         {
-            var composed = await ComposeAsync(services, options, rules, pushing, files, kept, cancellationToken);
+            var composed = await ComposeAsync(services, options, rules, pushing, new Composing(services, options, files, kept, services.GetRequiredService<TimeProvider>()) { Relay = relay }, cancellationToken);
             if (composed is null)
             {
                 await kept.DisposeAsync();
@@ -230,76 +239,16 @@ internal static class TableHost
         }
     }
 
-    private static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, ComposedHost.Kept kept, CancellationToken cancellationToken)
+    private static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, Composing composing, CancellationToken cancellationToken)
     {
-        var clock = services.GetRequiredService<TimeProvider>();
-        // A table told --no-record opens nothing and writes nothing: a rule tried out at a table should be
-        // able to leave the disk as it found it.
-        var store = options.Recording ? await ArtifactStores.OpenAsync(options.Record ?? DefaultRunsDirectory, cancellationToken) : null;
-        var offered = SeatableAgents.Read(WeightsDirectory);
-        var levels = BotLevels.OfHost(offered);
-
-        // The operator can seat every bot a level seats (ADR 0180), Easy's included, which no list put forward.
-        IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
-            .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
-            .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
-
-        var push = pushing is null ? null : new PushNotices(pushing.Sender, pushing.PublicKey, clock) { Record = table => table.RecordAsync(CancellationToken.None) };
-        // Finished matches with an account in them, kept beside the accounts for a ladder (ADR 0122, stage 5).
-        var results = options.Accounts != AccountsMode.Off && store is not null
-            ? await ArtifactStores.OpenResultsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken)
-            : null;
-        // The index that lists and finds the tables (ADR 0161): Table Storage beside a container, files beside a
-        // directory, and this process's own for a host that keeps nothing or whose store's index cannot be opened.
-        var index = (store is null ? null : await OpenIndexAsync(options.Record ?? DefaultRunsDirectory, cancellationToken)) ?? new InMemoryTableIndex();
-        // Where the bots' turns are taken (ADR 0159, phase 5; ADR 0162): handed to a worker through a queue when the
-        // host is told so -- its own, or table-worker's in a process of its own -- and in this process otherwise.
-        var mode = TurnsOf(options);
-        if (mode == TurnsMode.Worker && !(store is not null && ArtifactStores.IsContainerUrl(options.Record ?? DefaultRunsDirectory)))
+        var (kept, clock) = (composing.Kept, composing.Clock);
+        var tables = await ComposeTablesAsync(services, options, rules, pushing, kept, cancellationToken);
+        var (composer, registry) = (tables.Composer, tables.Registry);
+        if (await GateAsync(options) is not { } gate)
         {
-            // A directory's queues are this process's own, and a host recording nothing has no store a worker could
-            // pick its tables up from: no table-worker could take a turn put on them.
-            Console.WriteLine(store is null
-                ? "  Turns: this host records nothing a worker could pick its tables up from, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>)."
-                : "  Turns: a directory has no queue another process reads, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>).");
-            mode = TurnsMode.Queue;
-        }
-
-        var channels = mode == TurnsMode.Process ? null : ArtifactStores.OpenChannels(options.Record ?? DefaultRunsDirectory, clock);
-        var turns = channels is null ? null : await OpenChannelAsync(channels, AgentTurnWorker.Queue, cancellationToken);
-        // The notices go through a queue beside the turns' (ADR 0203), sent off the request by this host and by
-        // table-worker; a host whose turns are taken in process sends them in the request, as before.
-        var notices = channels is null || pushing is null ? null : await OpenChannelAsync(channels, QueuedNotice.Queue, cancellationToken, "the notices are sent in the request that gives them");
-        push?.Outbox = notices;
-        var contents = store is null ? null : await OpenContentsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken);
-        var composer = new TableComposer(services, rules, store)
-        {
-            Contents = contents,
-            Turns = turns is null ? new InProcessAgentTurns(clock) : new QueuedAgentTurns(turns, clock) { Said = Console.WriteLine },
-            Index = index,
-            Agents = agents,
-            Levels = levels,
-            Push = push,
-            Results = results,
-            Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
-        };
-        var stored = store is null ? null : new StoredSessions(store);
-        // The tables this host holds, and the way to the others: picked up from their records when a request
-        // names them, on a host that records any.
-        var registry = kept.Add(new TableRegistry(index) { Loader = stored is null ? null : new TableLoader(stored, composer, clock), Basis = composer.Basis });
-
-        // The operator's door: the platform's login where the host is behind one, a printed token everywhere
-        // else. The token is minted the way a pilot's is, and printed the way a pilot's is.
-        var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
-        // The accounts that are the operator once signed in (ADR 0172), a third door beside either.
-        var (admins, adminProblem) = OperatorGate.ParseAdmins(options.Admins ?? Environment.GetEnvironmentVariable(AdminsEnvironment));
-        if (adminProblem is not null || (admins.Count > 0 && options.Accounts == AccountsMode.Off))
-        {
-            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--accounts google' or '--accounts dev'.");
             return null;
         }
 
-        gate = gate.WithAdmins(admins);
         var described = RuleSetFile.Describe(rules, options.Rules);
         // The players' sign-in (ADR 0122), kept beside the recordings. A Google sign-in without its client id is
         // one line here rather than a page whose button never draws.
@@ -312,107 +261,254 @@ internal static class TableHost
 
         var google = kept.Add(options.Accounts == AccountsMode.Google ? new HttpClient() : null);
         var signingKeys = kept.Add(google is null ? null : new GoogleSigningKeys(google, clock));
-        var opened = options.Accounts == AccountsMode.Off
-            ? ((AccountApi Api, IAccountStore Store)?)null
-            : await OpenAccountsAsync(options, googleClientId, signingKeys, clock, cancellationToken);
-        var accounts = opened?.Api;
-        FriendsApi? friends = null;
-        AccountNotifier? notifier = null;
-        Friends? friendships = null;
-        PlayersApi? players = null;
-        PlayerDirectory? directory = null;
-        if (accounts is not null)
-        {
-            // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
-            // sign a notice, something to send one with.
-            var devices = new AccountDevices(await ArtifactStores.OpenDevicesAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), clock);
-            accounts.Devices = devices;
-            accounts.Notices = pushing is null ? null : new AccountNotices(pushing.Sender, devices);
-            // The bell's news (ADR 0201), beside the accounts too, kept whether or not the host can push.
-            accounts.NoticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), clock);
-            // The settings every new game of the account starts from (ADR 0140), beside the accounts too, with what pops
-            // up on its devices (ADR 0202), which the door reads before each push.
-            accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(options.Record ?? DefaultRunsDirectory, cancellationToken);
-            notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices)
-            {
-                Exists = async (id, token) => await opened!.Value.Store.FindAsync(id, token) is not null,
-                Preferences = accounts.Preferences,
-                Outbox = notices,
-            };
-            // A signed-in seat's "your turn" goes through the door, to its account's devices (ADR 0202).
-            push?.Accounts = notifier;
-            // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
-            friendships = new Friends(await ArtifactStores.OpenFriendsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), opened!.Value.Store, clock);
-            friends = new FriendsApi(friendships, accounts, notifier);
-            accounts.ForgetFriends = id => friendships.ForgetAsync(id, CancellationToken.None);
-            // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
-            // operator's list of players read from it, the accounts and the results.
-            accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), clock);
-            // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
-            accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(options.Record ?? DefaultRunsDirectory, cancellationToken), clock);
-            directory = new PlayerDirectory(opened.Value.Store, accounts.Activity, results, clock);
-            players = new PlayersApi(directory, accounts, results)
-            {
-                Friends = friendships,
-                // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
-                BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
-            };
-        }
-        var admin = new AdminApi(registry, composer, gate, clock, described, stored, agents, push)
+        var signedIn = options.Accounts == AccountsMode.Off
+            ? null
+            : await ComposeAccountsAsync(tables, pushing, await OpenAccountsAsync(options, googleClientId, signingKeys, clock, cancellationToken), clock, cancellationToken);
+        var accounts = signedIn?.Api;
+        var admin = new AdminApi(registry, composer, gate, clock, described, tables.Stored, tables.Agents, tables.Push)
         {
             Accounts = accounts,
-            Players = players,
+            Players = signedIn?.Players,
             Settings = accounts?.Settings is { } settings ? new SettingsApi(settings, clock) : null,
         };
         // A table opened for a friend (ADR 0129): the lobby checks the friendship and tells the friend's devices.
-        admin.Lobby.Friends = friendships;
+        admin.Lobby.Friends = signedIn?.Friendships;
         // A host the hourly job tends lets no request do the job's work (ADR 0162).
         admin.Lobby.Tended = options.Tended;
-        admin.Lobby.Notifier = notifier;
+        admin.Lobby.Notifier = signedIn?.Notifier;
         // A signed-in seat's subscription is its account's device too (ADR 0202).
         admin.Lobby.Devices = accounts?.Devices;
         // How a match ended, to each seat's account (stage 4), named as the cards name them.
-        composer.Notifier = notifier;
-        // What the lobbies in view read on, instead of reading on a clock (ADR 0164).
-        // With a relay (ADR 0165), what changed is also said to every page and process through it, whichever replica
-        // they reach, and pages connect to it rather than to this process's streams.
-        var relay = WebPubSubRelay.FromEnvironment();
+        composer.Notifier = signedIn?.Notifier;
+        var (relay, lobbyChanges) = (composing.Relay, Relayed(composing.Relay, composer, admin.Lobby, signedIn));
+        var tabs = await ComposeTabsAsync(tables, admin, signedIn, relay, kept, clock, cancellationToken);
+        composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id, CancellationToken.None))?.Username.Value;
+        var server = kept.Add(await ServerAsync(composing, tables, admin, signedIn, tabs, gate, cancellationToken));
+        return new ComposedHost(kept)
+        {
+            Server = server,
+            Registry = registry,
+            Composer = composer,
+            Admin = admin,
+            Store = tables.Store,
+            Stored = tables.Stored,
+            Accounts = accounts,
+            AccountStore = signedIn?.Store,
+            Friends = signedIn?.Friends,
+            Notifier = signedIn?.Notifier,
+            Push = tables.Push,
+            Gate = gate,
+            Relay = relay,
+            Changes = lobbyChanges,
+            Described = described,
+            Mode = tables.Queues.Mode,
+            Channels = tables.Queues.Channels,
+            Turns = tables.Queues.Turns,
+            Notices = tables.Queues.Notices,
+            NoticeCounts = tabs.NoticeCounts,
+            Chores = tabs.Chores,
+        };
+    }
+
+    /// <summary>What a host is composed from, the same for every part: the services, the options, the pages' directory, what is disposed with it, and the clock.</summary>
+    private sealed record Composing(IServiceProvider Services, CliOptions Options, string Files, ComposedHost.Kept Kept, TimeProvider Clock)
+    {
+        public IChangeRelay? Relay { get; init; }
+    }
+
+    /// <summary>Where the bots' turns and the notices go (ADR 0159, 0162, 0203): through the queues, or in this process.</summary>
+    private sealed record Queues(TurnsMode Mode, IWorkChannels? Channels, IWorkChannel? Turns, IWorkChannel? Notices);
+
+    /// <summary>The tables' side of a host: the store, the bots it seats, the queues, the composer and the registry.</summary>
+    private sealed record Tables(TableComposer Composer, TableRegistry Registry, Queues Queues, IReadOnlyList<SeatableAgent> Agents, BotLevels Levels)
+    {
+        public IArtifactStore? Store { get; init; }
+
+        public StoredSessions? Stored { get; init; }
+
+        public PushNotices? Push { get; init; }
+
+        public IMatchResults? Results { get; init; }
+
+        /// <summary>Where the stores beside the recordings are opened: what <c>--record</c> names, or the default directory.</summary>
+        public required string Target { get; init; }
+    }
+
+    /// <summary>The accounts' side of a host that signs players in: the accounts, the door every notice goes through, friends and players.</summary>
+    private sealed record SignedInParts(AccountApi Api, IAccountStore Store, AccountNotifier Notifier, Friends Friendships, FriendsApi Friends, PlayerDirectory Directory, PlayersApi Players);
+
+    /// <summary>The admin tabs' parts the server is built with too: the turns' queues, the notices' counts, feedback and notes.</summary>
+    private sealed record Tabs(TurnQueues? Queues, NoticeCounts? NoticeCounts, FeedbackIndex? FeedbackIndex, FeedbackWrites FeedbackWrites, FeedbackMutes FeedbackMutes, OperatorNotes Notes)
+    {
+        /// <summary>What a pass run from the Jobs tab tends; none without the tab.</summary>
+        public TableTend.Chores? Chores { get; init; }
+    }
+
+    private static async Task<Tables> ComposeTablesAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, ComposedHost.Kept kept, CancellationToken cancellationToken)
+    {
+        var clock = services.GetRequiredService<TimeProvider>();
+        var target = options.Record ?? DefaultRunsDirectory;
+        // A table told --no-record opens nothing and writes nothing: a rule tried out at a table should be
+        // able to leave the disk as it found it.
+        var store = options.Recording ? await ArtifactStores.OpenAsync(target, cancellationToken) : null;
+        var offered = SeatableAgents.Read(WeightsDirectory);
+        var levels = BotLevels.OfHost(offered);
+
+        // The operator can seat every bot a level seats (ADR 0180), Easy's included, which no list put forward.
+        IReadOnlyList<SeatableAgent> agents = [.. offered, .. levels.All
+            .Where(level => offered.All(agent => !string.Equals(agent.Value, level.Agent, StringComparison.OrdinalIgnoreCase)))
+            .Select(level => new SeatableAgent(level.Agent, level.Agent, Featured: false))];
+
+        var push = pushing is null ? null : new PushNotices(pushing.Sender, pushing.PublicKey, clock) { Record = table => table.RecordAsync(CancellationToken.None) };
+        // Finished matches with an account in them, kept beside the accounts for a ladder (ADR 0122, stage 5).
+        var results = options.Accounts != AccountsMode.Off && store is not null
+            ? await ArtifactStores.OpenResultsAsync(target, cancellationToken)
+            : null;
+        // The index that lists and finds the tables (ADR 0161): Table Storage beside a container, files beside a
+        // directory, and this process's own for a host that keeps nothing or whose store's index cannot be opened.
+        var index = (store is null ? null : await OpenIndexAsync(target, cancellationToken)) ?? new InMemoryTableIndex();
+        var queues = await OpenQueuesAsync(options, store, pushing, clock, cancellationToken);
+        push?.Outbox = queues.Notices;
+        var composer = new TableComposer(services, rules, store)
+        {
+            Contents = store is null ? null : await OpenContentsAsync(target, cancellationToken),
+            Turns = queues.Turns is null ? new InProcessAgentTurns(clock) : new QueuedAgentTurns(queues.Turns, clock) { Said = Console.WriteLine },
+            Index = index,
+            Agents = agents,
+            Levels = levels,
+            Push = push,
+            Results = results,
+            Basis = ReplayBasis.Of(EngineVersion.Current, services.GetRequiredService<IGameResources>(), rules),
+        };
+        var stored = store is null ? null : new StoredSessions(store);
+        // The tables this host holds, and the way to the others: picked up from their records when a request
+        // names them, on a host that records any.
+        var registry = kept.Add(new TableRegistry(index) { Loader = stored is null ? null : new TableLoader(stored, composer, clock), Basis = composer.Basis });
+        return new Tables(composer, registry, queues, agents, levels) { Store = store, Stored = stored, Push = push, Results = results, Target = target };
+    }
+
+    /// <summary>
+    /// Where the bots' turns are taken (ADR 0159, phase 5; ADR 0162): handed to a worker through a queue when the host is
+    /// told so -- its own, or table-worker's in a process of its own -- and in this process otherwise. The notices go
+    /// through a queue beside the turns' (ADR 0203), sent off the request by this host and by table-worker; a host whose
+    /// turns are taken in process sends them in the request, as before.
+    /// </summary>
+    private static async Task<Queues> OpenQueuesAsync(CliOptions options, IArtifactStore? store, Pushing? pushing, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        var target = options.Record ?? DefaultRunsDirectory;
+        var mode = TurnsOf(options);
+        if (mode == TurnsMode.Worker && !(store is not null && ArtifactStores.IsContainerUrl(target)))
+        {
+            // A directory's queues are this process's own, and a host recording nothing has no store a worker could
+            // pick its tables up from: no table-worker could take a turn put on them.
+            Console.WriteLine(store is null
+                ? "  Turns: this host records nothing a worker could pick its tables up from, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>)."
+                : "  Turns: a directory has no queue another process reads, so the bots' turns are taken by a worker here (--turns worker needs --record <container-url>).");
+            mode = TurnsMode.Queue;
+        }
+
+        if (mode == TurnsMode.Process)
+        {
+            return new Queues(mode, null, null, null);
+        }
+
+        var channels = ArtifactStores.OpenChannels(target, clock);
+        var turns = await OpenChannelAsync(channels, AgentTurnWorker.Queue, cancellationToken);
+        var notices = pushing is null ? null : await OpenChannelAsync(channels, QueuedNotice.Queue, cancellationToken, "the notices are sent in the request that gives them");
+        return new Queues(mode, channels, turns, notices);
+    }
+
+    /// <summary>
+    /// The operator's door: the platform's login where the host is behind one, a printed token everywhere else, and the
+    /// accounts that are the operator once signed in (ADR 0172). None, said on the console's error stream, when the
+    /// admin accounts cannot be read or no account can sign in.
+    /// </summary>
+    private static async Task<OperatorGate?> GateAsync(CliOptions options)
+    {
+        // The token is minted the way a pilot's is, and printed the way a pilot's is.
+        var gate = options.PlatformAuth ? OperatorGate.BehindPlatform() : OperatorGate.WithToken(TableComposer.Token());
+        var (admins, adminProblem) = OperatorGate.ParseAdmins(options.Admins ?? Environment.GetEnvironmentVariable(AdminsEnvironment));
+        if (adminProblem is not null || (admins.Count > 0 && options.Accounts == AccountsMode.Off))
+        {
+            await Console.Error.WriteLineAsync(adminProblem ?? $"{AdminsEnvironment} names admin accounts, and this host signs nobody in: add '--accounts google' or '--accounts dev'.");
+            return null;
+        }
+
+        return gate.WithAdmins(admins);
+    }
+
+    /// <summary>The accounts' side, opened beside the recordings and wired to the door every notice goes through (ADR 0201).</summary>
+    private static async Task<SignedInParts> ComposeAccountsAsync(Tables tables, Pushing? pushing, (AccountApi Api, IAccountStore Store) opened, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        var (accounts, store, target) = (opened.Api, opened.Store, tables.Target);
+        // The devices an account is told on (friends plan, stage 1), kept beside the accounts; with keys to
+        // sign a notice, something to send one with.
+        var devices = new AccountDevices(await ArtifactStores.OpenDevicesAsync(target, cancellationToken), clock);
+        accounts.Devices = devices;
+        accounts.Notices = pushing is null ? null : new AccountNotices(pushing.Sender, devices);
+        // The bell's news (ADR 0201), beside the accounts too, kept whether or not the host can push.
+        accounts.NoticeLog = new AccountNoticeLog(await ArtifactStores.OpenNoticesAsync(target, cancellationToken), clock);
+        // The settings every new game of the account starts from (ADR 0140), beside the accounts too, with what pops
+        // up on its devices (ADR 0202), which the door reads before each push.
+        accounts.Preferences = await ArtifactStores.OpenPreferencesAsync(target, cancellationToken);
+        var notifier = new AccountNotifier(accounts.NoticeLog, accounts.Notices)
+        {
+            Exists = async (id, token) => await store.FindAsync(id, token) is not null,
+            Preferences = accounts.Preferences,
+            Outbox = tables.Queues.Notices,
+        };
+        // A signed-in seat's "your turn" goes through the door, to its account's devices (ADR 0202).
+        tables.Push?.Accounts = notifier;
+        // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
+        var friendships = new Friends(await ArtifactStores.OpenFriendsAsync(target, cancellationToken), store, clock);
+        var friends = new FriendsApi(friendships, accounts, notifier);
+        accounts.ForgetFriends = id => friendships.ForgetAsync(id, CancellationToken.None);
+        // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
+        // operator's list of players read from it, the accounts and the results.
+        accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(target, cancellationToken), clock);
+        // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
+        accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(target, cancellationToken), clock);
+        var directory = new PlayerDirectory(store, accounts.Activity, tables.Results, clock);
+        var (levels, agents) = (tables.Levels, tables.Agents);
+        var players = new PlayersApi(directory, accounts, tables.Results)
+        {
+            Friends = friendships,
+            // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
+            BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
+        };
+        return new SignedInParts(accounts, store, notifier, friendships, friends, directory, players);
+    }
+
+    /// <summary>
+    /// What the lobbies in view read on, instead of reading on a clock (ADR 0164). With a relay (ADR 0165), what changed
+    /// is also said to every page and process through it, whichever replica they reach, and pages connect to it rather
+    /// than to this process's streams.
+    /// </summary>
+    private static LobbyChanges Relayed(IChangeRelay? relay, TableComposer composer, LobbyApi lobby, SignedInParts? signedIn)
+    {
         Console.WriteLine(relay is null
             ? $"  Relay: none. Pages read this process's own streams, and it looks at the tables it holds every second for what other processes wrote ({WebPubSubRelay.Environment} names a Web PubSub endpoint)."
             : "  Relay: on. Pages and processes hear what moved through Web PubSub, and nothing is looked at on a clock.");
         var lobbyChanges = new LobbyChanges { Relay = relay };
         composer.Lobby = lobbyChanges;
         composer.Relay = relay;
-        admin.Lobby.Changes = lobbyChanges;
-        admin.Lobby.Relay = relay;
-        friends?.Changes = lobbyChanges;
-        notifier?.Changes = lobbyChanges;
-        accounts?.Changes = lobbyChanges;
-        // The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab.
-        TurnQueues? queues = null;
-        if (channels is not null && turns is not null)
-        {
-            var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(turns.Name), cancellationToken);
-            var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(turns.Name), cancellationToken);
-            queues = poisoned is null || letters is null ? null : new TurnQueues(turns, poisoned, letters);
-            admin.Turns = queues is null ? null : new TurnsApi(queues);
-        }
+        lobby.Changes = lobbyChanges;
+        lobby.Relay = relay;
+        signedIn?.Friends.Changes = lobbyChanges;
+        signedIn?.Notifier.Changes = lobbyChanges;
+        signedIn?.Api.Changes = lobbyChanges;
+        return lobbyChanges;
+    }
 
-        // What the notices worker sent, had refused and found gone (N6), a day at a time beside the recordings, which
-        // the worker app adds to as well; in memory where this host records nothing, as its queues are its own. A store
-        // that cannot be opened leaves the counts out, never the notices.
-        var countsAt = store is null ? null : options.Record ?? DefaultRunsDirectory;
-        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(countsAt, clock, cancellationToken);
-        if (channels is not null && notices is not null)
-        {
-            var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(notices.Name), cancellationToken);
-            var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(notices.Name), cancellationToken);
-            admin.Notices = poisoned is null || letters is null ? null : new NoticesApi(new TurnQueues(notices, poisoned, letters), noticeCounts);
-        }
+    /// <summary>The admin panel's tabs: the queues (A3b, N6), feedback (ADR 0189), the Jobs (A3), the notes (A6) and the Overview (A5).</summary>
+    private static async Task<Tabs> ComposeTabsAsync(Tables tables, AdminApi admin, SignedInParts? signedIn, IChangeRelay? relay, ComposedHost.Kept kept, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        var (store, target, accounts) = (tables.Store, tables.Target, signedIn?.Api);
+        var (queues, noticeCounts) = await QueueTabsAsync(tables, admin, clock, cancellationToken);
 
         // The players' bug reports and ideas (ADR 0189), kept beside the recordings in a store of their own; a pass
         // lets go of what was closed 180 days ago.
-        var feedbackIndex = store is null ? null : await OpenFeedbackAsync(options.Record ?? DefaultRunsDirectory, clock, cancellationToken);
+        var feedbackIndex = store is null ? null : await OpenFeedbackAsync(target, clock, cancellationToken);
         var feedback = feedbackIndex?.Records;
         var feedbackWrites = kept.Add(new FeedbackWrites());
         if (feedback is not null && accounts is not null)
@@ -421,108 +517,152 @@ internal static class TableHost
             accounts.ForgetFeedback = id => forget.HandleAsync(id.ToString(), CancellationToken.None);
         }
 
-        // The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass,
-        // over this process's tables, said through the relay as the job says it. A store of runs that cannot be opened
-        // leaves the panel without its Jobs tab, never the players without the host.
-        // The suspended accounts' seats (ADR 0178), which a pass run from the panel offers as the hourly job's does.
-        var suspendedSeats = opened is { } held ? new SuspendedSeats(held.Store, admin.Lobby) : null;
-        if (store is not null
-            && await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(options.Record ?? DefaultRunsDirectory, cancellationToken)) is { } tendLog)
-        {
-            admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
-            {
-                var tended = await TableTend.TendAsync(registry, admin.Lobby, now, composer, clock, progress, suspendedSeats, feedback is null ? null : new LetGoOfClosedFeedback(feedback, clock), feedbackIndex, accounts?.NoticeLog);
-                if (relay is not null)
-                {
-                    TableTend.Announce(relay, tended);
-                }
-
-                return tended;
-            });
-        }
+        var chores = await JobsTabAsync(tables, admin, signedIn, relay, feedbackIndex, clock, cancellationToken);
 
         // What operators do from the panel (A6), kept beside the recordings and read in the Activity tab. A log that
         // cannot be opened leaves the actions on the console alone, never the panel without them.
-        var notes = store is null ? OperatorNotes.None : await OpenNotesAsync(options.Record ?? DefaultRunsDirectory, clock, cancellationToken);
+        var notes = store is null ? OperatorNotes.None : await OpenNotesAsync(target, clock, cancellationToken);
         admin.Notes = notes;
-        admin.Diagnosis = stored is null ? null : new TableDiagnosisApi(registry, composer, stored) { Turns = queues, Notes = notes };
-        players?.Notes = notes;
+        admin.Diagnosis = tables.Stored is null ? null : new TableDiagnosisApi(tables.Registry, tables.Composer, tables.Stored) { Turns = queues, Notes = notes };
+        signedIn?.Players.Notes = notes;
         admin.Turns?.Notes = notes;
         admin.Jobs?.Notes = notes;
         admin.Settings?.Notes = notes;
 
-        // The Feedback tab (feedback plan, R3): the operator reads, marks and moves feedback, and mutes a sender; an
-        // account's mute is kept with its activity, a guest's in this process's memory.
-        var feedbackMutes = new FeedbackMutes(accounts?.Activity);
-        var feedbackDesk = feedbackIndex is null ? null : FeedbackDesk.Open(feedbackIndex, feedbackMutes, feedbackWrites, clock);
-
         // The Overview (A5): the numbers at a glance, each read from the source its own tab reads.
-        admin.Overview = new OverviewApi(registry, composer, clock)
+        admin.Overview = new OverviewApi(tables.Registry, tables.Composer, clock)
         {
             Feedback = feedbackIndex is null ? null : new CountWaitingFeedback(feedbackIndex, clock),
-            Players = directory,
-            Results = results,
+            Players = signedIn?.Directory,
+            Results = tables.Results,
             Tending = admin.Jobs?.Runs,
             Turns = queues,
             Settings = accounts?.Settings,
         };
 
-        composer.NameOf = accounts is null ? null : async id => (await accounts.AccountAsync(id, CancellationToken.None))?.Username.Value;
-        // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
-        var leaderboard = accounts is null || results is null
-            ? null
-            : new LeaderboardApi(results, accounts, clock, levels.PlayerName);
-        // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
-        var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>(), services.GetRequiredService<MutationArt>(), services.GetService<SpellArt>() ?? SpellArt.None);
-        // The match scenarios (ADR 0179): cut by the operator from the recorded sessions and kept beside them, and
-        // practised by signed-in players in this process's memory, over the services built for their content.
-        // The repository's own (S7) are read beside them, each played on the content it carries.
-        var shipped = store is null ? RepositoryScenarios.None : RepositoryScenarios.Read(RepositoryScenarios.DefaultDirectory);
-        foreach (var one in shipped.All)
+        // The Feedback tab (feedback plan, R3) reads an account's mute kept with its activity, a guest's in this process's memory.
+        return new Tabs(queues, noticeCounts, feedbackIndex, feedbackWrites, new FeedbackMutes(accounts?.Activity), notes) { Chores = chores };
+    }
+
+    /// <summary>
+    /// The bots' turn queues (A3b), when the turns go through them: their lengths and dead letters in the Jobs tab. And
+    /// what the notices worker sent, had refused and found gone (N6), a day at a time beside the recordings, which the
+    /// worker app adds to as well; in memory where this host records nothing, as its queues are its own. A store that
+    /// cannot be opened leaves the counts out, never the notices.
+    /// </summary>
+    private static async Task<(TurnQueues? Queues, NoticeCounts? NoticeCounts)> QueueTabsAsync(Tables tables, AdminApi admin, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        var (channels, turns, notices) = (tables.Queues.Channels, tables.Queues.Turns, tables.Queues.Notices);
+        TurnQueues? queues = null;
+        if (channels is not null && turns is not null)
         {
-            composer.Carry(one.Document.Content, one.Document.Schema!.Value);
+            queues = await TurnQueuesAsync(channels, turns, cancellationToken);
+            admin.Turns = queues is null ? null : new TurnsApi(queues);
         }
 
-        var scenarioStore = store is null ? null : await OpenScenariosAsync(options.Record ?? DefaultRunsDirectory, clock, cancellationToken, shipped);
+        var countsAt = tables.Store is null ? null : tables.Target;
+        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(countsAt, clock, cancellationToken);
+        if (channels is not null && notices is not null && await TurnQueuesAsync(channels, notices, cancellationToken) is { } noticeQueues)
+        {
+            admin.Notices = new NoticesApi(noticeQueues, noticeCounts);
+        }
+
+        return (queues, noticeCounts);
+    }
+
+    /// <summary>A queue with its poison queue and its dead letters, or none when either cannot be opened.</summary>
+    private static async Task<TurnQueues?> TurnQueuesAsync(IWorkChannels channels, IWorkChannel queue, CancellationToken cancellationToken)
+    {
+        var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(queue.Name), cancellationToken);
+        var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(queue.Name), cancellationToken);
+        return poisoned is null || letters is null ? null : new TurnQueues(queue, poisoned, letters);
+    }
+
+    /// <summary>
+    /// The tending runs (A3), kept beside the recordings, and a pass run now from the panel: the hourly job's pass, over
+    /// this process's tables, said through the relay as the job says it, the suspended accounts' seats offered (ADR 0178)
+    /// as the job's does. A store of runs that cannot be opened leaves the panel without its Jobs tab, never the players
+    /// without the host.
+    /// </summary>
+    private static async Task<TableTend.Chores?> JobsTabAsync(Tables tables, AdminApi admin, SignedInParts? signedIn, IChangeRelay? relay, FeedbackIndex? feedbackIndex, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        if (tables.Store is null || await TableTend.OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(tables.Target, cancellationToken)) is not { } tendLog)
+        {
+            return null;
+        }
+
+        var chores = new TableTend.Chores(tables.Registry, admin.Lobby, clock)
+        {
+            Composer = tables.Composer,
+            Suspended = signedIn is null ? null : new SuspendedSeats(signedIn.Store, admin.Lobby),
+            Feedback = feedbackIndex is null ? null : new LetGoOfClosedFeedback(feedbackIndex.Records, clock),
+            FeedbackIndex = feedbackIndex,
+            Notices = signedIn?.Api.NoticeLog,
+        };
+        admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
+        {
+            var tended = await TableTend.TendAsync(chores, now, progress);
+            if (relay is not null)
+            {
+                TableTend.Announce(relay, tended);
+            }
+
+            return tended;
+        });
+        return chores;
+    }
+
+    /// <summary>
+    /// The match scenarios (ADR 0179): cut by the operator from the recorded sessions and kept beside them, and practised
+    /// by signed-in players in this process's memory, over the services built for their content. The repository's own
+    /// (S7) are read beside them, each played on the content it carries.
+    /// </summary>
+    private static async Task<(ScenarioStore? Store, ScenarioPractices? Practices)> ScenariosAsync(Tables tables, ComposedHost.Kept kept, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        if (tables.Store is null)
+        {
+            return (null, null);
+        }
+
+        var shipped = RepositoryScenarios.Read(RepositoryScenarios.DefaultDirectory);
+        foreach (var one in shipped.All)
+        {
+            tables.Composer.Carry(one.Document.Content, one.Document.Schema!.Value);
+        }
+
+        var scenarioStore = await OpenScenariosAsync(tables.Target, clock, cancellationToken, shipped);
         if (scenarioStore is not null && shipped.All.Count > 0)
         {
             Console.WriteLine($"  Scenarios from {RepositoryScenarios.DefaultDirectory}/: {string.Join(", ", shipped.All.Select(one => one.File))}.");
         }
 
-        var practices = kept.Add(scenarioStore is null ? null : new ScenarioPractices(composer, scenarioStore, clock));
+        return (scenarioStore, kept.Add(scenarioStore is null ? null : new ScenarioPractices(tables.Composer, scenarioStore, clock)));
+    }
 
-        (admin.Scenarios, admin.Feedback) = CuttingTabs(scenarioStore, stored, composer, feedbackDesk, notes, clock);
-        var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), feedbackWrites, clock, feedbackMutes);
-        var server = kept.Add(new TableServer(options.Bind, options.Port, registry, new TableFiles(files), admin, clock, stored, accounts, leaderboard, friends, stats)
+    /// <summary>The ladder, a player's statistics, the scenarios and feedback the players reach, and the server that answers them.</summary>
+    private static async Task<TableServer> ServerAsync(Composing composing, Tables tables, AdminApi admin, SignedInParts? signedIn, Tabs tabs, OperatorGate gate, CancellationToken cancellationToken)
+    {
+        var (services, options, files, kept, clock) = (composing.Services, composing.Options, composing.Files, composing.Kept, composing.Clock);
+        var (accounts, results, composer, stored) = (signedIn?.Api, tables.Results, tables.Composer, tables.Stored);
+        // The ladder (ADR 0124), read from the results the composer keeps; bots are named as the lobby names them.
+        var leaderboard = accounts is null || results is null
+            ? null
+            : new LeaderboardApi(results, accounts, clock, tables.Levels.PlayerName);
+        // A player's own statistics (ADR 0168), read off the same results, named from this host's catalogue.
+        var stats = accounts is null || results is null ? null : new StatsApi(results, accounts, services.GetRequiredService<IGameResources>(), services.GetRequiredService<MutationArt>(), services.GetService<SpellArt>() ?? SpellArt.None);
+        var (scenarioStore, practices) = await ScenariosAsync(tables, kept, clock, cancellationToken);
+
+        // The Feedback tab (feedback plan, R3): the operator reads, marks and moves feedback, and mutes a sender.
+        var feedbackDesk = tabs.FeedbackIndex is null ? null : FeedbackDesk.Open(tabs.FeedbackIndex, tabs.FeedbackMutes, tabs.FeedbackWrites, clock);
+        (admin.Scenarios, admin.Feedback) = CuttingTabs(scenarioStore, stored, composer, feedbackDesk, tabs.Notes, clock);
+        var feedback = tabs.FeedbackIndex?.Records;
+        var sendFeedback = feedback is null ? null : new SendFeedback(feedback, new GuestAddresses(), tabs.FeedbackWrites, clock, tabs.FeedbackMutes);
+        return new TableServer(options.Bind, options.Port, tables.Registry, new TableFiles(files), admin, clock, stored, accounts, leaderboard, signedIn?.Friends, stats)
         {
-            Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, new AskFeedbackMuted(feedbackMutes, clock), registry) { Accounts = accounts, Practices = practices },
+            Feedback = sendFeedback is null ? null : new FeedbackApi(sendFeedback, new AskFeedbackMuted(tabs.FeedbackMutes, clock), tables.Registry) { Accounts = accounts, Practices = practices },
             Tended = options.Tended,
             Scenarios = scenarioStore is null || practices is null || accounts is null ? null : new ScenariosApi(scenarioStore, practices, accounts) { Admins = gate.Admins, Stored = stored },
             Practices = practices,
-        });
-
-        return new ComposedHost(kept)
-        {
-            Server = server,
-            Registry = registry,
-            Composer = composer,
-            Admin = admin,
-            Store = store,
-            Stored = stored,
-            Accounts = accounts,
-            AccountStore = opened?.Store,
-            Friends = friends,
-            Notifier = notifier,
-            Push = push,
-            Gate = gate,
-            Relay = relay,
-            Changes = lobbyChanges,
-            Described = described,
-            Mode = mode,
-            Channels = channels,
-            Turns = turns,
-            Notices = notices,
-            NoticeCounts = noticeCounts,
         };
     }
 

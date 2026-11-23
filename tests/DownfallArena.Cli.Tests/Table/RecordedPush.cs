@@ -13,12 +13,32 @@ internal sealed class RecordedPush : IPushSender
     /// <summary>The endpoints the push service answers gone (410): sent to, and refused.</summary>
     public HashSet<string> Gone { get; } = [];
 
-    public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+    /// <summary>How long each send takes before it is kept, as a push service answering slowly; none unless given.</summary>
+    public TimeSpan Lag { get; init; }
+
+    /// <summary>How many sends were kept so far, read under the same lock the sends are kept under.</summary>
+    public int Count
     {
+        get
+        {
+            lock (Sent)
+            {
+                return Sent.Count;
+            }
+        }
+    }
+
+    public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+    {
+        if (Lag > TimeSpan.Zero)
+        {
+            await Task.Delay(Lag, cancellationToken);
+        }
+
         lock (Sent)
         {
             Sent.Add((to.Endpoint, payload, topic));
-            return Task.FromResult(!Gone.Contains(to.Endpoint));
+            return !Gone.Contains(to.Endpoint);
         }
     }
 }
