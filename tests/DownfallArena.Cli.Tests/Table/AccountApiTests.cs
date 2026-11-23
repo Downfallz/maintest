@@ -24,13 +24,12 @@ public sealed class AccountApiTests : IDisposable
         _store = new FileAccountStore(_root);
     }
 
-    private async Task<AccountApi> ApiAsync(AccountsMode mode = AccountsMode.Google) =>
+    private async Task<AccountApi> ApiAsync(AccountsMode mode = AccountsMode.SignIn, params ISignInProvider[] more) =>
         new(
             new AccountRegistry(_store, _clock),
             new AccountSessions(await _store.SessionKeyAsync(TestContext.Current.CancellationToken), _clock),
             mode,
-            mode == AccountsMode.Google ? new OneToken() : null,
-            mode == AccountsMode.Google ? ClientId : null);
+            mode == AccountsMode.SignIn ? [new OneToken(), .. more] : null);
 
     private static AccountRequest Signed(string? session) => new(session, Secure: true);
 
@@ -680,8 +679,112 @@ public sealed class AccountApiTests : IDisposable
     [Fact]
     public async Task Each_mode_answers_only_its_own_sign_in()
     {
-        (await (await ApiAsync(AccountsMode.Google)).HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody)).Status.ShouldBe(404);
+        (await (await ApiAsync(AccountsMode.SignIn)).HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody)).Status.ShouldBe(404);
         (await (await ApiAsync(AccountsMode.Development)).HandleAsync("POST", "/api/account/google", """{"credential":"x"}""", Nobody)).Status.ShouldBe(404);
+    }
+
+    [Fact]
+    public async Task A_provider_the_host_does_not_offer_is_not_found()
+    {
+        var answer = await (await ApiAsync()).HandleAsync("POST", "/api/account/discord", """{"code":"x"}""", Nobody);
+
+        answer.Status.ShouldBe(404);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.NoProvider");
+    }
+
+    [Fact]
+    public async Task The_host_offers_its_providers_in_the_order_it_was_given_them()
+    {
+        var api = await ApiAsync(AccountsMode.SignIn, new AnyCode("other"));
+
+        api.SignIn.Select(provider => provider.Name).ShouldBe(["google", "other"]);
+    }
+
+    [Fact]
+    public async Task Each_provider_signs_in_at_its_own_route_and_registers_its_own_identity()
+    {
+        var api = await ApiAsync(AccountsMode.SignIn, new AnyCode("other"));
+        var ticket = Json(await api.HandleAsync("POST", "/api/account/other", """{"code":"4242"}""", Nobody)).GetProperty("ticket").GetString();
+
+        var registered = await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"Kodiak"}""", Nobody);
+
+        registered.Status.ShouldBe(200);
+        (await new AccountRegistry(_store, _clock).FindAsync(new ExternalIdentity("other", "4242"), TestContext.Current.CancellationToken))!.Username.Value.ShouldBe("Kodiak");
+    }
+
+    [Fact]
+    public async Task A_provider_answers_only_its_own_proof()
+    {
+        var api = await ApiAsync(AccountsMode.SignIn, new AnyCode("other"));
+
+        var answer = await api.HandleAsync("POST", "/api/account/other", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        answer.Status.ShouldBe(401);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.SignInRejected");
+    }
+
+    [Fact]
+    public async Task A_proof_whose_fields_are_not_text_is_no_proof()
+    {
+        var answer = await (await ApiAsync()).HandleAsync("POST", "/api/account/google", """{"credential":["a-token-google-signed"]}""", Nobody);
+
+        answer.Status.ShouldBe(401);
+    }
+
+    [Fact]
+    public async Task A_proof_that_is_not_an_object_is_a_bad_request()
+    {
+        (await (await ApiAsync()).HandleAsync("POST", "/api/account/google", "[null]", Nobody)).Status.ShouldBe(400);
+    }
+
+    [Fact]
+    public async Task A_host_that_signs_in_with_providers_needs_one_and_each_only_once()
+    {
+        var registry = new AccountRegistry(_store, _clock);
+        var sessions = new AccountSessions(await _store.SessionKeyAsync(TestContext.Current.CancellationToken), _clock);
+
+        Should.Throw<ArgumentException>(() => new AccountApi(registry, sessions, AccountsMode.SignIn, []));
+        Should.Throw<ArgumentException>(() => new AccountApi(registry, sessions, AccountsMode.SignIn, [new OneToken(), new OneToken()]));
+        Should.Throw<ArgumentException>(() => new AccountApi(registry, sessions, AccountsMode.Development, [new OneToken()]));
+    }
+
+    [Fact]
+    public async Task A_sign_in_is_counted_started_and_finished_by_its_provider()
+    {
+        await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
+        var said = new List<string>();
+        var api = await ApiAsync();
+        api.Said = said.Add;
+
+        await api.HandleAsync("POST", "/api/account/google", $$"""{"credential":"{{GoodToken}}"}""", Nobody);
+
+        said.ShouldBe(["  Sign-in started (google).", "  Sign-in finished (google)."]);
+    }
+
+    [Fact]
+    public async Task A_sign_in_that_stops_at_the_name_is_counted_started_and_finished_only_once_the_name_is_chosen()
+    {
+        var said = new List<string>();
+        var api = await ApiAsync();
+        api.Said = said.Add;
+        var ticket = await TicketAsync(api);
+        said.ShouldBe(["  Sign-in started (google)."]);
+
+        await api.HandleAsync("POST", "/api/account", $$"""{"ticket":"{{ticket}}","username":"MarkF"}""", Nobody);
+
+        said.ShouldBe(["  Sign-in started (google).", "  Sign-in finished (google)."]);
+    }
+
+    [Fact]
+    public async Task A_sign_in_the_provider_refuses_is_counted_started_and_refused()
+    {
+        var said = new List<string>();
+        var api = await ApiAsync();
+        api.Said = said.Add;
+
+        await api.HandleAsync("POST", "/api/account/google", """{"credential":"forged"}""", Nobody);
+
+        said.ShouldBe(["  Sign-in started (google).", "  Sign-in refused (google)."]);
     }
 
     [Fact]
@@ -690,7 +793,7 @@ public sealed class AccountApiTests : IDisposable
         (await (await ApiAsync()).HandleAsync("POST", "/api/account/google", "{", Nobody)).Status.ShouldBe(400);
     }
 
-    private async Task<AccountApi> ClosedAsync(AccountsMode mode = AccountsMode.Google)
+    private async Task<AccountApi> ClosedAsync(AccountsMode mode = AccountsMode.SignIn)
     {
         var api = await ApiAsync(mode);
         api.Settings = new HostSettingsCache(new FileHostSettingsStore(_root), _clock);
@@ -757,10 +860,25 @@ public sealed class AccountApiTests : IDisposable
     }
 
     /// <summary>Google, as far as these tests need it: one token is Mark's, every other one is nobody's.</summary>
-    private sealed class OneToken : IIdentityTokenVerifier
+    private sealed class OneToken : ISignInProvider
     {
-        public Task<ExternalIdentity?> VerifyAsync(string token, CancellationToken cancellationToken = default) =>
-            Task.FromResult(token == GoodToken ? Mark : (ExternalIdentity?)null);
+        public string Name => ExternalIdentity.Google;
+
+        public string? ClientId => AccountApiTests.ClientId;
+
+        public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
+            Task.FromResult(proof["credential"] == GoodToken ? Mark : (ExternalIdentity?)null);
+    }
+
+    /// <summary>A second provider, with no client id: any code it is posted is the subject of a person it signs in.</summary>
+    private sealed class AnyCode(string name) : ISignInProvider
+    {
+        public string Name => name;
+
+        public string? ClientId => null;
+
+        public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
+            Task.FromResult(proof["code"] is { Length: > 0 } code ? new ExternalIdentity(name, code) : (ExternalIdentity?)null);
     }
 
     /// <summary>A device store that runs something once, just before its next save: another request landing in between.</summary>

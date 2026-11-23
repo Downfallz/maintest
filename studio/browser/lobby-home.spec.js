@@ -29,7 +29,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     const path = new URL(route.request().url()).pathname;
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
-    if (path === '/api/me') return json({ accounts: state.mode, account: state.account, googleClientId: 'test-client', operator, notice });
+    if (path === '/api/me') return json({ accounts: state.mode === 'google' ? 'signin' : state.mode, signIn: state.mode === 'google' ? [{ provider: 'google', clientId: 'test-client' }] : [], account: state.account, googleClientId: 'test-client', operator, notice });
     // A first sign-in while the operator has registration closed (ADR 0177) is refused rather than asked for a name.
     if (path === '/api/account/google' && registrationClosed) return route.fulfill({ status: 409, json: { error: 'Account.RegistrationClosed', message: 'New accounts are closed for now. Try again later.' } });
     // A first sign-in names itself in the name window: the host hands a ticket, then takes the name.

@@ -632,9 +632,12 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
 
 #### Accounts
 
-- `--accounts google|dev` signs players in on the home page (ADR 0122, docs/tabletop/accounts-plan.md): google
-  checks Google's ID token against `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`, dev signs in by a typed
-  name and is refused off the loopback address.
+- `--sign-in <provider>[,...]` signs players in on the home page with the providers listed, in the order their
+  buttons are drawn (ADR 0122, docs/tabletop/sign-in-methods-plan.md): `google` checks Google's ID token against
+  `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`. A provider the release does not know, or one named twice, is
+  refused. Each signs in at `POST /api/account/<provider>`, and `/api/me` lists them as `signIn`.
+- `--accounts google|dev`: `google` is the older spelling of `--sign-in google`, refused beside `--sign-in`; `dev`
+  signs in by a typed name and is refused off the loopback address.
 - `--admins <acct_id>[,...]` (or `DOWNFALL_ADMINS`) names the accounts that are the operator once signed in,
   beside the token or the platform's sign-in, so the menu's Admin link shows for them (ADR 0172; by id, never by
   name).

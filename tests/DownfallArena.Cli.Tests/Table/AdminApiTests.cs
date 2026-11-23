@@ -5,6 +5,7 @@ using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Domain.Matches;
 using DownfallArena.Infrastructure.Learning;
+using NSubstitute;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -492,6 +493,34 @@ public sealed class AdminApiTests : IDisposable
     }
 
     [Fact]
+    public async Task The_providers_a_host_signs_in_with_are_listed_in_order_with_their_client_ids()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"accounts-me-{Guid.CreateVersion7():N}");
+        try
+        {
+            var store = new Infrastructure.Accounts.FileAccountStore(root);
+            var google = new Infrastructure.Accounts.GoogleIdTokenVerifier("1234.apps.googleusercontent.com", Substitute.For<Infrastructure.Accounts.ISigningKeySource>(), TimeProvider.System);
+            var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, TimeProvider.System), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), TimeProvider.System), AccountsMode.SignIn, [google]);
+            var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules", _hosted.Stored) { Accounts = accounts };
+
+            var me = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, new AccountRequest(null, Secure: false)))).RootElement;
+
+            me.GetProperty("accounts").GetString().ShouldBe("signin");
+            var offered = me.GetProperty("signIn").EnumerateArray().Single();
+            offered.GetProperty("provider").GetString().ShouldBe("google");
+            offered.GetProperty("clientId").GetString().ShouldBe("1234.apps.googleusercontent.com");
+            me.GetProperty("googleClientId").GetString().ShouldBe("1234.apps.googleusercontent.com");
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Whether_players_sign_in_and_as_whom_is_answered_beside_the_operator()
     {
         var root = Path.Combine(Path.GetTempPath(), $"accounts-me-{Guid.CreateVersion7():N}");
@@ -508,6 +537,7 @@ public sealed class AdminApiTests : IDisposable
 
             me.GetProperty("operator").GetBoolean().ShouldBeFalse();
             me.GetProperty("accounts").GetString().ShouldBe("dev");
+            me.GetProperty("signIn").GetArrayLength().ShouldBe(0);
             me.GetProperty("account").GetProperty("username").GetString().ShouldBe("MarkF");
             nobody.GetProperty("account").ValueKind.ShouldBe(JsonValueKind.Null);
             JsonDocument.Parse(Text(await Admin(OperatorGate.WithToken(OperatorToken)).HandleAsync("GET", "/api/me", "", null, null))).RootElement.GetProperty("accounts").GetString().ShouldBe("off");

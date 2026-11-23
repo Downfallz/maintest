@@ -10,10 +10,14 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// Checks a Google ID token the way Google says to (ADR 0122): an RS256 signature by one of Google's keys, an
 /// issuer that is Google's, an audience that is this host's client id, and an expiry still ahead (a minute of
 /// clock skew either side). Everything else about the token is ignored, the email included: the account is the
-/// subject. Written against <see cref="RSA" /> rather than a JWT package: one algorithm and four claims.
+/// subject. Written against <see cref="RSA" /> rather than a JWT package: one algorithm and four claims. As a way to
+/// sign in, it reads the token from the posted <c>credential</c>, as Google's button hands it to the page.
 /// </summary>
-public sealed class GoogleIdTokenVerifier : IIdentityTokenVerifier
+public sealed class GoogleIdTokenVerifier : ISignInProvider
 {
+    /// <summary>The field of the posted body that holds the ID token.</summary>
+    public const string CredentialField = "credential";
+
     private static readonly string[] Issuers = ["accounts.google.com", "https://accounts.google.com"];
     private static readonly TimeSpan Skew = TimeSpan.FromMinutes(1);
 
@@ -29,6 +33,16 @@ public sealed class GoogleIdTokenVerifier : IIdentityTokenVerifier
         _clientId = clientId;
         _keys = keys;
         _clock = clock;
+    }
+
+    public string Name => ExternalIdentity.Google;
+
+    public string? ClientId => _clientId;
+
+    public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(proof);
+        return VerifyAsync(proof[CredentialField] ?? "", cancellationToken);
     }
 
     public async Task<ExternalIdentity?> VerifyAsync(string token, CancellationToken cancellationToken = default)

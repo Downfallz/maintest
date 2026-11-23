@@ -19,7 +19,7 @@ async function guest(page) {
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
-    if (path === '/api/me') return route.fulfill({ json: { accounts: 'google', account: null, googleClientId: 'test-client', operator: false, notice: null } });
+    if (path === '/api/me') return route.fulfill({ json: { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'test-client' }], account: null, googleClientId: 'test-client', operator: false, notice: null } });
     return route.fulfill({ status: 404, json: { message: 'Not here' } });
   });
   return errors;

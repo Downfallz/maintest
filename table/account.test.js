@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accountRequest, accountState, nameProblem, nextPath, noticeText, signInPath, signOutBody } from './account.js';
+import { accountRequest, accountState, drawWays, nameProblem, nextPath, noticeText, signInPath, signInWays, signOutBody } from './account.js';
 
 test('a name the host could never take is said at once, without asking it', () => {
   for (const name of ['', 'ab', '7kodiak', '_mark', 'Mark F', 'Médéric', 'a23456789012345678901']) assert.notEqual(nameProblem(name), null, name);
@@ -8,11 +8,34 @@ test('a name the host could never take is said at once, without asking it', () =
 });
 
 test('a host that says nothing about accounts has them off', () => {
-  assert.deepEqual(accountState({ operator: false }), { mode: 'off', account: null, clientId: null });
-  assert.deepEqual(accountState(null), { mode: 'off', account: null, clientId: null });
-  const signedIn = accountState({ accounts: 'google', googleClientId: 'id', account: { id: 'acct_x', username: 'MarkF' } });
+  assert.deepEqual(accountState({ operator: false }), { mode: 'off', account: null, clientId: null, ways: [] });
+  assert.deepEqual(accountState(null), { mode: 'off', account: null, clientId: null, ways: [] });
+  const signedIn = accountState({ accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], googleClientId: 'id', account: { id: 'acct_x', username: 'MarkF' } });
   assert.equal(signedIn.account.username, 'MarkF');
   assert.equal(signedIn.clientId, 'id');
+});
+
+test('the ways in are the providers the host lists, in its order, that this page can draw', () => {
+  assert.deepEqual(signInWays({ signIn: [{ provider: 'discord', clientId: null }, { provider: 'google', clientId: 'id' }] }), [{ provider: 'google', clientId: 'id' }]);
+  assert.deepEqual(signInWays({ signIn: [null, { provider: 7 }, 'google', { provider: 'google', clientId: 9 }] }), [{ provider: 'google', clientId: null }]);
+  assert.deepEqual(signInWays({ accounts: 'dev' }), []);
+  assert.deepEqual(signInWays({ signIn: 'google' }), []);
+});
+
+test('the page draws the button of each way /api/me lists and hides the others', () => {
+  const doc = anyPage();
+  const me = { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'id' }], account: null };
+
+  assert.deepEqual(drawWays(doc, accountState(me)), ['google']);
+  assert.equal(doc.getElementById('google-button').hidden, false);
+  assert.equal(doc.getElementById('sign-in-ways').hidden, false);
+
+  assert.deepEqual(drawWays(doc, accountState({ ...me, signIn: [] })), []);
+  assert.equal(doc.getElementById('google-button').hidden, true);
+  assert.equal(doc.getElementById('sign-in-ways').hidden, true);
+
+  assert.deepEqual(drawWays(doc, accountState({ accounts: 'dev', signIn: [{ provider: 'google', clientId: 'id' }] })), [], 'a developer\'s host draws the typed name, not a provider');
+  assert.equal(doc.getElementById('google-button').hidden, true);
 });
 
 test('a refusal keeps the hosts code so the page can tell a lapsed sign-in from a taken name', async () => {
