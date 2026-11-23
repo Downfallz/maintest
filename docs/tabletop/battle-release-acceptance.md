@@ -60,7 +60,7 @@ The download budget does not bound GPU memory. No remote fonts or audio download
 
 **Lightened, 2026-11-23 (#1016).** The bundle draws from `table/battle-page-art.js`, the battle's own pictures,
 which `table/page-art.js` imports and adds every other page's to; `battle/build.mjs` refuses a bundle that carries
-`page-art.js`. Main measured 1,812,887 bytes (513,243 gzip); the bundle is now 1,807,509 (510,773 gzip), 27,499
+`page-art.js`. Main measured 1,819,028 bytes (515,245 gzip) at `587077a`; the bundle is now 1,813,650 (512,742 gzip), 21,358
 under the limit. Most of the module was the battle's own: its 47 spell portraits and 21 forms, which it draws, and
 the forms gained the field guide's widths (#967). The limits do not move.
 
