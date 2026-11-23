@@ -35,14 +35,13 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
         var queued = 0;
-        foreach (var device in (await devices.ListAsync(to, cancellationToken)).DistinctBy(device => device.Endpoint, StringComparer.Ordinal))
+        var endpoints = (await devices.ListAsync(to, cancellationToken))
+            .Select(device => device.Endpoint)
+            .Distinct(StringComparer.Ordinal)
+            .Where(endpoint => except is null || !except.Contains(endpoint, StringComparer.Ordinal));
+        foreach (var endpoint in endpoints)
         {
-            if (except is not null && except.Contains(device.Endpoint, StringComparer.Ordinal))
-            {
-                continue;
-            }
-
-            await outbox.SendAsync(QueuedNotice.Of(new DevicePush(to.Value, device.Endpoint, payload, topic)).ToJson(), KeptFor, cancellationToken: cancellationToken);
+            await outbox.SendAsync(QueuedNotice.Of(new DevicePush(to.Value, endpoint, payload, topic)).ToJson(), KeptFor, cancellationToken: cancellationToken);
             queued++;
         }
 

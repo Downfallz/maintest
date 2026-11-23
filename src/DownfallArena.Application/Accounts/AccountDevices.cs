@@ -68,11 +68,11 @@ public sealed class AccountDevices
     {
         ArgumentNullException.ThrowIfNull(device);
         var stamped = device with { AddedAt = _clock.GetUtcNow() };
-        return (await ChangeAsync(account, held =>
+        return [.. (await ChangeAsync(account, held =>
         {
             var kept = held.Where(known => !string.Equals(known.Endpoint, stamped.Endpoint, StringComparison.Ordinal)).Append(stamped);
             return Trimmed([.. kept]);
-        }, cancellationToken))!.Where(known => !known.Gone).ToList();
+        }, cancellationToken))!.Where(known => !known.Gone)];
     }
 
     // At most so many devices, the oldest going first, and so many gone endpoints, the latest kept.

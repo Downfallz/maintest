@@ -170,8 +170,8 @@ internal static class TableHost
             {
                 Exists = async (id, token) => await opened!.Value.Store.FindAsync(id, token) is not null,
                 Preferences = accounts.Preferences,
+                Outbox = notices,
             };
-            notifier.Outbox = notices;
             // A signed-in seat's "your turn" goes through the door, to its account's devices (ADR 0202).
             push?.Accounts = notifier;
             // Friendships (ADR 0129), beside the accounts too; a deleted account leaves no link on anybody's list.
