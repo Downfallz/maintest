@@ -1115,7 +1115,7 @@ body:has(dialog:modal:not(.docked-sheet, #order-dialog)) #round-toast { animatio
    and how far the creature is sit on the scrim, on the left. */
 #atlas-board .atlas-family-head.scene-head { margin: -12px -10px 0; overflow: hidden; }
 #atlas-board .atlas-family-head.scene-head::after { aspect-ratio: auto; height: 48px; max-height: none; }
-#atlas-board .atlas-family-head.scene-head > .scene-words { align-self: center; padding: 4px 10px; }
+#atlas-board .atlas-family-head.scene-head > .scene-words { align-self: center; margin: 4px; padding: 2px 8px; }
 .atlas-family-head .atlas-sigil { grid-row: 1 / 3; width: 28px; height: 28px; fill: none; stroke: var(--mutation-colour); stroke-width: 1.6; }
 .atlas-family-head strong { font: 18px var(--font-display); color: var(--mutation-colour); }
 .atlas-family-head small { color: var(--muted); font-size: 11px; }
