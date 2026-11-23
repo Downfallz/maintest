@@ -21,7 +21,6 @@ public sealed class GoogleIdTokenVerifier : ISignInProvider
     private static readonly string[] Issuers = ["accounts.google.com", "https://accounts.google.com"];
     private static readonly TimeSpan Skew = TimeSpan.FromMinutes(1);
 
-    private readonly string _clientId;
     private readonly ISigningKeySource _keys;
     private readonly TimeProvider _clock;
 
@@ -30,14 +29,14 @@ public sealed class GoogleIdTokenVerifier : ISignInProvider
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
         ArgumentNullException.ThrowIfNull(keys);
         ArgumentNullException.ThrowIfNull(clock);
-        _clientId = clientId;
+        ClientId = clientId;
         _keys = keys;
         _clock = clock;
     }
 
     public string Name => ExternalIdentity.Google;
 
-    public string? ClientId => _clientId;
+    public string? ClientId { get; }
 
     public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default)
     {
@@ -100,8 +99,8 @@ public sealed class GoogleIdTokenVerifier : ISignInProvider
     private bool Audience(JsonElement claims) =>
         claims.TryGetProperty("aud", out var audience) && audience.ValueKind switch
         {
-            JsonValueKind.String => audience.GetString() == _clientId,
-            JsonValueKind.Array => audience.EnumerateArray().Any(item => item.ValueKind == JsonValueKind.String && item.GetString() == _clientId),
+            JsonValueKind.String => audience.GetString() == ClientId,
+            JsonValueKind.Array => audience.EnumerateArray().Any(item => item.ValueKind == JsonValueKind.String && item.GetString() == ClientId),
             _ => false,
         };
 

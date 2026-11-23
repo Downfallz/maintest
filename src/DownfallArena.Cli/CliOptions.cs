@@ -556,15 +556,10 @@ internal sealed record CliOptions
             return admins;
         }
 
-        if (values.ContainsKey(AccountsOption) && values.ContainsKey(SignInOption))
+        var (option, given) = SignInOptionOf(values);
+        if (option is null)
         {
-            return "'--sign-in' and '--accounts' both say how players sign in: give one ('--accounts google' is '--sign-in google').";
-        }
-
-        var option = values.ContainsKey(SignInOption) ? SignInOption : AccountsOption;
-        if (!values.ContainsKey(option))
-        {
-            return values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--sign-in google'." : null;
+            return given;
         }
 
         if (command is not ("table" or TendCommand or WorkerCommand))
@@ -586,6 +581,30 @@ internal sealed record CliOptions
         return values.ContainsKey(GoogleClientIdOption) && !ProvidersOf(values).Contains(ExternalIdentity.Google)
             ? "'--google-client-id' goes with '--sign-in google'."
             : null;
+    }
+
+    /// <summary>
+    /// The option that says how players sign in, or, when none can be read, what is wrong: both given, or a client id
+    /// with neither. Neither and nothing else is no option and no problem.
+    /// </summary>
+    private static (string? Option, string? Problem) SignInOptionOf(Dictionary<string, string> values)
+    {
+        if (values.ContainsKey(AccountsOption) && values.ContainsKey(SignInOption))
+        {
+            return (null, "'--sign-in' and '--accounts' both say how players sign in: give one ('--accounts google' is '--sign-in google').");
+        }
+
+        if (values.ContainsKey(SignInOption))
+        {
+            return (SignInOption, null);
+        }
+
+        if (values.ContainsKey(AccountsOption))
+        {
+            return (AccountsOption, null);
+        }
+
+        return (null, values.ContainsKey(GoogleClientIdOption) ? "'--google-client-id' goes with '--sign-in google'." : null);
     }
 
     /// <summary>What admin accounts cannot be had with (ADR 0172): a host that signs nobody in, or an id that is not one.</summary>
@@ -638,10 +657,15 @@ internal sealed record CliOptions
     }
 
     /// <summary>The providers <c>--sign-in</c> lists, or Google alone for <c>--accounts google</c>; none otherwise.</summary>
-    private static IReadOnlyList<string> ProvidersOf(Dictionary<string, string> values) =>
-        values.TryGetValue(SignInOption, out var providers) ? ParseProviders(providers)
-        : ModeOf(values) == AccountsMode.SignIn ? [ExternalIdentity.Google]
-        : [];
+    private static IReadOnlyList<string> ProvidersOf(Dictionary<string, string> values)
+    {
+        if (values.TryGetValue(SignInOption, out var providers))
+        {
+            return ParseProviders(providers);
+        }
+
+        return ModeOf(values) == AccountsMode.SignIn ? [ExternalIdentity.Google] : [];
+    }
 
     /// <summary>
     /// A comma-separated list of the providers this release can sign in with (<see cref="SignInProviders.Known" />),
