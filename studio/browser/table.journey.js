@@ -92,9 +92,9 @@ test('the measure counts a picture sent over twice its size or under it, by the 
     await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
     const { pictures } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
     // Cover draws the 400 px file 2000 px wide in its 100 px box: under its size. Contain draws the 800 px file 200 px
-    // wide in its 450 px box: over twice its size. The last two share a file: one draws it at its size, so the other,
-    // which draws it at 100 px, is sent nothing more, as the showcase's eclipse is the hero's file again lower down
-    // (#1082, #1179).
+    // wide in its 450 px box: over twice its size. The last two share a file that one draws at its own size: the other,
+    // at 100 px, is not oversized, as the browser reuses the file from its cache. The showcase's eclipse is the hero's
+    // ground file, drawn again lower down (#1082, #1179).
     expect(pictures).toMatchObject({ img: 9, oversized: 3, undersized: 2 });
   } finally {
     await context.close();

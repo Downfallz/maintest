@@ -54,8 +54,8 @@ One entry in `docs/art/page-pictures.json`:
   (#993). A group has two members or more; a page it does not name counts every member.
 - `quality` (optional): the WebP quality of this picture alone, a whole number from 1 to 100, in place of the kit's
   (`encoding`, 82). It is part of the picture's origin, so changing it derives the picture again, and no other. Lower it
-  for a heavy picture a page asks for first, checked by eye where it is drawn at 2×: the lesson's eclipse portrait on
-  the table's home is at 70 (#1137).
+  for a heavy picture a page asks for on first paint, and check it by eye where it is drawn at 2×: the lesson's eclipse
+  portrait on the table's home is at 70 (#1137).
 - `focus` (optional): where a box that cuts the painting centres the cut, across then down, in steps of 5%:
   `"focus": "30% 60%"` keeps a subject left of centre and low in view. `pictureElement` and `pictureHtml` write it as
   `data-focus-x` and `data-focus-y`, which `table/identity.css` turns into the image's `object-position`. The

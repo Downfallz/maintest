@@ -123,7 +123,7 @@ function declared(picture) {
   if (!(Array.isArray(picture.drawn) && picture.drawn.length && picture.drawn.every(width => Number.isInteger(width) && width > 0)))
     problems.push(`${name}: the width it is drawn at, in whole pixels, the phone's first`);
   if ('quality' in picture && !(Number.isInteger(picture.quality) && picture.quality >= 1 && picture.quality <= 100))
-    problems.push(`${name}: its quality is a whole number from 1 to 100, the kit's encoding's own for this picture`);
+    problems.push(`${name}: its quality is a whole number from 1 to 100, or absent to take the kit's`);
   for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first, lazy or wide, not ${role}`);
   return [...problems, ...phoneProblems(picture, name), ...groupProblems(picture, name), ...focusProblems(picture, name)];
 }

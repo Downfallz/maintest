@@ -1,0 +1,2 @@
+- A phone `sizes` fitted to the smallest file (62vw against a 243 px file, 241.8 at 390) tips to the next, twice-as-wide file a few px wider: probe `currentSrc` at the widths just past the fit (392-395 px at 1x) as well as 320 and 390 (#1179, showcase/page.mjs beast).
+- A walk measure that exempts a case (a file another picture draws at its size) changes what `docs/reference/commands.md` says the measure counts; grep the reference's sentence (#1179, scripts/ux/measures.mjs).

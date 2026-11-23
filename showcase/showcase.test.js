@@ -543,8 +543,8 @@ function sizesAt(sizes, screen) {
 }
 
 test('the width a sizes gives on a screen is the first length whose media condition holds', () => {
-  assert.equal(sizesAt('(max-width: 600px) 62vw, min(54vw, 850px)', 390), 241.8);
-  assert.equal(sizesAt('(max-width: 600px) 62vw, min(54vw, 850px)', 1000), 540);
+  assert.equal(sizesAt('(max-width: 600px) 61.5vw, min(54vw, 850px)', 390), 239.85);
+  assert.equal(sizesAt('(max-width: 600px) 61.5vw, min(54vw, 850px)', 1000), 540);
   assert.equal(sizesAt('(max-width: 650px) 315px, min(465px, 46vw)', 320), 315);
   assert.equal(sizesAt('(min-width: 1316px) 1280px, calc(100vw - 36px)', 390), null);
 });
@@ -557,9 +557,11 @@ test('on a phone, the Colossus\'s sizes is the width its height draws it at, not
   const [, height] = /\.hero-beast \{[^}]*height: clamp\(\d+px, (\d+(?:\.\d+)?)vw, \d+px\)/.exec(phone);
   const painting = PAGE_ART.colossus.sizes[0], ratio = painting.width / painting.height;
   const tag = picturesOf(read('index.html')).find(one => /class="picture hero-beast/.test(one));
-  const [, phoneWidth] = /^\(max-width: 600px\) (\d+)vw,/.exec(attribute(tag, 'sizes'));
-  assert.equal(Number(phoneWidth), Math.ceil(Number(height) * ratio), 'its height times its painting\'s ratio, rounded up');
-  assert.ok(PAGE_ART.colossus.drawn[0] >= sizesAt(attribute(tag, 'sizes'), 390), 'its declaration draws it at that width on a 390 px phone');
+  const [, phoneWidth] = /^\(max-width: 600px\) (\d+(?:\.\d+)?)vw,/.exec(attribute(tag, 'sizes'));
+  assert.ok(Math.abs(Number(phoneWidth) - Number(height) * ratio) <= 0.1, `${phoneWidth}vw is its height, ${height}vw, times its painting's ${ratio}`);
+  // Its phone file serves every phone up to 395 px wide at one density: past it, a sizes a hair over the file takes
+  // the next one, twice as wide.
+  for (const screen of [320, 390, 393, 395]) assert.ok(PAGE_ART.colossus.drawn[0] >= sizesAt(attribute(tag, 'sizes'), screen), `${screen} px: the ${PAGE_ART.colossus.drawn[0]} px file`);
 });
 
 test('a picture on the first screen drawn again lower down is lazy there: the budget counts its first use alone before any scroll (#1082)', () => {
