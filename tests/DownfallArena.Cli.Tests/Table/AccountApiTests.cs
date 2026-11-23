@@ -172,11 +172,11 @@ public sealed class AccountApiTests : IDisposable
         var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
         var id = await IdOf(api, session);
         await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
-        await devices.AddAsync(id, new PushDevice("https://push.example/laptop", "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A", "AAECAwQFBgcICQoLDA0ODw", default), TestContext.Current.CancellationToken);
+        await devices.AddAsync(id, new PushDevice("https://fcm.googleapis.com/fcm/send/laptop", "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A", "AAECAwQFBgcICQoLDA0ODw", default), TestContext.Current.CancellationToken);
 
-        (await api.HandleAsync("POST", "/api/account/signout", """{"endpoint":"https://push.example/phone"}""", Signed(session))).Status.ShouldBe(200);
+        (await api.HandleAsync("POST", "/api/account/signout", """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone"}""", Signed(session))).Status.ShouldBe(200);
 
-        (await devices.ListAsync(id, TestContext.Current.CancellationToken)).Select(device => device.Endpoint).ShouldBe(["https://push.example/laptop"]);
+        (await devices.ListAsync(id, TestContext.Current.CancellationToken)).Select(device => device.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/laptop"]);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public sealed class AccountApiTests : IDisposable
         Json(await api.HandleAsync("GET", "/api/account/names/MarkF", "", Nobody)).GetProperty("available").GetBoolean().ShouldBeTrue();
     }
 
-    private const string Subscription = """{"endpoint":"https://push.example/phone","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
+    private const string Subscription = """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
 
     /// <summary>An API whose host keeps devices and has push keys: the lobby's "Notify me on this device" reaches it.</summary>
     private async Task<(AccountApi Api, AccountDevices Devices, DeviceSender Sender)> NotifyingAsync()
@@ -393,15 +393,15 @@ public sealed class AccountApiTests : IDisposable
         var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
 
         var registered = await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
-        var tested = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://push.example/phone"}""", Signed(session));
+        var tested = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone"}""", Signed(session));
 
         registered.Status.ShouldBe(200);
         Json(registered).GetProperty("notices").GetBoolean().ShouldBeTrue();
         Json(registered).GetProperty("devices").GetInt32().ShouldBe(1);
-        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone");
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/phone");
         tested.Status.ShouldBe(200);
         Json(tested).GetProperty("sent").GetBoolean().ShouldBeTrue();
-        sender.Sent.ShouldHaveSingleItem().ShouldBe("https://push.example/phone");
+        sender.Sent.ShouldHaveSingleItem().ShouldBe("https://fcm.googleapis.com/fcm/send/phone");
     }
 
     [Fact]
@@ -418,6 +418,19 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_device_on_a_push_service_the_host_does_not_know_is_refused_and_nothing_is_kept()
+    {
+        var (api, devices, _) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+
+        var refused = await api.HandleAsync("PUT", "/api/account/push", Subscription.Replace("https://fcm.googleapis.com/fcm/send/phone", "https://slow.example/phone", StringComparison.Ordinal), Signed(session));
+
+        refused.Status.ShouldBe(400);
+        Json(refused).GetProperty("error").GetString().ShouldBe("Account.UnknownPushService");
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task A_browser_that_asks_to_be_forgotten_is_and_the_account_s_other_devices_stay()
     {
         var (api, devices, _) = await NotifyingAsync();
@@ -425,11 +438,11 @@ public sealed class AccountApiTests : IDisposable
         await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
         await api.HandleAsync("PUT", "/api/account/push", Subscription.Replace("/phone", "/laptop", StringComparison.Ordinal), Signed(session));
 
-        var forgotten = await api.HandleAsync("DELETE", "/api/account/push", """{"endpoint":"https://push.example/phone"}""", Signed(session));
+        var forgotten = await api.HandleAsync("DELETE", "/api/account/push", """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone"}""", Signed(session));
 
         forgotten.Status.ShouldBe(200);
         Json(forgotten).GetProperty("notices").GetBoolean().ShouldBeFalse();
-        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/laptop");
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/laptop");
     }
 
     [Fact]
@@ -440,7 +453,7 @@ public sealed class AccountApiTests : IDisposable
         await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
         sender.Gone = true;
 
-        var test = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://push.example/phone"}""", Signed(session));
+        var test = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone"}""", Signed(session));
         var again = await api.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
         var fresh = await api.HandleAsync("PUT", "/api/account/push", Subscription.Replace("/phone", "/phone-2", StringComparison.Ordinal), Signed(session));
 
@@ -448,7 +461,7 @@ public sealed class AccountApiTests : IDisposable
         again.Status.ShouldBe(410);
         Json(again).GetProperty("error").GetString().ShouldBe("Account.DeviceGone");
         fresh.Status.ShouldBe(200);
-        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/phone-2");
+        (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/phone-2");
     }
 
     [Fact]

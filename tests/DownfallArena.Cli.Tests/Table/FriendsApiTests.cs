@@ -14,7 +14,7 @@ namespace DownfallArena.Cli.Tests.Table;
 /// </summary>
 public sealed class FriendsApiTests : IDisposable
 {
-    private const string Subscription = """{"endpoint":"https://push.example/{0}","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
+    private const string Subscription = """{"endpoint":"https://fcm.googleapis.com/fcm/send/{0}","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"friends-api-{Guid.CreateVersion7():N}");
     private readonly Sender _sender = new();
@@ -76,7 +76,7 @@ public sealed class FriendsApiTests : IDisposable
         (await List(mark)).GetProperty("outgoing")[0].GetProperty("username").GetString().ShouldBe("bastien");
         (await List(bastien)).GetProperty("incoming")[0].GetProperty("username").GetString().ShouldBe("MarkF");
         var notice = _sender.Sent.ShouldHaveSingleItem();
-        notice.Endpoint.ShouldBe("https://push.example/bastien");
+        notice.Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/bastien");
         notice.Topic.ShouldBe("friend");
         var payload = JsonDocument.Parse(notice.Payload).RootElement;
         payload.GetProperty("body").GetString().ShouldBe("MarkF wants to be your friend.");
@@ -97,7 +97,7 @@ public sealed class FriendsApiTests : IDisposable
         (await List(mark)).GetProperty("friends")[0].GetProperty("username").GetString().ShouldBe("bastien");
         (await List(bastien)).GetProperty("friends")[0].GetProperty("username").GetString().ShouldBe("MarkF");
         _sender.Sent.Count.ShouldBe(2);
-        _sender.Sent[1].Endpoint.ShouldBe("https://push.example/MarkF");
+        _sender.Sent[1].Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/MarkF");
         JsonDocument.Parse(_sender.Sent[1].Payload).RootElement.GetProperty("body").GetString().ShouldBe("bastien accepted your friend request.");
     }
 

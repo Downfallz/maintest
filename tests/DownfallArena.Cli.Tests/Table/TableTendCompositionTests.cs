@@ -76,7 +76,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         var session = signedIn.Headers!.Single(header => header.Key == "Set-Cookie").Value.Split(';')[0][(AccountSessions.Cookie.Length + 1)..];
         if (phone)
         {
-            var subscription = JsonSerializer.Serialize(new { endpoint = $"https://push.example/{name}", keys = new { p256dh = InMemoryDeviceStore.Key, auth = InMemoryDeviceStore.Auth } });
+            var subscription = JsonSerializer.Serialize(new { endpoint = $"https://fcm.googleapis.com/fcm/send/{name}", keys = new { p256dh = InMemoryDeviceStore.Key, auth = InMemoryDeviceStore.Auth } });
             (await host.Accounts.HandleAsync("PUT", "/api/account/push", subscription, Signed(session))).Status.ShouldBe(200);
         }
 
@@ -181,7 +181,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
 
         await TableTend.TendAsync(job.Registry, job.Lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(25), job.Composer);
 
-        sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/bastien"]);
+        sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/bastien"]);
         (await KindsAsync(host, mark.Session)).ShouldBe(["match-over"]);
     }
 

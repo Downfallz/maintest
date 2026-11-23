@@ -370,23 +370,18 @@ test('in each group, the games waiting for this player come first, the most pres
   assert.deepEqual(ongoingGames(games).players.map(entry => entry.table.id), ['sooner', 'later', 'theirs']);
 });
 
-test('a game counts on the ladder when it is between players, in 3v3, and not opened unranked', () => {
-  assert.equal(isRanked(held('a').table), true);
-  assert.equal(isRanked({ ...held('b').table, casual: true }), false, 'opened unranked, or a shared device');
-  assert.equal(isRanked({ ...held('c').table, format: '1v1' }), false, 'only 3v3 is ranked (ADR 0171)');
-  assert.equal(isRanked(held('d', { bot: true }).table), false, 'a bot never is');
+test('a game counts on the ladder when the host says it does, and only then', () => {
+  assert.equal(isRanked({ ...held('a').table, ranked: true }), true);
+  assert.equal(isRanked({ ...held('b').table, ranked: false }), false);
+  assert.equal(isRanked(held('c').table), false, 'a host that did not say is not taken to mean ranked');
+  assert.equal(isRanked(null), false);
 });
 
-test('a game whose seats no account holds is not ranked: a host where nobody signs in keeps no ladder', () => {
+test('a public card is ranked without the seats\' account ids, which the lobby gives only to a player seated there (#971)', () => {
   const table = held('a').table;
-  assert.equal(isRanked({ ...table, seats: table.seats.map(seat => ({ ...seat, account: undefined })) }), false);
-  assert.equal(isRanked({ ...table, seats: [table.seats[0], { ...table.seats[1], account: table.seats[0].account }] }), false, 'one account at both seats');
-});
-
-test('a seat still open or kept for a friend leaves a game ranked: an account takes it', () => {
-  const table = held('a').table;
-  assert.equal(isRanked({ ...table, seats: [table.seats[0], { seat: 'player2', kind: 'open', name: 'Open seat' }] }), true);
-  assert.equal(isRanked({ ...table, seats: [table.seats[0], { seat: 'player2', kind: 'invited', name: 'Bastien' }] }), true);
+  const unnamed = { ...table, seats: table.seats.map(({ account, ...seat }) => seat) };
+  assert.equal(isRanked({ ...unnamed, ranked: true }), true);
+  assert.equal(isRanked({ ...table, ranked: false }), false, 'distinct accounts do not overrule the host');
 });
 
 test('a card says the day its game was created, and nothing when the host did not say', () => {

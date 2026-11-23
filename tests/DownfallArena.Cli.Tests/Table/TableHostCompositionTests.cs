@@ -17,9 +17,9 @@ namespace DownfallArena.Cli.Tests.Table;
 /// </summary>
 public sealed class TableHostCompositionTests : IAsyncDisposable
 {
-    private const string Phone = "https://push.example/phone";
-    private const string Subscription = """{"endpoint":"https://push.example/phone","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
-    private const string Browser = """{"endpoint":"https://push.example/browser","expirationTime":null,"keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
+    private const string Phone = "https://fcm.googleapis.com/fcm/send/phone";
+    private const string Subscription = """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
+    private const string Browser = """{"endpoint":"https://fcm.googleapis.com/fcm/send/browser","expirationTime":null,"keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
 
     private readonly HostedTables _hosted = new();
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"downfall-composed-{Guid.NewGuid():N}");
@@ -217,7 +217,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
         await FinishedBetweenAsync(host, mark.Id, bastien.Id);
 
-        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/bastien"]);
+        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/bastien"]);
         (await NoticesAsync(host, mark.Session)).EnumerateArray().ShouldHaveSingleItem().GetProperty("kind").GetString().ShouldBe("match-over");
     }
 
@@ -232,7 +232,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var subscribed = await host.Admin.Lobby.HandleAsync("PUT", "/api/lobby/push", Browser, table.Seats[0].Token, player);
 
         subscribed.Status.ShouldBe(200);
-        (await host.Accounts.Devices!.ListAsync(mark.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://push.example/browser"]);
+        (await host.Accounts.Devices!.ListAsync(mark.Id, Cancel)).Select(device => device.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/browser"]);
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
         await host.Push!.TurnDueAsync(table, new DueTurn(table.Id, table.Seats[0].Name, asked, 1));
 
-        _sender.Sent.Select(sent => sent.Endpoint).ShouldContain("https://push.example/MarkF");
+        _sender.Sent.Select(sent => sent.Endpoint).ShouldContain("https://fcm.googleapis.com/fcm/send/MarkF");
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await stopping.CancelAsync();
         await noticing;
         beforeTheWorker.ShouldBe(0, "the door queued the notice rather than send it in the request");
-        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/MarkF"]);
+        _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF"]);
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var opened = await host.Admin.Lobby.HandleAsync("POST", "/api/lobby/tables", $$"""{"opponent":"friend","friend":"{{bastien.Id.Value}}"}""", player: inviter);
 
         opened.Status.ShouldBe(201);
-        var told = _sender.Sent.Last(sent => sent.Endpoint == "https://push.example/bastien");
+        var told = _sender.Sent.Last(sent => sent.Endpoint == "https://fcm.googleapis.com/fcm/send/bastien");
         told.Topic.ShouldBe("invitation");
     }
 
@@ -326,7 +326,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var mark = await SignInAsync(host, "MarkF", phone: true);
         var table = await HeldAsync(host, mark.Id);
         var player = (await host.Accounts!.WhoAsync(Signed(mark.Session), Cancel)).ShouldNotBeNull();
-        var elsewhere = new RecordedPush { Gone = { "https://push.example/MarkF" } };
+        var elsewhere = new RecordedPush { Gone = { "https://fcm.googleapis.com/fcm/send/MarkF" } };
         var devices = new AccountDevices(await ArtifactStores.OpenDevicesAsync(Path.Combine(_root, "playtest"), Cancel), TimeProvider.System);
         await new AccountNotices(elsewhere, devices).SendAsync(mark.Id, AccountNotices.Payload("Victory", "You won.", "/lobby", "match:t1"), "match", except: null, Cancel);
         var subscription = Subscription.Replace("/phone", "/MarkF", StringComparison.Ordinal);

@@ -13,7 +13,7 @@ public sealed class WebPushSenderTests
     {
         var keys = PushKeys.Generate() with { Subject = "mailto:table@example.org" };
         using var service = new PushService(201);
-        using var sender = new WebPushSender(keys, service.Client);
+        using var sender = new WebPushSender(keys, service.Client, Anywhere);
 
         (await sender.SendAsync(service.Subscription(), """{"title":"Your turn"}""", "turn", TestContext.Current.CancellationToken)).ShouldBeTrue();
 
@@ -31,7 +31,7 @@ public sealed class WebPushSenderTests
     public async Task What_the_sender_encrypts_the_browser_s_keys_decrypt()
     {
         using var service = new PushService(201);
-        using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere);
         using var browser = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
         var auth = RandomNumberGenerator.GetBytes(16);
         var point = browser.PublicKey.ExportSubjectPublicKeyInfo()[^65..];
@@ -62,7 +62,7 @@ public sealed class WebPushSenderTests
     public async Task A_subscription_the_service_no_longer_knows_is_reported_gone(int status)
     {
         using var service = new PushService(status);
-        using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere);
 
         (await sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken)).ShouldBeFalse();
     }
@@ -71,12 +71,51 @@ public sealed class WebPushSenderTests
     public async Task A_service_that_is_out_is_an_http_failure_and_not_a_lost_subscription()
     {
         using var service = new PushService(503);
-        using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere);
 
         var failure = await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken));
 
         failure.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
     }
+
+    [Fact]
+    public async Task An_endpoint_on_no_known_push_service_is_never_called_and_is_reported_gone()
+    {
+        using var service = new PushService(201);
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
+
+        var sent = await sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken);
+
+        sent.ShouldBeFalse("a subscription kept before the host checked its service is forgotten as gone (#1132)");
+        service.Received.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_push_service_that_asks_to_be_tried_again_later_is_given_up_on_within_the_send_limit()
+    {
+        using var service = new PushService(429, retryAfter: "1");
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere, sendFor: TimeSpan.FromSeconds(3));
+
+        var failure = await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken));
+
+        failure.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests, "the 429 is this send's failure, not a wait inside it");
+        service.Received.Count.ShouldBe(1, "the library's own retry after a 429 waits as long and as often as the service asks");
+    }
+
+    [Fact]
+    public async Task A_push_service_that_does_not_answer_is_given_up_on_within_the_send_limit()
+    {
+        using var service = new PushService(201, delay: TimeSpan.FromSeconds(30));
+        using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere, sendFor: TimeSpan.FromMilliseconds(500));
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        await Should.ThrowAsync<HttpRequestException>(() => sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken));
+
+        watch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(5));
+    }
+
+    /// <summary>The listener here stands in for a push service at its own address, on no known service.</summary>
+    private static bool Anywhere(string endpoint) => endpoint.Length > 0;
 
     /// <summary>A push service on this machine: it answers one status, and keeps what it was sent.</summary>
     private sealed class PushService : IDisposable
@@ -84,13 +123,13 @@ public sealed class WebPushSenderTests
         private readonly HttpListener _listener = new();
         private readonly string _url;
 
-        public PushService(int status)
+        public PushService(int status, string? retryAfter = null, TimeSpan delay = default)
         {
             var port = FreePort();
             _url = $"http://127.0.0.1:{port}/";
             _listener.Prefixes.Add(_url);
             _listener.Start();
-            _ = AnswerAsync(status);
+            _ = AnswerAsync(status, retryAfter, delay);
             Client = new HttpClient();
         }
 
@@ -113,7 +152,7 @@ public sealed class WebPushSenderTests
             return new PushSubscription($"{_url}push/one", Base64Url.EncodeToString(point), Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(16)));
         }
 
-        private async Task AnswerAsync(int status)
+        private async Task AnswerAsync(int status, string? retryAfter, TimeSpan delay)
         {
             try
             {
@@ -124,7 +163,17 @@ public sealed class WebPushSenderTests
                     await context.Request.InputStream.CopyToAsync(buffer);
                     var bytes = buffer.ToArray();
                     Received.Add((context.Request.Headers, System.Text.Encoding.Latin1.GetString(bytes), bytes));
+                    if (delay > TimeSpan.Zero)
+                    {
+                        await Task.Delay(delay);
+                    }
+
                     context.Response.StatusCode = status;
+                    if (retryAfter is not null)
+                    {
+                        context.Response.Headers["Retry-After"] = retryAfter;
+                    }
+
                     context.Response.Close();
                 }
             }
