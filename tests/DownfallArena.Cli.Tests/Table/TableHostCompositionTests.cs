@@ -2,8 +2,11 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Azure.Storage;
+using Azure.Storage.Blobs;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Ports;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.SharedKernel.Identifiers;
@@ -550,26 +553,63 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             Assert.Skip($"No storage emulator at {Emulator}: run `npx azurite` or set AZURITE_BLOB_ENDPOINT.");
         }
 
-        var host = await ComposeAsync(push: true, turns: TurnsMode.Worker, record: $"{Emulator.ToString().TrimEnd('/')}/composed-{Guid.NewGuid():N}");
-        var mark = await SignInAsync(host, "MarkF", phone: true);
-        await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
-        var turn = $$"""{"table":"never-{{Guid.NewGuid():N}}"}""";
-        await host.Turns!.SendAsync(turn, cancellationToken: Cancel);
-        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
-
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
-        await _sender.FirstSent.WaitAsync(SeatsAsked.Within, Cancel);
-        var left = await host.Turns.PeekAsync(32, Cancel);
-
-        await stopping.CancelAsync();
-        await running;
-        host.Mode.ShouldBe(TurnsMode.Worker);
-        left.Select(work => work.Body).ShouldContain(turn, "the turn is table-worker's to take");
-        foreach (var work in (await host.Turns.ReceiveAsync(32, TimeSpan.FromSeconds(30), Cancel)).Where(work => work.Body == turn))
+        var container = new BlobContainerClient(new Uri($"{Emulator.ToString().TrimEnd('/')}/composed-{Guid.NewGuid():N}"), new StorageSharedKeyCredential(EmulatorAccount, EmulatorKey));
+        var host = await ComposeAsync(push: true, turns: TurnsMode.Worker, record: container.Uri.ToString());
+        var turns = host.Turns.ShouldNotBeNull();
+        var turn = $$"""{"table":"{{Unplayed}}{{Guid.NewGuid():N}}"}""";
+        try
         {
-            await host.Turns.DeleteAsync(work, Cancel);
+            await LetGoOfEarlierRunsAsync(turns);
+            var mark = await SignInAsync(host, "MarkF", phone: true);
+            await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
+            await turns.SendAsync(turn, cancellationToken: Cancel);
+            using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+            var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+            await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
+            var left = await turns.PeekAsync(32, Cancel);
+
+            await stopping.CancelAsync();
+            await running;
+            host.Mode.ShouldBe(TurnsMode.Worker);
+            left.Select(work => work.Body).ShouldContain(turn, "the turn is table-worker's to take");
+        }
+        finally
+        {
+            await LetGoOfEarlierRunsAsync(turns);
+            await container.DeleteIfExistsAsync(cancellationToken: CancellationToken.None);
         }
     }
+
+    /// <summary>What the turns this test puts on the emulator's one <c>agent-turns</c> queue name as their table.</summary>
+    private const string Unplayed = "never-";
+
+    /// <summary>
+    /// Deletes the turns this test put on the emulator's queue in a run before, cut short or failed, so the queue's
+    /// first items are this run's (#1181). The queue is the emulator account's, not the container's: every run
+    /// shares it. Any other item is put back at once, as it was.
+    /// </summary>
+    private static async Task LetGoOfEarlierRunsAsync(IWorkChannel turns)
+    {
+        for (var received = await turns.ReceiveAsync(32, TimeSpan.FromSeconds(30), CancellationToken.None); received.Count > 0; received = await turns.ReceiveAsync(32, TimeSpan.FromSeconds(30), CancellationToken.None))
+        {
+            foreach (var work in received)
+            {
+                await (work.Body.Contains($"\"{Unplayed}", StringComparison.Ordinal)
+                    ? turns.DeleteAsync(work, CancellationToken.None)
+                    : turns.RetryAsync(work, TimeSpan.Zero, CancellationToken.None));
+            }
+
+            if (received.All(work => !work.Body.Contains($"\"{Unplayed}", StringComparison.Ordinal)))
+            {
+                return;
+            }
+        }
+    }
+
+    private const string EmulatorAccount = "devstoreaccount1";
+
+    private const string EmulatorKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
     /// <summary>The storage emulator's blob service, where the hosted table's container would be.</summary>
     private static Uri Emulator { get; } = new(Environment.GetEnvironmentVariable("AZURITE_BLOB_ENDPOINT") ?? "http://127.0.0.1:10000/devstoreaccount1");

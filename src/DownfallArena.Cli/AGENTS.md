@@ -31,7 +31,10 @@ dotnet run --project src/DownfallArena.Cli -- studio
 - Without Azurite the storage tests are skipped, not passed: say so.
 - A test that needs a table under way holds it with a person seat that has arrived (`Arrive()`, then
   `Session.Begin()`): two bots play without waiting and can finish before the read (#598).
-- A test that plays two processes over one table gives each its own `HostedTables` over the same runs and index:
-  two registries over one host's services rebuild the match into one `InMemoryMatchRepository` (#1187).
+- A test that plays two processes over one table gives each its own `HostedTables`, over the same runs and index.
+  A second registry over one host's services picks the table up into the same `InMemoryMatchRepository`, and the
+  API's match is replaced by the rebuilt one under its running session: the likely cause of #1187.
+- A host composed over the emulator opens its queues by their one name for the whole account (`agent-turns`,
+  `notices`): its test never relies on a queue starting empty, and cleans up in `finally` (#1181).
 - A flag or a route is described in docs/reference/commands.md and table/README.md, not in `AGENTS.md`.
 - `--format` and `--declaration` are refused by `benchmark` (and `--declaration` by `studio` and `--practice`).

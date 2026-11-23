@@ -69,7 +69,7 @@ public sealed class TableHostWorkersTests : IDisposable
 
         var noticing = await TableHost.StartNoticesAsync(channels, notices, push, registry, TimeProvider.System, stopping.Token);
         await door.NotifyAsync(account, new Application.Accounts.Notice(Application.Accounts.NoticeKind.MatchOver, "Victory", "You won.", "/lobby", "match:t1"), Cancel);
-        await sender.FirstSent.WaitAsync(SeatsAsked.Within, Cancel);
+        await sender.FirstSent.WaitAsync(Waits.Within, Cancel);
 
         await stopping.CancelAsync();
         await noticing.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
@@ -106,7 +106,9 @@ public sealed class TableHostWorkersTests : IDisposable
         await table.RecordAsync(Cancel);
         using var workerHost = new HostedTables(_ => new FileArtifactStore(hosted.RunsDirectory), index: hosted.Index);
         using var worker = workerHost.Registry();
-        var stale = (await worker.FindAsync(table.Id, Cancel)).Table.ShouldNotBeNull();
+        var found = await worker.FindAsync(table.Id, Cancel);
+        found.Unavailable.ShouldBeNull();
+        var stale = found.Table.ShouldNotBeNull();
         stale.Touch(DateTimeOffset.UtcNow - TableWatch.WatchedFor - TimeSpan.FromMinutes(1));
         foreach (var seat in table.Seats)
         {
@@ -126,7 +128,7 @@ public sealed class TableHostWorkersTests : IDisposable
 
         var noticing = await TableHost.StartNoticesAsync(channels, notices, push, worker, TimeProvider.System, stopping.Token);
         await notices.SendAsync(QueuedNotice.Of(new DueTurn(table.Id, table.Seats[0].Name, later, 2)).ToJson(), cancellationToken: Cancel);
-        await sender.FirstSent.WaitAsync(SeatsAsked.Within, Cancel);
+        await sender.FirstSent.WaitAsync(Waits.Within, Cancel);
 
         await stopping.CancelAsync();
         await noticing.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
