@@ -1,6 +1,0 @@
-# host-reviewer lessons, notifications N5 PR (ADR 0203, the notices queue)
-
-- A dead-letter queue kept for good (DeadLetterWorker, InfiniteTimeSpan) holds whatever the item held: a notices item carries the account id, the device endpoint and the payload (another player's name), so the privacy text's "until you turn them off / with your account" is false for every given-up notice; check every new queue's poison body against the privacy pane (N5).
-- A field added to a stored document that an older image ignores on read and drops on write (DeviceRecord `gone`) turns a marker entry into a live one during a revision overlap: ask for a read that also recognises the marker by shape (empty keys), not only by the new flag (N5, same root as N1's NoticeDocuments).
-- A write "on behalf of" a send (MarkGoneAsync after a 410) that writes even when the account holds no such device recreates `devices/<id>.json` for an account deleted mid-send; a change that finds nothing to change should write nothing (N5, same root as N1/O4).
-- Work moved after a route's answer (LobbyApi HeldNotices) catches only StoreFails/HttpRequestException: anything else is a 500 for an action already recorded, and the loop stops for the remaining accounts; catch everything but cancellation there (N5).

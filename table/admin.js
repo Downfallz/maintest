@@ -7,6 +7,7 @@
 // game is not open yet, so the operator opens every table and the players, who never sign in, join by code.
 
 import { mountJobs } from './admin-jobs.js';
+import { mountNotices } from './admin-notices.js';
 import { mountSettings } from './admin-settings.js';
 import { mountOverview } from './admin-overview.js';
 import { mountActivity } from './admin-activity.js';
@@ -660,11 +661,13 @@ async function start() {
   // Refresh, never on the clock.
   // The tab shows when the host keeps either: its tending runs, or its bots' turn queues (A3b). Its mark says when
   // either has something waiting on the operator: a failed run, or a turn given up on.
-  const jobsTab = { runs: false, turns: false, runsWarn: false, turnsWarn: false };
+  // The notices (N6) are a third: their queues and counts, on a host that sends its notices from a queue.
+  const jobsTab = { runs: false, turns: false, notices: false, runsWarn: false, turnsWarn: false, noticesWarn: false };
   const drawJobsTab = () => {
-    element('tab-jobs').hidden = !(jobsTab.runs || jobsTab.turns);
-    element('jobs-off').hidden = jobsTab.runs || jobsTab.turns;
-    element('tab-jobs-count').textContent = jobsTab.runsWarn || jobsTab.turnsWarn ? '!' : '';
+    const any = jobsTab.runs || jobsTab.turns || jobsTab.notices;
+    element('tab-jobs').hidden = !any;
+    element('jobs-off').hidden = any;
+    element('tab-jobs-count').textContent = jobsTab.runsWarn || jobsTab.turnsWarn || jobsTab.noticesWarn ? '!' : '';
   };
   const jobs = mountJobs({
     send: transport.request,
@@ -677,6 +680,12 @@ async function start() {
     element,
     shown: available => { jobsTab.turns = available; element('turns-on').hidden = !available; drawJobsTab(); },
     warn: on => { jobsTab.turnsWarn = on; drawJobsTab(); },
+  });
+  const notices = mountNotices({
+    send: transport.request,
+    element,
+    shown: available => { jobsTab.notices = available; element('notices-on').hidden = !available; drawJobsTab(); },
+    warn: on => { jobsTab.noticesWarn = on; drawJobsTab(); },
   });
 
   // The host's settings (ADR 0177), on a host that signs players in: registration and the notice. The tab is marked
@@ -822,7 +831,7 @@ async function start() {
   element('sessions-refresh').addEventListener('click', redrawSessions);
   element('tables-previous').addEventListener('click', () => { tablesPage -= 1; drawTables(); });
   element('tables-next').addEventListener('click', () => { tablesPage += 1; drawTables(); });
-  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); await scenarios.redraw(); await feedback.redraw(); });
+  element('admin-refresh').addEventListener('click', async () => { await redraw(); await redrawSessions(); await players.redraw(); await jobs.redraw(); await turnQueues.redraw(); await notices.redraw(); await settings.redraw(); await overview.redraw(); await activity.redraw(); await scenarios.redraw(); await feedback.redraw(); });
   globalThis.addEventListener?.('hashchange', () => {
     showTab();
     if (tabOf(globalThis.location?.hash) === 'players') void players.redraw();
@@ -834,6 +843,7 @@ async function start() {
     if (tabOf(globalThis.location?.hash) === 'jobs') {
       void jobs.redraw();
       void turnQueues.redraw();
+      void notices.redraw();
     }
   });
   showTab();
@@ -863,6 +873,7 @@ async function start() {
   await players.redraw();
   await jobs.redraw();
   await turnQueues.redraw();
+  await notices.redraw();
   await settings.redraw();
   await overview.redraw();
   await activity.redraw();

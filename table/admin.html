@@ -183,7 +183,7 @@
       </section>
     </section>
     <section id="panel-jobs" class="admin-panel" aria-labelledby="tab-jobs" data-panel="jobs" hidden>
-      <p id="jobs-off" class="muted">This host keeps no tending runs (it records nothing, <code>--no-record</code>) and takes its bots' turns in its own process, so it has no jobs to show.</p>
+      <p id="jobs-off" class="muted">This host keeps no tending runs (it records nothing, <code>--no-record</code>), takes its bots' turns in its own process, and sends its notices in the request, so it has no jobs to show.</p>
       <section id="jobs-on" class="control players" aria-labelledby="jobs-title" hidden>
         <div class="list-head">
           <h2 id="jobs-title">Tending runs</h2>
@@ -228,6 +228,36 @@
         <ol id="turns-letters" class="session-list" aria-label="Dead letters"></ol>
         <p id="turns-empty" class="muted" hidden>No dead letter: every turn given up on has been dealt with.</p>
         <p id="turns-more" class="muted" hidden></p>
+      </section>
+      <section id="notices-on" class="control players" aria-labelledby="notices-title" hidden>
+        <div class="list-head">
+          <h2 id="notices-title">Notices</h2>
+          <button id="notices-refresh" type="button" class="secondary">Refresh</button>
+        </div>
+        <p class="muted">The API and the worker send the pop-ups to players' devices from a queue. A notice the push service keeps refusing is given up on after five tries and kept a week as a dead letter, with its account and kind only. The bell keeps every notice whatever happens here.</p>
+        <ul id="notices-queues" class="turn-queues" aria-label="Notice queues"></ul>
+        <output id="notices-said" class="said"></output>
+        <p id="notices-counted" class="muted"></p>
+        <div id="notices-table" class="player-table" hidden>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col" rowspan="2">Kind</th>
+                <th scope="colgroup" colspan="3">Today</th>
+                <th scope="colgroup" colspan="3">7 days</th>
+              </tr>
+              <tr>
+                <th scope="col" class="notice-count">Sent</th>
+                <th scope="col" class="notice-count">Refused</th>
+                <th scope="col" class="notice-count">Gone</th>
+                <th scope="col" class="notice-count">Sent</th>
+                <th scope="col" class="notice-count">Refused</th>
+                <th scope="col" class="notice-count">Gone</th>
+              </tr>
+            </thead>
+            <tbody id="notices-counts"></tbody>
+          </table>
+        </div>
       </section>
     </section>
     <section id="panel-activity" class="admin-panel" aria-labelledby="tab-activity" data-panel="activity" hidden>

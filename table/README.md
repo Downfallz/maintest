@@ -565,9 +565,13 @@ service worker, which serves nothing from a cache but `offline.html`, shown when
 answers, and given only when it cannot answer; the rulebook's own files also when the host answers with a server
 error (a 52x from Cloudflare for a host that is down), never the shared ones, which other pages draw with.
 The worker also keeps the offline page's plate (ADR 0200): `offline.js`, the picture kit (`picture.js`,
-`picture-focus.js`, `page-art.js`) and the plate's two files, which it reads off `page-art.js`, and keeps them again
-when a fresh `page-art.js` names other files. The kit is refreshed whenever a page loads it; `offline.js` only when
-the worker installs again. The offline page names its files from the root: it is shown at the failed page's address.
+`picture-form.js`, `picture-focus.js`, `page-art.js`, `battle-page-art.js`) and the plate's two files, which it reads off
+`page-art.js`, and keeps them again when a fresh `page-art.js` names other files. It keeps the rulebook's head painting
+the same way, at its phone width and twice it (354 and 708 px today, #1060). A screen that asks for a wider file, a
+phone of density 3 among them, shows the band without it. The kit is refreshed whenever a page loads it. The worker asks
+for `offline.js` again each time it keeps a `page-art.js` that differs from its copy (#1061). Loading a painting never
+keeps it: the worker keeps the files `page-art.js` names, when it reads that file. The offline page names its files
+from the root: it is shown at the failed page's address.
 Offline, the rulebook draws without the menu, the brand alone leading home. A rulebook file given from its copy
 carries `X-Rulebook-Copy: kept`, and the page then says the book is the one this device last read (#698).
 
@@ -802,6 +806,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `GET /api/admin/players?q&sort&page`, `GET /api/admin/players/<id>`, `POST .../sign-out`, `POST .../rename`, `DELETE .../<id>`, `POST`/`DELETE .../<id>/suspension` | operator | Players (ADR 0174, ADR 0178). |
 | `GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>`, `POST /api/admin/jobs/tend` | operator | Tending runs, and a pass now (ADR 0162). |
 | `GET /api/admin/jobs/turns`, `POST /api/admin/jobs/turns/requeue`, `POST .../drop` | operator | Bot turns' queues and dead letters. |
+| `GET /api/admin/jobs/notices` | operator | The notices' queues, and what the worker sent, had refused and found gone, for each kind, today and over 7 days (N6). |
 | `GET /api/admin/scenarios/rounds?session=<id>`, `GET`/`POST /api/admin/scenarios`, `DELETE /api/admin/scenarios/<id>`, `PUT /api/admin/scenarios/<id>/listing` | operator | Scenarios (ADR 0179); the repository's `scenarios/` files, its tutorials among them, are listed with them, read-only (S7, ADR 0187), and its bug scenarios (`bugs/<issue>-<slug>.json`, `"bug": N`, feedback plan R6). Listing one cut from a game still played is 409 `Scenario.UnderWay` or `Scenario.SourceUnread`, 503 `Scenario.Unavailable` when the store cannot say (#833). |
 | `GET /api/admin/feedback?kind&status&category&page`, `GET /api/admin/feedback/<id>`, `PUT .../<id>/status`, `PUT .../<id>/kind`, `POST`/`DELETE .../<id>/merge`, `POST`/`DELETE .../<id>/mute`, `POST .../<id>/reproduce`, `POST .../<id>/scenario.zip` | operator | The Feedback tab (feedback plan, R3, I1, R4, R5): the list, a sheet, the status by hand (an idea planned, shipped or declined; a bug report filed with its issue's number, then fixed), a kind moved, an idea merged into another or put back in the list as its own (#725), a sender stopped, a bug report's round cut as a scenario, in the reporter's seat (from a practice whose scenario's game is still played, 409 `Scenario.UnderWay` or `Scenario.SourceUnread`, #833), and, once the game is over, that scenario redacted as a zip for a public issue. |
 | `GET /api/admin/activity?page` | operator | What operators did. |

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { createServer as createTcpServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -82,6 +82,21 @@ test('the suite\'s own server, started for this checkout, is reused', async (t) 
     if (!answer) await new Promise((done) => setTimeout(done, 100));
   }
   assert.equal(answer, true);
+});
+
+// The picture kit writes absolute /page-art/ sources (ADR 0198); the real host serves them from table/page-art/, and so
+// must the suite's server, or no mock-host spec ever loads a painting (#1040).
+test('the suite\'s own server serves a page\'s pictures under /page-art/, as the host does', async (t) => {
+  const port = await freePort();
+  const server = spawn(process.execPath, ['server.js'], { cwd: join(here, 'browser'), env: { ...process.env, STUDIO_BROWSER_PORT: String(port) } });
+  t.after(() => server.kill());
+  for (let attempt = 0; attempt < 50 && !(await reusable(port).catch(() => false)); attempt += 1) await new Promise((done) => setTimeout(done, 100));
+  const picture = readdirSync(join(checkout, 'table', 'page-art')).find((file) => file.endsWith('.webp'));
+  const served = await fetch(`http://127.0.0.1:${port}/page-art/${picture}`);
+  assert.equal(served.status, 200);
+  assert.equal(served.headers.get('content-type'), 'image/webp');
+  assert.deepEqual(Buffer.from(await served.arrayBuffer()), readFileSync(join(checkout, 'table', 'page-art', picture)));
+  assert.equal((await fetch(`http://127.0.0.1:${port}/page-art/missing.webp`)).status, 404);
 });
 
 test('nothing is reused on a free port, so the config starts its own server', async () => {

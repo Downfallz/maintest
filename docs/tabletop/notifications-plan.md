@@ -1,6 +1,6 @@
 # Plan: notifications, the bell that keeps everything and the push a player chooses
 
-Status: accepted, 2026-11-22 (the owner settled the questions at the end). N1 to N5 are built; each stage below is
+Status: built, 2026-11-23 (the owner settled the questions at the end). N1 to N6 are built; each stage below was
 one pull request.
 
 ## What the owner asked for
@@ -249,6 +249,26 @@ Jobs tab show the counts and the queue's length.
 
 6. **N6, the counts.** The worker's counts in the ops report and in the admin's Jobs tab. Tests: Cli tests on
    the counts, `ops.test.js`, `admin.test.js`.
+
+   *Built (2026-11-23)*: `NoticeWorker` counts each look's pushes for each kind (the push topic: `turn`,
+   `invitation`, `friend`, `match`): **sent**, **refused** (every try a push service refused or did not answer, so a
+   notice retried twice counts two, and one given up on counts five; a store or a queue that fails around a send is
+   not a refusal) and **gone** (a device its push service dropped, or that the account no longer holds). After the
+   look it adds them to the day's document through `NoticeCounts` (Application, port `INoticeCountStore`; memory,
+   file and blob adapters in `Infrastructure/Work`), written over the version read and read again on a conflict,
+   since the API and `table-worker` both count; the first count of a day lets go of the days past seven, and a
+   clean-up that fails is a line, not lost counts. The store is `notice-counts/` beside the recordings (a directory
+   or a container; no new role, the processes' roles are the account's); a host that records nothing counts in
+   memory. A count that cannot be kept is a console line, never a notice sent again. `GET /api/admin/jobs/notices`
+   answers the three queues' lengths and the counts, today (UTC) and the seven days; the Jobs tab draws them in a
+   section *Notices* (`table/admin-notices.js`), marked when a notice waits given up on. The worker's lines now start
+   `Notice sent (kind)`, `Notice refused (kind)` and `Notice gone (kind)`; `scripts/ops/read.sh` counts them in Log
+   Analytics over 24 hours, and the report prints `Notifications 24 h : … envoyées, … refusées (dont … abandonnées),
+   … disparues`; a notice given up on, a push or a "your turn", is a concern, counted by the words the alert hears.
+
+   Left: the ops report reads the storage account's queue length as a whole, since Azure's metrics do not split it by
+   queue; the Jobs tab has each queue's. The notices sent in the request (no queue, or the hourly job) are not counted,
+   as the stage asked for the worker's counts. A notice to a seat without an account (ADR 0118) is not counted either.
 
 ## Questions the owner settled (2026-11-22)
 

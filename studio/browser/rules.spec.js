@@ -295,3 +295,63 @@ test.describe('a browser in French', () => {
     expect(errors).toEqual([]);
   });
 });
+
+// The page held to the pages' floor at every width, in both languages (#1059): no word under 11 px, every target
+// 44 px or more, no two overlapping, and nothing axe finds. Measured as the journey's walk measures a screen
+// (scripts/ux/measures.mjs), on the whole book drawn.
+for (const language of ['en', 'fr']) {
+  test(`in ${language === 'en' ? 'English' : 'French'}, no word under 11 px, no target under 44 px and nothing axe finds`, async ({ page }) => {
+    const { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage } = await import('../../scripts/ux/measures.mjs');
+    await guest(page);
+    await page.goto(`/table/rules.html?lang=${language}`);
+    await expect(page.locator('body')).toHaveAttribute('data-language', language);
+
+    const measured = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
+    expect(measured.text, 'the smallest words').toEqual({ smallest: expect.any(Number), under: 0 });
+    expect(measured.targets.under, 'the targets under 44 px').toBe(0);
+    expect(measured.overlaps, 'the targets that overlap').toBe(0);
+    expect(measured.wide).toBe(false);
+    await page.addScriptTag({ content: readFileSync(new URL('./node_modules/axe-core/axe.min.js', import.meta.url), 'utf8') });
+    expect(await page.evaluate(axeInPage, AXE_TAGS)).toEqual({});
+  });
+}
+
+// The head's band in French (#1060): the French eyebrow is longer, and the band grows with its words. On the painting
+// the page asks for, its words hold 4.5:1, and the band stays within the head's 120 px.
+test('in French the head\'s band holds its words at 4.5:1 and stays within 120 px', async ({ page }) => {
+  const { measureContrast } = await import('../../scripts/ux/contrast.mjs');
+  await guest(page);
+  // The kit names its files from the root, where the host serves them; this server serves the table under /table/.
+  await page.route(/\/page-art\/[^/]+\.webp$/, route => route.fulfill({ path: new URL(`../../table/page-art/${new URL(route.request().url()).pathname.split('/').pop()}`, import.meta.url).pathname, contentType: 'image/webp' }));
+  await page.goto('/table/rules.html?lang=fr');
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'fr');
+  await expect(page.locator('.page-head .eyebrow')).toHaveText('Le livre de règles officiel');
+  const painting = page.locator('.page-head > img');
+  await expect(painting).toHaveCount(1);
+  await painting.evaluate(image => image.decode());
+
+  const band = await page.locator('.page-head').boundingBox();
+  expect(band.height).toBeLessThanOrEqual(120);
+  const contrast = await measureContrast(page);
+  expect(contrast.texts).toBeGreaterThanOrEqual(2);
+  expect(contrast.under, JSON.stringify(contrast)).toBe(0);
+});
+
+// A table hidden by the filter measures no width; the landing that clears the filter brings it back, and with it its
+// stop of the keyboard when it is wider than the screen (#1059).
+test('a table wider than the screen is a stop of the keyboard again once a landing clears the filter that hid it', async ({ page }) => {
+  // At 320 the capstones' table is wider than the screen.
+  await page.setViewportSize({ width: 320, height: 740 });
+  await guest(page);
+  await open(page);
+  const capstones = page.locator('#capstones .rules-table');
+  await expect(capstones).toHaveAttribute('tabindex', '0');
+  await expect(capstones).toHaveAttribute('role', 'region');
+
+  await page.getByLabel('Find a rule').fill('provisional');
+  await expect(capstones).toBeHidden();
+  await page.goto('/table/rules.html#what-changed');
+
+  await expect(capstones).toBeVisible();
+  await expect(capstones).toHaveAttribute('tabindex', '0');
+});

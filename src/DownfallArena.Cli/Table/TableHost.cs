@@ -19,6 +19,7 @@ using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Matches;
 using DownfallArena.Infrastructure.Resources;
 using DownfallArena.Infrastructure.Tables;
+using DownfallArena.Infrastructure.Work;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DownfallArena.Cli.Table;
@@ -75,6 +76,7 @@ internal static class TableHost
         var (server, registry, composer, store, stored) = (host.Server, host.Registry, host.Composer, host.Store, host.Stored);
         var (accounts, push, gate, relay, described) = (host.Accounts, host.Push, host.Gate, host.Relay, host.Described);
         var (mode, channels, turns, notices) = (host.Mode, host.Channels, host.Turns, host.Notices);
+        var noticeCounts = host.NoticeCounts;
 
         Console.WriteLine($"Table on {server.Url}");
 
@@ -127,7 +129,7 @@ internal static class TableHost
             var working = mode == TurnsMode.Worker && turns is not null
                 ? TakenByTheWorker(turns)
                 : await StartWorkersAsync(channels, turns, registry, clock, stopping.Token);
-            var noticing = await StartNoticesAsync(channels, notices, push, registry, clock, stopping.Token);
+            var noticing = await StartNoticesAsync(channels, notices, push, registry, clock, stopping.Token, noticeCounts);
 
             // What other processes write to the tables this host holds -- the worker's turns, the hourly job's
             // expiries -- is heard through the relay when there is one, and looked for every second when there is not
@@ -396,6 +398,18 @@ internal static class TableHost
             admin.Turns = queues is null ? null : new TurnsApi(queues);
         }
 
+        // What the notices worker sent, had refused and found gone (N6), a day at a time beside the recordings, which
+        // the worker app adds to as well; in memory where this host records nothing, as its queues are its own. A store
+        // that cannot be opened leaves the counts out, never the notices.
+        var countsAt = store is null ? null : options.Record ?? DefaultRunsDirectory;
+        var noticeCounts = notices is null ? null : await OpenNoticeCountsAsync(countsAt, clock, cancellationToken);
+        if (channels is not null && notices is not null)
+        {
+            var poisoned = await OpenChannelAsync(channels, PoisonedWork.QueueOf(notices.Name), cancellationToken);
+            var letters = await OpenChannelAsync(channels, DeadLetter.QueueOf(notices.Name), cancellationToken);
+            admin.Notices = poisoned is null || letters is null ? null : new NoticesApi(new TurnQueues(notices, poisoned, letters), noticeCounts);
+        }
+
         // The players' bug reports and ideas (ADR 0189), kept beside the recordings in a store of their own; a pass
         // lets go of what was closed 180 days ago.
         var feedbackIndex = store is null ? null : await OpenFeedbackAsync(options.Record ?? DefaultRunsDirectory, clock, cancellationToken);
@@ -508,6 +522,7 @@ internal static class TableHost
             Channels = channels,
             Turns = turns,
             Notices = notices,
+            NoticeCounts = noticeCounts,
         };
     }
 
@@ -692,11 +707,36 @@ internal static class TableHost
     }
 
     /// <summary>
+    /// The notices worker's counts (N6) beside what <paramref name="target" /> names, or in this process's memory for
+    /// none; none at all, said on the console, when the store cannot be opened.
+    /// </summary>
+    internal static async Task<NoticeCounts?> OpenNoticeCountsAsync(string? target, TimeProvider clock, CancellationToken cancellationToken)
+    {
+        if (target is null)
+        {
+            return new NoticeCounts(new InMemoryNoticeCountStore(), clock);
+        }
+
+        try
+        {
+            return new NoticeCounts(await ArtifactStores.OpenNoticeCountsAsync(target, cancellationToken), clock)
+            {
+                ForgetFailed = failure => Console.WriteLine($"  The notices' counts older than a week could not be let go of; tried again tomorrow: {HttpHost.OneLine(failure)}"),
+            };
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure) || failure is Azure.Identity.AuthenticationFailedException)
+        {
+            Console.WriteLine($"  The notices' counts could not be opened ({HttpHost.OneLine(failure)}); the notices are sent and not counted.");
+            return null;
+        }
+    }
+
+    /// <summary>
     /// The two workers of the notices queue (ADR 0203): one sends what it holds -- a notice to one device of an account,
     /// "your turn" once its grace is over -- and the other keeps for good what the first gave up on. In the API and in
     /// <c>table-worker</c>; none on a host with no queue or no push keys, which sends in the request.
     /// </summary>
-    internal static async Task<Task> StartNoticesAsync(IWorkChannels? channels, IWorkChannel? notices, PushNotices? push, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<Task> StartNoticesAsync(IWorkChannels? channels, IWorkChannel? notices, PushNotices? push, TableRegistry registry, TimeProvider clock, CancellationToken stopping, NoticeCounts? counts = null)
     {
         if (channels is null || notices is null || push is null)
         {
@@ -741,6 +781,7 @@ internal static class TableHost
                 }
             },
             Said = Console.WriteLine,
+            Counts = counts,
         };
         var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine, KeptFor = NoticeWorker.DeadLettersKeptFor };
         Console.WriteLine($"  Notices: through the queue {notices.Name}, given up on after {NoticeWorker.MostDeliveries} tries onto {poison.Name}, kept a week on {deadLetters.Name}.");

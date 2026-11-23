@@ -36,6 +36,8 @@ journey is found before the pull request. Arguments: $ARGUMENTS (`--all` for eve
      `node node_modules/playwright/cli.js test <specs, or nothing for all> --trace off --reporter=dot,json`
      with `PLAYWRIGHT_JSON_OUTPUT_NAME` set to a file in the scratchpad. On a change a person sees, all four
      projects; otherwise `--project=phone --project=desktop` first, and the rest before shipping.
+     A spec the diff adds or changes is played on all four projects before the pull request opens, whatever the
+     change: #1039 and #1104 made `main` red on a width they were not played at.
    - Real engine, when called for: `dotnet build src/DownfallArena.Cli` and the catalogue
      (`dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst`: `data/dst/` is ignored by git and
      the host will not start without it), then

@@ -21,6 +21,12 @@ The standing orders in `CLAUDE.md`, in order. None of them is asked first.
 6. Then end the turn. Events arrive on their own; never poll or sleep for them.
 7. On each event, answer the round: every thread and failing check that has arrived and is not yet answered.
    - A review thread: fix it in a new commit, or reply why not. Every finding gets one of the two.
+     A fix carries the test that fails without it, in the same commit, not in a follow-up issue (#1104, #1129).
+   - A failing check: first search the open issues labelled `flaky` or `red-main` for the failing test's name
+     (`gh api -X GET search/issues -f q='repo:Downfallz/maintest is:issue is:open <test name>'`). Found: add the
+     run's link to that issue, say in the pull request that the failure is that issue's and not this change's, and
+     give the owner the re-run as one numbered step (a session's re-run answers 403). Do not work it out again: in
+     the week of 2026-W48, nineteen pull requests each proved anew that #1046 or #961 was not theirs.
    - A failing check: read its log (`get_job_logs`) and fix the cause in a new commit. Never skip, disable or
      retry a test to get green; a flaky one is a `flaky` issue (`/wrap-up`).
    - A conflict: `git fetch origin main && git merge origin/main`, settled (a generated index is rebuilt with

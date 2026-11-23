@@ -239,6 +239,7 @@ internal sealed partial class TableFiles
             ["/admin-players.js"] = (Path.Combine(tableDirectory, "admin-players.js"), JavaScript),
             ["/admin-jobs.js"] = (Path.Combine(tableDirectory, "admin-jobs.js"), JavaScript),
             ["/admin-turns.js"] = (Path.Combine(tableDirectory, "admin-turns.js"), JavaScript),
+            ["/admin-notices.js"] = (Path.Combine(tableDirectory, "admin-notices.js"), JavaScript),
             ["/admin-void.js"] = (Path.Combine(tableDirectory, "admin-void.js"), JavaScript),
             ["/admin-settings.js"] = (Path.Combine(tableDirectory, "admin-settings.js"), JavaScript),
             ["/admin-overview.js"] = (Path.Combine(tableDirectory, "admin-overview.js"), JavaScript),

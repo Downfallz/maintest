@@ -257,6 +257,25 @@ function drawBlock(doc, block) {
   return scroll;
 }
 
+/**
+ * A table wider than the screen scrolls sideways: it is then a stop of the keyboard, named by its section, so a reader
+ * without a pointer can scroll it (#1059, axe's scrollable-region-focusable). One that fits is no stop.
+ */
+export function reachScrolls(doc) {
+  for (const scroll of doc.querySelectorAll('#rules-book .rules-table')) {
+    if (scroll.scrollWidth > scroll.clientWidth) {
+      scroll.tabIndex = 0;
+      scroll.setAttribute('role', 'region');
+      const heading = scroll.closest('[data-section]')?.querySelector('h3') ?? scroll.closest('[data-part]')?.querySelector('h2');
+      if (heading) scroll.setAttribute('aria-label', heading.textContent.trim());
+    } else {
+      scroll.removeAttribute('tabindex');
+      scroll.removeAttribute('role');
+      scroll.removeAttribute('aria-label');
+    }
+  }
+}
+
 // A concept card, as the battle draws it in a tutorial: its title, its lines and its example.
 function drawCard(doc, card, words) {
   const aside = node(doc, 'aside', 'rules-card concept-card');
@@ -372,6 +391,8 @@ export function applyFilter(doc, book, query) {
     if (details && kept) details.open = kept.parts.has(element.dataset.part);
   }
   doc.getElementById('rules-changes').hidden = Boolean(kept);
+  // A table the filter hid measured no width: what it shows again is measured again, whoever cleared it.
+  reachScrolls(doc);
   const status = doc.getElementById('rules-status');
   if (!kept) status.textContent = words.total(book.parts.length, total);
   else if (kept.sections.size === 0 && kept.parts.size === 0) status.textContent = words.noMatch;
@@ -414,6 +435,9 @@ export function mountRules(doc, book, win = globalThis) {
   const state = { book };
   const filter = doc.getElementById('rules-filter');
   filter.addEventListener('input', () => applyFilter(doc, state.book, filter.value));
+  win.addEventListener('resize', () => reachScrolls(doc));
+  // A face that loads can widen a table, whichever text first asked for it.
+  doc.fonts?.addEventListener?.('loadingdone', () => reachScrolls(doc));
   doc.getElementById('rules-filter-form').addEventListener('submit', event => {
     event.preventDefault();
     const first = doc.querySelector('#rules-book [data-section]:not([hidden])');
@@ -538,8 +562,8 @@ async function load(doc, win = globalThis) {
 
 if (typeof document !== 'undefined') {
   // The claws on the arch: the rules hold the game up (docs/art/journeys/pages.md). Loaded apart, and its failure let
-  // go, so the book draws whatever the worker kept. Offline it keeps the kit but not this painting (ADR 0200): the
-  // band is soot with its words.
+  // go, so the book draws whatever the worker kept. Offline the worker gives the kit and this painting's 354 and 708 px
+  // files (#1060): a screen that asks for a wider one, a phone of density 3 among them, has a band of soot and words.
   import('./picture.js').then(({ wearPageHead }) => wearPageHead(document, 'latch-under-the-arch', { page: 'table/rules', focus: '50% 55%' })).catch(() => {});
   await load(document);
 }

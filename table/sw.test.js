@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { reachedModules } from '../scripts/module-imports.mjs';
 
 // The worker, run against what a browser gives one: `self` with its clients, its registration and the events
 // it listens for. A notice is a `push` event whose data reads as JSON.
@@ -337,13 +339,13 @@ const pageArtNaming = (...files) => [
 test('the offline plate\'s files are the ones page-art.js names for it, and no other picture\'s', () => {
   const w = offlineWorker({ network: async () => 'x' });
   const real = readFileSync(new URL('./page-art.js', import.meta.url), 'utf8');
-  const files = [...w.context.plateFiles(real)];
+  const files = [...w.context.pictureFiles(real)].filter(file => file.startsWith('/page-art/parasite-offline-'));
   assert.ok(files.length > 0, 'the real page-art.js declares the plate');
   for (const file of files) {
     assert.match(file, /^\/page-art\/parasite-offline-\d+\.[0-9a-f]{8}\.webp$/);
     assert.ok(real.includes(`file: '${file.slice('/page-art/'.length)}'`));
   }
-  assert.deepEqual([...w.context.plateFiles(pageArtNaming('parasite-offline-358.11111111.webp'))], ['/page-art/parasite-offline-358.11111111.webp']);
+  assert.deepEqual([...w.context.pictureFiles(pageArtNaming('parasite-offline-358.11111111.webp'))], ['/page-art/parasite-offline-358.11111111.webp']);
 });
 
 test('installing keeps the offline page\'s script, the picture kit and the plate page-art.js names', async () => {
@@ -356,6 +358,77 @@ test('installing keeps the offline page\'s script, the picture kit and the plate
     assert.ok(w.store.has(path), `${path} is kept`);
   }
   assert.ok(!w.store.has('/page-art/parasite-under-slate-323.aaaaaaaa.webp'), 'only the plate is kept, not every picture');
+});
+
+test('installing keeps the rulebook\'s head painting at the sizes a phone asks for, and no other of its files (#1060)', async () => {
+  const real = readFileSync(new URL('./page-art.js', import.meta.url), 'utf8');
+  const w = offlineWorker({ network: async path => ({ ...answer(`installed ${path}`), text: async () => (path === '/page-art.js' ? real : '') }) });
+
+  await install(w);
+
+  const head = [...w.store.keys()].filter(path => path.startsWith('/page-art/latch-under-the-arch-'));
+  assert.deepEqual(head.map(path => Number(path.match(/-(\d+)\./)[1])).sort((a, b) => a - b), [354, 708]);
+  for (const path of head) assert.ok(real.includes(`file: '${path.slice('/page-art/'.length)}'`));
+});
+
+test('the rulebook\'s head painting the network cannot load is its kept copy (#1060)', async () => {
+  const w = offlineWorker({ network: async () => { throw new TypeError('offline'); }, kept: { '/page-art/latch-under-the-arch-354.11111111.webp': 'the head' } });
+  const f = fetched('no-cors', { url: 'https://table.example/page-art/latch-under-the-arch-354.11111111.webp' });
+
+  w.handlers.fetch(f.event);
+
+  assert.equal(await bodyOf(f.answered()), 'the head');
+});
+
+test('a painting the worker keeps is not kept again when a page loads it: page-art.js names what is kept', async () => {
+  const w = offlineWorker({ network: async path => answer(`fresh ${path}`) });
+  const f = fetched('no-cors', { url: 'https://table.example/page-art/latch-under-the-arch-1280.11111111.webp' });
+
+  w.handlers.fetch(f.event);
+  await f.answered();
+  await f.settled();
+
+  assert.ok(!w.store.has('/page-art/latch-under-the-arch-1280.11111111.webp'));
+});
+
+test('a fresh page-art.js refreshes the kept offline.js with it, so the offline page never meets a newer kit with an older script (#1061)', async () => {
+  const w = offlineWorker({
+    network: async path => ({ ...answer(`fresh ${path}`), text: async () => pageArtNaming('parasite-offline-358.11111111.webp') }),
+    kept: { '/offline.js': 'old offline.js', '/page-art.js': 'old' },
+  });
+  const f = fetched('cors', { url: 'https://table.example/page-art.js' });
+
+  w.handlers.fetch(f.event);
+  await f.answered();
+  await f.settled();
+
+  assert.equal(w.store.get('/offline.js').body, 'fresh /offline.js');
+});
+
+test('a page-art.js the same as the kept one asks nothing more of the network: offline.js is already its deploy\'s', async () => {
+  const pageArt = pageArtNaming('parasite-offline-358.11111111.webp');
+  const asked = [];
+  const w = offlineWorker({
+    network: async path => { asked.push(path); return { ...answer(`fresh ${path}`), text: async () => pageArt }; },
+    kept: { '/offline.js': 'kept offline.js', '/page-art.js': pageArt, '/page-art/parasite-offline-358.11111111.webp': 'the plate' },
+  });
+  const f = fetched('cors', { url: 'https://table.example/page-art.js' });
+
+  w.handlers.fetch(f.event);
+  await f.answered();
+  await f.settled();
+
+  assert.deepEqual(asked.map(request => request.url ?? request), ['https://table.example/page-art.js']);
+  assert.equal(await w.store.get('/offline.js').text(), 'kept offline.js');
+});
+
+test('installing asks for offline.js once', async () => {
+  const asked = [];
+  const w = offlineWorker({ network: async path => { asked.push(path); return { ...answer(`installed ${path}`), text: async () => pageArtNaming('parasite-offline-358.11111111.webp') }; }, kept: { '/page-art.js': 'old' } });
+
+  await install(w);
+
+  assert.equal(asked.filter(path => path === '/offline.js').length, 1);
 });
 
 test('a fresh page-art.js keeps the plate it names and lets go of the older derivation\'s', async () => {
@@ -380,7 +453,7 @@ test('the plate the network cannot load is its kept copy; another picture is the
   w.handlers.fetch(plate.event);
   assert.equal(await bodyOf(plate.answered()), 'the plate');
 
-  const other = fetched('no-cors', { url: 'https://table.example/page-art/latch-under-the-arch-351.11111111.webp' });
+  const other = fetched('no-cors', { url: 'https://table.example/page-art/last-one-standing-354.11111111.webp' });
   w.handlers.fetch(other.event);
   assert.equal(other.answered(), null);
 });
@@ -592,4 +665,16 @@ test('a tap sends the page already on the game to the table the notice came from
 
   assert.deepEqual(went, ['/play?table=a']);
   assert.deepEqual(w.opened, []);
+});
+
+// #1136: OFFLINE_SCRIPTS is written by hand; a module offline.js reaches by import and the list leaves out would
+// leave the offline page without its plate, the network gone.
+test('installing keeps every module the offline page\'s script reaches by its imports', async () => {
+  const w = offlineWorker({ network: async path => ({ ...answer(`installed ${path}`), text: async () => '' }) });
+
+  await install(w);
+
+  const reached = reachedModules(fileURLToPath(new URL('.', import.meta.url)), ['offline.js']);
+  assert.ok(reached.has('/picture-focus.js'), 'the walk follows picture.js down to picture-focus.js');
+  for (const path of reached) assert.ok(w.store.has(path), `${path} is kept`);
 });

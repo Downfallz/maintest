@@ -16,6 +16,10 @@ diff: `git diff origin/main...HEAD`, or the range you are given.
 When you are given a sha and a copy of that commit (`/reviewers` gives both), read the changed files in the
 copy, never in the checkout, which the author's session may be editing, and start your report with
 `Reviewed: <sha>`. Only your memory stays in the checkout.
+Before you write the report, read the tip of the branch you reviewed again (`git rev-parse HEAD` for the
+checkout's branch, `git fetch origin <branch>` and `FETCH_HEAD` for a pull request reviewed from elsewhere): if
+it moved past the sha you reviewed, read `git diff <reviewed sha>..<tip>`, re-check each finding there and name
+both shas (R2, R4).
 
 For every route the diff adds or changes, answer:
 
@@ -30,6 +34,12 @@ For every route the diff adds or changes, answer:
 8. Is there a host test, a line in `table/README.md#routes`, and the behaviour in `docs/reference/commands.md`?
 9. Does every field the diff adds to a route's answer have a test through the route? A test of the page's mapper
    alone writes the field in its fixture, and stays green when the host drops it (#812).
+10. Does a test fail when the line that wires the change in (`TableHost`, a setter called only in the
+    composition root) is deleted? A test of the payload alone stays green when the host never calls it (#1117, #1121).
+11. Does a store the change adds per account, and every sentence it adds about what is kept, hold against
+    `ForgetAsync`: a write after the account is gone does not bring it back, and nothing is kept at rest that the
+    privacy text says is deleted (#1108, #1117, #1129)? A document read, changed and written back keeps a field an
+    older revision running beside it does not know (#1108, #1129).
 
 Verify by reading the code and the tests, not the description. Run the host tests you need
 (`dotnet test --project tests/DownfallArena.Cli.Tests -- --filter-namespace DownfallArena.Cli.Tests.Table`); a storage test skipped

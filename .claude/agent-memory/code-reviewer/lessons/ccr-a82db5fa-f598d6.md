@@ -1,2 +1,0 @@
-# code-reviewer lessons (branch ccr-a82db5fa-f598d6)
-- `.WaitAsync(limit)` on a driver call is no deadlock guard when the driver can call the blocking agent on the caller's thread: PlayAsync never returns its Task and the run hangs; with `AskTogetherAsync` forced false, #829's new stalled-seat test hung past 200 s while main's 2 s wait failed fast. Ask for `[Fact(Timeout = ...)]` (cancels TestContext's token) or `Task.Run` around the call (#829, e16c0f5).

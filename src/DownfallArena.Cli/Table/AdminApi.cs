@@ -99,6 +99,9 @@ internal sealed class AdminApi
     /// <summary>The bots' turn queues (A3b), on a host whose turns go through queues; none otherwise.</summary>
     public TurnsApi? Turns { get; set; }
 
+    /// <summary>The notices' queues and counts (notifications plan, N6), on a host that sends its notices from a queue; none otherwise.</summary>
+    public NoticesApi? Notices { get; set; }
+
     /// <summary>
     /// What operators do from the panel (A6), noted beside each action's console line, and the Activity tab. Shared
     /// with the other admin APIs, so it says through its own <see cref="OperatorNotes.Said" />, which the caller wires (#860).
@@ -206,6 +209,13 @@ internal sealed class AdminApi
     /// <summary>The routes of the host's own state: the Overview, the Jobs tab with its turn queues, and the Settings tab.</summary>
     private async Task<StudioResponse?> HostAsync(string method, string path, string body, string? query, string operatorName)
     {
+        if (NoticesApi.Names(path))
+        {
+            return Notices is null
+                ? StudioResponse.OfPlainText(404, "This host sends its notices in the request that gives them, so it has no notices queue to count.")
+                : await Notices.HandleAsync(method, path);
+        }
+
         if (TurnsApi.Names(path))
         {
             return Turns is null

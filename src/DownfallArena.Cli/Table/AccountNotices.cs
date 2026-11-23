@@ -54,7 +54,8 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
     /// <summary>
     /// One queued item: the payload to the device at that endpoint, if it is still one of the account's -- a browser
     /// turned off or signed out since is told nothing. A device whose push service says it is gone is forgotten and its
-    /// endpoint remembered as gone. A service that is out is thrown, for the queue to try again.
+    /// endpoint remembered as gone. A service that is out is thrown as a <see cref="PushRefusedException" />, for the
+    /// queue to try again; the store's own failure is thrown as it is.
     /// </summary>
     public async Task<DeviceSend> SendOneAsync(DevicePush item, CancellationToken cancellationToken = default)
     {
@@ -66,7 +67,18 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             return DeviceSend.NotADevice;
         }
 
-        if (await sender.SendAsync(Subscription(device), item.Payload, item.Topic, cancellationToken))
+        bool taken;
+        try
+        {
+            taken = await sender.SendAsync(Subscription(device), item.Payload, item.Topic, cancellationToken);
+        }
+        catch (Exception failure) when (!cancellationToken.IsCancellationRequested && failure is not PushRefusedException)
+        {
+            // The push service's own failure, told apart from the store's around it (N6): only this one is a refusal.
+            throw new PushRefusedException(failure.Message, failure);
+        }
+
+        if (taken)
         {
             return DeviceSend.Sent;
         }

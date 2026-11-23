@@ -1,2 +1,0 @@
-- A Markdown-scanning test that finds its section with `SkipWhile(line != "<heading>")` passes empty, and green, once the heading is renamed: probe it with the heading changed and a long row, and make it assert the section was found (#676, InstructionFileTests.Root_agents_map_rows_stay_one_short_line_each, 97e2d73).
-- A new limit added to an ADR's budget test must also go into the sentences that list that budget (AGENTS.md:6, ADR 0181, ai-workflow-plan.md:108): they read as complete lists (#676, 97e2d73).

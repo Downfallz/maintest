@@ -125,6 +125,7 @@ public sealed class TableFilesTests
     [InlineData("/admin-players.js")]
     [InlineData("/admin-jobs.js")]
     [InlineData("/admin-turns.js")]
+    [InlineData("/admin-notices.js")]
     [InlineData("/admin-void.js")]
     [InlineData("/admin-settings.js")]
     [InlineData("/admin-overview.js")]

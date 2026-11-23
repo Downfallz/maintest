@@ -57,6 +57,9 @@ internal sealed class ComposedHost(ComposedHost.Kept kept) : IAsyncDisposable
     /// <summary>The notices queue (ADR 0203); none on a host with no queue or no push keys.</summary>
     public IWorkChannel? Notices { get; init; }
 
+    /// <summary>What the notices worker sent, had refused and found gone (N6); none where nothing is counted.</summary>
+    public NoticeCounts? NoticeCounts { get; init; }
+
     public ValueTask DisposeAsync() => kept.DisposeAsync();
 
     /// <summary>What the composition holds, let go of in the reverse of the order it was made in.</summary>

@@ -75,4 +75,4 @@ by the API on the next page load (`docs/tabletop/notifications-plan.md`, "Sendin
 
 - `docs/tabletop/notifications-plan.md` (N5 built), `docs/architecture/stateless-table-inventory.md`,
   `infra/README.md` (the queues), `docs/tabletop/home-navigation.md` if it describes the send.
-- N6: the worker's counts in the ops report and the admin's Jobs tab.
+- N6 (built): the worker's counts in the ops report and the admin's Jobs tab.

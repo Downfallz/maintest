@@ -1,5 +1,0 @@
-# code-reviewer lessons (branch fix/battle-specs-under-load)
-
-- A static "open then wait for X" rule that searches forward windows (open+3 for the hidden card, card+5 for live) borrows a later open's wait: goto, card, reload, card, live reads clean for the goto. Probe it with two opens back to back and with the return from `visibilitychange` (choose(selected)), which no OPENS pattern names (#784/#785, battle-journeys.test.js loadedOnly, 8532685).
-- A parser that returns null for "reads a variable" is fail-open for everything else it cannot read (`'00:03'`, `1e3`, `3000 / 2`, unary minus): only an unknown identifier should yield null; any other parse failure should fail the rule (#784, duration, 8532685).
-- A changed battle spec set that passes alone can still fail at --workers=4: run the whole changed set at load next to its `origin/main` copies before blaming the change. Here order's tie journeys failed the same way on `main` (an unpolled `state.writes`), so it was a flake already there, not this change's (#784/#785, 8532685).

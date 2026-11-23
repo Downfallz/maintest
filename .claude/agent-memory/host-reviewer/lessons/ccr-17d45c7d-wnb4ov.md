@@ -1,2 +1,0 @@
-- A page latch set before `location.assign` (lobby-featured.js `opening`) and cleared only on account change leaves the action dead after Back: lobby HTML is RevalidatedCache, not no-store, so it is bfcache-eligible; ask for a `pageshow` (persisted) reset (UX9).
-- `round` on `/api/lobby/mine` (DescribeAsync, RoundNowAsync: null after 200 ms) is asserted by no Lobby host test; the UX9 featured title and ground hang on it, and flip on a slow read (UX9).
