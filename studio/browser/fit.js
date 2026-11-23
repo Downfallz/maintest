@@ -37,3 +37,12 @@ export async function fitsBattlefield(page) {
     return wrong;
   }), { timeout: 10000 }).toEqual([]);
 }
+
+// A window measured while it enters (the motion kit's rise, ADR 0197) can read a fraction of a pixel short of 44
+// (#1114). This waits until every animation of the node and of what it holds has ended, an endless one aside. It
+// reads the page's animations, which run on real time: it waits as long under a held page clock.
+export async function settled(locator) {
+  await locator.evaluate(node => Promise.all(node.getAnimations({ subtree: true })
+    .filter(one => Number.isFinite(one.effect?.getComputedTiming().endTime))
+    .map(one => one.finished.catch(() => {}))));
+}

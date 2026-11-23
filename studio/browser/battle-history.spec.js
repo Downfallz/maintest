@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { openSpells, servePageArt } from './battle-spells-fixture.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
-import { fitsViewport } from './fit.js';
+import { fitsViewport, settled } from './fit.js';
 import { WINDUP_MS, IMPACT_MS } from '../../table/battle-timing.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health = 20) => ({ id, name: `Creature ${id}`, health, maxHealth: 20, energy: 4,
@@ -400,18 +400,27 @@ test('every control of the journal is at least 44 px, and its footer stays in re
   await page.addInitScript(() => localStorage.removeItem('downfall.battle.history-view.v1'));
   const h = await mount(page, [{ sequence: 9, event: { kind: 'PurchasesRevealed', roundId: 2, choices: [{ creature: 1, tier: 'root' }, { creature: 4, tier: 'root' }] } },
     entry(10)]);
+  // A loaded runner measures the window while it still rises, a fraction of a pixel short of 44 (#1114): its
+  // entrance is slowed here so that every run measures during the rise unless it waits for its end.
+  await page.addStyleTag({ content: ':root { --motion-normal: 1500ms; }' });
   await page.locator('#history-open').click();
   await expect(page.locator('#history-dialog')).toHaveAttribute('data-view', 'summary');
   await expect(page.locator('.summary-mutations li')).toHaveCount(2);
-  const small = () => page.evaluate(() => [...document.querySelectorAll('#history-dialog :is(button, a[href], select, input, summary)')]
-    .filter(one => one.checkVisibility({ visibilityProperty: true }) && !one.closest('[hidden]'))
-    .map(one => [one.getAttribute('aria-label') || one.textContent.trim() || one.id, one.getBoundingClientRect()])
-    .filter(([, box]) => box.width > 1 && (box.height < 44 || box.width < 44)).map(([name, box]) => `${name} ${Math.round(box.width)}×${Math.round(box.height)}`));
+  // A measure taken while the window still moves is no measure: what moves is named with what is small.
+  const small = () => page.evaluate(() => [
+    ...document.getElementById('history-dialog').getAnimations({ subtree: true }).filter(one => one.playState === 'running')
+      .map(one => `moving ${one.transitionProperty ?? one.animationName}`),
+    ...[...document.querySelectorAll('#history-dialog :is(button, a[href], select, input, summary)')]
+      .filter(one => one.checkVisibility({ visibilityProperty: true }) && !one.closest('[hidden]'))
+      .map(one => [one.getAttribute('aria-label') || one.textContent.trim() || one.id, one.getBoundingClientRect()])
+      .filter(([, box]) => box.width > 1 && (box.height < 44 || box.width < 44)).map(([name, box]) => `${name} ${Math.round(box.width)}×${Math.round(box.height)}`)]);
+  await settled(page.locator('#history-dialog'));
   expect(await small(), 'the summary').toEqual([]);
   await fitsViewport(page, '#history-close');
   await page.locator('#history-mode-events').click();
   await page.locator('#history-filters > summary').click();
   await page.locator('#history-list details summary').first().click();
+  await settled(page.locator('#history-dialog'));
   expect(await small(), 'All events').toEqual([]);
   await fitsViewport(page, '#history-close');
   expect(h.state.errors).toEqual([]);

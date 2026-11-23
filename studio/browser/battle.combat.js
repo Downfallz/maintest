@@ -113,6 +113,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       await expect(estimate).toContainText('Estimate');
       if (guide) await expect(estimate).toContainText(`${guide.cost} energy → ${guide.energyAfterCost} left`);
       else await expect(estimate).toContainText('Preview unavailable for this question');
+      const resolvedBefore = Math.max(-1, ...(await seat.actions()).keys());
       const response = page.waitForResponse(response => response.url().endsWith('/decision') && response.request().method() === 'POST');
       await page.locator(view.waitingFor === 'Intent' ? '#combat-declare' : '#combat-confirm').click();
       expect((await response).status()).toBe(204);
@@ -121,7 +122,19 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       if (view.waitingFor === 'Intent') intents++; else { expect(last.command.targets).toEqual(targets); casts++; }
       await expect.poll(async () => (await read()).waitingAsked).not.toBe(view.waitingAsked);
       if (view.waitingFor !== 'Intent' && casts === 1) {
-        await expect.poll(() => page.evaluate(() => window.battleFrames.some(frame => frame.stage === 'impact')), { timeout: 10000 }).toBe(true);
+        // The cast plays to its impact, or is settled without playing: a view that brings it with the next question
+        // already drafting, as a loaded runner's late read does, shows it at once on the latest board
+        // (table/battle-playback.js, ADR 0141, #1075). Either way the page has shown it before the capture.
+        const allies = new Set(view.board.allies.map(one => one.id));
+        await expect.poll(async () => {
+          const cast = [...(await seat.actions()).entries()].find(([sequence, entry]) => sequence > resolvedBefore && allies.has(entry.event.resolution?.action?.actor))?.[0];
+          if (cast === undefined) return 'not resolved';
+          return page.evaluate(sequence => {
+            if (window.battleFrames.some(frame => frame.stage === 'impact' && frame.sequence === sequence)) return 'played';
+            const seen = Math.max(-1, ...JSON.parse(localStorage.getItem('downfall.battle.seen.v1') ?? '[]').map(one => one.sequence));
+            return seen >= sequence && document.getElementById('battle').dataset.reading === 'false' ? 'settled' : 'not shown';
+          }, cast);
+        }, { timeout: 10000 }).toMatch(/^(played|settled)$/);
         await page.screenshot({ path: info.outputPath(`${declaration}-confirmed.jpg`), type: 'jpeg', quality: 85 });
       }
     }

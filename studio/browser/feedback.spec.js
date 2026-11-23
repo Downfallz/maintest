@@ -41,7 +41,10 @@ async function seatWith(page, held, { account = null } = {}) {
     localStorage.setItem('downfall.table.seats', JSON.stringify({ player1: 'first' }));
     const original = fetch;
     window.fetch = (url, options) => String(url).endsWith('/events')
-      ? Promise.resolve(new Response(new ReadableStream({ start() {} }), { headers: { 'Content-Type': 'text/event-stream' } }))
+      ? Promise.resolve(new Response(new ReadableStream({ start(controller) {
+        // A test sends the seat a board when it chooses: the page reads its view again, as on a host's notice.
+        window.notifyBattle = () => controller.enqueue(new TextEncoder().encode('event: changed\ndata: 1\n\n'));
+      } }), { headers: { 'Content-Type': 'text/event-stream' } }))
       : original(url, options);
   });
   const view = { over: false, recording: true, waitingFor: null, feed: [], feedNext: 0,
@@ -152,16 +155,24 @@ test('the result offers the entry on a quiet line of its own', async ({ page }, 
   await seat(page);
 
   const entry = page.locator('#feedback-open-match');
-  // The board arriving late may draw over a result opened by hand: it is opened again until it stays.
+  // The board arriving late may draw over a result opened by hand: it is opened again until it stays, and read
+  // and pressed in the same attempt, so that no read falls between the check and the click (#1141). The first
+  // attempt meets a late board after its check, so every run takes that path.
+  let late = true;
   await expect(async () => {
     await page.evaluate(() => { const result = document.getElementById('match-dialog'); if (!result.open) result.showModal(); });
     await expect(entry).toBeVisible({ timeout: 1000 });
+    if (late) {
+      late = false;
+      await page.evaluate(() => window.notifyBattle());
+      await expect(page.locator('#match-dialog')).not.toHaveAttribute('open');
+    }
+    const [box, replay] = await Promise.all([entry.boundingBox(), page.locator('#match-replay').boundingBox()]);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.y).toBeGreaterThan(replay.y);
+    await page.screenshot({ path: info.outputPath('feedback-result.png') });
+    await entry.click({ timeout: 1000 });
   }).toPass();
-  const [box, replay] = await Promise.all([entry.boundingBox(), page.locator('#match-replay').boundingBox()]);
-  expect(box.height).toBeGreaterThanOrEqual(44);
-  expect(box.y).toBeGreaterThan(replay.y);
-  await page.screenshot({ path: info.outputPath('feedback-result.png') });
-  await entry.click();
   await expect(page.locator('#feedback-dialog')).toBeVisible();
 });
 
