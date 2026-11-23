@@ -647,3 +647,29 @@ test('a reveal marks the new spell in the inspection, and a repeated snapshot ne
   await expect(page.locator('#growth-receipt')).toBeHidden();
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);
 });
+// Every control a player can tap while the pick is up, and on the Mutation Tree opened on its offer, holds 44 px at
+// both phone widths (.claude/rules/pages.md, #1113), counted as the journey's measure counts them (scripts/ux/measures.mjs):
+// the top modal window, or the whole page under a docked sheet.
+for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+  test(`every control of the pick and of the Mutation Tree is at least 44 px at ${viewport.width} by ${viewport.height}`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'Own viewport');
+    await page.setViewportSize(viewport); const h = await mount(page);
+    const small = () => page.evaluate(() => {
+      const scope = [...document.querySelectorAll('dialog:modal')].at(-1) ?? document.body;
+      return [...scope.querySelectorAll('a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="tab"], [role="link"], [tabindex]:not([tabindex="-1"])')]
+        .filter(one => one.checkVisibility({ opacityProperty: true, visibilityProperty: true, contentVisibilityAuto: true }) && !one.disabled
+          && one.getAttribute('aria-disabled') !== 'true' && !one.closest('[inert]'))
+        .map(one => [one.getAttribute('aria-label') || one.textContent.trim() || one.id || one.className, one.getBoundingClientRect()])
+        .filter(([, box]) => box.width > 1 && box.height > 1 && (box.height < 44 || box.width < 44)).map(([name, box]) => `${name} ${Math.round(box.width)}×${Math.round(box.height)}`);
+    });
+    await page.locator('[data-mutation="root0"]').click();
+    expect(await small(), 'the pick').toEqual([]);
+    await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+    // Its detail names what the mutation leads to, each a button (Ironhide here).
+    await expect(page.locator('#atlas-detail-body .atlas-next')).toHaveText(['Ironhide']);
+    // Measured once the window has finished arriving, as the walk measures a screen at rest.
+    await page.locator('#atlas-dialog').evaluate(node => Promise.all(node.getAnimations({ subtree: true }).map(one => one.finished)));
+    expect(await small(), 'the Mutation Tree').toEqual([]);
+    expect(h.state.errors).toEqual([]);
+  });
+}

@@ -4,6 +4,17 @@ import { creatureLabel } from './battle-live.js';
 
 // A public reference: never pass evolutionChoices to talentClasses. Pending own picks belong only in
 // the private command sheet; both teams' acquired tiers change at PurchasesRevealed on the host.
+/**
+ * How far down the stage the reveal's crests start (#1077): under the receipt that floats over the field's top, 4 px
+ * clear of it. Its arrival's rise (`translate`, the kit's `.motion-arrive`) is taken out, so a frame drawn while it
+ * rises puts the crests under where it settles (#1091). `translate` is the receipt's computed value.
+ */
+export function crestInset(receipt, stage, translate) {
+  if (!stage || !receipt.height) return 0;
+  const rising = Number.parseFloat(String(translate).split(' ')[1] ?? '0') || 0;
+  return Math.max(0, receipt.bottom - rising - stage.top + 4);
+}
+
 export function mutationReference(view, catalogue, selectedId) {
   const board = view?.board;
   const roster = [...(board?.allies ?? []).map(one => ({ ...one, enemy: false })),

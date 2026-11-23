@@ -7,7 +7,8 @@ import type { Placement } from './types';
 // A screen reader hears the name a player sees, then one sentence (`speakCreature`): the drawn badges are silent,
 // so the button's name is made of its own words and never differs from them (WCAG 2.5.3, axe's
 // label-content-name-mismatch).
-const TEMPLATE = '<span class="creature-tag" aria-hidden="true"></span><span class="creature-result" aria-hidden="true"></span><span class="caption"><span class="creature-name"></span><span class="unseen creature-spoken"></span><span class="creature-badges" aria-hidden="true"><span class="creature-init"></span><span class="creature-defense" hidden></span><span class="creature-conditions"></span></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats" aria-hidden="true"></span></span>';
+const CAPTION = '<span class="creature-name"></span><span class="unseen creature-spoken"></span><span class="creature-badges" aria-hidden="true"><span class="creature-init"></span><span class="creature-defense" hidden></span><span class="creature-conditions"></span></span><span class="health-track" aria-hidden="true"><span class="health-fill"></span></span><span class="creature-stats" aria-hidden="true"></span>';
+const TEMPLATE = `<span class="creature-tag" aria-hidden="true"></span><span class="creature-result" aria-hidden="true"></span><span class="caption">${CAPTION}</span>`;
 
 export function creatureButton(id: string) {
   const node = document.createElement('button');
@@ -16,6 +17,19 @@ export function creatureButton(id: string) {
   node.disabled = true;
   node.innerHTML = TEMPLATE;
   return node;
+}
+
+/**
+ * The caption's contents drawn afresh, empty, for the caller to fill in the same render. A caption that changes
+ * form (compact under a docked sheet, full on the open field) would otherwise move its bar and its numbers inside
+ * it, a layout shift a translation cannot carry (#1112); new contents have no place before to shift from.
+ */
+export function renewCaption(node: HTMLElement) {
+  const caption = node.querySelector<HTMLElement>('.caption')!;
+  // The health last shown stays known, so a blow landing in the same render still reads as a number that changed.
+  const health = caption.querySelector<HTMLElement>('.creature-stats')?.dataset.health;
+  caption.innerHTML = CAPTION;
+  if (health !== undefined) caption.querySelector<HTMLElement>('.creature-stats')!.dataset.health = health;
 }
 
 /** What a screen reader hears after the creature's name: its side, its numbers and what a press does. */

@@ -8,7 +8,7 @@ import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
 import { battleOrder, createBattleOrderReveal, rollOffDice, tieMarks } from '../../table/battle-order.js';
 import { orderControls } from './order';
-import { createBattleGrowth } from '../../table/battle-growth.js';
+import { createBattleGrowth, crestInset } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
 import { atlasControls } from './mutation-atlas';
 import { createBattleUpkeep } from '../../table/battle-upkeep.js';
@@ -27,7 +27,7 @@ import { BattleAudio, soundControl } from './audio';
 import { mutationScene } from './mutation-scene';
 import { BattleScene } from './scene';
 import type { SceneFrame } from './types';
-import { creatureButton, placeHitTargets, speakCreature } from './targets';
+import { creatureButton, placeHitTargets, renewCaption, speakCreature } from './targets';
 import { bootScene } from './boot';
 import { windowFamily } from './windows';
 import { combatControls } from './combat';
@@ -541,6 +541,11 @@ function render() {
     else node.removeAttribute('aria-pressed');
     const targetTag = battleTargetTag(targetState, one);
     const condition = mutation.tag(one.id) ?? tempoTag(one.id) ?? tieTag(one.id) ?? targetTag?.tag ?? tagOf(one);
+    // A caption that changes form is drawn afresh, in this render: its bar and numbers arrive in their new places
+    // rather than moving there, at once as the field takes its room (#1112).
+    const form = $('battle').dataset.docked ?? 'false';
+    if (node.dataset.captionForm && node.dataset.captionForm !== form) renewCaption(node);
+    node.dataset.captionForm = form;
     node.querySelector('.creature-name')!.textContent = one.label;
     node.querySelector('.creature-tag')!.textContent = condition;
     statChips(node.querySelector<HTMLElement>('.creature-stats')!, one.health, one.maxHealth, one.energy);
@@ -607,7 +612,10 @@ function render() {
     text('reading-what', '');
   }
   // With nothing to name yet, the heading keeps its unseen word (#984): a heading is never empty for a screen reader.
-  const heading = playbackState.receipt ? playbackState.receipt.category : playbackState.active ? name(frame.actor) : headline(board);
+  let heading: string;
+  if (playbackState.receipt) heading = playbackState.receipt.category;
+  else if (playbackState.active) heading = name(frame.actor);
+  else heading = headline(board);
   if (heading) text('actor-name', heading);
   else if ($('actor-name').textContent !== 'Match') $('actor-name').replaceChildren(Object.assign(document.createElement('span'), { className: 'unseen', textContent: 'Match' }));
   const phase = view ? stepLabel(board.subPhase) || 'Waiting for players' : '';
@@ -663,10 +671,9 @@ function render() {
   const unlocks = showGrowth ? growth.receipt() : null;
   $('battle').dataset.reveal = unlocks ? unlocks.rows.map((row: GrowthRow) => row.creature).join(' ') : '';
   // The receipt floats over the top of the field: crests start below it rather than behind it.
-  // Its arrival's rise (`translate`, the kit's `.motion-arrive`) is taken out: the crests stand under where it settles.
+  // Where it settles, its arrival's rise taken out (crestInset, #1091).
   const receiptNode = $('growth-receipt'), receiptBox = receiptNode.getBoundingClientRect(), stageBox = document.querySelector('#phaser-mount canvas')?.getBoundingClientRect();
-  const rising = Number.parseFloat(getComputedStyle(receiptNode).translate.split(' ')[1] ?? '0') || 0;
-  const inset = unlocks && stageBox && receiptBox.height ? Math.max(0, receiptBox.bottom - rising - stageBox.top + 4) : 0;
+  const inset = unlocks ? crestInset(receiptBox, stageBox, getComputedStyle(receiptNode).translate) : 0;
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
@@ -821,7 +828,7 @@ function drawOpponent() {
   chip.dataset.kind = card.kind;
   text('opponent-avatar', avatarOf(card)); text('opponent-name', card.name);
   $('opponent-badge').hidden = !card.badge; text('opponent-badge', card.badge);
-  $('opponent-heart').hidden = card.friend !== 'friend';
+  $('opponent-friend').hidden = card.friend !== 'friend';
   chip.setAttribute('aria-label', `Opponent: ${card.name}${card.badge ? `, ${card.badge === 'BOT' ? 'a bot' : `rank ${card.badge}`}` : ''}${card.friend === 'friend' ? ', your friend' : ''}. Open details.`);
   text('enemy-label', view ? opponentLabel() : '');
   // The card, open or not, says the same.

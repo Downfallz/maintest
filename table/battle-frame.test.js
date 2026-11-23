@@ -33,7 +33,7 @@ test('the frame\'s History and the order row draw the set\'s history and next', 
     }
   }
   assert.doesNotMatch(sheet, /content: '›'/, 'no glyph stands for next');
-  assert.match(read('table/battle.html'), /id="opponent-heart"[^>]*>Friend</, 'a friend is a word, not the heart of health');
+  assert.match(read('table/battle.html'), /id="opponent-friend"[^>]*>Friend</, 'a friend is a word, not the heart of health');
 });
 
 // A placed creature's caption hangs from its button by a translation, not by `bottom` (#999): a button whose height
@@ -42,4 +42,18 @@ test('a placed caption hangs from its button by a translation of the button\'s h
   assert.match(read('table/battle-lab.css'), /\[style\*="--hit-height"\] > \.caption \{ top: 0; bottom: auto; translate: 0 calc\(var\(--hit-height\) - 100%\); \}/);
   assert.match(read('battle/src/targets.ts'), /setProperty\('--hit-height', `\$\{height\}px`\)/);
   assert.match(read('table/battle.html'), /id="help-open"[^>]*aria-describedby="history-unread"/, 'Help speaks History\'s unread count');
+});
+
+// #1092: the opponent's rank and Friend are one tag, square as the brand's tags are (a pill is a counter): one rule
+// draws both, Friend differs only in its colour, and nothing is named after a heart any more.
+test('the opponent\'s rank and Friend are one square tag that differs only in colour', () => {
+  const page = read('table/battle.html'), css = read('table/battle.css');
+  assert.match(page, /<span id="opponent-badge" class="opponent-tag opponent-badge" hidden><\/span>/);
+  assert.match(page, /<span id="opponent-friend" class="opponent-tag opponent-friend" hidden>Friend<\/span>/);
+  const tag = css.match(/^\.opponent-tag \{([^}]*)\}/m);
+  assert.ok(tag, 'one rule draws the tag');
+  assert.match(tag[1], /border-radius: var\(--radius-sharp\)/);
+  assert.equal(css.match(/^\.opponent-friend \{([^}]*)\}/m)?.[1].trim(), 'color: var(--gold);', 'Friend differs in its colour alone');
+  assert.doesNotMatch(css, /^\.opponent-badge \{/m, 'the rank has no rule of its own beside the tag');
+  for (const path of ['table/battle.html', 'table/battle.css', 'battle/src/live.ts', 'studio/browser/battle-live.spec.js']) assert.doesNotMatch(read(path), /opponent-heart/, path);
 });

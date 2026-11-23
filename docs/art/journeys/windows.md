@@ -231,6 +231,8 @@ None.
   (written for the ear only), then the line it shows.
 - **Announced**: nothing new: a picture that arrives says nothing.
 - **Targets**: 24 controls at 390 and 19 at 320, none under 44 px. A face with its form stays 44 px tall at the least.
+  The walk counted one at 390: the rule sentence's Rules link, 28 px wide. Done (#1113): the rulebook's links are
+  44 px wide at the least, and so is the header's mark, the way back to the lobby (36 by 38 px for a guest).
 
 ### Cost
 
@@ -324,8 +326,9 @@ None.
   "I Brute OFFER". The name starts with the visible words. Done (#1087): the numeral and the flag are not read; the
   Stage and the status are written beside the name for the ear only. The button has no `aria-label`.
 - **Announced**: nothing new.
-- **Targets**: 31 controls, 3 under 44 px at both widths (the board's mutations and the detail's chips); none
-  under 24.
+- **Targets**: 31 controls, 3 under 44 px at both widths, none under 24: the detail's chips of what the mutation
+  leads to (`.atlas-next`, 36 px tall). Done (#1113): they are 44 px tall, and `battle-mutations.spec.js` holds
+  every control of the tree and of the pick to 44 px at both widths.
 
 ### Cost
 
@@ -695,8 +698,9 @@ None.
   answer lands more than 0.5 s after the confirming tap. Holding the field still while a sheet closes is not part A's: the sheet now leaves at once, which does not
   move the field less. A later pass's, with the field's resizing. Done (#1035): a caption and its tag hang from their
   button by a translation, so they move by a transform and cause no layout shift. At 390, on a late answer, a shift of
-  0.013 remains: the caption's health bar changes rows as the caption leaves its docked form
-  (`battle-tempo.spec.js`). The field first eased into the room the sheet left over `RETURN_MS`; the owner found the
+  0.013 remained: the caption's health bar and numbers changed places as the caption left its docked form. Done
+  (#1112): a caption that changes form is drawn afresh in the same frame (`renewCaption`, `battle/src/targets.ts`),
+  so nothing inside it moves, and `battle-tempo.spec.js` now allows no shift at all. The field first eased into the room the sheet left over `RETURN_MS`; the owner found the
   figures drifting down after every Tempo and Mutation Tree too slow, so the field now takes its room at once, as it
   does when the spell choice closes (`battle/src/scene.ts`).
 
