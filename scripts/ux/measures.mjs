@@ -89,24 +89,10 @@ export function measureInPage({ floor, target, minimum }) {
   // The width of the file the browser chose, as its srcset declares it (#966). `naturalWidth` is already divided by the
   // density of the srcset's candidate, so for a `w` candidate it is the width `sizes` names, not the file's. The
   // candidate's own descriptor gives the file's width.
-  const candidates = text => {
-    const found = [];
-    for (let at = 0; at < text.length;) {
-      while (at < text.length && /[\s,]/.test(text[at])) at++;
-      let end = at;
-      while (end < text.length && !/\s/.test(text[end])) end++;
-      let url = text.slice(at, end), descriptor = '';
-      at = end;
-      if (url.endsWith(',')) { while (url.endsWith(',')) url = url.slice(0, -1); } else {
-        end = text.indexOf(',', at);
-        if (end === -1) end = text.length;
-        descriptor = text.slice(at, end).trim();
-        at = end + 1;
-      }
-      if (url) found.push({ url: new URL(url, document.baseURI).href, descriptor });
-    }
-    return found;
-  };
+  // A candidate is a URL and its descriptor, the candidates split on their commas. A data: URI holds a comma of its
+  // own: it matches no candidate, and is read by its naturalWidth, as before #966.
+  const candidates = text => text.split(',').map(part => part.trim().split(/\s+/)).filter(([url]) => url)
+    .map(([url, descriptor = '']) => ({ url: new URL(url, document.baseURI).href, descriptor }));
   const sentWidth = image => {
     const sources = image.parentElement?.tagName === 'PICTURE' ? [...image.parentElement.querySelectorAll('source'), image] : [image];
     const chosen = sources.flatMap(source => candidates(source.getAttribute('srcset') ?? '')).find(one => one.url === image.currentSrc);
