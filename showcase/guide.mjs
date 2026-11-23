@@ -107,6 +107,9 @@ const SIZES = {
   head: '(max-width: 650px) 218px, min(435px, max(263px, 30vw))',
 };
 
+/** A form's portrait: the kit's picture of the mutation its artwork names (#967). */
+const formPortrait = artwork => pictureHtml('mutation-' + artwork, { page: GUIDE, base: SHOWCASE_ART, sizes: SIZES.portrait });
+
 function entry(t, lang, byId) {
   const l = lore[lang], n = escape(name(t, lang)), id = 'form-' + key(t.id);
   const parentLinks = ids => ids.map(id => `<a href="#form-${key(id)}">${escape(name(byId.get(id), lang))}</a>`).join(' · ');
@@ -116,7 +119,7 @@ function entry(t, lang, byId) {
   return `<details class="form-entry" id="${id}" data-form="${n}">
     <summary><span class="roman">${stageNumeral(t.level)}</span><strong>${n}</strong><span class="form-teaser">${t.passive ? l.passive : t.spells.map(s => escape(name(s, lang))).join(' · ')}</span></summary>
     <div class="field-entry ${t.passive ? 'passive-entry' : ''}">
-      ${t.visual.artwork ? figure(`<div class="field-art">${pictureHtml(`mutation-${t.visual.artwork}`, { page: GUIDE, base: SHOWCASE_ART, sizes: SIZES.portrait })}</div>`, key(t.id), l) : ''}
+      ${t.visual.artwork ? figure(`<div class="field-art">${formPortrait(t.visual.artwork)}</div>`, key(t.id), l) : ''}
       <div><div class="mutation-facts"><p class="requirement">${need}</p>
         ${initiativeChip(t.initiative)}</div><p class="anatomy">${escape(t.notes[lang])}</p>
       ${t.passive ? `<p class="passive-rule">${portrait(t.visual.portrait)}${passive(t, lang)}</p>` : `<ul class="spell-list">${t.spells.map(s => spell(s, lang)).join('')}</ul>`}</div>
