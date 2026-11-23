@@ -59,7 +59,7 @@ Every flag of `table` is in docs/reference/commands.md.
   edit them. An icon comes from `icons.js`, inside a control that has a name; a new emoji or glyph as an icon is refused in review.
 - A new module the picture kit imports joins, in the same change, `TableFiles.cs`, `OFFLINE_SCRIPTS` of `sw.js`, `KIT`
   of `studio/browser/picture-kit.spec.js` and `SHOWCASE_FILES` of `studio/browser/plan.js`: each lists them by name.
-  `sw.test.js` and the kit's spec walk the imports and hold the first two (#1136).
+  `sw.test.js` and `studio/picture-kit.test.js` walk the imports (`scripts/module-imports.mjs`) and hold `OFFLINE_SCRIPTS` and `KIT` to them (#1136).
 - Motion comes from the kit: a token of `docs/art/branding.css`, never a number; `transform` and `opacity` only;
   travel under full motion alone. A `<dialog>` stays displayed while it fades after closing: test `open`, not `display`. The
   match's windows are in the kit, its docked sheets (`.docked-sheet`) fade in and leave at once, and
