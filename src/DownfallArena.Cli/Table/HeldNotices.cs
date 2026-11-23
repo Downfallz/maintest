@@ -27,32 +27,47 @@ internal sealed class HeldNotices
     }
 
     /// <summary>
-    /// Runs the work, then gives the notices it held, once it has answered and so let go of the gate. A notice that
-    /// cannot go is a line on <paramref name="said" />: what the work did is done. Inside work that already holds
-    /// notices, the outer one gives them.
+    /// Runs the work, then gives the notices it held, once it has let go of the gate, whether it finished or failed: a
+    /// release that fails at its third table has told the players at the first two. A notice that cannot go is a line on
+    /// <paramref name="said" />. Inside work whose scope is still open, the outer one gives them; work begun inside a
+    /// scope that has closed since (a loop a route started) opens one of its own.
     /// </summary>
     public static async Task<T> AfterAsync<T>(Func<Task<T>> work, Action<string> said)
     {
         ArgumentNullException.ThrowIfNull(work);
         ArgumentNullException.ThrowIfNull(said);
-        if (Current.Value is not null)
+        if (Current.Value is { IsOpen: true })
         {
             return await work();
         }
 
         var held = new HeldNotices();
         Current.Value = held;
-        T answer;
         try
         {
-            answer = await work();
+            return await work();
         }
         finally
         {
             Current.Value = null;
+            await GiveAsync(held.Close(), said);
         }
+    }
 
-        foreach (var (notifier, to, notice) in held.Close())
+    private bool IsOpen
+    {
+        get
+        {
+            lock (_held)
+            {
+                return !_closed;
+            }
+        }
+    }
+
+    private static async Task GiveAsync(List<(AccountNotifier Notifier, AccountId To, Notice Notice)> held, Action<string> said)
+    {
+        foreach (var (notifier, to, notice) in held)
         {
             try
             {
@@ -63,8 +78,6 @@ internal sealed class HeldNotices
                 said($"  Account {to}: a notice could not be given: {HttpHost.OneLine(failure)}");
             }
         }
-
-        return answer;
     }
 
     private bool Hold(AccountNotifier notifier, AccountId to, Notice notice)

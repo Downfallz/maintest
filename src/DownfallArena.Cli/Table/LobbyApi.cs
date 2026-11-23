@@ -1445,10 +1445,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     }
 
     /// <summary>
-    /// Whether the game counts on the ladder once played, as the result will say (<c>MatchResult.Ranked</c>, ADR 0124,
-    /// 0171): between people, in 3v3, not opened unranked, each person's seat held by an account of its own. A seat
-    /// still open, or kept for a friend, is taken by an account when it is taken. Decided here so the card reads a
-    /// badge, not the seats' account ids (#971).
+    /// Whether the game counts on the ladder once played: the rule of <c>MatchResult.Ranked</c> (ADR 0124), between
+    /// people, not opened unranked, each person's seat held by an account of its own, and 3v3, the one ranked format
+    /// (ADR 0171), which the host already holds a ranked game to when it opens it. A seat still open, or kept for a
+    /// friend, is taken by an account when it is taken. Decided here so the card reads a badge, not the seats'
+    /// account ids (#971).
     /// </summary>
     private static bool Ranked(PlayedTable table, IReadOnlyList<SeatSummary> seats)
     {

@@ -24,8 +24,8 @@ internal sealed record PushSubscription(string Endpoint, string P256dh, string A
 
     /// <summary>
     /// Whether the endpoint is on a push service the browsers use (#1132): Firebase for Chromium, Mozilla's, Windows'
-    /// notification service, Apple's. The host sends nowhere else, so a server a player controls can neither hold the
-    /// notices worker's time nor have the host call it. An https address on its default port, named by its host alone.
+    /// notification service, Apple's. Checked when a browser subscribes and again at each send (<see cref="WebPushSender" />),
+    /// so a server a player controls can neither hold the notices worker's time nor have the host call it. An https address on its default port, named by its host alone.
     /// </summary>
     public static bool OnKnownService(string? endpoint) =>
         Uri.TryCreate(endpoint, UriKind.Absolute, out var address) && address.Scheme == Uri.UriSchemeHttps && address.IsDefaultPort
@@ -34,7 +34,8 @@ internal sealed record PushSubscription(string Endpoint, string P256dh, string A
 
     private static readonly string[] Services = ["fcm.googleapis.com", "updates.push.services.mozilla.com", "web.push.apple.com"];
 
-    // Whose every subdomain is the service's: the Windows service names a regional host, Apple's its own.
+    // Whose every subdomain is the service's: the Windows service names a regional host. Safari's web push is
+    // web.push.apple.com; the rest of push.apple.com is Apple's too, as #1132 lists it.
     private static readonly string[] ServiceDomains = [".notify.windows.com", ".push.apple.com"];
 
     private static bool Decodes(string? text, int length, out byte[] bytes)

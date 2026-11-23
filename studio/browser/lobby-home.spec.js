@@ -916,6 +916,7 @@ test('every game against a player waiting for the player is gathered under Your 
   await expect(band.locator('.game-row').first()).toContainText('Unranked');
   await expect(band.locator('.game-row').first()).toContainText('left');
   await expect(band.locator('.game-row').last()).toContainText('Ranked');
+  await expect(band.locator('.game-row').last()).not.toContainText('Unranked');
   await expect(band).not.toContainText('Lookahead');
   // Every card of one's own says when its game was created and whether it counts on the ladder.
   const bots = page.locator('.mine-group.bots .game-card');

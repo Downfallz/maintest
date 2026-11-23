@@ -264,6 +264,34 @@ public sealed class LobbyInvitationsTests : IDisposable
         items.SelectMany(item => item.GetProperty("seats").EnumerateArray()).Count(seat => seat.TryGetProperty("account", out _)).ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData("""{"opponent":"bot"}""")]
+    [InlineData("""{"opponent":"hotseat"}""")]
+    [InlineData("""{"opponent":"person","ranked":false,"format":"1v1"}""")]
+    public async Task A_game_against_a_bot_on_a_shared_device_or_in_another_format_is_not_ranked(string opening)
+    {
+        var rook = await PlayerAsync("Rook");
+
+        var opened = await (await LobbyAsync()).HandleAsync("POST", "/api/lobby/tables", opening, player: rook);
+
+        opened.Status.ShouldBe(201);
+        Read(opened).GetProperty("table").GetProperty("ranked").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_seat_kept_for_a_friend_leaves_the_game_ranked_since_an_account_takes_it()
+    {
+        var mark = await PlayerAsync("MarkF");
+        var bastien = await PlayerAsync("bastien");
+        await BefriendAsync(mark, bastien);
+
+        var table = await InvitedTableAsync(mark, bastien);
+
+        (await MineAsync(mark)).GetProperty("tables")[0].GetProperty("table").GetProperty("ranked").GetBoolean().ShouldBeTrue();
+        (await MineAsync(bastien)).GetProperty("invitations")[0].GetProperty("table").GetProperty("id").GetString().ShouldBe(table.Id);
+        (await MineAsync(bastien)).GetProperty("invitations")[0].GetProperty("table").GetProperty("ranked").GetBoolean().ShouldBeTrue();
+    }
+
     [Fact]
     public async Task A_deleted_account_s_seat_whose_notice_is_still_on_its_way_holds_no_other_claim_waiting()
     {

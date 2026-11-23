@@ -601,10 +601,9 @@ The seat's view says the lesson under `practice.tutorial`:
 - A seat's link or code carries an invitation, not the seat: the page asks before accepting it, it is accepted
   once, and the admin panel's New invitation cuts off a lost device (ADR 0116).
   `POST /api/lobby/invitations` answers what a link's keys are to whoever holds them, signed in or not, and
-  spends nothing: the signed-out door reads from it who invites and to what format. A table described to anyone
-  but an account seated at it names its people and leaves out their account ids; its `ranked` says whether it
-  counts on the ladder (#971). `POST /api/lobby/claim`
-  takes the place and needs an account.
+  spends nothing: the signed-out door reads from it who invites and to what format. `POST /api/lobby/claim`
+  takes the place and needs an account. A table described to anyone except an account seated at it names its
+  players but not their account ids. Its `ranked` flag says whether it counts on the ladder (#971).
 
 #### "Your turn" on a phone
 
@@ -618,8 +617,9 @@ With push keys too, Settings offer a signed-in player "Pop-ups on this device" (
 accounts under `devices/` and forgotten with "sign out everywhere" and with the account, which is where a
 friend's request or an invitation reaches a player who holds no seat (docs/tabletop/friends-plan.md, stage 1).
 Off also lets go of the browser's subscription (ADR 0202).
-Both routes take only an endpoint on the browsers' push services (Firebase, Mozilla's, Windows', Apple's) and refuse
-any other host with a 400; one send gives up after five seconds (#1132).
+`PUT /api/account/push` and `PUT /api/lobby/push` take only an endpoint on the browsers' push services (Firebase,
+Mozilla's, Windows', Apple's) and refuse any other host with a 400. A subscription stored before is forgotten at its
+next send, and one send gives up after five seconds (#1132).
 A signed-in seat's subscription (`PUT /api/lobby/push`) is registered as one of its account's devices too, and its
 `DELETE` forgets it there; a signed-in seat is told its turn on the account's devices, not on the seat's own
 subscription, and never on the device that holds the other seat. `PUT /api/account/preferences/notices` with
