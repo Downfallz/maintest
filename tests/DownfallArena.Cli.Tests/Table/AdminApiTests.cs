@@ -500,16 +500,17 @@ public sealed class AdminApiTests : IDisposable
         {
             var store = new Infrastructure.Accounts.FileAccountStore(root);
             var google = new Infrastructure.Accounts.GoogleIdTokenVerifier("1234.apps.googleusercontent.com", Substitute.For<Infrastructure.Accounts.ISigningKeySource>(), TimeProvider.System);
-            var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, TimeProvider.System), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), TimeProvider.System), AccountsMode.SignIn, [google]);
+            using var http = new HttpClient();
+            var discord = new Infrastructure.Accounts.DiscordSignIn("1311111111111111111", http);
+            var accounts = new AccountApi(new Application.Accounts.AccountRegistry(store, TimeProvider.System), new AccountSessions(await store.SessionKeyAsync(TestContext.Current.CancellationToken), TimeProvider.System), AccountsMode.SignIn, [discord, google]);
             var admin = new AdminApi(_registry, _hosted.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules", _hosted.Stored) { Accounts = accounts };
 
             var me = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/me", "", null, null, new AccountRequest(null, Secure: false)))).RootElement;
 
-            me.GetProperty("accounts").GetString().ShouldBe("google");
-            var offered = me.GetProperty("signIn").EnumerateArray().Single();
-            offered.GetProperty("provider").GetString().ShouldBe("google");
-            offered.GetProperty("clientId").GetString().ShouldBe("1234.apps.googleusercontent.com");
-            me.GetProperty("googleClientId").GetString().ShouldBe("1234.apps.googleusercontent.com");
+            me.GetProperty("accounts").GetString().ShouldBe("signin");
+            me.GetProperty("signIn").EnumerateArray().Select(way => (way.GetProperty("provider").GetString(), way.GetProperty("clientId").GetString()))
+                .ShouldBe([("discord", "1311111111111111111"), ("google", "1234.apps.googleusercontent.com")]);
+            me.TryGetProperty("googleClientId", out _).ShouldBeFalse();
         }
         finally
         {

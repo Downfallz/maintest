@@ -73,7 +73,7 @@ async function lobby(page, { account = player, muted = false } = {}) {
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/feedback') return answering(state, route);
-    if (path === '/api/me') return route.fulfill({ json: { accounts: 'dev', account, googleClientId: 'test-client' } });
+    if (path === '/api/me') return route.fulfill({ json: { accounts: 'dev', account } });
     if (path === '/api/lobby') return route.fulfill({ json: { recording: true, format: '3v3', formats: ['3v3'], ongoing: 0, open: 0 } });
     if (['/api/lobby/adopt', '/api/lobby/mine', '/api/lobby/resume'].includes(path)) return route.fulfill({ json: { tables: [], invitations: [] } });
     if (path === '/api/friends') return route.fulfill({ json: { friends: [], incoming: [], outgoing: [] } });

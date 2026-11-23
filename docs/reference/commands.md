@@ -649,7 +649,9 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
 
 - `--sign-in <provider>[,...]` signs players in on the home page with the providers listed, in the order their
   buttons are drawn (ADR 0122, docs/tabletop/sign-in-methods-plan.md): `google` checks Google's ID token against
-  `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`. Each provider signs in at `POST /api/account/<provider>`, and
+  `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`; `discord` exchanges the code Discord returns to `/signin/discord`
+  with its PKCE verifier and no secret, for the application `--discord-client-id` or `DOWNFALL_DISCORD_CLIENT_ID`
+  names. A client id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
   also given. `dev` signs in by a typed name and is refused off the loopback address.

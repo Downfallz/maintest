@@ -264,12 +264,22 @@ public sealed class CliOptionsTests
     }
 
     [Theory]
-    [InlineData("off")]
-    [InlineData("google")]
-    [InlineData("dev")]
-    public void The_table_says_how_players_sign_in(string value)
+    [InlineData("off", "off")]
+    [InlineData("google", "signin")]
+    [InlineData("dev", "dev")]
+    public void The_table_says_how_players_sign_in(string value, string named)
     {
-        AccountApi.Named(CliOptions.Parse(["table", "--accounts", value]).Accounts).ShouldBe(value);
+        AccountApi.Named(CliOptions.Parse(["table", "--accounts", value]).Accounts).ShouldBe(named);
+    }
+
+    [Fact]
+    public void Discord_signs_in_beside_google_with_its_application_id_taken_as_given()
+    {
+        var options = CliOptions.Parse(["table", "--sign-in", "discord,google", "--discord-client-id", "1311111111111111111", "--google-client-id", "1234.apps.googleusercontent.com"]);
+
+        options.SignIn.ShouldBe(["discord", "google"]);
+        options.DiscordClientId.ShouldBe("1311111111111111111");
+        AccountApi.Named(options.Accounts).ShouldBe("signin");
     }
 
     [Fact]
@@ -320,6 +330,11 @@ public sealed class CliOptionsTests
     [InlineData("table", "--sign-in", "google", "--accounts", "google")]
     [InlineData("play", "--sign-in", "google")]
     [InlineData("table", "--sign-in", "google", "--no-record")]
+    [InlineData("table", "--discord-client-id", "1311111111111111111")]
+    [InlineData("table", "--sign-in", "google", "--discord-client-id", "1311111111111111111")]
+    [InlineData("table", "--accounts", "google", "--discord-client-id", "1311111111111111111")]
+    [InlineData("table", "--sign-in", "discord,discord")]
+    [InlineData("play", "--sign-in", "discord")]
     public void A_sign_in_the_table_cannot_have_is_refused_by_name(params string[] args)
     {
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");

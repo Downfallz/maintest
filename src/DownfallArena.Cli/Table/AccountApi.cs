@@ -93,9 +93,6 @@ internal sealed class AccountApi
     /// <summary>The providers this host signs in with, in the order the page draws their buttons; none in the other modes.</summary>
     public IReadOnlyList<ISignInProvider> SignIn { get; }
 
-    /// <summary>The Google client id the page's sign-in button is drawn for; public, as Google's own pages show it.</summary>
-    public string? GoogleClientId => _providers.GetValueOrDefault(ExternalIdentity.Google)?.ClientId;
-
     /// <summary>
     /// The providers as <c>/api/me</c> tells them to a page: each one's name and the public id its button is drawn for,
     /// in order. Nothing secret: a client id is on the provider's own pages.
@@ -225,13 +222,12 @@ internal sealed class AccountApi
     public AccountActivityLog? Activity { get; set; }
 
     /// <summary>
-    /// How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list. A host that signs
-    /// in through providers still says <c>google</c>, the name the page of the release before checks before it draws
-    /// Google's button: renaming it waits until every page reads <c>signIn</c> (sign-in methods plan, P3).
+    /// How <c>/api/me</c> names the mode to a page; which providers sign in is its <c>signIn</c> list. A page tells off and
+    /// dev apart and reads anything else as signing in through the providers listed (sign-in methods plan, P3).
     /// </summary>
     public static string Named(AccountsMode mode) => mode switch
     {
-        AccountsMode.SignIn => "google",
+        AccountsMode.SignIn => "signin",
         AccountsMode.Development => "dev",
         _ => "off",
     };

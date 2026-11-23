@@ -68,6 +68,10 @@ internal sealed partial class TableFiles
             ["/lobby"] = (Path.Combine(tableDirectory, "lobby.html"), StudioResponse.Html),
             ["/battle-preferences.js"] = (Path.Combine(tableDirectory, "battle-preferences.js"), JavaScript),
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
+            // Where Discord returns a sign-in (sign-in methods plan, P3): the address the app lists as its redirect.
+            ["/signin/discord"] = (Path.Combine(tableDirectory, "signin.html"), StudioResponse.Html),
+            ["/signin.js"] = (Path.Combine(tableDirectory, "signin.js"), JavaScript),
+            ["/discord.js"] = (Path.Combine(tableDirectory, "discord.js"), JavaScript),
             ["/lobby-practice.js"] = (Path.Combine(tableDirectory, "lobby-practice.js"), JavaScript),
             ["/lobby-tutorials.js"] = (Path.Combine(tableDirectory, "lobby-tutorials.js"), JavaScript),
             ["/lobby-featured.js"] = (Path.Combine(tableDirectory, "lobby-featured.js"), JavaScript),

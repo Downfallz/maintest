@@ -6,7 +6,9 @@ Two sign-ins have to know every address the table answers at, and neither learns
   `infra/bootstrap.sh redirect`;
 - the **players'** sign-in, with Google (ADR 0122): the OAuth client's *Authorized JavaScript origins*, set by hand
   in Google Cloud Console. It needs no redirect URI and no client secret: the button hands the page an ID token
-  directly.
+  directly;
+- the players' sign-in with Discord, once `TABLE_DISCORD_CLIENT_ID` is set (sign-in methods plan, P3): the
+  application's *Redirects*, one per address, each ending in `/signin/discord`.
 
 Run this runbook when the table gets an address:
 
@@ -59,8 +61,17 @@ Run this runbook when the table gets an address:
 
    *Save*. Google says a change can take from five minutes to a few hours to apply.
 
-5. **Check.** Open the lobby at each address in a private window: *Sign in with Google* offers the account
+5. **Discord**, when the table offers it: <https://discord.com/developers/applications>, the table's application,
+   *OAuth2*, *Redirects*, *Add Redirect* for each address of step 3 not listed yet, with `/signin/discord` after it,
+   and remove the old platform address's. *Save Changes*. For the domain:
+
+   ```text
+   https://play.downfallinstinct.com/signin/discord
+   ```
+
+6. **Check.** Open the lobby at each address in a private window: *Sign in with Google* offers the account
    chooser, and `/admin` signs in with the bootstrap account. A Google button that shows an `origin_mismatch`
-   error means step 4 has not applied yet, or does not list that address.
+   error means step 4 has not applied yet, or does not list that address; a Discord page that says *Invalid OAuth2
+   redirect_uri*, that step 5 does not.
 
 A browser keeps its cookie and saved seats per address, so a player who moves to a new address signs in again.
