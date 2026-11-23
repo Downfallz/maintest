@@ -693,12 +693,12 @@ None.
   captions moving down 120 px as the docked Tempo sheet closes and the field grows. Not a portrait, not the chip.
   `main` walked the same way shows the same 0.09 on one walk and none on the next: it counts only when the host's
   answer lands more than 0.5 s after the confirming tap. Holding the field still while a sheet closes is not part A's: the sheet now leaves at once, which does not
-  move the field less. A later pass's, with the field's resizing. Done (#1035, the owner's answer): the field keeps the
-  layout it had beside the sheet, then its figures ease into the room the sheet left over `RETURN_MS`
-  (`battle/src/scene.ts`); a caption and its tag hang from their button by a translation, so they move by a transform
-  and cause no layout shift. At 390, on a late answer, a shift of 0.013 remains: the caption's health bar changes rows
-  as the caption leaves its docked form (`battle-tempo.spec.js`). With reduced motion, the field is laid out at once.
-  Only a planning sheet that closes eases the field; the spell choice stepping aside for its targets does not.
+  move the field less. A later pass's, with the field's resizing. Done (#1035): a caption and its tag hang from their
+  button by a translation, so they move by a transform and cause no layout shift. At 390, on a late answer, a shift of
+  0.013 remains: the caption's health bar changes rows as the caption leaves its docked form
+  (`battle-tempo.spec.js`). The field first eased into the room the sheet left over `RETURN_MS`; the owner found the
+  figures drifting down after every Tempo and Mutation Tree too slow, so the field now takes its room at once, as it
+  does when the spell choice closes (`battle/src/scene.ts`).
 
 ## The spellbook's foot on a short screen (`spell-choice-foot`)
 

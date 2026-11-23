@@ -200,9 +200,10 @@ test('a reference spell whose portrait fails to load leaves no gap before its na
   await expect(strike.locator('.spell-card-name')).toHaveText('Strike');
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
-// #1035: the host's answer lands late, well after the tap; the field keeps the layout it had beside the sheet, then
-// eases into the room the sheet leaves. Its captions follow their figures by a translation, so none jumps.
-test('when the tempos close on a late answer the field keeps its layout, then eases into the room, its captions never jumping', async ({ page }, info) => {
+// #1035: the host's answer lands late, well after the tap; the field takes the room the sheet leaves at once, as it
+// does when the spell choice closes, rather than drifting into it (the owner's call). Its captions follow their figures
+// by a translation, so the move is a transform, not a layout shift.
+test('when the tempos close on a late answer the field takes its room at once, its captions moving by a transform', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'Own viewport');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => {
@@ -219,11 +220,9 @@ test('when the tempos close on a late answer the field keeps its layout, then ea
   await page.locator('#planning-confirm').click(); await expect(page.locator('#planning-dialog')).toBeHidden();
   await expect.poll(bottom).toBeGreaterThan(before + 150);
   await page.waitForTimeout(300);
-  // Read by the places it passes, not by its steps, which a loaded runner's frame rate sets: a jump goes from the sheet's
-  // layout to the field's in one frame, an ease passes through places between them, always downwards.
+  // At once: the caption goes from the sheet's layout to the field's in one frame, through no place between them.
   const feet = await page.evaluate(() => window.feet), end = await bottom();
-  expect(feet.filter(one => one > before + 20 && one < end - 20).length).toBeGreaterThanOrEqual(2);
-  expect(feet.every((one, index) => index === 0 || one >= feet[index - 1] - 1)).toBe(true);
+  expect(feet.filter(one => one > before + 20 && one < end - 20)).toEqual([]);
   const shifts = await page.evaluate(() => window.shifts);
   expect(shifts.flatMap(one => one.sources).filter(name => /\b(caption|creature-tag|creature)\b/.test(name))).toEqual([]);
   expect(shifts.reduce((sum, one) => sum + one.value, 0)).toBeLessThan(0.02);
