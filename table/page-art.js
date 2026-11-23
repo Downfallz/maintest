@@ -5,7 +5,8 @@
 // of at a time; `focus`, where a box that cuts it centres the cut.
 import { BATTLE_PAGE_ART } from './battle-page-art.js';
 
-export const PAGE_ART = /* @__PURE__ */ (() => ({
+function everyPage() {
+  return {
   ...BATTLE_PAGE_ART,
   'eclipse-ground': {
     from: '181281d949add838', frames: 1, drawn: [533,1440], pages: {"table/sign-in":"largest"},
@@ -338,4 +339,7 @@ export const PAGE_ART = /* @__PURE__ */ (() => ({
       { file: 'lesson-colossus-300.5565ad61.webp', width: 300, height: 200, bytes: 21992 },
     ],
   },
-}))();
+  };
+}
+
+export const PAGE_ART = /* @__PURE__ */ everyPage();
