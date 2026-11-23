@@ -46,6 +46,8 @@ were read screen by screen, at 320 and at 390 px, with their measures. No strip 
 run for this brief: the paints are the baseline's (home-new: largest paint 1.9 s, shift 0.26) and UX7's note (the
 home's shift 0.21 on the slow phone once the footer waits with the panel). On the fast walk every screen's shift is
 0.00. At 320 by 568 the walk could not press the match's Settings after `home-waiting`: that is the match's, UX11's.
+The pop-ups offer, briefed last, is not filmed by the walk: the walk's host has no push keys (`scripts/ux/set.mjs`)
+and headless Chromium refuses the permission, so the browser spec `studio/browser/table.push.js` shows it instead.
 
 Read again against the built journey's film (its sheets, measures, the strip `turn-arrives`, `--paint`, and two
 real-time clips at 390 by 844, with full and with less motion), and brought in line where the build chose otherwise
@@ -854,3 +856,135 @@ words still change, since it opens the same game; a different game never takes i
   line to arrive and push, below the action.
 - The walk's arrival is a seat taken, with two games in progress (the bot's on show), not an answer within a round:
   the second form above (one game's status changing in place) is read in the code, not on the sheet.
+
+## The pop-ups offer (new)
+
+### Job
+
+To ask a player, at a moment they have a reason to say yes, whether this device may pop up when it is their turn
+(stage N4 of [the notifications plan](../../tabletop/notifications-plan.md#the-offer), questions 4 to 6). One card
+of the page, `table/push-offer.js`, the same markup in the lobby (`/`) and the battle view (`/battle`), fixed over
+the page, as `.push-offer` in `table/identity.css` (the classic page's `.notices-offer` goes with its offer): at
+the foot of the screen in the lobby, at the top in the battle view, whose foot holds the dock and lesson 1's end
+card (Next, Play again, Leave), which the card must not cover. It arrives on the read that makes the moment: in
+the lobby, a game of Your games against a person that waits on the other player; in the battle view, the other
+player's turn, and lesson 1's end card. It is never the browser's prompt: that opens only after Turn on ([Ask for notices in context](../ux-craft.md#ask-for-notices-in-context)).
+It is not made for a browser that cannot push, a permission blocked, pop-ups already on, a host without push keys
+or a device holding both seats; after Not now it waits a week at least and asks three times at most; Don't ask
+again ends it. It is made once a page at most, and only once the page's own switch has read the browser. The card
+yields when the moment passes, the player's own turn come: it goes, unanswered, nothing is kept, and the page does
+not ask again. At a tutorial's end it asks through the account's switch, since a practice seat answers no push route.
+
+- **Filled action**: Turn on. On an iPhone outside the home screen there is no Turn on, and the card has none
+  filled: the steps are the answer. Install the app, Not now and Don't ask again are quiet.
+
+### Words
+
+- **Order**: the eyebrow, the title, the line of the platform, then the answers: Turn on, Install the app, Not now, Don't
+  ask again.
+- **Budget**: 36 words on the card at most, 0 today: neither page offers anything (the classic page's offer, which
+  goes, says "Get told when it's your turn", its button's words and Not now). Built from these words: 28 on
+  Android, 31 with Install the app, 28 on a desktop browser and on an iPhone at the home screen, 32 on an iPhone outside it.
+
+The eyebrow and the title are the same on every platform. The title asks the question the line answers, so the
+line the owner settled is not said twice.
+
+```text
+POP-UPS
+Away from the game?
+Turn on pop-ups to be told when it is your turn, even with the screen off.     (Android, the owner's words)
+Turn on pop-ups to be told when it is your turn, even with the tab closed.     (a desktop browser)
+Turn on pop-ups to be told when it is your turn, even with the app closed.     (an iPhone, at the home screen)
+On iPhone, pop-ups need the game on your Home Screen: tap Share, then Add to Home Screen, and open it from there.
+                                                                               (an iPhone, outside it)
+[Turn on]  Install the app  Not now  Don't ask again
+```
+
+Install is there on Android only, when the browser raised `beforeinstallprompt`; on an iPhone outside the home
+screen the answers are Not now and Don't ask again. Share and Add to Home Screen are the words Safari shows, so
+they keep its capitals. After Turn on, the answers give their room to one line and a quiet Close:
+
+```text
+Done: pop-ups are on for this device.                                   (the browser and the host said yes)
+Pop-ups stay off. You can turn them on in the menu, under Settings, Notifications.   (refused in the prompt)
+Pop-ups could not be turned on. You can try again in the menu, under Settings, Notifications.   (the host refused)
+```
+
+"Pop-ups" is the word of Settings, Notifications (**Pop-ups on this device**, N3); "your turn" and "the game" are
+the lobby's. `docs/domain/player-terminology.md` names neither; it is not amended for a word Settings already uses.
+
+### Pictures
+
+None: the card is a question and its answers. A picture would push the answers further over the page at 320 px,
+and what the player asks (what will I be told, and how) is a sentence's.
+
+### States
+
+- **First paint**: nothing shows. The card's markup is added hidden when the page starts, before any moment, so
+  its status region is in the page, empty, before it is filled.
+- **Empty**: cannot be: a browser with nothing to offer gets no card at all.
+- **Loaded**: the eyebrow, the title, the platform's line and its answers, at the foot of the lobby, at the top
+  of the battle view.
+- **Waiting**: after Turn on: the browser's own prompt over the page; Turn on says `Turning on…`, the card is
+  `aria-busy`, and the other answers are disabled until the browser and the host have answered.
+- **Error**: the host refuses the device, or the worker will not register: the third line under **Words**, and
+  Close. Read in the code, not seen.
+- **Offline**: no moment comes, since the moment is a read of the host. Turn on pressed as the network goes ends
+  as the host's refusal does. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The card arrives | The read that makes the moment: the lobby's lists, the battle's turn passing to the other player, lesson 1 done. The kit's `.motion-arrive`, a fade and a rise of 8 px. | `transform`, `opacity` | [A part that arrives by itself](../ux-craft.md#a-part-that-arrives-by-itself), [Ask for notices in context](../ux-craft.md#ask-for-notices-in-context) | `--motion-normal`, `--motion-enter` |
+| The press | A pointer down on any answer: the kit's press. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+| The answer | The browser and the host answered Turn on: the line takes the answers' room. | `opacity` | [A part that arrives by itself](../ux-craft.md#a-part-that-arrives-by-itself) | `--motion-normal`, `--motion-enter` |
+
+The card leaves at once, on Not now, Don't ask again, Close or the player's own turn, as the battle's docked sheets
+do: a card fading out over the featured action would hold it longer. Nothing moves by itself: no ambience.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The card arrives | A fade, no rise. |
+| The press | A change of colour, no scale. |
+| The answer | The same fade. |
+
+### Accessibility
+
+- **Focus**: never taken on arrival: the card is a region (`section`, named by its title), not a window, and
+  traps nothing. It sits last in the order of focus, after the page's own content. After Turn on the focus goes to
+  Close, since the line answers the player's own press; when the card goes with the focus inside it, the focus goes
+  back to what held it when the card arrived.
+- **Names**: the region is named by its title, "Away from the game?"; each answer by its words. Close is "Close
+  the pop-ups offer".
+- **Announced**: through the card's polite `role="status"` region (`aria-live="polite"`), never an alert, kept
+  rendered and out of sight (`.unseen`) so its first words are heard: "Away from the game? Pop-ups offered." on
+  arrival, once the card is shown (words written into a hidden region are not heard), then the line that answers
+  Turn on, which the card also shows.
+- **Targets**: every answer 44 px tall at least, Close too. Today the classic page's offer is 40 px tall, and goes.
+
+### Cost
+
+- **Bytes**: no picture; the card adds none to the page's first paint.
+- **Largest paint**: the page's own (the lobby's duel, the battle's field): the card arrives after it, on a read.
+- **Shift**: none from the card, fixed over the page. The answer's line takes the answers' room, so the card keeps
+  about its height until it goes.
+
+### Left
+
+- At 320 by 568 the card, two rows of answers on Android, covers the foot of the lobby's featured space, its
+  actions with it, until it is answered or the moment passes. Not built, and the owner's to choose: room held at the
+  page's foot while the card stands; a moment heard while a window is open waiting for it to close; or the lobby
+  waiting until no game is the player's to play, which amends
+  question 4 of [the notifications plan](../../tabletop/notifications-plan.md#questions-the-owner-settled-2026-11-22).
+- In the battle view the card stands at the top, over the round's bar, so lesson 1's end card in the dock stays
+  free: the round's bar and the header's tools are under it until it is answered.
+- "Done, briefly, then the card goes": briefed as Done and a quiet Close, with no clock. A card that left by
+  itself would be the page's one timer that moves something; if the owner wants it, the hold is a value the kit
+  lacks, asked of UX4.
+- The page's filled action under the card taking its outline while the card stands, so one gold shows a screen:
+  proposed, not built.
+- The battle view's other player's turn, and the end of lesson 1, are briefed here and not in `match.md` or
+  `lessons.md`: the card is one part, and one brief.

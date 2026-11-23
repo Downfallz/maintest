@@ -3,6 +3,7 @@ import { nextPath } from './account.js';
 import { mountDoor } from './door.js';
 import { onLobbyChange } from './changes.js';
 import { mountNavigation } from './navigation.js';
+import { mountPushOffer } from './push-offer.js';
 import { sinceVisitLine, turnOf } from './players.js';
 export { turnOf } from './players.js';
 export { codePath } from './navigation.js';
@@ -101,6 +102,14 @@ export function waitsOnAnother(entry) {
   if (entry.table.waiting || entry.table.openSeats > 0) return true;
   // Someone else is asked: a round being played, where nobody is, waits on no one.
   return gameKind(entry.table) === 'players' && turnOf(entry.table, (entry.seats ?? []).map(held => held.seat))?.mine === false;
+}
+
+/**
+ * A game of mine against a person that waits on the other player: the moment the offer of pop-ups is made (the
+ * notifications plan, N4). A device holding both seats waits on nobody away from it.
+ */
+export function waitsOnAPerson(entry) {
+  return gameKind(entry?.table) === 'players' && (entry?.seats ?? []).length === 1 && waitsOnAnother(entry);
 }
 
 /**
@@ -1045,7 +1054,11 @@ if (typeof document !== 'undefined') {
   const door = mountDoor(document);
   const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson, listed: featured.setLessons });
   const next = nextPath(globalThis.location.search);
+  // The offer of pop-ups (N4): made when a game against a person waits on the other player, once the switch has read
+  // this browser, whichever of the two comes first.
+  let offer = null, offerMoment = false;
   const navigation = mountNavigation(document, storage, {
+    onDevice: () => { offer?.changed(); if (offerMoment) offer?.consider(); },
     onInvite: lobby.invite,
     onFriends: lobby.friendsChanged,
     onInbox: () => lobby.refresh(),
@@ -1062,5 +1075,11 @@ if (typeof document !== 'undefined') {
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);
-  lobby.onMine(navigation.inbox.feed);
+  offer = mountPushOffer(document, { storage, source: { state: () => navigation.devices.offerState(), turnOn: () => navigation.devices.turnOn() } });
+  lobby.onMine(mine => {
+    navigation.inbox.feed(mine);
+    offerMoment = (mine.tables ?? []).some(waitsOnAPerson);
+    if (offerMoment) offer.consider();
+    else offer.withdraw();
+  });
 }

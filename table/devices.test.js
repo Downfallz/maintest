@@ -164,3 +164,35 @@ test('a box ticked while a save is on its way is kept as ticked and saved next',
   ]);
   assert.deepEqual(KINDS.map(kind => h.boxes[kind].checked), [false, true, false]);
 });
+
+test('the offer reads the switch only once it has read this browser, and Turn on is the switch turned on', async () => {
+  const { devices, calls } = harness({ held: false });
+  assert.equal(devices.offerState().ready, false, 'nobody signed in: nothing read');
+  devices.setAccount({ id: 'acc-1' });
+  await settled();
+  assert.deepEqual(devices.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'granted', hotseat: false });
+  // The harness's browser has no push manager to subscribe with: the switch tries, and the state says off.
+  const after = await devices.turnOn();
+  assert.equal(after.subscribed, false);
+  assert.equal(after.ready, true);
+  assert.equal(calls.filter(call => call.startsWith('PUT /api/account/push')).length, 0);
+});
+
+test('a browser already on is not turned on again by the offer', async () => {
+  const { devices, calls } = harness();
+  devices.setAccount({ id: 'acc-1' });
+  await settled();
+  assert.equal(devices.offerState().subscribed, true);
+  const before = calls.length;
+  await devices.turnOn();
+  assert.equal(calls.length, before);
+});
+
+test('a browser that cannot push is read once the host\'s key is, so the offer can give an iPhone the steps', async () => {
+  const { devices } = harness();
+  const unable = mountDevices({ getElementById: () => null }, { request: async path => (path === '/api/lobby/push' ? { publicKey: 'AQID' } : {}), nav: { userAgent: 'iPhone' }, win: {} });
+  unable.setAccount({ id: 'acc-1' });
+  await settled();
+  assert.deepEqual(unable.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
+  assert.equal(devices.offerState().ready, false, 'nobody signed in there');
+});
