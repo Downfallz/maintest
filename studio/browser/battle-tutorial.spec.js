@@ -116,11 +116,11 @@ async function playStep(page, state, index, capture) {
   for (const line of step.says) await expect(page.locator('#coach-lines')).toContainText(line);
   await expect(page.locator('#coach-cards button')).toHaveCount(step.concepts.length);
   await expect(page.locator(`[data-creature="${step.pointsAt.creature}"]`)).toHaveAttribute('data-coach', 'true');
-  // The ring rises once, its colour faded in, and is still after it (#978).
+  // The ring rises once, a layer of its own faded in by its opacity, and is still after it (#978).
   expect(await page.locator(`[data-creature="${step.pointsAt.creature}"]`).evaluate(node => {
-    const style = getComputedStyle(node);
-    return [style.animationName, style.animationIterationCount];
-  })).toEqual(['coach-ring', '1']);
+    const ring = getComputedStyle(node, '::after');
+    return [ring.animationName, ring.animationIterationCount, ring.pointerEvents];
+  })).toEqual(['coach-ring', '1', 'none']);
   await expect(page.locator('#practice-detail')).toHaveText(`Step ${index + 1} of ${lesson.steps.length}`);
   // The phase tips stay silent, and the spell choice opens by itself once the cards are read.
   await expect(page.locator('#help-dialog')).toBeHidden();

@@ -301,8 +301,8 @@ ring, not a painting ([Do, do not read](../ux-craft.md#do-do-not-read)).
 | The press | A pointer down on an ⓘ, Restart the round, or the sheet's controls. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
 
 The ring of what the step points at fades in once, over `--motion-normal` on `--motion-enter`, then stays still.
-It does not loop, so it is no ambience, and the screen has none. It is an outline, so what fades is its colour, not
-its `opacity`. That costs paint only, once, with no layout, and it is the same under less motion.
+It does not loop, so it is no ambience, and the screen has none. It is a layer of its own (`::after`), so it fades by
+its `opacity` and the element it rings stays as it is; the same under less motion.
 
 The coach steps aside from the field in a fade (#978). While it fades it takes no tap (`pointer-events`). Once its
 choice is sent it is also `inert`; while targets are chosen it takes no focus once the fade ends (`visibility`). In a

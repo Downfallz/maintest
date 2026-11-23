@@ -1944,11 +1944,13 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The lesson's end and the last tutorial's result say where the series stands (UX8). */
 .match-series { margin: 4px 0 0; color: var(--gold); font-size: 13px; line-height: 1.4; }
 .match-series[hidden] { display: none; }
-[data-coach="true"]:not(:focus-visible) { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--radius-soft); }
-/* The ring rises once where a step points (#978): its colour fades in, then it stays still. A fade, so the same
-   under less motion; on the element itself, so a focus that comes and goes does not play it again. */
-[data-coach="true"] { animation: coach-ring var(--motion-normal) var(--motion-enter); }
-@keyframes coach-ring { from { outline-color: transparent; } }
+/* The ring is a layer of its own, so it rises once by its opacity (#978) and the element it rings stays as it is. A
+   fade, so the same under less motion. A focused element shows its focus ring alone, as before. */
+[data-coach="true"]:not(.creature) { position: relative; }
+[data-coach="true"]::after { content: ""; position: absolute; inset: -4px; border: 2px solid var(--gold); border-radius: var(--radius-soft);
+  pointer-events: none; animation: coach-ring var(--motion-normal) var(--motion-enter); }
+[data-coach="true"]:focus-visible::after { visibility: hidden; }
+@keyframes coach-ring { from { opacity: 0; } }
 /* The card's eyebrow, title, lines and example are identity.css's .concept-card, shared with the rulebook (#699). */
 .concept-rulebook { margin: 0 0 8px; font-size: 12px; }
 /* The card's section in the rulebook, opened in a new tab so the battle stays on its question (rulebook-plan.md R4). */
