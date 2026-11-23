@@ -71,13 +71,12 @@ internal static class TableTend
         try
         {
             using var tending = await ComposeAsync(services, options, rules, sender, target, WebPubSubRelay.FromEnvironment());
-            var (registry, lobby, composer, relay) = (tending.Registry, tending.Lobby, tending.Composer, tending.Relay);
-            var (suspended, feedback, feedbackStore, notices) = (tending.Suspended, tending.Feedback, tending.FeedbackStore, tending.Notices);
+            var relay = tending.Relay;
 
             // Every run is kept for the admin panel's Jobs tab (A3), the one that failed too. A log that cannot be
             // opened costs the run its record, never the pass: the tables are tended all the same.
             var log = await OpenLogAsync(() => ArtifactStores.OpenTendLogAsync(target));
-            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(registry, lobby, now, composer, clock, progress, suspended, feedback, feedbackStore, notices));
+            var (tended, _) = await RecordedAsync(log, TendTrigger.Schedule, by: null, clock, (now, progress) => TendAsync(tending.Chores, now, progress));
             if (relay is not null)
             {
                 Announce(relay, tended);
@@ -108,6 +107,19 @@ internal static class TableTend
 
         /// <summary>The accounts' notice logs (ADR 0201), the bell's news kept whether or not the job can push; none on a host that signs nobody in.</summary>
         public AccountNoticeLog? Notices { get; init; }
+
+        public TimeProvider Clock { get; init; } = TimeProvider.System;
+
+        /// <summary>What the job's pass tends, every stage of it.</summary>
+        public Chores Chores => new(Registry, Lobby)
+        {
+            Composer = Composer,
+            Clock = Clock,
+            Suspended = Suspended,
+            Feedback = Feedback,
+            FeedbackIndex = FeedbackStore,
+            Notices = Notices,
+        };
 
         public void Dispose() => Registry.Dispose();
     }
@@ -171,7 +183,7 @@ internal static class TableTend
         var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby, Notifier = composer.Notifier };
         var suspended = suspendedAccounts is null ? null : new SuspendedSeats(suspendedAccounts, lobby);
 
-        return new Tending(registry, lobby, composer, relay) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log };
+        return new Tending(registry, lobby, composer, relay) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log, Clock = clock };
     }
 
     /// <summary>What a pass did, a line for the pass and one for each table, account or feedback it touched.</summary>
@@ -333,16 +345,37 @@ internal static class TableTend
         return erased;
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago and the notices past 90 days.</summary>
-    /// <param name="composer">What reads a table's last move; none, and no game is timed out.</param>
-    /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
-    /// <param name="suspended">The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</param>
-    /// <param name="feedback">What lets go of feedback closed 180 days ago (ADR 0189); none on a host that keeps none.</param>
-    /// <param name="notices">The accounts' notice logs (ADR 0201), swept for what is past 90 days (#1118); none on a host that signs nobody in.</param>
-    internal static async Task<Tended> TendAsync(TableRegistry registry, LobbyApi lobby, DateTimeOffset now, TableComposer? composer = null, TimeProvider? clock = null, Action<Tended>? progress = null, SuspendedSeats? suspended = null, LetGoOfClosedFeedback? feedback = null, FeedbackIndex? feedbackIndex = null, AccountNoticeLog? notices = null)
+    /// <summary>
+    /// What one pass tends: the tables and the lobby, and the parts each later stage needs, a stage left out where its
+    /// part is none. The hourly job's (<see cref="Tending.Chores" />), a pass run from the panel, and the tests'.
+    /// </summary>
+    internal sealed record Chores(TableRegistry Registry, LobbyApi Lobby)
     {
-        ArgumentNullException.ThrowIfNull(registry);
-        ArgumentNullException.ThrowIfNull(lobby);
+        /// <summary>What reads a table's last move; none, and no game is timed out, ended or warned.</summary>
+        public TableComposer? Composer { get; init; }
+
+        public TimeProvider Clock { get; init; } = TimeProvider.System;
+
+        /// <summary>The suspended accounts' seats (ADR 0178); none on a host that signs nobody in.</summary>
+        public SuspendedSeats? Suspended { get; init; }
+
+        /// <summary>What lets go of feedback closed 180 days ago (ADR 0189); none on a host that keeps none.</summary>
+        public LetGoOfClosedFeedback? Feedback { get; init; }
+
+        /// <summary>The index of feedback, built again from every record (#866); none on a host that keeps none.</summary>
+        public FeedbackIndex? FeedbackIndex { get; init; }
+
+        /// <summary>The accounts' notice logs (ADR 0201), swept for what is past 90 days (#1118); none on a host that signs nobody in.</summary>
+        public AccountNoticeLog? Notices { get; init; }
+    }
+
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago and the notices past 90 days.</summary>
+    /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
+    internal static async Task<Tended> TendAsync(Chores chores, DateTimeOffset now, Action<Tended>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(chores);
+        var (registry, lobby, composer, clock) = (chores.Registry, chores.Lobby, chores.Composer, chores.Clock);
+        var (suspended, feedback, feedbackIndex, notices) = (chores.Suspended, chores.Feedback, chores.FeedbackIndex, chores.Notices);
         var done = new Tended(await registry.SweepNeverBegunAsync(now), 0);
         progress?.Invoke(done);
         done = done with { Expired = await lobby.ExpireInvitationsNowAsync() };
@@ -355,9 +388,9 @@ internal static class TableTend
 
         if (composer is not null)
         {
-            done = done with { TimedOut = await TurnTimeouts.EndAsync(registry, composer, now, clock ?? TimeProvider.System) };
+            done = done with { TimedOut = await TurnTimeouts.EndAsync(registry, composer, now, clock) };
             progress?.Invoke(done);
-            done = done with { Abandoned = await AbandonedSeats.EndAsync(registry, composer, now, clock ?? TimeProvider.System) };
+            done = done with { Abandoned = await AbandonedSeats.EndAsync(registry, composer, now, clock) };
             progress?.Invoke(done);
             done = done with { Warned = await TurnTimeouts.WarnAsync(registry, composer, now, Interval) };
             progress?.Invoke(done);

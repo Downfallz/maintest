@@ -41,7 +41,7 @@ public sealed class TableTendTests : IDisposable
         var table = await RecordedAsync(host, HostedTables.OnePerson);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1));
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)), table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1));
 
         tended.Swept.ShouldBe([table.Id]);
         tended.Expired.ShouldBe(0);
@@ -57,7 +57,7 @@ public sealed class TableTendTests : IDisposable
         var sent = now.AddDays(-400);
         await store.SaveAsync(new Feedback { Id = Feedback.NewId(sent), Kind = FeedbackKind.Bug, Status = FeedbackStatus.Fixed, At = sent, ClosedAt = now.AddDays(-181), Sender = "acct_1", Category = "rules", Text = "The bleed did not tick." }, Cancel);
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), now, feedback: new LetGoOfClosedFeedback(store, new FakeTimeProvider(now)));
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Feedback = new LetGoOfClosedFeedback(store, new FakeTimeProvider(now)) }, now);
 
         tended.FeedbackLetGo.ShouldBe(1);
         (await store.IdsAsync(Cancel)).ShouldBeEmpty();
@@ -73,7 +73,7 @@ public sealed class TableTendTests : IDisposable
         var account = AccountId.New();
         await store.WriteAsync(account, [new NoticeEntry(1, NoticeKind.MatchOver, "Victory", "You won against bastien.", "/play?table=t1", "match:t1", now.AddDays(-91), Read: true)], null, Cancel);
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), now, notices: new AccountNoticeLog(store, new FakeTimeProvider(now)));
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Notices = new AccountNoticeLog(store, new FakeTimeProvider(now)) }, now);
 
         tended.NoticesErased.ShouldBe(1);
         File.Exists(Path.Combine(store.RootDirectory, "notices", $"{account.Value}.json")).ShouldBeFalse();
@@ -92,7 +92,7 @@ public sealed class TableTendTests : IDisposable
         var now = DateTimeOffset.UtcNow;
         File.SetLastWriteTimeUtc(path, now.AddDays(-91).UtcDateTime);
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), now, notices: new AccountNoticeLog(store, new FakeTimeProvider(now)));
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Notices = new AccountNoticeLog(store, new FakeTimeProvider(now)) }, now);
 
         tended.NoticesErased.ShouldBe(1);
         File.Exists(path).ShouldBeFalse();
@@ -162,7 +162,7 @@ public sealed class TableTendTests : IDisposable
         using var job = await _hosted.RestartedAsync();
         var said = new List<TableTend.Tended>();
 
-        await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1), progress: said.Add);
+        await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)), table.CreatedAt + TableRegistry.NeverBegunFor + TimeSpan.FromMinutes(1), said.Add);
 
         said[0].Swept.ShouldBe([table.Id], "the closures are said before the invitations are read");
         said[^1].Swept.ShouldBe([table.Id]);
@@ -175,7 +175,7 @@ public sealed class TableTendTests : IDisposable
         var table = await RecordedAsync(host, HostedTables.OnePerson);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), table.CreatedAt + TimeSpan.FromHours(1));
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)), table.CreatedAt + TimeSpan.FromHours(1));
 
         tended.Swept.ShouldBeEmpty();
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
@@ -207,7 +207,7 @@ public sealed class TableTendTests : IDisposable
         await table.RecordAsync(Cancel);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(25), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25));
 
         tended.TimedOut.ShouldBe([table.Id]);
         var ended = await job.Held(table.Id).ShouldNotBeNull().Session.Outcome;
@@ -224,7 +224,7 @@ public sealed class TableTendTests : IDisposable
         await table.RecordAsync(Cancel);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(25), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25));
 
         tended.TimedOut.ShouldBe([table.Id]);
         (await job.Held(table.Id).ShouldNotBeNull().Session.Outcome).Value.ShouldBe(new Domain.Matches.MatchOutcome(null, Domain.Matches.MatchEndReason.TimedOut));
@@ -238,7 +238,7 @@ public sealed class TableTendTests : IDisposable
         await table.RecordAsync(Cancel);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(23), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(23));
 
         tended.TimedOut.ShouldBeEmpty();
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);
@@ -260,7 +260,7 @@ public sealed class TableTendTests : IDisposable
         await table.RecordAsync(Cancel);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5));
 
         tended.Warned.ShouldBe([table.Id]);
         tended.TimedOut.ShouldBeEmpty();
@@ -283,7 +283,7 @@ public sealed class TableTendTests : IDisposable
         await table.RecordAsync(Cancel);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5));
 
         tended.Warned.ShouldBeEmpty();
         (await log.ListAsync(late, Cancel)).ShouldBeEmpty();
@@ -301,9 +301,9 @@ public sealed class TableTendTests : IDisposable
         await table.RecordAsync(Cancel);
         using var job = await _hosted.RestartedAsync();
         var lobby = new LobbyApi(job, _hosted.Composer, TimeProvider.System);
-        var first = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5), _hosted.Composer);
+        var first = await TableTend.TendAsync(new(job, lobby) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(5));
 
-        var again = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(30), _hosted.Composer);
+        var again = await TableTend.TendAsync(new(job, lobby) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(18) + TimeSpan.FromMinutes(30));
 
         first.Warned.ShouldBe([table.Id]);
         again.Warned.ShouldBeEmpty();
@@ -322,8 +322,8 @@ public sealed class TableTendTests : IDisposable
         using var job = await _hosted.RestartedAsync();
         var lobby = new LobbyApi(job, _hosted.Composer, TimeProvider.System);
 
-        var before = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(17.5), _hosted.Composer);
-        var after = await TableTend.TendAsync(job, lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(19.5), _hosted.Composer);
+        var before = await TableTend.TendAsync(new(job, lobby) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(17.5));
+        var after = await TableTend.TendAsync(new(job, lobby) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(19.5));
 
         before.Warned.ShouldBeEmpty();
         after.Warned.ShouldBeEmpty();
@@ -341,7 +341,7 @@ public sealed class TableTendTests : IDisposable
         var table = await LeftAsync(host);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(25), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25));
 
         tended.Abandoned.ShouldBe([table.Id]);
         (await job.Held(table.Id).ShouldNotBeNull().Session.Outcome).Value.ShouldBe(new Domain.Matches.MatchOutcome(Domain.Matches.PlayerSlot.Player1, Domain.Matches.MatchEndReason.Concession));
@@ -355,7 +355,7 @@ public sealed class TableTendTests : IDisposable
         var table = await LeftAsync(host);
         using var job = await _hosted.RestartedAsync();
 
-        var tended = await TableTend.TendAsync(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System), DateTimeOffset.UtcNow + TimeSpan.FromHours(23), _hosted.Composer);
+        var tended = await TableTend.TendAsync(new(job, new LobbyApi(job, _hosted.Composer, TimeProvider.System)) { Composer = _hosted.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(23));
 
         tended.Abandoned.ShouldBeEmpty();
         (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Open);

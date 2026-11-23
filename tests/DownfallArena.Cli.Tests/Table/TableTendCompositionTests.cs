@@ -134,7 +134,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         var table = await BegunAsync(host, mark.Id, bastien.Id);
         var job = await JobAsync();
 
-        var tended = await TableTend.TendAsync(job.Registry, job.Lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(25), job.Composer);
+        var tended = await TableTend.TendAsync(new(job.Registry, job.Lobby) { Composer = job.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25));
 
         tended.TimedOut.ShouldBe([table.Id]);
         (await KindsAsync(host, mark.Session)).ShouldBe(["match-over"]);
@@ -166,7 +166,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
         var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
 
-        (await TableTend.TendAsync(job.Registry, job.Lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(25), job.Composer)).TimedOut.ShouldBe([table.Id]);
+        (await TableTend.TendAsync(new(job.Registry, job.Lobby) { Composer = job.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25))).TimedOut.ShouldBe([table.Id]);
         for (var attempt = 0; attempt < 600 && !table.Session.Outcome.IsCompleted; attempt++)
         {
             await Task.Delay(50, Cancel);
@@ -175,6 +175,21 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         await stopping.CancelAsync();
         await running;
         table.Session.Outcome.IsCompleted.ShouldBeTrue("the host's watch read the job's end of the game into the table it holds");
+    }
+
+    [Fact]
+    public async Task The_job_s_pass_tends_with_every_part_the_job_composed()
+    {
+        await HostAsync();
+        var job = await JobAsync();
+
+        var chores = job.Chores;
+
+        (chores.Registry, chores.Lobby, chores.Composer).ShouldBe((job.Registry, job.Lobby, job.Composer));
+        chores.Suspended.ShouldNotBeNull().ShouldBeSameAs(job.Suspended);
+        chores.Feedback.ShouldNotBeNull().ShouldBeSameAs(job.Feedback);
+        chores.FeedbackIndex.ShouldNotBeNull().ShouldBeSameAs(job.FeedbackStore);
+        chores.Notices.ShouldNotBeNull().ShouldBeSameAs(job.Notices);
     }
 
     [Fact]
@@ -188,7 +203,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         (await host.Accounts!.SuspendAsync(bastien.Id, AccountSuspension.Create("Spamming invitations to strangers.", "op", at).Value, Cancel)).IsSuccess.ShouldBeTrue();
         var job = await JobAsync();
 
-        var tended = await TableTend.TendAsync(job.Registry, job.Lobby, at + AccountSuspension.SeatsKeptFor, suspended: job.Suspended);
+        var tended = await TableTend.TendAsync(new(job.Registry, job.Lobby) { Suspended = job.Suspended }, at + AccountSuspension.SeatsKeptFor);
 
         tended.Released.ShouldBe([bastien.Id.Value]);
         (await KindsAsync(host, mark.Session)).ShouldBe(["left"]);
@@ -217,7 +232,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         var sender = new RecordedPush();
         var job = await JobAsync(sender);
 
-        await TableTend.TendAsync(job.Registry, job.Lobby, DateTimeOffset.UtcNow + TimeSpan.FromHours(25), job.Composer);
+        await TableTend.TendAsync(new(job.Registry, job.Lobby) { Composer = job.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25));
 
         sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://push.example/bastien"]);
         (await KindsAsync(host, mark.Session)).ShouldBe(["match-over"]);
