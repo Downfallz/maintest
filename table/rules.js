@@ -436,8 +436,8 @@ export function mountRules(doc, book, win = globalThis) {
   const filter = doc.getElementById('rules-filter');
   filter.addEventListener('input', () => applyFilter(doc, state.book, filter.value));
   win.addEventListener('resize', () => reachScrolls(doc));
-  // The display face can widen a table once it has loaded.
-  doc.fonts?.ready.then(() => reachScrolls(doc));
+  // A face that loads can widen a table, whichever text first asked for it.
+  doc.fonts?.addEventListener?.('loadingdone', () => reachScrolls(doc));
   doc.getElementById('rules-filter-form').addEventListener('submit', event => {
     event.preventDefault();
     const first = doc.querySelector('#rules-book [data-section]:not([hidden])');

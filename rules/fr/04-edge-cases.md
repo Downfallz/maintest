@@ -119,6 +119,6 @@ id: critical
 title: Critique
 Quand son sort se résout, une créature en Précision lance un d20 contre le nombre indiqué.
 Un critique multiplie dégâts et soins du sort sur ses cibles.
-Instinct ne lance jamais.
-> Un sort indique d20 : 11+. Un jet de 14 est critique : ses 7 dégâts deviennent {floor(7 * rules.criticalMultiplier)}.
+Instinct ne lance jamais le dé.
+> Un sort indique d20 : 11+. Un 14 est critique : ses 7 dégâts deviennent {floor(7 * rules.criticalMultiplier)}.
 ```
