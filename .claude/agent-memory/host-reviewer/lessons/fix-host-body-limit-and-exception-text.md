@@ -1,4 +1,0 @@
-- HttpHost's 413 answers without reading the body; the managed HttpListener (Linux) closes the socket at once rather than draining, measured: no thread held, but the client may see a reset instead of the 413 on a large body (#691/#692/#755 PR).
-- HttpHost's catch-all now logs `METHOD AbsolutePath` on a throw: `/j/<code>` puts a seat's join code (ADR 0116) in the console; check what a path carries before logging it (#691/#692/#755 PR).
-- Exception text still reaches answers outside HttpHost: TableServer.cs:163/:206 (404 FileNotFound/DirectoryNotFound messages carry absolute paths), PracticeTable.cs:77, Push test 502 `failure.Message`; grep `\.Message` in Table/ on any "no exception text" PR (#691/#692/#755 PR).
-- A per-host limit passed as an optional argument (StudioServer MaxBodyBytes) has no test: dropping the argument leaves every test green and breaks the studio's knobs save (135 KB); ask for one test through the host (#691/#692/#755 PR).
