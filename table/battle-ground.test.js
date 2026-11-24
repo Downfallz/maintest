@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, PAINTING, REST_TINT, coronaScale, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, lightOf, mix } from './battle-ground.js';
+import { DEPTH, EMBERS, EMBER_COUNT, FOG, LIGHT, LIGHT_COLOURS, PAINTING, REST_TINT, coronaScale, paintingLayout, depthPlace, depthShift, emberAt, emberGlow, fogDrift, lightAt, lightOf, mix } from './battle-ground.js';
 import { TRAUMA, PUNCH } from './battle-motion.js';
 import { IMPACT_MS } from './battle-timing.js';
 
@@ -157,4 +157,20 @@ test('the light is one rise and one fall, gone within 320 ms of the contact, and
   // No family's colour is the target marker's gold.
   assert.ok(!Object.values(LIGHT_COLOURS).includes(0xeac88e));
   assert.ok(PAINTING.eclipse.y < 420);
+});
+
+test('the painting covers the field and keeps the eclipse whole on a wide screen', () => {
+  const rim = (PAINTING.eclipse.y - PAINTING.eclipse.radius * LIGHT.ring.peak);
+  for (const [width, height] of [[1908, 660], [2560, 700], [1280, 640], [390, 320], [390, 700], [1024, 700]]) {
+    const { scale, top } = paintingLayout(width, height);
+    assert.ok(PAINTING.width * scale >= width - 1e-9 && top + PAINTING.height * scale >= height - 1e-9, `${width} by ${height} is covered`);
+    assert.ok(top <= 0, 'the painting starts at or above the field');
+    assert.ok(top + rim * scale >= -1e-9, `${width} by ${height} shows the top of the eclipse's rim`);
+  }
+});
+
+test('on a field with room the painting is cropped 35% from the top, as before', () => {
+  const { scale, top } = paintingLayout(1700, 940);
+  assert.ok(top < 0);
+  assert.ok(Math.abs(top + (PAINTING.height * scale - 940) * .35) < 1e-9);
 });

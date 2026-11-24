@@ -9,7 +9,7 @@ import { MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
 import { DEFEATED_ALPHA, WEIGHTS, blowWeight, breath, lossOf, punches, traumaOf } from '../../table/battle-motion.js';
 import { castRelease, castWindup, fall, meleeReturn, meleeWindup, struck, throwWindup } from './body-motion';
 import { ViewShake } from './view-shake';
-import { REST_TINT, lightOf } from '../../table/battle-ground.js';
+import { REST_TINT, lightOf, paintingLayout } from '../../table/battle-ground.js';
 import type { SceneFrame, Placement } from './types';
 import { UpkeepMarkers } from './upkeep-markers';
 import { MutationReveal } from './mutation-reveal';
@@ -356,8 +356,8 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const { displayWidth: width, displayHeight: height } = this.cameras.main;
     if (this.backdrop) {
       const source = this.backdrop.texture.getSourceImage();
-      const factor = Math.max(width / source.width, height / source.height);
-      this.backdrop.setDisplaySize(source.width * factor, source.height * factor).setPosition(width / 2, -(source.height * factor - height) * .35);
+      const laid = paintingLayout(width, height);
+      this.backdrop.setDisplaySize(source.width * laid.scale, source.height * laid.scale).setPosition(width / 2, laid.top);
       this.horizon?.layout(width, height);
       this.ground?.layout(width, height);
     }

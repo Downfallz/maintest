@@ -10,7 +10,7 @@ What the ground stands on, read in `battle/src/scene.ts`, `battle/src/battle-hor
 
 | Layer | Depth | What it is | By round |
 | --- | --- | --- | --- |
-| The painting, `eclipse-battle.webp` | -10 | The sky, the eclipse and the floor the figures stand on, in one picture, tinted `0xb5bbc2`. Laid to cover the field, the crop centred across and 35% from the top. | always |
+| The painting, `eclipse-battle.webp` | -10 | The sky, the eclipse and the floor the figures stand on, in one picture, tinted `0xb5bbc2`. Laid to cover the field, the crop centred across and 35% from the top, but never below the eclipse's rim (1.08 of its radius above its centre): on a field wider than about 1.8 to 1 the floor's foreground is cut instead of the eclipse (`paintingLayout`). | always |
 | The fallen ledge | -9.9 | A plate over the painting's far edge. | from 4 |
 | The breach | -9.8 | A plate of the whole sky, feathered into the floor across source rows 399 to 479. | 6 to 11 |
 | The broken floor | -9.6 | A plate of the floor from source row 399. | from 12 |

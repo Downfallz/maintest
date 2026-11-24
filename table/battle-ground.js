@@ -7,6 +7,19 @@ import { lossOf, weightOf } from './battle-motion.js';
 /** The source painting, `battle-art/eclipse-battle.webp`: where its eclipse and the rows of its horizon are. */
 export const PAINTING = Object.freeze({ width: 1672, height: 941, eclipse: Object.freeze({ x: 846, y: 135, radius: 112 }) });
 
+/**
+ * Where the painting is laid on a field: scaled to cover it, centred across, and cropped 35% from the top, but never
+ * so far down that the eclipse loses the top of its disc and rim (1.08 of its radius, where the corona peaks). On a
+ * wide field (past about 1.9 to 1) the crop would cut the eclipse in half; there the floor's foreground is cut
+ * instead. `top` is the painting's top edge on the field, zero or above it.
+ */
+export function paintingLayout(width, height) {
+  const scale = Math.max(width / PAINTING.width, height / PAINTING.height);
+  const spare = PAINTING.height * scale - height;
+  const ceiling = (PAINTING.eclipse.y - PAINTING.eclipse.radius * LIGHT.ring.peak) * scale;
+  return { scale, top: -Math.min(spare * .35, ceiling) };
+}
+
 /** The tints the ground rests at: the painting and its plates, and the arch cut out of it. */
 export const REST_TINT = Object.freeze({ painting: 0xb5bbc2, arch: 0xa5b1b3 });
 
