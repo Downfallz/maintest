@@ -2460,13 +2460,13 @@ test('a test notice on a push service the host does not send to lets the browser
   let unsubscribed = 0;
   const held = { unsubscribe: async () => { unsubscribed += 1; } };
   p.state.push = { subscribed: true, supported: true, keyed: true, registration: { pushManager: { getSubscription: async () => held } } };
-  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 400, ok: false, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' } }) } }];
+  p.state.seats = [{ seat: 'player1', transport: { pushTest: async () => ({ status: 400, ok: false, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s notification service is not one this table can send to. Try another browser.' } }) } }];
 
   await p.context.testNotices(p.state);
 
   assert.equal(unsubscribed, 1);
   assert.equal(p.state.push.subscribed, false);
-  assert.match(p.nodes['notices-problem'].textContent, /not one this host sends to/);
+  assert.match(p.nodes['notices-problem'].textContent, /not one this table can send to/);
 });
 
 test('a test notice is two: the page shows one itself through a worker brought up to date, then asks the host for its push', async () => {

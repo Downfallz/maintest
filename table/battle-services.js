@@ -98,9 +98,9 @@ export function createBattleServices({ onChange, scope = globalThis }) {
     context.push.subscribed = answers.every(answer => answer.ok);
     if (!context.push.subscribed) {
       if (!held) await made.unsubscribe();
-      // A push service the host does not send to stays one: a retry cannot help (#1175).
+      // A push service the host does not send to stays one: a retry cannot help (#1175). The host's own sentence (#1233).
       context.message = answers.some(answer => answer.body?.error === 'Lobby.UnknownPushService')
-        ? 'This browser\'s push service is not one this table sends to. Try another browser.'
+        ? 'This browser\'s notification service is not one this table can send to. Try another browser.'
         : 'The host could not save notifications. Try again.';
     }
   }

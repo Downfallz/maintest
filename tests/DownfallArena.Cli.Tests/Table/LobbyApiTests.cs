@@ -677,6 +677,7 @@ public sealed class LobbyApiTests : IDisposable
 
         refused.Status.ShouldBe(400);
         JsonDocument.Parse(refused.Body).RootElement.GetProperty("error").GetString().ShouldBe("Lobby.UnknownPushService");
+        JsonDocument.Parse(refused.Body).RootElement.GetProperty("message").GetString().ShouldBe("This browser's notification service is not one this table can send to. Try another browser.", "the seat page and the battle view say it in a player's words (#1233)");
         table.Seats[0].Push.ShouldBeNull();
     }
 

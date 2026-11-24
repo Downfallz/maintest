@@ -70,8 +70,8 @@ test('the test reads the two notices together: the page\'s own, the host\'s, and
 
 test('a test answer means the host forgot the subscription when it is gone or on a push service the host does not send to', () => {
   assert.equal(testForgot({ status: 502, message: 'This subscription is gone. Tap "Notify me when it\'s my turn" again.' }), true);
-  assert.equal(testForgot({ status: 400, error: 'Account.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' }), true);
-  assert.equal(testForgot({ status: 400, error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' }), true);
+  assert.equal(testForgot({ status: 400, error: 'Account.UnknownPushService', message: 'This browser\'s notification service is not one this table can send to. Try another browser.' }), true);
+  assert.equal(testForgot({ status: 400, error: 'Lobby.UnknownPushService', message: 'This browser\'s notification service is not one this table can send to. Try another browser.' }), true);
   assert.equal(testForgot({ status: 502, message: 'The push service refused it (403).' }), false);
   assert.equal(testForgot({ status: 400, error: 'Account.BadRequest', message: 'gone' }), false);
   assert.equal(testForgot({ status: 502, message: 'This seat has no subscription: tap "Notify me when it\'s my turn" first.' }), false);

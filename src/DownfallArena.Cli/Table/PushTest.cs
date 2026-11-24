@@ -3,8 +3,11 @@ namespace DownfallArena.Cli.Table;
 /// <summary>What a test notice came to (<see cref="PushNotices.TestAsync" />): sent, or not, and said how.</summary>
 internal sealed record PushTest(bool Sent, string Message)
 {
-    /// <summary>What the subscribe routes and the push tests say of a push service this host does not send to.</summary>
-    public const string UnknownServiceMessage = "This browser's push service is not one this host sends to.";
+    /// <summary>
+    /// What the subscribe routes and the push tests say of a push service this host does not send to, in a player's words
+    /// (#1233): Settings and the seat page show it as it is, and the battle view says the same sentence.
+    /// </summary>
+    public const string UnknownServiceMessage = "This browser's notification service is not one this table can send to. Try another browser.";
 
     /// <summary>
     /// A test on a subscription on no push service this host sends to (#1209): said as the subscribe routes refuse one,

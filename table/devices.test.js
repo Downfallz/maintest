@@ -199,7 +199,7 @@ test('a browser that cannot push is read once the host\'s key is, so the offer c
 });
 
 test('a test on a push service the host does not send to turns the switch off and lets go of the browser\'s subscription (#1209)', async () => {
-  const refused = Object.assign(new Error('This browser\'s push service is not one this host sends to.'), { status: 400, code: 'Account.UnknownPushService' });
+  const refused = Object.assign(new Error('This browser\'s notification service is not one this table can send to. Try another browser.'), { status: 400, code: 'Account.UnknownPushService' });
   const h = harness({ testRefused: refused });
   h.devices.setAccount({ id: 'acct_mark' });
   await settled();
@@ -209,5 +209,5 @@ test('a test on a push service the host does not send to turns the switch off an
 
   assert.equal(h.calls.at(-1), 'unsubscribe');
   assert.equal(h.elements['device-toggle'].checked, false);
-  assert.match(h.elements['device-result'].textContent, /not one this host sends to/);
+  assert.match(h.elements['device-result'].textContent, /not one this table can send to/);
 });
