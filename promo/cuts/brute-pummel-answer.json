@@ -1,0 +1,11 @@
+{
+  "format": "downfall.promo.cut.v1",
+  "title": "The opponent strikes with Fury, the Brute answers with Pummel, for the vertical feeds",
+  "ratio": "9:16",
+  "titleCard": { "seconds": 2, "en": "Turn-based tactics", "fr": "Tactique au tour par tour" },
+  "shots": [
+    { "shot": "brute-pummel-round-3", "start": 2, "seconds": 2, "caption": { "en": "The opponent strikes first with Fury.", "fr": "L’adversaire frappe en premier avec Fury." } },
+    { "shot": "brute-pummel-round-3", "start": 6, "seconds": 2.6, "caption": { "en": "Your Brute answers with Pummel.", "fr": "Ta Brute riposte avec Pummel." } }
+  ],
+  "endCard": { "seconds": 3 }
+}

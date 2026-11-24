@@ -1,0 +1,41 @@
+/* The cards of a promotion's cut (docs/art/promotion-plan.md, P3): the title card, a shot's caption and the end
+   card, drawn by scripts/promo/cut.mjs from the brand's tokens (docs/art/branding.css, ADR 0158). Every colour is a
+   token, never a raw value: studio/promo-cut.test.js refuses one, as table/branding.test.js does for the pages.
+   Sizes follow the screen's short side (vmin), so one sheet frames the three ratios. */
+
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+body { font-family: var(--font-text); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+/* A full card: soot under slate, as the pages' ground, the mark above the words. */
+.card {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 5vmin; padding: 0 9vmin; text-align: center;
+  background:
+    radial-gradient(70vmax 50vmax at 30% 0, color-mix(in srgb, var(--raised) 85%, transparent) 0, transparent 70%),
+    radial-gradient(60vmax 45vmax at 100% 70%, color-mix(in srgb, var(--accent-wash) 60%, transparent) 0, transparent 70%),
+    linear-gradient(var(--paper), var(--soot));
+}
+.mark { width: 14vmin; height: auto; color: var(--bone); }
+.card-end .mark { width: 22vmin; }
+
+/* The title is carved in bone, with the hairline the pages draw under a title. */
+.title {
+  margin: 0; max-width: 100%;
+  font: 400 9.5vmin/1.15 var(--font-display); color: var(--bone); overflow-wrap: break-word;
+}
+.rule {
+  width: 40vmin; height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--bone) 55%, transparent), transparent);
+}
+
+/* The end card: the name, the site, and the line the showcase says under its button. */
+.name { margin: 0; font: 400 7vmin/1.2 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--bone); }
+.site { margin: 0; font: 400 5.2vmin/1.2 var(--font-display); color: var(--gold); }
+.note { margin: 0; font-size: 4.2vmin; color: var(--muted); letter-spacing: .04em; }
+
+/* A caption over a shot: a band in the page's glass, inside the margins a feed covers (set by the script). */
+.caption {
+  position: absolute; box-sizing: border-box; padding: 2.4vmin 3.6vmin;
+  background: var(--paper-glass); border-left: .8vmin solid var(--bone); border-radius: var(--radius-sharp);
+}
+.caption p { margin: 0; font-size: 4.6vmin; line-height: 1.25; color: var(--ink); overflow-wrap: break-word; }

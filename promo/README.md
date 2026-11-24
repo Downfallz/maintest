@@ -93,6 +93,58 @@ The journey holds a three-second film to the same frames twice, and a seven-seco
 spell. What was measured over 20 seconds is in the plan's P2 note. The MP4 carries no date and no note of the
 encoder's version, but another build of x264 may code the same frames otherwise: the workflow names its ffmpeg.
 
+## A cut
+
+One file per cut under `cuts/`, named after the cut: a title card, stretches of filmed shots with a caption each,
+and an end card, assembled into one silent MP4 a language (the plan's question 6: the captions carry the words).
+
+```json
+{
+  "format": "downfall.promo.cut.v1",
+  "title": "The opponent strikes with Fury, the Brute answers with Pummel, for the vertical feeds",
+  "ratio": "9:16",
+  "titleCard": { "seconds": 2, "en": "Turn-based tactics", "fr": "Tactique au tour par tour" },
+  "shots": [
+    { "shot": "brute-pummel-round-3", "start": 6, "seconds": 2.6, "caption": { "en": "Your Brute answers with Pummel.", "fr": "Ta Brute riposte avec Pummel." } }
+  ],
+  "endCard": { "seconds": 3 }
+}
+```
+
+- `ratio` is one of the ratios above; each shot is filmed at it (`film`, and the ratio among its `ratios`), and all
+  the cut's shots at one size and one rate.
+- A stretch keeps `seconds` of the shot's film from `start` (0 by default), both on a frame of its rate, and no
+  further than the film lasts.
+- `titleCard` and each `caption` say their words in English (`en`) and French (`fr`), as plain text without a
+  line break: the card wraps it. The English words are scanned as the pages' are, against the retired words of
+  [player-terminology.md](../docs/domain/player-terminology.md) (`table/terminology.test.js`); the French are held to
+  its FR column by the `copy-editor`. A spell keeps the name the battle shows, in English, in the French words
+  too, as the rulebook's French edition does: the film shows "Pummel", never the showcase's "Marteler"
+  (`studio/promo-cut.test.js` refuses those names). Each ratio limits a card's words (`CARD_LIMITS`: a title on three lines, a
+  caption on two), and the browser measures them again when it draws the card.
+- `endCard` gives only its `seconds`: its words are the brand's, the same in every cut (the mark, the name,
+  `downfallinstinct.com`, and the showcase's own "Beta · Free to play" line, `showcase/copy.mjs`).
+- A card lasts 1 to 5 seconds (2 by default), and a cut at most 60.
+
+A cut is refused when it names a shot `shots/` does not hold, a shot not filmed at its ratio, seconds past a film,
+words missing in a language or over their card, or a key not in this format (`studio/promo-cut.test.js`).
+
+```bash
+node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json --check   # the cut read and checked, no browser
+node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json           # artifacts/promo/cuts/brute-pummel-answer/
+```
+
+It reads each shot's frames where `shoot.mjs --film` writes them (`artifacts/promo/<shot>/frames-9x16/`, or under
+`--frames <folder>`), and says the command to film one it lacks. The cards are drawn by Chromium from the brand's
+tokens (`scripts/promo/cards.css` on `docs/art/branding.css`, the Marcellus face carried in the page, the mark of
+`table/brand-mark.svg`), never a raw colour: the test refuses one, as the pages' tests do. A caption is a band in
+the pages' glass, laid over the shot at the top of what the vertical feeds leave clear (`SAFE_ZONES`). It stays off
+the creatures' names and the battle view's dock, which those feeds cover anyway. `ffmpeg` joins the cards and the
+frames in one pass, with the encoding a film gets: `cut-en-9x16.mp4` and `cut-fr-9x16.mp4`, beside the cards' PNG.
+The same frames give the same bytes on one machine. Only the display face is carried in the page: the captions and
+the end card's last line are in the machine's own sans-serif (`--font-text`), so another machine's fonts can wrap
+them otherwise, as another build of x264 can code the frames otherwise.
+
 ## Where the files go
 
 `.github/workflows/promo-film.yml` (*Film a promotion shot*, by hand) films a shot on a runner and writes the film
