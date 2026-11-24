@@ -681,10 +681,7 @@ public sealed class TableServerTests : IAsyncDisposable
 
     private static async Task Finished(PlayedTable table)
     {
-        for (var attempt = 0; attempt < 300 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         table.IsFinished.ShouldBeTrue("the closing should have marked the table finished");
     }
