@@ -1,0 +1,8 @@
+{
+  "format": "downfall.promo.shot.v1",
+  "title": "A Brute pummels the other from the top of round 3, over 20 seconds",
+  "scenario": "greedy-1v1-round-3.json",
+  "ratios": ["9:16"],
+  "size": 1080,
+  "film": { "seconds": 20, "fps": 30, "casts": ["spell:pummel:v1"] }
+}
