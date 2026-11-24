@@ -299,11 +299,22 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .sign-in-content .sign-in-game { margin: 0 0 6px; color: var(--bone); font-size: 15px; line-height: 1.6; }
 .sign-in-content .muted { margin: 0; font-size: 15px; line-height: 1.6; }
 .sign-in-actions { display: grid; gap: 8px; margin-top: 26px; min-width: 0; }
-.sign-in-ways { display: grid; gap: 8px; min-width: 0; }
+.sign-in-ways { display: grid; gap: 10px; justify-items: start; min-width: 0; }
 .sign-in-ways[hidden] { display: none; }
-.sign-in-actions .google-button:not([hidden]) { display: flex; align-items: center; min-width: 200px; }
-/* Discord's and Microsoft's buttons are the table's own plain button (identity.css), the width of Google's beside them: one filled action a screen. */
-.sign-in-actions .code-flow-button { min-width: 200px; justify-self: start; }
+/* The ways in are one column of like buttons, the standard a sign-in page has: one width, one height, the provider's
+   logo in a white square at the start and its words in the middle. Google draws its own (filled_black, rectangular,
+   40 px high, 280 px wide as account.js asks); Discord's and Microsoft's copy it, in Google's own colours, so the three
+   read as a set. Each keeps a 44 px touch target: the 40 px face, and 2 px above and below that the gap leaves free. */
+.sign-in-actions .google-button:not([hidden]) { display: flex; align-items: center; width: min(100%, 280px); min-height: 44px; }
+/* Google's frame takes the page's dark scheme otherwise, and paints its margin white around the button. */
+.sign-in-actions .google-button iframe { color-scheme: normal; }
+.sign-in-actions .code-flow-button { position: relative; display: grid; grid-template-columns: 36px 1fr; align-items: center;
+  width: min(100%, 280px); min-height: 40px; height: 40px; margin: 2px 0; padding: 2px 8px 2px 2px; border: 0; border-radius: 4px;
+  background: #202124; color: #fff; font-size: 14px; font-weight: 500; letter-spacing: 0.25px; text-align: center; }
+.sign-in-actions .code-flow-button::after { content: ""; position: absolute; inset: -2px 0; }
+.sign-in-actions .code-flow-button:hover:not(:disabled) { background: #303134; }
+.sign-in-actions .code-flow-button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.way-logo { box-sizing: border-box; display: block; width: 36px; height: 36px; padding: 8px; border-radius: 3px; background: #fff; }
 .sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
 .sign-in-policy:hover { color: var(--gold); }
 .name-check-room { min-height: 30px; }

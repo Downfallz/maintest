@@ -289,7 +289,9 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
     try {
       answerGoogle('signin', response => request('/api/account/google', { credential: response.credential }).then(signedIn).catch(error => say('sign-in-problem', error.message)));
       const id = prepareGoogle(await google(), way.clientId);
-      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large' });
+      // The width of Discord's and Microsoft's beside it (lobby.css), or the room there is at 320 px.
+      const room = el('sign-in-ways')?.clientWidth || 280;
+      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large', logo_alignment: 'left', width: Math.min(280, room) });
     } catch (error) {
       say('sign-in-problem', error.message);
     }
