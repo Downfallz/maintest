@@ -20,7 +20,8 @@ by reading the journal end and the record of every table it holds, once a second
   off, so no access key exists (ADR 0160), and each identity holds Web PubSub Service Owner on it alone.
 - **Every process says what moved** (`IChangeRelay`): a table's change, from wherever it is bumped (the API, the
   worker, the job), goes to the group `table-<id>` as `changed` and to the group `hosts` as `<origin>|<id>`; the
-  public lists to the group `lobby`; an account's own lists to that account as the user. The messages are words,
+  public lists to the group `lobby`; an account's own lists to that account as the user, as `account`, and its
+  notices alone, marked read, as `account notices` (#1152). The messages are words,
   never state: a page reads its own routes, and what it may read is still the API's to decide (ADR 0119).
 - **Sends are coalesced by key**: one on its way and one more for whatever came meanwhile, so a bot's turn costs a
   table two messages, not ten. A send that fails is a console line; the next move sends again.

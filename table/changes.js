@@ -192,4 +192,12 @@ export function backoff(run, { schedule = setTimeout, cancel = clearTimeout, fir
 
 // Whether an event is one the signed-in player's own lists should be read again on: the stream opening (whatever
 // happened while it was closed) or their own lists changing.
-export const accountMoved = event => event?.event === 'ready' || String(event?.data ?? '').startsWith('account');
+// Notices marked read on another page (`account notices`) move the bell alone, not the lists (#1152).
+const noticesOnly = event => /^account notices\b/.test(String(event?.data ?? ''));
+export const accountMoved = event => event?.event === 'ready' || (String(event?.data ?? '').startsWith('account') && !noticesOnly(event));
+
+// Whether the bell's news should be read again: the stream opening, the player's own lists, or their notices alone.
+export const noticesMoved = event => event?.event === 'ready' || String(event?.data ?? '').startsWith('account');
+
+// Whether anything a lobby lists moved: every change but notices marked read, which the bell alone shows.
+export const listsMoved = event => !noticesOnly(event);

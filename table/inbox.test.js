@@ -173,3 +173,99 @@ test('two turns waiting show 2 on the menu\'s entry and its button, and the butt
   }
   assert.equal(doc.byId['menu-inbox-said'].textContent, 'Notifications · 2 waiting');
 });
+
+test('notices marked read on another page read the bell\'s news again, and not the player\'s lists (#1152)', async () => {
+  const doc = inboxDocument();
+  const asked = [];
+  const request = async path => {
+    asked.push(path);
+    if (path === '/api/lobby/mine') return { tables: [], invitations: [] };
+    if (path === '/api/friends') return { friends: [], incoming: [], outgoing: [] };
+    if (path === '/api/account/notices') return { notices: [] };
+    throw new Error(`Unexpected ${path}`);
+  };
+  let listener = null;
+  const win = { setTimeout: () => 0, clearTimeout: () => {}, navigator: {}, location: { assign() {} } };
+  const inbox = mountInbox(doc, { request, win, changes: heard => { listener = heard; return () => {}; }, reopen: () => {} });
+  inbox.setAccount({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  asked.length = 0;
+  listener({ event: 'changed', data: 'account notices 2' });
+  await settled();
+  assert.deepEqual(asked, ['/api/account/notices']);
+  asked.length = 0;
+  listener({ event: 'changed', data: 'account 3' });
+  await settled();
+  assert.deepEqual(asked.toSorted(), ['/api/account/notices', '/api/friends', '/api/lobby/mine']);
+});
+
+test('a read of the lists that answers after a read of the news alone still draws its lists (#1152)', async () => {
+  const doc = inboxDocument();
+  let release = null, listener = null;
+  const request = async path => {
+    if (path === '/api/lobby/mine') { await new Promise(resolve => { release = resolve; }); return { tables: [turnAgainst('a', 'Bastien')], invitations: [] }; }
+    if (path === '/api/friends') return { friends: [], incoming: [], outgoing: [] };
+    if (path === '/api/account/notices') return { notices: [] };
+    throw new Error(`Unexpected ${path}`);
+  };
+  const win = { setTimeout: () => 0, clearTimeout: () => {}, navigator: {}, location: { assign() {} } };
+  const inbox = mountInbox(doc, { request, win, changes: heard => { listener = heard; return () => {}; }, reopen: () => {} });
+  inbox.setAccount({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  listener({ event: 'changed', data: 'account notices 2' });
+  await settled();
+  release();
+  await settled();
+  assert.equal(doc.byId['menu-inbox-said'].textContent, 'Notifications · 1 waiting');
+});
+
+// One entry, read or not as the host answers it at that moment: the order guards are seen only when the stale read
+// and the fresh one answer differently.
+const voided = read => ({ id: 1, kind: 'match', title: 'Match voided', body: 'Why.', url: '/lobby', tag: 'match:t1', at: '2026-11-23T00:00:00Z', read });
+
+function orderedInbox() {
+  const doc = inboxDocument();
+  const answers = { notices: [] };
+  const request = async path => {
+    const key = { '/api/lobby/mine': 'mine', '/api/friends': 'friends', '/api/account/notices': 'notices' }[path];
+    if (!key) throw new Error(`Unexpected ${path}`);
+    const answer = await answers[key].shift();
+    if (key === 'mine') return { tables: [], invitations: [] };
+    if (key === 'friends') return { friends: [], incoming: [], outgoing: [] };
+    return { notices: [answer ?? voided(false)] };
+  };
+  answers.mine = []; answers.friends = [];
+  let listener = null;
+  const win = { setTimeout: () => 0, clearTimeout: () => {}, navigator: {}, location: { assign() {} } };
+  const inbox = mountInbox(doc, { request, win, changes: heard => { listener = heard; return () => {}; }, reopen: () => {} });
+  const held = () => { let release; const promise = new Promise(resolve => { release = resolve; }); return { promise, release }; };
+  return { doc, inbox, answers, held, heard: event => listener(event) };
+}
+
+test('a read of the lists that answers after a later read of the news alone keeps the newer news (#1152)', async () => {
+  const h = orderedInbox();
+  const slow = h.held();
+  h.answers.mine.push(slow.promise);
+  h.answers.notices.push(voided(false), voided(true));
+  h.inbox.setAccount({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  h.heard({ event: 'changed', data: 'account notices 2' });
+  await settled();
+  slow.release();
+  await settled();
+  assert.doesNotMatch(h.doc.byId['menu-inbox-said'].textContent, /new/);
+});
+
+test('a read of the news alone that answers after a later read of the lists keeps the newer news (#1152)', async () => {
+  const h = orderedInbox();
+  const slow = h.held();
+  h.answers.notices.push(voided(true), slow.promise.then(() => voided(false)), voided(true));
+  h.inbox.setAccount({ id: 'acct_a', username: 'MarcF' });
+  await settled();
+  h.heard({ event: 'changed', data: 'account notices 2' });
+  h.heard({ event: 'changed', data: 'account 3' });
+  await settled();
+  slow.release();
+  await settled();
+  assert.doesNotMatch(h.doc.byId['menu-inbox-said'].textContent, /new/);
+});

@@ -575,8 +575,8 @@ The seat's view says the lesson under `practice.tutorial`:
   places (`GET /api/lobby` counts the games in progress and the open seats; `GET /api/lobby/page/<open|all>/<page>`
   serves them eight at a time, newest first, a signed-in player's own open tables left out of open), table
   creation, and a Leave action that rotates the seat token/code and offers the same team to another player.
-- `GET /api/lobby/events` streams that the public lists, or the signed-in player's own, changed, and every lobby
-  page reads on it and on its seat streams instead of a clock (ADR 0164).
+- `GET /api/lobby/events` streams that the public lists, or the signed-in player's own, changed, or only their
+  notices (`account notices`), and every lobby page reads on it and on its seat streams instead of a clock (ADR 0164).
 - With `DOWNFALL_RELAY` naming an Azure Web PubSub endpoint (on table, table-worker and table-tend alike), every
   process says what moved through it, a page connects to it at the address `GET /api/seat/<seat>/negotiate` or
   `GET /api/lobby/negotiate` signs, falling back to the stream without one, and a process hears the others there
@@ -646,7 +646,7 @@ browser as a device.
 With accounts on, push keys or not, the news to an account (a friend accepted, the invited friend took the seat,
 the other player left, a match ended) is kept in its notice log under `notices/`, the 100 latest of the last 90
 days, forgotten with the account. `GET /api/account/notices` lists it, newest first, with the unread count.
-`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201). When it marked any, the account's lobby stream says its lists changed, and the account's other pages read the bell again.
+`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201). When it marked any, the account's lobby stream and relay say `account notices`. The account's other pages then read the bell's news again, not their lists (#1152).
 
 #### Accounts
 

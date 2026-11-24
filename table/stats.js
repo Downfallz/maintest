@@ -1,4 +1,4 @@
-import { onLobbyChange } from './changes.js';
+import { accountMoved, onLobbyChange } from './changes.js';
 import { numberChanged } from './motion.js';
 import { pictureElement, wearPageHead } from './picture.js';
 import { focusableScrolls, recordBar, recordParts } from './leaderboard.js';
@@ -175,6 +175,6 @@ if (typeof document !== 'undefined') {
   wearPageHead(document, 'combat-marks', { page: 'table/stats' });
   // Read again when the player's own lists change (their lobby stream, ADR 0164), which a game of theirs ending
   // does, and when the stream opens -- the page loaded, back in view -- rather than on a clock.
-  onLobbyChange(event => { if (!document.hidden && (event.event === 'ready' || String(event.data).startsWith('account'))) void load(document); });
+  onLobbyChange(event => { if (!document.hidden && accountMoved(event)) void load(document); });
   await load(document);
 }

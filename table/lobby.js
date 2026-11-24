@@ -1,7 +1,7 @@
 import { preferredPresentation, presentationPath } from './battle-preferences.js';
 import { nextPath } from './account.js';
 import { mountDoor } from './door.js';
-import { onLobbyChange } from './changes.js';
+import { listsMoved, onLobbyChange } from './changes.js';
 import { mountNavigation } from './navigation.js';
 import { mountPushOffer } from './push-offer.js';
 import { keyBytes, pushSupported, sameKey } from './push.js';
@@ -1088,7 +1088,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   // Back in view or back online reads at once, whatever the stream can say yet.
   doc.addEventListener('visibilitychange', resume);
   globalThis.addEventListener?.('online', resume);
-  const unlisten = changes(resume);
+  // Notices marked read on another page move the bell alone: the lists are not read again for them (#1152).
+  const unlisten = changes(event => { if (listsMoved(event)) resume(); });
   return {
     /** Opens a game of the player's, as its card's Resume does. */
     enter,

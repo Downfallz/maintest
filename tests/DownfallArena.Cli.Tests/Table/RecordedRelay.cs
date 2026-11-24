@@ -20,6 +20,8 @@ internal sealed class RecordedRelay : IChangeRelay
 
     public void Account(AccountId account) => Said.Enqueue($"account {account.Value}");
 
+    public void Notices(AccountId account) => Said.Enqueue($"account notices {account.Value}");
+
     public Task<Uri> SeatAsync(string table, CancellationToken cancellationToken = default) =>
         Refusal is { } refusal ? Task.FromException<Uri>(refusal) : Task.FromResult(new Uri($"wss://relay.example/client/hubs/downfall?group=table-{table}"));
 

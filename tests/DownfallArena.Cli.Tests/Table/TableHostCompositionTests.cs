@@ -225,12 +225,12 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var mark = await SignInAsync(host, "MarkF");
         await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
         var upTo = (await NoticesAsync(host, mark.Session))[0].GetProperty("id").GetInt64();
-        var before = host.Changes.VersionOf(mark.Id);
+        var before = host.Changes.NoticesVersionOf(mark.Id);
 
         var read = await host.Accounts!.HandleAsync("POST", "/api/account/notices/read", $$"""{"upTo":{{upTo}}}""", Signed(mark.Session));
 
         read.Status.ShouldBe(200);
-        host.Changes.VersionOf(mark.Id).ShouldBeGreaterThan(before);
+        host.Changes.NoticesVersionOf(mark.Id).ShouldBeGreaterThan(before, "the bells read again, not the lists (#1152)");
     }
 
     [Fact]

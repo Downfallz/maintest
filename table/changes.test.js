@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accountMoved, backoff, createLobbyChanges, keepWatching, socketOrStream, streamEvents } from './changes.js';
+import { accountMoved, backoff, createLobbyChanges, keepWatching, listsMoved, noticesMoved, socketOrStream, streamEvents } from './changes.js';
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const encode = text => new TextEncoder().encode(text);
@@ -155,6 +155,20 @@ test('the stream opening and the player\'s own lists moving are what the bell an
   assert.equal(accountMoved({ event: 'ready', data: '0' }), true);
   assert.equal(accountMoved({ event: 'changed', data: 'account 3' }), true);
   assert.equal(accountMoved({ event: 'changed', data: 'lobby 7' }), false);
+});
+
+test('notices marked read on another page move the bell alone, not the player\'s lists (#1152)', () => {
+  // `account notices` is said by the stream as `account notices 4`, and by the relay as `account notices`.
+  for (const data of ['account notices 4', 'account notices']) {
+    assert.equal(accountMoved({ event: 'changed', data }), false, data);
+    assert.equal(listsMoved({ event: 'changed', data }), false, data);
+    assert.equal(noticesMoved({ event: 'changed', data }), true, data);
+  }
+  for (const data of ['account 3', 'account']) assert.equal(noticesMoved({ event: 'changed', data }), true, data);
+  assert.equal(noticesMoved({ event: 'ready', data: '0' }), true);
+  assert.equal(noticesMoved({ event: 'changed', data: 'lobby 7' }), false);
+  for (const data of ['lobby 7', 'lobby', 'account 3', 'account']) assert.equal(listsMoved({ event: 'changed', data }), true, data);
+  assert.equal(listsMoved({ event: 'ready', data: '' }), true);
 });
 
 test('a read that failed is tried again, later each time, and the wait starts over once one answers', () => {

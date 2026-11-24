@@ -156,7 +156,8 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             }
 
             await ForgetAsync(account, device.Endpoint, cancellationToken);
-            return new PushTest(false, "The push service says this subscription is gone. Turn \"Pop-ups on this device\" on again.");
+            // Not "the push service says": a device kept before the host checked its service is never sent to (#1176).
+            return new PushTest(false, "This subscription is gone. Turn \"Pop-ups on this device\" on again.");
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {

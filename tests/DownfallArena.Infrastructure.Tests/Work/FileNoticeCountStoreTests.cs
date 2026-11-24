@@ -25,6 +25,22 @@ public sealed class FileNoticeCountStoreTests : NoticeCountStoreContract, IDispo
         (await store.WriteAsync(new DateOnly(2026, 11, 22), [new("turn", 1, 0, 0)], broken.Version, Cancel)).ShouldBeTrue();
     }
 
+    /// <summary>A day another revision wrote, with a count this one does not know: adding to it keeps that count (#1151).</summary>
+    [Fact]
+    public async Task Adding_to_a_day_keeps_the_fields_this_revision_does_not_know()
+    {
+        Directory.CreateDirectory(_root);
+        var path = Path.Combine(_root, "2026-11-23.json");
+        await File.WriteAllTextAsync(path, NoticeCountFields.Written, Cancel);
+        var store = new FileNoticeCountStore(_root);
+
+        var read = await store.ReadAsync(NoticeCountFields.Day, Cancel);
+        (await store.WriteAsync(NoticeCountFields.Day, NoticeCount.Sum([.. read.Counts, new("turn", 1, 0, 0)]), read.Version, Cancel)).ShouldBeTrue();
+
+        NoticeCountFields.ShouldKeepThem(await File.ReadAllTextAsync(path, Cancel));
+        (await store.ReadAsync(NoticeCountFields.Day, Cancel)).Counts.ShouldBe([new NoticeCount("turn", 3, 0, 1)]);
+    }
+
     [Fact]
     public async Task Forgetting_leaves_a_file_that_is_no_day_where_it_is()
     {
