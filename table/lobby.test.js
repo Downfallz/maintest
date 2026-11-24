@@ -425,7 +425,13 @@ test('an empty ladder or statistics page opens a ranked table for another player
 test('the lobby page preloads every module lobby.js reaches, and nothing else', () => {
   const folder = fileURLToPath(new URL('.', import.meta.url));
   const page = readFileSync(new URL('./lobby.html', import.meta.url), 'utf8');
-  const preloaded = [...page.matchAll(/<link rel="modulepreload" href="([^"]+)"/g)].map(found => `/${found[1]}`);
+  // Every <link> whose rel names modulepreload, whatever the order of its attributes; one with no href is refused.
+  const links = [...page.matchAll(/<link\b[^>]*>/g)].map(found => found[0]).filter(tag => /\brel="[^"]*\bmodulepreload\b/.test(tag));
+  const preloaded = links.map(tag => {
+    const href = /\bhref="([^"]+)"/.exec(tag);
+    assert.ok(href, `a preload names no module: ${tag}`);
+    return `/${href[1]}`;
+  });
   assert.equal(new Set(preloaded).size, preloaded.length, 'a module is preloaded twice');
   assert.equal(preloaded[0], '/lobby.js');
   const reached = [...reachedModules(folder, ['lobby.js'])].filter(path => path !== '/motion.js');

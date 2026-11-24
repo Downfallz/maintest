@@ -66,8 +66,8 @@ Every flag of `table` is in docs/reference/commands.md.
   `battle/src/windows.ts` holds their focus (UX12): a new window gets its frame control in the map `live.ts` gives it.
 - The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
   cannot pair a page with another deploy's bundle. A module another module imports keeps its bare name.
-- `lobby.html` preloads every module `lobby.js` reaches (#1207): a module it comes to import joins that list,
-  which `lobby.test.js` holds to the imports.
+- `lobby.html` preloads every module `lobby.js` reaches (#1207). A module it starts to import is added to that list;
+  `lobby.test.js` fails when the list and the imports differ, and on a dynamic `import()` (`scripts/module-imports.mjs`).
 - 320 px wide first, 44 px touch targets, no document scrolling in the battle view.
 - The words a player reads come from docs/domain/player-terminology.md, not from the domain's own.
   `terminology.test.js` holds them to its EN column and refuses the legacy words and sentences they

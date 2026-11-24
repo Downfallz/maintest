@@ -50,10 +50,11 @@ run for this brief: the paints are the baseline's (home-new: largest paint 1.9 s
 home's shift 0.21 on the slow phone once the footer waits with the panel). On the fast walk every screen's shift is
 0.00. At 320 by 568 the walk could not press the match's Settings after `home-waiting`: that is the match's, UX11's.
 `--paint` held to the budget (#962) read a new player's home on 2026-11-23 at 2.6 s, its shift 0.01: over the 2.5 s budget,
-the one page that fails the run on that machine. The last paint was the featured lesson's goal (`#featured-detail`),
-unseen until `/api/tutorials` answered, behind four levels of imports and a dozen reads. Since #1207 the page
-preloads every module `lobby.js` reaches and a signed-in account's lessons are read first: 2.2 s (2,164 to 2,180 ms)
-on a cloud session's machine, and the sign-in panel 2.2 s (was 2.4 s).
+the one page that fails the run on that machine. The last paint was the featured lesson's goal (`#featured-detail`).
+It stayed unseen until `/api/tutorials` answered, behind four levels of imports and a dozen reads. Since #1207 the
+page preloads every module `lobby.js` reaches and a signed-in account's lessons are read first. On one cloud
+session's machine, five loads each, the home went from 2,544–2,596 ms to 2,164–2,180 ms, and the sign-in panel
+from 2,416–2,444 ms to 2,184–2,212 ms.
 The pop-ups offer, briefed last, is filmed since #1126: the walk's host has push keys of its own
 (`scripts/ux/set.mjs`), and the walker's browser stands in for one never asked, as `studio/browser/table.push.js`
 does, from `home-waiting` on (`home-push-offer`) and through the lessons (`lesson-1-push-offer`).
