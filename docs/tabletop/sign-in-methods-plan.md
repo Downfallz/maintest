@@ -78,7 +78,7 @@ turning what the page sends into an identity or null:
 | --- | --- | --- | --- |
 | `google` | The ID token. | Checks it, as today. | None. |
 | `discord` | `{ code, verifier, redirect }` after Discord's authorize page, code flow with PKCE, the app marked *public client*. | Exchanges the code at `discord.com/api/v10/oauth2/token` with the verifier, reads `GET /oauth2/@me` (the app and the user), keeps the user's `id`. Scope `identify` only. | None. |
-| `microsoft` | The same shape, against personal Microsoft accounts. | Exchanges, checks the ID token as Google's. | None. |
+| `microsoft` | The same shape, against personal Microsoft accounts. | Exchanges, reads the ID token in the token endpoint's answer, its claims only. | None. |
 | `facebook` (not planned) | The access token from Facebook's SDK. | Asks `debug_token` whether it was issued to this app, keeps the user id. | The app secret, as a Container App secret. |
 | `guest` | Nothing. | Makes one (below). | None. |
 
@@ -259,11 +259,13 @@ and 4. The recommended answer:
    *Built (2026-11-24)*:
 
    - The shared part: `CodeExchangeSignIn` (Infrastructure) holds what Discord and Microsoft share, moved out of
-     `DiscordSignIn` unchanged: the proof's shape checked before the provider is asked, the return path
-     `/signin/<provider>`, the bounds (30 exchanges a minute each, 4 at once, a 429's `Retry-After`, ten seconds of
-     patience). One addition for both: an answer `invalid_client` or `unauthorized_client` is the application set up
-     wrong, so `503 Account.ProviderUnavailable` with `<provider> refuses the app (<error>)` on the console, never a
-     refusal counted against the player's address.
+     `DiscordSignIn` unchanged. That is the proof's shape, checked before the provider is asked; the return path
+     `/signin/<provider>`; and the bounds: 30 exchanges a minute each, 4 at once, a 429's `Retry-After`, ten seconds
+     of patience.
+   - One addition for both: an answer `invalid_client` or `unauthorized_client` is the application set up wrong. It is
+     `503 Account.ProviderUnavailable`, with `<provider> refuses the app (<error>)` on the console. Since the provider
+     was asked, the address's count of #1193 still counts it as refused (`SignInUnavailableException.ProviderAnswered`),
+     so one address cannot spend the provider's budget for every player without being counted.
    - The provider: `MicrosoftSignIn` exchanges the code at the `consumers` token endpoint with the scope `openid`
      alone, no secret. It reads the ID token in Microsoft's answer without checking its signature again, since it came
      over TLS in answer to the host's own request (OpenID Connect Core, 3.1.3.7, step 6). It keeps its `sub` once the

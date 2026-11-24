@@ -74,8 +74,8 @@ Run this runbook when the table gets an address:
 
 6. **Microsoft**, when the table offers it: <https://portal.azure.com>, *Microsoft Entra ID*, *App registrations*,
    *All applications*, the table's application, *Authentication*. Under *Mobile and desktop applications*, *Add URI*
-   for each address of step 3 not listed yet, with `/signin/microsoft` after it, and remove the one of the platform
-   address it replaces. *Save*. For the domain:
+   for each address of step 3 not listed yet, with `/signin/microsoft` after it, and remove the platform address it
+   replaces. *Save*. For the domain:
 
    ```text
    https://play.downfallinstinct.com/signin/microsoft
@@ -85,7 +85,7 @@ Run this runbook when the table gets an address:
    chooser, and `/admin` signs in with the bootstrap account. A Google button that shows an `origin_mismatch`
    error means step 4 has not applied yet, or does not list that address; a Discord page that says *Invalid OAuth2
    redirect_uri*, that step 5 does not; a Microsoft page that says the redirect URI does not match, that step 6 does
-   not. The console line `Sign-in unavailable (<provider>): <provider> refuses the app (invalid_client)` is an
-   application set up wrong: [../README.md](../README.md), its provider's steps.
+   not. A console line `Sign-in unavailable (<provider>): <provider> refuses the app (…)`, or every Microsoft sign-in
+   refused and none finished, is an application set up wrong: [../README.md](../README.md), its provider's steps.
 
 A browser keeps its cookie and saved seats per address, so a player who moves to a new address signs in again.

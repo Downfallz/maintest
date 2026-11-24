@@ -68,7 +68,8 @@ public sealed class MicrosoftSignIn : CodeExchangeSignIn
             if (root.ValueKind != JsonValueKind.Object
                 || Text(root, "iss") != Issuer
                 || Text(root, "tid") != ConsumersTenant
-                || Text(root, "aud") != ClientId
+                // A client id is a GUID: the portal shows it in lower case, but one pasted in upper case is the same app.
+                || !string.Equals(Text(root, "aud"), ClientId, StringComparison.OrdinalIgnoreCase)
                 || Time(root, "exp") is not { } expires || expires + Skew <= now
                 || (Time(root, "iat") is { } issued && issued - Skew > now)
                 || Text(root, "sub") is not { Length: > 0 } subject)

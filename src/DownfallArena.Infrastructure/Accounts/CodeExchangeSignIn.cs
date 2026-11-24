@@ -183,10 +183,12 @@ public abstract class CodeExchangeSignIn : ISignInProvider, IDisposable
     {
         ArgumentNullException.ThrowIfNull(request);
         using var response = await _http.SendAsync(request, cancellationToken);
+        // The status first: a 429 holds the host back even when its body never comes.
+        Unavailable(response);
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            Unsuccessful(response, body);
+            Refusal(body);
             return null;
         }
 
@@ -238,12 +240,17 @@ public abstract class CodeExchangeSignIn : ISignInProvider, IDisposable
     }
 
     /// <summary>
-    /// What an answer that is not a success means: a 429 holds the host back for as long as the provider says, and it,
-    /// a server error, an app refused or anything the provider gives no verdict with is unavailable; any other client
-    /// error is the provider saying no.
+    /// What a status that is not a success means, read before the body: a 429 holds the host back for as long as the
+    /// provider says, and it, a server error or anything the provider gives no verdict with is unavailable. A client
+    /// error is read on, in <see cref="Refusal" />.
     /// </summary>
-    private void Unsuccessful(HttpResponseMessage response, string body)
+    private void Unavailable(HttpResponseMessage response)
     {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
             var wait = response.Headers.RetryAfter?.Delta ?? DefaultHoldBack;
@@ -259,11 +266,15 @@ public abstract class CodeExchangeSignIn : ISignInProvider, IDisposable
         {
             throw new SignInUnavailableException($"{Label} answered {(int)response.StatusCode}.");
         }
+    }
 
+    /// <summary>A client error: the provider saying no to the player, unless it is the app it refuses.</summary>
+    private void Refusal(string body)
+    {
         if (ErrorOf(body) is { } error && AppRefused.Contains(error, StringComparer.Ordinal))
         {
             // Only a word of the fixed list is said: the rest of the provider's answer never reaches the console.
-            throw new SignInUnavailableException($"{Label} refuses the app ({error}): see infra/runbooks/sign-ins.md.");
+            throw new SignInUnavailableException($"{Label} refuses the app ({error}): see infra/runbooks/sign-ins.md.") { ProviderAnswered = true };
         }
     }
 

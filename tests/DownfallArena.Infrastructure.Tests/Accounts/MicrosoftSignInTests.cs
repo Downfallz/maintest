@@ -103,6 +103,7 @@ public sealed class MicrosoftSignInTests : IDisposable
     [InlineData("https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0", "72f988bf-86f1-41af-91ab-2d7cd011db47")]
     [InlineData("https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0", Consumers)]
     [InlineData("https://sts.windows.net/9188040d-6c67-4c5b-b112-36a304b66dad/", Consumers)]
+    [InlineData("https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0", "72f988bf-86f1-41af-91ab-2d7cd011db47")]
     public async Task A_token_of_a_work_or_school_tenant_or_another_issuer_is_refused(string issuer, string tenant)
     {
         _microsoft.Issuer = issuer;
@@ -110,6 +111,36 @@ public sealed class MicrosoftSignInTests : IDisposable
 
         (await Microsoft().SignInAsync(Proof(), Cancel)).ShouldBeNull();
     }
+
+    [Fact]
+    public async Task A_client_id_given_in_upper_case_is_the_same_app()
+    {
+        var microsoft = new MicrosoftSignIn(ClientId.ToUpperInvariant(), _http, _clock);
+        _made.Add(microsoft);
+
+        (await microsoft.SignInAsync(Proof(), Cancel)).ShouldBe(new ExternalIdentity("microsoft", Subject));
+    }
+
+    [Theory]
+    [InlineData("{")]
+    [InlineData("""{"iss":""")]
+    public async Task Claims_that_cannot_be_read_are_refused_and_not_a_crash(string claims)
+    {
+        _microsoft.Token = $"e30.{Encode(claims)}.c2ln";
+
+        (await Microsoft().SignInAsync(Proof(), Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task An_expiry_beyond_any_date_is_refused_and_not_a_crash()
+    {
+        _microsoft.Token = $"e30.{Encode($$"""{"iss":"https://login.microsoftonline.com/{{Consumers}}/v2.0","tid":"{{Consumers}}","aud":"{{ClientId}}","sub":"s","exp":1000000000000000}""")}.c2ln";
+
+        (await Microsoft().SignInAsync(Proof(), Cancel)).ShouldBeNull();
+    }
+
+    private static string Encode(string json) =>
+        Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
     [Fact]
     public async Task An_expired_token_is_refused()
@@ -174,6 +205,7 @@ public sealed class MicrosoftSignInTests : IDisposable
         var refused = await Should.ThrowAsync<SignInUnavailableException>(() => Microsoft().SignInAsync(Proof(), Cancel));
 
         refused.Message.ShouldBe($"Microsoft refuses the app ({error}): see infra/runbooks/sign-ins.md.");
+        refused.ProviderAnswered.ShouldBeTrue();
     }
 
     [Theory]
@@ -184,7 +216,7 @@ public sealed class MicrosoftSignInTests : IDisposable
     {
         _microsoft.ExchangeStatus = status;
 
-        await Should.ThrowAsync<SignInUnavailableException>(() => Microsoft().SignInAsync(Proof(), Cancel));
+        (await Should.ThrowAsync<SignInUnavailableException>(() => Microsoft().SignInAsync(Proof(), Cancel))).ProviderAnswered.ShouldBeFalse();
     }
 
     [Fact]
@@ -361,9 +393,6 @@ public sealed class MicrosoftSignInTests : IDisposable
             var claims = $$"""{"ver":"2.0","iss":"{{Issuer}}","aud":"{{Audience}}","tid":"{{Tenant}}","iat":{{Issued.ToUnixTimeSeconds()}},"nbf":{{Issued.ToUnixTimeSeconds()}},"exp":{{Expires.ToUnixTimeSeconds()}}{{subject}}}""";
             return $"{Encode("""{"typ":"JWT","alg":"RS256","kid":"k1"}""")}.{Encode(claims)}.c2lnbmF0dXJl";
         }
-
-        private static string Encode(string json) =>
-            Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
         private static HttpResponseMessage Json(HttpStatusCode status, string body) =>
             new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };

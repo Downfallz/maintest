@@ -21,4 +21,11 @@ public sealed class SignInUnavailableException : Exception
         : base(message, innerException)
     {
     }
+
+    /// <summary>
+    /// Whether the provider was asked and answered, though not with a verdict on the player: the app itself refused.
+    /// The sign-in spent the provider's budget, so the route counts it against the address as a refusal, while still
+    /// answering 503: otherwise one address could spend the budget of every player without its count rising.
+    /// </summary>
+    public bool ProviderAnswered { get; init; }
 }
