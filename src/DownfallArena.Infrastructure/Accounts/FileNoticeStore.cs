@@ -10,6 +10,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// </summary>
 public sealed class FileNoticeStore : INoticeStore
 {
+    private readonly TextsRead<AccountId> _read = new();
+
     public FileNoticeStore(string rootDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
@@ -21,27 +23,25 @@ public sealed class FileNoticeStore : INoticeStore
     public async Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         var (text, version, written) = await ConditionalFile.ReadWrittenAsync(FullPath(account), cancellationToken);
+        _read.Remember(account, text, version);
         return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version) { Written = written };
     }
 
     /// <summary>
-    /// Reads the document again, to write back the fields this revision does not know (#1211). A write is refused,
-    /// without being tried, when the version has moved since it was read.
+    /// Writes back the fields this revision does not know (#1211), from the text read at that version: kept from this
+    /// store's read, or read again (#1232). A write over a version that has moved since is refused: without being
+    /// tried when the document was read again, by its condition when the text was kept.
     /// </summary>
     public async Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        string? before = null;
-        if (version is not null && entries.Count > 0)
-        {
-            (before, var current) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
-            if (!string.Equals(current, version, StringComparison.Ordinal))
-            {
-                return false;
-            }
-        }
-
-        return await ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
+        return await _read.WriteAsync(
+            account,
+            version,
+            entries.Count == 0 ? null : before => NoticeDocuments.Write(entries, before),
+            token => ConditionalFile.ReadAsync(FullPath(account), token),
+            (text, token) => ConditionalFile.WriteAsync(FullPath(account), text, version, token),
+            cancellationToken);
     }
 
     public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
@@ -56,7 +56,7 @@ public sealed class FileNoticeStore : INoticeStore
     }
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
-        ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
+        _read.ForgetAsync(account, () => ConditionalFile.DeleteAsync(FullPath(account), cancellationToken));
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, NoticeDocuments.PathOf(account));
 }

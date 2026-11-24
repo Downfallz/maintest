@@ -10,6 +10,7 @@ namespace DownfallArena.Infrastructure.Work;
 public sealed class BlobNoticeCountStore : INoticeCountStore
 {
     private readonly BlobContainerClient _container;
+    private readonly TextsRead<DateOnly> _read = new();
 
     private BlobNoticeCountStore(BlobContainerClient container)
     {
@@ -26,31 +27,30 @@ public sealed class BlobNoticeCountStore : INoticeCountStore
     public async Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default)
     {
         var (text, version) = await ConditionalBlob.ReadAsync(Blob(day), cancellationToken);
+        _read.Remember(day, text, version);
         return new NoticeCountRead(text is null ? [] : NoticeCountDocuments.Read(text), version);
     }
 
     /// <summary>
-    /// Reads the day again to write back what this revision does not know of it (#1151): a write over a version that
-    /// has moved since is refused here, without being tried.
+    /// Writes back what this revision does not know of the day (#1151), from the text read at that version: kept from
+    /// this store's read, or read again (#1232). A write over a version that has moved since is refused: without being
+    /// tried when the day was read again, by its condition when the text was kept.
     /// </summary>
     public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(counts);
-        string? before = null;
-        if (version is not null)
-        {
-            (before, var current) = await ConditionalBlob.ReadAsync(Blob(day), cancellationToken);
-            if (!string.Equals(current, version, StringComparison.Ordinal))
-            {
-                return false;
-            }
-        }
-
-        return await ConditionalBlob.WriteAsync(Blob(day), NoticeCountDocuments.Write(counts, before), version, cancellationToken);
+        return await _read.WriteAsync(
+            day,
+            version,
+            before => NoticeCountDocuments.Write(counts, before),
+            token => ConditionalBlob.ReadAsync(Blob(day), token),
+            (text, token) => ConditionalBlob.WriteAsync(Blob(day), text, version, token),
+            cancellationToken);
     }
 
     public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
     {
+        _read.Forget(kept => kept < day);
         var old = new List<string>();
         await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: null, cancellationToken).Where(item => NoticeCountDocuments.DayOf(item.Name) < day))
         {
