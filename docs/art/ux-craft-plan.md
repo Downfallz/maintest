@@ -786,9 +786,13 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     every window is dark. `studio/ux-flash.test.js` holds the thresholds; `studio/ux-access.test.js` the lines and the list.
 
     Left, in `scripts/ux/access-known.json`, a journey's list each: what the checks found and this stage did not fix,
-    489 lines read without an element's place among its siblings. A finding not in the list fails the journey, and so
+    495 lines read without an element's place among its siblings. A finding not in the list fails the journey, and so
     does one the list holds and the walk no longer finds (`goneFindings`): the list is cut in the change that fixes
-    it, so a finding that comes back is new again.
+    it, so a finding that comes back is new again. 28 of the lines are marked `~ `, unsteady: three walks of one
+    tree, and the session that wrote the list, did not all find them (a creature on the field, a coach's card or the
+    order of play placed a frame sooner or later, all overlaps or cuts under 200% and spacing). They are never new and
+    never gone; the other 467 hold both ways. The offline page lost its ring under forced colours: it loads no sheet
+    of the table, so it now writes the rule itself.
     axe is never in it. What it holds:
     - Text at 200% and spaced, in the match's frame and windows and in the lessons: 359 pairs of controls on top of each
       other and 44 boxes that cut their words. The frame is laid out for 11 px words at 320 px; doubled, the bar's buttons meet the

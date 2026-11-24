@@ -192,17 +192,24 @@ export function knownLine(line) {
   return line.replace(/:nth-of-type\(\d+\)/g, '');
 }
 
+/**
+ * A line of the list marked `~ ` is unsteady: a finding some walks of the same tree make and others do not (a
+ * creature on the field or a coach's card placed a frame sooner or later). It is never new, and never gone.
+ */
+export const UNSTEADY = '~ ';
+
 /** The findings no list knows: what a change brought. `known` is the list's lines, `found` a walk's. */
 export function unknownFindings(found, known) {
-  const knows = new Set(known);
+  const knows = new Set(known.map(line => (line.startsWith(UNSTEADY) ? line.slice(UNSTEADY.length) : line)));
   return [...new Set(found.map(knownLine))].filter(line => !knows.has(line)).sort();
 }
 
 /**
  * The lines a list knows that the walk no longer finds: what a change fixed. They fail the journey as a new finding
- * does, so the list is cut in the change that fixed them and a finding that comes back is seen.
+ * does, so the list is cut in the change that fixed them and a finding that comes back is seen. An unsteady line is
+ * not held to it.
  */
 export function goneFindings(found, known) {
   const finds = new Set(found.map(knownLine));
-  return known.filter(line => !finds.has(line)).sort();
+  return known.filter(line => !line.startsWith(UNSTEADY) && !finds.has(line)).sort();
 }

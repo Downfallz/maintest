@@ -42,6 +42,13 @@ test('a line the list knows and the walk no longer finds is gone, whatever its p
   assert.deepEqual(goneFindings([], []), []);
 });
 
+test('an unsteady line, marked ~, is neither new when a walk finds it nor gone when it does not', () => {
+  const known = ['~ 320 a: spacing overlaps #coach | #field', '320 a: spacing wide'];
+  assert.deepEqual(unknownFindings(['320 a: spacing overlaps #coach | #field', '320 a: spacing wide'], known), []);
+  assert.deepEqual(goneFindings(['320 a: spacing wide'], known), []);
+  assert.deepEqual(goneFindings([], known), ['320 a: spacing wide']);
+});
+
 test('the list of what is known names journeys and screens that exist, at the two widths, and never axe', () => {
   const known = JSON.parse(readFileSync(new URL('../scripts/ux/access-known.json', import.meta.url), 'utf8'));
   for (const [journey, lines] of Object.entries(known)) {
@@ -49,11 +56,12 @@ test('the list of what is known names journeys and screens that exist, at the tw
     assert.ok(walked, `${journey} is a journey`);
     assert.deepEqual(lines, [...new Set(lines)].sort(), `${journey}'s list is sorted, each line once`);
     for (const line of lines) {
-      const [, width, screen, check] = /^(\d+) ([a-z0-9-]+): ([a-z]+) /.exec(line) ?? [];
+      const [, width, screen, check] = /^(?:~ )?(\d+) ([a-z0-9-]+): ([a-z]+) /.exec(line) ?? [];
       assert.ok(['320', '390'].includes(width), `${line}: a width the walk takes`);
       assert.ok(walked.screens.includes(screen), `${line}: a screen of ${journey}`);
       assert.ok(['forced', 'contrast', 'spacing', 'doubled'].includes(check), `${line}: a check, and not axe (ADR 0197)`);
       assert.equal(knownLine(line), line, `${line}: read as the list reads it`);
+      if (line.startsWith('~ ')) assert.ok(!lines.includes(line.slice(2)), `${line}: steady or unsteady, not both`);
     }
   }
 });

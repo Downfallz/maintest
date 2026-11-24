@@ -21,7 +21,8 @@ const HALVES = { 'table-phone': ['doors', 'lessons'], 'table-desktop': ['lobby',
 const WIDTHS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
 // What UX13 found and left to a later stage, a journey's list each (docs/art/ux-craft-plan.md, UX13's note). A finding
 // not in it fails, and so does one the list holds and the walk no longer finds: the list is cut in the change that
-// fixed it, so a finding that comes back is new again. axe is never in it: ADR 0197 holds every screen to none.
+// fixed it, so a finding that comes back is new again. A line marked `~ ` is one some walks make and others do not:
+// it is neither (scripts/ux/access.mjs, UNSTEADY). axe is never in it: ADR 0197 holds every screen to none.
 const KNOWN = JSON.parse(readFileSync(new URL('../../scripts/ux/access-known.json', import.meta.url), 'utf8'));
 
 let folder, showcase, axe;
