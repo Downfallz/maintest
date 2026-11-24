@@ -233,21 +233,14 @@ internal static class TableHost
     /// <param name="pushing">The sender and the public key of a host given push keys; none on a host without.</param>
     /// <param name="files">The directory the pages are served from.</param>
     /// <param name="relay">Where what moved is said (ADR 0165): the one the environment names, a recording one in the tests (#1153); none.</param>
-    internal static Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, IChangeRelay? relay, CancellationToken cancellationToken) =>
-        ComposeAsync(services, options, rules, pushing, files, relay, Environment.GetEnvironmentVariable, cancellationToken);
-
-    /// <summary>
-    /// The host composed with <paramref name="variables" /> read where a flag is not given: the process's environment
-    /// as it runs, a test's own (#1239), as the test classes running in parallel share the process's.
-    /// </summary>
-    internal static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, IChangeRelay? relay, Func<string, string?> variables, CancellationToken cancellationToken)
+    internal static async Task<ComposedHost?> ComposeAsync(IServiceProvider services, CliOptions options, RuleSet rules, Pushing? pushing, string files, IChangeRelay? relay, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
         var kept = new ComposedHost.Kept();
         try
         {
-            var composed = await ComposeAsync(services, options, rules, pushing, new Composing(services, options, files, kept, services.GetRequiredService<TimeProvider>()) { Relay = relay, Variables = variables }, cancellationToken);
+            var composed = await ComposeAsync(services, options, rules, pushing, new Composing(services, options, files, kept, services.GetRequiredService<TimeProvider>()) { Relay = relay }, cancellationToken);
             if (composed is null)
             {
                 await kept.DisposeAsync();
@@ -277,9 +270,9 @@ internal static class TableHost
         // (sign-in methods plan, P2, P3, P6). A provider without its client id is one line here rather than a page whose
         // button never draws.
         var clients = new SignInClients(
-            options.GoogleClientId ?? composing.Variables(GoogleClientIdEnvironment),
-            options.DiscordClientId ?? composing.Variables(DiscordClientIdEnvironment),
-            options.MicrosoftClientId ?? composing.Variables(MicrosoftClientIdEnvironment));
+            options.GoogleClientId ?? options.Variables(GoogleClientIdEnvironment),
+            options.DiscordClientId ?? options.Variables(DiscordClientIdEnvironment),
+            options.MicrosoftClientId ?? options.Variables(MicrosoftClientIdEnvironment));
         var (providers, signInProblem) = SignInProviders.Build(
             options.SignIn,
             clients,
@@ -346,9 +339,6 @@ internal static class TableHost
     private sealed record Composing(IServiceProvider Services, CliOptions Options, string Files, ComposedHost.Kept Kept, TimeProvider Clock)
     {
         public IChangeRelay? Relay { get; init; }
-
-        /// <summary>Where the sign-in providers' client ids are read without their flags: the process's environment unless a test gives its own.</summary>
-        public Func<string, string?> Variables { get; init; } = Environment.GetEnvironmentVariable;
     }
 
     /// <summary>Where the bots' turns and the notices go (ADR 0159, 0162, 0203): through the queues, or in this process.</summary>

@@ -586,8 +586,8 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
     /// <summary>
     /// Each provider's client id is read from its variable when no flag gives it (#1239): production passes the flags,
-    /// so only this test fails when a fallback is deleted. The variables are read through the seam the host is composed
-    /// with, not the process's environment, which the test classes running in parallel share.
+    /// so only this test fails when a fallback is deleted. The variables are read through the options' own
+    /// (<c>CliOptions.Variables</c>), not the process's environment, which the test classes running in parallel share.
     /// </summary>
     [Fact]
     public async Task Without_their_flags_the_host_reads_each_provider_client_id_from_its_variable()
@@ -608,6 +608,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
                 Record = Path.Combine(_root, "playtest"),
                 Accounts = AccountsMode.SignIn,
                 SignIn = [ExternalIdentity.Google, ExternalIdentity.Discord, ExternalIdentity.Microsoft],
+                Variables = name => variables.GetValueOrDefault(name),
                 Lobby = true,
                 Port = FreePort(),
             },
@@ -615,7 +616,6 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             null,
             Path.Combine(AppContext.BaseDirectory, "table"),
             null,
-            name => variables.GetValueOrDefault(name),
             Cancel)).ShouldNotBeNull();
 
         _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([
