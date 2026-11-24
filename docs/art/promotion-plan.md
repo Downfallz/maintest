@@ -267,7 +267,7 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    checks the batch with the scripts' own refusals and the gate, and publishes a contact sheet page in French. It
    ships the batch as one pull request. Only `main` may write the `promo` container (ADR 0206). So after the
    merge, the skill gives the owner a numbered step a shot and a ratio, to film it there from `main`. The workflow
-   writes no cut: a cut's MP4 is a file of the contact sheet page, where the owner takes it. The producer writes in the
+   writes no cut and no still: they are files of the contact sheet page, where the owner takes them. The producer writes in the
    showcase's voice (`showcase/copy.mjs`: concrete, second person, "tu" in French, no hype), in the words a player
    reads, and counts against `CHANNELS` and `CARD_LIMITS`. It writes only the words of the files under
    `promo/cuts/` and `promo/calendar/` it is given; a brief's `ask` stays the owner's words.
@@ -280,7 +280,7 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    Left to later stages: no batch is made in this pull request. The first, run by hand, is the first of the two P8
    waits for. A post that shows a generated file waits for its intake, so a brief and its post come in two
    batches. The pull request carries no checklist yet (P7), and no workflow writes a cut to the `promo` container
-   (P3's note), so a cut lives on the batch's page.
+   (P3's note), nor a still, so both live on the batch's page.
 7. **P7, the checklist.** The pull request of a batch carries, per post, the file's link, the words, the channel
    and the hour, in the order the owner posts them on a phone; the owner answers with each post's link and a
    session marks it `published`. No secret, no platform API. Tests: a channel's ratio and caption limit.

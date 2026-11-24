@@ -105,8 +105,8 @@ owner and stop.
    a captioned frame a stretch and the end card, the still, the brief's prompt and its reference frames. Load the `artifact-design` skill, and take the
    page's colours and type from `docs/art/branding.css` (slate ground, bone words, one gold accent, Marcellus for
    titles only). Write the page in `$F`, and publish it with the `Artifact` tool, the pictures as its files. One page a batch, updated
-   in place when the batch is filmed again. Each cut's MP4, one a language, is a file of the page too: until a
-   workflow writes cuts to the `promo` container, the page is where the owner takes a cut from. The films stay in
+   in place when the batch is filmed again. Each cut's MP4, one a language, and each still at full size are files of the
+   page too: no workflow writes a cut or a still to the `promo` container, so the page is where the owner takes them. The films stay in
    `$F` and `artifacts/promo/`: they are not committed.
 
 9. **`/ship`.** The pull request names each post, the page's link, and what waits for the owner: a brief's pack to
@@ -115,9 +115,9 @@ owner and stop.
 
 ## After the merge
 
-The workflow writes to the `promo` container from `main` only (ADR 0206), and it writes a shot's film and sheet,
-not a cut: a post whose media is `cut <cut>` is taken from the contact sheet page (step 8). For each new shot and
-each ratio a post shows as `film` or `still`, give the owner one numbered step, the way through GitHub on a phone:
+The workflow writes to the `promo` container from `main` only (ADR 0206), and it films: it writes a shot's film and
+sheet, never a cut or a still. A post whose media is `cut <cut>` or `still <shot> <ratio>` is taken from the contact
+sheet page (step 8). For each new shot and each ratio a post shows as `film`, give the owner one numbered step, the way through GitHub on a phone:
 *Actions*, *Film a promotion shot*, *Run workflow*, the branch `main`, the shot's file and the ratio. Its summary gives the lines of `promo/media.json`
 that a session adds in a pull request of its own (`node scripts/promo/media.mjs` checks them).
 

@@ -199,9 +199,11 @@ test('promo films, cuts, briefs and checks with the promotion scripts, and has t
   assert.match(promo, /`\/ship`/);
   // The workflow writes a shot's film and sheet, not a cut: the cut reaches the owner on the contact sheet page.
   const workflow = readFileSync(join(root, '.github/workflows/promo-film.yml'), 'utf8');
+  // Nor a still: the workflow only films. A cut and a still reach the owner on the contact sheet page.
   assert.doesNotMatch(workflow, /cut\.mjs/);
-  assert.match(promo, /Each cut's MP4, one a language, is a file of the page too/);
-  assert.match(promo, /For each new shot and\s+each ratio/);
+  assert.doesNotMatch(workflow, /--still|still-/);
+  assert.match(promo, /Each cut's MP4, one a language, and each still at full size are files of the\s+page too/);
+  assert.match(promo, /For each new shot and each ratio a post shows as `film`,/);
   // A scenario tried is written outside scenarios/, where every file is a listed scenario and a test.
   assert.doesNotMatch(promo, /--out scenarios\//);
 });
