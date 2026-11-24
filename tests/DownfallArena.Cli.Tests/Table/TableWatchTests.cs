@@ -121,10 +121,7 @@ public sealed class TableWatchTests : IDisposable
         {
         }
 
-        for (var waited = 0; waited < 300 && (await _here.Stored!.RecordAsync(table.Id, Cancel))?.Status != TableRecord.Finished; waited++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(async () => (await _here.Stored!.RecordAsync(table.Id, Cancel))?.Status == TableRecord.Finished, "the table's record says finished", Cancel);
 
         var changed = await new TableWatch(registry, TimeProvider.System).WatchOnceAsync(Cancel);
 
@@ -471,10 +468,7 @@ public sealed class TableWatchTests : IDisposable
     private static async Task ClosedAsync(PlayedTable table)
     {
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; waited < 300 && !(table.IsFinished && table.Run!.IsClosed); waited++)
-        {
-            await Task.Delay(50, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished && table.Run!.IsClosed, "the table finished and its run closed", Cancel);
 
         table.IsFinished.ShouldBeTrue();
     }
