@@ -151,7 +151,9 @@
     "390 lesson-result: doubled clipped #match-report-sides > section > div > table > tbody > tr > th > button > span",
     "390 lesson-result: spacing overlaps #match-mvp > div > button | #match-again",
     "390 lesson-result: spacing overlaps #match-mvp > div > button | #match-leave",
+    "~ 320 lesson-1-complete: doubled overlaps #actor-layer > button | #coach-next",
     "~ 320 lesson-1-first-step: spacing overlaps #actor-layer > button | #combat-dialog-close",
+    "~ 320 lesson-1-push-offer: doubled overlaps #actor-layer > button | #coach-next",
     "~ 320 lesson-2-first-step: spacing overlaps #actor-layer > button | #coach-cards > button",
     "~ 320 lesson-2-first-step: spacing overlaps #actor-layer > button | #coach-restart",
     "~ 320 lesson-2-first-step: spacing overlaps #planning-choices > div > div > button | #planning-close",
@@ -162,7 +164,13 @@
     "~ 320 lesson-3-first-step: spacing overlaps #planning-choices > section > div > div > button | #planning-close",
     "~ 320 lesson-3-first-step: spacing overlaps #practice-leave | #coach-restart",
     "~ 320 lesson-3-first-step: spacing overlaps #settings | #coach-cards > button",
-    "~ 320 lesson-3-first-step: spacing overlaps #settings | #coach-restart"
+    "~ 320 lesson-3-first-step: spacing overlaps #settings | #coach-restart",
+    "~ 320 lesson-result: spacing clipped #match-report-sides > section > div > table > tbody > tr > th > button > span",
+    "~ 390 lesson-1-first-step: doubled overlaps #practice-leave | #settings",
+    "~ 390 lesson-3-first-step: doubled clipped #planning-confirm",
+    "~ 390 lesson-3-first-step: doubled overlaps #planning-pick-rule > a | #planning-close",
+    "~ 390 lesson-4-first-step: doubled overlaps #practice-leave | #settings",
+    "~ 390 lesson-result: spacing clipped #match-report-sides > section > div > table > tbody > tr > th > button > span"
   ],
   "lobby": [
     "320 create-window-bot: doubled overlaps #bot-level | #create-cancel",

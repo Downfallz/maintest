@@ -123,10 +123,17 @@ test('a whole round is played by keyboard and each action is told in one live re
     expect(casts, 'the player cast by keyboard').toBeGreaterThan(0);
     expect(errors).toEqual([]);
 
-    // Each resolved action of round 1 the page played was told in the one region, and in no other.
-    const said = await page.evaluate(() => window.liveSaid);
+    // Each resolved action of round 1 the page played was told in the one region, and in no other. Round 2 can
+    // arrive before the last result's words are written, on a slow shard: wait for what the region says.
     const actions = [...(await seat.actions()).entries()].filter(([, entry]) => entry.event.roundId === 1);
     expect(actions.length).toBeGreaterThan(0);
+    const untold = async () => {
+      const sequences = new Set((await page.evaluate(() => window.liveSaid))
+        .filter(one => one.region === 'playback-announcement').map(one => one.sequence));
+      return actions.map(([sequence]) => sequence).filter(sequence => !sequences.has(sequence));
+    };
+    await expect.poll(untold, { message: 'every action of round 1 was told', timeout: 20000 }).toEqual([]);
+    const said = await page.evaluate(() => window.liveSaid);
     const told = said.filter(one => one.region === 'playback-announcement');
     expect(told.length, 'the round was told in #playback-announcement').toBeGreaterThan(0);
     for (const one of told) {
