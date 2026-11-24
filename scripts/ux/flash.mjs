@@ -22,40 +22,58 @@ export function luminance(red, green, blue) {
 }
 
 /**
- * The changes between frames: for each pair in order, `up`, `down` or null, the direction of the change of
- * luminance that covers at least `area` of the frame. Each frame is an array of the same length, a luminance a cell.
+ * The changes of one cell across a film: each `{ at, direction }`, the frame at which the cell's luminance has moved
+ * `step` or more from its extreme since the last change, `up` or `down`. The extreme is the cell's running one, not
+ * the frame before: a light that ramps up over several frames, each step smaller than `step`, is one change once
+ * the ramp adds up, and a ramp that keeps going the same way is the same change, not another.
  */
-export function transitions(frames, { step = LUMINANCE_STEP, darker = DARKER_UNDER, area = AREA } = {}) {
-  if (!Array.isArray(frames) || frames.length < 2) throw new Error('The flash guard needs two frames or more.');
-  const size = frames[0].length;
-  if (!size || frames.some(frame => frame.length !== size)) throw new Error('Every frame of the flash guard has the same cells, and at least one.');
+export function cellChanges(values, { step = LUMINANCE_STEP, darker = DARKER_UNDER } = {}) {
   const changes = [];
-  for (let index = 1; index < frames.length; index++) {
-    let up = 0, down = 0;
-    for (let cell = 0; cell < size; cell++) {
-      const before = frames[index - 1][cell], after = frames[index][cell];
-      if (Math.abs(after - before) < step || Math.min(before, after) >= darker) continue;
-      if (after > before) up++; else down++;
+  let low = values[0], high = values[0], last = null;
+  for (let at = 1; at < values.length; at++) {
+    const value = values[at];
+    if (last !== 'up' && value - low >= step && low < darker) {
+      changes.push({ at, direction: 'up' });
+      last = 'up';
+      low = high = value;
+    } else if (last !== 'down' && high - value >= step && value < darker) {
+      changes.push({ at, direction: 'down' });
+      last = 'down';
+      low = high = value;
+    } else {
+      // Going on the way it changed moves the extreme it will turn from; going back leaves it.
+      if (last !== 'down') high = Math.max(high, value);
+      if (last !== 'up') low = Math.min(low, value);
     }
-    changes.push(up >= area * size ? 'up' : down >= area * size ? 'down' : null);
   }
   return changes;
 }
 
 /**
  * The most flashes in any one second of a film whose frames are `interval` ms apart. A flash is two opposing
- * changes: up then down, or down then up, the second ending the flash.
+ * changes of one cell, up then down or down then up, the second ending it. Each frame is an array of the same
+ * length, a luminance a cell. The screen flashes `n` times in a second when at least `area` of its cells each
+ * flash `n` times or more in that second.
  */
-export function flashesASecond(frames, interval, options) {
+export function flashesASecond(frames, interval, { step = LUMINANCE_STEP, darker = DARKER_UNDER, area = AREA } = {}) {
+  if (!Array.isArray(frames) || frames.length < 2) throw new Error('The flash guard needs two frames or more.');
   if (!(interval > 0)) throw new Error('The flash guard needs the time between frames, in ms.');
-  const changes = transitions(frames, options);
+  const size = frames[0].length;
+  if (!size || frames.some(frame => frame.length !== size)) throw new Error('Every frame of the flash guard has the same cells, and at least one.');
   const ends = [];
-  let last = null;
-  for (const [index, change] of changes.entries()) {
-    if (!change) continue;
-    if (last && change !== last) { ends.push((index + 1) * interval); last = null; } else last = change;
+  for (let cell = 0; cell < size; cell++) {
+    const changes = cellChanges(frames.map(frame => frame[cell]), { step, darker });
+    // Each second change ends a flash: up, down is one; up, down, up, down is two.
+    ends.push(changes.filter((_, index) => index % 2 === 1).map(change => change.at * interval));
   }
-  return Math.max(0, ...ends.map(end => ends.filter(other => other >= end && other < end + 1000).length));
+  const enough = Math.max(1, Math.ceil(area * size));
+  let most = 0;
+  for (let from = 0; from < frames.length; from++) {
+    const start = from * interval;
+    const counts = ends.map(times => times.filter(time => time >= start && time < start + 1000).length).sort((a, b) => b - a);
+    most = Math.max(most, counts[enough - 1]);
+  }
+  return most;
 }
 
 /**

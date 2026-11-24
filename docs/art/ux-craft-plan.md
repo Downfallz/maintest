@@ -780,13 +780,15 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     by keyboard both it and `battle-parity.spec.js` use.
 
     The flash guard, `scripts/ux/flash.mjs` (WCAG 2.3.1: a pair of opposing changes of 10% of luminance, the darker
-    under 0.8, over a quarter of the screen), films the windows a strip shows entering: the menu, Create and the
+    under 0.8, over a quarter of the screen), reads each cell against its running extreme since its last change, so
+    a ramp of small steps counts once it adds up, and films the windows a strip shows entering: the menu, Create and the
     match's Settings, 30 frames 40 ms apart. None flashes. The brightest is the menu, at a mean luminance of 0.049:
     every window is dark. `studio/ux-flash.test.js` holds the thresholds; `studio/ux-access.test.js` the lines and the list.
 
     Left, in `scripts/ux/access-known.json`, a journey's list each: what the checks found and this stage did not fix,
-    489 lines read without an element's place among its siblings. A finding not in the list fails the journey; one the
-    list holds and the walk no longer finds is said in the report, so the list is cut in the change that fixes it.
+    489 lines read without an element's place among its siblings. A finding not in the list fails the journey, and so
+    does one the list holds and the walk no longer finds (`goneFindings`): the list is cut in the change that fixes
+    it, so a finding that comes back is new again.
     axe is never in it. What it holds:
     - Text at 200% and spaced, in the match's frame and windows and in the lessons: 359 pairs of controls on top of each
       other and 44 boxes that cut their words. The frame is laid out for 11 px words at 320 px; doubled, the bar's buttons meet the

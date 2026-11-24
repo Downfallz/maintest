@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { findingLines, knownLine, unknownFindings } from '../scripts/ux/access.mjs';
+import { findingLines, goneFindings, knownLine, unknownFindings } from '../scripts/ux/access.mjs';
 import { JOURNEYS } from '../scripts/ux/journeys.mjs';
 
 // The checks of accessibility of UX13 (scripts/ux/access.mjs), without a browser: how a finding is written, how the
@@ -32,6 +32,14 @@ test('the list reads a finding without its place among siblings, and a known one
   const found = ['320 a: forced icons #timeline > li:nth-of-type(1) > button:nth-of-type(1)', '320 a: forced icons #timeline > li:nth-of-type(2) > button:nth-of-type(1)', '320 a: forced focus #new'];
   assert.deepEqual(unknownFindings(found, ['320 a: forced icons #timeline > li > button']), ['320 a: forced focus #new']);
   assert.deepEqual(unknownFindings([], ['anything']), []);
+});
+
+test('a line the list knows and the walk no longer finds is gone, whatever its place among siblings', () => {
+  const found = ['320 a: forced icons #timeline > li:nth-of-type(3) > button:nth-of-type(1)'];
+  assert.deepEqual(goneFindings(found, ['320 a: forced icons #timeline > li > button', '390 a: spacing wide', '320 a: doubled clipped #x']),
+    ['320 a: doubled clipped #x', '390 a: spacing wide']);
+  assert.deepEqual(goneFindings(found, ['320 a: forced icons #timeline > li > button']), []);
+  assert.deepEqual(goneFindings([], []), []);
 });
 
 test('the list of what is known names journeys and screens that exist, at the two widths, and never axe', () => {

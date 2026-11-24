@@ -197,3 +197,12 @@ export function unknownFindings(found, known) {
   const knows = new Set(known);
   return [...new Set(found.map(knownLine))].filter(line => !knows.has(line)).sort();
 }
+
+/**
+ * The lines a list knows that the walk no longer finds: what a change fixed. They fail the journey as a new finding
+ * does, so the list is cut in the change that fixed them and a finding that comes back is seen.
+ */
+export function goneFindings(found, known) {
+  const finds = new Set(found.map(knownLine));
+  return known.filter(line => !finds.has(line)).sort();
+}

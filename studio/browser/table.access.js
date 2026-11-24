@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { JOURNEYS } from '../../scripts/ux/journeys.mjs';
 import { axeSource, walkJourney } from '../../scripts/ux/journey.mjs';
 import { readFileSync } from 'node:fs';
-import { findingLines, knownLine, unknownFindings } from '../../scripts/ux/access.mjs';
+import { findingLines, goneFindings, unknownFindings } from '../../scripts/ux/access.mjs';
 import { MOST_A_SECOND, flashesASecond, luminanceInPage } from '../../scripts/ux/flash.mjs';
 import { buildShowcase } from '../../scripts/ux/set.mjs';
 
@@ -19,8 +19,9 @@ test.describe.configure({ mode: 'default' });
 // plays the keyboard's round.
 const HALVES = { 'table-phone': ['doors', 'lessons'], 'table-desktop': ['lobby', 'pages', 'match', 'windows'] };
 const WIDTHS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
-// What UX13 found and left to a later stage, a journey's list each (docs/art/ux-craft-plan.md, UX13's note). A finding not in it fails; one the list holds and the walk no longer finds is said, so the list
-// is cut in the change that fixed it. axe is never in it: ADR 0197 holds every screen to none.
+// What UX13 found and left to a later stage, a journey's list each (docs/art/ux-craft-plan.md, UX13's note). A finding
+// not in it fails, and so does one the list holds and the walk no longer finds: the list is cut in the change that
+// fixed it, so a finding that comes back is new again. axe is never in it: ADR 0197 holds every screen to none.
 const KNOWN = JSON.parse(readFileSync(new URL('../../scripts/ux/access-known.json', import.meta.url), 'utf8'));
 
 let folder, showcase, axe;
@@ -45,9 +46,8 @@ for (const journey of JOURNEYS) {
     }
     const known = KNOWN[journey.id] ?? [];
     expect(known.filter(line => / axe /.test(line)), 'axe is held to none').toEqual([]);
-    const gone = known.filter(line => !found.some(one => knownLine(one) === line));
-    if (gone.length) info.annotations.push({ type: 'fixed, to cut from access-known.json', description: gone.join('\n') });
-    expect(unknownFindings(found, known)).toEqual([]);
+    expect(unknownFindings(found, known), 'found, and not in scripts/ux/access-known.json').toEqual([]);
+    expect(goneFindings(found, known), 'fixed: cut these lines from scripts/ux/access-known.json').toEqual([]);
   });
 }
 
