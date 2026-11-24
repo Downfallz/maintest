@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readCalendar } from '../scripts/promo/calendar.mjs';
 import { retiredWords } from '../scripts/rules/build.mjs';
 import { rewrites as rewritesOf, termRows } from '../scripts/terminology.mjs';
 import { creatureName, decisionLabel, phaseLabel, stageLabel, stepLabel, tempoLabel } from './terms.js';
@@ -303,6 +304,9 @@ const sources = () => [
       const cut = JSON.parse(read(path));
       return { path, texts: [cut.titleCard?.en, ...(cut.shots ?? []).map(stretch => stretch.caption?.en)].filter(text => typeof text === 'string') };
     }),
+  // The words of a post of the promotion's calendar (promo/README.md#the-calendar), read by its own parser: its title
+  // and its English words, wherever its sections are.
+  ...readCalendar(join(root, 'promo/calendar')).map(post => ({ path: `promo/calendar/${post.file}`, texts: [post.title, post.words.en] })),
 ];
 
 function violations(files) {
