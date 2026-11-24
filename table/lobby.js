@@ -1165,6 +1165,10 @@ if (typeof document !== 'undefined') {
         void seatPush.setSeat(accountsOff ? lastWaiting : null);
         offer?.changed();
       }
+      // A signed-in account's lessons are asked for first: the featured space waits for them and for the games, and
+      // the dozen reads the lists and the header make queue behind them on a slow phone (#1207). Nobody's are told
+      // at once, so after the lobby, whose change of account empties the featured space.
+      const lessons = account ? tutorials.setAccount(account) : null;
       const playable = Boolean(account) || mode === 'off';
       if (!playable) door.signedOut();
       document.getElementById('home-games').hidden = !playable;
@@ -1172,7 +1176,7 @@ if (typeof document !== 'undefined') {
       lobby.setAccount(account, mode);
       practiceList.setAccount(account);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
-      return Boolean(await tutorials.setAccount(account));
+      return Boolean(await (lessons ?? tutorials.setAccount(account)));
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);

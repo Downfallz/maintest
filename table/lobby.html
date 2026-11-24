@@ -13,6 +13,36 @@
   <link rel="stylesheet" href="lobby.css" />
   <link rel="stylesheet" href="identity.css" />
   <script type="module" src="motion.js"></script>
+  <!-- Every module lobby.js reaches, asked for at once rather than one level of imports after another (#1207). -->
+  <link rel="modulepreload" href="lobby.js" />
+  <link rel="modulepreload" href="account.js" />
+  <link rel="modulepreload" href="arrival.js" />
+  <link rel="modulepreload" href="battle-page-art.js" />
+  <link rel="modulepreload" href="battle-preferences.js" />
+  <link rel="modulepreload" href="battle-reactions.js" />
+  <link rel="modulepreload" href="changes.js" />
+  <link rel="modulepreload" href="devices.js" />
+  <link rel="modulepreload" href="discord.js" />
+  <link rel="modulepreload" href="door.js" />
+  <link rel="modulepreload" href="feedback-sheet.js" />
+  <link rel="modulepreload" href="friends.js" />
+  <link rel="modulepreload" href="game-preferences.js" />
+  <link rel="modulepreload" href="inbox.js" />
+  <link rel="modulepreload" href="invitation.js" />
+  <link rel="modulepreload" href="lobby-featured.js" />
+  <link rel="modulepreload" href="lobby-practice.js" />
+  <link rel="modulepreload" href="lobby-tutorials.js" />
+  <link rel="modulepreload" href="navigation.js" />
+  <link rel="modulepreload" href="page-art.js" />
+  <link rel="modulepreload" href="picture-focus.js" />
+  <link rel="modulepreload" href="picture-form.js" />
+  <link rel="modulepreload" href="picture.js" />
+  <link rel="modulepreload" href="players.js" />
+  <link rel="modulepreload" href="push-offer.js" />
+  <link rel="modulepreload" href="push.js" />
+  <link rel="modulepreload" href="session.js" />
+  <link rel="modulepreload" href="site-origins.js" />
+  <link rel="modulepreload" href="transport.js" />
 </head>
 <body class="lobby-page home-page" data-home="loading">
   <header class="masthead lobby-header home-header" data-navigation="lobby"></header>
