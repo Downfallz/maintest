@@ -172,11 +172,15 @@ public sealed class AccountRegistry
         }
     }
 
-    // An identity a try bound itself, then a later try refused (#1217): the account read last does not list it, so its
-    // binding holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it.
+    // An identity a try bound itself, then a later try refused (#1217): the account does not list it, so its binding
+    // holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it. The
+    // account is read once more just before: another process's link may have taken the binding up since the refusal,
+    // writing only the account. What is left is the moment between that read and the removal, which no condition of
+    // the store can close, since taking a binding up writes nothing to it.
     private async Task UnbindRefusedAsync(bool bound, Result<Account> written, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
-        if (bound && written.IsFailure && last?.Identities.Contains(identity) != true)
+        if (bound && written.IsFailure && last?.Identities.Contains(identity) != true
+            && (await _store.FindAsync(id, cancellationToken))?.Identities.Contains(identity) != true)
         {
             await _store.UnbindSubjectAsync(identity, id, cancellationToken);
         }

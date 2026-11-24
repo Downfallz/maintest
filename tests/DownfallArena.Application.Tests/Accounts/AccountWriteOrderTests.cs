@@ -261,6 +261,20 @@ public sealed class AccountWriteOrderTests
     }
 
     [Fact]
+    public async Task A_refused_way_whose_binding_another_link_adopted_since_the_refusal_leaves_it()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.BeforeNextAccountWrite = () => _store.Accounts[mark.Id] = mark with { Generation = mark.Generation + 1 };
+        _store.AccountReadsBeforeHook = 2;
+        _store.BeforeAccountRead = () => _store.Accounts[mark.Id] = mark with { Generation = mark.Generation + 1, Identities = mark.Identities.With(Discord) };
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, mark.Generation, Cancel);
+
+        linked.Error.ShouldBe(AccountErrors.SessionEnded);
+        _store.Subjects[Discord].ShouldBe(mark.Id);
+    }
+
+    [Fact]
     public async Task A_way_added_that_found_its_binding_made_by_another_link_leaves_it_when_refused()
     {
         var mark = await RegisteredAsync(Google, "MarkF");

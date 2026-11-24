@@ -46,8 +46,19 @@ internal sealed class MemoryAccountStore : IAccountStore
     /// <summary>Lets every write of an account wait first, so a write can land after something read before it.</summary>
     public bool SlowWrites { get; set; }
 
+    /// <summary>Runs once just before the read of an account numbered <see cref="AccountReadsBeforeHook" /> from now (0 is the next).</summary>
+    public Action? BeforeAccountRead { get; set; }
+
+    public int AccountReadsBeforeHook { get; set; }
+
     public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default)
     {
+        if (BeforeAccountRead is { } before && AccountReadsBeforeHook-- == 0)
+        {
+            BeforeAccountRead = null;
+            before();
+        }
+
         if (SlowReads)
         {
             await Task.Delay(1, cancellationToken);
