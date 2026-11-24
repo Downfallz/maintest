@@ -1315,6 +1315,23 @@ about two minutes.
 Both modes need what `ux/journey.mjs` needs, a film also `ffmpeg` and `ffprobe`. Both exit 1 before they start a
 browser on a shot they refuse (promo/README.md), and `--film` on a shot without a `film` or beside `--still`.
 
+### promo/cut.mjs
+
+```bash
+node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json --check
+node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json
+node scripts/promo/cut.mjs promo/cuts/<cut>.json --lang fr --frames <folder> --out <folder>
+```
+
+Assembles a promotion's cut (docs/art/promotion-plan.md, P3; promo/README.md): the title card, each stretch of a
+filmed shot with its caption laid over it, and the end card, into one silent H.264 MP4 a language,
+`cut-<lang>-<ratio>.mp4` under `artifacts/promo/cuts/<cut>/` (`--out` elsewhere), beside the cards' PNG, each film
+printed with its SHA-256, size, frame count and length. The cards are drawn by Chromium from the brand's tokens;
+`ffmpeg` joins them with the frames `shoot.mjs --film` wrote (`artifacts/promo/<shot>/frames-<ratio>/`, or
+`--frames <folder>/<shot>/frames-<ratio>/`). `--lang` makes one language. `--check` reads and checks the cut
+without a browser. Exit 1 on a cut it refuses, on words the browser finds over their card, and on a stretch whose
+frames are not filmed yet, with the command that films them.
+
 ### promo/media.mjs
 
 ```bash

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { encodeFilm, filmFacts, hasEncoder, holdClock, onHost, readShot, root, sha256, shootFilm, shootStill } from '../../scripts/promo/shoot.mjs';
 import { startHost } from '../../scripts/ux/set.mjs';
+import { drawCards, readCut } from '../../scripts/promo/cut.mjs';
 
 // The promotion's still and film on the real engine (docs/art/promotion-plan.md, P1 and P2; ADR 0205): a shot of
 // the repository opened on a real host gives the same bytes twice, and a picture of the size its ratio asks; a film
@@ -80,4 +81,21 @@ test('the filmed seat casts the shot\'s spell when the host asks it to act', asy
   const decisions = await onHost(startHost, origin => shootFilm(browser, origin, shot, '9:16', async () => {}));
   expect(decisions.map(one => one.kind)).toEqual(['Evolution', 'Speed', 'Action']);
   expect(decisions[2]).toMatchObject({ kind: 'Action', spell: 'spell:pummel:v1', creature: 1, targets: [2] });
+});
+
+test('the cards of a cut draw at the film\'s size, the caption on a clear ground, and words past their card are refused', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'table-phone', 'The cards set their own size: one project draws them.');
+  // P3 of the plan: the browser measures the words the character limit only estimates.
+  const cut = readCut(join(root, 'promo/cuts/brute-pummel-15s.json'));
+  for (const language of ['en', 'fr']) {
+    const cards = await drawCards(browser, cut, language);
+    expect(dimensions(cards.title)).toEqual([1080, 1920]);
+    expect(dimensions(cards.end)).toEqual([1080, 1920]);
+    expect(cards.captions).toHaveLength(cut.shots.length);
+    // A PNG with an alpha channel says colour type 6 in its header: the shot shows through around the band.
+    for (const caption of cards.captions) expect(caption[25]).toBe(6);
+  }
+  const wide = 'W'.repeat(56);
+  const over = { ...cut, shots: [{ ...cut.shots[0], caption: { en: wide, fr: wide } }] };
+  await expect(drawCards(browser, over, 'en')).rejects.toThrow(/the caption of shots\[0\] in en runs over its card/);
 });

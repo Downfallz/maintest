@@ -1,0 +1,11 @@
+{
+  "format": "downfall.promo.cut.v1",
+  "title": "The Brute's Pummel, in fifteen seconds, for the vertical feeds",
+  "ratio": "9:16",
+  "titleCard": { "seconds": 2, "en": "Evolve your creatures.", "fr": "Fais évoluer tes créatures." },
+  "shots": [
+    { "shot": "brute-pummel-round-3", "start": 0, "seconds": 4, "caption": { "en": "Each round, pick a tempo for every creature.", "fr": "À chaque round, choisis le tempo de chaque créature." } },
+    { "shot": "brute-pummel-round-3", "start": 7, "seconds": 5, "caption": { "en": "The Brute leaps at an enemy with Pummel.", "fr": "La Brute bondit sur un ennemi avec Marteler." } }
+  ],
+  "endCard": { "seconds": 3 }
+}

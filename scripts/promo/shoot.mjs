@@ -522,6 +522,10 @@ export function sheetFrames(count, picks = 12) {
 // promo workflow's runner); the arguments are the script's own and a checked shot's numbers, nothing a visitor sends.
 export const hasEncoder = () => ['ffmpeg', 'ffprobe'].every(tool => spawnSync(tool, ['-version'], { stdio: 'ignore' }).status === 0); // NOSONAR
 
+/** How a film is encoded, after its inputs: the options `encodeFilm` names, shared by a cut (`cut.mjs`). */
+export const ENCODING = Object.freeze(['-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-threads', '1',
+  '-bsf:v', 'filter_units=remove_types=6', '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:v', '+bitexact', '-movflags', '+faststart']);
+
 /**
  * Encode the PNG frames of `folder` (`000000.png` on) at `fps` into an H.264 MP4 a feed takes: yuv420p, the index
  * at the front, one thread, no date, and without the note x264 writes of its version and options (an SEI unit, cut
@@ -530,9 +534,7 @@ export const hasEncoder = () => ['ffmpeg', 'ffprobe'].every(tool => spawnSync(to
  */
 export function encodeFilm(folder, fps, out) {
   const run = spawnSync('ffmpeg', ['-y', // NOSONAR: S4036, as for hasEncoder
-    '-loglevel', 'error', '-framerate', String(fps), '-i', join(folder, '%06d.png'),
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-threads', '1',
-    '-bsf:v', 'filter_units=remove_types=6', '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:v', '+bitexact', '-movflags', '+faststart', out], { encoding: 'utf8' });
+    '-loglevel', 'error', '-framerate', String(fps), '-i', join(folder, '%06d.png'), ...ENCODING, out], { encoding: 'utf8' });
   if (run.status !== 0) throw new Error(`ffmpeg could not encode ${folder}: ${run.stderr || run.error?.message}`);
 }
 

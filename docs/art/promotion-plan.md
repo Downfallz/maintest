@@ -1,7 +1,6 @@
 # Plan: promotion, from the real game to a published post
 
-Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 and P2 are built, P2's upload
-unproven until the owner's runbook is done; P3 is next.
+Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1, P2 and P3 are built; P4 is next.
 
 ## What the owner asked for
 
@@ -166,6 +165,27 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
 3. **P3, the cut.** `promo/cuts/`, title and end cards from the brand, captions in English and French,
    assembled. Tests: a cut naming a missing shot or a caption over its card is refused; a raw colour in a card
    fails as the pages' do.
+
+   *Built (2026-11-24)*: `promo/cuts/*.json` (format in [promo/README.md](../../promo/README.md#a-cut)) and
+   `scripts/promo/cut.mjs`. A cut names its ratio, a title card in English and French, stretches of filmed shots
+   (`start` and `seconds`, on a frame, inside the film) with a caption each, and an end card whose words are the
+   brand's: the mark of `table/brand-mark.svg`, the name, `downfallinstinct.com` and the showcase's own
+   "Beta · Free to play" (`showcase/copy.mjs`). Chromium draws the cards from `scripts/promo/cards.css` on
+   `docs/art/branding.css`, with Marcellus carried in the page; a caption is a band in the pages' glass laid over the
+   shot inside the margins the vertical feeds cover, above the dock (P2's choice). The browser measures the words
+   again and refuses those over their card. `ffmpeg` joins the cards and the shot's frames once, encoded as a film
+   is: one silent MP4 a language. The first cut, `brute-pummel-15s`, is the Pummel film at 9:16.
+
+   Tests: `studio/promo-cut.test.js` (the refusals: a missing shot, a shot not filmed or not at the ratio, seconds
+   past the film or off a frame, words missing, on two lines or over their card, words on the end card, a cut past
+   60 s, shots at two sizes or rates; the cards' stylesheet and pages name no raw colour and only tokens of
+   `branding.css`; the assembly's arguments; an MP4 of the length, size and frame count asked, the same bytes twice),
+   and the journey `studio/browser/table.promo.js` (the cards drawn at 1080 by 1920, the caption on a clear ground,
+   a caption too wide refused).
+
+   Left to later stages: the workflow films a shot and uploads its film, not a cut, and `promo/media.json` records
+   films and sheets only, so a cut is made in a session from frames filmed there; a cut has no transition between
+   its parts.
 4. **P4, the brief.** `scripts/promo/brief.mjs`: the prompt pack and its frames; the intake of the owner's file
    with its provenance. With question 2 answered "the API too", the call to the model's API with the key the
    environment holds, behind the same intake, once the owner says the prompts are proven. Tests: the pack names the real creature's words; an intake without
