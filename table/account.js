@@ -4,13 +4,13 @@
 // only checks a name's shape before asking, so a keystroke that cannot be a name costs no request.
 
 import { undressScene, wearScene } from './picture.js';
-import { startDiscord, takeTicket } from './discord.js';
+import { CODE_FLOWS, startCodeFlow, takeTicket } from './codeflow.js';
 
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{2,19}$/;
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client';
-// The providers this page can draw a button for, each in its element `<provider>-button` (sign-in methods plan, P2, P3).
-// A provider the host lists that is not here is left undrawn: a page older than its host.
-export const DRAWN_WAYS = ['google', 'discord'];
+// The providers this page can draw a button for, each in its element `<provider>-button` (sign-in methods plan, P2, P3,
+// P6). A provider the host lists that is not here is left undrawn: a page older than its host.
+export const DRAWN_WAYS = ['google', 'discord', 'microsoft'];
 
 /** What the page can say about a name before asking the host, or null when only the host can tell. */
 export function nameProblem(value) {
@@ -252,27 +252,32 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
     return (await refresh()).leaving;
   }
 
-  // Discord's button leaves for Discord's authorize page; its return page (signin.js) comes back here with `next`.
-  let discord = null;
-  el('discord-button')?.addEventListener('click', async () => {
-    if (!discord?.clientId) return;
-    say('sign-in-problem');
-    el('discord-button').disabled = true;
-    // A page brought back from the back-forward cache, the player having pressed Back at Discord, gives the button back.
-    win.addEventListener?.('pageshow', event => { if (event.persisted) el('discord-button').disabled = false; }, { once: true });
-    try {
-      await startDiscord({ clientId: discord.clientId, origin: win.location.origin, next: nextPath(win.location.search), storage: session, go: url => win.location.assign(url) });
-    } catch (error) {
-      say('sign-in-problem', error.message);
-      el('discord-button').disabled = false;
-    }
-  });
+  // Discord's and Microsoft's buttons leave for the provider's authorize page; its return page (signin.js) comes back
+  // here with `next`.
+  let offeredWays = [];
+  for (const provider of Object.keys(CODE_FLOWS)) {
+    const button = el(`${provider}-button`);
+    button?.addEventListener('click', async () => {
+      const way = offeredWays.find(each => each.provider === provider);
+      if (!way?.clientId) return;
+      say('sign-in-problem');
+      button.disabled = true;
+      // A page brought back from the back-forward cache, the player having pressed Back at the provider, gives the button back.
+      win.addEventListener?.('pageshow', event => { if (event.persisted) button.disabled = false; }, { once: true });
+      try {
+        await startCodeFlow({ provider, clientId: way.clientId, origin: win.location.origin, next: nextPath(win.location.search), storage: session, go: url => win.location.assign(url) });
+      } catch (error) {
+        say('sign-in-problem', error.message);
+        button.disabled = false;
+      }
+    });
+  }
 
-  // The ways in, once the host has said which: Discord's button is ours, Google's is drawn by Google's script. A name
+  // The ways in, once the host has said which: Discord's and Microsoft's buttons are ours, Google's is drawn by Google's script. A name
   // to choose that a return page handed over opens the name window, as a first sign-in on this page does.
   async function withWays(state) {
     const offered = state.mode === 'dev' || state.mode === 'off' ? [] : state.ways;
-    discord = offered.find(each => each.provider === 'discord') ?? null;
+    offeredWays = offered;
     // Taken only where the window can open: a host that could not be read keeps it for the reload it asks for.
     const handed = state.account || offered.length === 0 ? null : takeTicket(session);
     if (handed) await signedIn({ needsUsername: true, ticket: handed });

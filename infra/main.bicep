@@ -27,6 +27,9 @@ param googleClientId string = ''
 @description('The Discord application id players sign in with (sign-in methods plan, P3), the app a public client. Public, not a secret. Empty, Discord is not offered.')
 param discordClientId string = ''
 
+@description('The Microsoft application (client) id players sign in with, personal accounts only (sign-in methods plan, P6), the app a public client. Public, not a secret. Empty, Microsoft is not offered.')
+param microsoftClientId string = ''
+
 @description('The player accounts that are the operator once signed in (ADR 0175), by their ids (acct_...), comma-separated. Empty, only the operators above reach the admin panel.')
 param adminAccounts string = ''
 
@@ -70,8 +73,9 @@ var tenantId = tenant().tenantId
 var operatorIds = filter(map(split(operators, ','), id => trim(id)), id => !empty(id))
 
 // The players' sign-in (ADR 0122), through each provider given its client id, Google's button first (sign-in methods
-// plan, P3). The host checks Google's ID token itself and exchanges Discord's code with PKCE, so the ids are all it takes.
-var signInProviders = concat(empty(googleClientId) ? [] : ['google'], empty(discordClientId) ? [] : ['discord'])
+// plan, P3, P6). The host checks Google's ID token itself and exchanges Discord's and Microsoft's codes with PKCE, so
+// the ids are all it takes.
+var signInProviders = concat(empty(googleClientId) ? [] : ['google'], empty(discordClientId) ? [] : ['discord'], empty(microsoftClientId) ? [] : ['microsoft'])
 var accountArgs = concat(empty(signInProviders) ? [] : [
   '--sign-in'
   join(signInProviders, ',')
@@ -81,6 +85,9 @@ var accountArgs = concat(empty(signInProviders) ? [] : [
 ], empty(discordClientId) ? [] : [
   '--discord-client-id'
   discordClientId
+], empty(microsoftClientId) ? [] : [
+  '--microsoft-client-id'
+  microsoftClientId
 ])
 // The admin accounts (ADR 0175), on the API alone: it is the one process that serves the panel, and only with players
 // signing in at all.

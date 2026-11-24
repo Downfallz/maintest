@@ -283,6 +283,15 @@ public sealed class CliOptionsTests
     }
 
     [Fact]
+    public void Microsoft_signs_in_beside_the_others_with_its_application_id_taken_as_given()
+    {
+        var options = CliOptions.Parse(["table", "--sign-in", "google,microsoft", "--microsoft-client-id", "6731de76-14a6-49ae-97bc-6eba6914391e", "--google-client-id", "1234.apps.googleusercontent.com"]);
+
+        options.SignIn.ShouldBe(["google", "microsoft"]);
+        options.MicrosoftClientId.ShouldBe("6731de76-14a6-49ae-97bc-6eba6914391e");
+    }
+
+    [Fact]
     public void Sign_in_lists_the_providers_in_the_order_given_and_accounts_google_is_google_alone()
     {
         var listed = CliOptions.Parse(["table", "--sign-in", "google", "--google-client-id", "1234.apps.googleusercontent.com"]);
@@ -335,6 +344,9 @@ public sealed class CliOptionsTests
     [InlineData("table", "--accounts", "google", "--discord-client-id", "1311111111111111111")]
     [InlineData("table", "--sign-in", "discord,discord")]
     [InlineData("play", "--sign-in", "discord")]
+    [InlineData("table", "--microsoft-client-id", "6731de76-14a6-49ae-97bc-6eba6914391e")]
+    [InlineData("table", "--sign-in", "google,discord", "--microsoft-client-id", "6731de76-14a6-49ae-97bc-6eba6914391e")]
+    [InlineData("table", "--sign-in", "microsoft,microsoft")]
     public void A_sign_in_the_table_cannot_have_is_refused_by_name(params string[] args)
     {
         Should.Throw<ArgumentException>(() => CliOptions.Parse(args)).Message.ShouldContain("--");

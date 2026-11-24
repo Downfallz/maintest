@@ -135,9 +135,64 @@ once:
    Discord, comes back to the lobby, and a first sign-in asks for a player name. A Discord page that says
    *Invalid OAuth2 redirect_uri* means step 2 does not list that address.
 
+Microsoft is a third way in (sign-in methods plan, P6), for personal Microsoft accounts (Outlook, Hotmail, Xbox),
+offered once the `TABLE_MICROSOFT_CLIENT_ID` variable names an application; unset, its button is not drawn. As
+Discord's, the application is a *public client*: the host exchanges Microsoft's code with the page's PKCE verifier and
+no secret. It asks for the `openid` scope only: no name, no email. The host keeps the ID token's `sub`, which
+Microsoft makes for this application alone. Setting it up, once:
+
+1. **Azure portal**: <https://portal.azure.com>, *Microsoft Entra ID*, *App registrations*, *New registration*.
+   Name: the game's. *Supported account types*: *Personal Microsoft accounts only*. *Redirect URI*: the platform
+   *Public client/native (mobile & desktop)*, and the table's address with `/signin/microsoft` after it (the
+   platform's address comes from [runbooks/sign-ins.md](runbooks/sign-ins.md), step 3). *Register*. Made once and
+   kept: the identifier Microsoft gives each player is this application's alone, so an application deleted and made
+   again signs nobody back in to the account they had.
+
+   ```text
+   https://play.downfallinstinct.com/signin/microsoft
+   ```
+
+2. **Authentication**, under *Mobile and desktop applications*, *Add URI* for each other address the table answers
+   at. *Save*. Never under *Single-page application*, where Microsoft gives the code only to the browser, nor *Web*,
+   where it asks for a secret. Never `localhost` either: a laptop's table gets an application of its own, made the
+   same way with `http://localhost:5099/signin/microsoft` as its one redirect. Leave *Allow public client flows* at
+   *No*: the host needs none of them.
+
+3. **API permissions**: remove *Microsoft Graph*, *User.Read* (*...*, *Remove permission*), so the consent page asks
+   only to sign the player in. The host never reads the player's profile.
+
+4. **Overview**, *Application (client) ID*: copy it. Public: it is in Microsoft's own authorize address.
+
+5. **GitHub**, the repository, *Settings*, *Secrets and variables*, *Actions*, *Variables*, *New repository
+   variable*: name `TABLE_MICROSOFT_CLIENT_ID`, value the id of step 4.
+
+   ```text
+   TABLE_MICROSOFT_CLIENT_ID
+   ```
+
+6. **GitHub**, *Actions*, *Deploy the table*, *Run workflow* on `main`, or wait for the next merge.
+
+7. **Check**: the lobby in a private window shows *Continue with Microsoft*; it leaves for Microsoft, comes back to
+   the lobby, and a first sign-in asks for a player name. What goes wrong, and where to look:
+
+   - A Microsoft page that says the redirect URI does not match: step 1 or 2 does not list that address.
+   - On the console, the line below: the redirect sits under *Web* rather than step 2's platform. Move it. If it is
+     there already, set *Authentication*, *Allow public client flows* to *Yes*, *Save*.
+
+     ```text
+     Sign-in unavailable (microsoft): Microsoft refuses the app (invalid_client)
+     ```
+
+   - Every Microsoft sign-in answers *Your sign-in could not be checked*, and the console's
+     `Sign-ins (microsoft)` line counts them refused, none finished, with no *unavailable* line: the redirect sits
+     under *Single-page application*. Move it under step 2's platform.
+
+   Microsoft marks the application *unverified* on its consent page until its publisher is verified, which needs a
+   Microsoft partner account: the sign-in works either way.
+
 Accounts are kept in the storage account's `accounts` container, beside the recordings, and hold a player name, an
-internal id and the provider's id for each way in (Google's subject, Discord's user id). No email is kept. A player
-deletes their account from the account menu on the home page; the lobby's *What we keep* panel says the same to
+internal id and the provider's id for each way in (Google's subject, Discord's user id, Microsoft's subject). No
+email is kept. A player deletes their account from the account menu on the home page; the lobby's *What we keep* panel says the same to
 players.
 
 ## The showcase at the apex

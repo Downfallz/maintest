@@ -656,9 +656,13 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   buttons are drawn (ADR 0122, docs/tabletop/sign-in-methods-plan.md): `google` checks Google's ID token against
   `--google-client-id` or `DOWNFALL_GOOGLE_CLIENT_ID`. `discord` exchanges the code, with its PKCE verifier and no
   secret, for the application that `--discord-client-id` or `DOWNFALL_DISCORD_CLIENT_ID` names; Discord returns the
-  code to the page `/signin/discord`. A hosted table takes that return over https only; a loopback one also over
-  http. Discord out of service, slow or rate-limiting is `503 Account.ProviderUnavailable` and a line of its own,
-  `Sign-in unavailable (discord): <why>.`, once a minute; the host asks Discord at most 30 times a minute, 4 at once,
+  code to the page `/signin/discord`. `microsoft` does the same for personal Microsoft accounts, with
+  `--microsoft-client-id` or `DOWNFALL_MICROSOFT_CLIENT_ID`: it exchanges the code at the `consumers` token endpoint
+  with the scope `openid`, keeps the ID token's `sub` once its issuer, tenant, audience and expiry are this app's, and
+  Microsoft returns to `/signin/microsoft`. A hosted table takes either return over https only; a loopback one also
+  over http. Discord or Microsoft out of service, slow, rate-limiting or refusing the app itself (`invalid_client`,
+  `unauthorized_client`) is `503 Account.ProviderUnavailable` and a line of its own,
+  `Sign-in unavailable (<provider>): <why>.`, once a minute; the host asks each at most 30 times a minute, 4 at once,
   and not at all until a 429's `Retry-After` has passed. `POST /api/account/<provider>` is checked by network
   address before the provider is asked: five sign-ins a minute its provider does not vouch for (thirty for the /64s
   of one IPv6 /48), twenty people vouched for, eight checked at once; past that it is answered

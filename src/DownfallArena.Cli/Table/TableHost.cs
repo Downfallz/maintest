@@ -267,11 +267,12 @@ internal static class TableHost
 
         var described = RuleSetFile.Describe(rules, options.Rules);
         // The players' sign-in (ADR 0122), kept beside the recordings, through each provider --sign-in lists
-        // (sign-in methods plan, P2, P3). A provider without its client id is one line here rather than a page whose
+        // (sign-in methods plan, P2, P3, P6). A provider without its client id is one line here rather than a page whose
         // button never draws.
         var clients = new SignInClients(
             options.GoogleClientId ?? Environment.GetEnvironmentVariable(GoogleClientIdEnvironment),
-            options.DiscordClientId ?? Environment.GetEnvironmentVariable(DiscordClientIdEnvironment));
+            options.DiscordClientId ?? Environment.GetEnvironmentVariable(DiscordClientIdEnvironment),
+            options.MicrosoftClientId ?? Environment.GetEnvironmentVariable(MicrosoftClientIdEnvironment));
         var (providers, signInProblem) = SignInProviders.Build(
             options.SignIn,
             clients,
@@ -977,6 +978,9 @@ internal static class TableHost
 
     /// <summary>The variable the hosted table reads its Discord application id from (sign-in methods plan, P3).</summary>
     public const string DiscordClientIdEnvironment = "DOWNFALL_DISCORD_CLIENT_ID";
+
+    /// <summary>The variable the hosted table reads its Microsoft application (client) id from (sign-in methods plan, P6).</summary>
+    public const string MicrosoftClientIdEnvironment = "DOWNFALL_MICROSOFT_CLIENT_ID";
 
     /// <summary>The variable a host reads its admin accounts from when <c>--admins</c> is not given (ADR 0172).</summary>
     public const string AdminsEnvironment = "DOWNFALL_ADMINS";

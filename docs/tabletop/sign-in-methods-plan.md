@@ -1,7 +1,7 @@
 # Plan: more ways to sign in, and a guest
 
-Status: accepted, 2026-11-23. The owner settled the four questions (at the end) and question 5 with P4. P1 to P5 are
-built; P6 is not.
+Status: accepted, 2026-11-23. The owner settled the four questions (at the end) and question 5 with P4. P1 to P6 are
+built.
 
 ## What the owner asked for
 
@@ -78,7 +78,7 @@ turning what the page sends into an identity or null:
 | --- | --- | --- | --- |
 | `google` | The ID token. | Checks it, as today. | None. |
 | `discord` | `{ code, verifier, redirect }` after Discord's authorize page, code flow with PKCE, the app marked *public client*. | Exchanges the code at `discord.com/api/v10/oauth2/token` with the verifier, reads `GET /oauth2/@me` (the app and the user), keeps the user's `id`. Scope `identify` only. | None. |
-| `microsoft` | The same shape, against personal Microsoft accounts. | Exchanges, checks the ID token as Google's. | None. |
+| `microsoft` | The same shape, against personal Microsoft accounts. | Exchanges, reads the ID token in the token endpoint's answer, its claims only. | None. |
 | `facebook` (not planned) | The access token from Facebook's SDK. | Asks `debug_token` whether it was issued to this app, keeps the user id. | The app secret, as a Container App secret. |
 | `guest` | Nothing. | Makes one (below). | None. |
 
@@ -255,6 +255,36 @@ and 4. The recommended answer:
      remove guests; a guest who signs in to an account it already has loses the guest's tutorial progress.
 6. **P6, Microsoft.** `MicrosoftSignIn` (personal accounts, PKCE, no secret), as P3, with `microsoftClientId`
    and the owner's steps in `infra/README.md`.
+
+   *Built (2026-11-24)*:
+
+   - The shared part: `CodeExchangeSignIn` (Infrastructure) holds what Discord and Microsoft share, moved out of
+     `DiscordSignIn` unchanged. That is the proof's shape, checked before the provider is asked; the return path
+     `/signin/<provider>`; and the bounds: 30 exchanges a minute each, 4 at once, a 429's `Retry-After`, ten seconds
+     of patience.
+   - One addition for both: an answer `invalid_client` or `unauthorized_client` is the application set up wrong. It is
+     `503 Account.ProviderUnavailable`, with `<provider> refuses the app (<error>)` on the console. Since the provider
+     was asked, the address's count of #1193 still counts it as refused (`SignInUnavailableException.ProviderAnswered`),
+     so one address cannot spend the provider's budget for every player without being counted.
+   - The provider: `MicrosoftSignIn` exchanges the code at the `consumers` token endpoint with the scope `openid`
+     alone, no secret. It reads the ID token in Microsoft's answer without checking its signature again, since it came
+     over TLS in answer to the host's own request (OpenID Connect Core, 3.1.3.7, step 6). It keeps its `sub` once the
+     issuer and the tenant are the personal accounts', the audience this app, and the token not expired. Microsoft's
+     access token is never used and lapses on its own: Microsoft has no revocation to call.
+   - The host: `--sign-in microsoft`, `--microsoft-client-id` or `DOWNFALL_MICROSOFT_CLIENT_ID`; `/signin/microsoft`
+     serves the return page.
+   - The page: `discord.js` became `codeflow.js`, one module for both providers (`CODE_FLOWS`). Each keeps its own
+     state in the tab, Discord's under the name it had. The lobby draws *Continue with Microsoft* under Discord's
+     button; Settings adds it as Discord. `signin.js` reads the provider from its path.
+   - Infra: `microsoftClientId` in `infra/main.bicep` from the `TABLE_MICROSOFT_CLIENT_ID` variable; unset, nothing
+     changes. The owner's steps are in `infra/README.md` (*Player sign-in*): the redirect under *Mobile and desktop
+     applications*, never *Single-page application* or *Web*. The redirects per address are in
+     `infra/runbooks/sign-ins.md`. The privacy policy and *What we keep* name Microsoft.
+   - Tests: `MicrosoftSignInTests` against a fake token endpoint; the options, the providers, the composition and the
+     served page; the pages; the Microsoft journey in `studio/browser/signin-discord.spec.js`.
+   - Left: creating the Microsoft application and the variable (the owner's steps). Whether Microsoft redeems a
+     code without a secret for a *Mobile and desktop* redirect on a custom https address was not tried against
+     Microsoft itself; the steps say what the console line means if it does not.
 
 Not planned (question 2): Facebook, which needs the app secret and Meta's app review, and Apple, which needs
 a signing key and a paid developer account. Each comes back as its own stage with an ADR when a player asks.

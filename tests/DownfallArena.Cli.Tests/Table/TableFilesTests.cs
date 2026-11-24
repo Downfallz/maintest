@@ -41,18 +41,20 @@ public sealed class TableFilesTests
     }
 
     /// <summary>
-    /// Discord's return (sign-in methods plan, P3) at the address its app lists, naming its files from the root: a page
-    /// under <c>/signin/</c> would read a relative <c>table.css</c> as <c>/signin/table.css</c>.
+    /// Discord's return (sign-in methods plan, P3) and Microsoft's (P6) at the address each app lists, naming its files
+    /// from the root: a page under <c>/signin/</c> would read a relative <c>table.css</c> as <c>/signin/table.css</c>.
     /// </summary>
-    [Fact]
-    public void Discord_returns_to_a_page_that_names_its_files_from_the_root()
+    [Theory]
+    [InlineData("/signin/discord")]
+    [InlineData("/signin/microsoft")]
+    public void A_provider_returns_to_a_page_that_names_its_files_from_the_root(string path)
     {
-        var page = Text(Files.Get("/signin/discord"));
+        var page = Text(Files.Get(path));
 
         page.ShouldContain("src=\"/signin.js?v=");
         page.ShouldContain("href=\"/identity.css?v=");
         page.ShouldContain("<meta name=\"referrer\" content=\"no-referrer\" />");
-        Files.Get("/discord.js").Status.ShouldBe(200);
+        Files.Get("/codeflow.js").Status.ShouldBe(200);
     }
 
     /// <summary>What a phone installs and shows (ADR 0118): the worker at the root, the manifest as a manifest, the icon as bytes.</summary>

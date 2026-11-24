@@ -1010,6 +1010,22 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_provider_that_answered_it_refuses_the_app_counts_against_the_address_and_is_still_unavailable()
+    {
+        var provider = new CountingProvider { RefusesTheApp = true };
+        var api = await ApiAsync(AccountsMode.SignIn, provider);
+        for (var posted = 0; posted < SignInAttempts.PerAddress; posted++)
+        {
+            (await api.HandleAsync("POST", "/api/account/counted", """{"code":"x"}""", From("203.0.113.7"))).Status.ShouldBe(503);
+        }
+
+        var answer = await api.HandleAsync("POST", "/api/account/counted", """{"code":"x"}""", From("203.0.113.7"));
+
+        answer.Status.ShouldBe(429);
+        provider.Asked.ShouldBe(SignInAttempts.PerAddress);
+    }
+
+    [Fact]
     public async Task Another_address_still_signs_in_while_one_has_spent_its_count()
     {
         await new AccountRegistry(_store, _clock).RegisterAsync(Mark, "MarkF", TestContext.Current.CancellationToken);
@@ -1258,6 +1274,9 @@ public sealed class AccountApiTests : IDisposable
     {
         public int Asked { get; private set; }
 
+        /// <summary>Whether it answers as a provider does that refuses the app itself: unavailable, though it was asked.</summary>
+        public bool RefusesTheApp { get; init; }
+
         public string Name => "counted";
 
         public string? ClientId => null;
@@ -1265,7 +1284,9 @@ public sealed class AccountApiTests : IDisposable
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default)
         {
             Asked++;
-            return Task.FromResult<ExternalIdentity?>(null);
+            return RefusesTheApp
+                ? throw new SignInUnavailableException("The app is refused.") { ProviderAnswered = true }
+                : Task.FromResult<ExternalIdentity?>(null);
         }
     }
 

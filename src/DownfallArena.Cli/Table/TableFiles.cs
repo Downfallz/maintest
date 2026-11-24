@@ -69,9 +69,11 @@ internal sealed partial class TableFiles
             ["/battle-preferences.js"] = (Path.Combine(tableDirectory, "battle-preferences.js"), JavaScript),
             ["/lobby.js"] = (Path.Combine(tableDirectory, "lobby.js"), JavaScript),
             // Where Discord returns a sign-in (sign-in methods plan, P3): the address the app lists as its redirect.
+            // Where Microsoft returns one (P6), the same page.
             ["/signin/discord"] = (Path.Combine(tableDirectory, "signin.html"), StudioResponse.Html),
+            ["/signin/microsoft"] = (Path.Combine(tableDirectory, "signin.html"), StudioResponse.Html),
             ["/signin.js"] = (Path.Combine(tableDirectory, "signin.js"), JavaScript),
-            ["/discord.js"] = (Path.Combine(tableDirectory, "discord.js"), JavaScript),
+            ["/codeflow.js"] = (Path.Combine(tableDirectory, "codeflow.js"), JavaScript),
             // Settings' ways to sign in (sign-in methods plan, P4), which the navigation and the return page import.
             ["/ways.js"] = (Path.Combine(tableDirectory, "ways.js"), JavaScript),
             ["/lobby-practice.js"] = (Path.Combine(tableDirectory, "lobby-practice.js"), JavaScript),

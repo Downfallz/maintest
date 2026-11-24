@@ -121,6 +121,12 @@ internal sealed record CliOptions
     public string? DiscordClientId { get; init; }
 
     /// <summary>
+    /// The Microsoft application (client) id the sign-in is for (sign-in methods plan, P6); <c>DOWNFALL_MICROSOFT_CLIENT_ID</c>
+    /// when not given. Public, not a secret: the app is a public client.
+    /// </summary>
+    public string? MicrosoftClientId { get; init; }
+
+    /// <summary>
     /// The accounts that are the operator when signed in, by their ids, comma-separated (ADR 0172);
     /// <c>DOWNFALL_ADMINS</c> when not given.
     /// </summary>
@@ -238,7 +244,7 @@ internal sealed record CliOptions
     /// <summary>A redacted scenario from a bug's issue checked and written under <c>scenarios/bugs/</c> (docs/tabletop/feedback-plan.md, R6).</summary>
     public const string ScenarioImportCommand = "scenario-import";
 
-    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--sign-in google,discord] [--google-client-id id] [--discord-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
+    public const string Usage = "Usage: play|human|simulate|evaluate|benchmark|studio|table|table-tend|table-worker|push-keys|scenario-cut|scenario-check|scenario-generate|scenario-import [--seed N] [--matches N] [--format 3v3|2v2|1v1] [--declaration hidden-intent|at-activation] [--out file] [--schema path] [--record dir|container-url] [--traces N] [--trace file] [--slot-log file] [--p1 agent] [--p2 agent] [--seeds file] [--benchmarks dir] [--write] [--data dir] [--port N] [--export dir] [--handover N] [--rules file] [--bind address] [--who initials] [--no-record] [--practice] [--lobby] [--platform-auth] [--push-keys file] [--accounts off|google|dev] [--sign-in google,discord,microsoft] [--google-client-id id] [--discord-client-id id] [--microsoft-client-id id] [--admins acct_...] [--turns process|queue|worker] [--tended] [--scenario file] [--session dir] [--round N] [--seat player1|player2] [--title text] [--goal text] [--with-content] [--zip file] [--issue N]";
 
     /// <summary>Every option this command line takes. Anything else is a typo, and says so by name.</summary>
     private const string RecordOption = "--record";
@@ -267,6 +273,7 @@ internal sealed record CliOptions
 
     private const string GoogleClientIdOption = "--google-client-id";
     private const string DiscordClientIdOption = "--discord-client-id";
+    private const string MicrosoftClientIdOption = "--microsoft-client-id";
     private const string AdminsOption = "--admins";
 
     private const string DeclarationOption = "--declaration";
@@ -290,7 +297,7 @@ internal sealed record CliOptions
     [
         SeedOption, "--matches", "--out", "--schema", RecordOption, "--traces", TraceOption, "--p1", "--p2",
         "--seeds", "--benchmarks", "--data", "--port", "--export", HandoverOption, "--rules", "--bind",
-        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, SignInOption, GoogleClientIdOption, DiscordClientIdOption, TurnsOption,
+        "--who", FormatOption, DeclarationOption, SlotLogOption, PushKeysOption, AccountsOption, SignInOption, GoogleClientIdOption, DiscordClientIdOption, MicrosoftClientIdOption, TurnsOption,
         AdminsOption, ScenarioOption, "--session", "--round", "--seat", "--title", "--goal", ZipOption, IssueOption,
     ];
 
@@ -340,6 +347,7 @@ internal sealed record CliOptions
             SignIn = ProvidersOf(values),
             GoogleClientId = values.GetValueOrDefault(GoogleClientIdOption),
             DiscordClientId = values.GetValueOrDefault(DiscordClientIdOption),
+            MicrosoftClientId = values.GetValueOrDefault(MicrosoftClientIdOption),
             Admins = values.GetValueOrDefault(AdminsOption),
             Turns = values.TryGetValue(TurnsOption, out var turns) ? ParseTurns(turns) : null,
             Bind = values.TryGetValue("--bind", out var bind) ? HttpHost.Bindable(bind) : HttpHost.Loopback,
@@ -597,8 +605,13 @@ internal sealed record CliOptions
             return "'--google-client-id' goes with '--sign-in google'.";
         }
 
-        return values.ContainsKey(DiscordClientIdOption) && !providers.Contains(ExternalIdentity.Discord)
-            ? "'--discord-client-id' goes with '--sign-in discord'."
+        if (values.ContainsKey(DiscordClientIdOption) && !providers.Contains(ExternalIdentity.Discord))
+        {
+            return "'--discord-client-id' goes with '--sign-in discord'.";
+        }
+
+        return values.ContainsKey(MicrosoftClientIdOption) && !providers.Contains(ExternalIdentity.Microsoft)
+            ? "'--microsoft-client-id' goes with '--sign-in microsoft'."
             : null;
     }
 

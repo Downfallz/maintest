@@ -1,6 +1,6 @@
 # The sign-ins' addresses
 
-Three sign-ins have to know every address the table answers at, and none learns it by itself:
+Four sign-ins have to know every address the table answers at, and none learns it by itself:
 
 - the **admin panel**'s sign-in, the platform's Entra one (ADR 0081): its redirect URIs, one per address, set by
   `infra/bootstrap.sh redirect`;
@@ -8,7 +8,10 @@ Three sign-ins have to know every address the table answers at, and none learns 
   in Google Cloud Console. It needs no redirect URI and no client secret: the button hands the page an ID token
   directly;
 - the players' sign-in with Discord, once `TABLE_DISCORD_CLIENT_ID` is set (sign-in methods plan, P3): the
-  application's *Redirects*, one per address, each ending in `/signin/discord`.
+  application's *Redirects*, one per address, each ending in `/signin/discord`;
+- the players' sign-in with Microsoft, once `TABLE_MICROSOFT_CLIENT_ID` is set (sign-in methods plan, P6): the
+  application's redirect URIs under *Mobile and desktop applications*, one per address, each ending in
+  `/signin/microsoft`.
 
 Run this runbook when the table gets an address:
 
@@ -69,9 +72,20 @@ Run this runbook when the table gets an address:
    https://play.downfallinstinct.com/signin/discord
    ```
 
-6. **Check.** Open the lobby at each address in a private window: *Sign in with Google* offers the account
+6. **Microsoft**, when the table offers it: <https://portal.azure.com>, *Microsoft Entra ID*, *App registrations*,
+   *All applications*, the table's application, *Authentication*. Under *Mobile and desktop applications*, *Add URI*
+   for each address of step 3 not listed yet, with `/signin/microsoft` after it, and remove the platform address it
+   replaces. *Save*. For the domain:
+
+   ```text
+   https://play.downfallinstinct.com/signin/microsoft
+   ```
+
+7. **Check.** Open the lobby at each address in a private window: *Sign in with Google* offers the account
    chooser, and `/admin` signs in with the bootstrap account. A Google button that shows an `origin_mismatch`
    error means step 4 has not applied yet, or does not list that address; a Discord page that says *Invalid OAuth2
-   redirect_uri*, that step 5 does not.
+   redirect_uri*, that step 5 does not; a Microsoft page that says the redirect URI does not match, that step 6 does
+   not. A console line `Sign-in unavailable (<provider>): <provider> refuses the app (…)`, or every Microsoft sign-in
+   refused and none finished, is an application set up wrong: [../README.md](../README.md), its provider's steps.
 
 A browser keeps its cookie and saved seats per address, so a player who moves to a new address signs in again.

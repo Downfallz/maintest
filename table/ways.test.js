@@ -31,7 +31,7 @@ test('a way the host no longer offers is still listed, to remove', () => {
 });
 
 test('a provider this page cannot draw a button for is not offered to add', () => {
-  const rows = wayRows([{ provider: 'google' }], { ...me, signIn: [...me.signIn, { provider: 'microsoft', clientId: 'm' }] });
+  const rows = wayRows([{ provider: 'google' }], { ...me, signIn: [...me.signIn, { provider: 'facebook', clientId: 'f' }] });
 
   assert.deepEqual(rows.map(row => row.provider), ['google', 'discord']);
 });
@@ -147,4 +147,22 @@ test('a removal with no recent sign-in in the tab asks for a sign in again and a
   assert.deepEqual(asked, [['/api/account/identities', undefined]]);
   assert.equal(doc.getElementById('ways-again').hidden, false);
   assert.match(doc.getElementById('ways-problem').textContent, /sign in again/);
+});
+
+test('Microsoft offered and not yet used is added through its own authorize page, as Discord is', async () => {
+  const doc = page();
+  const session = tab();
+  session.setItem('downfall.recentSignIn', JSON.stringify({ value: 'R', at: Date.now() }));
+  const went = [];
+  const offering = { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'g-client' }, { provider: 'microsoft', clientId: 'ms-app' }] };
+  const ways = mountWays(doc, { request: async () => ({ identities: [{ provider: 'google', removable: false }] }), session, win: { location: { origin: 'https://play.example', assign: url => went.push(url) } } });
+  ways.setAccount({ id: 'a1', username: 'MarkF' }, offering);
+  await ways.shown('account');
+
+  const add = doc.getElementById('ways-list').children[1].children.at(-1);
+  await add.listeners.click();
+
+  assert.equal(add['aria-label'], 'Add Microsoft');
+  assert.match(went.at(-1), /^https:\/\/login\.microsoftonline\.com\/consumers\/oauth2\/v2\.0\/authorize\?/);
+  assert.equal(JSON.parse(session.getItem('downfall.microsoftSignIn')).purpose, 'link');
 });

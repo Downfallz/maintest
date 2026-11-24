@@ -8,6 +8,7 @@ public sealed class SignInProvidersTests : IDisposable
 {
     private const string GoogleId = "1234.apps.googleusercontent.com";
     private const string DiscordId = "1311111111111111111";
+    private const string MicrosoftId = "6731de76-14a6-49ae-97bc-6eba6914391e";
 
     private readonly List<HttpClient> _made = [];
 
@@ -25,10 +26,10 @@ public sealed class SignInProvidersTests : IDisposable
     [Fact]
     public void Each_provider_listed_is_built_in_order()
     {
-        var (providers, problem) = SignInProviders.Build(["discord", "google"], new SignInClients(GoogleId, DiscordId), Keys, Http, TimeProvider.System);
+        var (providers, problem) = SignInProviders.Build(["discord", "microsoft", "google"], new SignInClients(GoogleId, DiscordId, MicrosoftId), Keys, Http, TimeProvider.System);
 
         problem.ShouldBeNull();
-        providers.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([("discord", DiscordId), ("google", GoogleId)]);
+        providers.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([("discord", DiscordId), ("microsoft", MicrosoftId), ("google", GoogleId)]);
     }
 
     [Theory]
@@ -54,6 +55,18 @@ public sealed class SignInProvidersTests : IDisposable
         problem.ShouldContain("DOWNFALL_DISCORD_CLIENT_ID");
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(" ")]
+    public void Microsoft_without_its_application_id_is_one_line_and_no_provider(string? clientId)
+    {
+        var (providers, problem) = SignInProviders.Build(["google", "microsoft"], new SignInClients(GoogleId, DiscordId, clientId), Keys, Http, TimeProvider.System);
+
+        providers.ShouldBeEmpty();
+        problem.ShouldNotBeNull().ShouldContain("--microsoft-client-id");
+        problem.ShouldContain("DOWNFALL_MICROSOFT_CLIENT_ID");
+    }
+
     [Fact]
     public void No_key_source_and_no_client_is_made_for_a_host_that_signs_in_with_neither()
     {
@@ -65,8 +78,8 @@ public sealed class SignInProvidersTests : IDisposable
     }
 
     [Fact]
-    public void Discord_is_one_of_the_names_sign_in_accepts()
+    public void Discord_and_microsoft_are_names_sign_in_accepts()
     {
-        SignInProviders.Known.ShouldBe(["google", "discord"]);
+        SignInProviders.Known.ShouldBe(["google", "discord", "microsoft"]);
     }
 }

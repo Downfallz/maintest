@@ -81,7 +81,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>The host the command line composes with the providers <c>--sign-in</c> lists (sign-in methods plan, P2).</summary>
-    private async Task<ComposedHost?> ComposeSigningInAsync(string? googleClientId, string? discordClientId = null) =>
+    private async Task<ComposedHost?> ComposeSigningInAsync(string? googleClientId, string? discordClientId = null, string? microsoftClientId = null) =>
         await TableHost.ComposeAsync(
             _hosted.Services,
             new CliOptions
@@ -90,9 +90,10 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
                 Output = "out.csv",
                 Record = Path.Combine(_root, "playtest"),
                 Accounts = AccountsMode.SignIn,
-                SignIn = discordClientId is null ? ["google"] : ["google", "discord"],
+                SignIn = [ExternalIdentity.Google, .. discordClientId is null ? [] : new[] { ExternalIdentity.Discord }, .. microsoftClientId is null ? [] : new[] { ExternalIdentity.Microsoft }],
                 GoogleClientId = googleClientId,
                 DiscordClientId = discordClientId,
+                MicrosoftClientId = microsoftClientId,
                 Lobby = true,
                 Port = FreePort(),
             },
@@ -121,6 +122,17 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             .ShouldBe([("google", "1234.apps.googleusercontent.com"), ("discord", "1311111111111111111")]);
         // A proof of the wrong shape is refused before Discord is asked, so this asks nobody.
         (await _host.Accounts.HandleAsync("POST", "/api/account/discord", """{"code":"x"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(401);
+    }
+
+    [Fact]
+    public async Task The_host_signs_in_with_microsoft_for_the_application_it_was_given()
+    {
+        _host = (await ComposeSigningInAsync("1234.apps.googleusercontent.com", microsoftClientId: "6731de76-14a6-49ae-97bc-6eba6914391e")).ShouldNotBeNull();
+
+        _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId))
+            .ShouldBe([("google", "1234.apps.googleusercontent.com"), ("microsoft", "6731de76-14a6-49ae-97bc-6eba6914391e")]);
+        // A proof of the wrong shape is refused before Microsoft is asked, so this asks nobody.
+        (await _host.Accounts.HandleAsync("POST", "/api/account/microsoft", """{"code":"x"}""", new AccountRequest(null, Secure: true))).Status.ShouldBe(401);
     }
 
     /// <summary>Signs the name in through the host's own sign-in, and answers its session and its account.</summary>

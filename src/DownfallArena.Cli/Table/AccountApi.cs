@@ -658,6 +658,12 @@ internal sealed class AccountApi
         }
         catch (SignInUnavailableException exception)
         {
+            // A provider that answered spent its budget: the address pays for it, whatever the player is told.
+            if (exception.ProviderAnswered)
+            {
+                outcome = SignInAttempts.Outcome.Refused;
+            }
+
             // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
             // Why is said once a minute: every post would otherwise write it again.
             if (Counted(SignInCounts.Step.Unavailable, name) == 1)
