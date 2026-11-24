@@ -24,10 +24,7 @@ public sealed class TableComposerTests
 
         await Should.ThrowAsync<IOException>(() => hosted.Composer.ComposeAsync(HostedTables.OnePerson, TestContext.Current.CancellationToken));
 
-        for (var attempt = 0; attempt < 300 && repository.Count > 0; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => repository.Count == 0, "the match was forgotten", TestContext.Current.CancellationToken);
 
         repository.Count.ShouldBe(0, "the match of a table that never opened should have been forgotten");
     }
