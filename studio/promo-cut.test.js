@@ -8,6 +8,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CARD_LIMITS, CUT_FORMAT, END_NOTE, LANGUAGES, assemble, assembly, brandMark, withFont, cardPages, cutName, framesOf, parseArguments, readCut } from '../scripts/promo/cut.mjs';
 import { filmFacts, hasEncoder, root } from '../scripts/promo/shoot.mjs';
+import { spellNamesFr } from '../showcase/field-notes.mjs';
 
 const script = fileURLToPath(new URL('../scripts/promo/cut.mjs', import.meta.url));
 const cuts = join(root, 'promo/cuts');
@@ -47,6 +48,22 @@ test('every cut of the repository reads, and its shots are the repository\'s fil
     const run = spawnSync(process.execPath, [script, join(cuts, file), '--check'], { encoding: 'utf8' });
     assert.equal(run.status, 0, run.stderr);
     assert.match(run.stdout, /stretch\(es\), [\d.]+ s at /);
+  }
+});
+
+test('a cut\'s words name a spell as the battle it lays them over does, in English, in French too', () => {
+  // The showcase's French names are not the game's: a French caption over a film that says "Pummel" says Pummel.
+  const english = new Set(readdirSync(join(root, 'data/Spells'), { recursive: true }).filter(file => String(file).endsWith('.json'))
+    .map(file => JSON.parse(readFileSync(join(root, 'data/Spells', String(file)), 'utf8')).name));
+  const showcaseOnly = Object.values(spellNamesFr).filter(name => !english.has(name));
+  assert.ok(showcaseOnly.includes('Marteler'), 'the showcase names Pummel otherwise');
+  for (const file of readdirSync(cuts).filter(name => name.endsWith('.json'))) {
+    const read = readCut(join(cuts, file));
+    for (const language of LANGUAGES) {
+      for (const text of [read.titleCard[language], ...read.shots.map(stretch => stretch.caption[language])]) {
+        for (const name of showcaseOnly) assert.ok(!new RegExp(`(^|[^\\p{L}])${name}([^\\p{L}]|$)`, 'u').test(text), `${file}: "${text}" names the spell ${name}, which the battle does not show`);
+      }
+    }
   }
 });
 

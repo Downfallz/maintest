@@ -181,7 +181,8 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    Tests: `studio/promo-cut.test.js` (the refusals: a missing shot, a shot not filmed or not at the ratio, seconds
    past the film or off a frame, words missing, broken over two lines, or over their card, words on the end card, a cut past
    60 s, shots at two sizes or rates; the cards' stylesheet and pages name no raw colour and only tokens of
-   `branding.css`, and the display face is carried in the page; the assembly's arguments; an MP4 of the length, size and frame count asked, the same bytes twice),
+   `branding.css`, and the display face is carried in the page; a cut's words name spells as the battle does,
+   in English, in French too; the assembly's arguments; an MP4 of the length, size and frame count asked, the same bytes twice),
    and the journey `studio/browser/table.promo.js` (the cards drawn at 1080 by 1920, the caption on a clear ground,
    a caption too wide refused, on the phone project's defaults). The English words of a cut are scanned with the
    pages' (`table/terminology.test.js`), and a change to a cut plays the journey (`studio/browser/plan.js`).

@@ -100,9 +100,9 @@ and an end card, assembled into one silent MP4 a language (the plan's question 6
   "format": "downfall.promo.cut.v1",
   "title": "The opponent strikes with Fury, the Brute answers with Pummel, for the vertical feeds",
   "ratio": "9:16",
-  "titleCard": { "seconds": 2, "en": "Turn-based 3v3 combat", "fr": "3 contre 3 au tour par tour" },
+  "titleCard": { "seconds": 2, "en": "Turn-based tactics", "fr": "Tactique au tour par tour" },
   "shots": [
-    { "shot": "brute-pummel-round-3", "start": 6, "seconds": 2.6, "caption": { "en": "Your Brute answers with Pummel.", "fr": "Ta Brute riposte avec Marteler." } }
+    { "shot": "brute-pummel-round-3", "start": 6, "seconds": 2.6, "caption": { "en": "Your Brute answers with Pummel.", "fr": "Ta Brute riposte avec Pummel." } }
   ],
   "endCard": { "seconds": 3 }
 }
@@ -115,7 +115,9 @@ and an end card, assembled into one silent MP4 a language (the plan's question 6
 - `titleCard` and each `caption` say their words in English (`en`) and French (`fr`), as plain text without a
   line break: the card wraps it. The English words are scanned as the pages' are, against the retired words of
   [player-terminology.md](../docs/domain/player-terminology.md) (`table/terminology.test.js`); the French are held to
-  its FR column by the `copy-editor`. Each ratio limits a card's words (`CARD_LIMITS`: a title on three lines, a
+  its FR column by the `copy-editor`. A spell keeps the name the battle shows, in English, in the French words
+  too, as the rulebook's French edition does: the film shows "Pummel", never the showcase's "Marteler"
+  (`studio/promo-cut.test.js` refuses those names). Each ratio limits a card's words (`CARD_LIMITS`: a title on three lines, a
   caption on two), and the browser measures them again when it draws the card.
 - `endCard` gives only its `seconds`: its words are the brand's, the same in every cut (the mark, the name,
   `downfallinstinct.com`, and the showcase's own "Beta · Free to play" line, `showcase/copy.mjs`).
