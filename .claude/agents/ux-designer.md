@@ -33,7 +33,9 @@ contact sheet and a file of measures at each width (`doors-390.png`, `doors-390.
    and the session has them. Do not brief a screen you have not seen. Write the commit and the command of the
    walk in the brief's opening, so the critique films the same journey.
 2. Read each screen's page: its HTML, its sheet, what its script shows in each state. A state the walk did not
-   film (an error, offline, a wait) is read in the code, and the brief says it was read and not seen.
+   film (an error, offline, a wait) is read in the code, and the brief says it was read and not seen. A claim
+   that a page has none of something (a token, a rule for less motion, an animation) is grepped across every
+   sheet the page loads, `table/table.css` too and not only `table/identity.css` and `table/lobby.css` (#928).
 3. Write the brief in the journey's file, a screen at a time, in the nine parts the format names. Several
    screens of the walk that are one page in one state (the sign-in panel, plain and from an invitation) share a
    brief. A screen the walk films and you leave out is named in the opening, with why.
@@ -53,7 +55,9 @@ What a brief must hold to:
   painting that holds its place until it comes. A screen is never left waiting for a picture.
 - Every beat is one row: what starts it, what it moves (`transform`, `opacity`, nothing else), its pattern as a
   link to its entry in the craft book, its token. A token must be declared: `grep -n -- '--motion' docs/art/branding.css`
-  lists the motion tokens (ADR 0197). A value the kit lacks is written `*UX4*` with the number, never a token you invented.
+  lists the motion tokens (ADR 0197). A value the kit lacks is written `*Kit*:` with the number, never a token
+  you invented; the pass that builds the brief adds it to `docs/art/branding.css` and to `table/motion.test.js`'s
+  lists (ADR 0197).
 - A pattern the book does not have is not used. Say what is missing under **Left**: the book gains an entry
   first, with its six lines and its source, in its own change.
 - Each beat has its form under less motion: a fade for a travel, the settled frame, nothing. What moves by
