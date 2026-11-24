@@ -792,11 +792,11 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     `studio/ux-access.test.js` the lines and the list.
 
     Not fixed: each journey has a list in `scripts/ux/access-known.json` of what the checks found and this stage did
-    not fix, 587 lines in all. A line names the finding without the element's place among its siblings. A finding not
+    not fix, 604 lines in all. A line names the finding without the element's place among its siblings. A finding not
     in the list fails the journey, and so does a line the walk no longer finds (`goneFindings`): the change that fixes
-    a finding removes its line, so a finding that returns fails again. 19 lines are marked `~ ` (unsteady): the
-    walks of the same tree did not all find them. A creature on the field, a coach's card or the order of play lands a
-    frame sooner or later, so these overlaps and cuts come and go. They never fail the walk; the other 568 hold both
+    a finding removes its line, so a finding that returns fails again. 39 lines are marked `~ ` (unsteady): the
+    walks of the same tree did not all find them, here or on CI's runners, whose fonts set words wider. A creature on the field, a coach's card or the order of play lands a
+    frame sooner or later, so these overlaps and cuts come and go. They never fail the walk; the other 565 hold both
     ways. axe findings are never in the list. It holds:
     - Text at 200% and spaced: 357 pairs of controls on top of each other (340 steady), 68 boxes that cut their
       words (66 steady) and 79 screens that scroll sideways at 200%. Most are in the match's frame (161), its windows

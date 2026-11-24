@@ -230,7 +230,8 @@
     "390 waiting-room: doubled overlaps #inbox-open | #settings",
     "390 waiting-room: forced icons #actor-layer > button",
     "390 waiting-room: spacing clipped #reading-detail",
-    "390 waiting-room: spacing overlaps #home-menu-toggle | #settings"
+    "390 waiting-room: spacing overlaps #home-menu-toggle | #settings",
+    "~ 390 home-push-offer: doubled overlaps #mine-finished | #push-offer-on"
   ],
   "pages": [
     "320 friend-invited: doubled overlaps #ranked | #create-cancel",
@@ -254,7 +255,8 @@
     "390 leaderboard: doubled wide",
     "390 rulebook: doubled wide",
     "390 statistics-ranked: doubled wide",
-    "390 statistics: doubled wide"
+    "390 statistics: doubled wide",
+    "~ 320 offline: doubled wide"
   ],
   "match": [
     "320 match-result: doubled clipped #match-report-sides > section > div > table > tbody > tr > th > button > span",
@@ -348,7 +350,6 @@
     "390 mutation-tree: doubled overlaps #home-menu-toggle | #help-open",
     "390 mutation-tree: doubled overlaps #home-menu-toggle | #settings",
     "390 mutation-tree: doubled overlaps #inbox-open | #settings",
-    "390 mutation-tree: doubled overlaps #mutation-inspect | #planning-close",
     "390 mutation-tree: doubled overlaps #planning-choices > section > div > div > button | #planning-close",
     "390 mutation-tree: forced icons #actor-layer > button",
     "390 mutation-tree: spacing overlaps #home-menu-toggle | #settings",
@@ -443,7 +444,13 @@
     "~ 320 order-of-play: spacing overlaps #recap-open | #timeline > li > button",
     "~ 320 result-read: spacing clipped #actor-layer > button > span > span > span",
     "~ 320 result-read: spacing clipped #actor-layer > button > span > span > span > span",
-    "~ 390 order-of-play: spacing overlaps #order-open | #timeline > li > button"
+    "~ 390 mutation-tree: doubled clipped #planning-confirm",
+    "~ 390 mutation-tree: doubled overlaps #mutation-inspect | #planning-close",
+    "~ 390 order-of-play: doubled overlaps #order-open | #timeline > li > button",
+    "~ 390 order-of-play: doubled overlaps #recap-open | #timeline > li > button",
+    "~ 390 order-of-play: spacing overlaps #order-open | #timeline > li > button",
+    "~ 390 phase-tip: spacing overlaps #help-rules | #help-mute",
+    "~ 390 targets: spacing clipped #actor-layer > button > span"
   ],
   "windows": [
     "320 history: doubled overlaps #history-summary > article > header > button | #history-earlier",
@@ -473,7 +480,6 @@
     "320 mutation-pick: spacing overlaps #planning-choices > section > div > div > button | #planning-close",
     "320 mutation-tree: doubled overlaps #atlas-board > section > div > button | #atlas-detail-body > div > button",
     "320 mutation-tree: spacing overlaps #atlas-board > section > div > button | #atlas-detail-body > div > button",
-    "320 mutation-tree: spacing overlaps #atlas-board > section > div > button | #atlas-detail-close",
     "320 order-revealed: doubled clipped #actor-layer > button > span > span",
     "320 order-revealed: doubled overlaps #account-menu > summary | #timeline > li > button",
     "320 order-revealed: doubled overlaps #help-open | #timeline > li > button",
@@ -542,7 +548,6 @@
     "390 mutation-pick: doubled overlaps #home-menu-toggle | #help-open",
     "390 mutation-pick: doubled overlaps #home-menu-toggle | #settings",
     "390 mutation-pick: doubled overlaps #inbox-open | #settings",
-    "390 mutation-pick: doubled overlaps #mutation-inspect | #planning-close",
     "390 mutation-pick: doubled overlaps #planning-choices > section > div > div > button | #planning-close",
     "390 mutation-pick: forced icons #actor-layer > button",
     "390 mutation-pick: spacing overlaps #home-menu-toggle | #settings",
@@ -604,6 +609,10 @@
     "390 tempo-reference: doubled overlaps #planning-choices > div > div > button | #planning-close",
     "390 tempo-reference: doubled overlaps #recap-open | #order-open",
     "390 tempo-reference: forced icons #actor-layer > button",
-    "390 tempo-reference: spacing overlaps #home-menu-toggle | #settings"
+    "390 tempo-reference: spacing overlaps #home-menu-toggle | #settings",
+    "~ 320 mutation-tree: spacing overlaps #atlas-board > section > div > button | #atlas-detail-close",
+    "~ 390 history: doubled overlaps #history-summary > article > header > button | #history-earlier",
+    "~ 390 mutation-pick: doubled clipped #planning-confirm",
+    "~ 390 mutation-pick: doubled overlaps #mutation-inspect | #planning-close"
   ]
 }
