@@ -44,24 +44,40 @@ export function parseBaseline(text) {
   const tables = {};
   let journey = null, width = null, header = null;
   for (const line of text.split('\n')) {
-    const heading = /^## (.+)$/.exec(line);
-    if (heading) { journey = byTitle.get(heading[1]) ?? null; width = null; header = null; continue; }
-    const at = /^At (\d+) by \d+:$/.exec(line);
-    if (at && journey) { width = Number(at[1]); header = null; continue; }
-    if (!line.startsWith('|')) { if (line.trim()) header = null; continue; }
-    if (!journey || !width) continue;
-    const row = line.slice(1, -1).split('|').map(cell => cell.trim());
-    if (!header) { header = row; continue; }
-    if (row.every(cell => /^-+$/.test(cell))) continue;
-    const measured = Object.fromEntries(header.map((name, index) => [name, row[index]]));
-    ((tables[journey] ??= {})[width] ??= new Map()).set(measured.Screen.replace(/ \(staged\)$/, ''), measured);
+    const heading = /^## (.+)$/.exec(line), at = /^At (\d+) by \d+:$/.exec(line);
+    if (heading) {
+      journey = byTitle.get(heading[1]) ?? null;
+      width = null;
+      header = null;
+    } else if (at && journey) {
+      width = Number(at[1]);
+      header = null;
+    } else if (!line.startsWith('|')) {
+      // A line of prose ends a table: the next one starts with its own header.
+      if (line.trim()) header = null;
+    } else if (journey && width) {
+      const row = line.slice(1, -1).split('|').map(cell => cell.trim());
+      if (!header) header = row;
+      else if (!row.every(cell => /^-+$/.test(cell))) keepRow(tables, journey, width, header, row);
+    }
   }
   if (!Object.keys(tables).length) throw new Error('The baseline holds no table of a journey.');
   return tables;
 }
 
+/** One row of the baseline, kept by its journey, its width and its screen's name, `(staged)` left out. */
+function keepRow(tables, journey, width, header, row) {
+  const measured = Object.fromEntries(header.map((name, index) => [name, row[index]]));
+  tables[journey] ??= {};
+  tables[journey][width] ??= new Map();
+  tables[journey][width].set(measured.Screen.replace(/ \(staged\)$/, ''), measured);
+}
+
 const table = (header, rows) => [`| ${header.join(' | ')} |`, `| ${header.map(() => '---').join(' | ')} |`, ...rows.map(row => `| ${row.join(' | ')} |`)].join('\n');
-const moved = (then, now) => (then === undefined ? now : then === now ? now : `${then} → ${now}`);
+const moved = (then, now) => {
+  if (then === undefined || then === now) return now;
+  return `${then} → ${now}`;
+};
 const width = walk => Number(walk.header.viewport.split('x')[0]);
 const seconds = spread => (spread ? `${(spread.median / 1000).toFixed(1)} s` : 'not painted');
 
@@ -96,11 +112,54 @@ export function missingWalks(walks) {
   return lacking;
 }
 
+/** One journey's section: each width a table of its screens then and now, what is gone and what a player could not press. */
+function journeySection(journey, walks, baseline) {
+  const parts = [`## ${journey.title}`];
+  for (const walk of walks) {
+    const then = baseline[journey.id]?.[width(walk)] ?? new Map();
+    const rows = walk.screens.map(screen => {
+      const was = then.get(screen.screen), is = cells(screen, walk.header.axe);
+      return [was ? screen.screen : `${screen.screen} *new*`, ...COMPARED.map(column => moved(was?.[column], is[column]))];
+    });
+    parts.push(`At ${walk.header.viewport.replace('x', ' by ')}:`, table(['Screen', ...COMPARED], rows));
+    const gone = [...then.keys()].filter(name => !walk.screens.some(screen => screen.screen === name));
+    if (gone.length) parts.push(`In the baseline and not walked now: ${gone.join(', ')}.`);
+    const blocked = (walk.header.blocked ?? []).map(line => '- ' + line.replaceAll('|', String.raw`\|`));
+    if (blocked.length) parts.push(`Out of a player's reach at this size:\n\n${blocked.join('\n')}`);
+  }
+  return parts;
+}
+
+/** The paints' section, against the baseline's paints. */
+function paintSection(paint, baselinePaints) {
+  const { profile, pages } = paint;
+  if (!pages || !Object.keys(pages).length) throw new Error('paint.json holds no page.');
+  const rows = Object.entries(pages).map(([name, page]) => {
+    const was = baselinePaints?.get(name) ?? baselinePaints?.get(BASELINE_PAINT_NAMES[name]);
+    const shift = page.shift ? page.shift.median.toFixed(2) : 'not read';
+    return [name, moved(was?.['Largest paint']?.split(' (')[0], seconds(page.largestPaintMs)), page.largestIs,
+      moved(was?.['Layout shift']?.split(' (')[0], shift), moved(was?.['Pictures loaded'], `${Math.round(page.pictureBytes / 1024)} KB`)];
+  });
+  return ['## The first paints, on a slow phone',
+    `Each page loaded ${Object.values(pages)[0].runs} times with nothing cached, at ${profile.viewport.replace('x', ' by ')}, on the baseline's slow phone. The median; the baseline's where it painted the page. A paint is this machine's on this day.`,
+    table(['Page', 'Largest paint', 'The largest is', 'Layout shift', 'Pictures loaded'], rows)];
+}
+
+/** The section of less motion: what travelled or animated at rest, or that nothing did. */
+function lessSection(less) {
+  const faults = less.flatMap(walk => lessMotionFaults(walk.screens).map(line => `${walk.header.journey} at ${width(walk)} px, ${line}`));
+  const screens = less.reduce((sum, walk) => sum + walk.screens.length, 0);
+  return ['## Less motion',
+    `Every journey walked again with the system's wish for less motion (\`--less-motion\`): ${screens} screens. On the way to each, on every person's pages, the walk keeps every transition, keyframe animation or \`animate\` call that moves a thing across the screen, on an element or its \`::before\` and \`::after\`, and every smooth scroll (\`scripts/ux/motion.mjs\`); at rest, every animation still running.`,
+    faults.length ? faults.map(line => `- ${line}`).join('\n') : 'Nothing travelled, and nothing animated at rest.'];
+}
+
 /** The page: each journey's screens then and now, the paints then and now, and what less motion found. */
 export function acceptanceMarkdown({ walks, paint, baseline, baselinePaints = null, commit, date }) {
   const full = walks.filter(walk => !walk.header.lessMotion), less = walks.filter(walk => walk.header.lessMotion);
   if (!full.length) throw new Error('No walk to read against the baseline: the folder holds no measures under full motion.');
   const now = tally(full);
+  const axe = now.axeRun ? `${now.axe} with a finding of axe.` : 'axe was not run.';
   const parts = [`# The journeys at acceptance
 
 The journeys of [the pages' craft plan](../ux-craft-plan.md) as UX14 found them, walked by \`scripts/ux/journey.mjs\` on
@@ -110,43 +169,13 @@ on its page. A cell reads \`then → now\` where the measure moved since the bas
 not. A screen the baseline does not hold is marked *new*. [The record](../ux-acceptance.md) reads this page.
 
 ${now.screens} screens walked. ${now.overFilled} with more than one filled action. ${now.wordsUnder} words under 11 px in all.
-${now.overlaps} with controls that overlap. ${now.axeRun ? `${now.axe} with a finding of axe.` : 'axe was not run.'} ${now.animating} still animating at rest.`];
+${now.overlaps} with controls that overlap. ${axe} ${now.animating} still animating at rest.`];
   for (const journey of JOURNEYS) {
     const mine = full.filter(walk => walk.header.journey === journey.id);
-    if (!mine.length) continue;
-    parts.push(`## ${journey.title}`);
-    for (const walk of mine) {
-      const then = baseline[journey.id]?.[width(walk)] ?? new Map();
-      const rows = walk.screens.map(screen => {
-        const was = then.get(screen.screen), is = cells(screen, walk.header.axe);
-        return [`${screen.screen}${was ? '' : ' *new*'}`, ...COMPARED.map(column => moved(was?.[column], is[column]))];
-      });
-      parts.push(`At ${walk.header.viewport.replace('x', ' by ')}:`, table(['Screen', ...COMPARED], rows));
-      const gone = [...then.keys()].filter(name => !walk.screens.some(screen => screen.screen === name));
-      if (gone.length) parts.push(`In the baseline and not walked now: ${gone.join(', ')}.`);
-      if (walk.header.blocked?.length) parts.push(`Out of a player's reach at this size:\n\n${walk.header.blocked.map(line => `- ${line.replaceAll('|', '\\|')}`).join('\n')}`);
-    }
+    if (mine.length) parts.push(...journeySection(journey, mine, baseline));
   }
-  if (paint) {
-    const { profile, pages } = paint;
-    if (!pages || !Object.keys(pages).length) throw new Error('paint.json holds no page.');
-    parts.push('## The first paints, on a slow phone',
-      `Each page loaded ${Object.values(pages)[0].runs} times with nothing cached, at ${profile.viewport.replace('x', ' by ')}, on the baseline's slow phone. The median; the baseline's where it painted the page. A paint is this machine's on this day.`,
-      table(['Page', 'Largest paint', 'The largest is', 'Layout shift', 'Pictures loaded'],
-        Object.entries(pages).map(([name, page]) => {
-          const was = baselinePaints?.get(name) ?? baselinePaints?.get(BASELINE_PAINT_NAMES[name]);
-          return [name, moved(was?.['Largest paint']?.split(' (')[0], seconds(page.largestPaintMs)), page.largestIs,
-            moved(was?.['Layout shift']?.split(' (')[0], page.shift ? page.shift.median.toFixed(2) : 'not read'),
-            moved(was?.['Pictures loaded'], `${Math.round(page.pictureBytes / 1024)} KB`)];
-        })));
-  }
-  if (less.length) {
-    const faults = less.flatMap(walk => lessMotionFaults(walk.screens).map(line => `${walk.header.journey} at ${width(walk)} px, ${line}`));
-    const screens = less.reduce((sum, walk) => sum + walk.screens.length, 0);
-    parts.push('## Less motion',
-      `Every journey walked again with the system's wish for less motion (\`--less-motion\`): ${screens} screens. On the way to each, on every person's pages, the walk keeps every transition, keyframe animation or \`animate\` call that moves a thing across the screen, on an element or its \`::before\` and \`::after\`, and every smooth scroll (\`scripts/ux/motion.mjs\`); at rest, every animation still running.`,
-      faults.length ? faults.map(line => `- ${line}`).join('\n') : 'Nothing travelled, and nothing animated at rest.');
-  }
+  if (paint) parts.push(...paintSection(paint, baselinePaints));
+  if (less.length) parts.push(...lessSection(less));
   return `${parts.join('\n\n')}\n`;
 }
 

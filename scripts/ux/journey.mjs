@@ -163,7 +163,7 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
         // Every person's pages are drained, so a page left behind or the friend's own says what moved on it.
         if (lessMotion) {
           if (!(await on.evaluate(travelWatchedInPage))) throw new Error(`${name}: the watch of less motion is not on this page, so nothing it read could be called still.`);
-          measures.travel = [...new Set(watches.flatMap(watch => watch.take()))].sort();
+          measures.travel = [...new Set(watches.flatMap(watch => watch.take()))].sort((a, b) => a.localeCompare(b));
         }
         if (filmed?.at === name) {
           shots = await film(on, () => filmed.act({ ...walk, page: on }), { frames, interval });
@@ -341,11 +341,11 @@ async function main(argv) {
           continue;
         }
         const { lessMotion } = options;
-        const screens = await walkJourney(browser, journey, viewport, { showcase, axe, lessMotion });
+        const screens = await walkJourney(browser, journey, viewport, { showcase, axe, lessMotion }); // NOSONAR S9382: one walk at a time, on purpose (above).
         const name = `${journey.id}-${viewport.width}${lessMotion ? '-less' : ''}`;
         const sheet = join(out, `${name}.png`), measures = join(out, `${name}.measures.jsonl`);
-        await writeFile(sheet, await journeySheet(browser, journey, viewport, screens, lessMotion));
-        await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), lessMotion, blocked: screens.blocked, screens }));
+        await writeFile(sheet, await journeySheet(browser, journey, viewport, screens, lessMotion)); // NOSONAR S9382: written before the next walk starts.
+        await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), lessMotion, blocked: screens.blocked, screens })); // NOSONAR S9382: as above.
         console.log(sheet); console.log(measures);
         const moving = lessMotion ? lessMotionLines(journey.id, viewport, screens) : [];
         for (const line of moving) console.error(line);

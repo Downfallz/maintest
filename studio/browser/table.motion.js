@@ -29,7 +29,7 @@ for (const journey of JOURNEYS) {
     test.setTimeout(600000);
     const faults = [];
     for (const viewport of WIDTHS) {
-      const screens = await walkJourney(browser, journey, viewport, { showcase, lessMotion: true });
+      const screens = await walkJourney(browser, journey, viewport, { showcase, lessMotion: true }); // NOSONAR S9382: each walk raises its own host, one at a time.
       faults.push(...lessMotionFaults(screens).map(line => `${viewport.width} ${line}`));
     }
     expect(faults).toEqual([]);

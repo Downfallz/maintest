@@ -63,13 +63,15 @@ export function watchTravelInPage({ travel, binding }) {
     return animation;
   };
   // A smooth scroll glides the page however the sheets cut their durations.
-  for (const [owner, method] of [[Element.prototype, 'scrollIntoView'], [Element.prototype, 'scrollTo'], [Element.prototype, 'scrollBy'], [Element.prototype, 'scroll'], [window, 'scrollTo'], [window, 'scrollBy'], [window, 'scroll']]) {
+  const smooth = (owner, method) => {
     const original = owner[method];
     owner[method] = function (...args) {
-      if (args[0]?.behavior === 'smooth') keep(this, `${method} smooth`);
+      if (args[0]?.behavior === 'smooth') keep(this, `${String(method)} smooth`);
       return original.apply(this, args);
     };
-  }
+  };
+  for (const method of ['scrollIntoView', 'scrollTo', 'scrollBy', 'scroll']) smooth(Element.prototype, method);
+  for (const method of ['scrollTo', 'scrollBy', 'scroll']) smooth(window, method);
 }
 
 /** Runs in the page: whether the watch is on it. A page without it would read as still. */
@@ -87,7 +89,7 @@ export async function watchTravel(context) {
   await context.addInitScript(watchTravelInPage, { travel: TRAVEL, binding: TRAVEL_BINDING });
   return {
     take() {
-      const lines = [...kept].sort();
+      const lines = [...kept].sort((a, b) => a.localeCompare(b));
       kept.clear();
       return lines;
     },
