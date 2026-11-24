@@ -109,6 +109,15 @@ export function budgetOf(art, page, density) {
 const paintingsOf = picture => picture.frames ?? [picture.source];
 /** The widths a phone of density 3 draws a picture at, on every page `dense` names, each once. */
 export const denseWidths = picture => [...new Set(Object.values(picture.dense ?? {}).flat())];
+
+/**
+ * A `dense` width whose file three times as wide is not sent: folded into a larger one within a tenth, which the
+ * worker, keeping files up to three times the width, would not keep either (#1149).
+ */
+function foldedDense(picture, sourceWidth, widths) {
+  return denseWidths(picture).filter(width => !widths.includes(Math.min(Math.round(width * 3), sourceWidth)))
+    .map(width => `${picture.name}: a phone of density 3 draws it at ${width} px, and its ${width * 3} px file is folded into a larger one: the worker would keep none for it`);
+}
 const phoneOf = picture => (picture.phone ? { phone: picture.phone } : {});
 const groupOf = picture => (picture.group ? { group: picture.group } : {});
 const denseOf = picture => (picture.dense ? { dense: picture.dense } : {});
@@ -198,7 +207,10 @@ function pictureProblems(picture, entry, { authored, read, files }) {
   if (entry.from !== origin(picture, paintings, encodingOf(picture, authored.encoding))) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: ${again}`);
   if (!same(entry.pages, picture.pages ?? {}) || !same(entry.drawn, picture.drawn) || !same(entry.phone, picture.phone) || !same(entry.dense, picture.dense) || !same(entry.group, picture.group) || entry.focus !== picture.focus || entry.frames !== frames)
     problems.push(`${picture.name}: the module does not say what the declaration says: ${again}`);
-  try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => paintingSize(one).width)), denseWidths(picture)); } catch { return [...problems, `${picture.name}: a painting it names is neither a PNG nor a WebP file`]; }
+  let sourceWidth;
+  try { sourceWidth = Math.min(...paintings.map(one => paintingSize(one).width)); } catch { return [...problems, `${picture.name}: a painting it names is neither a PNG nor a WebP file`]; }
+  widths = widthsOf(picture.drawn, sourceWidth, denseWidths(picture));
+  problems.push(...foldedDense(picture, sourceWidth, widths));
   const sent = entry.sizes.map(size => size.width / frames);
   if (!same(sent, widths)) problems.push(`${picture.name}: it is sent at ${widths.join(', ')} px, and the module names ${sent.join(', ')}: ${again}`);
   return [...problems, ...entry.sizes.flatMap(size => fileProblems(picture.name, size, files, read))];
@@ -314,7 +326,9 @@ async function derive() {
       const paintings = paintingsOf(picture), bytes = paintings.map(read), encoding = encodingOf(picture, authored.encoding), from = origin(picture, bytes, encoding);
       const kept = before[picture.name];
       if (kept?.from === from && kept.sizes.every(size => list().includes(size.file))) { art[picture.name] = { from, frames: kept.frames, drawn: picture.drawn, pages: picture.pages ?? {}, ...carried(picture), sizes: kept.sizes }; continue; }
-      const widths = widthsOf(picture.drawn, Math.min(...bytes.map(one => paintingSize(one).width)), denseWidths(picture));
+      const sourceWidth = Math.min(...bytes.map(one => paintingSize(one).width)), widths = widthsOf(picture.drawn, sourceWidth, denseWidths(picture));
+      const folded = foldedDense(picture, sourceWidth, widths);
+      if (folded.length) throw new Error(folded.join('\n'));
       const jobs = widths.map(width => ({ sources: paintings.map(path => fileURLToPath(new URL(path, ROOT))), width, out: join(work, `${picture.name}-${width}.webp`), ...encoding }));
       // NOSONAR S4036: python3 is found on the PATH of whoever derives a picture; nothing a visitor sends reaches this.
       const ran = spawnSync('python3', [fileURLToPath(new URL('encode.py', import.meta.url))], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR

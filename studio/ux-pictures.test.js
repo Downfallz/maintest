@@ -241,6 +241,9 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ dense: { 'table/sign-in': [99] } }), /eclipse-ground: on table\/sign-in a phone of density 3 draws it at 99 px, a width its drawn does not list/);
   assert.match(bad({ dense: [533] }), /dense gives each page the widths a phone of density 3 draws/);
   assert.match(bad({ dense: { 'showcase/home': [533] } }), /eclipse-ground: dense names showcase\/home, a page that does not draw it/);
+  // Three times 450 is 1350, a tenth under the 1440 px file: folded into it, it is not sent, and the worker keeps no
+  // file a phone of density 3 asks for.
+  assert.match(bad({ drawn: [533, 1440, 450], dense: { 'table/sign-in': [450] } }), /eclipse-ground: a phone of density 3 draws it at 450 px, and its 1350 px file is folded into a larger one/);
   assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
   for (const focus of ['33% 60%', null, {}, []]) assert.match(bad({ focus }), /eclipse-ground: a focus is two percentages/, JSON.stringify(focus));
   assert.match(bad({ source: undefined, frames: ['a.webp', 'b.webp'], focus: '50% 50%' }), /eclipse-ground: a strip is never cut, and takes no focus/);
