@@ -42,24 +42,11 @@ public sealed class TutorialPlayTests
 
     private static async Task<bool> HandedBackAsync(TutorialPlay play)
     {
-        for (var waited = 0; waited < 100 && play.Assisted.Count > 0; waited++)
-        {
-            await Task.Delay(50, TestContext.Current.CancellationToken);
-        }
-
-        return play.Assisted.Count == 0;
+        return await Waits.HoldsAsync(() => play.Assisted.Count == 0, TestContext.Current.CancellationToken);
     }
 
-    /// <summary>Whether <paramref name="condition" /> holds within five seconds, read 50 ms apart.</summary>
-    private static async Task<bool> SaidAsync(Func<bool> condition)
-    {
-        for (var waited = 0; waited < 100 && !condition(); waited++)
-        {
-            await Task.Delay(50, TestContext.Current.CancellationToken);
-        }
-
-        return condition();
-    }
+    /// <summary>Whether <paramref name="condition" /> holds within <see cref="Waits.Within" />.</summary>
+    private static Task<bool> SaidAsync(Func<bool> condition) => Waits.HoldsAsync(condition, TestContext.Current.CancellationToken);
 
     [Fact]
     public async Task An_assisted_question_is_answered_with_the_recorded_answer_for_the_asking_it_was_read_at()
