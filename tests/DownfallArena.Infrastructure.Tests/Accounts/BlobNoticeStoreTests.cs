@@ -34,6 +34,9 @@ public sealed class BlobNoticeStoreTests : NoticeStoreContract
         return await BlobNoticeStore.OpenAsync(_container, Cancel);
     }
 
+    protected override async Task<INoticeStore> OtherStoreAsync(INoticeStore store) =>
+        await BlobNoticeStore.OpenAsync(new BlobContainerClient(_container!.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
+
     /// <summary>A log another revision wrote, with fields this one does not know: marking it read keeps them (#1211).</summary>
     [Fact]
     public async Task Changing_a_log_keeps_the_fields_this_revision_does_not_know()
@@ -75,7 +78,7 @@ public sealed class BlobNoticeStoreTests : NoticeStoreContract
         var blob = _container!.GetBlobClient($"notices/{account.Value}.json");
         await blob.UploadAsync(BinaryData.FromString(NoticeFields.Written), Cancel);
         var read = await store.ReadAsync(account, Cancel);
-        var other = await BlobNoticeStore.OpenAsync(new BlobContainerClient(_container.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
+        var other = await OtherStoreAsync(store);
 
         (await other.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
 

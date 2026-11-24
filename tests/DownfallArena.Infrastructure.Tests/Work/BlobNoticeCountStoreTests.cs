@@ -36,6 +36,9 @@ public sealed class BlobNoticeCountStoreTests : NoticeCountStoreContract
         return await BlobNoticeCountStore.OpenAsync(_container, Cancel);
     }
 
+    protected override async Task<INoticeCountStore> OtherStoreAsync(INoticeCountStore store) =>
+        await BlobNoticeCountStore.OpenAsync(new BlobContainerClient(_container!.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
+
     /// <summary>A day another revision wrote, with a count this one does not know: adding to it keeps that count (#1151).</summary>
     [Fact]
     public async Task Adding_to_a_day_keeps_the_fields_this_revision_does_not_know()
@@ -75,7 +78,7 @@ public sealed class BlobNoticeCountStoreTests : NoticeCountStoreContract
         var blob = _container!.GetBlobClient("2026-11-23.json");
         await blob.UploadAsync(BinaryData.FromString(NoticeCountFields.Written), Cancel);
         var read = await store.ReadAsync(NoticeCountFields.Day, Cancel);
-        var other = await BlobNoticeCountStore.OpenAsync(new BlobContainerClient(_container.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
+        var other = await OtherStoreAsync(store);
 
         (await other.WriteAsync(NoticeCountFields.Day, NoticeCount.Sum([.. read.Counts, new("turn", 1, 0, 0)]), read.Version, Cancel)).ShouldBeTrue();
 

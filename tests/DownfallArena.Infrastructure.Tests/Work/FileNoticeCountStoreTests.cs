@@ -10,6 +10,8 @@ public sealed class FileNoticeCountStoreTests : NoticeCountStoreContract, IDispo
 
     protected override Task<INoticeCountStore> StoreAsync() => Task.FromResult<INoticeCountStore>(new FileNoticeCountStore(_root));
 
+    protected override Task<INoticeCountStore> OtherStoreAsync(INoticeCountStore store) => Task.FromResult<INoticeCountStore>(new FileNoticeCountStore(_root));
+
     [Fact]
     public async Task A_day_that_does_not_parse_or_holds_a_count_without_its_kind_reads_what_it_can_and_the_next_write_replaces_it()
     {

@@ -29,7 +29,8 @@ public sealed class FileNoticeCountStore : INoticeCountStore
 
     /// <summary>
     /// Writes back what this revision does not know of the day (#1151), from the text read at that version: kept from
-    /// this store's read, or read again (#1232). A write over a version that has moved since is refused, without being tried.
+    /// this store's read, or read again (#1232). A write over a version that has moved since is refused: without being
+    /// tried when the day was read again, by its condition when the text was kept.
     /// </summary>
     public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {
@@ -49,6 +50,7 @@ public sealed class FileNoticeCountStore : INoticeCountStore
 
     public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
     {
+        _read.Forget(kept => kept < day);
         if (!System.IO.Directory.Exists(Directory))
         {
             return;

@@ -26,7 +26,7 @@ internal sealed class TextsRead<TKey>
             return;
         }
 
-        if (_texts.Count >= Capacity)
+        if (!_texts.ContainsKey(key) && _texts.Count >= Capacity)
         {
             _texts.Clear();
         }
@@ -34,10 +34,24 @@ internal sealed class TextsRead<TKey>
         _texts[key] = (version, text);
     }
 
+    /// <summary>Lets go of what was kept of a document the store deleted or emptied, its push keys among it (ADR 0203).</summary>
+    public void Forget(TKey key) => _texts.TryRemove(key, out _);
+
+    /// <summary>Lets go of what was kept of every document <paramref name="which" /> names, those the store deleted.</summary>
+    public void Forget(Func<TKey, bool> which)
+    {
+        ArgumentNullException.ThrowIfNull(which);
+        foreach (var key in _texts.Keys.Where(which))
+        {
+            _texts.TryRemove(key, out _);
+        }
+    }
+
     /// <summary>
-    /// The text the document holds at that version, taken from what was kept or read again; none, with false, when the
-    /// document has moved past it, so the write is refused without being tried. What was kept is given to one write
-    /// only: the version it names is gone once that write is made.
+    /// The text the document holds at that version, taken from what was kept or read again. When it was read again and
+    /// the document has moved past that version, none, with false, so the write is refused without being tried; a kept
+    /// text cannot tell, and the conditional write is refused instead. What was kept is given to one write only: the
+    /// version it names is gone once that write is made.
     /// </summary>
     public async Task<(bool Current, string? Text)> AtAsync(
         TKey key,

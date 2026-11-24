@@ -11,6 +11,12 @@ public abstract class DeviceStoreContract
 
     protected abstract Task<IDeviceStore> StoreAsync();
 
+    /// <summary>
+    /// A second store over the same documents, as another process opens it: one that kept nothing of what
+    /// <paramref name="store" /> read (#1232). The same store for an adapter with one copy in memory.
+    /// </summary>
+    protected virtual Task<IDeviceStore> OtherStoreAsync(IDeviceStore store) => Task.FromResult(store);
+
     private static PushDevice Phone(string name, int day) =>
         new($"https://push.example/{name}", "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A", "AAECAwQFBgcICQoLDA0ODw", new DateTimeOffset(2026, 11, day, 20, 0, 0, TimeSpan.Zero));
 
@@ -128,5 +134,39 @@ public abstract class DeviceStoreContract
         await store.ForgetAsync(AccountId.New(), Cancel);
 
         (await store.ListAsync(AccountId.New(), Cancel)).ShouldBeEmpty();
+    }
+
+    /// <summary>The text this store kept of its read does not let its save past another store's since (#1232).</summary>
+    [Fact]
+    public async Task A_save_over_the_version_read_is_refused_once_another_store_saved_since()
+    {
+        var store = await StoreAsync();
+        var other = await OtherStoreAsync(store);
+        var account = AccountId.New();
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        (await other.SaveAsync(account, [Phone("one", 1), Phone("two", 2)], (await other.ReadAsync(account, Cancel)).Version, Cancel)).ShouldBeTrue();
+
+        var saved = await store.SaveAsync(account, [Phone("one", 1), Phone("three", 3)], read.Version, Cancel);
+
+        saved.ShouldBeFalse();
+        (await store.ListAsync(account, Cancel)).ShouldBe([Phone("one", 1), Phone("two", 2)]);
+    }
+
+    /// <summary>Nor past another store's forgetting the account: its devices stay gone.</summary>
+    [Fact]
+    public async Task A_save_over_the_version_read_is_refused_once_another_store_forgot_the_account()
+    {
+        var store = await StoreAsync();
+        var other = await OtherStoreAsync(store);
+        var account = AccountId.New();
+        await store.SaveAsync(account, [Phone("one", 1)], null, Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        await other.ForgetAsync(account, Cancel);
+
+        var saved = await store.SaveAsync(account, [Phone("one", 1), Phone("two", 2)], read.Version, Cancel);
+
+        saved.ShouldBeFalse();
+        (await store.ListAsync(account, Cancel)).ShouldBeEmpty();
     }
 }

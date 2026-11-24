@@ -11,6 +11,12 @@ public abstract class NoticeStoreContract
 
     protected abstract Task<INoticeStore> StoreAsync();
 
+    /// <summary>
+    /// A second store over the same documents, as another process opens it: one that kept nothing of what
+    /// <paramref name="store" /> read (#1232). The same store for an adapter with one copy in memory.
+    /// </summary>
+    protected virtual Task<INoticeStore> OtherStoreAsync(INoticeStore store) => Task.FromResult(store);
+
     private static NoticeEntry Entry(long id, NoticeKind kind = NoticeKind.MatchOver, bool read = false) =>
         new(id, kind, "Victory", "You won against bastien.", "/play?table=t1", $"match:t{id}", new DateTimeOffset(2026, 11, 22, 20, 0, 0, TimeSpan.Zero).AddMinutes(id), read);
 
@@ -166,5 +172,39 @@ public abstract class NoticeStoreContract
         await store.ForgetAsync(AccountId.New(), Cancel);
 
         (await store.ReadAsync(AccountId.New(), Cancel)).Entries.ShouldBeEmpty();
+    }
+
+    /// <summary>The text this store kept of its read does not let its write past another store's since (#1232).</summary>
+    [Fact]
+    public async Task A_write_over_the_version_read_is_refused_once_another_store_wrote_since()
+    {
+        var store = await StoreAsync();
+        var other = await OtherStoreAsync(store);
+        var account = AccountId.New();
+        await store.WriteAsync(account, [Entry(1)], null, Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        (await other.WriteAsync(account, [Entry(2), Entry(1)], (await other.ReadAsync(account, Cancel)).Version, Cancel)).ShouldBeTrue();
+
+        var written = await store.WriteAsync(account, [Entry(3), Entry(1)], read.Version, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.ReadAsync(account, Cancel)).Entries.ShouldBe([Entry(2), Entry(1)]);
+    }
+
+    /// <summary>Nor past another store's forgetting the account: the log stays gone.</summary>
+    [Fact]
+    public async Task A_write_over_the_version_read_is_refused_once_another_store_forgot_the_account()
+    {
+        var store = await StoreAsync();
+        var other = await OtherStoreAsync(store);
+        var account = AccountId.New();
+        await store.WriteAsync(account, [Entry(1)], null, Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        await other.ForgetAsync(account, Cancel);
+
+        var written = await store.WriteAsync(account, [Entry(2), Entry(1)], read.Version, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.ReadAsync(account, Cancel)).ShouldBe(new NoticeLogRead([], null));
     }
 }

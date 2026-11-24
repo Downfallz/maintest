@@ -34,6 +34,9 @@ public sealed class BlobDeviceStoreTests : DeviceStoreContract
         return await BlobDeviceStore.OpenAsync(_container, Cancel);
     }
 
+    protected override async Task<IDeviceStore> OtherStoreAsync(IDeviceStore store) =>
+        await BlobDeviceStore.OpenAsync(new BlobContainerClient(_container!.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
+
     /// <summary>A list another revision wrote, with fields this one does not know: adding a device keeps them (#1211).</summary>
     [Fact]
     public async Task Changing_a_list_keeps_the_fields_this_revision_does_not_know()
@@ -75,7 +78,7 @@ public sealed class BlobDeviceStoreTests : DeviceStoreContract
         var blob = _container!.GetBlobClient($"devices/{account.Value}.json");
         await blob.UploadAsync(BinaryData.FromString(DeviceFields.Written), Cancel);
         var read = await store.ReadAsync(account, Cancel);
-        var other = await BlobDeviceStore.OpenAsync(new BlobContainerClient(_container.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
+        var other = await OtherStoreAsync(store);
 
         (await other.SaveAsync(account, DeviceFields.Added(read.Devices), read.Version, Cancel)).ShouldBeTrue();
 

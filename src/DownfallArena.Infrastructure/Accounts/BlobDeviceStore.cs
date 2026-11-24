@@ -38,11 +38,17 @@ public sealed class BlobDeviceStore : IDeviceStore
 
     /// <summary>
     /// Writes back the fields this revision does not know (#1211), from the text read at that version: kept from this
-    /// store's read, or read again (#1232). A write is refused, without being tried, when the version has moved since.
+    /// store's read, or read again (#1232). A write over a version that has moved since is refused: without being
+    /// tried when the document was read again, by its condition when the text was kept.
     /// </summary>
     public async Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(devices);
+        if (devices.Count == 0)
+        {
+            _read.Forget(account);
+        }
+
         string? before = null;
         if (version is not null && devices.Count > 0)
         {
@@ -56,8 +62,11 @@ public sealed class BlobDeviceStore : IDeviceStore
         return await ConditionalBlob.WriteAsync(Blob(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
-        _container.DeleteBlobIfExistsAsync(DeviceDocuments.PathOf(account), cancellationToken: cancellationToken);
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    {
+        _read.Forget(account);
+        return _container.DeleteBlobIfExistsAsync(DeviceDocuments.PathOf(account), cancellationToken: cancellationToken);
+    }
 
     private BlobClient Blob(AccountId account) => _container.GetBlobClient(DeviceDocuments.PathOf(account));
 }

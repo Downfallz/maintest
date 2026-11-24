@@ -10,6 +10,8 @@ public sealed class FileNoticeStoreTests : NoticeStoreContract, IDisposable
 
     protected override Task<INoticeStore> StoreAsync() => Task.FromResult<INoticeStore>(new FileNoticeStore(_root));
 
+    protected override Task<INoticeStore> OtherStoreAsync(INoticeStore store) => Task.FromResult<INoticeStore>(new FileNoticeStore(_root));
+
     [Fact]
     public async Task An_entry_of_a_kind_this_host_does_not_know_is_skipped_and_the_rest_read()
     {

@@ -1,0 +1,3 @@
+# code-reviewer lessons (branch claude/issue-1232-stores-conditional-writes-l149y2)
+- A version-keyed text cache that skips a pre-write read also skips the pre-write refusal: a hit over a moved version is sent and refused by the storage (412), so "refused without being tried" doc comments go stale; read each doc line against the hit path (#1232, ae6defe).
+- A round-trip saving proved on one adapter (Blob, a counting pipeline policy) leaves its twin adapters (File) with the same change and no test that breaks when it is reverted; ask for the twin's test or say it is a guard only (#1232, ae6defe).
