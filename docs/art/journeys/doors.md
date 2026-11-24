@@ -844,6 +844,10 @@ another device, which this page learns from the host, shows the plain door: this
 - **Filled action**: the sign-in itself, as on the plain door: Google's button on the public host, which cannot be
   gold; Sign in, filled gold, on a developer's host. Every other action is quiet.
 
+- **The painting from 1280 px**: beside the words, the panel cuts the plate's sides. The cut is held at `90% 50%`
+  (`door.js`), so the Predator's jaw, at 91% of the painting's width, stays in, and the dark left under the words'
+  fade goes.
+
 ### Words
 
 - **Order**: the eyebrow, the title, the line on the games, the line on the account, the button. Privacy policy last.

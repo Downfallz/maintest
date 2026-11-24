@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { doorPictures, doorWords, invitationKeys, invitationOf, nameNext } from './door.js';
 
 const offered = (table, seat = 'player2') => ({ invitations: [{ token: 'inv', kind: 'invitation', seat, table }] });
@@ -84,4 +85,9 @@ test('a player who just signed out here is told goodbye and that their games wai
 test('the panel after a sign out shows the Predator at rest alone, in place of the ground and the Revenant', () => {
   assert.deepEqual(doorPictures(null, { left: true }), ['predator-at-rest']);
   assert.deepEqual(doorPictures({}, { left: true }), ['duel'], 'an invitation outranks the goodbye');
+});
+
+test('beside the words on a wide screen, the Predator at rest is cut on its dark left, so its jaw stays in the panel', () => {
+  const source = readFileSync(new URL('./door.js', import.meta.url), 'utf8');
+  assert.match(source, /'predator-at-rest': \{[^}]*focus: '90% 50%'/);
 });
