@@ -157,8 +157,8 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             }
 
             await ForgetAsync(account, device.Endpoint, cancellationToken);
-            // A device kept before the host checked its service is never sent to, and turning it on again would be
-            // refused on the same service: answered as that refusal, not as gone (#1176, #1209).
+            // A device kept from before the host checked push services is never sent to. Turning it on again would be
+            // refused on that service too, so answer with that refusal, not "gone" (#1176, #1209).
             return sent is PushSent.UnknownService
                 ? PushTest.OnUnknownService
                 : new PushTest(false, "This subscription is gone. Turn \"Pop-ups on this device\" on again.");

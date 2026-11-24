@@ -7,7 +7,7 @@
 // The pure part is here: what the switch says and what the choices send. The page does the asking.
 
 import { accountRequest } from './account.js';
-import { keyBytes, noticeButton, pushSupported, sameKey } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, testForgot } from './push.js';
 
 // Where a browser kept, before ADR 0202, that it was turned off for an account while it held its subscription.
 const OptOutKey = 'downfall.table.device-opt-out';
@@ -256,9 +256,9 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       result(answer.message);
     } catch (error) {
       result(error.message || 'Could not reach the host. Try again.');
-      if (/gone/.test(error.message ?? '')) {
-        // Gone from the service, and the browser still holds it: let go of here too, or the next tap would get
-        // the same dead subscription back from the browser and the host's 410 for it.
+      if (testForgot({ status: error.status, error: error.code, message: error.message })) {
+        // The host forgot it, and the browser still holds it: let go of here too, or the next tap would get the same
+        // subscription back from the browser and the host's refusal of it.
         await (await held())?.unsubscribe();
         state.subscribed = false;
         render();

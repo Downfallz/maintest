@@ -65,6 +65,33 @@ public sealed class AccountNoticesTests
         (await new AccountNotices(_sender, _devices).IsGoneAsync(_mark, "https://push.example/old", Cancel)).ShouldBeTrue("another process reads it from the devices");
     }
 
+    /// <summary>A device kept on a push service the host does not send to reaches nobody and is forgotten, as a gone one is (#1209).</summary>
+    [Fact]
+    public async Task A_device_on_a_push_service_the_host_does_not_send_to_is_not_counted_and_is_forgotten()
+    {
+        await _devices.AddAsync(_mark, Phone("old"), Cancel);
+        await _devices.AddAsync(_mark, Phone("new"), Cancel);
+        _sender.Unknown.Add("https://push.example/old");
+
+        var reached = await _notices.SendAsync(_mark, "{}", "friend", Cancel);
+
+        reached.ShouldBe(1);
+        (await _devices.ListAsync(_mark, Cancel)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://push.example/new");
+    }
+
+    /// <summary>The queued send to such a device is done with as gone, not sent (#1209).</summary>
+    [Fact]
+    public async Task A_queued_notice_to_a_device_on_a_push_service_the_host_does_not_send_to_is_gone_and_forgets_it()
+    {
+        await _devices.AddAsync(_mark, Phone("old"), Cancel);
+        _sender.Unknown.Add("https://push.example/old");
+
+        var sent = await _notices.SendOneAsync(new DevicePush(_mark.Value, "https://push.example/old", "{}", "friend"), Cancel);
+
+        sent.ShouldBe(DeviceSend.Gone);
+        (await _devices.ListAsync(_mark, Cancel)).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_service_that_is_out_loses_the_notice_and_keeps_the_device()
     {
@@ -166,6 +193,9 @@ public sealed class AccountNoticesTests
 
         public HashSet<string> Gone { get; } = new(StringComparer.Ordinal);
 
+        /// <summary>The endpoints on no push service the host sends to: never sent to (#1209).</summary>
+        public HashSet<string> Unknown { get; } = new(StringComparer.Ordinal);
+
         public Exception? Failure { get; set; }
 
         public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
@@ -178,6 +208,11 @@ public sealed class AccountNoticesTests
             if (Gone.Contains(to.Endpoint))
             {
                 return Task.FromResult(PushSent.Gone);
+            }
+
+            if (Unknown.Contains(to.Endpoint))
+            {
+                return Task.FromResult(PushSent.UnknownService);
             }
 
             Sent.Add((to, payload, topic));

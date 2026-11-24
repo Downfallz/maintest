@@ -10,8 +10,9 @@ internal enum PushSent
     Gone,
 
     /// <summary>
-    /// Not sent: the endpoint is on no push service this host sends to, a subscription kept before the subscribe routes
-    /// checked it (#1132). It is forgotten as a gone one is, but a new one on the same service would be refused (#1209).
+    /// Not sent: the endpoint is on no push service this host sends to. It is a subscription kept from before the
+    /// subscribe routes checked it (#1132). It is forgotten like a gone one, but a new subscription on that service
+    /// would be refused (#1209).
     /// </summary>
     UnknownService,
 }

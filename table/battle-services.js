@@ -1,4 +1,4 @@
-import { keyBytes, sameKey, noticeButton, pushSupported, showOwnNotice, testReading, TAG } from './push.js';
+import { keyBytes, sameKey, noticeButton, pushSupported, showOwnNotice, testForgot, testReading, TAG } from './push.js';
 
 /** Where the rest of the notifications is chosen, said under the match settings' switch. */
 export const WHERE = 'This switch is this device\'s, for every game. Signed in, Settings, Notifications, in the menu, chooses what pops up. The bell keeps everything.';
@@ -124,7 +124,7 @@ export function createBattleServices({ onChange, scope = globalThis }) {
       const answer = await context.transport.pushTest();
       if (!valid(context)) return;
       context.message = testReading({ page, host: answer.body?.message ?? `The host answered ${answer.status}.`, hostOk: answer.ok });
-      if (answer.status === 502 && /gone/.test(answer.body?.message ?? '')) {
+      if (testForgot({ status: answer.status, error: answer.body?.error, message: answer.body?.message })) {
         const held = await context.registration.pushManager.getSubscription();
         if (!valid(context)) return;
         await held?.unsubscribe(); context.push.subscribed = false;

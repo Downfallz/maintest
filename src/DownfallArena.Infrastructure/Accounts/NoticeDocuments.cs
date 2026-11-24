@@ -32,14 +32,16 @@ internal static class NoticeDocuments
 
     /// <summary>
     /// The entries as a document, keeping what <paramref name="before" />, the document they were read from, holds that
-    /// this revision does not know: the fields of the log, and those of each entry, matched by its id.
+    /// this revision does not know: the fields of the log, and those of each entry of a kind it reads, matched by its id.
     /// </summary>
     public static string Write(IReadOnlyList<NoticeEntry> entries, string? before = null)
     {
         ArgumentNullException.ThrowIfNull(entries);
         var kept = Parse(before);
         var unknown = (kept?.Entries ?? [])
-            .Where(entry => entry?.Unknown is { Count: > 0 })
+            // Only an entry this revision reads: one of a kind it skips goes at this write, and its id can be one this
+            // revision hands out again, which must not inherit its fields.
+            .Where(entry => entry?.Unknown is { Count: > 0 } && NoticeKinds.Parse(entry.Kind) is not null)
             .GroupBy(entry => entry!.Id)
             .ToDictionary(entry => entry.Key, entry => entry.First()!.Unknown);
         return JsonSerializer.Serialize(new NoticesRecord([.. entries.Select(entry =>

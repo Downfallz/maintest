@@ -29,8 +29,8 @@ public sealed class FileDeviceStore : IDeviceStore
     }
 
     /// <summary>
-    /// Reads the document again to write back what this revision does not know of it (#1211): a write over a version
-    /// that has moved since is refused here, without being tried.
+    /// Reads the document again, to write back the fields this revision does not know (#1211). A write is refused,
+    /// without being tried, when the version has moved since it was read.
     /// </summary>
     public async Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
     {

@@ -116,6 +116,26 @@ public sealed class PushNoticesTests : IDisposable
         notices.IsDead("https://push.example/other").ShouldBeFalse();
     }
 
+    /// <summary>A subscription kept on a push service the host does not send to is forgotten as a gone one is (#1209).</summary>
+    [Fact]
+    public async Task A_subscription_on_a_push_service_the_host_does_not_send_to_is_forgotten_and_recorded()
+    {
+        var (table, notices) = await Seated();
+        var recorded = new TaskCompletionSource<PlayedTable>(TaskCreationOptions.RunContinuationsAsynchronously);
+        notices.Record = recordedTable => { recorded.TrySetResult(recordedTable); return Task.CompletedTask; };
+        _sender.Gone = true;
+        _sender.Refusal = PushSent.UnknownService;
+        table.Seats[0].Push = Phone;
+
+        await Arrive(table);
+        await Asked(table);
+        _clock.Advance(Grace);
+
+        (await recorded.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)).ShouldBeSameAs(table);
+        table.Seats[0].Push.ShouldBeNull();
+        notices.IsDead(Phone.Endpoint).ShouldBeTrue();
+    }
+
     /// <summary>A subscription replaced while its notice was in flight is not the one the service refused: the new one stays.</summary>
     [Fact]
     public async Task A_refusal_of_a_subscription_the_seat_no_longer_holds_leaves_the_new_one_alone()
@@ -548,6 +568,9 @@ public sealed class PushNoticesTests : IDisposable
 
         public bool Gone { get; set; }
 
+        /// <summary>What a refused send answers: the push service's gone, or a service the host does not send to.</summary>
+        public PushSent Refusal { get; set; } = PushSent.Gone;
+
         public bool Failing { get; set; }
 
         /// <summary>Set, the send waits on it before answering: what a test needs to change the seat under a notice in flight.</summary>
@@ -570,7 +593,7 @@ public sealed class PushNoticesTests : IDisposable
                 await hold.Task;
             }
 
-            return Failing ? throw new HttpRequestException("The push service is out.") : Gone ? PushSent.Gone : PushSent.Taken;
+            return Failing ? throw new HttpRequestException("The push service is out.") : Gone ? Refusal : PushSent.Taken;
         }
 
         public Task<(PushSubscription To, string Payload)> Next()

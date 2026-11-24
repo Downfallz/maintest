@@ -3,7 +3,7 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, battleAddress, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, pushSupported, sameKey, testReading, showOwnNotice, TAG } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, testForgot, testReading, showOwnNotice, TAG } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -1215,9 +1215,9 @@ async function testNotices(state) {
     const own = await showOwn(state);
     const answer = await seat.transport.pushTest();
     if (problem) problem.textContent = testReading({ page: own, host: answer.body?.message ?? `The host answered ${answer.status}.`, hostOk: answer.ok });
-    if (answer.status === 502 && /gone/.test(answer.body?.message ?? '')) {
-      // Gone from the service, and the browser still holds it: let go of here too, or the next tap would get
-      // the same dead subscription back from the browser and the host's 410 for it.
+    if (testForgot({ status: answer.status, error: answer.body?.error, message: answer.body?.message })) {
+      // The host forgot it, and the browser still holds it: let go of here too, or the next tap would get the same
+      // subscription back from the browser and the host's refusal of it.
       const held = await state.push.registration?.pushManager.getSubscription();
       await held?.unsubscribe();
       state.push.subscribed = false;

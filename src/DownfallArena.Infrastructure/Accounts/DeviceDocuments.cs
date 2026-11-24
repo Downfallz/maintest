@@ -21,18 +21,20 @@ internal static class DeviceDocuments
 
     /// <summary>
     /// The devices as a document, keeping what <paramref name="before" />, the document they were read from, holds that
-    /// this revision does not know: the fields of the list, and those of each device, matched by its endpoint.
+    /// this revision does not know: the fields of the list, and those of each device not gone, matched by its endpoint and key.
     /// </summary>
     public static string Write(IReadOnlyList<PushDevice> devices, string? before = null)
     {
         ArgumentNullException.ThrowIfNull(devices);
         var kept = before is null ? null : Parse(before);
         var unknown = (kept?.Devices ?? [])
-            .Where(device => device?.Unknown is { Count: > 0 } && device.Endpoint is not null)
-            .GroupBy(device => device!.Endpoint, StringComparer.Ordinal)
-            .ToDictionary(device => device.Key, device => device.First()!.Unknown, StringComparer.Ordinal);
+            .Where(device => device?.Unknown is { Count: > 0 } && device.Endpoint is not null && !string.IsNullOrEmpty(device.P256dh))
+            .GroupBy(device => (device!.Endpoint, device.P256dh!))
+            .ToDictionary(device => device.Key, device => device.First()!.Unknown);
+        // A device keeps them while it keeps its keys: a gone one is kept without them (ADR 0203), and one subscribed
+        // again on the same endpoint is another subscription, so neither inherits what was said of the one before.
         return JsonSerializer.Serialize(new DevicesRecord([.. devices.Select(device =>
-            new DeviceRecord(device.Endpoint, device.P256dh, device.Auth, device.AddedAt, device.Gone) { Unknown = unknown.GetValueOrDefault(device.Endpoint) })])
+            new DeviceRecord(device.Endpoint, device.P256dh, device.Auth, device.AddedAt, device.Gone) { Unknown = device.Gone ? null : unknown.GetValueOrDefault((device.Endpoint, device.P256dh)) })])
         { Unknown = kept?.Unknown }, Web);
     }
 

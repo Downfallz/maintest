@@ -748,13 +748,15 @@ public sealed class LobbyApiTests : IDisposable
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
         var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
+        var subscribing = await lobby.HandleAsync("PUT", "/api/lobby/push", JsonSerializer.Serialize(new { endpoint = "https://slow.example/one", keys = new { p256dh = BrowserKey, auth = BrowserAuth } }), table.Seats[0].Token);
         table.Seats[0].Push = new PushSubscription("https://slow.example/one", BrowserKey, BrowserAuth);
 
         var test = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", table.Seats[0].Token);
 
-        test.Status.ShouldBe(400);
+        test.Status.ShouldBe(subscribing.Status);
         var answer = JsonDocument.Parse(test.Body).RootElement;
         answer.GetProperty("error").GetString().ShouldBe("Lobby.UnknownPushService");
+        answer.GetProperty("message").GetString().ShouldBe(JsonDocument.Parse(subscribing.Body).RootElement.GetProperty("message").GetString());
         answer.GetProperty("message").GetString().ShouldNotBeNull().ShouldNotContain("gone", Case.Sensitive, "the pages ask to subscribe again on a test that says gone");
         table.Seats[0].Push.ShouldBeNull();
     }

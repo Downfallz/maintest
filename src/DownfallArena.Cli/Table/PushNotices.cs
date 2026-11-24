@@ -199,8 +199,8 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 }
             }
 
-            // A subscription kept before the host checked its service is never sent to, and tapping again would be
-            // refused on the same service: answered as that refusal, not as gone (#1176, #1209).
+            // A subscription kept from before the host checked push services is never sent to. Tapping again would be
+            // refused on that service too, so answer with that refusal, not "gone" (#1176, #1209).
             return sent is PushSent.UnknownService
                 ? PushTest.OnUnknownService
                 : new PushTest(false, "This subscription is gone. Tap \"Notify me when it's my turn\" again.");

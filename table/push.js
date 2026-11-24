@@ -73,6 +73,13 @@ export function testReading({ page, host, hostOk }) {
   return lines.join(' ');
 }
 
+// Whether the host's answer to a test notice means it forgot this subscription, so the page lets go of it too: gone
+// from its push service (502), or kept on a push service the host does not send to (400, #1209). The next tap then
+// makes a new subscription, and the host says whether it takes it.
+export function testForgot({ status, error, message } = {}) {
+  return (status === 502 && /gone/.test(message ?? '')) || (status === 400 && /\.UnknownPushService$/.test(error ?? ''));
+}
+
 export async function showOwnNotice(registration, scope = globalThis) {
   if (!registration?.showNotification) return 'no worker';
   try {

@@ -633,9 +633,9 @@ friend's request or an invitation reaches a player who holds no seat (docs/table
 Off also lets go of the browser's subscription (ADR 0202).
 `PUT /api/account/push` and `PUT /api/lobby/push` take only an endpoint on the browsers' push services (Firebase,
 Mozilla's, Windows', Apple's) and refuse any other host with a 400. A subscription stored before is forgotten at its
-next send, and one send gives up after five seconds (#1132); its test (`POST /api/account/push/test`,
-`POST /api/lobby/push/test`) forgets it too and answers the same 400 and code, not "gone", since subscribing again on
-that service is refused (#1209).
+next send, and one send gives up after five seconds (#1132). A test of such a subscription (`POST /api/account/push/test`,
+`POST /api/lobby/push/test`) forgets it too. It answers the same 400 and code, not "gone", because subscribing again on
+that push service is refused (#1209).
 A signed-in seat's subscription (`PUT /api/lobby/push`) is registered as one of its account's devices too, and its
 `DELETE` forgets it there; a signed-in seat is told its turn on the account's devices, not on the seat's own
 subscription, and never on the device that holds the other seat. `PUT /api/account/preferences/notices` with

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { keyBytes, noticeButton, pushSupported, sameKey, testReading } from './push.js';
+import { keyBytes, noticeButton, pushSupported, sameKey, testForgot, testReading } from './push.js';
 
 test('a browser pushes when it has a worker, a push manager, notifications and a secure context', () => {
   const nav = { serviceWorker: {} };
@@ -66,4 +66,14 @@ test('the test reads the two notices together: the page\'s own, the host\'s, and
 
   const dropped = testReading({ page: 'the browser took it and then listed no such notice: it dropped it', host: 'Sent.', hostOk: true });
   assert.match(dropped, /it dropped it\. Sent\. Look for it in the system's notification history/);
+});
+
+test('a test answer means the host forgot the subscription when it is gone or on a push service the host does not send to', () => {
+  assert.equal(testForgot({ status: 502, message: 'This subscription is gone. Tap "Notify me when it\'s my turn" again.' }), true);
+  assert.equal(testForgot({ status: 400, error: 'Account.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' }), true);
+  assert.equal(testForgot({ status: 400, error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' }), true);
+  assert.equal(testForgot({ status: 502, message: 'The push service refused it (403).' }), false);
+  assert.equal(testForgot({ status: 400, error: 'Account.BadRequest', message: 'gone' }), false);
+  assert.equal(testForgot({ status: 502, message: 'This seat has no subscription: tap "Notify me when it\'s my turn" first.' }), false);
+  assert.equal(testForgot(), false);
 });

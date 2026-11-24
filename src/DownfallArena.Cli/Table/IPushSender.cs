@@ -13,8 +13,8 @@ internal interface IPushSender
     /// switched back on reads one "your turn", the latest, and one notice per kind of thing it was told. A topic is
     /// at most 32 characters of the URL-safe base64 alphabet. <see cref="PushSent.Taken" /> when the push service took it;
     /// <see cref="PushSent.Gone" /> when the subscription is gone (the browser unsubscribed, or the service forgot it), and
-    /// <see cref="PushSent.UnknownService" /> when it is on no service this host sends to: the two answers that mean the
-    /// seat, or the account, should forget it too. Anything else is thrown: a service that is out is a line on
+    /// <see cref="PushSent.UnknownService" /> when it is on no service this host sends to. After either answer the seat
+    /// or the account should forget the subscription. Anything else is thrown: a service that is out is a line on
     /// the console and a notice that did not arrive, never a reason to drop the subscription.
     /// </summary>
     Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default);
