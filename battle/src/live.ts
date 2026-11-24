@@ -203,7 +203,8 @@ type Devices = { offerState: () => { ready: boolean }, turnOn: () => Promise<unk
 const accountDevices = () => (globalThis as { downfallNavigation?: { devices?: Devices } }).downfallNavigation?.devices ?? null;
 const inPractice = () => Boolean((view as { practice?: unknown } | null)?.practice);
 // The card stands over the field at the top: the creatures it covers are inert until it goes (#1206).
-pushOffer = mountPushOffer(document, { storage, covers: '#actor-layer .creature', source: {
+let laidOut = false;
+pushOffer = mountPushOffer(document, { storage, covers: '#actor-layer .creature', placed: () => laidOut, source: {
   state: () => (inPractice() ? accountDevices()?.offerState() ?? { ready: false } : services.offerState()),
   turnOn: () => (inPractice() ? accountDevices()?.turnOn() ?? Promise.resolve({ ready: false }) : services.turnOn()),
 } });
@@ -620,7 +621,6 @@ function render() {
   offerMoment = battleMoment({ awaiting, lesson: tutorialOf(view), other });
   if (offerMoment) pushOffer?.consider();
   else pushOffer?.withdraw();
-  pushOffer?.cover();
   $('reading-dots').hidden = !awaiting;
   $('waiting-last').hidden = !awaiting || !playbackState.summary;
   if (awaiting) {
@@ -982,7 +982,8 @@ async function discover(autoResume = true) {
   }
 }
 
-scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); };
+// The creatures are placed here, so what the pop-ups offer covers is read here too (#1206).
+scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); laidOut = true; pushOffer?.cover(); };
 scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onAuras = shown => { if (shown) $('battle').dataset.auras = shown; else delete $('battle').dataset.auras; };

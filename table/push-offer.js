@@ -136,22 +136,30 @@ const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-l
  * does. The page calls `consider()` at its moments; the card shows only when it is due, once a page.
  * `covers` names the page's controls that the card makes inert while it covers them (the battle view's creatures,
  * #1206): a control under the card takes no tap anyway, and a focus there would be hidden under it (WCAG 2.4.11).
+ * `placed()` says the page has put them where they stand: until then, where they are says nothing.
  * @param {Document} doc
- * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number, covers?: string | null }} options
+ * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number, covers?: string | null, placed?: () => boolean }} options
  */
-export function mountPushOffer(doc, { source, storage = null, nav = globalThis.navigator, win = globalThis, now = () => Date.now(), covers = null } = {}) {
+export function mountPushOffer(doc, { source, storage = null, nav = globalThis.navigator, win = globalThis, now = () => Date.now(), covers = null, placed = () => true } = {}) {
   doc.body.insertAdjacentHTML('beforeend', MARKUP);
   const el = id => doc.getElementById(id);
+  // Where the card comes to rest: while it arrives its `translate` moves it, and what it covers is read without it.
+  function resting(card) {
+    const box = card.getBoundingClientRect();
+    const [x = 0, y = 0] = (win?.getComputedStyle?.(card).translate ?? '').split(' ').map(part => Number.parseFloat(part) || 0);
+    return { left: box.left - x, right: box.right - x, top: box.top - y, bottom: box.bottom - y };
+  }
   // The controls this card made inert, given back when it no longer covers them, or goes.
   const made = new Set();
   function cover() {
     if (!covers) return;
     const card = el('push-offer');
-    const box = card.hidden ? null : card.getBoundingClientRect?.();
+    const box = card.hidden || !placed() ? null : resting(card);
     const under = new Set();
     if (box) {
       for (const one of doc.querySelectorAll(covers)) {
-        if (card.contains(one) || one.inert && !made.has(one)) continue;
+        // A control with the focus keeps it: made inert, the focus would fall to the page's body.
+        if (card.contains(one) || (one.inert && !made.has(one)) || one === doc.activeElement) continue;
         const other = one.getBoundingClientRect();
         const wide = Math.min(box.right, other.right) - Math.max(box.left, other.left);
         const tall = Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top);
@@ -163,8 +171,10 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
   }
   if (covers) {
     win?.addEventListener?.('resize', cover);
-    // The card arrives moving (`motion-arrive`): what it covers is read again where it comes to rest.
+    // The card arrives moving (`motion-arrive`): what it covers is read again where it comes to rest, and again when
+    // it changes size (Turn on answered: the said line and Close take the answers' room).
     for (const settled of ['animationend', 'animationcancel', 'transitionend']) el('push-offer').addEventListener?.(settled, cover);
+    if (win?.ResizeObserver) new win.ResizeObserver(() => cover()).observe(el('push-offer'));
   }
   const platform = offerPlatform(nav, win);
   // The browser's own install prompt, kept for the card's Install on Android: raised once, used once.
@@ -232,6 +242,7 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     el('push-offer-said').textContent = turnedOnLine(after, failed);
     el('push-offer-told').textContent = el('push-offer-said').textContent;
     draw();
+    cover();
     el('push-offer-close').focus?.();
   }
 
@@ -257,7 +268,8 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
       before = doc.activeElement ?? null;
       draw();
       el('push-offer').hidden = false;
-      cover();
+      // Read once the page has drawn this frame: the page places what the card covers after it considers the card.
+      if (win?.requestAnimationFrame) win.requestAnimationFrame(cover); else cover();
       // Said once the card is shown: words written into a hidden region are not announced.
       const tell = () => { el('push-offer-told').textContent = `${TITLE} Pop-ups offered.`; };
       if (win?.requestAnimationFrame) win.requestAnimationFrame(tell); else tell();
@@ -275,7 +287,7 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     changed() {
       if (!el('push-offer').hidden && !busy && !el('push-offer-said').textContent && source.state()?.subscribed) { el('push-offer').hidden = true; cover(); }
     },
-    /** The page drew again, and its controls may have moved: those the card covers now are inert, the rest not. */
+    /** The page placed its controls again: those the card covers now are inert, the rest not. */
     cover,
   };
 }

@@ -499,6 +499,14 @@ test('the pop-ups offer keeps each answer on one line on a phone', async ({ page
 test('the pop-ups offer makes the creatures it covers inert until it is answered', async ({ page }) => {
   const h = await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
   h.view = { ...h.view, practice: { tutorial: { order: 1, of: 4, done: true, title: 'Your first combat', steps: [{ id: 'one', title: 'One' }], shown: 1 } } };
+  // Every creature ever made inert, recorded from the page's first script: one the card leaves free once the field is
+  // placed was never made inert, even before the scene placed the creatures (#1206, review).
+  await page.addInitScript(() => {
+    const own = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'inert');
+    window.madeInert = new Set();
+    Object.defineProperty(HTMLElement.prototype, 'inert', { configurable: true, get() { return own.get.call(this); },
+      set(value) { if (value && this.classList.contains('creature')) window.madeInert.add(this); own.set.call(this, value); } });
+  });
   await page.setViewportSize({ width: 320, height: 568 }); await page.reload();
   await expect(page.locator('#push-offer')).toBeVisible();
   const read = () => page.evaluate(() => {
@@ -507,12 +515,15 @@ test('the pop-ups offer makes the creatures it covers inert until it is answered
       const box = one.getBoundingClientRect();
       const covered = !document.getElementById('push-offer').hidden
         && Math.min(box.right, card.right) - Math.max(box.left, card.left) > 2 && Math.min(box.bottom, card.bottom) - Math.max(box.top, card.top) > 2;
-      return { id: one.dataset.creatureId, covered, inert: one.inert };
+      return { covered, inert: one.inert };
     });
   });
   await expect.poll(async () => (await read()).filter(one => one.covered).length).toBeGreaterThan(0);
   await expect.poll(async () => (await read()).filter(one => one.covered !== one.inert)).toEqual([]);
   await expect.poll(async () => (await read()).filter(one => !one.covered && !one.inert).length, 'the creatures the card leaves free stay buttons').toBeGreaterThan(0);
+  const free = (await read()).flatMap((one, index) => (one.covered ? [] : [index]));
+  expect(await page.evaluate(free => free.filter(index => window.madeInert.has(document.querySelectorAll('#actor-layer .creature')[index])), free), 'a creature the card leaves free was never made inert').toEqual([]);
+  expect(await page.evaluate(() => window.madeInert.size), 'the hook saw the covered ones made inert').toBeGreaterThan(0);
   await page.locator('#push-offer-later').click(); await expect(page.locator('#push-offer')).toBeHidden();
   await expect.poll(async () => (await read()).filter(one => one.inert)).toEqual([]);
 });
