@@ -679,7 +679,8 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
   `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
   identity that provider's proof vouches for, under the same per-address count as a sign-in (one per provider; `409 Account.IdentityTaken` when another account
-  uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`).
+  uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`),
+  or finishes a removal of that provider that stopped before its entry went (#1216).
   Both ask for a sign-in of this account made in the last ten minutes: every sign-in's answer carries `recent`,
   which the page sends back; without it they answer `403 Account.SignInAgain`. A removal ends every other session of
   the account and forgets its devices. The console says

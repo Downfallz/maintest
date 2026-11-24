@@ -1,6 +1,8 @@
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 
@@ -110,5 +112,68 @@ public sealed class IdleGuestsTests : IDisposable
 
         (await Guests().RemoveAsync(_clock.GetUtcNow())).ShouldBe(0);
         (await _accounts.FindAsync(mark.Id, Cancel)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_guest_upgraded_by_the_api_while_the_pass_removes_it_keeps_its_account()
+    {
+        var guest = await GuestAsync();
+        _clock.Advance(IdleGuests.KeptFor);
+        var google = new ExternalIdentity(ExternalIdentity.Google, "109876543210987654321");
+        var upgrading = new UpgradingStore(_accounts, async () =>
+        {
+            await _accounts.TryBindSubjectAsync(google, guest.Id, Cancel);
+            await _accounts.SaveAsync(guest with { Identities = AccountIdentities.Of(google), Username = Username.Create("MarkF").Value }, Cancel);
+        });
+
+        var removed = await new IdleGuests(upgrading, _activity, _preferences, _clock).RemoveAsync(_clock.GetUtcNow());
+
+        removed.ShouldBe(0);
+        (await _accounts.FindAsync(guest.Id, Cancel)).ShouldNotBeNull().IsGuest.ShouldBeFalse();
+        (await _accounts.FindBySubjectAsync(google, Cancel)).ShouldBe(guest.Id);
+    }
+
+    /// <summary>The accounts on disk, upgraded by the API the first time the registry reads one to delete it.</summary>
+    private sealed class UpgradingStore(IAccountStore inner, Func<Task> upgrade) : IAccountStore
+    {
+        private Func<Task>? _upgrade = upgrade;
+
+        public async Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default)
+        {
+            if (Interlocked.Exchange(ref _upgrade, null) is { } now)
+            {
+                await now();
+            }
+
+            return await inner.ReadAsync(id, cancellationToken);
+        }
+
+        public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+
+        public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
+
+        public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
+
+        public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default) =>
+            inner.SaveIfUnchangedAsync(account, version, cancellationToken);
+
+        public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+
+        public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default) =>
+            inner.DeleteIfUnchangedAsync(id, version, cancellationToken);
+
+        public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.FindBySubjectAsync(identity, cancellationToken);
+
+        public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.TryBindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.UnbindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) => inner.FindUsernameAsync(username, cancellationToken);
+
+        public Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.TryReserveUsernameAsync(reservation, cancellationToken);
+
+        public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.ReleaseUsernameAsync(reservation, cancellationToken);
+
+        public Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default) => inner.SessionKeyAsync(cancellationToken);
     }
 }

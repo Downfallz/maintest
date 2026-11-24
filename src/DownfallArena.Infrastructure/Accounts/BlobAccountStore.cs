@@ -34,6 +34,11 @@ public sealed class BlobAccountStore : IAccountStore
     public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.AccountPath(id), cancellationToken) is { } read ? AccountDocuments.ReadAccount(read.Json) : null;
 
+    public async Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default) =>
+        await ReadAsync(AccountDocuments.AccountPath(id), cancellationToken) is { } read
+            ? new AccountRead(AccountDocuments.ReadAccount(read.Json), read.ETag.ToString())
+            : null;
+
     public async Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default)
     {
         var accounts = new List<Account>();
@@ -56,8 +61,33 @@ public sealed class BlobAccountStore : IAccountStore
             .UploadAsync(BinaryData.FromString(AccountDocuments.Write(account)), Options(conditions: null), cancellationToken);
     }
 
+    /// <summary>Uploaded with <c>If-Match</c> on the version read, so the service refuses it once another host wrote or deleted the account.</summary>
+    public async Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        try
+        {
+            await _container.GetBlobClient(AccountDocuments.AccountPath(account.Id)).UploadAsync(
+                BinaryData.FromString(AccountDocuments.Write(account)),
+                Options(new BlobRequestConditions { IfMatch = new ETag(version) }),
+                cancellationToken);
+            return true;
+        }
+        catch (RequestFailedException exception) when (exception.Status is 404 or 412)
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) =>
         (await _container.DeleteBlobIfExistsAsync(AccountDocuments.AccountPath(id), cancellationToken: cancellationToken)).Value;
+
+    public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        return DeleteIfUnchangedAsync(AccountDocuments.AccountPath(id), new ETag(version), cancellationToken);
+    }
 
     public async Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.SubjectPath(identity), cancellationToken) is { } read ? AccountDocuments.ReadSubject(read.Json) : null;
@@ -87,7 +117,9 @@ public sealed class BlobAccountStore : IAccountStore
         ArgumentNullException.ThrowIfNull(reservation);
         var path = AccountDocuments.NamePath(reservation.Username);
         return await ReadAsync(path, cancellationToken) is { } read
-            && AccountDocuments.ReadName(read.Json).Account == reservation.Account
+            && AccountDocuments.ReadName(read.Json) is var held
+            && held.Account == reservation.Account
+            && held.ReservedAt == reservation.ReservedAt
             && await DeleteIfUnchangedAsync(path, read.ETag, cancellationToken);
     }
 

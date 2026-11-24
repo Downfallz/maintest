@@ -789,7 +789,8 @@ internal sealed class AccountApi
             return stale;
         }
 
-        if (who.Account.Identities.ByProvider(name) is not { } identity)
+        // A removal that stopped before its binding went keeps the identity apart (#1216): removing it again finishes it.
+        if ((who.Account.Identities.ByProvider(name) ?? (who.Account.Unbinding is { } pending && pending.Provider == name ? pending : null)) is not { } identity)
         {
             return WayRefused(AccountErrors.IdentityNotLinked);
         }

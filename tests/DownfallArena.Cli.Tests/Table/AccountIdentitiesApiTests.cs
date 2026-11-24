@@ -5,6 +5,7 @@ using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
+using DownfallArena.SharedKernel.Identifiers;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -20,11 +21,11 @@ public sealed class AccountIdentitiesApiTests : IDisposable
 
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"accounts-ways-{Guid.CreateVersion7():N}");
     private readonly FixedClock _clock = new(new DateTimeOffset(2026, 11, 23, 20, 14, 0, TimeSpan.Zero));
-    private readonly FileAccountStore _store;
+    private readonly UnbindingStore _store;
 
     public AccountIdentitiesApiTests()
     {
-        _store = new FileAccountStore(_root);
+        _store = new UnbindingStore(new FileAccountStore(_root));
     }
 
     private static CancellationToken Cancel => TestContext.Current.CancellationToken;
@@ -360,6 +361,24 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_removal_stopped_before_its_binding_went_is_finished_by_removing_the_way_again()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+        _store.FailNextUnbinding = true;
+        var stopped = await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
+        var again = await MarkSignedInAsync(api);
+
+        var removed = await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(again));
+
+        stopped.Status.ShouldBe(503);
+        removed.Status.ShouldBe(200);
+        Providers(removed).ShouldBe(["google"]);
+        (await _store.FindBySubjectAsync(MarkOnDiscord, Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task The_way_in_the_account_registered_with_can_go_once_another_is_added()
     {
         var api = await ApiAsync();
@@ -469,6 +488,51 @@ public sealed class AccountIdentitiesApiTests : IDisposable
 
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
             throw new SignInUnavailableException("out of reach") { RetryAfter = RetryAfter };
+    }
+
+    /// <summary>The accounts on disk, whose next removal of a binding fails once <see cref="FailNextUnbinding" /> is set: the store out of service.</summary>
+    private sealed class UnbindingStore(IAccountStore inner) : IAccountStore
+    {
+        public bool FailNextUnbinding { get; set; }
+
+        public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
+        {
+            if (FailNextUnbinding)
+            {
+                FailNextUnbinding = false;
+                throw new IOException("The account store is out of service (a test).");
+            }
+
+            return inner.UnbindSubjectAsync(identity, account, cancellationToken);
+        }
+
+        public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+
+        public Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default) => inner.ReadAsync(id, cancellationToken);
+
+        public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
+
+        public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
+
+        public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default) =>
+            inner.SaveIfUnchangedAsync(account, version, cancellationToken);
+
+        public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+
+        public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default) =>
+            inner.DeleteIfUnchangedAsync(id, version, cancellationToken);
+
+        public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.FindBySubjectAsync(identity, cancellationToken);
+
+        public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.TryBindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) => inner.FindUsernameAsync(username, cancellationToken);
+
+        public Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.TryReserveUsernameAsync(reservation, cancellationToken);
+
+        public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.ReleaseUsernameAsync(reservation, cancellationToken);
+
+        public Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default) => inner.SessionKeyAsync(cancellationToken);
     }
 
     private sealed class FixedClock(DateTimeOffset start) : TimeProvider

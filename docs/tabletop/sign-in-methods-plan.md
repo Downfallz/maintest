@@ -223,9 +223,8 @@ and 4. The recommended answer:
      (`lobby-home.spec.js`).
    - ADR 0204 asks that P4 ship once no release older than P1 runs. P2 and P3 were merged after P1; the running
      revision is to be checked before this one merges.
-   - Left: a removal whose second write (the `by-subject` entry) fails leaves that entry behind, out of reach of the
-     route and of the account's deletion; the registry's writes are not conditional on what they read, against the
-     release beside them during a deploy; a notice in the bell when a way is added or removed.
+   - Left: a notice in the bell when a way is added or removed. (A removal whose entry stayed behind, and the
+     registry's writes not conditional on what they read, were closed by #1216 and #1217.)
 5. **P5, the guest.** The ADR UX15 asks for, amending accounts-plan question 5: what a guest is, the routes it
    reaches, its lifetime, the per-address count, the upgrade. `MakeGuestAsync`, `UpgradeAsync`,
    `POST /api/account/guest`, the route list, `table-tend` removing old guests. No page: UX15 builds the journey
