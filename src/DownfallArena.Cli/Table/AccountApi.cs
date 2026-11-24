@@ -589,14 +589,19 @@ internal sealed class AccountApi
         {
             var guest = await GuestAsync(request);
             var signedIn = await SignedInAsync(account, request, name);
-            if (guest is not null && signedIn.Status == 200)
+            // Only a guest other than the account signed in, and still a guest in the store: one upgraded meanwhile into
+            // that very account, while this process still held it as a guest, is that account now.
+            if (guest is not null && guest.Id != account.Id && signedIn.Status == 200)
             {
                 // The guest's cookie is replaced by the account's: nothing reaches the guest again (ADR 0207). A store
                 // that fails leaves it to the hourly job, and the player signed in all the same.
                 try
                 {
-                    await ForgetAsync(guest.Id);
-                    Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
+                    if (await FreshAsync(guest.Id) is { IsGuest: true })
+                    {
+                        await ForgetAsync(guest.Id);
+                        Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
+                    }
                 }
                 catch (Exception failure) when (TableRegistry.StoreFails(failure))
                 {
@@ -916,6 +921,8 @@ internal sealed class AccountApi
             }
             catch (Exception failure) when (TableRegistry.StoreFails(failure))
             {
+                // Some of its writes may have gone through: the account is read afresh next time.
+                _cache.TryRemove(guest.Id, out _);
                 Said($"  Guest not upgraded ({identity.Provider}): account {guest.Id}: {HttpHost.OneLine(failure)}");
                 return AccountsUnavailable();
             }

@@ -200,6 +200,22 @@ public sealed class AccountGuestApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_sign_in_whose_guest_was_upgraded_meanwhile_into_that_account_keeps_the_account()
+    {
+        var api = await ApiAsync();
+        var (account, session) = await GuestAsync(api);
+        var id = SharedKernel.Identifiers.AccountId.Parse(account.GetProperty("id").GetString()!);
+        await api.HandleAsync("GET", AccountApi.Prefix, "", session);
+        // The upgrade was written, but its answer was lost: the API still holds the guest it read.
+        await new AccountRegistry(_store, _clock).UpgradeAsync(id, Mark, "MarkF", Cancel);
+
+        var signedIn = await api.HandleAsync("POST", "/api/account/google", """{"credential":"mark"}""", session);
+
+        signedIn.Status.ShouldBe(200, Encoding.UTF8.GetString(signedIn.Body));
+        (await _store.FindAsync(id, Cancel)).ShouldNotBeNull().Username.Value.ShouldBe("MarkF");
+    }
+
+    [Fact]
     public async Task A_player_signed_in_is_not_made_a_guest()
     {
         var api = await ApiAsync();
