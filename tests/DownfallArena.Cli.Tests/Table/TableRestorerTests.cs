@@ -937,7 +937,7 @@ public sealed class TableRestorerTests : IDisposable
     /// </summary>
     private async Task PlayUntil(PlayedTable table, ISeatPerson person, PlayerOptionsKind kind)
     {
-        for (var attempt = 0; attempt < 600; attempt++)
+        for (var deadline = DateTimeOffset.UtcNow + Waits.Within; DateTimeOffset.UtcNow < deadline;)
         {
             switch (person.Waiting)
             {
