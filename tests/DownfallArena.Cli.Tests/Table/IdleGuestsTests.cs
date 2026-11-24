@@ -2,6 +2,7 @@ using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -51,6 +52,27 @@ public sealed class IdleGuestsTests : IDisposable
         (await _accounts.FindUsernameAsync(guest.Username, Cancel)).ShouldBeNull();
         (await _activity.FindAsync(guest.Id, Cancel)).ShouldBeNull();
         (await _preferences.GetTutorialsAsync(guest.Id, Cancel)).ShouldBe(TutorialProgress.None);
+    }
+
+    [Fact]
+    public async Task A_pass_that_could_not_forget_a_guests_settings_keeps_the_guest_for_the_next_pass_to_finish()
+    {
+        var guest = await GuestAsync();
+        await _preferences.SaveTutorialsAsync(guest.Id, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        _clock.Advance(IdleGuests.KeptFor);
+        var failing = NSubstitute.Substitute.For<Application.Accounts.Ports.IPreferenceStore>();
+        failing.ForgetAsync(guest.Id, Arg.Any<CancellationToken>()).Returns<Task>(_ => throw new IOException("out of service (a test)"));
+        var said = new List<string>();
+
+        var first = await new IdleGuests(_accounts, _activity, failing, _clock) { Said = said.Add }.RemoveAsync(_clock.GetUtcNow());
+        var left = await _accounts.FindAsync(guest.Id, Cancel);
+        var second = await new IdleGuests(_accounts, _activity, _preferences, _clock) { Said = said.Add }.RemoveAsync(_clock.GetUtcNow());
+
+        left.ShouldNotBeNull();
+        (first, second).ShouldBe((0, 1), string.Join(" | ", said));
+        said.ShouldHaveSingleItem().ShouldContain($"Account {guest.Id}");
+        (await _preferences.GetTutorialsAsync(guest.Id, Cancel)).ShouldBe(TutorialProgress.None);
+        (await _accounts.FindAsync(guest.Id, Cancel)).ShouldBeNull();
     }
 
     [Fact]

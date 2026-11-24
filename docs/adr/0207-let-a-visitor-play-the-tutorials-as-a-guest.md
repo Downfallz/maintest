@@ -62,6 +62,12 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Bad: anyone can now make an account of one more kind. The counts bound it to three hundred an hour, about
   seven thousand a day at worst, each a few small documents. The operator's list of players shows them, by their
   `Guest-` names.
+- Bad: the host-wide count can be spent by one actor with thirty addresses, or thirty IPv6 /64s, for an hour: no
+  visitor becomes a guest until it passes, and they are told to sign in. That is the price of a bound on what the
+  store is asked to keep; the provider sign-ins are not affected.
+- Neutral: a request with a session is checked against the list before its route, which reads the account. While
+  the account store is out of service and the account is not in the 30-second cache, such a request answers
+  `503 Account.Unavailable` rather than be let past the list on a guess.
 - Bad: a guest who signs in to an account they already have loses the guest's tutorial progress. Merging it is left
   out: the account's own progress is the one its player made.
 - Bad: an upgrade that stops after the account is written leaves the guest's binding, which reaches nothing, and

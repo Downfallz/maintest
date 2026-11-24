@@ -184,6 +184,22 @@ public sealed class AccountGuestApiTests : IDisposable
     }
 
     [Fact]
+    public async Task An_upgrade_asked_again_after_its_answer_was_lost_signs_in_the_upgraded_account()
+    {
+        var api = await ApiAsync();
+        var (account, session) = await GuestAsync(api);
+        var ticket = Json(await api.HandleAsync("POST", "/api/account/google", """{"credential":"mark"}""", session)).GetProperty("ticket").GetString();
+        var body = JsonSerializer.Serialize(new { ticket, username = "MarkF" });
+        await api.HandleAsync("POST", AccountApi.Prefix, body, session);
+
+        var again = await api.HandleAsync("POST", AccountApi.Prefix, body, session);
+
+        again.Status.ShouldBe(200, Encoding.UTF8.GetString(again.Body));
+        Json(again).GetProperty("account").GetProperty("id").GetString().ShouldBe(account.GetProperty("id").GetString());
+        Session(again).ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
     public async Task A_player_signed_in_is_not_made_a_guest()
     {
         var api = await ApiAsync();

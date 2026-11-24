@@ -38,22 +38,28 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
             {
                 // Read again just before it goes: a guest upgraded since the listing is a player's account, and one used
                 // since is kept.
-                if (await accounts.FindAsync(listed.Id) is not { IsGuest: true } guest || !Idle(guest, await activity.FindAsync(guest.Id), now))
+                var kept = await activity.FindAsync(listed.Id);
+                if (await accounts.FindAsync(listed.Id) is not { IsGuest: true } guest || !Idle(guest, kept, now))
                 {
                     continue;
+                }
+
+                // What is kept for it goes first and the account last: a pass that stops between them finds the guest
+                // again, its activity gone, and its making time still says it is idle.
+                if (preferences is not null)
+                {
+                    await preferences.ForgetAsync(guest.Id);
+                }
+
+                if (kept is not null)
+                {
+                    await activity.ForgetAsync(guest.Id);
                 }
 
                 if (await registry.DeleteAsync(guest.Id))
                 {
                     removed++;
                 }
-
-                if (preferences is not null)
-                {
-                    await preferences.ForgetAsync(guest.Id);
-                }
-
-                await activity.ForgetAsync(guest.Id);
             }
             catch (Exception failure) when (TableRegistry.StoreFails(failure))
             {

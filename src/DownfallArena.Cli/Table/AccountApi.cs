@@ -538,7 +538,18 @@ internal sealed class AccountApi
         }
 
         Counted(SignInCounts.Step.Started, ExternalIdentity.Guest);
-        var made = await _registry.MakeGuestAsync();
+        Result<Account> made;
+        try
+        {
+            made = await _registry.MakeGuestAsync();
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            Counted(SignInCounts.Step.Unavailable, ExternalIdentity.Guest);
+            Said($"  Guest not made: {HttpHost.OneLine(failure)}");
+            return AccountsUnavailable();
+        }
+
         if (made.IsFailure)
         {
             Counted(SignInCounts.Step.Refused, ExternalIdentity.Guest);
@@ -580,9 +591,17 @@ internal sealed class AccountApi
             var signedIn = await SignedInAsync(account, request, name);
             if (guest is not null && signedIn.Status == 200)
             {
-                // The guest's cookie is replaced by the account's: nothing reaches the guest again (ADR 0207).
-                await ForgetAsync(guest.Id);
-                Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
+                // The guest's cookie is replaced by the account's: nothing reaches the guest again (ADR 0207). A store
+                // that fails leaves it to the hourly job, and the player signed in all the same.
+                try
+                {
+                    await ForgetAsync(guest.Id);
+                    Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
+                }
+                catch (Exception failure) when (TableRegistry.StoreFails(failure))
+                {
+                    Said($"  Guest left for an account of its own ({name}): account {guest.Id} could not be removed: {HttpHost.OneLine(failure)}");
+                }
             }
 
             return signedIn;
@@ -818,6 +837,9 @@ internal sealed class AccountApi
             : Problem(403, "Account.SignInAgain", "For your safety, sign in again to change how you sign in.");
     }
 
+    private static StudioResponse AccountsUnavailable() =>
+        Problem(503, "Account.Unavailable", "Accounts cannot be written right now. Try again in a minute.");
+
     private static StudioResponse WaysUnavailable() =>
         Problem(503, "Account.Unavailable", "Your ways to sign in cannot be changed right now. Try again in a minute.");
 
@@ -887,7 +909,17 @@ internal sealed class AccountApi
         // A guest who chooses a name becomes that account (ADR 0207): its id, and so its tutorials, are kept.
         if (await GuestAsync(request) is { } guest)
         {
-            var upgraded = await _registry.UpgradeAsync(guest.Id, identity, asked!.Username);
+            Result<Account> upgraded;
+            try
+            {
+                upgraded = await _registry.UpgradeAsync(guest.Id, identity, asked!.Username);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Guest not upgraded ({identity.Provider}): account {guest.Id}: {HttpHost.OneLine(failure)}");
+                return AccountsUnavailable();
+            }
+
             if (upgraded.IsFailure)
             {
                 return Refused(upgraded.Error);
@@ -899,6 +931,13 @@ internal sealed class AccountApi
         }
 
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
+        if (registered.IsFailure && registered.Error == AccountErrors.AlreadyRegistered && await _registry.FindAsync(identity) is { } held)
+        {
+            // The ticket is the host's own proof of the identity, so the account it reaches signs in: an upgrade asked
+            // again after its answer was lost lands here, its guest's cookie ended by the upgrade (ADR 0207).
+            return await SignedInAsync(held, request, identity.Provider);
+        }
+
         return registered.IsSuccess ? await SignedInAsync(registered.Value, request, identity.Provider) : Refused(registered.Error);
     }
 

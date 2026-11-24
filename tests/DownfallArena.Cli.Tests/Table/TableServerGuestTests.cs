@@ -2,10 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
+using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -26,14 +29,16 @@ public sealed class TableServerGuestTests : IAsyncDisposable
     private readonly TableServer _server;
     private readonly AccountApi _accounts;
     private readonly Task _serving;
+    private readonly FakeTimeProvider _clock = new(DateTimeOffset.UtcNow);
+    private readonly SwitchedStore _store;
 
     public TableServerGuestTests()
     {
         _registry = _hosted.Registry();
-        var store = new FileAccountStore(_root);
+        _store = new SwitchedStore(new FileAccountStore(_root));
         _accounts = new AccountApi(
-            new AccountRegistry(store, TimeProvider.System),
-            new AccountSessions(store.SessionKeyAsync().GetAwaiter().GetResult(), TimeProvider.System),
+            new AccountRegistry(_store, _clock),
+            new AccountSessions(_store.SessionKeyAsync().GetAwaiter().GetResult(), _clock),
             AccountsMode.Development)
         {
             Said = _ => { },
@@ -187,6 +192,40 @@ public sealed class TableServerGuestTests : IAsyncDisposable
         feedback.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
+    [Theory]
+    [InlineData("GET", "/api/lobby")]
+    [InlineData("POST", "/api/lobby/tables")]
+    [InlineData("GET", "/api/friends")]
+    [InlineData("PUT", "/api/account/push")]
+    [InlineData("POST", "/api/account/notices/read")]
+    [InlineData("GET", "/api/leaderboard")]
+    [InlineData("GET", "/api/scenarios")]
+    [InlineData("GET", "/api/tables")]
+    public async Task A_guest_holding_its_tutorials_token_reaches_no_route_the_token_does_not_open(string method, string path)
+    {
+        var guest = await GuestAsync();
+        var opened = await SendAsync(HttpMethod.Post, $"/api/scenarios/{Tutorial}/practice", guest, "{}");
+        var token = (await opened.Content.ReadFromJsonAsync<JsonElement>(Cancel)).GetProperty("token").GetString();
+
+        var answer = await SendAsync(new HttpMethod(method), path, guest, method == "GET" ? null : "{}", token);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await ErrorAsync(answer)).ShouldBe(AccountErrors.GuestNotAllowed.Code);
+    }
+
+    [Fact]
+    public async Task A_session_whose_account_cannot_be_read_is_asked_to_wait_rather_than_let_past_the_guests_list()
+    {
+        var guest = await GuestAsync();
+        _clock.Advance(AccountApi.CacheFor);
+        _store.Failing = true;
+
+        var answer = await SendAsync(HttpMethod.Get, "/api/lobby", guest);
+
+        answer.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        (await ErrorAsync(answer)).ShouldBe("Account.Unavailable");
+    }
+
     [Fact]
     public async Task A_guest_does_not_reach_the_tutorial_of_another_guest()
     {
@@ -199,5 +238,34 @@ public sealed class TableServerGuestTests : IAsyncDisposable
 
         answer.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await ErrorAsync(answer)).ShouldBe(AccountErrors.GuestNotAllowed.Code);
+    }
+
+    /// <summary>The accounts on disk, whose reads of an account fail once <see cref="Failing" /> is set: the store out of service.</summary>
+    private sealed class SwitchedStore(IAccountStore inner) : IAccountStore
+    {
+        public bool Failing { get; set; }
+
+        public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
+            Failing ? throw new IOException("The account store is out of service (a test).") : inner.FindAsync(id, cancellationToken);
+
+        public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
+
+        public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
+
+        public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+
+        public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.FindBySubjectAsync(identity, cancellationToken);
+
+        public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.TryBindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.UnbindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) => inner.FindUsernameAsync(username, cancellationToken);
+
+        public Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.TryReserveUsernameAsync(reservation, cancellationToken);
+
+        public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.ReleaseUsernameAsync(reservation, cancellationToken);
+
+        public Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default) => inner.SessionKeyAsync(cancellationToken);
     }
 }

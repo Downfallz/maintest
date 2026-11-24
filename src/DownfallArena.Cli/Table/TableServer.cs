@@ -1,4 +1,5 @@
 using System.Net;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
@@ -420,7 +421,24 @@ internal sealed class TableServer : IDisposable
     /// </summary>
     private async Task<StudioResponse?> GuestRefusalAsync(string method, string path, string? token, AccountRequest account)
     {
-        if (_accounts is null || string.IsNullOrEmpty(account.Session) || await _accounts.GuestAsync(account) is not { } guest)
+        if (_accounts is null || string.IsNullOrEmpty(account.Session))
+        {
+            return null;
+        }
+
+        Account? guest;
+        try
+        {
+            guest = await _accounts.GuestAsync(account);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            // Whether the session is a guest's cannot be read: the request is not let past the list on a guess.
+            Console.WriteLine($"  Whether a session is a guest's could not be read: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfJson(new { error = "Account.Unavailable", message = "Accounts cannot be read right now. Try again in a minute." }, ArtifactJson.LineOptions, status: 503);
+        }
+
+        if (guest is null)
         {
             return null;
         }
@@ -431,15 +449,22 @@ internal sealed class TableServer : IDisposable
             return null;
         }
 
-        // Feedback is not a seat's route: a guest sends none (ADR 0207), so none names an account the hourly job removes.
-        if (!FeedbackApi.Names(path) && Practices?.ByToken(token) is { } practice && practice.Account == guest.Id.ToString() && teaches(practice.Scenario))
+        // The practice's token opens what the practice's own API answers, and nothing a route before it names: the lobby,
+        // friends, push and the rest read the cookie, not the token. Feedback is one of those: a guest sends none
+        // (ADR 0207), so none names an account the hourly job removes.
+        if (!NamedBeforeTheTables(path) && Practices?.ByToken(token) is { } practice && practice.Account == guest.Id.ToString() && teaches(practice.Scenario))
         {
             return null;
         }
 
-        var refused = Application.Accounts.AccountErrors.GuestNotAllowed;
+        var refused = AccountErrors.GuestNotAllowed;
         return StudioResponse.OfJson(new { error = refused.Code, message = refused.Message }, ArtifactJson.LineOptions, status: 403);
     }
+
+    /// <summary>Whether a route this host answers before it looks for a table by its token names the path.</summary>
+    private static bool NamedBeforeTheTables(string path) =>
+        AccountApi.Names(path) || FriendsApi.Names(path) || LeaderboardApi.Names(path) || StatsApi.Names(path)
+        || ScenariosApi.Names(path) || FeedbackApi.Names(path) || AdminApi.Names(path) || path.StartsWith(LobbyApi.Prefix, StringComparison.Ordinal);
 
     private static StudioResponse StartingUp() =>
         StudioResponse.OfPlainText(503, "This host is starting: its tables are being rebuilt. Try again in a moment.") with
