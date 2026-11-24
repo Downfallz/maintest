@@ -1218,6 +1218,7 @@ node scripts/ux/journey.mjs doors
 node scripts/ux/journey.mjs --all --paint --out <folder>
 node scripts/ux/journey.mjs lobby --width 390
 node scripts/ux/journey.mjs lobby --strip create-window --frames 12 --interval 40
+node scripts/ux/journey.mjs --all --less-motion --out <folder>
 node scripts/ux/journey.mjs --list
 node scripts/ux/baseline.mjs <folder> --commit <sha> --date <day> > docs/art/journeys/baseline.md
 ```
@@ -1269,8 +1270,30 @@ It exits 1 when a page is over its paint budget or never painted, when nothing i
 a strip is unknown, or when a build is missing. It also exits 1 when
 `--frames` or `--interval` is given without `--strip`, or `--runs` without `--paint`.
 
+`--less-motion` walks the journeys named, or `--all`, with the system's wish for less motion (UX14, ADR 0197), and
+writes `doors-390-less.png` and `doors-390-less.measures.jsonl`, whose header says `lessMotion`. Each screen's line
+gains `travel`: every CSS transition, CSS animation and `animate` call of a millisecond or more that moved a
+`transform`, a `translate`, a `scale` or a `rotate` on the way to it (`scripts/ux/motion.mjs`). A screen reached
+after something travelled, or still animating at rest, is printed on standard error and the run exits 1. It is
+refused with `--strip`, and alone. `studio/browser/table.motion.js` holds every journey to none, at both widths.
+
 `baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,
 docs/art/journeys/baseline.md; it exits 1 on a folder with no measures, or when `--commit` or `--date` has no value.
+
+### ux/acceptance.mjs
+
+```bash
+node scripts/ux/journey.mjs --all --paint --out <folder> && node scripts/ux/journey.mjs --all --less-motion --out <folder>
+node scripts/ux/acceptance.mjs <folder> --commit <sha> --date <day> > docs/art/journeys/acceptance.md
+```
+
+Reads the walks of a folder against docs/art/journeys/baseline.md, screen by screen (UX14): the words, the filled
+actions, the smallest text, the words under 11 px, the targets under 44 px, the overlaps, what animates at rest and
+axe, each written `then → now` where it moved, a screen the baseline lacks marked *new* and one it holds and the walk
+did not reach listed. With `paint.json` it reads the paints against the baseline's, and with walks under
+`--less-motion` it lists what travelled or animated at rest. It writes docs/art/journeys/acceptance.md, which
+docs/art/ux-acceptance.md reads. It exits 1 when `--commit` or `--date` has no value, when the folder holds no walk
+under full motion, or when the baseline holds no table of a journey.
 
 ### ux/pictures.mjs
 

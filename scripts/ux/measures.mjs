@@ -163,8 +163,8 @@ export async function axeInPage(tags) {
  * The measures of a journey as JSON Lines: a header, then a line a screen, in the order they were reached. The
  * header's `blocked` lists the choices the walk made by script because the page left them out of reach.
  */
-export function measuresLines({ journey, viewport, axe, blocked = [], screens }) {
-  const header = { journey, viewport: `${viewport.width}x${viewport.height}`, axe, blocked };
+export function measuresLines({ journey, viewport, axe, lessMotion = false, blocked = [], screens }) {
+  const header = { journey, viewport: `${viewport.width}x${viewport.height}`, axe, ...(lessMotion ? { lessMotion: true } : {}), blocked };
   return `${[header, ...screens.map(({ name, staged, measures }) => ({ screen: name, ...(staged ? { staged: true } : {}), ...measures }))].map(line => JSON.stringify(line)).join('\n')}\n`;
 }
 

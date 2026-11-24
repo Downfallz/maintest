@@ -23,6 +23,7 @@ builds.
 | [match.md](match.md) | The match's frame: the round's bar, the order of play, the team labels and the captions, the dock, and one exchange followed from the actor to the next decision. The windows are UX12's. | UX11 |
 | [windows.md](windows.md) | The match's windows, their pictures first: the pick, the Mutation Tree opened from it, the spellbook at its top and at its foot, and the journal. The other windows join it with UX12. | UX12 (P1 of [its pictures' plan](../ux12-pictures-plan.md)) |
 | [baseline.md](baseline.md) | Not a brief: the five journeys as they stood before any pass, and the match's windows before UX12, a line of measures a screen. | UX2 |
+| [acceptance.md](acceptance.md) | Not a brief: every journey as UX14 found it, read against the baseline, `then → now`. | UX14 |
 
 ## The format
 

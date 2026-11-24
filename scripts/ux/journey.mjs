@@ -10,6 +10,8 @@
 //   node scripts/ux/journey.mjs lobby --strip create-window   # one interaction across time: lobby-create-window-390.png
 //   node scripts/ux/journey.mjs --paint                       # the first paints on a slow phone: paint.json, held to
 //                                                             # docs/art/page-budget.json (exit 1 when one is over)
+//   node scripts/ux/journey.mjs --all --less-motion           # under the system's less motion: doors-390-less.png and
+//                                                             # .measures.jsonl, each screen with what travelled (UX14)
 //   node scripts/ux/journey.mjs --list                        # the journeys, their screens and their strips
 //
 // It needs the engine built, the content consolidated, the battle bundle and the browser suite's Playwright.
@@ -24,6 +26,7 @@ import { checkScreen } from './access.mjs';
 import { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage, measuresLines, watchShiftInPage } from './measures.mjs';
 import { PAINT_RUNS, judgePaints, paints } from './paint.mjs';
 import { measureContrast } from './contrast.mjs';
+import { TRAVEL, lessMotionFaults, takeTravelInPage, watchTravelInPage } from './motion.mjs';
 import { installSeatViews } from '../../studio/browser/seat-views.js';
 import { VIEWPORTS, buildShowcase, missing, raiseSet, root } from './set.mjs';
 
@@ -122,7 +125,7 @@ async function film(page, act, { frames = 12, interval = 40 } = {}) {
  * interaction. It throws when the walk misses a screen it
  * names or reaches one it does not. `scale` is the screen's density: 1 for a sheet, 2 for a picture a page shows.
  */
-export async function walkJourney(browser, journey, viewport, { showcase, axe = null, access = false, strip = null, frames, interval, scale = 1 } = {}) {
+export async function walkJourney(browser, journey, viewport, { showcase, axe = null, access = false, lessMotion = false, strip = null, frames, interval, scale = 1 } = {}) {
   const filmed = strip ? journey.strips?.[strip] : null;
   if (strip && !filmed) throw new Error(`The ${journey.id} journey has no strip named ${strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
   const set = await raiseSet(showcase);
@@ -130,8 +133,10 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
   const person = async () => {
     // UX_JOURNEY_VIDEO=<folder> records each person's walk in real time, a clip of a stage's interaction (UX7-UX12).
     const video = process.env.UX_JOURNEY_VIDEO ? { recordVideo: { dir: join(process.env.UX_JOURNEY_VIDEO, String(viewport.width)), size: viewport } } : {};
-    const context = await browser.newContext({ ...contextOptions(viewport), deviceScaleFactor: scale, ...video });
+    // `lessMotion`: the system's wish for less motion, the one every page reads (ADR 0197), and what travels kept.
+    const context = await browser.newContext({ ...contextOptions(viewport), deviceScaleFactor: scale, ...video, ...(lessMotion ? { reducedMotion: 'reduce' } : {}) });
     await context.addInitScript(watchShiftInPage);
+    if (lessMotion) await context.addInitScript(watchTravelInPage, TRAVEL);
     // The seat's views as the page reads them, for the walks that play (studio/browser/seat-views.js).
     await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);
     contexts.push(context);
@@ -154,6 +159,8 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
         if (!journey.screens.includes(name)) throw new Error(`The ${journey.id} journey reached "${name}", which it does not name.`);
         if (walk.seen(name)) throw new Error(`The ${journey.id} journey reached "${name}" twice.`);
         const measures = await settle(on);
+        // What moved across the screen on the way here, under less motion (UX14): none is what a walk is held to.
+        if (lessMotion) measures.travel = (await on.evaluate(takeTravelInPage)) ?? [];
         if (filmed?.at === name) {
           shots = await film(on, () => filmed.act({ ...walk, page: on }), { frames, interval });
           throw STOP;
@@ -220,13 +227,13 @@ export async function contactSheet(browser, cells, { title, columns = COLUMNS, w
   }
 }
 
-const journeySheet = (browser, journey, viewport, screens) => contactSheet(browser, screens.map((screen, index) => ({
+const journeySheet = (browser, journey, viewport, screens, lessMotion = false) => contactSheet(browser, screens.map((screen, index) => ({
   png: screen.png,
   caption: `${index + 1}. ${screen.name}`,
   note: [screen.staged ? 'staged' : null, !screen.measures.window && screen.measures.height > SCREENS_SHOWN * viewport.height ? `${screen.measures.height} px tall, cut` : null].filter(Boolean).join(', '),
-})), { title: `${journey.title} · ${viewport.width} × ${viewport.height}`, width: viewport.width });
+})), { title: `${journey.title} · ${viewport.width} × ${viewport.height}${lessMotion ? ' · less motion' : ''}`, width: viewport.width });
 
-const SWITCHES = { '--all': 'all', '--list': 'list', '--paint': 'paint' };
+const SWITCHES = { '--all': 'all', '--list': 'list', '--paint': 'paint', '--less-motion': 'lessMotion' };
 const VALUED = {
   '--out': (text, options) => { options.out = text; },
   '--strip': (text, options) => { options.strip = text; },
@@ -253,7 +260,7 @@ export function blockedLines(id, viewport, taken) {
 }
 
 export function parseArguments(argv) {
-  const options = { journeys: [], all: false, list: false, paint: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, runs: PAINT_RUNS };
+  const options = { journeys: [], all: false, list: false, paint: false, lessMotion: false, out: null, strip: null, showcase: null, viewports: VIEWPORTS, runs: PAINT_RUNS };
   const given = new Set();
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
@@ -271,6 +278,8 @@ export function parseArguments(argv) {
   // An option the chosen mode ignores is refused, not taken in silence (#1093).
   for (const flag of ['frames', 'interval']) if (given.has(flag) && !options.strip) throw new Error(`--${flag} films a strip: name --strip.`);
   if (given.has('runs') && !options.paint) throw new Error('--runs counts the paints: name --paint.');
+  if (options.lessMotion && options.strip) throw new Error('--less-motion walks journeys: a strip films with the animations stopped.');
+  if (options.lessMotion && !options.all && !options.journeys.length) throw new Error('--less-motion walks journeys: name one, or --all.');
   if (options.all && options.journeys.length) throw new Error('Name journeys, or --all, not both.');
   if (!options.all && !options.journeys.length && !options.paint) throw new Error(`Name a journey (${JOURNEYS.map(journey => journey.id).join(', ')}), --all, --paint or --list.`);
   if (options.strip) {
@@ -321,11 +330,14 @@ async function main(argv) {
           for (const line of blockedLines(journey.id, viewport, shots)) console.error(line);
           continue;
         }
-        const screens = await walkJourney(browser, journey, viewport, { showcase, axe });
-        const sheet = join(out, `${journey.id}-${viewport.width}.png`), measures = join(out, `${journey.id}-${viewport.width}.measures.jsonl`);
-        await writeFile(sheet, await journeySheet(browser, journey, viewport, screens));
-        await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), blocked: screens.blocked, screens }));
+        const { lessMotion } = options;
+        const screens = await walkJourney(browser, journey, viewport, { showcase, axe, lessMotion });
+        const name = `${journey.id}-${viewport.width}${lessMotion ? '-less' : ''}`;
+        const sheet = join(out, `${name}.png`), measures = join(out, `${name}.measures.jsonl`);
+        await writeFile(sheet, await journeySheet(browser, journey, viewport, screens, lessMotion));
+        await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), lessMotion, blocked: screens.blocked, screens }));
         console.log(sheet); console.log(measures);
+        if (lessMotion) for (const line of lessMotionFaults(screens)) { console.error(`${journey.id} at ${viewport.width} px under less motion, ${line}`); process.exitCode = 1; }
         for (const line of blockedLines(journey.id, viewport, screens)) console.error(line);
       }
     }
