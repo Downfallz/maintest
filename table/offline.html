@@ -18,6 +18,9 @@
     .offline-plate { width: min(100%, 358px); aspect-ratio: 16 / 9; margin: 0 auto 1.25rem; }
     .offline-plate .scene-plate { margin: 0; }
     .offline-plate .picture { display: block; width: 100%; height: auto; }
+    button:focus-visible { outline: 3px solid var(--bone); outline-offset: 3px; }
+    /* Forced colours, as identity.css writes it (UX13): the ring stays, in the system's own colour. */
+    @media (forced-colors: active) { :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px !important; } }
   </style>
 </head>
 <body>
