@@ -354,6 +354,6 @@ public sealed class OperatorVoidTests : IDisposable
     /// <summary>A push service nothing reaches: the devices are never listed.</summary>
     private sealed class Unsent : IPushSender
     {
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(false);
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(PushSent.Gone);
     }
 }

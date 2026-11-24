@@ -181,7 +181,8 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
         var payload = JsonSerializer.Serialize(new { title = "Notifications work", body = "This phone is told when it is your turn.", url = $"/play?table={Uri.EscapeDataString(table.Id)}", tag = $"test:{seat.Name}", test = true }, Web);
         try
         {
-            if (await sender.SendAsync(subscription, payload, Topic))
+            var sent = await sender.SendAsync(subscription, payload, Topic);
+            if (sent is PushSent.Taken)
             {
                 Console.WriteLine($"  Session {table.Id}: {seat.Name} sent a test notice.");
                 return new PushTest(true, "Sent. If nothing showed, check the phone's notification settings for this browser.");
@@ -198,8 +199,11 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 }
             }
 
-            // Not "the push service says": a subscription kept before the host checked its service is never sent to (#1176).
-            return new PushTest(false, "This subscription is gone. Tap \"Notify me when it's my turn\" again.");
+            // A subscription kept before the host checked its service is never sent to, and tapping again would be
+            // refused on the same service: answered as that refusal, not as gone (#1176, #1209).
+            return sent is PushSent.UnknownService
+                ? PushTest.OnUnknownService
+                : new PushTest(false, "This subscription is gone. Tap \"Notify me when it's my turn\" again.");
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {
@@ -372,7 +376,7 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             return;
         }
 
-        if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, await CastsAsync(table, seat)), Topic))
+        if (await sender.SendAsync(subscription, Payload(question, round, seat, table.Id, await CastsAsync(table, seat)), Topic) is PushSent.Taken)
         {
             // Said, so a host's log shows what reached a phone and what did not.
             Console.WriteLine($"  Session {table.Id}: {seat.Name} notified of asking {question.Asked}.");

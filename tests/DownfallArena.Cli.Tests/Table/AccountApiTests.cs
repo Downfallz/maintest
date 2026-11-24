@@ -440,9 +440,12 @@ public sealed class AccountApiTests : IDisposable
         (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 
-    /// <summary>A device kept before the host checked its push service is never called: no push service said anything about it (#1176).</summary>
+    /// <summary>
+    /// A device kept before the host checked its push service is never called, and is forgotten: the test answers in the
+    /// subscribe route's words, not "gone", since subscribing again on that service would be refused the same way (#1209).
+    /// </summary>
     [Fact]
-    public async Task A_test_on_a_device_kept_on_a_push_service_the_host_does_not_know_says_it_is_gone_without_naming_a_push_service()
+    public async Task A_test_on_a_device_kept_on_a_push_service_the_host_does_not_know_forgets_it_and_answers_as_subscribing_would()
     {
         var (api, devices, _) = await NotifyingAsync();
         using var sender = new WebPushSender(PushKeys.Generate() with { Subject = "mailto:table@example.org" });
@@ -450,13 +453,14 @@ public sealed class AccountApiTests : IDisposable
         var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
         var id = await IdOf(api, session);
         await devices.AddAsync(id, new PushDevice("https://slow.example/phone", "BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A", "AAECAwQFBgcICQoLDA0ODw", default), TestContext.Current.CancellationToken);
+        var subscribing = await api.HandleAsync("PUT", "/api/account/push", Subscription.Replace("https://fcm.googleapis.com/fcm/send/phone", "https://slow.example/phone", StringComparison.Ordinal), Signed(session));
 
         var test = await api.HandleAsync("POST", "/api/account/push/test", """{"endpoint":"https://slow.example/phone"}""", Signed(session));
 
-        test.Status.ShouldBe(502);
-        var message = Json(test).GetProperty("message").GetString().ShouldNotBeNull();
-        message.ShouldContain("gone", Case.Sensitive, "the pages forget a subscription whose test says gone");
-        message.ShouldNotContain("push service", Case.Insensitive);
+        test.Status.ShouldBe(subscribing.Status);
+        Json(test).GetProperty("error").GetString().ShouldBe("Account.UnknownPushService");
+        Json(test).GetProperty("message").GetString().ShouldBe(Json(subscribing).GetProperty("message").GetString());
+        Json(test).GetProperty("message").GetString().ShouldNotBeNull().ShouldNotContain("gone", Case.Sensitive, "the pages ask to subscribe again on a test that says gone");
         (await devices.ListAsync(id, TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 
@@ -1358,15 +1362,15 @@ public sealed class AccountApiTests : IDisposable
 
         public bool Gone { get; set; }
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             if (Gone)
             {
-                return Task.FromResult(false);
+                return Task.FromResult(PushSent.Gone);
             }
 
             Sent.Add(to.Endpoint);
-            return Task.FromResult(true);
+            return Task.FromResult(PushSent.Taken);
         }
     }
 

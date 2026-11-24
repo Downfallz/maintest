@@ -47,6 +47,22 @@ public sealed class FileNoticeStoreTests : NoticeStoreContract, IDisposable
         (await store.ReadAsync(account, Cancel)).Entries.ShouldBe(entries);
     }
 
+    /// <summary>A log another revision wrote, with fields this one does not know: marking it read keeps them (#1211).</summary>
+    [Fact]
+    public async Task Changing_a_log_keeps_the_fields_this_revision_does_not_know()
+    {
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var path = Path.Combine(_root, "notices", $"{account.Value}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, NoticeFields.Written, Cancel);
+        var store = new FileNoticeStore(_root);
+
+        var read = await store.ReadAsync(account, Cancel);
+        (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
+
+        NoticeFields.ShouldKeepThem(await File.ReadAllTextAsync(path, Cancel));
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

@@ -67,10 +67,10 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             return DeviceSend.NotADevice;
         }
 
-        bool taken;
+        PushSent sent;
         try
         {
-            taken = await sender.SendAsync(Subscription(device), item.Payload, item.Topic, cancellationToken);
+            sent = await sender.SendAsync(Subscription(device), item.Payload, item.Topic, cancellationToken);
         }
         catch (Exception failure) when (!cancellationToken.IsCancellationRequested && failure is not PushRefusedException)
         {
@@ -78,7 +78,7 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             throw new PushRefusedException(failure.Message, failure);
         }
 
-        if (taken)
+        if (sent is PushSent.Taken)
         {
             return DeviceSend.Sent;
         }
@@ -117,7 +117,7 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
 
             try
             {
-                if (await sender.SendAsync(Subscription(device), payload, topic, cancellationToken))
+                if (await sender.SendAsync(Subscription(device), payload, topic, cancellationToken) is PushSent.Taken)
                 {
                     reached++;
                     continue;
@@ -149,15 +149,19 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
         var payload = Payload("Notifications work", "This device is told about your friends, your invitations and your games.", "/lobby", "test:account", test: true);
         try
         {
-            if (await sender.SendAsync(Subscription(device), payload, "test", cancellationToken))
+            var sent = await sender.SendAsync(Subscription(device), payload, "test", cancellationToken);
+            if (sent is PushSent.Taken)
             {
                 Console.WriteLine($"  Account {account}: sent a test notice.");
                 return new PushTest(true, "Sent. If nothing showed, check the device's notification settings for this browser.");
             }
 
             await ForgetAsync(account, device.Endpoint, cancellationToken);
-            // Not "the push service says": a device kept before the host checked its service is never sent to (#1176).
-            return new PushTest(false, "This subscription is gone. Turn \"Pop-ups on this device\" on again.");
+            // A device kept before the host checked its service is never sent to, and turning it on again would be
+            // refused on the same service: answered as that refusal, not as gone (#1176, #1209).
+            return sent is PushSent.UnknownService
+                ? PushTest.OnUnknownService
+                : new PushTest(false, "This subscription is gone. Turn \"Pop-ups on this device\" on again.");
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {

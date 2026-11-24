@@ -553,7 +553,7 @@ public sealed class PushNoticesTests : IDisposable
         /// <summary>Set, the send waits on it before answering: what a test needs to change the seat under a notice in flight.</summary>
         public TaskCompletionSource? Hold { get; set; }
 
-        public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public async Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             lock (Sent)
             {
@@ -570,7 +570,7 @@ public sealed class PushNoticesTests : IDisposable
                 await hold.Task;
             }
 
-            return Failing ? throw new HttpRequestException("The push service is out.") : !Gone;
+            return Failing ? throw new HttpRequestException("The push service is out.") : Gone ? PushSent.Gone : PushSent.Taken;
         }
 
         public Task<(PushSubscription To, string Payload)> Next()

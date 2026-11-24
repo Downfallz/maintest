@@ -1129,7 +1129,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
 
         if (!PushSubscription.OnKnownService(subscription.Endpoint))
         {
-            return (null, Problem(400, "Lobby.UnknownPushService", "This browser's push service is not one this host sends to."));
+            return (null, Problem(400, "Lobby.UnknownPushService", PushTest.UnknownServiceMessage));
         }
 
         // A signed-in seat is told on its account's devices, so the account's sender is the one that hears a push
@@ -1252,6 +1252,11 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         }
 
         var test = await push.TestAsync(table, seat);
+        if (test.UnknownService)
+        {
+            return Problem(400, "Lobby.UnknownPushService", test.Message);
+        }
+
         return Json(new { sent = test.Sent, message = test.Message }, test.Sent ? 200 : 502);
     }
 

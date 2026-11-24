@@ -15,7 +15,7 @@ public sealed class WebPushSenderTests
         using var service = new PushService(201);
         using var sender = new WebPushSender(keys, service.Client, Anywhere);
 
-        (await sender.SendAsync(service.Subscription(), """{"title":"Your turn"}""", "turn", TestContext.Current.CancellationToken)).ShouldBeTrue();
+        (await sender.SendAsync(service.Subscription(), """{"title":"Your turn"}""", "turn", TestContext.Current.CancellationToken)).ShouldBe(PushSent.Taken);
 
         var request = service.Received.ShouldHaveSingleItem();
         request.Headers["Authorization"].ShouldNotBeNull().ShouldStartWith("vapid t=");
@@ -64,7 +64,7 @@ public sealed class WebPushSenderTests
         using var service = new PushService(status);
         using var sender = new WebPushSender(PushKeys.Generate(), service.Client, Anywhere);
 
-        (await sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken)).ShouldBeFalse();
+        (await sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken)).ShouldBe(PushSent.Gone);
     }
 
     [Fact]
@@ -79,14 +79,14 @@ public sealed class WebPushSenderTests
     }
 
     [Fact]
-    public async Task An_endpoint_on_no_known_push_service_is_never_called_and_is_reported_gone()
+    public async Task An_endpoint_on_no_known_push_service_is_never_called_and_is_reported_apart_from_gone()
     {
         using var service = new PushService(201);
         using var sender = new WebPushSender(PushKeys.Generate(), service.Client);
 
         var sent = await sender.SendAsync(service.Subscription(), "{}", "turn", TestContext.Current.CancellationToken);
 
-        sent.ShouldBeFalse("a subscription kept before the host checked its service is forgotten as gone (#1132)");
+        sent.ShouldBe(PushSent.UnknownService, "a subscription kept before the host checked its service is forgotten, but subscribing again on it is refused (#1132, #1209)");
         service.Received.ShouldBeEmpty();
     }
 

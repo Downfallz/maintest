@@ -29,10 +29,24 @@ public sealed class BlobNoticeStore : INoticeStore
         return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version) { Written = written };
     }
 
-    public Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Reads the document again to write back what this revision does not know of it (#1211): a write over a version
+    /// that has moved since is refused here, without being tried.
+    /// </summary>
+    public async Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        return ConditionalBlob.WriteAsync(Blob(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries), version, cancellationToken);
+        string? before = null;
+        if (version is not null && entries.Count > 0)
+        {
+            (before, var current) = await ConditionalBlob.ReadAsync(Blob(account), cancellationToken);
+            if (!string.Equals(current, version, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return await ConditionalBlob.WriteAsync(Blob(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
     }
 
     public async Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)

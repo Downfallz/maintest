@@ -168,20 +168,20 @@ public sealed class AccountNoticesTests
 
         public Exception? Failure { get; set; }
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             if (Failure is { } failure)
             {
-                return Task.FromException<bool>(failure);
+                return Task.FromException<PushSent>(failure);
             }
 
             if (Gone.Contains(to.Endpoint))
             {
-                return Task.FromResult(false);
+                return Task.FromResult(PushSent.Gone);
             }
 
             Sent.Add((to, payload, topic));
-            return Task.FromResult(true);
+            return Task.FromResult(PushSent.Taken);
         }
     }
 

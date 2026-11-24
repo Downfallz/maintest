@@ -47,17 +47,17 @@ internal sealed class WebPushSender : IPushSender, IDisposable
         };
     }
 
-    public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+    public async Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(to);
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
 
         // A subscription kept before the host checked its service at subscribe time is never called, and is forgotten
-        // as gone, so its page subscribes again (#1132).
+        // (#1132); said apart from gone, since subscribing again on the same service is refused (#1209).
         if (!_sendsTo(to.Endpoint))
         {
-            return false;
+            return PushSent.UnknownService;
         }
 
         var subscription = new Lib.Net.Http.WebPush.PushSubscription { Endpoint = to.Endpoint };
@@ -71,7 +71,7 @@ internal sealed class WebPushSender : IPushSender, IDisposable
         try
         {
             await _client.RequestPushMessageDeliveryAsync(subscription, message, limit.Token);
-            return true;
+            return PushSent.Taken;
         }
         catch (OperationCanceledException late) when (!cancellationToken.IsCancellationRequested)
         {
@@ -79,7 +79,7 @@ internal sealed class WebPushSender : IPushSender, IDisposable
         }
         catch (PushServiceClientException refusal) when (refusal.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Gone)
         {
-            return false;
+            return PushSent.Gone;
         }
         catch (PushServiceClientException refusal)
         {
