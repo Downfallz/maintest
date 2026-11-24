@@ -119,6 +119,9 @@ export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bi
     const error = new Error(result.message || `The host answered ${response.status}. Try again.`);
     error.code = result.error;
     error.status = response.status;
+    // How long the host asks the page to wait before posting again, in seconds (`Retry-After`), or null.
+    const after = response.headers?.get?.('Retry-After');
+    error.retryAfter = after && /^\d+$/.test(after.trim()) ? Number(after) : null;
     throw error;
   }
   // Every sign-in's answer carries it, whichever page or provider made it.

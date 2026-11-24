@@ -502,7 +502,10 @@ in the tab's `sessionStorage`. Discord returns to `/signin/discord`, whose page 
 
 The host exchanges the code at Discord with the verifier and no secret, since the app is a public client. It
 refuses a token Discord issued to another app, keeps the Discord user's id and revokes the token. A Discord that
-cannot be asked is `503 Account.ProviderUnavailable`, never a refused sign-in.
+cannot be asked is `503 Account.ProviderUnavailable`, never a refused sign-in. When the host itself held the code
+back, because four exchanges were already under way, the 503 carries `Retry-After: 1`. The return page keeps the code
+and the verifier in memory. A 429 or a 503 whose `Retry-After` is five seconds or less is waited out once, saying
+"Checking your sign-in…", and the same proof is posted again (#1204). A second refusal is said on the page.
 
 `--sign-in microsoft --microsoft-client-id <id>` (or `DOWNFALL_MICROSOFT_CLIENT_ID`) adds personal Microsoft
 accounts (P6) the same way, through `codeflow.js` as Discord: its button leaves for the `consumers` authorize page

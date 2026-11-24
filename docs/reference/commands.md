@@ -663,7 +663,8 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   over http. Discord or Microsoft out of service, slow, rate-limiting or refusing the app itself (`invalid_client`,
   `unauthorized_client`) is `503 Account.ProviderUnavailable` and a line of its own,
   `Sign-in unavailable (<provider>): <why>.`, once a minute; the host asks each at most 30 times a minute, 4 at once,
-  and not at all until a 429's `Retry-After` has passed. `POST /api/account/<provider>` is checked by network
+  and not at all until a 429's `Retry-After` has passed. A post refused because 4 are already under way carries
+  `Retry-After: 1`, and the return page posts the same code once more after it (#1204). `POST /api/account/<provider>` is checked by network
   address before the provider is asked: five sign-ins a minute its provider does not vouch for (thirty for the /64s
   of one IPv6 /48), twenty people vouched for, eight checked at once; past that it is answered
   `429 Account.TooManySignIns` with `Retry-After` (#1193, `table/README.md`). The host

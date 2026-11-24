@@ -171,3 +171,56 @@ test('Microsoft added from Settings goes to its identities route and says Micros
   assert.equal(notAdded('microsoft'), 'Microsoft was not added. Open Settings, Account, and try again.');
   assert.equal(returnProblem('failed', 'microsoft'), 'Microsoft could not sign you in. Try again from the lobby.');
 });
+
+const busy = (status, retryAfter) => Object.assign(new Error('Too many sign-ins from your network just now. Try again in a minute.'), { status, retryAfter });
+
+test('a short 429 is waited out once, saying the sign-in is being checked, and the same code then signs in', async () => {
+  const doc = page();
+  const win = windowAt('?code=abc&state=st');
+  const posted = [], waited = [];
+  const answers = [() => { throw busy(429, 1); }, () => ({ needsUsername: false })];
+
+  const outcome = await finishCodeFlow({ win, doc, storage: tab(kept), request: async (path, body) => { posted.push(body); return answers.shift()(); },
+    pause: async ms => { waited.push([ms, doc.getElementById('signin-state').textContent]); } });
+
+  assert.equal(outcome, 'signed-in');
+  assert.deepEqual(waited, [[1000, 'Checking your sign-in…']]);
+  assert.equal(posted.length, 2);
+  assert.deepEqual(posted[1], posted[0], 'the code and verifier kept in memory are posted again');
+  assert.equal(win.replaced, '/lobby?next=%2Fj%2Fabc');
+});
+
+test('a short 503 is waited out once too, also when adding the provider from Settings', async () => {
+  const storage = tab({ ...kept, next: null, purpose: 'link' });
+  const answers = [() => { throw busy(503, 2); }, () => ({})];
+  const waited = [];
+
+  const outcome = await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc: page(), storage, request: async () => answers.shift()(), pause: async ms => { waited.push(ms); } });
+
+  assert.equal(outcome, 'linked');
+  assert.deepEqual(waited, [2000]);
+});
+
+test('a second short 429 says the host\'s message, with the way back, and is not tried a third time', async () => {
+  const doc = page();
+  let asked = 0;
+
+  const outcome = await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc, storage: tab(kept), request: async () => { asked += 1; throw busy(429, 1); }, pause: async () => {} });
+
+  assert.equal(outcome, 'refused');
+  assert.equal(asked, 2);
+  assert.match(doc.getElementById('signin-state').textContent, /Too many sign-ins/);
+  assert.equal(doc.getElementById('signin-back').hidden, false);
+});
+
+test('a wait longer than five seconds, none said, or another refusal is not tried again', async () => {
+  for (const refusal of [busy(429, 6), busy(503, null), busy(401, 1), new Error('The host answered 500. Try again.')]) {
+    let asked = 0, waited = false;
+
+    const outcome = await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc: page(), storage: tab(kept), request: async () => { asked += 1; throw refusal; }, pause: async () => { waited = true; } });
+
+    assert.equal(outcome, 'refused');
+    assert.equal(asked, 1, refusal.message);
+    assert.equal(waited, false);
+  }
+});

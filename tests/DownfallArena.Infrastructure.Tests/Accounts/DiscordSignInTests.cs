@@ -240,8 +240,9 @@ public sealed class DiscordSignInTests : IDisposable
         _discord.Held = new TaskCompletionSource();
         var asking = Enumerable.Range(0, DiscordSignIn.AtOnce).Select(i => discord.SignInAsync(Proof(code: $"code{i}"), Cancel)).ToList();
 
-        await Should.ThrowAsync<SignInUnavailableException>(() => discord.SignInAsync(Proof(), Cancel));
+        var busy = await Should.ThrowAsync<SignInUnavailableException>(() => discord.SignInAsync(Proof(), Cancel));
         _discord.Held.SetResult();
+        busy.RetryAfter.ShouldBe(TimeSpan.FromSeconds(1), "the code was never sent: the page may post it again shortly (#1204)");
         (await Task.WhenAll(asking)).ShouldAllBe(identity => identity != null);
     }
 

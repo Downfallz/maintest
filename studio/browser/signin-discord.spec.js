@@ -49,7 +49,7 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
     if (path === '/api/account/discord' || path === '/api/account/microsoft') {
       seen.posted.push(path === '/api/account/discord' ? route.request().postDataJSON() : { microsoft: route.request().postDataJSON() });
       const answer = discord();
-      return route.fulfill({ status: answer.status ?? 200, json: answer.json });
+      return route.fulfill({ status: answer.status ?? 200, headers: answer.headers, json: answer.json });
     }
     if (path === '/api/lobby') return route.fulfill({ json: { recording: true, format: '3v3', formats: ['3v3'], ongoing: 0, open: 0 } });
     if (['/api/lobby/adopt', '/api/lobby/mine', '/api/lobby/resume'].includes(path)) return route.fulfill({ json: { tables: [], invitations: [] } });
@@ -125,6 +125,19 @@ test('a sign-in the host refuses for its network\'s count says the host\'s words
   await expect(page.locator('#signin-state')).toHaveText(message);
   await expect(page.getByRole('link', { name: 'Back to the lobby' })).toBeVisible();
   expect(seen.posted).toHaveLength(1);
+  expect(seen.errors).toEqual([]);
+});
+
+test('a sign-in the host was too busy to check for a second is posted once more and signs in (#1204)', async ({ page }) => {
+  const message = 'Too many sign-ins from your network just now. Try again in a minute.';
+  const answers = [{ status: 429, headers: { 'Retry-After': '1' }, json: { error: 'Account.TooManySignIns', message } }, { json: { needsUsername: true, ticket: 'name-ticket' } }];
+  const seen = await lobby(page, { discord: () => answers.shift() });
+
+  await discordButton(page).click();
+
+  await expect(page.getByRole('dialog', { name: 'Choose your player name' })).toBeVisible();
+  expect(seen.posted).toHaveLength(2);
+  expect(seen.posted[1]).toEqual(seen.posted[0]);
   expect(seen.errors).toEqual([]);
 });
 

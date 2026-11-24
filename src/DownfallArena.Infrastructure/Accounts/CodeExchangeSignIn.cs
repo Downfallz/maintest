@@ -38,6 +38,9 @@ public abstract class CodeExchangeSignIn : ISignInProvider, IDisposable
     /// <summary>How many sign-ins ask the provider at once, at most.</summary>
     public const int AtOnce = 4;
 
+    /// <summary>How long a sign-in refused for <see cref="AtOnce" /> is told to wait before posting the same code again.</summary>
+    public static readonly TimeSpan BusyFor = TimeSpan.FromSeconds(1);
+
     /// <summary>How long a sign-in waits for the provider, all its calls together, before it is unavailable.</summary>
     public static readonly TimeSpan Patience = TimeSpan.FromSeconds(10);
 
@@ -111,7 +114,8 @@ public abstract class CodeExchangeSignIn : ISignInProvider, IDisposable
 
         if (!await _asking.WaitAsync(TimeSpan.Zero, cancellationToken))
         {
-            throw new SignInUnavailableException($"{Label} is being asked by as many sign-ins as the host allows at once.");
+            // The provider was not asked and the code not spent: a place frees as soon as an exchange answers (#1204).
+            throw new SignInUnavailableException($"{Label} is being asked by as many sign-ins as the host allows at once.") { RetryAfter = BusyFor };
         }
 
         try
