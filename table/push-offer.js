@@ -134,12 +134,38 @@ const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-l
  * (`keyed`, `subscribed`, `permission`, `hotseat`, `ready` once it has read the browser, and `where` the switch is
  * when it is not in Settings), and `turnOn()` asks the browser and registers the device, the same as the switch
  * does. The page calls `consider()` at its moments; the card shows only when it is due, once a page.
+ * `covers` names the page's controls that the card makes inert while it covers them (the battle view's creatures,
+ * #1206): a control under the card takes no tap anyway, and a focus there would be hidden under it (WCAG 2.4.11).
  * @param {Document} doc
- * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number }} options
+ * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number, covers?: string | null }} options
  */
-export function mountPushOffer(doc, { source, storage = null, nav = globalThis.navigator, win = globalThis, now = () => Date.now() } = {}) {
+export function mountPushOffer(doc, { source, storage = null, nav = globalThis.navigator, win = globalThis, now = () => Date.now(), covers = null } = {}) {
   doc.body.insertAdjacentHTML('beforeend', MARKUP);
   const el = id => doc.getElementById(id);
+  // The controls this card made inert, given back when it no longer covers them, or goes.
+  const made = new Set();
+  function cover() {
+    if (!covers) return;
+    const card = el('push-offer');
+    const box = card.hidden ? null : card.getBoundingClientRect?.();
+    const under = new Set();
+    if (box) {
+      for (const one of doc.querySelectorAll(covers)) {
+        if (card.contains(one) || one.inert && !made.has(one)) continue;
+        const other = one.getBoundingClientRect();
+        const wide = Math.min(box.right, other.right) - Math.max(box.left, other.left);
+        const tall = Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top);
+        if (wide > 2 && tall > 2) under.add(one);
+      }
+    }
+    for (const one of made) if (!under.has(one)) { one.inert = false; made.delete(one); }
+    for (const one of under) { one.inert = true; made.add(one); }
+  }
+  if (covers) {
+    win?.addEventListener?.('resize', cover);
+    // The card arrives moving (`motion-arrive`): what it covers is read again where it comes to rest.
+    for (const settled of ['animationend', 'animationcancel', 'transitionend']) el('push-offer').addEventListener?.(settled, cover);
+  }
   const platform = offerPlatform(nav, win);
   // The browser's own install prompt, kept for the card's Install on Android: raised once, used once.
   let install = null;
@@ -177,6 +203,7 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     answered = true;
     const inside = el('push-offer').contains?.(doc.activeElement);
     el('push-offer').hidden = true;
+    cover();
     if (inside && before?.isConnected) before.focus?.();
   }
 
@@ -230,6 +257,7 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
       before = doc.activeElement ?? null;
       draw();
       el('push-offer').hidden = false;
+      cover();
       // Said once the card is shown: words written into a hidden region are not announced.
       const tell = () => { el('push-offer-told').textContent = `${TITLE} Pop-ups offered.`; };
       if (win?.requestAnimationFrame) win.requestAnimationFrame(tell); else tell();
@@ -245,7 +273,9 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     },
     /** The switch changed elsewhere (Settings, the match settings): a card for a browser now on goes. */
     changed() {
-      if (!el('push-offer').hidden && !busy && !el('push-offer-said').textContent && source.state()?.subscribed) el('push-offer').hidden = true;
+      if (!el('push-offer').hidden && !busy && !el('push-offer-said').textContent && source.state()?.subscribed) { el('push-offer').hidden = true; cover(); }
     },
+    /** The page drew again, and its controls may have moved: those the card covers now are inert, the rest not. */
+    cover,
   };
 }

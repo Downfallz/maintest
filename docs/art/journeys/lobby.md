@@ -1001,18 +1001,19 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
   room held at the page's foot, a moment waiting for a window to close, or the lobby waiting until no game is the
   player's to play.
 - In the battle view the card stands at the top, over the round's bar, so lesson 1's end card in the dock stays
-  free: the round's bar and the header's tools are under it until it is answered (6 overlaps at 320 in the first
-  film; Leave the tutorial stays on the end card). While the card stands, the end card's filled Play again takes its
-  outline form too, so the screen's one gold is Turn on (#1128; `battle-services.spec.js`).
+  free: the round's bar and the header's tools are under it until it is answered (Leave the tutorial stays on the
+  end card). At 320 by 568 it also covers the opponent's creatures, each a button: settled by the owner (#1206,
+  2026-11-24), those it covers are inert while it stands, so no tap and no focus lands under it, and its answer gives
+  them back (`covers` in `push-offer.js`; `battle-services.spec.js`). The walk counts 0 overlaps at both widths.
+  While the card stands, the end card's filled Play again takes its outline form too, so the screen's one gold is
+  Turn on (#1128; `battle-services.spec.js`).
 - "Done, briefly, then the card goes": briefed as Done and a quiet Close, with no clock. A card that left by
   itself would be the page's one timer that moves something; if the owner wants it, the hold is a value the kit
   lacks, asked of the kit (`*Kit*:`).
-- The page's filled action under the card taking its outline while the card stands, so one gold shows a screen:
-  proposed, not built.
-- The first film's critique (#1126): at lesson 1's end, Turn on and the end card's Next are two gold actions on one
-  screen (`lesson-1-push-offer`). The designer proposes Turn on as a quiet (outlined) button while the end card
-  stands, so Next is the only filled action. The owner settles it. At 390 Turn on breaks onto two lines in its button; Don't ask again could
-  take the second row first. Only the card's loaded state, desktop words, was filmed: Waiting, the answer lines,
-  the error and the Android and iPhone forms were not.
+- The first film's critique (#1126): at lesson 1's end, Turn on and the end card's Next were two gold actions on one
+  screen (`lesson-1-push-offer`); the owner's #1128 answer gives Next its outline form, and the walk counts one
+  filled action at both widths. At 390 Turn on broke onto two lines in its button: an answer now keeps its words on
+  one line, and when the row wraps, Don't ask again takes the second row (#1206). Only the card's loaded state,
+  desktop words, was filmed: Waiting, the answer lines, the error and the Android and iPhone forms were not.
 - The battle view's other player's turn, and the end of lesson 1, are briefed here and not in `match.md` or
   `lessons.md`: the card is one part, and one brief.

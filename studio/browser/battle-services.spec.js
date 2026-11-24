@@ -474,6 +474,48 @@ test('the end of the first tutorial offers pop-ups through the account\'s switch
   expect(h.writes.filter(one => one.path.startsWith('/api/lobby/push'))).toEqual([]);
   await expect.poll(() => h.writes.map(one => `${one.method} ${one.path}`)).toContain('PUT /api/account/push');
 });
+// Each answer of the card keeps its words on one line: at 390 Turn on broke onto two inside its button. When the row
+// wraps, Don't ask again takes the second row first (#1206).
+test('the pop-ups offer keeps each answer on one line on a phone', async ({ page }) => {
+  const h = await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
+  h.view = { ...h.view, practice: { tutorial: { order: 1, of: 4, done: true, title: 'Your first combat', steps: [{ id: 'one', title: 'One' }], shown: 1 } } };
+  for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+    await page.setViewportSize(viewport); await page.reload();
+    await expect(page.locator('#push-offer')).toBeVisible();
+    const lines = await page.locator('#push-offer .push-offer-actions button:not([hidden])').evaluateAll(buttons => buttons.map(button => {
+      const range = document.createRange(); range.selectNodeContents(button);
+      return { name: button.textContent.trim(), lines: new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size, top: Math.round(button.getBoundingClientRect().top) };
+    }));
+    expect(lines.filter(one => one.lines !== 1), `${viewport.width}: ${JSON.stringify(lines)}`).toEqual([]);
+    const row = name => { const one = lines.find(each => each.name === name); if (!one) throw new Error(`${viewport.width}: no ${name} in ${JSON.stringify(lines)}`); return one.top; };
+    const tops = lines.map(one => one.top);
+    expect(row('Turn on'), `${viewport.width}: Turn on stays on the first row`).toBe(Math.min(...tops));
+    expect(row('Don\'t ask again'), `${viewport.width}: Don't ask again is the one that wraps`).toBe(Math.max(...tops));
+  }
+});
+// At 320 by 568 the card at the top covers the opponent's creatures, each a button: while it stands, those it covers
+// take no tap and no focus (a focus hidden under the card, WCAG 2.4.11), those it leaves free stay, and its answer
+// gives them back (#1206, the owner's answer).
+test('the pop-ups offer makes the creatures it covers inert until it is answered', async ({ page }) => {
+  const h = await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
+  h.view = { ...h.view, practice: { tutorial: { order: 1, of: 4, done: true, title: 'Your first combat', steps: [{ id: 'one', title: 'One' }], shown: 1 } } };
+  await page.setViewportSize({ width: 320, height: 568 }); await page.reload();
+  await expect(page.locator('#push-offer')).toBeVisible();
+  const read = () => page.evaluate(() => {
+    const card = document.getElementById('push-offer').getBoundingClientRect();
+    return [...document.querySelectorAll('#actor-layer .creature')].map(one => {
+      const box = one.getBoundingClientRect();
+      const covered = !document.getElementById('push-offer').hidden
+        && Math.min(box.right, card.right) - Math.max(box.left, card.left) > 2 && Math.min(box.bottom, card.bottom) - Math.max(box.top, card.top) > 2;
+      return { id: one.dataset.creatureId, covered, inert: one.inert };
+    });
+  });
+  await expect.poll(async () => (await read()).filter(one => one.covered).length).toBeGreaterThan(0);
+  await expect.poll(async () => (await read()).filter(one => one.covered !== one.inert)).toEqual([]);
+  await expect.poll(async () => (await read()).filter(one => !one.covered && !one.inert).length, 'the creatures the card leaves free stay buttons').toBeGreaterThan(0);
+  await page.locator('#push-offer-later').click(); await expect(page.locator('#push-offer')).toBeHidden();
+  await expect.poll(async () => (await read()).filter(one => one.inert)).toEqual([]);
+});
 test('a bot\'s move makes no offer of pop-ups', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'bot', name: 'Greedy' } });
   h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };

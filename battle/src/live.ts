@@ -202,7 +202,8 @@ const servicesUI = serviceControls(services, storage);
 type Devices = { offerState: () => { ready: boolean }, turnOn: () => Promise<unknown> };
 const accountDevices = () => (globalThis as { downfallNavigation?: { devices?: Devices } }).downfallNavigation?.devices ?? null;
 const inPractice = () => Boolean((view as { practice?: unknown } | null)?.practice);
-pushOffer = mountPushOffer(document, { storage, source: {
+// The card stands over the field at the top: the creatures it covers are inert until it goes (#1206).
+pushOffer = mountPushOffer(document, { storage, covers: '#actor-layer .creature', source: {
   state: () => (inPractice() ? accountDevices()?.offerState() ?? { ready: false } : services.offerState()),
   turnOn: () => (inPractice() ? accountDevices()?.turnOn() ?? Promise.resolve({ ready: false }) : services.turnOn()),
 } });
@@ -619,6 +620,7 @@ function render() {
   offerMoment = battleMoment({ awaiting, lesson: tutorialOf(view), other });
   if (offerMoment) pushOffer?.consider();
   else pushOffer?.withdraw();
+  pushOffer?.cover();
   $('reading-dots').hidden = !awaiting;
   $('waiting-last').hidden = !awaiting || !playbackState.summary;
   if (awaiting) {
