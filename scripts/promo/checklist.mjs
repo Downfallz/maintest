@@ -86,8 +86,7 @@ export function checklist(posts, { page, media = () => readMedia(join(root, 'pro
     const shown = post.media.map(item => `   - ${where(item, options)}.`);
     for (const channel of post.channels) {
       step += 1;
-      lines.push(`${step}. **${post.hour}, ${CHANNEL_NAMES[channel]}.**`, '', ...shown, '');
-      lines.push(...block('English', post.words.en), ...block('French', post.words.fr));
+      lines.push(`${step}. **${post.hour}, ${CHANNEL_NAMES[channel]}.**`, '', ...shown, '', ...block('English', post.words.en), ...block('French', post.words.fr));
     }
   }
   lines.push(
@@ -160,39 +159,49 @@ export function publish(post, links, { calendar = join(root, 'promo/calendar'), 
 
 const USAGE = 'usage: node scripts/promo/checklist.mjs [--calendar <folder>] (--page <url> [<post>...] | --approve <post>... | --publish <post> --link <channel> <url>...)';
 
+// The value after a flag, never another flag.
+function valueAfter(argv, index, flag) {
+  const given = argv[index + 1];
+  if (given === undefined || given.startsWith('--')) throw new Error(`${flag} takes a value. ${USAGE}`);
+  return given;
+}
+
+// One argument read into what is parsed so far; returns how many more arguments it took.
+function readArgument(argv, index, parsed) {
+  const argument = argv[index];
+  if (argument === '--calendar' || argument === '--page') {
+    const key = argument.slice(2);
+    if (parsed[key] !== undefined) throw new Error(`${argument} is given twice.`);
+    parsed[key] = valueAfter(argv, index, argument);
+    return 1;
+  }
+  if (argument === '--approve' || argument === '--publish') {
+    if (parsed.mode !== 'checklist') throw new Error(USAGE);
+    parsed.mode = argument.slice(2);
+    return 0;
+  }
+  if (argument === '--link') {
+    const channel = valueAfter(argv, index, argument);
+    const link = valueAfter(argv, index + 1, argument);
+    if (Object.hasOwn(parsed.links, channel)) throw new Error(`--link ${channel} is given twice.`);
+    parsed.links[channel] = link;
+    return 2;
+  }
+  if (argument.startsWith('--')) throw new Error(USAGE);
+  parsed.posts.push(argument);
+  return 0;
+}
+
 // The command's arguments: the calendar, the mode, the posts, the page and the links.
 export function parseArguments(argv) {
   const parsed = { mode: 'checklist', posts: [], links: {} };
-  const value = (index, flag) => {
-    const given = argv[index + 1];
-    if (given === undefined || given.startsWith('--')) throw new Error(`${flag} takes a value. ${USAGE}`);
-    return given;
-  };
-  const once = (key, index, flag) => {
-    if (parsed[key] !== undefined) throw new Error(`${flag} is given twice.`);
-    parsed[key] = value(index, flag);
-  };
-  for (let index = 0; index < argv.length; index += 1) {
-    const argument = argv[index];
-    if (argument === '--calendar') once('calendar', index++, argument);
-    else if (argument === '--page') once('page', index++, argument);
-    else if (argument === '--approve' || argument === '--publish') {
-      if (parsed.mode !== 'checklist') throw new Error(USAGE);
-      parsed.mode = argument.slice(2);
-    } else if (argument === '--link') {
-      const channel = value(index, argument);
-      const link = value(index + 1, argument);
-      if (Object.hasOwn(parsed.links, channel)) throw new Error(`--link ${channel} is given twice.`);
-      parsed.links[channel] = link;
-      index += 2;
-    } else if (argument.startsWith('--')) throw new Error(USAGE);
-    else parsed.posts.push(argument);
-  }
+  for (let index = 0; index < argv.length; index += 1) index += readArgument(argv, index, parsed);
   const { mode, posts, links, page } = parsed;
-  if (mode !== 'publish' && Object.keys(links).length) throw new Error(`--link goes with --publish. ${USAGE}`);
+  const linked = Object.keys(links).length > 0;
+  if (mode !== 'publish' && linked) throw new Error(`--link goes with --publish. ${USAGE}`);
   if (mode !== 'checklist' && page !== undefined) throw new Error(`--page goes with the checklist. ${USAGE}`);
   if (mode === 'approve' && posts.length === 0) throw new Error(USAGE);
-  if (mode === 'publish' && (posts.length !== 1 || Object.keys(links).length === 0)) throw new Error(USAGE);
+  if (mode === 'publish' && (posts.length !== 1 || !linked)) throw new Error(USAGE);
   return parsed;
 }
 
