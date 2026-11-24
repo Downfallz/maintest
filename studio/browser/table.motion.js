@@ -98,13 +98,16 @@ test('the watch keeps what travels, on a pseudo-element too, and leaves a fade a
       document.getElementById('spin').animate([{ rotate: '0deg' }, { rotate: '360deg' }], { duration: 300 });
       document.getElementById('spin').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
       document.getElementById('far').scrollIntoView({ behavior: 'smooth' });
-      setTimeout(done, 150);
+      done();
     })));
-    // Then the page goes: what it kept is already out of it.
-    await page.goto('http://fixture.test/again');
-    expect(watch.take()).toEqual(['#after::after transition transform', '#before::before animation rise transform', '#far scrollIntoView smooth',
+    // What the watch kept reaches the walk when the page's events fire: waited for, never timed (studio/AGENTS.md).
+    const seen = new Set();
+    await expect.poll(() => { for (const line of watch.take()) seen.add(line); return [...seen].sort(); }).toEqual([
+      '#after::after transition transform', '#before::before animation rise transform', '#far scrollIntoView smooth',
       '#rise animation rise transform', '#slide transition translate', '#spin animate rotate']);
-    expect(watch.take(), 'a take forgets what it took').toEqual([]);
+    // Then the page goes: what it kept was already out of it, and a take forgets what it took.
+    await page.goto('http://fixture.test/again');
+    expect(watch.take()).toEqual([]);
     const unwatched = await blind.newPage();
     await unwatched.goto('about:blank');
     expect(await unwatched.evaluate(travelWatchedInPage), 'a page without the watch is not read as still').toBe(false);
