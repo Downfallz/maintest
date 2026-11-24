@@ -233,10 +233,10 @@ public sealed class SteppedSessionTests : IDisposable
         var (session, _, _) = await Opened(_host, people: false);
         var api = Api(session);
         var journaled = session.Journaled;
-        _journal.FailTheNext(3);
+        _journal.FailEvery();
 
         session.Begin();
-        await Failed();
+        await Failed(session);
         var shown = await FeedNextAsync(api);
 
         shown.ShouldBe(journaled.ShouldNotBeNull());
@@ -253,10 +253,10 @@ public sealed class SteppedSessionTests : IDisposable
         var (session, _, _) = await Opened(_host, people: false);
         var api = Api(session);
         var before = api.Changes.Version;
-        _journal.FailTheNext(3);
+        _journal.FailEvery();
 
         session.Begin();
-        await Failed();
+        await Failed(session);
 
         api.Changes.Version.ShouldBe(before);
     }
@@ -439,16 +439,14 @@ public sealed class SteppedSessionTests : IDisposable
         return payload.RootElement.GetProperty("feedNext").GetInt32();
     }
 
-    /// <summary>Waits until the journal has refused an append.</summary>
-    private async Task Failed()
-    {
-        for (var attempt = 0; attempt < 500 && _journal.Failed == 0; attempt++)
-        {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-
-        _journal.Failed.ShouldBeGreaterThan(0);
-    }
+    /// <summary>
+    /// Waits until the journal is stable: it refused a bot's turn, the session read the match again and tried once more, and
+    /// was refused again. The journal refuses every append after, so what a test reads then is where the table stays,
+    /// however late it reads (#1212). A journal that took the third try, or a read taken at the first refusal, let a
+    /// loaded runner move the table between the refusal and the reading.
+    /// </summary>
+    private async Task Failed(SteppedSession session) =>
+        await Waits.UntilAsync(() => _journal.Failed >= 2 && session.LastFailure is not null, "the journal refused a turn and its next try", TestContext.Current.CancellationToken);
 
     /// <summary>A table with its person in seat 1 and a bot that can be held in seat 2, or two bots.</summary>
     /// <param name="handover">The round the person's seat is theirs from, a bot holding it until then; none for a seat theirs from the start.</param>
@@ -532,6 +530,9 @@ public sealed class SteppedSessionTests : IDisposable
         public int Failed => Volatile.Read(ref _failed);
 
         public void FailTheNext(int appends) => Volatile.Write(ref _failing, appends);
+
+        /// <summary>Refuses every append from now on, as a store out for longer than the test reads.</summary>
+        public void FailEvery() => FailTheNext(int.MaxValue);
 
         public void LoseTheNextAnswer() => Volatile.Write(ref _losing, 1);
 
