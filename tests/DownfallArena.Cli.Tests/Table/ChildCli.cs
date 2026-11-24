@@ -27,8 +27,8 @@ internal sealed class ChildCli : IAsyncDisposable
     }
 
     /// <summary>
-    /// Starts the command line built beside the tests, where the pages it serves are copied (<c>table/</c>), with nothing
-    /// of this run's own <c>DOWNFALL_*</c> settings.
+    /// Starts the command line built beside the tests, from the folder where <c>table/</c> is copied. It inherits none of
+    /// this run's <c>DOWNFALL_*</c> settings, the relay's among them.
     /// </summary>
     public static ChildCli Start(params string[] arguments)
     {
@@ -60,7 +60,7 @@ internal sealed class ChildCli : IAsyncDisposable
         return child;
     }
 
-    /// <summary>The first line <paramref name="match" /> holds for, written already or once it is, within <see cref="Waits.Within" />.</summary>
+    /// <summary>The first line <paramref name="match" /> holds for, whether written already or later, within <see cref="Waits.Within" />.</summary>
     public async Task<string> LineAsync(Func<string, bool> match, CancellationToken cancellationToken)
     {
         var seen = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -75,18 +75,33 @@ internal sealed class ChildCli : IAsyncDisposable
         }
 
         var exited = _process.WaitForExitAsync(cancellationToken);
-        var first = await Task.WhenAny(seen.Task, exited).WaitAsync(Waits.Within, cancellationToken);
+        Task first;
+        try
+        {
+            first = await Task.WhenAny(seen.Task, exited).WaitAsync(Waits.Within, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            lock (_lines)
+            {
+                _awaited.RemoveAll(awaited => awaited.Seen == seen);
+            }
+
+            throw new TimeoutException($"The line was not written within {Waits.Within}:{Environment.NewLine}{string.Join(Environment.NewLine, Lines)}");
+        }
+
         return first == seen.Task
             ? await seen.Task
             : throw new InvalidOperationException($"The process exited ({_process.ExitCode}) before the line was written:{Environment.NewLine}{string.Join(Environment.NewLine, Lines)}");
     }
 
-    /// <summary>Sends SIGTERM, as the platform stops a replica it scales in, and answers the exit code once the process has stopped.</summary>
+    /// <summary>Sends SIGTERM, as the platform stops a replica it scales in, and returns the exit code once the process has stopped.</summary>
     public async Task<int> TerminateAsync(CancellationToken cancellationToken)
     {
         using (var kill = Process.Start("kill", ["-TERM", $"{_process.Id}"]))
         {
             await kill.WaitForExitAsync(cancellationToken);
+            kill.ExitCode.ShouldBe(0, "the signal was not sent");
         }
 
         await _process.WaitForExitAsync(cancellationToken).WaitAsync(Waits.Within, cancellationToken);

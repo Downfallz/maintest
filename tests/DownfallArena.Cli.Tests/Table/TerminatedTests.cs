@@ -8,12 +8,13 @@ namespace DownfallArena.Cli.Tests.Table;
 
 /// <summary>
 /// The table host and table-worker stopped as the platform stops a replica it scales in, or to zero: SIGTERM, sent to
-/// a process of their own, which is the only way production stops them (#1171, #1205). Each says what it held and
-/// exits 0, where a process without its registration is cut off where it stands.
+/// a process of their own, which is the only way production stops them (#1171, #1205). Each reports what it held and
+/// exits 0. A process that did not register for the signal is killed mid-work, and exits 143.
 /// </summary>
 /// <remarks>
 /// Not run beside the others: table-worker takes from the emulator account's one <c>agent-turns</c> queue, whose items
-/// are the other tests' (#1181).
+/// are the other tests' (#1181). Another run's tests on the same emulator, another session's on the same machine,
+/// are not kept from it: their queue items can be taken while it runs.
 /// </remarks>
 [Collection(Terminated.Alone)]
 public sealed class TerminatedTests : IDisposable
@@ -49,7 +50,7 @@ public sealed class TerminatedTests : IDisposable
     }
 
     [Fact]
-    public async Task On_SIGTERM_table_worker_lets_go_of_its_queue_and_exits_0()
+    public async Task On_SIGTERM_table_worker_stops_and_exits_0()
     {
         Assert.SkipWhen(OperatingSystem.IsWindows(), "SIGTERM is a POSIX signal.");
         if (!await EmulatorAsync())
