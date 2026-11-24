@@ -33,8 +33,9 @@ owner and stop.
 
 1. **Read the request.** Name each post it asks for: what it shows (a creature, a spell, a moment), its ratio
    (`9:16` for the vertical feeds, `16:9`, `1:1`), how long, its channels (among the launch's seven), its day and its hour.
-   Each channel takes the ratios it shows whole (`CHANNELS` in `scripts/promo/calendar.mjs`): the vertical feeds
-   take `9:16`, Shorts a square too. An hour the owner did not give is `18:00`, Montreal's. A day the owner did not give is the first day with no file under `promo/calendar/`, never one before today, Montreal's day. A
+   Each channel takes only some ratios, uncropped (`CHANNELS` in `scripts/promo/calendar.mjs`): the vertical feeds
+   take `9:16`, and Shorts also takes a square. An hour the owner did not give is `18:00`, Montreal time.
+   A day the owner did not give is the first day with no file under `promo/calendar/`, never one before today, Montreal's day. A
    request that needs gameplay made from a prompt alone, or a channel off the launch's list, is refused and said
    why (ADR 0205, the plan's question 5). Ask the owner (AskUserQuestion) only what changes what is filmed.
 
@@ -120,8 +121,8 @@ owner and stop.
    ```
 
 10. **`/ship`.** The pull request names each post, the page's link, and what waits for the owner: a brief's pack to
-    generate, a choice the batch could not make. Its body carries the checklist whole, under the template's
-    headings. Merging it approves the posts.
+    generate, a choice the batch could not make. The pull request's body holds the whole checklist, under the
+    template's headings. Merging it approves the posts.
 
 ## After the merge
 
@@ -138,7 +139,7 @@ The owner posts from the checklist, then answers with each post's links, one lin
 node scripts/promo/checklist.mjs --publish <post> --link <channel> <link> --link <channel> <link>
 ```
 
-A post is published once every one of its channels has its link: a link missing, or off its channel's site, is
+An approved post is published once every one of its channels has its link: a link missing, or off its channel's site, is
 refused, and the file is kept as it was.
 
 ## Rules

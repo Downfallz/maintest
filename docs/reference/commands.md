@@ -1366,7 +1366,7 @@ node scripts/promo/calendar.mjs --calendar <folder>
 ```
 
 Checks the promotion's calendar (docs/art/promotion-plan.md, P5; promo/README.md#the-calendar): each post of
-`promo/calendar/`, named by its date, names its hour, its channels, each showing its media's ratio whole, the media the repository holds, its words in English and
+`promo/calendar/`, named by its date, names its hour, its channels (each takes only some ratios, uncropped), the media the repository holds, its words in English and
 French within each channel's limit as that channel counts, and its status, with the link of each channel, on its
 site, once published. Prints how many
 posts it holds by status. Exit 1 on a post it refuses, on a calendar missing or without a post, and on another
@@ -1385,9 +1385,10 @@ Prints the posting checklist of the promotion's calendar in Markdown (docs/art/p
 promo/README.md#the-checklist): the posts not published, or those named, in the order of their days and hours, one
 numbered step a channel with the hour, where each file is (`--page`, the batch's contact sheet, for a cut, a still or
 a generated file; the blob of `promo/media.json` for a film) and the words in English and French. `--approve` sets
-drafts to `approved`; `--publish` gives a post the link of each of its channels and the `published` status, and
+drafts to `approved`, or none when one is refused; `--publish` gives an approved post the link of each of its channels and the `published` status, and
 keeps the file as it was when the post then reads as refused. Exit 1 on a post refused, a checklist with nothing to
-publish, a cut or a still without `--page`, and on arguments it does not take.
+publish, a post named twice, a cut, a still or a generated file without `--page`, a post named by a path outside the
+calendar, and on arguments it does not take.
 
 ### promo/cut.mjs
 

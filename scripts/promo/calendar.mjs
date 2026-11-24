@@ -9,7 +9,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGenerated } from './brief.mjs';
-import { montrealToday, readShot, root } from './shoot.mjs';
+import { RATIOS, montrealToday, readShot, root } from './shoot.mjs';
 
 // Characters as most platforms count them, at the most: UTF-16 units, which are never fewer than the code points
 // or the graphemes a platform counts (an emoji is two).
@@ -45,18 +45,18 @@ function weighted(text) {
 /**
  * The channels of the launch (the plan's question 5), each with the most characters its post's words may hold, as
  * it counts them: the title of a Short, a Reddit post's title, a post on X or Bluesky, the caption of a TikTok or a
- * Reel, a Discord message. Each names the ratios it shows whole: the vertical feeds crop or bar anything wider
- * than 9:16, and Shorts also take a square. Each also names the hosts its posts' links are on.
+ * Reel, a Discord message. Each names the ratios it shows uncropped: the vertical feeds crop or bar anything wider
+ * than 9:16, and Shorts also take a square (the margins they cover are SAFE_ZONES in shoot.mjs). Each also names the hosts its posts' links are on.
  */
-const ANY = Object.freeze(['9:16', '16:9', '1:1']);
+const ANY = Object.freeze(Object.keys(RATIOS));
 export const CHANNELS = Object.freeze({
-  'youtube-shorts': Object.freeze({ limit: 100, count: units, ratios: Object.freeze(['9:16', '1:1']), hosts: ['youtube.com', 'youtu.be'] }),
-  tiktok: Object.freeze({ limit: 2200, count: units, ratios: Object.freeze(['9:16']), hosts: ['tiktok.com'] }),
-  'instagram-reels': Object.freeze({ limit: 2200, count: units, ratios: Object.freeze(['9:16']), hosts: ['instagram.com'] }),
-  reddit: Object.freeze({ limit: 300, count: units, ratios: ANY, hosts: ['reddit.com', 'redd.it'] }),
-  x: Object.freeze({ limit: 280, count: weighted, ratios: ANY, hosts: ['x.com', 'twitter.com'] }),
-  bluesky: Object.freeze({ limit: 300, count: units, ratios: ANY, hosts: ['bsky.app'] }),
-  discord: Object.freeze({ limit: 2000, count: units, ratios: ANY, hosts: ['discord.com', 'discord.gg'] }),
+  'youtube-shorts': Object.freeze({ limit: 100, count: units, ratios: Object.freeze(['9:16', '1:1']), hosts: Object.freeze(['youtube.com', 'youtu.be']) }),
+  tiktok: Object.freeze({ limit: 2200, count: units, ratios: Object.freeze(['9:16']), hosts: Object.freeze(['tiktok.com']) }),
+  'instagram-reels': Object.freeze({ limit: 2200, count: units, ratios: Object.freeze(['9:16']), hosts: Object.freeze(['instagram.com']) }),
+  reddit: Object.freeze({ limit: 300, count: units, ratios: ANY, hosts: Object.freeze(['reddit.com', 'redd.it']) }),
+  x: Object.freeze({ limit: 280, count: weighted, ratios: ANY, hosts: Object.freeze(['x.com', 'twitter.com']) }),
+  bluesky: Object.freeze({ limit: 300, count: units, ratios: ANY, hosts: Object.freeze(['bsky.app']) }),
+  discord: Object.freeze({ limit: 2000, count: units, ratios: ANY, hosts: Object.freeze(['discord.com', 'discord.gg']) }),
 });
 
 export { montrealToday };

@@ -285,10 +285,10 @@ Fury lands first. Your Brute answers with Pummel. Turn-based tactics, free to pl
 Fury frappe en premier. Ta Brute riposte avec Pummel. Tactique au tour par tour, gratuite en bêta.
 ```
 
-- `hour` is when the owner posts it, Montreal's time, on a 24-hour clock (`18:00`).
+- `hour` is when the owner posts it, Montreal time, on a 24-hour clock (`18:00`).
 - `channels` names the channels of the launch it goes to: `youtube-shorts`, `tiktok`, `instagram-reels`, `reddit`,
-  `x`, `bluesky` and `discord` (the plan's question 5). Each shows whole the ratios `CHANNELS` gives it: TikTok and
-  Reels `9:16`, Shorts `9:16` or `1:1`, the others all three.
+  `x`, `bluesky` and `discord` (the plan's question 5). Each channel takes only the ratios `CHANNELS` lists for it,
+  uncropped: TikTok and Reels `9:16`, Shorts `9:16` or `1:1`, the others all three.
 - `media` names what it shows, one or more, each one the repository holds: `cut <cut>` (a cut of `cuts/`),
   `still <shot> <ratio>` or `film <shot> <ratio>` (a shot of `shots/`, taken or filmed at that ratio), or
   `generated <sha256>` (a line of `generated.json`).
@@ -337,8 +337,11 @@ node scripts/promo/checklist.mjs --approve <post>...        # the drafts of a me
 node scripts/promo/checklist.mjs --publish <post> --link <channel> <url> [--link <channel> <url>]...
 ```
 
-A post is a file of `calendar/`, by path or by name. `--approve` takes drafts only. `--publish` writes the links
-and the `published` status, then reads the post again as the calendar does: a link missing, off its channel's site
-or of a channel the post does not go to, or a post dated after today, is refused and the file is kept as it was.
+A post is a file of `calendar/`, by its name or by a path inside it, never a file elsewhere. `--approve` takes
+drafts only, and writes none when one of those named is refused. `--publish` takes an approved post, writes the
+links and the `published` status, then reads the post again as the calendar does. It is refused when a link is
+missing, is off its channel's site or names a channel the post does not go to, or when the post is dated after
+today, and the file is then kept as it was. A film filmed twice is posted from its last line in `media.json`.
 Nothing is posted from the repository: no platform API, no account, no secret. A checklist with no post to publish,
-or a cut or a still without the page's link, is refused (`studio/promo-checklist.test.js`).
+a post named twice, or a cut, a still or a generated file without the page's link, is refused
+(`studio/promo-checklist.test.js`).

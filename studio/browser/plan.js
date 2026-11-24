@@ -136,7 +136,7 @@ const RULES = [
   { matches: (path) => path.startsWith('scripts/ux/'), calls: () => ({ realEngine: true }) },
   // The promotion's still is shot on the real engine by its own journey (table.promo.js), from the shots it reads
   // and the scenarios directly under scenarios/ that a shot plays; the same journey draws the cards of a cut,
-  // from the palette and the face of docs/art/branding.css. The calendar's checker is read by no journey.
+  // from the palette and the face of docs/art/branding.css. The calendar's checker and its checklist are read by no journey.
   { matches: (path) => (path.startsWith('scripts/promo/') && !['scripts/promo/calendar.mjs', 'scripts/promo/checklist.mjs'].includes(path)) || path.startsWith('promo/shots/') || path.startsWith('promo/cuts/') || path === 'docs/art/branding.css' || /^scenarios\/[^/]+\.json$/.test(path), calls: () => ({ realEngine: true }) },
   { matches: (path) => path.startsWith('battle/'), calls: () => ({ journeys: isBattleSpec, realEngine: true, release: true }) },
   { matches: (path) => /^(table|studio)\/.*\.(test\.js|fixture\.json)$/.test(path), calls: () => ({}) },

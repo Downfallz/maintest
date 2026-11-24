@@ -285,23 +285,23 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    and the hour, in the order the owner posts them on a phone; the owner answers with each post's link and a
    session marks it `published`. No secret, no platform API. Tests: a channel's ratio and caption limit.
 
-   *Built (2026-11-24)*: a post gives its `hour` (Montreal's, `HH:MM`), and each channel of `CHANNELS` the ratios it
-   shows whole: TikTok and Reels `9:16`, Shorts `9:16` or `1:1`, the others all three. A post whose medium a channel
+   *Built (2026-11-24)*: a post gives its `hour` (Montreal time, `HH:MM`), and each channel of `CHANNELS` the ratios it
+   takes uncropped: TikTok and Reels `9:16`, Shorts `9:16` or `1:1`, the others all three. A post whose medium a channel
    does not take is refused, as one whose words are over its limit is. `scripts/promo/checklist.mjs` writes the
    checklist in Markdown: a heading a post, in the order of their days and hours, then one numbered step a channel,
    with the hour, where each file is (the batch's contact sheet page for a cut, a still or a generated file; the blob
    `promo/media.json` records for a film, or the step to film it from `main`) and the words in English and French,
    one block each. It ends with the owner's answer, one line a channel. `--approve` sets the drafts of a merged batch
-   to `approved`; `--publish` writes each channel's link and `published`, and keeps the file as it was when the post
-   then reads as refused. `/promo` writes the checklist into the batch's pull request (step 9) and says how a
+   to `approved`. `--publish` writes each channel's link and `published` on an approved post, and keeps the file as
+   it was when the post then reads as refused (format in [promo/README.md](../../promo/README.md#the-checklist)). `/promo` writes the checklist into the batch's pull request (step 9) and says how a
    session marks a post published.
 
    Tests: `studio/promo-calendar.test.js` (the hour, each channel's ratios) and `studio/promo-checklist.test.js`
    (the order, a step a channel numbered across the batch, the words in blocks, where a cut, a still and a film are,
-   a published post left out, a ratio and a caption over a limit refused, approving and publishing, and a file kept
-   when a link is missing or off its site, the arguments and exit codes).
+   a published post left out, a ratio and a caption over a limit refused, approving and publishing, an approved post before a published one, a
+   file kept when a link is missing or off its site, the last film of a shot filmed twice, the line endings kept, the arguments and exit codes).
 
-   Left to later stages: one text a language for all of a post's channels, as in P5; the hour is not checked
+   Left to later stages: one text per language for all of a post's channels, as in P5, rather than one per channel; the hour is not checked
    against a channel's best time. No batch has used the checklist yet: the first batch by hand is P8's first wait.
 8. **P8, the week ahead.** A scheduled task, weekly, runs `/promo` on the calendar's next empty week and opens its
    pull request. Only after P6 has made two batches by hand.
