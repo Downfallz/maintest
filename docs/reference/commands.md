@@ -1352,6 +1352,19 @@ to `artifacts/promo/generated/<brief>/`, and adds its line to `promo/generated.j
 exits 1 on an intake with no model or no day, a day after today, a missing or stale pack, a file already recorded, or
 a file that is not what its kind comes back as (a picture, an MP4 for a restyled clip, either for a transition).
 
+### promo/calendar.mjs
+
+```bash
+node scripts/promo/calendar.mjs
+node scripts/promo/calendar.mjs --calendar <folder>
+```
+
+Checks the promotion's calendar (docs/art/promotion-plan.md, P5; promo/README.md#the-calendar): each post of
+`promo/calendar/`, named by its date, names its channels, the media the repository holds, its words in English and
+French within each channel's limit, and its status, with the link of each channel once published. Prints how many
+posts it holds by status. Exit 1 on a post it refuses, on a calendar missing or without a post, and on another
+argument.
+
 ### promo/cut.mjs
 
 ```bash

@@ -1,6 +1,6 @@
 # Plan: promotion, from the real game to a published post
 
-Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 to P4 are built; P5 is next.
+Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 to P5 are built; P6 is next.
 
 ## What the owner asked for
 
@@ -234,6 +234,26 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    the Pummel film the opponent mutates into Frenzied and casts Fury, which the prompt does not name (#1244).
 5. **P5, the calendar.** `promo/calendar/`, its test, and the launch's milestones as posts once there is a date.
    Tests: the refusals named above.
+
+   *Built (2026-11-24)*: `promo/calendar/*.md` (the format is in
+   [promo/README.md](../../promo/README.md#the-calendar)) and `scripts/promo/calendar.mjs`, which reads and checks
+   them. A post is named by its day; its front matter gives its channels, its media (`cut <cut>`,
+   `still <shot> <ratio>`, `film <shot> <ratio>` or `generated <sha256>`, each one the repository holds) and its
+   status, and its body a title and its words under `## en` and `## fr`. Its words are the same on each of its
+   channels and fit the smallest of their limits (`CHANNELS`: a Short's title 100 characters, a Reddit title 300, X
+   280, Bluesky 300, TikTok and Reels 2200, Discord 2000). A post that shows a restyled clip says so in each
+   language (ADR 0205). A `published` post gives `link <channel>: https://...` for each channel, and is not dated
+   after today; a post not published gives no link. The first post, `2026-12-01-brute-pummel-answer`, a draft, puts
+   the cut `brute-pummel-answer` on the vertical feeds, X and Bluesky.
+
+   Tests: `studio/promo-calendar.test.js` (a post's name, its media missing or not held, a channel not of the
+   launch or named twice, words over a channel's limit counted in characters, words missing in a language, the
+   restyled label, the links by status, the keys, the command's exit codes, a spell named in French as the battle
+   names it); the English words are scanned with the pages' (`table/terminology.test.js`).
+
+   Left to later stages: the launch's milestones wait for a date (the owner has none yet, 2026-11-24). A post has no
+   hour, and its words are one text for all its channels; the checklist (P7) orders the posts and checks a channel's
+   ratio.
 6. **P6, `/promo`.** The skill: a request in words ("a 20-second vertical clip of the Brute's Pummel") becomes the
    shots, the cut, the brief, the post's draft and the contact sheet, as a pull request. A `promo-producer`
    agent writes the words of a post, held to the brand's voice. `studio/prompts.test.js` holds what they name.

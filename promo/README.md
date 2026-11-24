@@ -251,3 +251,55 @@ refused when:
 A line of `generated.json` is refused when it lacks its model, day, prompt or references, says another kind, shot or
 ratio than its brief, or names a type its kind does not come back as (`studio/promo-brief.test.js`). `blob` is the
 file's path in the `promo` container. The record also keeps its hash.
+
+## The calendar
+
+One post a file under `calendar/`, named by its date and a name: `calendar/2026-12-01-brute-pummel-answer.md` is a
+post of 1 December 2026. Nothing is posted from the repository: the owner publishes each post by hand (the plan's
+question 4), and a post's file says where it stands.
+
+```markdown
+---
+channels: youtube-shorts, tiktok, instagram-reels, x, bluesky
+media: cut brute-pummel-answer
+status: draft
+---
+
+# The Brute answers Fury with Pummel, on the vertical feeds
+
+## en
+
+Fury lands first. Your Brute answers with Pummel. Turn-based tactics, free to play in beta.
+
+## fr
+
+Fury frappe en premier. Ta Brute riposte avec Pummel. Tactique au tour par tour, gratuite en bêta.
+```
+
+- `channels` names the channels of the launch it goes to: `youtube-shorts`, `tiktok`, `instagram-reels`, `reddit`,
+  `x`, `bluesky` and `discord` (the plan's question 5).
+- `media` names what it shows, one or more, each one the repository holds: `cut <cut>` (a cut of `cuts/`),
+  `still <shot> <ratio>` or `film <shot> <ratio>` (a shot of `shots/`, taken or filmed at that ratio), or
+  `generated <sha256>` (a line of `generated.json`).
+- `status` is `draft`, `approved` (its pull request is merged) or `published`. A published post gives the link of
+  each of its channels, one line each: `link x: https://x.com/...`. A post not published gives none.
+- The `#` heading says what the post is, for the owner who reads the calendar. Under `## en` and `## fr` are its
+  words, the same on each of its channels: they fit the smallest of their limits (`CHANNELS` in
+  `scripts/promo/calendar.mjs`, in characters: a Short's title 100, a Reddit title 300, X 280, Bluesky 300, TikTok
+  and Reels 2200, Discord 2000). Words longer than a channel takes are a post of their own, for the channels that
+  take them.
+- A post that shows a restyled clip says so in its words, "Gameplay restyled by a model." and "Partie restylisée
+  par un modèle." (ADR 0205).
+
+The English words are scanned as the pages' are (`table/terminology.test.js`), and a spell keeps the name the
+battle shows in the French words too, as in a cut. A post is refused when it is not named by a real day, has a key
+not in this format, names no channel or one not of the launch, has no media or media the repository does not hold,
+lacks its words in a language or has words over a channel's limit, or gives a link before it is published; a
+published post is refused without the link of each channel, or dated after today (`studio/promo-calendar.test.js`).
+
+```bash
+node scripts/promo/calendar.mjs   # promo/calendar/ read and checked
+```
+
+The launch's milestones (the release candidate, `v1.0.0`) become posts like any other, written backwards from a
+date once the owner has one.

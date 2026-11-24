@@ -303,6 +303,10 @@ const sources = () => [
       const cut = JSON.parse(read(path));
       return { path, texts: [cut.titleCard?.en, ...(cut.shots ?? []).map(stretch => stretch.caption?.en)].filter(text => typeof text === 'string') };
     }),
+  // The words of a post of the promotion's calendar (promo/README.md#the-calendar): its title and its English words.
+  ...files('promo/calendar')
+    .filter(path => path.endsWith('.md'))
+    .map(path => ({ path, texts: read(path).split('## fr')[0].split('\n').filter(line => line.trim() && !/^(---|[a-z][a-z -]*:)/.test(line)) })),
 ];
 
 function violations(files) {
