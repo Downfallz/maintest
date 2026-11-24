@@ -209,6 +209,24 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Adding_a_way_spends_the_addresss_sign_in_count_as_a_sign_in_does()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        var fromHome = new AccountRequest(session, Secure: true, Address: "203.0.113.7");
+        for (var posted = 0; posted < SignInAttempts.PerAddress; posted++)
+        {
+            (await api.HandleAsync("POST", Route + "/discord", Recent(), fromHome)).Status.ShouldBe(401);
+        }
+
+        var answer = await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), fromHome);
+
+        answer.Status.ShouldBe(429);
+        Error(answer).ShouldBe("Account.TooManySignIns");
+        Providers(await api.HandleAsync("GET", Route, "", Signed(session))).ShouldBe(["google"]);
+    }
+
+    [Fact]
     public async Task A_provider_the_host_does_not_offer_cannot_be_added()
     {
         var api = await ApiAsync();

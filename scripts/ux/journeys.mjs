@@ -4,7 +4,8 @@
 // interactions `--strip` films.
 
 import { GAME_ORIGIN } from '../../table/site-origins.js';
-import { choose, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
+import { answer, asked, choose, latest, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
+import { DESKTOP, VIEWPORTS, neverAskedInPage } from './set.mjs';
 
 export const WALKER = 'Walker', FRIEND = 'Rook';
 const FIRST_LESSON = 'sc-repo-tutorial-your-first-combat';
@@ -46,10 +47,31 @@ async function invitationFrom(walk, name) {
   return `${walk.set.game}${join}`;
 }
 
+// A picture below the first screen, brought into view and waited on: a scene is lazy, so the walk's settling leaves it
+// out until it has arrived (#1044).
+async function sceneInView(page, selector) {
+  await page.locator(selector).first().scrollIntoViewIfNeeded({ timeout: 30000 });
+  // A picture inside a closed entry has a box but is not drawn: only the ones the visitor sees are waited on.
+  await page.waitForFunction(() => [...document.images].filter(image => {
+    const box = image.getBoundingClientRect();
+    return image.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true }) && box.width > 0 && box.bottom > 0 && box.top < innerHeight;
+  }).every(image => image.complete && image.naturalWidth > 0), null, { timeout: 30000 });
+}
+
+// The pop-ups offer, as it arrives on its moment, read and put off with Not now (#1126): a week before it asks again,
+// so the screens after it are as they were.
+async function pushOffer(walk, page, name) {
+  await page.locator('#push-offer').waitFor({ timeout: 30000 });
+  await walk.screen(name);
+  await page.locator('#push-offer-later').click();
+  await page.locator('#push-offer').waitFor({ state: 'hidden' });
+}
+
 const doors = {
   id: 'doors',
   title: 'The two doors',
-  screens: ['showcase-home', 'showcase-round', 'showcase-home-fr', 'showcase-mutations', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief', 'sign-out', 'signed-out-panel'],
+  screens: ['showcase-home', 'showcase-home-story', 'showcase-home-modes', 'showcase-round', 'showcase-home-fr', 'showcase-mutations',
+    'showcase-mutations-family', 'showcase-mutations-entry', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief', 'sign-out', 'signed-out-panel'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -61,6 +83,12 @@ const doors = {
     await walk.screen('showcase-home');
     const play = await page.getByRole('link', { name: 'Play now' }).first().getAttribute('href');
     if (new URL(play).origin !== new URL(GAME_ORIGIN).origin) throw new Error(`Play now leads to ${play}, not to the game.`);
+    // The home's two scenes, far below its first screen (S5): the Predator at rest, then the broken charge (#1044).
+    await sceneInView(page, '#story .story-scene');
+    await walk.screen('showcase-home-story', { asSeen: true });
+    await sceneInView(page, '#modes .modes-scene');
+    await walk.screen('showcase-home-modes', { asSeen: true });
+    await page.evaluate(() => window.scrollTo(0, 0));
     // How to play: the round seen played, each move a picture of the battle view (UX6).
     await page.getByRole('link', { name: 'How to play' }).click();
     // The moves' pictures are lazy, so the walk's settling leaves them out: wait until each has arrived.
@@ -73,6 +101,14 @@ const doors = {
     await walk.screen('showcase-home-fr');
     await page.goto(`${set.showcase}/mutations/`);
     await walk.screen('showcase-mutations');
+    // The field guide's scenes (S4): a family scrolled to its head, then an entry opened by its link (#1044).
+    await page.goto(`${set.showcase}/mutations/#family-predator`);
+    await sceneInView(page, '#family-predator');
+    await walk.screen('showcase-mutations-family', { asSeen: true });
+    await page.goto(`${set.showcase}/mutations/#form-parasite`);
+    await page.locator('#form-parasite[open]').waitFor();
+    await sceneInView(page, '#form-parasite');
+    await walk.screen('showcase-mutations-entry', { asSeen: true });
     await page.goto(`${set.showcase}/rules/`);
     await walk.screen('showcase-rules');
     // A path that does not exist: the static server answers 404 with nothing, so the walk opens the page itself.
@@ -122,16 +158,21 @@ const theLessons = {
   id: 'lessons',
   title: 'The lessons',
   screens: [...lessons.flatMap(lesson => [`lesson-${lesson.order}-brief`, `lesson-${lesson.order}-first-step`,
-    ...(hasCards(lesson) ? [`lesson-${lesson.order}-concept-card`] : []), lesson.endsTheMatch ? 'lesson-result' : `lesson-${lesson.order}-complete`]), 'home-after-the-lessons'],
+    ...(hasCards(lesson) ? [`lesson-${lesson.order}-concept-card`] : []), ...(lesson.order === 1 ? ['lesson-1-push-offer'] : []),
+    lesson.endsTheMatch ? 'lesson-result' : `lesson-${lesson.order}-complete`]), 'home-after-the-lessons'],
   strips: {
     'brief-begins': { at: 'lesson-1-brief', act: ({ page }) => page.locator('#practice-brief-begin').click() },
     // The first cast (#978): the coach and its ring by the spell choice, then the spell chosen, and the frames after it
-    // show the coach stepping aside while the targets are chosen. Film it with `--frames 12 --interval 40`.
-    'first-cast': { at: 'lesson-1-first-step', act: ({ page, blocked }) => chooseRecordedSpell(page, lessons[0], blocked) },
+    // show the coach stepping aside while the targets are chosen. Film it with `--frames 12 --interval 40`. On a phone
+    // the spell choice docks under the field and the coach leaves with its sheet; its fade on the field plays only from
+    // 760 px wide, so the strip is filmed on a desktop too (#1140).
+    'first-cast': { at: 'lesson-1-first-step', viewports: [...VIEWPORTS, DESKTOP], act: ({ page, blocked }) => chooseRecordedSpell(page, lessons[0], blocked) },
   },
   async walk(walk) {
     const { page, set } = walk;
     await account(walk, page, WALKER, { skipLessons: false });
+    // A browser never asked for notifications, so lesson 1's end offers pop-ups (#1126).
+    await page.context().addInitScript(neverAskedInPage);
     for (const lesson of lessons) {
       const name = part => `lesson-${lesson.order}-${part}`;
       // The first lesson opens by itself on a new player's home; the next ones are opened from Learn to play.
@@ -155,6 +196,7 @@ const theLessons = {
         await walk.screen('lesson-result');
         await page.locator('#match-leave').click();
       } else {
+        if (lesson.order === 1) await pushOffer(walk, page, 'lesson-1-push-offer');
         await walk.screen(name('complete'));
         await page.locator('#coach-leave').click();
       }
@@ -174,12 +216,26 @@ async function friendTakesTheSeat(walk) {
   const friend = await walk.person();
   await account(walk, friend, FRIEND);
   await takeSeat(friend, openSeat);
+  return friend;
+}
+
+// The seat's part of the question both players are asked, answered from `page` with the first choices the host
+// offers, until the seat waits on the other player: a mutation is asked a creature at a time.
+async function answerOurPart(walk, page) {
+  let view = await asked(page), answers = 0;
+  while (view?.waitingFor && !view.over) {
+    if (answers === 12) throw new Error(`The seat was still asked ${view.waitingFor} after twelve answers.`);
+    await readUntilAsked(page);
+    await answer(page, view, { blocked: walk.blocked, ahead: true });
+    answers += 1;
+    view = await latest(page);
+  }
 }
 
 const lobby = {
   id: 'lobby',
   title: 'The lobby',
-  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-game-ended', 'home-ended-ground', 'home-waiting-ground', 'home-turn-arrives'],
+  screens: ['home-new', 'home-menu', 'create-window', 'create-window-bot', 'home-your-turn', 'waiting-room', 'home-waiting', 'home-push-offer', 'home-game-ended', 'home-ended-ground', 'home-waiting-ground', 'home-turn-arrives', 'home-answer-arrives'],
   strips: {
     // The turn that arrives: the friend takes the open seat while the walker's home is open, a bot's turn on show.
     'turn-arrives': { at: 'home-game-ended', act: walk => friendTakesTheSeat(walk) },
@@ -223,6 +279,11 @@ const lobby = {
     await walk.screen('waiting-room');
     await home(page, set.game);
     await walk.screen('home-waiting');
+    // A game against a person waits on the other player: the moment of the pop-ups offer, in a browser never asked
+    // (#1126). Put off with Not now, it does not ask again in this walk.
+    await page.context().addInitScript(neverAskedInPage);
+    await home(page, set.game);
+    await pushOffer(walk, page, 'home-push-offer');
     // The game against the bot, conceded: a game that ended.
     await page.goto(game);
     await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
@@ -234,6 +295,7 @@ const lobby = {
     await page.locator('#create-solo').click();
     await page.locator('#create-submit').click();
     await page.waitForURL(/\/battle/);
+    const botGame = page.url();
     await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
     await home(page, set.game);
     await page.locator('#mine-finished').click();
@@ -249,12 +311,26 @@ const lobby = {
     await page.locator('#mine-finished').click();
     await page.evaluate(() => window.scrollTo(0, 0));
     // The friend takes the open seat: a person's turn arrives on the open home, and outranks the bot's on show.
-    await friendTakesTheSeat(walk);
+    const friend = await friendTakesTheSeat(walk);
     await page.locator('#welcome', { hasText: FRIEND }).waitFor({ timeout: 30000 });
     await walk.screen('home-turn-arrives');
     // Its action opens the friend's game, not the bot's, and the battle's first frame names it.
     await page.locator('#featured-action').click();
     await page.waitForURL(new RegExp(`[?&]${seat}=${token}`));
+    // The other form (#988): a game begun, its turn delivered by an answer inside a round. The walker answers its
+    // question in the friend's game, and concedes the bot's, so the friend's game is featured as their turn; then Rook
+    // answers through the host, and the walker's turn arrives on the open home, in place.
+    await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
+    await answerOurPart(walk, page);
+    await page.goto(botGame);
+    await page.locator('#battle[data-connection="live"]').waitFor({ timeout: 30000 });
+    await concede(walk);
+    await home(page, set.game);
+    await page.locator('#featured-eyebrow', { hasText: /their turn/i }).waitFor({ timeout: 30000 });
+    await answerOurPart(walk, friend);
+    await page.locator('#featured-eyebrow', { hasText: /your turn/i }).waitFor({ timeout: 30000 });
+    await page.locator('#welcome', { hasText: FRIEND }).waitFor({ timeout: 30000 });
+    await walk.screen('home-answer-arrives');
   },
 };
 
@@ -358,7 +434,7 @@ async function gameWithFriend(walk, friend) {
 
 // A ranked 3v3 game between the walker and the friend: a first round played by both with the first choices offered,
 // then conceded by the walker.
-async function rankedGame(walk, friend) {
+export async function rankedGame(walk, friend) {
   const { page } = walk;
   await gameWithFriend(walk, friend);
   const second = view => view.board.roundNumber > 1;

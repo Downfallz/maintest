@@ -198,7 +198,8 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
                 }
             }
 
-            return new PushTest(false, "The push service says this subscription is gone. Tap \"Notify me when it's my turn\" again.");
+            // Not "the push service says": a subscription kept before the host checked its service is never sent to (#1176).
+            return new PushTest(false, "This subscription is gone. Tap \"Notify me when it's my turn\" again.");
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {

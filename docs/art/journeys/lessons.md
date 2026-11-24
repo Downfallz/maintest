@@ -22,6 +22,10 @@ under `.planning-footer` (the Confirm row) and the creature tabs, and in the mut
 (`#planning-creatures [data-creature]`) are not in view at all. The paints were not run: the battle page is not
 one `--paint` loads.
 
+Lesson 1's end makes the pop-ups offer, filmed as `lesson-1-push-offer` before `lesson-1-complete` (#1126): the
+walker's browser stands in for one never asked about notifications, and the walk puts the card off with Not now.
+The card is briefed with the lobby's, in [The pop-ups offer](lobby.md#the-pop-ups-offer-home-push-offer).
+
 What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one filled action, the cut corner. No shade and no
@@ -365,7 +369,8 @@ and must still.
   built in #978. The strip is filmed with `node scripts/ux/journey.mjs lessons --strip first-cast --frames 12
   --interval 40`: its frames follow the spell chosen. At both of the film's widths the coach stands in the spell
   choice's sheet, so the strip shows it leaving at once with the sheet, and the ring staying. The fade is seen on a
-  screen 760 px wide or more, where the coach stands on the field; the film does not walk that width.
+  screen 760 px wide or more, where the coach stands on the field: the strip names its own sizes, and is filmed at
+  1280 by 800 too (`--width 1280`, #1140).
 - The film's shift on `lesson-2-complete` and `lesson-3-complete` stays past 0.1: 0.32 and 0.42 at 320, 0.41 and
   0.38 at 390. It is summed over the whole lesson, the round's sheets and playback included, and the end card no
   longer adds to it (it is laid over the dock). What moves is the match's frame's, UX11's.

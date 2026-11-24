@@ -88,7 +88,8 @@ test('a picture of the kit holds its room before it loads and takes the file its
   });
   expect(taken.room).toEqual([308, 205]);
   const density = await page.evaluate(() => devicePixelRatio);
-  expect(taken.natural).toBe(density >= 2 ? 620 : 308);
+  // Without sizes it is drawn at its declaration's first width, the phone's: 243 px, the Colossus shown whole (#1179).
+  expect(taken.natural).toBe(density >= 2 ? 486 : 243);
   expect(taken.file).toMatch(/^\/table\/page-art\/colossus-\d+\.[0-9a-f]{8}\.webp$/);
   expect(taken.priority).toBe('high');
 });

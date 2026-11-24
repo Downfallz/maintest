@@ -737,6 +737,25 @@ public sealed class LobbyApiTests : IDisposable
         table.Seats[0].Push.ShouldNotBeNull("the seat was given another subscription while the test was in flight, and that one answered nothing");
     }
 
+    /// <summary>A subscription kept before the host checked its push service is never called: no push service said anything about it (#1176).</summary>
+    [Fact]
+    public async Task A_test_on_a_subscription_kept_on_a_push_service_the_host_does_not_know_says_it_is_gone_without_naming_a_push_service()
+    {
+        using var sender = new WebPushSender(PushKeys.Generate() with { Subject = "mailto:table@example.org" });
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
+        table.Seats[0].Push = new PushSubscription("https://slow.example/one", BrowserKey, BrowserAuth);
+
+        var test = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", table.Seats[0].Token);
+
+        test.Status.ShouldBe(502);
+        var message = JsonDocument.Parse(test.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull();
+        message.ShouldContain("gone", Case.Sensitive, "the pages forget a subscription whose test says gone");
+        message.ShouldNotContain("push service", Case.Insensitive);
+        table.Seats[0].Push.ShouldBeNull();
+    }
+
     private sealed class Refusing : IPushSender
     {
         public List<string> Sent { get; } = [];

@@ -52,6 +52,10 @@ One entry in `docs/art/page-pictures.json`:
   and hyphens. The statistics page draws one mutation, the one the player acquires most, out of 21. Each of
   the 21 pictures carries `"group": { "table/stats": "leaned-mutation" }`. The budget counts a group as its heaviest member, not their sum
   (#993). A group has two members or more; a page it does not name counts every member.
+- `quality` (optional): the WebP quality of this picture alone, a whole number from 1 to 100, in place of the kit's
+  (`encoding`, 82). It is part of the picture's origin, so changing it derives the picture again, and no other. Lower it
+  for a heavy picture a page asks for on first paint, and check it by eye where it is drawn at 2×: the lesson's eclipse
+  portrait on the table's home is at 70 (#1137).
 - `focus` (optional): where a box that cuts the painting centres the cut, across then down, in steps of 5%:
   `"focus": "30% 60%"` keeps a subject left of centre and low in view. `pictureElement` and `pictureHtml` write it as
   `data-focus-x` and `data-focus-y`, which `table/identity.css` turns into the image's `object-position`. The
@@ -184,8 +188,9 @@ smallest file that fills the width drawn at twice the density, for each width th
 (`phone`), each file once, and a `group` as its heaviest member. `studio/ux-pictures.test.js` fails when a page
 goes over, and when a budget is so loose it holds nothing: either number more than 1.5 times what the page loads,
 plus 4 KiB (#1107). Adding a picture to a page raises its number in the
-same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are read by
-`node scripts/ux/journey.mjs --paint`.
+same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are held by
+`node scripts/ux/journey.mjs --paint`: it loads the pages a player opens first by these names, and exits 1 when a
+page's median largest paint or shift is over them (#962).
 
 ## A picture asked of the owner
 

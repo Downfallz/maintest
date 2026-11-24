@@ -147,7 +147,7 @@ test('the showcase is deployed for its pages, the catalogue and the rulebook it 
     'table/picture-form.js',
     'table/picture-focus.js',
     'table/page-art.js',
-    'table/page-art/colossus-308.1855df35.webp',
+    'table/page-art/colossus-243.adb0dced.webp',
     'table/motion.js',
     '.github/workflows/showcase.yml',
   ]) {

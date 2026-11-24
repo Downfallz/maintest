@@ -339,7 +339,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     {
         try
         {
-            // A tutorial missing before the last one shipped (its order skipped) is not done: the series is not finished.
+            // A tutorial of the series missing at this host, the last one too, is not done: the series is not finished.
             return store.Tutorials.Count >= store.Series && await accounts.TutorialsAsync(account) is { } kept
                 && store.Tutorials.Where(one => one.Id != id).All(one => kept.StateOf(one.Id) == TutorialState.Done);
         }

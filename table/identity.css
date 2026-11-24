@@ -273,6 +273,9 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .scene-head[data-side="end"]::before { background: linear-gradient(to left, var(--soot) 0, color-mix(in srgb, var(--soot) 55%, transparent) 30%, color-mix(in srgb, var(--soot) 20%, transparent) 60%, transparent 85%); }
 .scene-head :is(h1, h2, h3) { margin: 0; color: var(--bone); }
 .scene-head .eyebrow { margin: 0 0 2px; }
+/* A page's head (the ladder, the statistics, the rulebook) is read on its painting at the pages' floor of 11 px, written
+   once here rather than page by page (#1150). The match's and the windows' heads keep their own sizes. */
+.page-head .eyebrow { font-size: 11px; }
 @media (max-height: 600px) {
   .scene-head::after { max-height: 64px; }
   .scene-head > .scene-words { margin: 4px; padding: 4px 8px; }

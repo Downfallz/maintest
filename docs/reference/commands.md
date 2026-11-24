@@ -399,7 +399,9 @@ parsed, or 503 `Scenario.Unavailable` when the store cannot say), and `GET /api/
 leaves off one whose game the store cannot read just then, said in one console line for the list (#833).
 
 `GET /api/tutorials` lists the tutorials to any signed-in account (401 signed out), in the order of the series:
-each one's `id`, `order`, `of`, `title`, `goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
+each one's `id`, `order`, `of` (the series length the tutorial files give, which a lesson missing at this host,
+even the last, does not shorten; the host names a missing lesson on its console at start-up, #1186), `title`,
+`goal`, `round`, `seat`, `format` and `link`. A tutorial is opened as a
 practice by the routes above, and is never listed under Practice. Once a tutorial is done the host answers nothing
 more for the person and the page draws no question: its end card offers Play again and Leave. A done tutorial is
 not resumed, and leaving one, done or not, lets go of its practice (`DELETE`), so it opens from its cut the next
@@ -428,7 +430,8 @@ The seat's view says the lesson under `practice.tutorial`:
 - `done`: the last step's question was asked and its round ended, or the match ended.
 - `next`: the lesson that follows in the series, its `title` and `link`; null after the last (#980).
 - `othersDone`: whether the account has done every other tutorial of the series, as of when this one opened; false
-  when its store cannot say, or when a tutorial of the series is missing at this host (#980).
+  when its store cannot say, or when a tutorial of the series, even the last, is missing at this host (#980,
+  #1186).
 
 #### The admin panel: Overview, Activity and Settings
 
@@ -572,8 +575,8 @@ The seat's view says the lesson under `practice.tutorial`:
   places (`GET /api/lobby` counts the games in progress and the open seats; `GET /api/lobby/page/<open|all>/<page>`
   serves them eight at a time, newest first, a signed-in player's own open tables left out of open), table
   creation, and a Leave action that rotates the seat token/code and offers the same team to another player.
-- `GET /api/lobby/events` streams that the public lists, or the signed-in player's own, changed, and every lobby
-  page reads on it and on its seat streams instead of a clock (ADR 0164).
+- `GET /api/lobby/events` streams that the public lists, or the signed-in player's own, changed, or only their
+  notices (`account notices`), and every lobby page reads on it and on its seat streams instead of a clock (ADR 0164).
 - With `DOWNFALL_RELAY` naming an Azure Web PubSub endpoint (on table, table-worker and table-tend alike), every
   process says what moved through it, a page connects to it at the address `GET /api/seat/<seat>/negotiate` or
   `GET /api/lobby/negotiate` signs, falling back to the stream without one, and a process hears the others there
@@ -643,7 +646,7 @@ browser as a device.
 With accounts on, push keys or not, the news to an account (a friend accepted, the invited friend took the seat,
 the other player left, a match ended) is kept in its notice log under `notices/`, the 100 latest of the last 90
 days, forgotten with the account. `GET /api/account/notices` lists it, newest first, with the unread count.
-`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201). When it marked any, the account's lobby stream says its lists changed, and the account's other pages read the bell again.
+`POST /api/account/notices/read` with `{"upTo": <id>}` marks entries read up to that id (ADR 0201). When it marked any, the account's lobby stream and relay say `account notices`. The account's other pages then read the bell's news again, not their lists (#1152).
 
 #### Accounts
 
@@ -653,13 +656,19 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   secret, for the application that `--discord-client-id` or `DOWNFALL_DISCORD_CLIENT_ID` names; Discord returns the
   code to the page `/signin/discord`. A hosted table takes that return over https only; a loopback one also over
   http. Discord out of service, slow or rate-limiting is `503 Account.ProviderUnavailable` and a line of its own,
-  `Sign-in unavailable (discord): <why>.`; the host asks Discord at most 30 times a minute, 4 at once, and not at all
-  until a 429's `Retry-After` has passed. A code is used once: a second post of the same code is refused. A client
+  `Sign-in unavailable (discord): <why>.`, once a minute; the host asks Discord at most 30 times a minute, 4 at once,
+  and not at all until a 429's `Retry-After` has passed. `POST /api/account/<provider>` is checked by network
+  address before the provider is asked: five sign-ins a minute its provider does not vouch for (thirty for the /64s
+  of one IPv6 /48), twenty people vouched for, eight checked at once; past that it is answered
+  `429 Account.TooManySignIns` with `Retry-After` (#1193, `table/README.md`). The host
+  writes its sign-in counts as one console line a minute per provider, and when it stops,
+  `Sign-ins (<provider>): … started, … finished, … refused, … unavailable, … limited.`, which the ops report sums
+  (#1171). A code is used once: a second post of the same code is refused. A client
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
   `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
-  identity that provider's proof vouches for (one per provider; `409 Account.IdentityTaken` when another account
+  identity that provider's proof vouches for, under the same per-address count as a sign-in (one per provider; `409 Account.IdentityTaken` when another account
   uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`).
   Both ask for a sign-in of this account made in the last ten minutes: every sign-in's answer carries `recent`,
   which the page sends back; without it they answer `403 Account.SignInAgain`. A removal ends every other session of
@@ -1196,7 +1205,8 @@ screens in order, numbered and named) and a file of measures (`doors-390.measure
 line a screen). The journeys are `doors`, `lessons`, `lobby`, `pages`, `match` and `windows` (the match's
 windows, UX12); `--all` walks the six, and `--list` prints their screens and their strips. Each walk builds its own set: the showcase built into a temporary
 folder and served from it (`--showcase <folder>` reads one already built), and a table host with developer
-accounts, a recording of its own and a table of seed 7. It needs the engine built (`dotnet build`), the content
+accounts, a recording of its own, a table of seed 7 and push keys of its own (`push-keys`), so the pages offer
+pop-ups. A walk that films the offer sets its browser up as one never asked about notifications. It needs the engine built (`dotnet build`), the content
 consolidated (`data/dst`), the battle bundle and the browser suite's Playwright and axe
 (`npm --prefix studio/browser ci --ignore-scripts`); without axe the measures say it was not run.
 
@@ -1210,7 +1220,8 @@ fall under 4.5:1 (`scripts/ux/contrast.mjs`). A box under 4.5:1 is counted, as a
 not stop the walk. Two walks of one journey give the same lines (`studio/browser/table.journey.js`), the shift aside: it
 moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. A picture
 is counted `oversized` when the width its chosen srcset candidate declares is over twice the pixels it is drawn on
-(`object-fit` included), and `undersized` when it is under them; an SVG is neither. The walk fails when it misses a
+(`object-fit` included), and `undersized` when it is under them; an SVG is neither, and a file another picture of
+the screen draws at its own size is not `oversized`: the browser reuses it from its cache (#1179). The walk fails when it misses a
 screen its journey names, when a screen never comes to rest (40 reads, 250 ms apart), when the host refuses a setup
 post, or when the page throws. A strip fails on the same page error.
 
@@ -1221,12 +1232,18 @@ stopped.
 
 `--strip <interaction>` films one interaction across time instead: the walk stops at the strip's screen, stops
 the animations and holds the timers, makes the interaction and steps the page (`--frames`, 12 by default,
-`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. A strip, like a walk,
-prints on standard error each control it had to press by script. `--paint` loads the showcase's home,
-the sign-in panel and a new player's home `--runs` times each (5 by default) with nothing cached, on a slow
-phone's network and processor, and writes the median, the fastest and the slowest of the first and the largest
-paint in `paint.json`. `--out` is the folder (`artifacts/journeys/` by default). It exits 1 when
-nothing is named, when a journey, a width or a strip is unknown, or when a build is missing. It also exits 1 when
+`--interval` ms apart, 40 by default) onto one sheet a width, `lobby-create-window-390.png`. A strip may name its
+own sizes. `lessons --strip first-cast` is filmed at 320, 390 and 1280 by 800 (`--width 1280` for that one). From
+760 px wide the walker uses a mouse, not a finger, and the coach steps aside on the field. A strip, like a walk,
+prints on standard error each control it had to press by script. `--paint` loads the pages of
+`docs/art/page-budget.json` a player opens first, by the names that file gives them: `showcase/home`,
+`table/sign-in`, a new player's `table/home`, then `table/leaderboard` and `table/stats` signed in, once the
+walker has played a ranked game against the friend. Each is loaded `--runs` times (5 by default) with nothing
+cached, on a slow phone's network and processor. It writes the median, the fastest and the slowest of the first and
+the largest paint in `paint.json`, then prints, a line a page, whether the median largest paint and shift are
+within the file's `largestPaintMs` and `shift` (ADR 0197). `--out` is the folder (`artifacts/journeys/` by default).
+It exits 1 when a page is over its paint budget or never painted, when nothing is named, when a journey, a width or
+a strip is unknown, or when a build is missing. It also exits 1 when
 `--frames` or `--interval` is given without `--strip`, or `--runs` without `--paint`.
 
 `baseline.mjs` lays the measures and the paints of a folder out as the page a person reads,

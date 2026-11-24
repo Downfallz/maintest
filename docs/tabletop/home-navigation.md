@@ -102,8 +102,8 @@ installed app shows the same count on its icon (`navigator.setAppBadge`). The be
 description, say how much waits and how much news is new (`Notifications · 1 waiting · 2 new`).
 
 Opening the window marks the news read (`POST /api/account/notices/read`, up to the newest entry). The news it
-showed stays marked *New* until the window closes. The host tells the player's other pages, and their badges drop
-too; that tells each of them to read its lists again, the bell's three reads and, on the lobby, the lobby's own. A
+showed stays marked *New* until the window closes. The host tells the player's other pages with `account notices`, and their badges drop
+too: each bell reads its news again, and nothing else is read again, the lists included (#1152). A
 read the host refused leaves the news unread, counted until the next opening.
 
 Every action is the route the lobby or the Friends panel already uses; a request answered here is read again by

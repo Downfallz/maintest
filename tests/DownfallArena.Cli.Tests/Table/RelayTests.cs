@@ -109,8 +109,18 @@ public sealed class RelayTests : IDisposable
 
         changes.Everyone();
         changes.Account(Mark);
+        changes.Notices(Mark);
 
-        relay.Said.ShouldBe(["lobby", $"account {Mark.Value}"]);
+        relay.Said.ShouldBe(["lobby", $"account {Mark.Value}", $"account notices {Mark.Value}"]);
+    }
+
+    /// <summary>The words the relay itself sends, which the pages read: no fake stands in for them here (#1152).</summary>
+    [Fact]
+    public void The_relay_says_the_lobby_to_its_group_and_an_account_s_lists_and_notices_to_that_account()
+    {
+        WebPubSubRelay.Addressed(WebPubSubRelay.LobbyKey).ShouldBe((null, "lobby"));
+        WebPubSubRelay.Addressed(WebPubSubRelay.AccountKey(Mark)).ShouldBe((Mark.Value, "account"));
+        WebPubSubRelay.Addressed(WebPubSubRelay.NoticesKey(Mark)).ShouldBe((Mark.Value, "account notices"));
     }
 
     [Fact]

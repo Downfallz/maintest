@@ -29,6 +29,22 @@ public sealed class LobbyChangesTests
         written.ShouldContain("event: changed\ndata: account 1\n\n");
     }
 
+    /// <summary>Its own word, which a page from before it reads as <c>account</c>, as its prefix says (#1152).</summary>
+    [Fact]
+    public async Task The_stream_says_the_player_s_notices_moved_apart_from_their_lists()
+    {
+        var changes = new LobbyChanges();
+
+        var written = await StreamedAsync(changes, Mark, ["account notices 1"], () =>
+        {
+            changes.Notices(Bastien);
+            changes.Notices(Mark);
+        });
+
+        written.ShouldContain("event: changed\ndata: account notices 1\n\n");
+        written.ShouldNotContain("data: account 1");
+    }
+
     [Fact]
     public async Task A_player_s_stream_says_nothing_of_another_player_s_lists()
     {

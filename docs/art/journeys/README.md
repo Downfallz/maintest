@@ -63,7 +63,7 @@ the heading, nine `###` parts, in this order:
 
   | Beat | When | Moves | Pattern | Token |
   | --- | --- | --- | --- | --- |
-  | Its name. | What starts it: a press, an arrival the host's stream tells, the screen in view. Never a clock. | `transform`, `opacity` or both: nothing else moves. | A link to the pattern's entry in the craft book, two at most. | Its duration and its curve, as tokens in backticks. A token the kit has not declared is written `*UX4*:` then the value asked for. |
+  | Its name. | What starts it: a press, an arrival the host's stream tells, the screen in view. Never a clock. | `transform`, `opacity` or both: nothing else moves. | A link to the pattern's entry in the craft book, two at most. | Its duration and its curve, as tokens in backticks. A token the kit has not declared is written `*Kit*:` then the value asked for; the pass that needs it adds the token to `docs/art/branding.css` in ADR 0197's vocabulary. |
 
 - **Less motion**: one table, a row for each beat of Motion under the same name, or `None` when nothing moves.
 
@@ -106,7 +106,7 @@ screen reader's voice, a real phone.
 - a screen has the nine parts in order, with their lines and their tables;
 - a picture is a file of the repository, or is asked of the owner with its prompt;
 - a beat moves `transform` or `opacity` only, names an entry of the craft book, and names a declared token or
-  the value asked of UX4;
+  `*Kit*:` and the value asked of the kit;
 - every beat has its form under less motion.
 
 ## The loop

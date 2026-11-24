@@ -6,12 +6,17 @@ import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { createServer as createSocket } from 'node:net';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { hostLinks } from '../../studio/browser/host-log.js';
 import { dotnetBinary } from '../../studio/browser/dotnet.js';
+
+/** The walk's two phones. */
+export const VIEWPORTS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
+/** A desktop, for a strip that names it: what plays only on a wide screen (the coach's fade on the field, #1140). */
+export const DESKTOP = { width: 1280, height: 800 };
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const HOST = join(root, 'artifacts/bin/DownfallArena.Cli/debug/DownfallArena.Cli.dll');
@@ -30,10 +35,11 @@ export function missing() {
 function run(command, args, options) {
   return new Promise((done, fail) => {
     const child = spawn(command, args, options);
-    let said = '';
-    child.stdout.on('data', data => { said += data; }); child.stderr.on('data', data => { said += data; });
+    // What it printed on standard output is its answer (the push keys); both streams say why it failed.
+    let said = '', printed = '';
+    child.stdout.on('data', data => { said += data; printed += data; }); child.stderr.on('data', data => { said += data; });
     child.once('error', fail);
-    child.once('exit', code => (code === 0 ? done(said) : fail(new Error(`${command} ${args.join(' ')} exited ${code}:\n${said}`))));
+    child.once('exit', code => (code === 0 ? done(printed) : fail(new Error(`${command} ${args.join(' ')} exited ${code}:\n${said}`))));
   });
 }
 
@@ -94,14 +100,43 @@ export async function stopProcess(child, { grace = 10000 } = {}) {
 }
 
 /**
- * A table host as a developer starts one: accounts by a typed name, a table of seed 7 with a bot in its second
- * seat, the scenarios of the repository, a recording under `folder`. Returns its origin and the first seat's
- * invitation.
+ * What the walk's host is started with, as a developer starts one: accounts by a typed name, a table of seed 7 with a
+ * bot in its second seat, the scenarios of the repository, a recording under `folder`, and the push keys written there,
+ * so the pages offer pop-ups as a hosted table does (#1126).
+ */
+export function hostArguments(folder, port) {
+  return [HOST, 'table', '--declaration', 'at-activation', '--p2', 'greedy', '--seed', '7', '--accounts', 'dev',
+    '--record', join(folder, 'sessions'), '--push-keys', join(folder, PUSH_KEYS), '--port', String(port)];
+}
+
+const PUSH_KEYS = 'push-keys.json';
+let printedKeys = null;
+
+/** A pair of Web Push keys, printed by the host's `push-keys` once a run and written into `folder`. */
+async function writePushKeys(folder, program) {
+  printedKeys ??= run(program, [HOST, 'push-keys'], { cwd: root }).catch(error => { printedKeys = null; throw error; });
+  await writeFile(join(folder, PUSH_KEYS), await printedKeys);
+}
+
+/**
+ * The browser never asked for notifications, read in the page. Headless Chromium answers every notification
+ * permission with a refusal, which the pop-ups offer rightly takes as a no: the walk stands in a browser that has not
+ * answered yet, as studio/browser/table.push.js does. A page without notifications is left as it is.
+ */
+export function neverAskedInPage() {
+  if (!globalThis.Notification) return;
+  Object.defineProperty(globalThis.Notification, 'permission', { configurable: true, get: () => 'default' });
+  globalThis.Notification.requestPermission = async () => 'default';
+}
+
+/**
+ * A table host started with `hostArguments` on a free port. Returns its origin and the first seat's invitation.
  */
 export async function startHost(folder, { program = dotnetBinary() } = {}) {
   const port = await freePort();
-  const host = spawn(program, [HOST, 'table', '--declaration', 'at-activation', '--p2', 'greedy', '--seed', '7',
-    '--accounts', 'dev', '--record', join(folder, 'sessions'), '--port', String(port)], { cwd: root });
+  // A program that cannot print the keys cannot start the host either: said as the host's own failure.
+  try { await writePushKeys(folder, program); } catch (error) { throw new Error(`The table host did not start (its push keys: ${error.message})`); }
+  const host = spawn(program, hostArguments(folder, port), { cwd: root });
   let log = '', failed = null;
   host.stdout.on('data', data => { log += data; }); host.stderr.on('data', data => { log += data; });
   // A program that cannot be spawned emits an error, and never an exit: without a listener it ends the process.

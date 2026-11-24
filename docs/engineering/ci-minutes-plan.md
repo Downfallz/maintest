@@ -241,6 +241,27 @@ complete runs.
    seconds. A pull request that plays one small spec now starts four phone jobs, as it starts two desktop halves:
    a half the shard leaves empty pays its setup to play nothing.
 
+   *Read after a day of `main` (from the merge, 2026-11-22 18:40, to 11-23 20:23, #1096)*: 41 CI runs on `main`
+   and the one nightly since. 25 succeeded, 4 failed and 12 were cancelled. 23 ran the journeys, and every one of
+   them was read; 2 played only a few specs. The other 6 skipped the journeys. That leaves 22 full runs: the 21 CI
+   runs that played every spec, and the nightly. The step "Verify the journeys of this project", median and longest
+   over them:
+
+   - desktop and tablet: 1/2 13:27 and 18:51; 2/2 14:41 and 18:11.
+   - small-phone: 1/2 10:36 and 12:03; 2/2 10:29 and 11:24.
+   - phone: 1/2 12:43 and 13:36; 2/2 10:01 and 12:23.
+
+   No job passed 20 of its 30 minutes. Before the split, the phone's job hit the 30 minutes 9 times in 53 runs. Every
+   `desktop and tablet 1/2` log says "No test flaked": `battle-ground` and `battle-motion` (#961, #976) neither failed
+   nor passed only on the retry. The dot reporter does not log `battle-fx.spec.js`'s own time. Playwright names any
+   file over 5 minutes as slow, and no log names this one; it took 7 to 9 minutes before. The slowest files now are
+   `battle-stagings` (10.6 minutes) and `battle-tutorial` (8.0) on desktop, and `battle-tutorial` (5.0 to 5.4) on
+   the phones.
+
+   The only journey failures were one test of `battle-windows.spec.js` (a toast's animation) on the phones' second
+   halves. It failed in 3 runs on 11-22, between 19:53 and 21:05, and on its retry each time; the journeys were green
+   again from 22:01. The fourth failed run (11-23 16:07, #1173) failed in the .NET build, which #1182 mended.
+
    Every browser job (journeys, real engine, battle-release) restores `~/.cache/ms-playwright` with
    `actions/cache/restore`, keyed by the runner's image, Playwright's version and the job's one `ENGINE`. It then
    runs `install --with-deps` as before: the system packages are installed every time, and the engine is

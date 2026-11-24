@@ -475,11 +475,25 @@ Google's ID token itself and keeps its own `HttpOnly` session cookie for thirty 
 recordings: `runs/accounts/`, or the `accounts` container next to the recordings' one. Nothing else is kept: no
 email, no real name, no picture. The routes are `/api/account/*`, and `/api/me` says `accounts` (`off`, `dev`, or `signin` for
 any host that signs in through providers), `signIn` (each provider as `{"provider", "clientId"}`, in order) and
-`account`. Each sign-in writes one console line per step, `Sign-in started (<provider>).` when
-the proof reaches the host, then `Sign-in finished (<provider>).` once a session is issued (after the name window,
-for a new player) or `Sign-in refused (<provider>).` (the provider said no, the account is suspended, or
-registration is closed). Counted by provider, the lines show where people stop. A request with a forged proof
-writes its two lines too.
+`account`. The host counts each sign-in's steps in memory and writes one console line a minute per provider
+(#1171): `Sign-ins (<provider>): 3 started, 2 finished, 1 refused, 0 unavailable, 0 limited.` The steps are:
+started when the proof is sent to the provider; finished once a session is issued (after the name window, for a new
+player); refused when the provider says no, the account is suspended or registration is closed; unavailable when
+the provider is out of service; limited when the address had spent its count (below). The line is written
+on the first request after the minute, and when the host stops. Summed by provider in the ops report, the lines
+show where people stop; a script posting forged proofs adds to the counts, not to the log.
+
+`POST /api/account/<provider>` is checked by network address before the provider is asked (#1193). In a minute,
+one address may post five sign-ins its provider does not vouch for (a forged or refused proof, or one person
+signing in again), and the /64s of one IPv6 /48 thirty together. It may be vouched for twenty different people,
+and have eight sign-ins being checked at once. Sign-ins still being checked count against the /48's thirty, and
+against the address's five once it has been refused. Past any of these the post is answered
+`429 Account.TooManySignIns` with `Retry-After`: one second while its sign-ins are being checked, otherwise until a
+place frees. A proof that is not one JSON object, and a provider out of service or failing, are not counted. One
+person signing in again counts against their own address only; a /48 refused thirty times, though, is refused whole
+for the rest of the minute. So a room of players behind one address
+signs in, and one address cannot spend a provider's budget (Discord's thirty a minute) for every player. Several
+addresses still can; Discord's own limit then answers `503 Account.ProviderUnavailable`.
 
 `--sign-in discord --discord-client-id <id>` (or `DOWNFALL_DISCORD_CLIENT_ID`) adds Discord (P3). Its button
 leaves for Discord's authorize page with a PKCE challenge and the scope `identify`. The state and the verifier stay
@@ -802,9 +816,9 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `/offline.html`, `/offline.js` | anyone | The page the service worker keeps (ADR 0166), and the script that draws its plate. |
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `/signin/discord` | anyone | The page Discord returns a sign-in to (sign-in methods plan, P3): it checks the tab's state, posts the code and goes back to the lobby. |
-| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed. |
+| `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past an address's count: five sign-ins a minute its provider does not vouch for (thirty for an IPv6 /48), twenty people vouched for, eight checked at once (#1193). |
 | `GET /api/account/identities` | account | The providers the account signs in with, in the order added, and whether each can be removed (`{"identities": [{"provider", "removable"}]}`), never their identifiers (P4, ADR 0204). |
-| `POST /api/account/identities/<provider>` | account, signed in within ten minutes | Adds a way in: the body is the provider's sign-in proof, as for `POST /api/account/<provider>`, with `recent`, the proof a sign-in's answer handed the page. Answers with the account's updated ways; 403 `Account.SignInAgain` without a recent sign-in of this account, 404 `Account.NoProvider`, 400 `Account.BadRequest`, 401 `Account.SignInRejected`, 503 `Account.ProviderUnavailable` as for a sign-in, 409 `Account.IdentityTaken` for a way another account uses, 409 `Account.ProviderLinked` for a second way through one provider, 403 `Account.Suspended`, 503 `Account.Unavailable` when the store fails. |
+| `POST /api/account/identities/<provider>` | account, signed in within ten minutes | Adds a way in: the body is the provider's sign-in proof, as for `POST /api/account/<provider>`, with `recent`, the proof a sign-in's answer handed the page. Answers with the account's updated ways; 403 `Account.SignInAgain` without a recent sign-in of this account, 404 `Account.NoProvider`, 400 `Account.BadRequest`, 401 `Account.SignInRejected`, 503 `Account.ProviderUnavailable` as for a sign-in, 409 `Account.IdentityTaken` for a way another account uses, 409 `Account.ProviderLinked` for a second way through one provider, 429 `Account.TooManySignIns` past the address's count, as for a sign-in, 403 `Account.Suspended`, 503 `Account.Unavailable` when the store fails. |
 | `DELETE /api/account/identities/<provider>` | account, signed in within ten minutes | Removes a way in (`{"recent"}`), whether or not the host still offers its provider; every other session ends and the devices are forgotten, and this browser gets a new session. 403 `Account.SignInAgain`, 409 `Account.LastIdentity` for the only one, 404 `Account.IdentityNotLinked` for one the account does not use, 503 `Account.Unavailable` when the store fails (with the new session when only the devices could not be forgotten). |
 | `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
 | `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
@@ -812,7 +826,7 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `GET`/`PUT /api/account/preferences` | account | Game settings (ADR 0140); the `GET` also says the tutorials done and skipped (ADR 0187) and what pops up (`notices`, ADR 0202). |
 | `PUT /api/account/preferences/notices` | account | What pops up on the account's devices (ADR 0202): `{"turns", "invitations", "results"}`, each `true` or `false`, a choice left out on. The bell keeps everything whatever they say. 404 on a host that keeps no settings. |
 | `PUT`/`DELETE /api/account/push`, `POST /api/account/push/test` | account | This browser as one of the account's devices; 400 `Account.UnknownPushService` for an endpoint on none of the browsers' push services (#1132). |
-| `GET /api/account/notices`, `POST /api/account/notices/read` | account | The notice log (ADR 0201): the news the bell keeps, newest first, with the unread count; read marks up to an id (`{"upTo": <id>}`) and, when it marked any, tells the account's other pages through their stream. 404 on a host that keeps none. |
+| `GET /api/account/notices`, `POST /api/account/notices/read` | account | The notice log (ADR 0201): the news the bell keeps, newest first, with the unread count; read marks up to an id (`{"upTo": <id>}`) and, when it marked any, tells the account's other bells through their stream (`account notices`, #1152). 404 on a host that keeps none. |
 | `GET /api/lobby`, `GET /api/lobby/page/<open\|all>/<page>` | anyone | Counts, and the public tables eight at a time, each with `ranked`, the host's word on whether it counts on the ladder. A seat is described by its name. Its `account` id is sent only to an account seated at that table, for the rematch, and this holds on every lobby route (#971). |
 | `GET /api/lobby/events`, `GET /api/lobby/negotiate` | anyone | What changed: the stream (ADR 0164), or the relay's address (ADR 0165). |
 | `GET /api/lobby/mine`, `GET /api/lobby/opponents` | account | The player's tables and invitations (a game waiting for the player carries its recap: the casts since the last visit); the eight latest opponents. |
