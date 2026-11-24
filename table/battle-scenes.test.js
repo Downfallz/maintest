@@ -40,6 +40,9 @@ test('the windows hold the words their heads wear, and the sheet sets the bands'
   assert.match(page, /<header class="atlas-header"><div class="atlas-band"><div class="atlas-words">.*?<\/div><button id="atlas-close"[^>]*>Close<\/button><\/div><select id="atlas-creature"/);
   assert.match(page, /<header class="match-header"><div><p class="eyebrow" id="match-eyebrow">/);
   assert.match(sheet, /#atlas-board \.atlas-family-head\.scene-head::after \{ aspect-ratio: auto; height: 48px; max-height: none; \}/);
+  // On a wide and tall screen the tree's band grows to 200 px, its cut held low enough to keep the trails' meeting point.
+  assert.match(sheet, /@media \(min-width: 744px\) and \(min-height: 760px\) \{\s*#atlas-dialog \.atlas-band\.scene-head::after \{ max-height: 200px; \}/);
+  assert.equal(TREE_HEAD.focus, '50% 60%');
   // The result always wears its head since S11: the crest it replaced is gone, from the page and from the sheet (#1066).
   assert.doesNotMatch(page, /match-crest/); assert.doesNotMatch(sheet, /match-crest/);
 });

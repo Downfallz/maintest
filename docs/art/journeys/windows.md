@@ -292,7 +292,8 @@ they draw today. The two spell portraits are drawn today, at the same size.
 
 The four scenes are S11 of [the scene paintings' plan](../scene-paintings-plan.md#the-app): a head on the window and
 one on each family's column, no painting behind the board (the owner's question 8). The window's band is the
-screen's width on a phone, 3:1 under the cap of 120 px from 360 px wide, 64 px under 600 px tall, taller when its
+screen's width on a phone, 3:1 under the cap of 120 px from 360 px wide, 200 px from 744 px wide and 760 px tall (cut at `50% 60%`, so the
+three trails and their meeting point stay in), 64 px under 600 px tall, taller when its
 words wrap. On a phone the list of creatures sits under the band, on soot, across the window; from 820 px wide and
 601 px tall it takes the band's lower end corner, under Close, and on a wider, shorter screen it stands beside the band. A column is `min(94vw, 400px)` wide on a phone and
 about 390 px on a wide screen; its band is 48 px tall at every width, so each painting is cut to a strip and the

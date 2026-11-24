@@ -477,7 +477,9 @@ async function closeInTheFarCorner(page, heading, close) {
     expect(band.x + band.width - (button.x + button.width)).toBeLessThanOrEqual(12);
     expect(button.y - band.y).toBeLessThanOrEqual(12);
     expect(button.x).toBeGreaterThanOrEqual(words.x + words.width);
-    expect(band.height).toBeLessThanOrEqual(page.viewportSize().height < 600 ? 64 + 1 : 120 + 1);
+    // A window's head: 64 px on a short screen, 200 on a wide and tall one (identity.css), 120 otherwise.
+    const { width, height } = page.viewportSize();
+    expect(band.height).toBeLessThanOrEqual((height < 600 ? 64 : width >= 744 && height >= 760 ? 200 : 120) + 1);
   }).toPass({ timeout: 5000 });
 }
 

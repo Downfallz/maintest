@@ -317,8 +317,9 @@ for (const language of ['en', 'fr']) {
 }
 
 // The head's band in French (#1060): the French eyebrow is longer, and the band grows with its words. On the painting
-// the page asks for, its words hold 4.5:1, and the band stays within the head's 120 px.
-test('in French the head\'s band holds its words at 4.5:1 and stays within 120 px', async ({ page }) => {
+// the page asks for, its words hold 4.5:1, and the band stays within the head's room: 120 px, 300 on a wide and tall
+// screen (identity.css).
+test('in French the head\'s band holds its words at 4.5:1 and stays within its room', async ({ page }) => {
   const { measureContrast } = await import('../../scripts/ux/contrast.mjs');
   await guest(page);
   // The kit names its files from the root, where the host serves them; this server serves the table under /table/.
@@ -331,7 +332,8 @@ test('in French the head\'s band holds its words at 4.5:1 and stays within 120 p
   await painting.evaluate(image => image.decode());
 
   const band = await page.locator('.page-head').boundingBox();
-  expect(band.height).toBeLessThanOrEqual(120);
+  const viewport = page.viewportSize();
+  expect(band.height).toBeLessThanOrEqual(viewport.width >= 744 && viewport.height >= 760 ? 300 : 120);
   const contrast = await measureContrast(page);
   expect(contrast.texts).toBeGreaterThanOrEqual(2);
   expect(contrast.under, JSON.stringify(contrast)).toBe(0);

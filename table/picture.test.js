@@ -159,12 +159,15 @@ test('a page that builds itself gets the same scene as an element, its words app
   assert.equal(plate.children.length, 1, 'a plate without words has no caption');
 });
 
-test('the sheet holds the three forms: a band of 3:1 no taller than 120 px, 64 on a short screen, a scrim to soot under words', () => {
+test('the sheet holds the three forms: a band of 3:1 no taller than 120 px, 300 for a page and 200 for a window on a wide screen, 64 on a short one, a scrim to soot under words', () => {
   const sheet = read('table/identity.css');
   assert.match(sheet, /\.scene-head::after \{[^}]*aspect-ratio: 3 \/ 1; max-height: 120px;[^}]*\}/);
   // The band's room shares a cell with the words and any control: it never takes a tap (S11, the Mutation Tree's Close).
   assert.match(sheet, /\.scene-head::after \{[^}]*pointer-events: none; \}/);
   assert.match(sheet, /@media \(max-height: 600px\) \{\s*\.scene-head::after \{ max-height: 64px; \}/);
+  // On a wide and tall screen a page's band grows to 300 px and a window's head to 200, so the 3:1 painting is not
+  // cut to a thin slice of its middle (#1106's desktop finding).
+  assert.match(sheet, /@media \(min-width: 744px\) and \(min-height: 760px\) \{\s*\.scene-head\.page-head::after \{ max-height: 300px; \}\s*dialog \.dialog-heading\.scene-head::after \{ max-height: 200px; \}/);
   assert.match(sheet, /\.scene-head::before \{[^}]*linear-gradient\(to right, var\(--soot\)/);
   assert.match(sheet, /\.scene-head\[data-side="end"\]::before \{[^}]*linear-gradient\(to left, var\(--soot\)/);
   assert.match(sheet, /\.scene-ground::before \{[^}]*var\(--soot\)/);

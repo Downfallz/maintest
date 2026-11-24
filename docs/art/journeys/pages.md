@@ -656,8 +656,10 @@ are drawn in CSS. What follows holds for the head of the statistics and of the r
 
 - **The band.** The hero's eyebrow and title become the band's words: Ranked games between two players, The ladder.
   The detail line, "Every finished ranked game moves both players' ratings.", stays under the band as a line of the
-  page. The band spans the page's column: 354 px at 390, 284 at 320, up to 1280 on a wide screen, where it is 120 px
-  tall. It is written in the page's HTML (the classes of `.scene-head`, its `data-side`, its `.scene-words` holding
+  page. The band spans the page's column: 354 px at 390, 284 at 320, up to 1280 on a wide screen. Its height
+  follows its 3:1 up to 120 px, and up to 300 px from 744 px wide and 760 px tall, where a 120 px cap made the band
+  about 11:1 and cut the painting to a slice of its middle (#1106). The ladder's painting is cut at focus `50% 25%`,
+  so the Ravager's spines stay in; the statistics' at `50% 35%`. A window's head grows to 200 px there. It is written in the page's HTML (the classes of `.scene-head`, its `data-side`, its `.scene-words` holding
   the eyebrow and the `h2`), so its room and its words are there at first paint, before any script. The page's script
   dresses it with the painting (`wearScene`). The title keeps its `id`, so the hero is still named by it. No word
   changes.
@@ -1102,7 +1104,7 @@ last read (ADR 0191).
 The head is the ladder's form ([the ladder before a ranked game](#the-ladder-before-a-ranked-game-leaderboard)): the
 eyebrow and the title on the band, at 28 px on a phone. The detail line and the languages stay under the band, in
 that order. At 320 the band is 102 px tall in English, its eyebrow on two lines. The French eyebrow is longer and still
-fits: `studio/browser/rules.spec.js` holds the French band within 120 px, its words at a contrast of at least 4.5:1 on
+fits: `studio/browser/rules.spec.js` holds the French band within its room (120 px, 300 on a wide screen), its words at a contrast of at least 4.5:1 on
 the painting (#1060).
 
 - **Focus `50% 55%`**, passed by the page, not the declaration's: the showcase's 404 draws the painting whole. At 390

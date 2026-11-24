@@ -65,10 +65,12 @@ const PICTURES = {
   'eclipse-ground': { class: 'sign-in-ground', sizes: '(min-width: 701px) 100vw, 533px' },
   revenant: { class: 'sign-in-creature', sizes: '(min-width: 701px) 550px, 107px' },
   duel: { class: 'sign-in-ground sign-in-duel', sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)' },
-  // Laid out as the duel is, a plate of its own: whole above the words, beside them from 1280 px.
+  // Laid out as the duel is, a plate of its own: whole above the words, beside them from 1280 px. There the panel cuts
+  // its sides, so the cut keeps its right edge, where the Predator's jaw ends (at 91% of its width), and gives up the
+  // dark left that the words' fade covers.
   'predator-at-rest': {
     class: 'sign-in-ground sign-in-duel', form: 'plate', alt: 'The Predator at rest in a dark hall, an ember on its shoulder.',
-    sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)',
+    sizes: '(min-width: 1280px) 980px, (min-width: 701px) 94vw, calc(100vw - 32px)', focus: '90% 50%',
   },
 };
 

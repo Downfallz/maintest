@@ -172,7 +172,7 @@ async function load(doc) {
 if (typeof document !== 'undefined') {
   focusableScrolls(document);
   // The Ironhide's scar: what the games left on the player (docs/art/journeys/pages.md), cut below the plates' middle.
-  wearPageHead(document, 'combat-marks', { page: 'table/stats' });
+  wearPageHead(document, 'combat-marks', { page: 'table/stats', focus: '50% 35%' });
   // Read again when the player's own lists change (their lobby stream, ADR 0164), which a game of theirs ending
   // does, and when the stream opens -- the page loaded, back in view -- rather than on a clock.
   onLobbyChange(event => { if (!document.hidden && accountMoved(event)) void load(document); });
