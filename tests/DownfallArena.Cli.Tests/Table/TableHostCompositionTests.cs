@@ -173,10 +173,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
         table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(60), Cancel);
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         return table;
     }
@@ -302,10 +299,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var table = await HeldAsync(host, mark.Id);
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
-        for (var attempt = 0; attempt < 300 && table.Seats[0].Person!.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.Seats[0].Person!.Waiting is not null, "the first seat was asked something", Cancel);
 
         var asked = table.Seats[0].Person!.Waiting.ShouldNotBeNull().Asked;
 
@@ -324,10 +318,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
         var noticing = await TableHost.StartNoticesAsync(host.Channels, host.Notices, host.Push, host.Registry, TimeProvider.System, stopping.Token);
-        for (var attempt = 0; attempt < 300 && _sender.Sent.Count == 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
 
         await stopping.CancelAsync();
         await noticing;
@@ -486,11 +477,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         table.Session.Begin();
 
         var queued = 0;
-        for (var attempt = 0; attempt < 250 && queued == 0 && _sender.Sent.Count == 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-            queued = await host.Notices!.CountAsync(Cancel);
-        }
+        await Waits.UntilAsync(async () => (queued = await host.Notices!.CountAsync(Cancel)) > 0 || _sender.Count > 0, "the turn went on the notices queue, or was sent", Cancel);
 
         queued.ShouldBe(1);
         (await host.Notices!.PeekAsync(1, Cancel)).ShouldBeEmpty("the turn itself is queued, hidden until its grace is over, not a push to a device");
