@@ -221,3 +221,43 @@ test('a name to choose is kept while the host cannot be read, for the reload', a
 
   assert.equal(session.kept.get('downfall.signInTicket'), 'ticket-1');
 });
+
+test('a sign-in\'s answer leaves its proof of a recent sign-in in the tab, for ten minutes', async () => {
+  const { keepRecentSignIn, recentSignIn, RECENT_FOR_MS } = await import('./account.js');
+  const store = new Map();
+  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value) };
+
+  keepRecentSignIn(storage, 'r1.proof', 1000);
+
+  assert.equal(recentSignIn(storage, 1000 + RECENT_FOR_MS - 1), 'r1.proof');
+  assert.equal(recentSignIn(storage, 1000 + RECENT_FOR_MS), null);
+});
+
+test('Google is initialized once, and its answer goes to Settings while it waits, the sign-in otherwise', async () => {
+  const { answerGoogle, prepareGoogle } = await import('./account.js');
+  let initialized = 0, callback = null;
+  const id = { initialize(options) { initialized += 1; callback = options.callback; } };
+  const got = [];
+  answerGoogle('signin', response => got.push(['signin', response]));
+
+  prepareGoogle(id, 'g'); prepareGoogle(id, 'g');
+  answerGoogle('link', response => got.push(['link', response]));
+  callback('a');
+  answerGoogle('link', null);
+  callback('b');
+
+  assert.equal(initialized, 1);
+  assert.deepEqual(got, [['link', 'a'], ['signin', 'b']]);
+  answerGoogle('signin', null);
+});
+
+test('a sign out forgets the tab\'s proof of a recent sign-in', async () => {
+  const { forgetRecentSignIn, keepRecentSignIn, recentSignIn } = await import('./account.js');
+  const store = new Map();
+  const storage = { getItem: key => store.get(key) ?? null, setItem: (key, value) => store.set(key, value), removeItem: key => store.delete(key) };
+  keepRecentSignIn(storage, 'r1.proof');
+
+  forgetRecentSignIn(storage);
+
+  assert.equal(recentSignIn(storage), null);
+});

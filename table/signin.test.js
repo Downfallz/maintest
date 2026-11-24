@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { finishDiscord, lobbyPath, returnProblem } from './signin.js';
+import { NOT_ADDED, finishDiscord, lobbyPath, returnProblem } from './signin.js';
 
 function page() {
   const made = new Map();
@@ -87,4 +87,52 @@ test('an error Discord returns with other than the player saying no is said, wit
   assert.equal(await finishDiscord({ win, doc, storage: tab(kept), request: async () => ({}) }), 'failed');
   assert.equal(win.replaced, null);
   assert.equal(doc.getElementById('signin-state').textContent, returnProblem('failed'));
+});
+
+test('a return started from Settings adds Discord to the account and hands Settings its line', async () => {
+  const win = windowAt('?code=abc&state=st');
+  const storage = tab({ ...kept, next: null, purpose: 'link' });
+  storage.setItem('downfall.recentSignIn', JSON.stringify({ value: 'R', at: Date.now() }));
+  const posted = [];
+
+  const outcome = await finishDiscord({ win, doc: page(), storage, request: async (path, body) => { posted.push([path, body]); return { identities: [{ provider: 'google' }, { provider: 'discord' }] }; } });
+
+  assert.equal(outcome, 'linked');
+  assert.deepEqual(posted, [['/api/account/identities/discord', { code: 'abc', verifier: kept.verifier, redirect: 'https://play.example/signin/discord', recent: 'R' }]]);
+  assert.equal(win.replaced, '/lobby');
+  assert.equal(storage.store.get('downfall.waysNote'), 'Discord added. You can sign in with it now.');
+});
+
+test('a Discord another account uses is said on the return page, with the way back', async () => {
+  const doc = page();
+  const refused = Object.assign(new Error('Another account already uses this way to sign in.'), { code: 'Account.IdentityTaken' });
+
+  const outcome = await finishDiscord({ win: windowAt('?code=abc&state=st'), doc, storage: tab({ ...kept, purpose: 'link' }), request: async () => { throw refused; } });
+
+  assert.equal(outcome, 'refused');
+  assert.equal(doc.getElementById('signin-state').textContent, refused.message);
+  assert.equal(doc.getElementById('signin-back').hidden, false);
+});
+
+test('a link whose state does not match says Discord was not added, not to sign in again', async () => {
+  const doc = page();
+  let asked = false;
+
+  const outcome = await finishDiscord({ win: windowAt('?code=abc&state=forged'), doc, storage: tab({ ...kept, purpose: 'link' }), request: async () => { asked = true; return {}; } });
+
+  assert.equal(outcome, 'mismatch');
+  assert.equal(asked, false);
+  assert.equal(doc.getElementById('signin-heading').textContent, 'Adding Discord');
+  assert.equal(doc.getElementById('signin-state').textContent, NOT_ADDED);
+});
+
+test('a player who says no at Discord while adding it goes back with Settings told', async () => {
+  const win = windowAt('?error=access_denied&state=st');
+  const storage = tab({ ...kept, next: null, purpose: 'link' });
+
+  const outcome = await finishDiscord({ win, doc: page(), storage, request: async () => ({}) });
+
+  assert.equal(outcome, 'cancelled');
+  assert.equal(win.replaced, '/lobby');
+  assert.equal(storage.store.get('downfall.waysNote'), 'Discord was not added.');
 });

@@ -79,6 +79,35 @@ export function noticeText(me, page) {
   return line || null;
 }
 
+// The host's proof of a recent sign-in in this tab, and when it was kept (sign-in methods plan, P4).
+const RECENT = 'downfall.recentSignIn';
+// How long the host takes a sign-in as recent (AccountSessions.RecentFor). The page uses it only to ask for a sign in
+// again before leaving for Discord, rather than after; the host checks the proof itself.
+export const RECENT_FOR_MS = 10 * 60 * 1000;
+
+/** Keeps the host's proof of a recent sign-in in this tab, from a sign-in's answer: what changing a way to sign in asks for. */
+export function keepRecentSignIn(storage, value, now = Date.now()) {
+  if (typeof value !== 'string' || !value) return;
+  try { storage?.setItem(RECENT, JSON.stringify({ value, at: now })); } catch { /* Changing a way then asks for a sign in again. */ }
+}
+
+/** Forgets the proof of a recent sign-in: a sign out leaves nothing in the tab that changes the account's ways in. */
+export function forgetRecentSignIn(storage) {
+  try { storage?.removeItem(RECENT); } catch { /* Nothing kept, nothing to forget. */ }
+}
+
+/** The proof of a recent sign-in this tab keeps, or null when it has none or it is too old to be taken. */
+export function recentSignIn(storage, now = Date.now()) {
+  try {
+    const kept = JSON.parse(storage?.getItem(RECENT) ?? 'null');
+    return typeof kept?.value === 'string' && typeof kept.at === 'number' && now - kept.at < RECENT_FOR_MS ? kept.value : null;
+  } catch { return null; }
+}
+
+function tabSession() {
+  try { return globalThis.sessionStorage ?? null; } catch { return null; }
+}
+
 export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bind(globalThis), method = body === undefined ? 'GET' : 'POST') {
   const options = { method, headers: {}, credentials: 'same-origin' };
   if (body !== undefined) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
@@ -92,6 +121,8 @@ export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bi
     error.status = response.status;
     throw error;
   }
+  // Every sign-in's answer carries it, whichever page or provider made it.
+  if (typeof result?.recent === 'string') keepRecentSignIn(tabSession(), result.recent);
   return result;
 }
 
@@ -106,6 +137,31 @@ export function loadGoogle(doc, win = globalThis) {
     script.onerror = () => reject(new Error('Google sign-in could not be reached. Check the connection and refresh.'));
     doc.head.append(script);
   });
+}
+
+// Google's script keeps one configuration per page, the last `initialize` given (sign-in methods plan, P4): the
+// sign-in button and Settings' Add Google share it. It is initialized once per script, and its answer goes to whoever
+// asked for it last and is still waiting: Settings while an account is signed in, the sign-in otherwise.
+const googleInitialized = new WeakSet();
+const googleAnswers = { signin: null, link: null };
+
+/** Who Google's answer goes to: `signin` for the sign-in button, `link` for Settings' Add Google, null to stop. */
+export function answerGoogle(kind, handler) {
+  googleAnswers[kind] = handler;
+}
+
+/** Google's sign-in API, initialized once for this client id, its answer sent where `answerGoogle` says. */
+export function prepareGoogle(id, clientId) {
+  if (!googleInitialized.has(id)) {
+    googleInitialized.add(id);
+    id.initialize({
+      client_id: clientId,
+      callback: response => (googleAnswers.link ?? googleAnswers.signin)?.(response),
+      ux_mode: 'popup',
+      cancel_on_tap_outside: true,
+    });
+  }
+  return id;
 }
 
 /**
@@ -226,13 +282,8 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
   async function withGoogle(way) {
     if (!way?.clientId) return;
     try {
-      const id = await google();
-      id.initialize({
-        client_id: way.clientId,
-        callback: response => request('/api/account/google', { credential: response.credential }).then(signedIn).catch(error => say('sign-in-problem', error.message)),
-        ux_mode: 'popup',
-        cancel_on_tap_outside: true,
-      });
+      answerGoogle('signin', response => request('/api/account/google', { credential: response.credential }).then(signedIn).catch(error => say('sign-in-problem', error.message)));
+      const id = prepareGoogle(await google(), way.clientId);
       id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large' });
     } catch (error) {
       say('sign-in-problem', error.message);
@@ -367,6 +418,7 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
       try {
         await request('/api/account/signout', await signOutBody(everywhere));
         markSignedOut(session);
+        forgetRecentSignIn(session);
         await refresh();
       } catch (error) {
         if (!everywhere) el('account-menu').open = true;

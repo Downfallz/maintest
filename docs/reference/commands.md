@@ -666,6 +666,15 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   (#1171). A code is used once: a second post of the same code is refused. A client
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
+- A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
+  `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
+  identity that provider's proof vouches for, under the same per-address count as a sign-in (one per provider; `409 Account.IdentityTaken` when another account
+  uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`).
+  Both ask for a sign-in of this account made in the last ten minutes: every sign-in's answer carries `recent`,
+  which the page sends back; without it they answer `403 Account.SignInAgain`. A removal ends every other session of
+  the account and forgets its devices. The console says
+  `Way in added (<provider>) to account <id>.`, `Way in removed (<provider>) from account <id>.` and
+  `Way in refused (<provider>) for account <id>: <code or status>.`.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
   also given. `dev` signs in by a typed name and is refused off the loopback address.
 - `--admins <acct_id>[,...]` (or `DOWNFALL_ADMINS`) names the accounts that are the operator once signed in,
