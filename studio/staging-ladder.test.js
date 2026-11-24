@@ -167,6 +167,14 @@ test('each staged spell has its storyboard, in its family\'s file or with the ba
   }
 });
 
+test('the slow push is on the five capstones the owner kept, one Stage III spell in each family (#1088)', () => {
+  const pushed = staged
+    .filter(([, visual]) => stagingBeats(visual).some(beat => beat.beat === 'push'))
+    .map(([id]) => spells[id].name)
+    .sort();
+  assert.deepEqual(pushed, ['Crushing Stomp', 'Death Wail', 'Devour', 'Incinerate', 'Void Pulse']);
+});
+
 test('the bands are the ones the storyboards\' README writes', () => {
   const readme = read('docs/art/storyboards/README.md');
   const row = label => readme.split('\n').find(line => line.startsWith(`| ${label}`))?.split('|').slice(2, 6).map(cell => cell.trim());
