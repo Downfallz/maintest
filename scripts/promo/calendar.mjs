@@ -19,16 +19,16 @@ const units = text => text.length;
 // ranges and of the usual punctuation, 2 for any other (an emoji, an ellipsis, the narrow space French puts before
 // "?"). Anything shaped as a domain is taken for an address, the safe side since an address is never more than 23;
 // an email address is not linked, so it counts its characters.
-const ADDRESS = /(?<![@\w.-])(?:https?:\/\/\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?![@.\w-])\S*)/gi;
+const ADDRESSES = [/(?<![@\w.-])https?:\/\/\S+/gi, /(?<![@\w.-])[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?![@.\w-])\S*/gi];
 const LIGHT = [[0x0000, 0x10ff], [0x2000, 0x200d], [0x2010, 0x201f], [0x2032, 0x2037]];
 // X leaves the punctuation that ends a sentence out of an address: it counts as characters.
 const TRAILING = /[.,;:!?'"»…)\]]+$/u;
 function weighted(text) {
   let addresses = 0;
-  const rest = text.replace(ADDRESS, address => {
+  const rest = ADDRESSES.reduce((left, pattern) => left.replace(pattern, address => {
     addresses += 1;
     return TRAILING.exec(address)?.[0] ?? '';
-  });
+  }), text);
   let count = addresses * 23;
   for (const character of rest) {
     const point = character.codePointAt(0);
@@ -84,41 +84,57 @@ function split(text, refuse) {
   if (end < 0) refuse('the front matter ends with a "---" line.');
   const head = new Map();
   const links = new Map();
-  for (const line of lines.slice(1, end)) {
-    if (!line.trim()) continue;
-    const match = /^([a-z][a-z-]*(?: [a-z][a-z-]*)?): ?(.*)$/.exec(line);
-    if (!match) refuse(`the front matter's lines are "key: value", not ${JSON.stringify(line)}.`);
-    const [, key, value] = match;
-    const into = key.startsWith('link ') ? links : head;
-    const name = key.startsWith('link ') ? key.slice(5) : key;
-    if (into.has(name)) refuse(`the front matter gives "${key}" twice.`);
-    if (into === head && !KEYS.includes(key)) refuse(`"${key}" is not a key of a post: ${KEYS.join(', ')} and "link <channel>".`);
-    into.set(name, value.trim());
-  }
+  for (const line of lines.slice(1, end).filter(line => line.trim())) frontLine(line, { head, links }, refuse);
   return { head, links, body: lines.slice(end + 1) };
 }
 
-// The title, and the words under each language's heading.
-function words(body, refuse) {
+// One line of the front matter: a key of the format, or the link of a channel.
+function frontLine(line, { head, links }, refuse) {
+  const match = /^([a-z][a-z-]*(?: [a-z][a-z-]*)?): ?(.*)$/.exec(line);
+  if (!match) refuse(`the front matter's lines are "key: value", not ${JSON.stringify(line)}.`);
+  const [, key, value] = match;
+  const link = key.startsWith('link ');
+  const into = link ? links : head;
+  const name = link ? key.slice(5) : key;
+  if (into.has(name)) refuse(`the front matter gives "${key}" twice.`);
+  if (!link && !KEYS.includes(key)) refuse(`"${key}" is not a key of a post: ${KEYS.join(', ')} and "link <channel>".`);
+  into.set(name, value.trim());
+}
+
+const HEADINGS = LANGUAGES.map(language => '"## ' + language + '"').join(', ');
+
+// The one title, before the first language's heading.
+function titleOf(body, refuse) {
   const first = body.findIndex(line => line.startsWith('## '));
   const titles = body.slice(0, first < 0 ? body.length : first).filter(line => line.startsWith('# '));
   if (titles.length > 1) refuse(`the post has one title, not ${titles.length}.`);
   const title = titles[0]?.slice(2).trim();
   if (!title) refuse('the post has its title, a "# " heading before its words, for the owner who reads the calendar.');
+  return title;
+}
+
+// The lines under each language's heading.
+function sectionsOf(body, refuse) {
   const sections = new Map();
   let current;
   for (const line of body) {
     if (line.startsWith('## ')) {
       current = line.slice(3).trim();
-      if (!LANGUAGES.includes(current)) refuse(`"## ${current}" is not a language of a post: ${LANGUAGES.map(language => `"## ${language}"`).join(', ')}.`);
+      if (!LANGUAGES.includes(current)) refuse(`"## ${current}" is not a language of a post: ${HEADINGS}.`);
       if (sections.has(current)) refuse(`"## ${current}" is given twice.`);
       sections.set(current, []);
-    } else if (current && line.startsWith('# ')) {
-      refuse(`the post has one title, before its words, not ${JSON.stringify(line)} under "## ${current}".`);
     } else if (current) {
+      if (line.startsWith('# ')) refuse(`the post has one title, before its words, not ${JSON.stringify(line)} under "## ${current}".`);
       sections.get(current).push(line);
     }
   }
+  return sections;
+}
+
+// The title, and the words under each language's heading.
+function words(body, refuse) {
+  const title = titleOf(body, refuse);
+  const sections = sectionsOf(body, refuse);
   const out = {};
   for (const language of LANGUAGES) {
     const text = (sections.get(language) ?? []).join('\n').trim();
@@ -128,40 +144,117 @@ function words(body, refuse) {
   return { title, words: out };
 }
 
+const USAGE = 'each medium is "cut <cut>", "still <shot> <ratio>", "film <shot> <ratio>" or "generated <sha256>"';
+
+// How each kind of medium is read: whether it takes a ratio, and what the repository holds of it.
+const MEDIA = {
+  cut: { ratio: false, read: (name, _, { cuts, refuse }) => {
+    const path = join(cuts, `${name}.json`);
+    if (!SLUG.test(name) || !existsSync(path)) refuse(`the cut ${JSON.stringify(name)} is one promo/cuts/ does not hold.`);
+    try {
+      return { ratio: JSON.parse(readFileSync(path, 'utf8')).ratio };
+    } catch (error) {
+      return refuse(`the cut ${name} is not a cut's JSON (${error.message}).`);
+    }
+  } },
+  still: { ratio: true, read: (name, ratio, options) => ({ ratio: shotAt(name, ratio, options).ratio }) },
+  film: { ratio: true, read: (name, ratio, options) => {
+    if (!shotAt(name, ratio, options).film) options.refuse(`the shot ${name} has no film.`);
+    return { ratio };
+  } },
+  generated: { ratio: false, read: (name, _, { generated, refuse }) => {
+    const line = generated().find(file => file.sha256 === name);
+    if (!line) refuse(`the generated file ${name} is one promo/generated.json does not hold.`);
+    return { ratio: line.ratio, makes: line.makes };
+  } },
+};
+
+// A shot of promo/shots/, taken at the ratio.
+function shotAt(name, ratio, { shots, refuse }) {
+  const path = join(shots, `${name}.json`);
+  if (!SLUG.test(name) || !existsSync(path)) refuse(`the shot ${JSON.stringify(name)} is one promo/shots/ does not hold.`);
+  const shot = readShot(path);
+  if (!shot.ratios.includes(ratio)) refuse(`the shot ${name} is not taken at ${ratio}: ${shot.ratios.join(', ')}.`);
+  return { ratio, film: shot.film };
+}
+
 // One medium of the post, which the repository holds: a cut, a shot's still or film, or a generated file by hash.
-function medium(entry, { cuts, shots, generated, refuse }) {
+function medium(entry, options) {
   const [kind, name, ratio, ...rest] = entry.split(/\s+/);
-  const usage = 'each medium is "cut <cut>", "still <shot> <ratio>", "film <shot> <ratio>" or "generated <sha256>"';
-  if (rest.length || !name || ((kind === 'still' || kind === 'film') && ratio === undefined)) refuse(`${usage}, not ${JSON.stringify(entry)}.`);
-  switch (kind) {
-    case 'cut': {
-      if (ratio !== undefined) refuse(`${usage}, not ${JSON.stringify(entry)}.`);
-      const path = join(cuts, `${name}.json`);
-      if (!SLUG.test(name) || !existsSync(path)) refuse(`the cut ${JSON.stringify(name)} is one promo/cuts/ does not hold.`);
-      try {
-        return { kind, name, ratio: JSON.parse(readFileSync(path, 'utf8')).ratio };
-      } catch (error) {
-        return refuse(`the cut ${name} is not a cut's JSON (${error.message}).`);
-      }
+  const reader = Object.hasOwn(MEDIA, kind) ? MEDIA[kind] : undefined;
+  if (!reader || rest.length || !name || reader.ratio !== (ratio !== undefined)) options.refuse(`${USAGE}, not ${JSON.stringify(entry)}.`);
+  return { kind, name, ...reader.read(name, ratio, options) };
+}
+
+// The channels a post goes to, each of the launch, each once.
+function channelsOf(head, refuse) {
+  const channels = list(head.get('channels') ?? '');
+  if (channels.length === 0) refuse(`"channels" lists one or more of ${Object.keys(CHANNELS).join(', ')}.`);
+  for (const channel of channels) if (!Object.hasOwn(CHANNELS, channel)) refuse(`the channel ${JSON.stringify(channel)} is not one of ${Object.keys(CHANNELS).join(', ')}.`);
+  if (new Set(channels).size !== channels.length) refuse('"channels" names a channel twice.');
+  return channels;
+}
+
+// What a post shows, each medium once.
+function mediaOf(head, options) {
+  const entries = list(head.get('media') ?? '');
+  if (entries.length === 0) options.refuse('"media" names what the post shows: a cut, a still, a film or a generated file.');
+  if (new Set(entries).size !== entries.length) options.refuse('"media" names a medium twice.');
+  return entries.map(entry => medium(entry, options));
+}
+
+// The record of generated files, read once, when a post names one; its refusal names the post.
+function recordReader(generated, readRecord, path, refuse) {
+  let record;
+  return () => {
+    if (record) return record;
+    if (!existsSync(generated)) refuse(`it names a generated file, and the record ${generated} is missing.`);
+    try {
+      record = readRecord(generated);
+    } catch (error) {
+      refuse(`it names a generated file, and ${error.message}`);
     }
-    case 'still':
-    case 'film': {
-      const path = join(shots, `${name}.json`);
-      if (!SLUG.test(name) || !existsSync(path)) refuse(`the shot ${JSON.stringify(name)} is one promo/shots/ does not hold.`);
-      const shot = readShot(path);
-      if (!shot.ratios.includes(ratio)) refuse(`the shot ${name} is not taken at ${ratio}: ${shot.ratios.join(', ')}.`);
-      if (kind === 'film' && !shot.film) refuse(`the shot ${name} has no film.`);
-      return { kind, name, ratio };
+    return record;
+  };
+}
+
+// The words fit each channel as it counts them, and say a restyled clip is restyled.
+function checkWords(said, channels, media, refuse) {
+  const restyled = media.some(item => item.makes === 'restyled-clip');
+  for (const language of LANGUAGES) {
+    for (const channel of channels) {
+      const count = CHANNELS[channel].count(said[language]);
+      if (count > CHANNELS[channel].limit) refuse(`its words in ${language} are ${count} characters, and ${channel} takes ${CHANNELS[channel].limit}.`);
     }
-    case 'generated': {
-      if (ratio !== undefined) refuse(`${usage}, not ${JSON.stringify(entry)}.`);
-      const line = generated().find(file => file.sha256 === name);
-      if (!line) refuse(`the generated file ${name} is one promo/generated.json does not hold.`);
-      return { kind, name, ratio: line.ratio, makes: line.makes };
-    }
-    default:
-      return refuse(`${usage}, not ${JSON.stringify(entry)}.`);
+    if (restyled && !said[language].includes(RESTYLED[language])) refuse(`it shows a restyled clip, so its words in ${language} say "${RESTYLED[language]}" (ADR 0205).`);
   }
+}
+
+// The host of a post's link, on its channel's own site.
+function linkHost(channel, link, refuse) {
+  let address;
+  try {
+    address = new URL(link);
+  } catch {
+    address = undefined;
+  }
+  if (address?.protocol !== 'https:' || /\s/.test(link) || address.pathname.length < 2) refuse(`"link ${channel}" is the post's https:// address.`);
+  const host = address.hostname;
+  if (!CHANNELS[channel].hosts.some(known => host === known || host.endsWith(`.${known}`))) refuse(`"link ${channel}" is on ${CHANNELS[channel].hosts.join(' or ')}, not ${host}.`);
+}
+
+// A published post gives each channel's link, and is not dated after today; another gives none.
+function checkLinks(links, { channels, status, date, today }, refuse) {
+  for (const [channel, link] of links) {
+    if (!channels.includes(channel)) refuse(`"link ${channel}" names ${channel}, which is not one of its channels.`);
+    linkHost(channel, link, refuse);
+  }
+  if (status !== 'published') {
+    if (links.size > 0) refuse(`it is ${status}, so it gives no link yet: a link comes once it is published.`);
+    return;
+  }
+  if (date > today) refuse(`it is published, and dated ${date}, after today (${today}).`);
+  for (const channel of channels) if (!links.has(channel)) refuse(`it is published, so it gives the link of ${channel}: "link ${channel}: https://...".`);
 }
 
 /**
@@ -183,59 +276,12 @@ export function readPost(path, {
   const { head, links, body } = split(readFileSync(path, 'utf8'), refuse);
   const { title, words: said } = words(body, refuse);
 
-  const channels = list(head.get('channels') ?? '');
-  if (channels.length === 0) refuse(`"channels" lists one or more of ${Object.keys(CHANNELS).join(', ')}.`);
-  for (const channel of channels) if (!Object.hasOwn(CHANNELS, channel)) refuse(`the channel ${JSON.stringify(channel)} is not one of ${Object.keys(CHANNELS).join(', ')}.`);
-  if (new Set(channels).size !== channels.length) refuse('"channels" names a channel twice.');
-
-  const entries = list(head.get('media') ?? '');
-  if (entries.length === 0) refuse('"media" names what the post shows: a cut, a still, a film or a generated file.');
-  if (new Set(entries).size !== entries.length) refuse('"media" names a medium twice.');
-  let record;
-  const lines = () => {
-    if (!record) {
-      try {
-        if (!existsSync(generated)) refuse(`it names a generated file, and the record ${generated} is missing.`);
-        record = readRecord(generated);
-      } catch (error) {
-        if (error.message.startsWith(`${path}:`)) throw error;
-        refuse(`it names a generated file, and ${error.message}`);
-      }
-    }
-    return record;
-  };
-  const media = entries.map(entry => medium(entry, { cuts, shots, generated: lines, refuse }));
-
-  for (const language of LANGUAGES) {
-    for (const channel of channels) {
-      const count = CHANNELS[channel].count(said[language]);
-      if (count > CHANNELS[channel].limit) refuse(`its words in ${language} are ${count} characters, and ${channel} takes ${CHANNELS[channel].limit}.`);
-    }
-    if (media.some(item => item.makes === 'restyled-clip') && !said[language].includes(RESTYLED[language])) {
-      refuse(`it shows a restyled clip, so its words in ${language} say "${RESTYLED[language]}" (ADR 0205).`);
-    }
-  }
-
+  const channels = channelsOf(head, refuse);
+  const media = mediaOf(head, { cuts, shots, refuse, generated: recordReader(generated, readRecord, path, refuse) });
+  checkWords(said, channels, media, refuse);
   const status = head.get('status');
   if (!STATUSES.includes(status)) refuse(`"status" is ${STATUSES.slice(0, -1).join(', ')} or ${STATUSES.at(-1)}.`);
-  for (const [channel, link] of links) {
-    if (!channels.includes(channel)) refuse(`"link ${channel}" names ${channel}, which is not one of its channels.`);
-    let address;
-    try {
-      address = new URL(link);
-    } catch {
-      address = undefined;
-    }
-    if (address?.protocol !== 'https:' || /\s/.test(link) || address.pathname.length < 2) refuse(`"link ${channel}" is the post's https:// address.`);
-    const host = address.hostname;
-    if (!CHANNELS[channel].hosts.some(known => host === known || host.endsWith(`.${known}`))) refuse(`"link ${channel}" is on ${CHANNELS[channel].hosts.join(' or ')}, not ${host}.`);
-  }
-  if (status === 'published') {
-    if (date > today) refuse(`it is published, and dated ${date}, after today (${today}).`);
-    for (const channel of channels) if (!links.has(channel)) refuse(`it is published, so it gives the link of ${channel}: "link ${channel}: https://...".`);
-  } else if (links.size > 0) {
-    refuse(`it is ${status}, so it gives no link yet: a link comes once it is published.`);
-  }
+  checkLinks(links, { channels, status, date, today }, refuse);
   return { file, date, title, channels, media, words: said, status, links: Object.fromEntries(links) };
 }
 
