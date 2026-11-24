@@ -14,7 +14,11 @@ namespace DownfallArena.Cli;
 /// </summary>
 internal static class CliHost
 {
-    public static IHost Build(CliOptions options, int seed, bool logMatchToConsole)
+    /// <param name="clock">
+    /// The clock every service reads, the system's unless given: a test that moves time on, as a pass run a day later
+    /// needs (#1180). Registered before the Application's own, which is only added when none is.
+    /// </param>
+    public static IHost Build(CliOptions options, int seed, bool logMatchToConsole, TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -22,6 +26,11 @@ internal static class CliHost
         // comes from CliOptions, so the command line is not handed to the builder.
         var builder = Host.CreateApplicationBuilder();
         builder.Logging.ClearProviders();
+        if (clock is not null)
+        {
+            builder.Services.AddSingleton(clock);
+        }
+
         builder.Services
             .AddApplication()
             .AddInfrastructure(seed)

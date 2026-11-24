@@ -2,8 +2,11 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Azure.Storage;
+using Azure.Storage.Blobs;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
+using DownfallArena.Application.Ports;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
 using DownfallArena.SharedKernel.Identifiers;
@@ -60,19 +63,20 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>The host the command line composes over a directory, signing players in, with push keys or without.</summary>
-    private async Task<ComposedHost> ComposeAsync(bool push = false, TurnsMode? turns = null, IChangeRelay? relay = null)
+    /// <param name="services">The services the host is composed over: this class's host's unless given, a host on a test's clock.</param>
+    private async Task<ComposedHost> ComposeAsync(bool push = false, TurnsMode? turns = null, IChangeRelay? relay = null, IServiceProvider? services = null, string? record = null)
     {
         var options = new CliOptions
         {
             Command = "table",
             Output = "out.csv",
-            Record = Path.Combine(_root, "playtest"),
+            Record = record ?? Path.Combine(_root, "playtest"),
             Accounts = AccountsMode.Development,
             Lobby = true,
             Port = FreePort(),
             Turns = turns,
         };
-        _host = (await TableHost.ComposeAsync(_hosted.Services, options, HostedTables.Rules, push ? new TableHost.Pushing(_sender, "BP8") : null, Path.Combine(AppContext.BaseDirectory, "table"), relay, Cancel)).ShouldNotBeNull();
+        _host = (await TableHost.ComposeAsync(services ?? _hosted.Services, options, HostedTables.Rules, push ? new TableHost.Pushing(_sender, "BP8") : null, Path.Combine(AppContext.BaseDirectory, "table"), relay, Cancel)).ShouldNotBeNull();
         return _host;
     }
 
@@ -494,6 +498,32 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         seat.Status.ShouldBe(410);
     }
 
+    /// <summary>
+    /// The panel's "Run now" over a table opened on another replica and never begun (#1180): no process holds it, so
+    /// the pass closes it through its record, and only the host saying so through the relay tells the pages on the
+    /// other replicas, which list it open until then. The pass reads the time from the services' clock, which the
+    /// test moves past the hours a table may wait to begin.
+    /// </summary>
+    [Fact]
+    public async Task A_table_a_pass_run_from_the_panel_closes_is_said_through_the_relay()
+    {
+        var clock = new ShiftedClock();
+        using var later = new HostedTables(store: null, clock: clock);
+        var relay = new RecordedRelay();
+        var host = await ComposeAsync(relay: relay, services: later.Services);
+        var elsewhere = await host.Composer.ComposeAsync(HostedTables.TwoPeople, Cancel);
+        _tables.Add(elsewhere);
+        await elsewhere.RecordAsync(Cancel);
+        clock.Advance(TableRegistry.NeverBegunFor + TimeSpan.FromHours(1));
+        relay.Said.Clear();
+
+        var pass = await host.Admin.Jobs!.HandleAsync("POST", JobsApi.TendRoute, null, "op");
+
+        pass.Status.ShouldBe(200);
+        host.Chores.ShouldNotBeNull().Clock.ShouldBeSameAs(clock);
+        relay.Said.ShouldBe([$"table {elsewhere.Id}", "lobby"]);
+    }
+
     /// <summary>The panel's "Run now" runs the hourly job's pass (A3), the notice logs' sweep with it (#1118).</summary>
     [Fact]
     public async Task A_pass_run_from_the_panel_erases_the_notices_past_90_days()
@@ -507,6 +537,100 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
         pass.Status.ShouldBe(200);
         (await store.ReadAsync(mark.Id, Cancel)).Version.ShouldBeNull();
+    }
+
+    /// <summary>
+    /// A host told <c>--turns worker</c> over a container (#1181): <c>table-worker</c> takes the bots' turns in a process of
+    /// its own, so this host starts no worker of its own beside it, and a turn put on the queue is still there for it.
+    /// That nothing took it is read once the host's notices worker, started after where the turns' would be, has sent
+    /// what its own queue held. Over the storage emulator; skipped, and said so, without it.
+    /// </summary>
+    [Fact]
+    public async Task Started_as_it_runs_with_its_turns_taken_by_the_worker_the_host_leaves_them_on_the_queue()
+    {
+        if (!await EmulatorAsync())
+        {
+            Assert.Skip($"No storage emulator at {Emulator}: run `npx azurite` or set AZURITE_BLOB_ENDPOINT.");
+        }
+
+        var container = new BlobContainerClient(new Uri($"{Emulator.ToString().TrimEnd('/')}/composed-{Guid.NewGuid():N}"), new StorageSharedKeyCredential(EmulatorAccount, EmulatorKey));
+        var host = await ComposeAsync(push: true, turns: TurnsMode.Worker, record: container.Uri.ToString());
+        var turns = host.Turns.ShouldNotBeNull();
+        var turn = $$"""{"table":"{{Unplayed}}{{Guid.NewGuid():N}}"}""";
+        try
+        {
+            await LetGoOfEarlierRunsAsync(turns);
+            var mark = await SignInAsync(host, "MarkF", phone: true);
+            await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
+            await turns.SendAsync(turn, cancellationToken: Cancel);
+            using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+            var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+            await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
+            var left = await turns.PeekAsync(32, Cancel);
+
+            await stopping.CancelAsync();
+            await running;
+            host.Mode.ShouldBe(TurnsMode.Worker);
+            left.Select(work => work.Body).ShouldContain(turn, "the turn is table-worker's to take");
+        }
+        finally
+        {
+            await LetGoOfEarlierRunsAsync(turns);
+            await container.DeleteIfExistsAsync(cancellationToken: CancellationToken.None);
+        }
+    }
+
+    /// <summary>What the turns this test puts on the emulator's one <c>agent-turns</c> queue name as their table.</summary>
+    private const string Unplayed = "never-";
+
+    /// <summary>
+    /// Deletes the turns this test put on the emulator's queue in a run before, cut short or failed, so the queue's
+    /// first items are this run's (#1181). The queue is the emulator account's, not the container's: every run
+    /// shares it. Any other item is put back at once, as it was.
+    /// </summary>
+    private static async Task LetGoOfEarlierRunsAsync(IWorkChannel turns)
+    {
+        for (var received = await turns.ReceiveAsync(32, TimeSpan.FromSeconds(30), CancellationToken.None); received.Count > 0; received = await turns.ReceiveAsync(32, TimeSpan.FromSeconds(30), CancellationToken.None))
+        {
+            foreach (var work in received)
+            {
+                await (work.Body.Contains($"\"{Unplayed}", StringComparison.Ordinal)
+                    ? turns.DeleteAsync(work, CancellationToken.None)
+                    : turns.RetryAsync(work, TimeSpan.Zero, CancellationToken.None));
+            }
+
+            if (received.All(work => !work.Body.Contains($"\"{Unplayed}", StringComparison.Ordinal)))
+            {
+                return;
+            }
+        }
+    }
+
+    private const string EmulatorAccount = "devstoreaccount1";
+
+    private const string EmulatorKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
+    /// <summary>The storage emulator's blob service, where the hosted table's container would be.</summary>
+    private static Uri Emulator { get; } = new(Environment.GetEnvironmentVariable("AZURITE_BLOB_ENDPOINT") ?? "http://127.0.0.1:10000/devstoreaccount1");
+
+    /// <summary>Whether the emulator's blob and queue services both answer: the host opens its turns' queue beside its container.</summary>
+    private static async Task<bool> EmulatorAsync()
+    {
+        foreach (var port in new[] { Emulator.Port, Emulator.Port + 1, Emulator.Port + 2 })
+        {
+            using var client = new TcpClient();
+            try
+            {
+                await client.ConnectAsync(Emulator.Host, port, Cancel);
+            }
+            catch (SocketException)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>A port nothing else on this machine holds right now, asked of the machine rather than guessed.</summary>
