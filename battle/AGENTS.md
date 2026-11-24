@@ -52,6 +52,8 @@ npm --prefix studio/browser test -- --trace off battle-lab.spec.js battle-bench.
 - The ground's fog and embers (`src/ground.ts`, README "The ground") are read from the ambient clock alone: no emitter and
   no `Math.random`, or a film of the field at rest stops repeating. What takes the ground's tint is put back by `clearMotion`.
 - The words a player reads come from docs/domain/player-terminology.md.
+- A read of where the creatures stand on the page hooks on `scene.onLayout`, not on `render()`: `render()` runs before the
+  scene places them, and Phaser places them again on a resize or once art loads (#1206).
 - Every new item in the header's `.tools` is measured at 320 px with every button it can show: `battle-reactions.spec.js`
   checks the header with the reactions on (#767). Under 360 px, 💬 lives in the opponent's card.
 - The suite takes 30 to 45 minutes in a session: run the specs the change touches first, then the list above.
