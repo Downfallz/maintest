@@ -35,28 +35,13 @@ public sealed class FileNoticeStore : INoticeStore
     public async Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        if (entries.Count == 0)
-        {
-            _read.Forget(account);
-        }
-
-        string? before = null;
-        if (version is not null && entries.Count > 0)
-        {
-            (var current, before) = await _read.AtAsync(account, version, token => ConditionalFile.ReadAsync(FullPath(account), token), cancellationToken);
-            if (!current)
-            {
-                return false;
-            }
-        }
-
-        var written = await ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
-        if (entries.Count == 0)
-        {
-            _read.Forget(account);
-        }
-
-        return written;
+        return await _read.WriteAsync(
+            account,
+            version,
+            entries.Count == 0 ? null : before => NoticeDocuments.Write(entries, before),
+            token => ConditionalFile.ReadAsync(FullPath(account), token),
+            (text, token) => ConditionalFile.WriteAsync(FullPath(account), text, version, token),
+            cancellationToken);
     }
 
     public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
@@ -70,12 +55,8 @@ public sealed class FileNoticeStore : INoticeStore
         return Task.FromResult(accounts);
     }
 
-    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-    {
-        _read.Forget(account);
-        await ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
-        _read.Forget(account);
-    }
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        _read.ForgetAsync(account, () => ConditionalFile.DeleteAsync(FullPath(account), cancellationToken));
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, NoticeDocuments.PathOf(account));
 }

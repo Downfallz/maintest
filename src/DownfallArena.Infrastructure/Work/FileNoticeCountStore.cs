@@ -35,17 +35,13 @@ public sealed class FileNoticeCountStore : INoticeCountStore
     public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(counts);
-        string? before = null;
-        if (version is not null)
-        {
-            (var current, before) = await _read.AtAsync(day, version, token => ConditionalFile.ReadAsync(FullPath(day), token), cancellationToken);
-            if (!current)
-            {
-                return false;
-            }
-        }
-
-        return await ConditionalFile.WriteAsync(FullPath(day), NoticeCountDocuments.Write(counts, before), version, cancellationToken);
+        return await _read.WriteAsync(
+            day,
+            version,
+            before => NoticeCountDocuments.Write(counts, before),
+            token => ConditionalFile.ReadAsync(FullPath(day), token),
+            (text, token) => ConditionalFile.WriteAsync(FullPath(day), text, version, token),
+            cancellationToken);
     }
 
     public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)

@@ -39,28 +39,13 @@ public sealed class BlobNoticeStore : INoticeStore
     public async Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        if (entries.Count == 0)
-        {
-            _read.Forget(account);
-        }
-
-        string? before = null;
-        if (version is not null && entries.Count > 0)
-        {
-            (var current, before) = await _read.AtAsync(account, version, token => ConditionalBlob.ReadAsync(Blob(account), token), cancellationToken);
-            if (!current)
-            {
-                return false;
-            }
-        }
-
-        var written = await ConditionalBlob.WriteAsync(Blob(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
-        if (entries.Count == 0)
-        {
-            _read.Forget(account);
-        }
-
-        return written;
+        return await _read.WriteAsync(
+            account,
+            version,
+            entries.Count == 0 ? null : before => NoticeDocuments.Write(entries, before),
+            token => ConditionalBlob.ReadAsync(Blob(account), token),
+            (text, token) => ConditionalBlob.WriteAsync(Blob(account), text, version, token),
+            cancellationToken);
     }
 
     public async Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
@@ -77,12 +62,8 @@ public sealed class BlobNoticeStore : INoticeStore
         return accounts;
     }
 
-    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-    {
-        _read.Forget(account);
-        await _container.DeleteBlobIfExistsAsync(NoticeDocuments.PathOf(account), cancellationToken: cancellationToken);
-        _read.Forget(account);
-    }
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        _read.ForgetAsync(account, () => _container.DeleteBlobIfExistsAsync(NoticeDocuments.PathOf(account), cancellationToken: cancellationToken));
 
     private BlobClient Blob(AccountId account) => _container.GetBlobClient(NoticeDocuments.PathOf(account));
 }

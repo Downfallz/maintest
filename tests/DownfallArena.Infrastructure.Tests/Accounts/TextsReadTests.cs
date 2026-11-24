@@ -106,7 +106,7 @@ public sealed class TextsReadTests
         var texts = new TextsRead<string>(time);
         texts.Remember("a", "kept", "v1");
 
-        time.Advance(TextsRead<string>.Lifetime);
+        time.Advance(TimeSpan.FromSeconds(TextsRead<string>.LifetimeSeconds));
 
         (await texts.AtAsync("a", "v1", Stored("stored", "v1"), Cancel)).ShouldBe((true, "stored"));
         _reads.ShouldBe(1);
@@ -119,7 +119,7 @@ public sealed class TextsReadTests
         var time = new FakeTimeProvider();
         var texts = new TextsRead<string>(time);
         texts.Remember("erased", "keys", "v1");
-        time.Advance(TextsRead<string>.Lifetime);
+        time.Advance(TimeSpan.FromSeconds(TextsRead<string>.LifetimeSeconds));
 
         texts.Remember("other", "kept", "v1");
 

@@ -10,7 +10,7 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// as before.
 /// </summary>
 /// <remarks>
-/// A write follows its read within the same request, so a text is kept for <see cref="Lifetime" /> only. That bounds
+/// A write follows its read within the same request, so a text is kept for <see cref="LifetimeSeconds" /> seconds only. That bounds
 /// what an account erased by another process leaves here, its push keys among it (ADR 0203): such a text is never
 /// given to a write once old, and is let go at a later read or write of the store, within two lifetimes. A store
 /// that is not used again keeps it until its process ends: the reads that save nothing (a push's devices) keep no text.
@@ -19,11 +19,13 @@ namespace DownfallArena.Infrastructure.Accounts;
 internal sealed class TextsRead<TKey>
     where TKey : notnull
 {
-    /// <summary>How long a text is kept: far longer than a read and the write after it, far shorter than a session.</summary>
-    public static readonly TimeSpan Lifetime = TimeSpan.FromSeconds(30);
+    /// <summary>How long a text is kept, in seconds: far longer than a read and the write after it, far shorter than a session.</summary>
+    public const int LifetimeSeconds = 30;
 
     /// <summary>A few hundred documents at most: past it the store forgets them all, and its next writes read again.</summary>
     private const int Capacity = 256;
+
+    private static TimeSpan Lifetime => TimeSpan.FromSeconds(LifetimeSeconds);
 
     private readonly ConcurrentDictionary<TKey, (string Version, string Text, DateTimeOffset Kept)> _texts = new();
     private readonly TimeProvider _time;
@@ -73,6 +75,49 @@ internal sealed class TextsRead<TKey>
     }
 
     /// <summary>
+    /// Writes the document over that version only (ADR 0201): <paramref name="document" /> made from the text read at
+    /// it, so the fields this revision does not know are written back (#1211), or, for none, the document deleted and
+    /// what was kept of it forgotten, before and after. False when another write came first.
+    /// </summary>
+    public async Task<bool> WriteAsync(
+        TKey key,
+        string? version,
+        Func<string?, string>? document,
+        Func<CancellationToken, Task<(string? Text, string? Version)>> read,
+        Func<string?, CancellationToken, Task<bool>> write,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(write);
+        if (document is null)
+        {
+            return await ForgetAroundAsync(key, () => write(null, cancellationToken));
+        }
+
+        string? before = null;
+        if (version is not null)
+        {
+            (var current, before) = await AtAsync(key, version, read, cancellationToken);
+            if (!current)
+            {
+                return false;
+            }
+        }
+
+        return await write(document(before), cancellationToken);
+    }
+
+    /// <summary>Deletes the document, forgetting what was kept of it before and after, its push keys among it (ADR 0203).</summary>
+    public Task ForgetAsync(TKey key, Func<Task> delete)
+    {
+        ArgumentNullException.ThrowIfNull(delete);
+        return ForgetAroundAsync(key, async () =>
+        {
+            await delete();
+            return true;
+        });
+    }
+
+    /// <summary>
     /// The text the document holds at that version, taken from what was kept or read again. When it was read again and
     /// the document has moved past that version, none, with false, so the write is refused without being tried; a kept
     /// text cannot tell, and the conditional write is refused instead. What was kept is given to one write only: the
@@ -96,6 +141,14 @@ internal sealed class TextsRead<TKey>
 
         var (text, current) = await read(cancellationToken);
         return string.Equals(current, version, StringComparison.Ordinal) ? (true, text) : (false, null);
+    }
+
+    private async Task<bool> ForgetAroundAsync(TKey key, Func<Task<bool>> deletion)
+    {
+        Forget(key);
+        var done = await deletion();
+        Forget(key);
+        return done;
     }
 
     /// <summary>Lets go of the texts kept past their lifetime, at most once a lifetime; the time now.</summary>

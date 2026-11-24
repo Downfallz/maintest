@@ -46,36 +46,17 @@ public sealed class FileDeviceStore : IDeviceStore
     public async Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(devices);
-        if (devices.Count == 0)
-        {
-            _read.Forget(account);
-        }
-
-        string? before = null;
-        if (version is not null && devices.Count > 0)
-        {
-            (var current, before) = await _read.AtAsync(account, version, token => ConditionalFile.ReadAsync(FullPath(account), token), cancellationToken);
-            if (!current)
-            {
-                return false;
-            }
-        }
-
-        var written = await ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
-        if (devices.Count == 0)
-        {
-            _read.Forget(account);
-        }
-
-        return written;
+        return await _read.WriteAsync(
+            account,
+            version,
+            devices.Count == 0 ? null : before => DeviceDocuments.Write(devices, before),
+            token => ConditionalFile.ReadAsync(FullPath(account), token),
+            (text, token) => ConditionalFile.WriteAsync(FullPath(account), text, version, token),
+            cancellationToken);
     }
 
-    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
-    {
-        _read.Forget(account);
-        await ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
-        _read.Forget(account);
-    }
+    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>
+        _read.ForgetAsync(account, () => ConditionalFile.DeleteAsync(FullPath(account), cancellationToken));
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, DeviceDocuments.PathOf(account));
 }

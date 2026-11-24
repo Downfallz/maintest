@@ -39,17 +39,13 @@ public sealed class BlobNoticeCountStore : INoticeCountStore
     public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(counts);
-        string? before = null;
-        if (version is not null)
-        {
-            (var current, before) = await _read.AtAsync(day, version, token => ConditionalBlob.ReadAsync(Blob(day), token), cancellationToken);
-            if (!current)
-            {
-                return false;
-            }
-        }
-
-        return await ConditionalBlob.WriteAsync(Blob(day), NoticeCountDocuments.Write(counts, before), version, cancellationToken);
+        return await _read.WriteAsync(
+            day,
+            version,
+            before => NoticeCountDocuments.Write(counts, before),
+            token => ConditionalBlob.ReadAsync(Blob(day), token),
+            (text, token) => ConditionalBlob.WriteAsync(Blob(day), text, version, token),
+            cancellationToken);
     }
 
     public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
