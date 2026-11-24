@@ -12,7 +12,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// <remarks>
 /// A write follows its read within the same request, so a text is kept for <see cref="Lifetime" /> only. That bounds
 /// what an account erased by another process leaves here, its push keys among it (ADR 0203): such a text is never
-/// given to a write once old, and is let go at the store's next read or write after that.
+/// given to a write once old, and is let go at a later read or write of the store, within two lifetimes. A store
+/// that is not used again keeps it until its process ends: the reads that save nothing (a push's devices) keep no text.
 /// </remarks>
 /// <typeparam name="TKey">What names a document in its store: an account, a day.</typeparam>
 internal sealed class TextsRead<TKey>
@@ -57,7 +58,7 @@ internal sealed class TextsRead<TKey>
 
     /// <summary>
     /// Lets go of what was kept of a document this store deletes or empties. Called before and after the deletion, so a
-    /// read that lands between the two keeps nothing either.
+    /// read whose answer is kept between the two keeps nothing either.
     /// </summary>
     public void Forget(TKey key) => _texts.TryRemove(key, out _);
 

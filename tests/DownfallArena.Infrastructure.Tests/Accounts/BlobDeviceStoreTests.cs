@@ -116,4 +116,20 @@ public sealed class BlobDeviceStoreTests : DeviceStoreContract
 
         _reads.Count.ShouldBe(1);
     }
+
+    /// <summary>A push's listing keeps nothing of what it read, push keys among it (ADR 0203): a save after it reads.</summary>
+    [Fact]
+    public async Task Listing_the_devices_keeps_nothing_of_what_it_read()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var blob = _container!.GetBlobClient($"devices/{account.Value}.json");
+        var version = (await blob.UploadAsync(BinaryData.FromString(DeviceFields.Written), Cancel)).Value.ETag.ToString();
+        var devices = await store.ListAsync(account, Cancel);
+        _reads.Reset();
+
+        (await store.SaveAsync(account, DeviceFields.Added(devices), version, Cancel)).ShouldBeTrue();
+
+        _reads.Count.ShouldBe(1);
+    }
 }

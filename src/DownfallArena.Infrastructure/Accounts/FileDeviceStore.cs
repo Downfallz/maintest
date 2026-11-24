@@ -21,8 +21,15 @@ public sealed class FileDeviceStore : IDeviceStore
 
     public string RootDirectory { get; }
 
-    public async Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default) =>
-        (await ReadAsync(account, cancellationToken)).Devices;
+    /// <summary>
+    /// The devices, for a push or a check that saves nothing: what they read is not kept, so a worker that sends to an
+    /// account holds none of its keys past the send (ADR 0203).
+    /// </summary>
+    public async Task<IReadOnlyList<PushDevice>> ListAsync(AccountId account, CancellationToken cancellationToken = default)
+    {
+        var (text, _) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
+        return text is null ? [] : DeviceDocuments.Read(text);
+    }
 
     public async Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
