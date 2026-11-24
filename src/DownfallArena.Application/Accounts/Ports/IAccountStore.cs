@@ -53,7 +53,10 @@ public interface IAccountStore
     /// <summary>Holds the name for the account if nobody holds it yet; false when somebody already does.</summary>
     Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default);
 
-    /// <summary>Frees the name if it is still held for that reservation's account; false otherwise.</summary>
+    /// <summary>
+    /// Frees the name if it is still that very reservation, the same account holding it since the same time; false
+    /// otherwise. A name judged abandoned and held again since by its account is not the one judged (#1227).
+    /// </summary>
     Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default);
 
     /// <summary>

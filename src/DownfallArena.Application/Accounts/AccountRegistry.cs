@@ -127,13 +127,14 @@ public sealed class AccountRegistry
                         return Result.Failure<Account>(AccountErrors.UsernameTaken);
                     }
 
-                    if (!await BindAsync(identity, id, cancellationToken))
+                    var binding = await BindAsync(identity, id, cancellationToken);
+                    bound |= binding.Made;
+                    if (!binding.Bound)
                     {
                         await ReleaseUnlessNamedAsync(reservation, account, cancellationToken);
                         return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
                     }
 
-                    bound = true;
                     return Result.Success(account with
                     {
                         Identities = AccountIdentities.Of(identity),
@@ -147,7 +148,7 @@ public sealed class AccountRegistry
             {
                 // A try refused after an earlier one held the name and bound the identity: another process changed the
                 // account meanwhile (deleted, suspended or upgraded it). What was written for this upgrade goes.
-                if (reservation is not null && (last is null || last.Username.Key != reservation.Username.Key))
+                if (reservation is not null && last!.Username.Key != reservation.Username.Key)
                 {
                     await _store.ReleaseUsernameAsync(reservation, cancellationToken);
                 }
@@ -160,7 +161,7 @@ public sealed class AccountRegistry
             await _store.UnbindSubjectAsync(guestIdentity, id, cancellationToken);
             if (before!.Username.Key != name.Value.Key)
             {
-                await _store.ReleaseUsernameAsync(new UsernameReservation(before.Username, id, before.CreatedAt), cancellationToken);
+                await ReleaseHeldAsync(before.Username, id, cancellationToken);
             }
 
             return await UnboundAsync(upgraded.Value, guestIdentity, cancellationToken);
@@ -171,13 +172,22 @@ public sealed class AccountRegistry
         }
     }
 
-    // An identity a try bound, then a later try refused (#1217): the account read last does not list it, so its
+    // An identity a try bound itself, then a later try refused (#1217): the account read last does not list it, so its
     // binding holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it.
     private async Task UnbindRefusedAsync(bool bound, Result<Account> written, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
         if (bound && written.IsFailure && last?.Identities.Contains(identity) != true)
         {
             await _store.UnbindSubjectAsync(identity, id, cancellationToken);
+        }
+    }
+
+    // Frees the name as it is held for the account now: a release names the very reservation it frees (#1227).
+    private async Task ReleaseHeldAsync(Username name, AccountId id, CancellationToken cancellationToken)
+    {
+        if (await _store.FindUsernameAsync(name, cancellationToken) is { } held && held.Account == id)
+        {
+            await _store.ReleaseUsernameAsync(held, cancellationToken);
         }
     }
 
@@ -367,12 +377,13 @@ public sealed class AccountRegistry
                         return Result.Failure<Account>(AccountErrors.ProviderLinked);
                     }
 
-                    if (!await BindAsync(identity, id, cancellationToken))
+                    var binding = await BindAsync(identity, id, cancellationToken);
+                    bound |= binding.Made;
+                    if (!binding.Bound)
                     {
                         return Result.Failure<Account>(AccountErrors.IdentityTaken);
                     }
 
-                    bound = true;
                     return Result.Success(finished with { Identities = finished.Identities.With(identity) });
                 },
                 cancellationToken);
@@ -441,33 +452,35 @@ public sealed class AccountRegistry
         }
     }
 
-    // Binds the identity to the account; true when it now names it, already or once a binding that holds nobody is
-    // taken back, false when another account holds it.
-    private async Task<bool> BindAsync(ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    // Binds the identity to the account: Bound when it now names it, already or once a binding that holds nobody is
+    // taken back, false when another account holds it; Made when this call wrote the binding, so a refusal later undoes
+    // only what it wrote, never a binding another link in flight made (#1217).
+    private async Task<(bool Bound, bool Made)> BindAsync(ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
         if (await _store.TryBindSubjectAsync(identity, id, cancellationToken))
         {
-            return true;
+            return (true, true);
         }
 
         var holder = await _store.FindBySubjectAsync(identity, cancellationToken);
         if (holder == id)
         {
-            return true;
+            return (true, false);
         }
 
         if (holder is { } other)
         {
             if (!await HoldsNobodyAsync(identity, other, cancellationToken))
             {
-                return false;
+                return (false, false);
             }
 
             await _store.UnbindSubjectAsync(identity, other, cancellationToken);
         }
 
         return await _store.TryBindSubjectAsync(identity, id, cancellationToken)
-            || await _store.FindBySubjectAsync(identity, cancellationToken) == id;
+            ? (true, true)
+            : (await _store.FindBySubjectAsync(identity, cancellationToken) == id, false);
     }
 
     /// <summary>
@@ -499,7 +512,7 @@ public sealed class AccountRegistry
 
                 if (await _store.DeleteIfUnchangedAsync(id, read.Version, cancellationToken))
                 {
-                    await _store.ReleaseUsernameAsync(new UsernameReservation(account.Username, id, account.CreatedAt), cancellationToken);
+                    await ReleaseHeldAsync(account.Username, id, cancellationToken);
                     return true;
                 }
             }
@@ -557,10 +570,9 @@ public sealed class AccountRegistry
                 return renamed;
             }
 
-            if (before!.Username.Key != name.Value.Key
-                && await _store.FindUsernameAsync(before.Username, cancellationToken) is { } old && old.Account == id)
+            if (before!.Username.Key != name.Value.Key)
             {
-                await _store.ReleaseUsernameAsync(old, cancellationToken);
+                await ReleaseHeldAsync(before.Username, id, cancellationToken);
             }
 
             return renamed;

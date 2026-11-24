@@ -203,8 +203,22 @@ internal sealed class MemoryAccountStore : IAccountStore
     public Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) =>
         Task.FromResult(Names.TryAdd(reservation.Username.Key, reservation));
 
-    public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Names.TryGetValue(reservation.Username.Key, out var held) && held.Account == reservation.Account && Names.Remove(reservation.Username.Key));
+    /// <summary>Runs once just before the next release of a name: another writer landing between a judgement of it and its release.</summary>
+    public Action? BeforeNextNameRelease { get; set; }
+
+    public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default)
+    {
+        if (BeforeNextNameRelease is { } before)
+        {
+            BeforeNextNameRelease = null;
+            before();
+        }
+
+        return Task.FromResult(Names.TryGetValue(reservation.Username.Key, out var held)
+            && held.Account == reservation.Account
+            && held.ReservedAt == reservation.ReservedAt
+            && Names.Remove(reservation.Username.Key));
+    }
 
     public byte[] Key { get; } = [.. Enumerable.Range(1, 32).Select(value => (byte)value)];
 

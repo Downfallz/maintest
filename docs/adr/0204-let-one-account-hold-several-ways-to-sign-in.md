@@ -38,7 +38,8 @@ names its provider, and the `by-subject` index is keyed by provider and subject.
   file's hash). During a deploy the release beside this one writes the same accounts, and so does the hourly job,
   in a process of its own; the registry's lock reaches neither. A refused write reads the account again and decides
   again. If the account is gone, it is not written back. When a later try refuses what an earlier one began, the
-  binding and the name that try wrote are freed. The sweep of idle guests deletes an account only while it is still
+  binding and the name that try wrote are freed. Five tries lost in a row throw, as a store out of service does, and
+  leave what a stop between two writes leaves. The sweep of idle guests deletes an account only while it is still
   a guest (#1217).
 - **Never by email.** The host keeps no email (ADR 0122 holds), so it never joins two identities because a provider
   says they share an address. So someone who opens a provider account with your address cannot reach yours.

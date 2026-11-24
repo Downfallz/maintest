@@ -107,7 +107,9 @@ public sealed class FileAccountStore : IAccountStore
     {
         ArgumentNullException.ThrowIfNull(reservation);
         return ExclusivelyAsync(
-            async () => (await FindUsernameAsync(reservation.Username, cancellationToken))?.Account == reservation.Account
+            async () => await FindUsernameAsync(reservation.Username, cancellationToken) is { } held
+                && held.Account == reservation.Account
+                && held.ReservedAt == reservation.ReservedAt
                 && Delete(AccountDocuments.NamePath(reservation.Username)),
             cancellationToken);
     }

@@ -262,6 +262,22 @@ public abstract class AccountStoreContract
     }
 
     [Fact]
+    public async Task A_name_held_again_since_it_was_read_is_not_released_for_the_reservation_read()
+    {
+        var store = await StoreAsync();
+        var read = new UsernameReservation(Username.Create("MarkF").Value, AccountId.New(), Now);
+        await store.TryReserveUsernameAsync(read, Cancel);
+        await store.ReleaseUsernameAsync(read, Cancel);
+        var again = read with { ReservedAt = Now.AddHours(2) };
+        await store.TryReserveUsernameAsync(again, Cancel);
+
+        var released = await store.ReleaseUsernameAsync(read, Cancel);
+
+        released.ShouldBeFalse();
+        (await store.FindUsernameAsync(read.Username, Cancel)).ShouldBe(again);
+    }
+
+    [Fact]
     public async Task A_sign_in_is_bound_once_and_unbound_only_from_its_account()
     {
         var store = await StoreAsync();

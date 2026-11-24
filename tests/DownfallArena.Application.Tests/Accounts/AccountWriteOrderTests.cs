@@ -226,6 +226,72 @@ public sealed class AccountWriteOrderTests
     }
 
     [Fact]
+    public async Task A_name_judged_abandoned_and_held_afresh_by_its_account_meanwhile_is_not_freed()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.FailNextAccountWrite = true;
+        await Should.ThrowAsync<IOException>(() => Registry().RenameAsync(mark.Id, "Marcus", Cancel));
+        _clock.Advance(AccountRegistry.AbandonedAfter * 2);
+        var fresh = new UsernameReservation(Username.Create("Marcus").Value, mark.Id, _clock.GetUtcNow());
+        _store.BeforeNextNameRelease = () => _store.Names["marcus"] = fresh;
+
+        var registered = await Registry().RegisterAsync(Discord, "Marcus", Cancel);
+
+        registered.Error.ShouldBe(AccountErrors.UsernameTaken);
+        _store.Names["marcus"].ShouldBe(fresh);
+    }
+
+    [Fact]
+    public async Task An_upgrade_the_other_release_finished_first_keeps_the_name_and_the_binding_it_wrote()
+    {
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        var upgraded = guest with
+        {
+            Identities = AccountIdentities.Of(Google),
+            Username = Username.Create("MarkF").Value,
+            Generation = guest.Generation + 1,
+        };
+        _store.BeforeNextAccountWrite = () => _store.Accounts[guest.Id] = upgraded;
+
+        var again = await Registry().UpgradeAsync(guest.Id, Google, "MarkF", Cancel);
+
+        again.Error.ShouldBe(AccountErrors.NotAGuest);
+        _store.Subjects[Google].ShouldBe(guest.Id);
+        _store.Names["markf"].Account.ShouldBe(guest.Id);
+    }
+
+    [Fact]
+    public async Task A_way_added_that_found_its_binding_made_by_another_link_leaves_it_when_refused()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.Subjects[Discord] = mark.Id;
+        _store.BeforeNextAccountWrite = () => _store.Accounts[mark.Id] = mark with { Generation = mark.Generation + 1 };
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, mark.Generation, Cancel);
+
+        linked.Error.ShouldBe(AccountErrors.SessionEnded);
+        _store.Subjects[Discord].ShouldBe(mark.Id);
+    }
+
+    [Fact]
+    public async Task An_abandoned_registration_resumed_by_another_release_before_its_removal_is_kept()
+    {
+        _store.FailNextBinding = true;
+        await Should.ThrowAsync<IOException>(() => Registry().RegisterAsync(Google, "MarkF", Cancel));
+        var stopped = _store.Accounts.Values.Single();
+        _clock.Advance(AccountRegistry.AbandonedAfter);
+        _store.BeforeNextAccountWrite = () =>
+        {
+            _store.Subjects[Google] = stopped.Id;
+            _store.Accounts[stopped.Id] = stopped with { };
+        };
+
+        await Registry().RegisterAsync(Discord, "MarkF", Cancel);
+
+        _store.Accounts.ShouldContainKey(stopped.Id);
+    }
+
+    [Fact]
     public async Task An_upgrade_stopped_before_its_account_was_written_then_asked_with_another_name_frees_the_first_an_hour_on()
     {
         var guest = (await Registry().MakeGuestAsync(Cancel)).Value;

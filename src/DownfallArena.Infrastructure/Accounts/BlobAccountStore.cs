@@ -117,7 +117,9 @@ public sealed class BlobAccountStore : IAccountStore
         ArgumentNullException.ThrowIfNull(reservation);
         var path = AccountDocuments.NamePath(reservation.Username);
         return await ReadAsync(path, cancellationToken) is { } read
-            && AccountDocuments.ReadName(read.Json).Account == reservation.Account
+            && AccountDocuments.ReadName(read.Json) is var held
+            && held.Account == reservation.Account
+            && held.ReservedAt == reservation.ReservedAt
             && await DeleteIfUnchangedAsync(path, read.ETag, cancellationToken);
     }
 
