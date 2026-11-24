@@ -48,6 +48,52 @@ const END_KEYS = new Set(['seconds']);
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const listed = keys => keys.map(key => JSON.stringify(key)).join(', ');
 
+// A card's seconds: 2 when it gives none.
+function cardSeconds(card, at, refuse) {
+  const seconds = card.seconds ?? 2;
+  if (typeof seconds !== 'number' || seconds < CARD_SECONDS.shortest || seconds > CARD_SECONDS.longest) refuse(`${at}.seconds is from ${CARD_SECONDS.shortest} to ${CARD_SECONDS.longest}.`);
+  return seconds;
+}
+
+// A card's words in each language, one line each, at most `limit` characters at the cut's ratio.
+function cardWords(value, at, limit, ratio, refuse) {
+  if (!isObject(value)) refuse(`${at} gives its words in ${LANGUAGES.join(' and ')}.`);
+  const out = {};
+  for (const language of LANGUAGES) {
+    const text = value[language];
+    if (typeof text !== 'string' || !text.trim()) refuse(`${at}.${language} is missing: a card says its words in ${LANGUAGES.join(' and ')}.`);
+    if (/[\n\r]/.test(text)) refuse(`${at}.${language} is one line: the card wraps it.`);
+    if ([...text].length > limit) refuse(`${at}.${language} runs over its card: ${[...text].length} characters, at most ${limit} at ${ratio}.`);
+    out[language] = text.trim();
+  }
+  return out;
+}
+
+// The keys an object of the cut may hold, and nothing else.
+function onlyKeys(object, keys, where, refuse) {
+  const unknown = Object.keys(object).filter(key => !keys.has(key));
+  if (unknown.length) refuse(`unknown key ${listed(unknown)}${where}.`);
+}
+
+// One stretch: a filmed shot at the cut's ratio, and seconds of its film on its frames.
+function readStretch(stretch, at, { ratio, shots, readShotOnce, refuse }) {
+  if (!isObject(stretch)) refuse(`${at} is an object: its "shot", "start", "seconds" and "caption".`);
+  onlyKeys(stretch, SHOT_KEYS, ` in ${at}`, refuse);
+  if (typeof stretch.shot !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(stretch.shot) || !existsSync(join(shots, `${stretch.shot}.json`))) {
+    refuse(`${at} names the shot ${JSON.stringify(stretch.shot)}, which promo/shots/ does not hold.`);
+  }
+  const shot = readShotOnce(stretch.shot);
+  if (!shot.film) refuse(`${at} names ${stretch.shot}, a shot with no "film": a cut keeps seconds of a film.`);
+  if (!shot.ratios.includes(ratio)) refuse(`${at} names ${stretch.shot}, which is not filmed at ${ratio}.`);
+  const fps = shot.film.fps;
+  const start = stretch.start ?? 0;
+  const onFrame = value => typeof value === 'number' && value >= 0 && Math.abs(value * fps - Math.round(value * fps)) < 1e-6;
+  if (!onFrame(start)) refuse(`${at}.start is a number of seconds from 0, on a frame of the film's ${fps} a second.`);
+  if (!onFrame(stretch.seconds) || stretch.seconds <= 0) refuse(`${at}.seconds is a number of seconds over 0, on a frame of the film's ${fps} a second.`);
+  if (start + stretch.seconds > shot.film.seconds) refuse(`${at} keeps ${start} s to ${start + stretch.seconds} s of ${stretch.shot}, whose film lasts ${shot.film.seconds} s.`);
+  return { shot, start, seconds: stretch.seconds, caption: cardWords(stretch.caption, `${at}.caption`, CARD_LIMITS.caption[ratio], ratio, refuse) };
+}
+
 /**
  * A cut's file, read and checked: refused when it names a shot `promo/shots/` does not hold, a shot without a film
  * at the cut's ratio, seconds past the end of a film, a card's words missing in a language or over its card, or
@@ -64,57 +110,22 @@ export function readCut(path, { shots = join(root, 'promo/shots'), readOne = rea
   const refuse = why => { throw new Error(`${path}: ${why}`); };
   if (!isObject(cut)) refuse('a cut is a JSON object.');
   if (cut.format !== CUT_FORMAT) refuse(`"format" is "${CUT_FORMAT}".`);
-  const unknown = Object.keys(cut).filter(key => !KEYS.has(key));
-  if (unknown.length) refuse(`unknown key ${listed(unknown)}.`);
+  onlyKeys(cut, KEYS, '', refuse);
   if (typeof cut.title !== 'string' || !cut.title.trim()) refuse('"title" says what the cut shows, for the person who picks it.');
   if (!Object.hasOwn(RATIOS, cut.ratio)) refuse(`"ratio" is one of ${Object.keys(RATIOS).join(', ')}.`);
   const ratio = cut.ratio;
 
-  const cardSeconds = (card, at) => {
-    const seconds = card.seconds ?? 2;
-    if (typeof seconds !== 'number' || seconds < CARD_SECONDS.shortest || seconds > CARD_SECONDS.longest) refuse(`${at}.seconds is from ${CARD_SECONDS.shortest} to ${CARD_SECONDS.longest}.`);
-    return seconds;
-  };
-  const words = (value, at, limit) => {
-    if (!isObject(value)) refuse(`${at} gives its words in ${LANGUAGES.join(' and ')}.`);
-    const out = {};
-    for (const language of LANGUAGES) {
-      const text = value[language];
-      if (typeof text !== 'string' || !text.trim()) refuse(`${at}.${language} is missing: a card says its words in ${LANGUAGES.join(' and ')}.`);
-      if (/[\n\r]/.test(text)) refuse(`${at}.${language} is one line: the card wraps it.`);
-      if ([...text].length > limit) refuse(`${at}.${language} runs over its card: ${[...text].length} characters, at most ${limit} at ${ratio}.`);
-      out[language] = text.trim();
-    }
-    return out;
-  };
-
   if (!isObject(cut.titleCard)) refuse('"titleCard" is an object: its "seconds" and its words in each language.');
-  const titleUnknown = Object.keys(cut.titleCard).filter(key => !TITLE_KEYS.has(key));
-  if (titleUnknown.length) refuse(`unknown key ${listed(titleUnknown)} in "titleCard".`);
-  const titleCard = { seconds: cardSeconds(cut.titleCard, 'titleCard'), ...words(cut.titleCard, 'titleCard', CARD_LIMITS.title[ratio]) };
+  onlyKeys(cut.titleCard, TITLE_KEYS, ' in "titleCard"', refuse);
+  const titleCard = { seconds: cardSeconds(cut.titleCard, 'titleCard', refuse), ...cardWords(cut.titleCard, 'titleCard', CARD_LIMITS.title[ratio], ratio, refuse) };
 
   if (!Array.isArray(cut.shots) || cut.shots.length === 0) refuse('"shots" lists one or more stretches of filmed shots.');
   const read = new Map();
-  const stretches = cut.shots.map((stretch, index) => {
-    const at = `shots[${index}]`;
-    if (!isObject(stretch)) refuse(`${at} is an object: its "shot", "start", "seconds" and "caption".`);
-    const extra = Object.keys(stretch).filter(key => !SHOT_KEYS.has(key));
-    if (extra.length) refuse(`unknown key ${listed(extra)} in ${at}.`);
-    if (typeof stretch.shot !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(stretch.shot) || !existsSync(join(shots, `${stretch.shot}.json`))) {
-      refuse(`${at} names the shot ${JSON.stringify(stretch.shot)}, which promo/shots/ does not hold.`);
-    }
-    if (!read.has(stretch.shot)) read.set(stretch.shot, readOne(join(shots, `${stretch.shot}.json`)));
-    const shot = read.get(stretch.shot);
-    if (!shot.film) refuse(`${at} names ${stretch.shot}, a shot with no "film": a cut keeps seconds of a film.`);
-    if (!shot.ratios.includes(ratio)) refuse(`${at} names ${stretch.shot}, which is not filmed at ${ratio}.`);
-    const fps = shot.film.fps;
-    const start = stretch.start ?? 0;
-    const onFrame = value => typeof value === 'number' && value >= 0 && Math.abs(value * fps - Math.round(value * fps)) < 1e-6;
-    if (!onFrame(start)) refuse(`${at}.start is a number of seconds from 0, on a frame of the film's ${fps} a second.`);
-    if (!onFrame(stretch.seconds) || stretch.seconds <= 0) refuse(`${at}.seconds is a number of seconds over 0, on a frame of the film's ${fps} a second.`);
-    if (start + stretch.seconds > shot.film.seconds) refuse(`${at} keeps ${start} s to ${start + stretch.seconds} s of ${stretch.shot}, whose film lasts ${shot.film.seconds} s.`);
-    return { shot, start, seconds: stretch.seconds, caption: words(stretch.caption, `${at}.caption`, CARD_LIMITS.caption[ratio]) };
-  });
+  const readShotOnce = shot => {
+    if (!read.has(shot)) read.set(shot, readOne(join(shots, `${shot}.json`)));
+    return read.get(shot);
+  };
+  const stretches = cut.shots.map((stretch, index) => readStretch(stretch, `shots[${index}]`, { ratio, shots, readShotOnce, refuse }));
   const [first] = stretches;
   for (const stretch of stretches) {
     if (stretch.shot.size !== first.shot.size) refuse(`its shots are filmed at one size: ${first.shot.name} at ${first.shot.size}, ${stretch.shot.name} at ${stretch.shot.size}.`);
@@ -123,9 +134,8 @@ export function readCut(path, { shots = join(root, 'promo/shots'), readOne = rea
 
   const endCard = cut.endCard ?? {};
   if (!isObject(endCard)) refuse('"endCard" is an object: its "seconds". Its words are the brand\'s.');
-  const endUnknown = Object.keys(endCard).filter(key => !END_KEYS.has(key));
-  if (endUnknown.length) refuse(`unknown key ${listed(endUnknown)} in "endCard": its words are the brand's, not the cut's.`);
-  const end = { seconds: cardSeconds(endCard, 'endCard') };
+  onlyKeys(endCard, END_KEYS, ' in "endCard": its words are the brand\'s, not the cut\'s', refuse);
+  const end = { seconds: cardSeconds(endCard, 'endCard', refuse) };
 
   const seconds = titleCard.seconds + stretches.reduce((sum, one) => sum + one.seconds, 0) + end.seconds;
   if (seconds > LONGEST_FILM) refuse(`the cut lasts ${seconds} s, past the ${LONGEST_FILM} s of a feed's clip.`);
@@ -161,7 +171,7 @@ function brandStyle() {
   return withFont(readFileSync(join(root, 'docs/art/branding.css'), 'utf8'), font) + readFileSync(join(root, 'scripts/promo/cards.css'), 'utf8');
 }
 
-const escape = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const escape = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 /**
  * The page of each card of a cut in one language: the title card, one caption a stretch (on a clear ground, laid over
@@ -174,7 +184,8 @@ export function cardPages(cut, language) {
   const zone = SAFE_ZONES[cut.ratio];
   const margin = side => `${Math.max(zone[side] * 100, 6)}%`;
   // At the top of what the feed leaves clear: the creatures' names and the battle view's dock are lower down.
-  const band = `left:${margin('left')};right:${margin('right')};top:${zone.top > 0 ? `${zone.top * 100}%` : '6%'}`;
+  const top = zone.top > 0 ? `${zone.top * 100}%` : '6%';
+  const band = `left:${margin('left')};right:${margin('right')};top:${top}`;
   return {
     title: page(`<main class="card card-title">${brandMark()}<h1 class="title" data-lines="3">${escape(cut.titleCard[language])}</h1><div class="rule"></div></main>`),
     captions: cut.shots.map(stretch => page(`<div class="caption" style="${band}"><p data-lines="2">${escape(stretch.caption[language])}</p></div>`)),
@@ -206,8 +217,8 @@ export async function drawCards(browser, cut, language) {
       return png;
     };
     const title = await draw(pages.title, '.title', 'the title card', false);
-    const captions = [];
-    for (const [index, html] of pages.captions.entries()) captions.push(await draw(html, '.caption p', `the caption of shots[${index}]`, true));
+    // Each card on a page of its own: the captions are drawn side by side.
+    const captions = await Promise.all(pages.captions.map((html, index) => draw(html, '.caption p', `the caption of shots[${index}]`, true)));
     const end = await draw(pages.end, '.note', 'the end card', false);
     return { title, captions, end };
   } finally {
@@ -247,7 +258,7 @@ export function assembly(cut, { frames, cards, out }) {
   const closing = card(cards.end, cut.endCard.seconds);
   const parts = cut.shots.length + 2;
   chains.push(`[${closing}:v]setsar=1,format=rgb24[s${parts - 1}]`,
-    `${Array.from({ length: parts }, (_, index) => `[s${index}]`).join('')}concat=n=${parts}:v=1:a=0,format=yuv420p[cut]`);
+    Array.from({ length: parts }, (_, index) => `[s${index}]`).join('') + `concat=n=${parts}:v=1:a=0,format=yuv420p[cut]`);
   return ['-y', '-loglevel', 'error', ...inputs, '-filter_complex', chains.join(';'), '-map', '[cut]', '-r', fps, '-an', ...ENCODING, out];
 }
 
@@ -308,7 +319,8 @@ async function main(argv) {
   const { chromium } = playwright();
   const browser = await chromium.launch({ executablePath: process.env.STUDIO_CHROMIUM || undefined });
   try {
-    for (const language of options.lang ? [options.lang] : LANGUAGES) {
+    // One language after the other, each cut printed as it is made.
+    const cutOne = async language => {
       const drawn = await drawCards(browser, cut, language);
       const file = name => join(folder, name);
       const cards = { title: file(`title-${language}.png`), captions: drawn.captions.map((_, index) => file(`caption-${index + 1}-${language}.png`)), end: file(`end-${language}.png`) };
@@ -319,7 +331,8 @@ async function main(argv) {
       assemble(cut, { frames, cards, out });
       const facts = filmFacts(out);
       console.log(`${shownPath(out)}  sha256:${sha256(readFileSync(out))}  ${facts.width}x${facts.height} frames:${facts.frames} ${facts.seconds.toFixed(2)} s`);
-    }
+    };
+    await (options.lang ? [options.lang] : LANGUAGES).reduce((previous, language) => previous.then(() => cutOne(language)), Promise.resolve());
   } finally {
     await browser.close();
   }

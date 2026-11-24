@@ -87,8 +87,7 @@ test('the cards of a cut draw at the film\'s size, the caption on a clear ground
   test.skip(info.project.name !== 'table-phone', 'The cards set their own size: one project draws them.');
   // P3 of the plan: the browser measures the words the character limit only estimates.
   const cut = readCut(join(root, 'promo/cuts/brute-pummel-answer.json'));
-  for (const language of ['en', 'fr']) {
-    const cards = await drawCards(browser, cut, language);
+  for (const cards of await Promise.all(['en', 'fr'].map(language => drawCards(browser, cut, language)))) {
     expect(dimensions(cards.title)).toEqual([1080, 1920]);
     expect(dimensions(cards.end)).toEqual([1080, 1920]);
     expect(cards.captions).toHaveLength(cut.shots.length);
