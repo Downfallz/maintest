@@ -18,7 +18,7 @@ const today = '2026-11-24';
 
 const post = ({ head = {}, links = [], en = 'Your Brute answers with Pummel.', fr = 'Ta Brute riposte avec Pummel.', title = 'The Brute answers' } = {}) => [
   '---',
-  ...Object.entries({ channels: 'bluesky, x', media: 'cut brute-pummel-answer', status: 'draft', ...head })
+  ...Object.entries({ hour: '18:00', channels: 'bluesky, x', media: 'cut brute-pummel-answer', status: 'draft', ...head })
     .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${key}: ${value}`),
   ...links,
@@ -108,6 +108,26 @@ test('a post of a restyled clip says it is restyled, in each language', () => {
   assert.equal(read.media[0].makes, 'restyled-clip');
 });
 
+test('a post gives the hour the owner posts it, Montreal\'s, on a 24-hour clock', () => {
+  assert.equal(withPost(post()).hour, '18:00');
+  assert.equal(withPost(post({ head: { hour: '07:05' } })).hour, '07:05');
+  assert.throws(() => withPost(post({ head: { hour: undefined } })), /"hour" is when the owner posts it/);
+  for (const hour of ['7:05', '24:00', '18:60', '6 pm', '18h00']) assert.throws(() => withPost(post({ head: { hour } })), /"hour"/, hour);
+});
+
+test('a post shows each medium at a ratio each of its channels shows whole', () => {
+  assert.deepEqual(Object.fromEntries(Object.entries(CHANNELS).map(([channel, { ratios }]) => [channel, ratios])), {
+    'youtube-shorts': ['9:16', '1:1'], tiktok: ['9:16'], 'instagram-reels': ['9:16'],
+    reddit: ['9:16', '16:9', '1:1'], x: ['9:16', '16:9', '1:1'], bluesky: ['9:16', '16:9', '1:1'], discord: ['9:16', '16:9', '1:1'],
+  });
+  assert.equal(withPost(post({ head: { channels: 'tiktok, reddit', media: 'cut brute-pummel-answer' } })).channels.length, 2);
+  assert.throws(() => withPost(post({ head: { channels: 'reddit, tiktok', media: 'still brute-mirror-round-3 16:9' } })), /the still brute-mirror-round-3 at 16:9, and tiktok takes 9:16/);
+  assert.throws(() => withPost(post({ head: { channels: 'instagram-reels', media: 'still brute-mirror-round-3 1:1' } })), /instagram-reels takes 9:16/);
+  assert.equal(withPost(post({ head: { channels: 'youtube-shorts', media: 'still brute-mirror-round-3 1:1' } })).media[0].ratio, '1:1');
+  const generated = [{ brief: 'brute-pummel-key-art', makes: 'key-art', shot: 'brute-pummel-round-3', ratio: '16:9', sha256: hash }];
+  assert.throws(() => withPost(post({ head: { channels: 'youtube-shorts', media: `generated ${hash}` } }), { generated }), /the generated .* at 16:9, and youtube-shorts takes 9:16 or 1:1/);
+});
+
 test('a post names the channels of the launch, each once', () => {
   assert.deepEqual(Object.keys(CHANNELS), ['youtube-shorts', 'tiktok', 'instagram-reels', 'reddit', 'x', 'bluesky', 'discord']);
   assert.throws(() => withPost(post({ head: { channels: undefined } })), /"channels"/);
@@ -165,7 +185,7 @@ test('a published post gives the link of each of its channels; a post not publis
 
 test('a status, a key or a line the format does not have is refused', () => {
   assert.throws(() => withPost(post({ head: { status: 'posted' } })), /"status" is draft, approved or published/);
-  assert.throws(() => withPost(post({ head: { hour: '18:00' } })), /"hour"/);
+  assert.throws(() => withPost(post({ head: { time: '18:00' } })), /"time" is not a key/);
   assert.throws(() => withPost(post({ links: ['not a key line'] })), /key: value/);
   assert.throws(() => withPost(post({ links: ['channels: x'] })), /twice/);
   assert.throws(() => withPost('# No front matter\n'), /starts with its "---"/);

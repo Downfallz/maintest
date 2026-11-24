@@ -268,6 +268,7 @@ question 4), and a post's file says where it stands.
 
 ```markdown
 ---
+hour: 18:00
 channels: youtube-shorts, tiktok, instagram-reels, x, bluesky
 media: cut brute-pummel-answer
 status: draft
@@ -284,8 +285,10 @@ Fury lands first. Your Brute answers with Pummel. Turn-based tactics, free to pl
 Fury frappe en premier. Ta Brute riposte avec Pummel. Tactique au tour par tour, gratuite en bêta.
 ```
 
+- `hour` is when the owner posts it, Montreal's time, on a 24-hour clock (`18:00`).
 - `channels` names the channels of the launch it goes to: `youtube-shorts`, `tiktok`, `instagram-reels`, `reddit`,
-  `x`, `bluesky` and `discord` (the plan's question 5).
+  `x`, `bluesky` and `discord` (the plan's question 5). Each shows whole the ratios `CHANNELS` gives it: TikTok and
+  Reels `9:16`, Shorts `9:16` or `1:1`, the others all three.
 - `media` names what it shows, one or more, each one the repository holds: `cut <cut>` (a cut of `cuts/`),
   `still <shot> <ratio>` or `film <shot> <ratio>` (a shot of `shots/`, taken or filmed at that ratio), or
   `generated <sha256>` (a line of `generated.json`).
@@ -305,8 +308,9 @@ The title and the English words are scanned as the pages' are (`table/terminolog
 name the battle shows in the French words too, as in a cut. A post is refused when (`studio/promo-calendar.test.js`):
 
 - its name is not a real day and a name, or the calendar holds a file that is not a post;
-- its front matter has a key not in this format, no channel, or a channel not of the launch;
-- it has no media, or media the repository does not hold;
+- its front matter has a key not in this format, no hour or one off the 24-hour clock, no channel, or a channel not
+  of the launch;
+- it has no media, or media the repository does not hold, or a medium at a ratio one of its channels does not take;
 - it has no title before its words, or lacks its words in a language;
 - its words are over a channel's limit, or show a restyled clip without saying so;
 - it gives a link before it is published, or a link off its channel's site;
@@ -318,3 +322,23 @@ node scripts/promo/calendar.mjs   # promo/calendar/ read and checked
 
 The launch's milestones (the release candidate, `v1.0.0`) become posts like any other, written backwards from a
 date once the owner has one.
+
+## The checklist
+
+The pull request of a batch carries the steps the owner posts from, on a phone (the plan's question 4): a heading a
+post, in the order of their days and hours, then one numbered step a channel, with the hour, where each file is and
+the post's words in English and French, one block each to copy. A cut, a still and a generated file are on the
+batch's contact sheet page; a film is in the `promo` container, at the blob `media.json` records, or the step says
+how to film it from `main`. It ends with the answer the owner gives: one line a channel, `<post> <channel> <link>`.
+
+```bash
+node scripts/promo/checklist.mjs --page <url> [<post>...]   # every post not published, or these
+node scripts/promo/checklist.mjs --approve <post>...        # the drafts of a merged batch
+node scripts/promo/checklist.mjs --publish <post> --link <channel> <url> [--link <channel> <url>]...
+```
+
+A post is a file of `calendar/`, by path or by name. `--approve` takes drafts only. `--publish` writes the links
+and the `published` status, then reads the post again as the calendar does: a link missing, off its channel's site
+or of a channel the post does not go to, or a post dated after today, is refused and the file is kept as it was.
+Nothing is posted from the repository: no platform API, no account, no secret. A checklist with no post to publish,
+or a cut or a still without the page's link, is refused (`studio/promo-checklist.test.js`).

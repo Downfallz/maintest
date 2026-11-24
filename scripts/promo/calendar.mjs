@@ -1,5 +1,5 @@
 // The promotion's calendar (docs/art/promotion-plan.md, P5; promo/README.md#the-calendar): one post a file under
-// promo/calendar/, named by its date. The front matter gives the channels, the media and the status; the body gives
+// promo/calendar/, named by its date. The front matter gives the hour, the channels, the media and the status; the body gives
 // the post's title and its words in English and French. Nothing is posted from here: the owner publishes by hand.
 //
 //   node scripts/promo/calendar.mjs                       # checks promo/calendar/, exit 1 on a post it refuses
@@ -45,16 +45,18 @@ function weighted(text) {
 /**
  * The channels of the launch (the plan's question 5), each with the most characters its post's words may hold, as
  * it counts them: the title of a Short, a Reddit post's title, a post on X or Bluesky, the caption of a TikTok or a
- * Reel, a Discord message. Each also names the hosts its posts' links are on.
+ * Reel, a Discord message. Each names the ratios it shows whole: the vertical feeds crop or bar anything wider
+ * than 9:16, and Shorts also take a square. Each also names the hosts its posts' links are on.
  */
+const ANY = Object.freeze(['9:16', '16:9', '1:1']);
 export const CHANNELS = Object.freeze({
-  'youtube-shorts': Object.freeze({ limit: 100, count: units, hosts: ['youtube.com', 'youtu.be'] }),
-  tiktok: Object.freeze({ limit: 2200, count: units, hosts: ['tiktok.com'] }),
-  'instagram-reels': Object.freeze({ limit: 2200, count: units, hosts: ['instagram.com'] }),
-  reddit: Object.freeze({ limit: 300, count: units, hosts: ['reddit.com', 'redd.it'] }),
-  x: Object.freeze({ limit: 280, count: weighted, hosts: ['x.com', 'twitter.com'] }),
-  bluesky: Object.freeze({ limit: 300, count: units, hosts: ['bsky.app'] }),
-  discord: Object.freeze({ limit: 2000, count: units, hosts: ['discord.com', 'discord.gg'] }),
+  'youtube-shorts': Object.freeze({ limit: 100, count: units, ratios: Object.freeze(['9:16', '1:1']), hosts: ['youtube.com', 'youtu.be'] }),
+  tiktok: Object.freeze({ limit: 2200, count: units, ratios: Object.freeze(['9:16']), hosts: ['tiktok.com'] }),
+  'instagram-reels': Object.freeze({ limit: 2200, count: units, ratios: Object.freeze(['9:16']), hosts: ['instagram.com'] }),
+  reddit: Object.freeze({ limit: 300, count: units, ratios: ANY, hosts: ['reddit.com', 'redd.it'] }),
+  x: Object.freeze({ limit: 280, count: weighted, ratios: ANY, hosts: ['x.com', 'twitter.com'] }),
+  bluesky: Object.freeze({ limit: 300, count: units, ratios: ANY, hosts: ['bsky.app'] }),
+  discord: Object.freeze({ limit: 2000, count: units, ratios: ANY, hosts: ['discord.com', 'discord.gg'] }),
 });
 
 export { montrealToday };
@@ -65,7 +67,8 @@ export const LANGUAGES = Object.freeze(['en', 'fr']);
 /** What the words of a post say when it shows a restyled clip (ADR 0205): its post says it is restyled. */
 export const RESTYLED = Object.freeze({ en: 'Gameplay restyled by a model.', fr: 'Partie restylisée par un modèle.' });
 
-const KEYS = ['channels', 'media', 'status'];
+const KEYS = ['hour', 'channels', 'media', 'status'];
+const HOUR = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const NAME = /^(\d{4})-(\d{2})-(\d{2})-[a-z0-9][a-z0-9-]*\.md$/;
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -84,7 +87,7 @@ function dayOf(name, refuse) {
 // The front matter's lines, and the body after it.
 function split(text, refuse) {
   const lines = text.replace(/^\uFEFF/, '').replaceAll('\r\n', '\n').split('\n');
-  if (lines[0] !== '---') refuse('a post starts with its "---" front matter: channels, media, status.');
+  if (lines[0] !== '---') refuse('a post starts with its "---" front matter: hour, channels, media, status.');
   const end = lines.indexOf('---', 1);
   if (end < 0) refuse('the front matter ends with a "---" line.');
   const head = new Map();
@@ -223,6 +226,23 @@ function recordReader(generated, readRecord, path, refuse) {
   };
 }
 
+// The hour the owner posts it, Montreal's, on a 24-hour clock.
+function hourOf(head, refuse) {
+  const hour = head.get('hour') ?? '';
+  if (!HOUR.test(hour)) refuse(`"hour" is when the owner posts it, Montreal's time, as HH:MM on a 24-hour clock, not ${JSON.stringify(hour)}.`);
+  return hour;
+}
+
+// Each medium is at a ratio each channel shows whole.
+function checkRatios(channels, media, refuse) {
+  for (const item of media) {
+    if (item.ratio === undefined) continue;
+    for (const channel of channels) {
+      if (!CHANNELS[channel].ratios.includes(item.ratio)) refuse(`it shows the ${item.kind} ${item.name} at ${item.ratio}, and ${channel} takes ${CHANNELS[channel].ratios.join(' or ')}.`);
+    }
+  }
+}
+
 // The words fit each channel as it counts them, and say a restyled clip is restyled.
 function checkWords(said, channels, media, refuse) {
   const restyled = media.some(item => item.makes === 'restyled-clip');
@@ -263,8 +283,9 @@ function checkLinks(links, { channels, status, date, today }, refuse) {
 }
 
 /**
- * One post read and checked. Refused: a name that is not its date, a key not in the format, no channel or one not
- * of the launch, no media or media the repository does not hold, words missing in a language or over a channel's
+ * One post read and checked. Refused: a name that is not its date, a key not in the format, no hour, no channel or
+ * one not of the launch, no media or media the repository does not hold, a medium at a ratio a channel does not
+ * show whole, words missing in a language or over a channel's
  * limit, a restyled clip its words do not call restyled, a link before it is published, and a published post
  * without the link of each channel, or dated after today.
  */
@@ -281,13 +302,15 @@ export function readPost(path, {
   const { head, links, body } = split(readFileSync(path, 'utf8'), refuse);
   const { title, words: said } = words(body, refuse);
 
+  const hour = hourOf(head, refuse);
   const channels = channelsOf(head, refuse);
   const media = mediaOf(head, { cuts, shots, refuse, generated: recordReader(generated, readRecord, path, refuse) });
+  checkRatios(channels, media, refuse);
   checkWords(said, channels, media, refuse);
   const status = head.get('status');
   if (!STATUSES.includes(status)) refuse(`"status" is ${STATUSES.slice(0, -1).join(', ')} or ${STATUSES.at(-1)}.`);
   checkLinks(links, { channels, status, date, today }, refuse);
-  return { file, date, title, channels, media, words: said, status, links: Object.fromEntries(links) };
+  return { file, date, hour, title, channels, media, words: said, status, links: Object.fromEntries(links) };
 }
 
 /** Every post of the calendar, in the order of their dates. Refuses a folder that is missing or holds no post. */
