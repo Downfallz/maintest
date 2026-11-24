@@ -185,7 +185,7 @@ public sealed class PlaytestNotesTests : IDisposable
     /// <summary>Passes, goes Standard and keeps any tie order until the seat is asked to target or to act.</summary>
     private static async Task PlayUntilTheSlot((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table)
     {
-        for (var attempt = 0; attempt < 600; attempt++)
+        for (var deadline = DateTimeOffset.UtcNow + Waits.Within; DateTimeOffset.UtcNow < deadline;)
         {
             switch (table.Person.Waiting)
             {
