@@ -49,7 +49,7 @@ public sealed class TableFilesTests
     {
         var page = Text(Files.Get("/signin/discord"));
 
-        page.ShouldContain("src=\"/signin.js\"");
+        page.ShouldContain("src=\"/signin.js?v=");
         page.ShouldContain("href=\"/identity.css?v=");
         page.ShouldContain("<meta name=\"referrer\" content=\"no-referrer\" />");
         Files.Get("/discord.js").Status.ShouldBe(200);
@@ -307,16 +307,54 @@ public sealed class TableFilesTests
     }
 
     /// <summary>
-    /// A page's own module keeps its bare name: another module imports it by that name, and a stamped one beside it
-    /// would be a second copy of the module, run twice.
+    /// A page's own modules are named by the release's tag, in the page and in every module that imports one, so
+    /// the address is one and the browser runs each module once: `ways.js` of one deploy importing `account.js` of the one
+    /// before refused to load, and the return from Discord stayed on "Checking your sign-in…".
     /// </summary>
     [Fact]
-    public void A_page_module_another_module_imports_keeps_its_bare_name()
+    public void A_page_and_its_modules_name_every_module_by_one_release_tag()
     {
-        var page = Text(Files.Get("/"));
+        var page = Text(Files.Get("/signin/discord"));
+        var release = System.Text.RegularExpressions.Regex.Match(page, "src=\"/signin\\.js\\?v=([0-9a-f]{12})\"").Groups[1].Value;
 
-        page.ShouldContain("src=\"navigation.js\"");
-        page.ShouldContain("href=\"identity.css?v=");
+        release.ShouldNotBeEmpty();
+        var signIn = Text(Files.Get("/signin.js"));
+        signIn.ShouldContain($"from './account.js?v={release}'");
+        signIn.ShouldContain($"from './ways.js?v={release}'");
+        Text(Files.Get("/ways.js")).ShouldContain($"from './account.js?v={release}'");
+        Text(Files.Get("/")).ShouldContain($"src=\"navigation.js?v={release}\"");
+        Text(Files.Get("/rules.js")).ShouldContain($"import('./picture.js?v={release}')", customMessage: "a module loaded later is the page's own copy");
+    }
+
+    /// <summary>One module changed is a new release: the page and a module that imports another, unchanged, both name it.</summary>
+    [Fact]
+    public void A_changed_module_renames_every_module_in_the_page_and_its_imports()
+    {
+        var folder = System.IO.Directory.CreateTempSubdirectory("table-files-").FullName;
+        File.WriteAllText(Path.Combine(folder, "signin.html"), "<script type=\"module\" src=\"/signin.js\"></script>");
+        File.WriteAllText(Path.Combine(folder, "signin.js"), "import { a } from './account.js';\nimport './ways.js';\nimport { b } from './elsewhere.js';");
+        File.WriteAllText(Path.Combine(folder, "account.js"), "export const a = 1;");
+        var files = new TableFiles(folder);
+        var page = Text(files.Get("/signin/discord"));
+        var module = Text(files.Get("/signin.js"));
+
+        File.WriteAllText(Path.Combine(folder, "account.js"), "export const a = 2;");
+        File.SetLastWriteTimeUtc(Path.Combine(folder, "account.js"), DateTime.UtcNow.AddMinutes(1));
+
+        Text(files.Get("/signin/discord")).ShouldNotBe(page);
+        var after = Text(files.Get("/signin.js"));
+        after.ShouldNotBe(module);
+        after.ShouldMatch("from './account\\.js\\?v=[0-9a-f]{12}';\\nimport './ways\\.js\\?v=[0-9a-f]{12}';");
+        after.ShouldContain("from './elsewhere.js';", customMessage: "a name the host does not serve is left as it is");
+        System.IO.Directory.Delete(folder, recursive: true);
+    }
+
+    /// <summary>The worker is registered at one address, so neither its name nor its text is stamped.</summary>
+    [Fact]
+    public void The_worker_keeps_its_bare_name_and_its_text()
+    {
+        Text(Files.Get("/sw.js")).ShouldBe(File.ReadAllText(Path.Combine(Directory, "sw.js")));
+        Text(Files.Get("/lobby")).ShouldNotContain("sw.js?v=");
     }
 
     /// <summary>A new bundle is a new page: its names change, and so does its tag, so a browser's 304 cannot keep the old one.</summary>
