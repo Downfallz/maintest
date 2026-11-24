@@ -1,0 +1,1 @@
+- A host message the battle view also writes itself (battle-services.js hard-codes UnknownServiceMessage instead of reading body.message): the JS fixtures copy the sentence, so the two drift with every test green; ask the page to show the host's `message` (#1233 PR).

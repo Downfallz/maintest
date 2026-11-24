@@ -187,7 +187,9 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 /* In a match the foot holds the dock and a lesson's end card: the card stands at the top, over the round's bar. */
 .battle-page .push-offer { top: max(12px, env(safe-area-inset-top)); bottom: auto; }
 .push-offer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.push-offer-actions button { min-height: 44px; }
+/* An answer keeps its words on one line: a filled answer broken in two reads as two (#1206). The row wraps instead,
+   and Don't ask again, the last, takes the second row first. */
+.push-offer-actions button { min-height: 44px; white-space: nowrap; }
 .push-offer-actions button[hidden] { display: none; }
 /* While the card stands, the page's own filled action takes its outline form, so a screen shows one gold: the card's
    Turn on (#1128, the owner's answer). It is still the page's action, in the same place, and comes back when the card

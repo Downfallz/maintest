@@ -173,7 +173,7 @@ public sealed class AccountNoticesTests
         var test = await _notices.TestAsync(_mark, "https://push.example/phone", Cancel);
 
         test.Sent.ShouldBeFalse();
-        test.Message.ShouldBe("The push service refused it (403).");
+        test.Message.ShouldBe("The notification service refused it (403).");
     }
 
     [Fact]

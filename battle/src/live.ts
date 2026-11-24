@@ -202,7 +202,9 @@ const servicesUI = serviceControls(services, storage);
 type Devices = { offerState: () => { ready: boolean }, turnOn: () => Promise<unknown> };
 const accountDevices = () => (globalThis as { downfallNavigation?: { devices?: Devices } }).downfallNavigation?.devices ?? null;
 const inPractice = () => Boolean((view as { practice?: unknown } | null)?.practice);
-pushOffer = mountPushOffer(document, { storage, source: {
+// The card stands over the field at the top: the creatures it covers are inert until it goes (#1206).
+let laidOut = false;
+pushOffer = mountPushOffer(document, { storage, covers: '#actor-layer .creature', placed: () => laidOut, source: {
   state: () => (inPractice() ? accountDevices()?.offerState() ?? { ready: false } : services.offerState()),
   turnOn: () => (inPractice() ? accountDevices()?.turnOn() ?? Promise.resolve({ ready: false }) : services.turnOn()),
 } });
@@ -980,7 +982,8 @@ async function discover(autoResume = true) {
   }
 }
 
-scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); };
+// The creatures are placed here, so what the pop-ups offer covers is read here too (#1206).
+scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); laidOut = true; pushOffer?.cover(); };
 scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onAuras = shown => { if (shown) $('battle').dataset.auras = shown; else delete $('battle').dataset.auras; };

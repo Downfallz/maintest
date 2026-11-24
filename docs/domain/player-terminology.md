@@ -105,6 +105,17 @@ The recap a player reads on coming back to a game (docs/tabletop/async-recap-pla
 | Both sides match | **As many creatures standing, as much health** | **Autant de créatures debout, autant de santé** |
 | The recap's line on a Your turn card, in the inbox and in the notice | **3 casts since your last visit · last move 5 h ago** (**1 cast** for one) | **3 sorts lancés depuis votre dernière visite · dernier coup il y a 5 h** (**1 sort lancé**) |
 
+## Notifications
+
+What a notification service answers is said as "notification service", never "push service", and its refusal as
+"this table", never "host" (#1233). Settings, the seat page and the battle view say a refusal in one sentence, the
+host's (`PushTest.UnknownServiceMessage`). The other sentences of the notification pages that still say "host" are
+still undecided.
+
+| What the page shows | Player-facing EN | Player-facing FR |
+| --- | --- | --- |
+| A browser whose notification service the table does not send to | **This browser's notification service is not one this table can send to. Try another browser.** | **Le service de notifications de ce navigateur n'est pas de ceux auxquels cette table peut envoyer. Essayez un autre navigateur.** |
+
 ## The ladder
 
 The leaderboard and the rulebook's section on it (ADR 0124, `rules/05-reference.md`):

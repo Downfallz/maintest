@@ -134,12 +134,49 @@ const MARKUP = `<section id="push-offer" class="push-offer motion-arrive" aria-l
  * (`keyed`, `subscribed`, `permission`, `hotseat`, `ready` once it has read the browser, and `where` the switch is
  * when it is not in Settings), and `turnOn()` asks the browser and registers the device, the same as the switch
  * does. The page calls `consider()` at its moments; the card shows only when it is due, once a page.
+ * `covers` names the page's controls that the card makes inert while it covers them (the battle view's creatures,
+ * #1206): a control under the card takes no tap anyway, and a focus there would be hidden under it (WCAG 2.4.11).
+ * `placed()` says the page has put them where they stand: until then, where they are says nothing.
  * @param {Document} doc
- * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number }} options
+ * @param {{ source: { state: () => any, turnOn: () => Promise<any> }, storage?: Storage | null, nav?: any, win?: any, now?: () => number, covers?: string | null, placed?: () => boolean }} options
  */
-export function mountPushOffer(doc, { source, storage = null, nav = globalThis.navigator, win = globalThis, now = () => Date.now() } = {}) {
+export function mountPushOffer(doc, { source, storage = null, nav = globalThis.navigator, win = globalThis, now = () => Date.now(), covers = null, placed = () => true } = {}) {
   doc.body.insertAdjacentHTML('beforeend', MARKUP);
   const el = id => doc.getElementById(id);
+  // Where the card comes to rest: while it arrives its `translate` moves it, and what it covers is read without it.
+  function resting(card) {
+    const box = card.getBoundingClientRect();
+    const [x = 0, y = 0] = (win?.getComputedStyle?.(card).translate ?? '').split(' ').map(part => Number.parseFloat(part) || 0);
+    return { left: box.left - x, right: box.right - x, top: box.top - y, bottom: box.bottom - y };
+  }
+  // The controls this card made inert, given back when it no longer covers them, or goes.
+  const made = new Set();
+  // Whether two boxes share more than a hair each way, as the walk's measure of overlaps counts them.
+  const overlap = (box, other) => Math.min(box.right, other.right) - Math.max(box.left, other.left) > 2
+    && Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top) > 2;
+  // The controls the card covers now. A control with the focus keeps it, made inert the focus would fall to the
+  // page's body; one made inert by the page itself is the page's.
+  function coveredNow(card) {
+    if (card.hidden || !placed()) return new Set();
+    const box = resting(card);
+    return new Set([...doc.querySelectorAll(covers)].filter(one => !card.contains(one) && (!one.inert || made.has(one))
+      && one !== doc.activeElement && overlap(box, one.getBoundingClientRect())));
+  }
+  function cover() {
+    if (!covers) return;
+    const under = coveredNow(el('push-offer'));
+    for (const one of made) if (!under.has(one)) { one.inert = false; made.delete(one); }
+    for (const one of under) { one.inert = true; made.add(one); }
+  }
+  if (covers) {
+    win?.addEventListener?.('resize', cover);
+    // The card arrives moving (`motion-arrive`): what it covers is read again where it comes to rest, and again when
+    // it changes size (Turn on answered: the said line and Close take the answers' room).
+    for (const settled of ['animationend', 'animationcancel', 'transitionend']) el('push-offer').addEventListener?.(settled, cover);
+    if (win?.ResizeObserver) new win.ResizeObserver(() => cover()).observe(el('push-offer'));
+    // A control kept for its focus is made inert as soon as the focus goes elsewhere, so it cannot be reached again.
+    doc.addEventListener?.('focusin', () => { if (made.size || !el('push-offer').hidden) cover(); });
+  }
   const platform = offerPlatform(nav, win);
   // The browser's own install prompt, kept for the card's Install on Android: raised once, used once.
   let install = null;
@@ -177,6 +214,7 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     answered = true;
     const inside = el('push-offer').contains?.(doc.activeElement);
     el('push-offer').hidden = true;
+    cover();
     if (inside && before?.isConnected) before.focus?.();
   }
 
@@ -205,6 +243,7 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     el('push-offer-said').textContent = turnedOnLine(after, failed);
     el('push-offer-told').textContent = el('push-offer-said').textContent;
     draw();
+    cover();
     el('push-offer-close').focus?.();
   }
 
@@ -230,6 +269,8 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
       before = doc.activeElement ?? null;
       draw();
       el('push-offer').hidden = false;
+      // Read once the page has drawn this frame: the page places what the card covers after it considers the card.
+      if (win?.requestAnimationFrame) win.requestAnimationFrame(cover); else cover();
       // Said once the card is shown: words written into a hidden region are not announced.
       const tell = () => { el('push-offer-told').textContent = `${TITLE} Pop-ups offered.`; };
       if (win?.requestAnimationFrame) win.requestAnimationFrame(tell); else tell();
@@ -245,7 +286,9 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     },
     /** The switch changed elsewhere (Settings, the match settings): a card for a browser now on goes. */
     changed() {
-      if (!el('push-offer').hidden && !busy && !el('push-offer-said').textContent && source.state()?.subscribed) el('push-offer').hidden = true;
+      if (!el('push-offer').hidden && !busy && !el('push-offer-said').textContent && source.state()?.subscribed) { el('push-offer').hidden = true; cover(); }
     },
+    /** The page placed its controls again: those the card covers now are inert, the rest not. */
+    cover,
   };
 }

@@ -55,11 +55,11 @@ test('the button is offered only where a notice could reach, and says what tappi
 test('the test reads the two notices together: the page\'s own, the host\'s, and what each outcome means', () => {
   const both = testReading({ page: null, host: 'Sent.', hostOk: true });
   assert.match(both, /^The page showed one itself\. Sent\. Two notices, then\./);
-  assert.match(both, /Only the page's: the push service is not reaching this browser/);
+  assert.match(both, /Only the page's: the notification service is not reaching this browser/);
   assert.match(both, /Neither: the browser is not showing notifications/);
 
-  const refused = testReading({ page: null, host: 'The push service refused it (403).', hostOk: false });
-  assert.equal(refused, 'The page showed one itself. The push service refused it (403).');
+  const refused = testReading({ page: null, host: 'The notification service refused it (403).', hostOk: false });
+  assert.equal(refused, 'The page showed one itself. The notification service refused it (403).');
 
   const blocked = testReading({ page: 'permission denied', host: 'Sent.', hostOk: true });
   assert.equal(blocked, 'The page could not show one itself: permission denied. Sent. Allow notifications for this site in the browser\'s settings.');
@@ -70,9 +70,9 @@ test('the test reads the two notices together: the page\'s own, the host\'s, and
 
 test('a test answer means the host forgot the subscription when it is gone or on a push service the host does not send to', () => {
   assert.equal(testForgot({ status: 502, message: 'This subscription is gone. Tap "Notify me when it\'s my turn" again.' }), true);
-  assert.equal(testForgot({ status: 400, error: 'Account.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' }), true);
-  assert.equal(testForgot({ status: 400, error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' }), true);
-  assert.equal(testForgot({ status: 502, message: 'The push service refused it (403).' }), false);
+  assert.equal(testForgot({ status: 400, error: 'Account.UnknownPushService', message: 'This browser\'s notification service is not one this table can send to. Try another browser.' }), true);
+  assert.equal(testForgot({ status: 400, error: 'Lobby.UnknownPushService', message: 'This browser\'s notification service is not one this table can send to. Try another browser.' }), true);
+  assert.equal(testForgot({ status: 502, message: 'The notification service refused it (403).' }), false);
   assert.equal(testForgot({ status: 400, error: 'Account.BadRequest', message: 'gone' }), false);
   assert.equal(testForgot({ status: 502, message: 'This seat has no subscription: tap "Notify me when it\'s my turn" first.' }), false);
   assert.equal(testForgot(), false);

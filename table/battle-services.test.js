@@ -98,22 +98,30 @@ test('a subscription the browser already held is kept when the host refuses a se
   h.calls.length = 0;
   await h.control.toggle();
   assert.equal(h.calls.includes('unsubscribe'), false, 'the account\'s device keeps its subscription');
-  assert.match(h.control.model().message, /could not save/);
+  assert.equal(h.control.model().message, 'This table could not save notifications. Try again.');
 });
 test('a push service the host does not send to is said without asking for a retry that cannot work (#1175)', async () => {
   const h = harness();
   // Shaped as LobbyApiTests.A_subscription_on_a_push_service_the_host_does_not_know_is_refused_and_nothing_is_kept gets it.
-  h.transport.push = async () => ({ ok: false, status: 400, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' } });
+  // The host's own sentence is shown, so the two never drift apart (#1233): a sentence of the host's other than the page's fallback.
+  h.transport.push = async () => ({ ok: false, status: 400, body: { error: 'Lobby.UnknownPushService', message: 'The host\'s own sentence. Try another browser.' } });
   await tick();
   await h.control.toggle();
-  assert.equal(h.control.model().message, 'This browser\'s push service is not one this table sends to. Try another browser.');
+  assert.equal(h.control.model().message, 'The host\'s own sentence. Try another browser.');
   assert.doesNotMatch(h.control.model().message, /try again/i);
   assert.ok(h.calls.includes('unsubscribe'), 'the subscription this page made is let go of');
 });
+test('a push service the host does not send to, with no sentence of the host\'s, is said in the page\'s own (#1233)', async () => {
+  const h = harness();
+  h.transport.push = async () => ({ ok: false, status: 400, body: { error: 'Lobby.UnknownPushService' } });
+  await tick();
+  await h.control.toggle();
+  assert.equal(h.control.model().message, 'This browser\'s notification service is not one this table can send to. Try another browser.');
+});
 test('a test on a push service the host does not send to lets the subscription go and hides the test (#1209)', async () => {
   const h = harness({ held: true }); await tick();
-  h.transport.pushTest = async () => { h.calls.push('host-test'); return { ok: false, status: 400, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' } }; };
+  h.transport.pushTest = async () => { h.calls.push('host-test'); return { ok: false, status: 400, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s notification service is not one this table can send to. Try another browser.' } }; };
   await h.control.test();
   assert.deepEqual(h.calls.slice(-2), ['host-test', 'unsubscribe']);
-  assert.equal(h.control.model().testShown, false); assert.match(h.control.model().message, /not one this host sends to/);
+  assert.equal(h.control.model().testShown, false); assert.match(h.control.model().message, /not one this table can send to/);
 });

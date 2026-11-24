@@ -238,6 +238,8 @@ public sealed class AccountApiTests : IDisposable
     }
 
     private const string Subscription = """{"endpoint":"https://fcm.googleapis.com/fcm/send/phone","keys":{"p256dh":"BAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A","auth":"AAECAwQFBgcICQoLDA0ODw"}}""";
+    /// <summary>The one sentence a player reads when their browser's notification service is refused (#1233).</summary>
+    private const string PlayersRefusal = "This browser's notification service is not one this table can send to. Try another browser.";
 
     /// <summary>An API whose host keeps devices and has push keys: the lobby's "Notify me on this device" reaches it.</summary>
     private async Task<(AccountApi Api, AccountDevices Devices, DeviceSender Sender)> NotifyingAsync()
@@ -437,6 +439,7 @@ public sealed class AccountApiTests : IDisposable
 
         refused.Status.ShouldBe(400);
         Json(refused).GetProperty("error").GetString().ShouldBe("Account.UnknownPushService");
+        Json(refused).GetProperty("message").GetString().ShouldBe(PlayersRefusal, "Settings and the seat page show it as it is, in a player's words (#1233)");
         (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldBeEmpty();
     }
 
