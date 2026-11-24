@@ -199,6 +199,7 @@ test('an intake without its model, its day, its pack or its prompt is refused, a
   assert.throws(() => intakeIn(folder, png, { model: 'ChatGPT', date: '2026-11-25' }), /after today/);
   assert.throws(() => intakeIn(folder, png, { model: 'ChatGPT', date: '2026-11-24', promptText: '' }), /give the prompt/);
   assert.throws(() => intakeIn(folder, mp4, { model: 'ChatGPT', date: '2026-11-24' }), /a key-art comes back as png, jpg, webp; this file is mp4/);
+  assert.throws(() => intakeIn(folder, png, { model: 'ChatGPT', date: '2026-11-24' }, { ...readBrief(keyArt), frames: [{ seconds: 8, frame: 240, file: 'frame-8.00s.png' }] }), /not the pack of the brief as it stands/);
   writeFileSync(join(folder, 'pack/prompt.md'), 'another prompt');
   assert.throws(() => intakeIn(folder, png, { model: 'ChatGPT', date: '2026-11-24' }), /prompt\.md changed since the pack was written/);
   assert.equal(existsSync(join(folder, 'generated.json')), false);

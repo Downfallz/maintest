@@ -431,7 +431,9 @@ function readPack(brief, pack, promptText, refuse) {
   const file = join(pack, 'pack.json');
   if (!existsSync(file)) refuse(`${shownPath(file)} is missing: the file answers a pack, written by node scripts/promo/brief.mjs promo/briefs/${brief.name}.json.`);
   const facts = JSON.parse(readFileSync(file, 'utf8'));
-  if (facts.brief !== brief.name || facts.makes !== brief.makes || facts.shot !== brief.shot.name || facts.ratio !== brief.ratio) refuse(`${shownPath(file)} is not the pack of the brief as it stands: write the pack again.`);
+  const same = facts.brief === brief.name && facts.makes === brief.makes && facts.shot === brief.shot.name && facts.ratio === brief.ratio
+    && Array.isArray(facts.references) && facts.references.map(one => one?.file).join() === references(brief).join();
+  if (!same) refuse(`${shownPath(file)} is not the pack of the brief as it stands: write the pack again.`);
   if (promptText !== undefined) {
     if (!isText(promptText)) refuse('give the prompt it was made from (--prompt <file>).');
     return { text: promptText, references: facts.references };
