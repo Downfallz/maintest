@@ -429,7 +429,7 @@ public sealed class TableRegistryTests : IDisposable
 
     private static async Task Forgotten(IMatchRepository repository, MatchId matchId)
     {
-        await Waits.UntilAsync(async () => await repository.FindAsync(matchId, TestContext.Current.CancellationToken) is null, "the repository let go of the match of a table that was let go of", TestContext.Current.CancellationToken);
+        await Waits.UntilAsync(async () => await repository.FindAsync(matchId, TestContext.Current.CancellationToken) is null, "the repository dropped the match of the released table", TestContext.Current.CancellationToken);
     }
 
     /// <summary>
