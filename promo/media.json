@@ -1,4 +1,7 @@
 {
   "format": "downfall.promo.media.v1",
-  "files": []
+  "files": [
+    {"shot":"brute-pummel-round-3","ratio":"9:16","file":"film-9x16.mp4","sha256":"5aa04c1c2b4370615de36c2ddee4ec0720fade9057a095c0827efa6058863f27","bytes":3951239,"blob":"brute-pummel-round-3/5aa04c1c2b4370615de36c2ddee4ec0720fade9057a095c0827efa6058863f27.mp4"},
+    {"shot":"brute-pummel-round-3","ratio":"9:16","file":"sheet-9x16.png","sha256":"66e0755a8a452ab266f10b7cf075341adcb7a8247f38cb3decf08d2446f82ea9","bytes":803298,"blob":"brute-pummel-round-3/66e0755a8a452ab266f10b7cf075341adcb7a8247f38cb3decf08d2446f82ea9.png"}
+  ]
 }
