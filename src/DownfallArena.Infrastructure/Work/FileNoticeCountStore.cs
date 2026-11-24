@@ -10,6 +10,8 @@ namespace DownfallArena.Infrastructure.Work;
 /// </summary>
 public sealed class FileNoticeCountStore : INoticeCountStore
 {
+    private readonly TextsRead<DateOnly> _read = new();
+
     public FileNoticeCountStore(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
@@ -21,12 +23,13 @@ public sealed class FileNoticeCountStore : INoticeCountStore
     public async Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default)
     {
         var (text, version) = await ConditionalFile.ReadAsync(FullPath(day), cancellationToken);
+        _read.Remember(day, text, version);
         return new NoticeCountRead(text is null ? [] : NoticeCountDocuments.Read(text), version);
     }
 
     /// <summary>
-    /// Reads the day again to write back what this revision does not know of it (#1151): a write over a version that
-    /// has moved since is refused here, without being tried.
+    /// Writes back what this revision does not know of the day (#1151), from the text read at that version: kept from
+    /// this store's read, or read again (#1232). A write over a version that has moved since is refused, without being tried.
     /// </summary>
     public async Task<bool> WriteAsync(DateOnly day, IReadOnlyList<NoticeCount> counts, string? version, CancellationToken cancellationToken = default)
     {
@@ -34,8 +37,8 @@ public sealed class FileNoticeCountStore : INoticeCountStore
         string? before = null;
         if (version is not null)
         {
-            (before, var current) = await ConditionalFile.ReadAsync(FullPath(day), cancellationToken);
-            if (!string.Equals(current, version, StringComparison.Ordinal))
+            (var current, before) = await _read.AtAsync(day, version, token => ConditionalFile.ReadAsync(FullPath(day), token), cancellationToken);
+            if (!current)
             {
                 return false;
             }

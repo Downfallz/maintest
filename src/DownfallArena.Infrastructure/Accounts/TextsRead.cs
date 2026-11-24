@@ -1,0 +1,59 @@
+using System.Collections.Concurrent;
+
+namespace DownfallArena.Infrastructure.Accounts;
+
+/// <summary>
+/// The text a store last read of each document, with the version it was read at, so a conditional write over that
+/// version writes back the fields this revision does not know (#1211) without reading the document again (#1232). A
+/// version names one text, a blob's tag or a file's hash, so the text kept is the one a second read would return. A
+/// write it cannot answer, from a read another store made or one it forgot, reads the document again, as before.
+/// </summary>
+/// <typeparam name="TKey">What names a document in its store: an account, a day.</typeparam>
+internal sealed class TextsRead<TKey>
+    where TKey : notnull
+{
+    /// <summary>A few hundred documents at most: past it the store forgets them all, and its next writes read again.</summary>
+    private const int Capacity = 256;
+
+    private readonly ConcurrentDictionary<TKey, (string Version, string Text)> _texts = new();
+
+    /// <summary>Keeps the text read at that version; a document that is not there forgets what was kept of it.</summary>
+    public void Remember(TKey key, string? text, string? version)
+    {
+        if (text is null || version is null)
+        {
+            _texts.TryRemove(key, out _);
+            return;
+        }
+
+        if (_texts.Count >= Capacity)
+        {
+            _texts.Clear();
+        }
+
+        _texts[key] = (version, text);
+    }
+
+    /// <summary>
+    /// The text the document holds at that version, taken from what was kept or read again; none, with false, when the
+    /// document has moved past it, so the write is refused without being tried. What was kept is given to one write
+    /// only: the version it names is gone once that write is made.
+    /// </summary>
+    public async Task<(bool Current, string? Text)> AtAsync(
+        TKey key,
+        string version,
+        Func<CancellationToken, Task<(string? Text, string? Version)>> read,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(read);
+        if (_texts.TryGetValue(key, out var kept)
+            && string.Equals(kept.Version, version, StringComparison.Ordinal)
+            && _texts.TryRemove(KeyValuePair.Create(key, kept)))
+        {
+            return (true, kept.Text);
+        }
+
+        var (text, current) = await read(cancellationToken);
+        return string.Equals(current, version, StringComparison.Ordinal) ? (true, text) : (false, null);
+    }
+}

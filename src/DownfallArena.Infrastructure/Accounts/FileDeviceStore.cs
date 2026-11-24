@@ -11,6 +11,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// </summary>
 public sealed class FileDeviceStore : IDeviceStore
 {
+    private readonly TextsRead<AccountId> _read = new();
+
     public FileDeviceStore(string rootDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
@@ -25,12 +27,13 @@ public sealed class FileDeviceStore : IDeviceStore
     public async Task<DeviceListRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         var (text, version) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
+        _read.Remember(account, text, version);
         return new DeviceListRead(text is null ? [] : DeviceDocuments.Read(text), version);
     }
 
     /// <summary>
-    /// Reads the document again, to write back the fields this revision does not know (#1211). A write is refused,
-    /// without being tried, when the version has moved since it was read.
+    /// Writes back the fields this revision does not know (#1211), from the text read at that version: kept from this
+    /// store's read, or read again (#1232). A write is refused, without being tried, when the version has moved since.
     /// </summary>
     public async Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
     {
@@ -38,8 +41,8 @@ public sealed class FileDeviceStore : IDeviceStore
         string? before = null;
         if (version is not null && devices.Count > 0)
         {
-            (before, var current) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
-            if (!string.Equals(current, version, StringComparison.Ordinal))
+            (var current, before) = await _read.AtAsync(account, version, token => ConditionalFile.ReadAsync(FullPath(account), token), cancellationToken);
+            if (!current)
             {
                 return false;
             }

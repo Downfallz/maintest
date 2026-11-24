@@ -10,6 +10,7 @@ namespace DownfallArena.Infrastructure.Accounts;
 public sealed class BlobNoticeStore : INoticeStore
 {
     private readonly BlobContainerClient _container;
+    private readonly TextsRead<AccountId> _read = new();
 
     private BlobNoticeStore(BlobContainerClient container)
     {
@@ -26,12 +27,13 @@ public sealed class BlobNoticeStore : INoticeStore
     public async Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         var (text, version, written) = await ConditionalBlob.ReadWrittenAsync(Blob(account), cancellationToken);
+        _read.Remember(account, text, version);
         return new NoticeLogRead(text is null ? [] : NoticeDocuments.Read(text), version) { Written = written };
     }
 
     /// <summary>
-    /// Reads the document again, to write back the fields this revision does not know (#1211). A write is refused,
-    /// without being tried, when the version has moved since it was read.
+    /// Writes back the fields this revision does not know (#1211), from the text read at that version: kept from this
+    /// store's read, or read again (#1232). A write is refused, without being tried, when the version has moved since.
     /// </summary>
     public async Task<bool> WriteAsync(AccountId account, IReadOnlyList<NoticeEntry> entries, string? version, CancellationToken cancellationToken = default)
     {
@@ -39,8 +41,8 @@ public sealed class BlobNoticeStore : INoticeStore
         string? before = null;
         if (version is not null && entries.Count > 0)
         {
-            (before, var current) = await ConditionalBlob.ReadAsync(Blob(account), cancellationToken);
-            if (!string.Equals(current, version, StringComparison.Ordinal))
+            (var current, before) = await _read.AtAsync(account, version, token => ConditionalBlob.ReadAsync(Blob(account), token), cancellationToken);
+            if (!current)
             {
                 return false;
             }
