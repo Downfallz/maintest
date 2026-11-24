@@ -463,8 +463,15 @@ test('the end of the first tutorial offers pop-ups through the account\'s switch
   // Signed in, the header's own stream is the last one opened: the seat is read again by opening the page again.
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#push-offer')).toBeVisible();
+  // The end card's Next takes its outline form while the card stands, so the screen shows one gold (#1128).
+  // The end card's filled action takes its outline form while the card stands, so the screen shows one gold (#1128):
+  // the kit's graded gold is gone, and only the edge along its cut corners is drawn.
+  await expect(page.locator('#coach-again')).toBeVisible();
+  await expect.poll(() => page.locator('#coach-again').evaluate(again => getComputedStyle(again).backgroundImage)).not.toMatch(/linear-gradient\(rgb/);
   await page.locator('#push-offer-on').click();
   await expect(page.locator('#push-offer-said')).not.toBeEmpty();
+  await page.locator('#push-offer-close').click(); await expect(page.locator('#push-offer')).toBeHidden();
+  await expect.poll(() => page.locator('#coach-again').evaluate(again => getComputedStyle(again).backgroundImage)).toMatch(/linear-gradient\(rgb/);
   expect(h.writes.filter(one => one.path.startsWith('/api/lobby/push'))).toEqual([]);
   await expect.poll(() => h.writes.map(one => `${one.method} ${one.path}`)).toContain('PUT /api/account/push');
 });

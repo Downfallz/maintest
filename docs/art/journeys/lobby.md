@@ -885,8 +885,9 @@ not ask again. At a tutorial's end it asks through the account's switch, since a
 
 - **Filled action**: Turn on. On an iPhone outside the home screen there is no Turn on, and the card has none
   filled: the steps are the answer. Install the app, Not now and Don't ask again are quiet. While the card stands,
-  the page's own filled action takes its outline form, no fill, a gold edge and gold words, so a screen shows one
-  gold (#1128, the owner's answer; `table/identity.css`, `table.push.js`). It comes back filled when the card goes.
+  the page's own filled action takes its outline form (no fill, gold edge, gold words), so a screen shows one gold
+  (#1128, the owner's answer; `table/identity.css`, `table.push.js`). It comes back filled when the card goes. A
+  window opened over the card keeps its own filled action: the card is behind its backdrop.
 
 ### Words
 
@@ -992,11 +993,13 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
   actions with it, until it is answered or the moment passes. The first film (#1126, `home-push-offer`) shows it
   covers them at 390 by 844 too: the answers fit one row, and the card still hides the title's second line and both
   actions. Settled by the owner (#1128, 2026-11-24): the card still covers them, and the page's own filled action
-  takes its outline form while it stands, so only Turn on is gold. Room held at the page's foot, a moment waiting for
-  a window to close, and the lobby waiting until no game is the player's to play were not chosen.
+  takes its outline form while the card stands, so only Turn on is gold. The owner did not choose the other three:
+  room held at the page's foot, a moment waiting for a window to close, or the lobby waiting until no game is the
+  player's to play.
 - In the battle view the card stands at the top, over the round's bar, so lesson 1's end card in the dock stays
   free: the round's bar and the header's tools are under it until it is answered (6 overlaps at 320 in the first
-  film; Leave the tutorial stays on the end card).
+  film; Leave the tutorial stays on the end card). While the card stands, the end card's filled Play again takes its
+  outline form too, so the screen's one gold is Turn on (#1128; `battle-services.spec.js`).
 - "Done, briefly, then the card goes": briefed as Done and a quiet Close, with no clock. A card that left by
   itself would be the page's one timer that moves something; if the owner wants it, the hold is a value the kit
   lacks, asked of the kit (`*Kit*:`).

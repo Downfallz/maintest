@@ -190,11 +190,18 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .push-offer-actions button { min-height: 44px; }
 .push-offer-actions button[hidden] { display: none; }
 /* While the card stands, the page's own filled action takes its outline form, so a screen shows one gold: the card's
-   Turn on (#1128, the owner's answer). It is still the page's action, in the same place, and comes back when the card goes. */
-body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *),
-body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *):hover:not(:disabled) {
-  background: transparent; border-color: var(--gold); color: var(--gold);
+   Turn on (#1128, the owner's answer). It is still the page's action, in the same place, and comes back when the card
+   goes. A window opened over the card keeps its own filled action: the card is behind its backdrop. The cut clips the
+   border at the two cut corners, so the edge is drawn along them; the focus ring and the hover are gold on soot. */
+body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *, dialog *) {
+  --cut-line: linear-gradient(to top right, transparent calc(50% - 1px), var(--gold) calc(50% - 1px) 50%, transparent 50%);
+  background: var(--cut-line) right top / 10px 10px no-repeat border-box, var(--cut-line) left bottom / 10px 10px no-repeat border-box, transparent;
+  border-color: var(--gold); color: var(--gold);
 }
+body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *, dialog *):hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--gold) 14%, transparent); border-color: var(--gold);
+}
+body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *, dialog *):focus-visible { outline-color: var(--gold); }
 
 /* The icon set (icons.js, ADR 0198): a drawing in the identity's line, in the colour and at the size of the text
    it sits in. It is never alone in a control without a name. */
