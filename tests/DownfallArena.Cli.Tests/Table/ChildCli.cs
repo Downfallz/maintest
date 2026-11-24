@@ -101,7 +101,9 @@ internal sealed class ChildCli : IAsyncDisposable
         using (var kill = Process.Start("kill", ["-TERM", $"{_process.Id}"]))
         {
             await kill.WaitForExitAsync(cancellationToken);
-            kill.ExitCode.ShouldBe(0, "the signal was not sent");
+            kill.ExitCode.ShouldBe(0, _process.HasExited
+                ? $"the process had exited ({_process.ExitCode}) before the signal:{Environment.NewLine}{string.Join(Environment.NewLine, Lines)}"
+                : "the signal was not sent");
         }
 
         await _process.WaitForExitAsync(cancellationToken).WaitAsync(Waits.Within, cancellationToken);
