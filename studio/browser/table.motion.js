@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { JOURNEYS } from '../../scripts/ux/journeys.mjs';
 import { walkJourney } from '../../scripts/ux/journey.mjs';
-import { TRAVEL, lessMotionFaults, takeTravelInPage, watchTravelInPage } from '../../scripts/ux/motion.mjs';
+import { lessMotionFaults, travelWatchedInPage, watchTravel } from '../../scripts/ux/motion.mjs';
 import { buildShowcase } from '../../scripts/ux/set.mjs';
 
 // Less motion across every screen (docs/art/ux-craft-plan.md, UX14; ADR 0197), on the real engine: every journey
@@ -48,12 +48,15 @@ test('with full motion the same watch sees the lobby travel', async ({ browser }
 });
 
 // The watch sees each way a page can move a thing, and nothing else: a transition, a keyframe animation and a call to
-// `animate` that travel are kept; a fade and the classic sheet's net, a travel cut to 0.01 ms, are not.
-test('the watch keeps what travels and leaves a fade and a cut duration', async ({ browser }, info) => {
+// `animate` that travel, on an element or on its `::before` and `::after`, and a smooth scroll are kept; a fade and the
+// classic sheet's net, a travel cut to 0.01 ms, are not. What travelled leaves the page at once, so a navigation loses
+// nothing, and a page the watch is not on says so.
+test('the watch keeps what travels, on a pseudo-element too, and leaves a fade and a cut duration', async ({ browser }, info) => {
   test.skip(info.project.name !== 'table-phone', 'A fixture page: one project reads it.');
   const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const blind = await browser.newContext();
   try {
-    await context.addInitScript(watchTravelInPage, TRAVEL);
+    const watch = await watchTravel(context);
     const page = await context.newPage();
     // A page loaded, as a walk loads one: `setContent` rewrites the document, and the window's listeners with it.
     await page.route('http://fixture.test/**', route => route.fulfill({ contentType: 'text/html', body: `<!doctype html><style>
@@ -62,17 +65,30 @@ test('the watch keeps what travels and leaves a fade and a cut duration', async 
       #slide { transition: translate 200ms; } #slide.on { translate: 0 20px; }
       #cut { transition: transform 0.01ms; } #cut.on { transform: scale(2); }
       #rise.on { animation: rise 200ms; } #fade.on { animation: fade 200ms; }
-    </style><div id="slide">a</div><div id="cut">b</div><div id="rise">c</div><div id="fade">d</div><div id="spin">e</div>` }));
+      #before::before, #after::after { content: '·'; display: inline-block; }
+      #before.on::before { animation: rise 200ms; }
+      #after::after { transition: transform 200ms; } #after.on::after { transform: scale(2); }
+    </style><div id="slide">a</div><div id="cut">b</div><div id="rise">c</div><div id="fade">d</div><div id="spin">e</div>
+    <div id="before">f</div><div id="after">g</div><div style="height:3000px"></div><p id="far">h</p>` }));
     await page.goto('http://fixture.test/');
+    expect(await page.evaluate(travelWatchedInPage)).toBe(true);
     await page.evaluate(() => new Promise(done => requestAnimationFrame(() => {
-      for (const id of ['slide', 'cut', 'rise', 'fade']) document.getElementById(id).classList.add('on');
+      for (const id of ['slide', 'cut', 'rise', 'fade', 'before', 'after']) document.getElementById(id).classList.add('on');
       document.getElementById('spin').animate([{ rotate: '0deg' }, { rotate: '360deg' }], { duration: 300 });
       document.getElementById('spin').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300 });
-      setTimeout(done, 100);
+      document.getElementById('far').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(done, 150);
     })));
-    expect(await page.evaluate(takeTravelInPage)).toEqual(['#rise animation rise transform', '#slide transition translate', '#spin animate rotate']);
-    expect(await page.evaluate(takeTravelInPage), 'a read forgets what it read').toEqual([]);
+    // Then the page goes: what it kept is already out of it.
+    await page.goto('http://fixture.test/again');
+    expect(watch.take()).toEqual(['#after::after transition transform', '#before::before animation rise transform', '#far scrollIntoView smooth',
+      '#rise animation rise transform', '#slide transition translate', '#spin animate rotate']);
+    expect(watch.take(), 'a take forgets what it took').toEqual([]);
+    const unwatched = await blind.newPage();
+    await unwatched.goto('about:blank');
+    expect(await unwatched.evaluate(travelWatchedInPage), 'a page without the watch is not read as still').toBe(false);
   } finally {
     await context.close();
+    await blind.close();
   }
 });

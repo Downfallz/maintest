@@ -26,7 +26,7 @@ import { checkScreen } from './access.mjs';
 import { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage, measuresLines, watchShiftInPage } from './measures.mjs';
 import { PAINT_RUNS, judgePaints, paints } from './paint.mjs';
 import { measureContrast } from './contrast.mjs';
-import { TRAVEL, lessMotionFaults, takeTravelInPage, watchTravelInPage } from './motion.mjs';
+import { lessMotionFaults, travelWatchedInPage, watchTravel } from './motion.mjs';
 import { installSeatViews } from '../../studio/browser/seat-views.js';
 import { VIEWPORTS, buildShowcase, missing, raiseSet, root } from './set.mjs';
 
@@ -129,14 +129,14 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
   const filmed = strip ? journey.strips?.[strip] : null;
   if (strip && !filmed) throw new Error(`The ${journey.id} journey has no strip named ${strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
   const set = await raiseSet(showcase);
-  const contexts = [];
+  const contexts = [], watches = [];
   const person = async () => {
     // UX_JOURNEY_VIDEO=<folder> records each person's walk in real time, a clip of a stage's interaction (UX7-UX12).
     const video = process.env.UX_JOURNEY_VIDEO ? { recordVideo: { dir: join(process.env.UX_JOURNEY_VIDEO, String(viewport.width)), size: viewport } } : {};
     // `lessMotion`: the system's wish for less motion, the one every page reads (ADR 0197), and what travels kept.
     const context = await browser.newContext({ ...contextOptions(viewport), deviceScaleFactor: scale, ...video, ...(lessMotion ? { reducedMotion: 'reduce' } : {}) });
     await context.addInitScript(watchShiftInPage);
-    if (lessMotion) await context.addInitScript(watchTravelInPage, TRAVEL);
+    if (lessMotion) watches.push(await watchTravel(context));
     // The seat's views as the page reads them, for the walks that play (studio/browser/seat-views.js).
     await context.addInitScript(`(${installSeatViews})(window, ${JSON.stringify({ seats: ['player1', 'player2'] })});`);
     contexts.push(context);
@@ -160,7 +160,11 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
         if (walk.seen(name)) throw new Error(`The ${journey.id} journey reached "${name}" twice.`);
         const measures = await settle(on);
         // What moved across the screen on the way here, under less motion (UX14): none is what a walk is held to.
-        if (lessMotion) measures.travel = (await on.evaluate(takeTravelInPage)) ?? [];
+        // Every person's pages are drained, so a page left behind or the friend's own says what moved on it.
+        if (lessMotion) {
+          if (!(await on.evaluate(travelWatchedInPage))) throw new Error(`${name}: the watch of less motion is not on this page, so nothing it read could be called still.`);
+          measures.travel = [...new Set(watches.flatMap(watch => watch.take()))].sort();
+        }
         if (filmed?.at === name) {
           shots = await film(on, () => filmed.act({ ...walk, page: on }), { frames, interval });
           throw STOP;
@@ -278,6 +282,7 @@ export function parseArguments(argv) {
   // An option the chosen mode ignores is refused, not taken in silence (#1093).
   for (const flag of ['frames', 'interval']) if (given.has(flag) && !options.strip) throw new Error(`--${flag} films a strip: name --strip.`);
   if (given.has('runs') && !options.paint) throw new Error('--runs counts the paints: name --paint.');
+  if (options.lessMotion && options.paint) throw new Error('--less-motion walks journeys: the paints are measured with full motion, apart.');
   if (options.lessMotion && options.strip) throw new Error('--less-motion walks journeys: a strip films with the animations stopped.');
   if (options.lessMotion && !options.all && !options.journeys.length) throw new Error('--less-motion walks journeys: name one, or --all.');
   if (options.all && options.journeys.length) throw new Error('Name journeys, or --all, not both.');

@@ -41,8 +41,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   or gone. axe is never in the list.
 - `browser/table.motion.js` (UX14) walks every journey with the system's less motion: a screen reached after a
   `transform`, `translate`, `scale` or `rotate` that lasts a millisecond, or still animating at rest, fails it
-  (`scripts/ux/motion.mjs`). Its watch is an init script on the window: a fixture built with `setContent` loses
-  it, so load the page with `goto`. `ux-acceptance.test.js` holds `scripts/ux/acceptance.mjs` and the record.
+  (`scripts/ux/motion.mjs`). Its watch listens on the window and hands what it sees to the walk at once: a fixture
+  built with `setContent` loses the listeners, so load the page with `goto`. A screen whose page lacks it stops the walk. `ux-acceptance.test.js` holds `scripts/ux/acceptance.mjs` and the record.
 - `journey-briefs.test.js` holds each brief of `docs/art/journeys/` to its nine parts, to the screens its journey's
   walk names (`scripts/ux/journeys.mjs`), to the craft book's headings and to the declared tokens: a screen or a
   heading renamed there renames it in the brief, in the same change.

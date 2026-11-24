@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { JOURNEYS } from './journeys.mjs';
+import { VIEWPORTS } from './set.mjs';
 import { readWalks } from './baseline.mjs';
 import { lessMotionFaults } from './motion.mjs';
 
@@ -78,6 +79,23 @@ export function tally(walks) {
   };
 }
 
+/**
+ * What a folder lacks to be read as the acceptance: a walk under full motion of every journey at every width, and,
+ * once any walk under less motion is there, all of them. A line each; empty when the folder is whole.
+ */
+export function missingWalks(walks) {
+  const has = (journey, width, less) => walks.some(walk => walk.header.journey === journey && Number(walk.header.viewport.split('x')[0]) === width && Boolean(walk.header.lessMotion) === less);
+  const lacking = [];
+  const anyLess = walks.some(walk => walk.header.lessMotion);
+  for (const journey of JOURNEYS) {
+    for (const { width } of VIEWPORTS) {
+      if (!has(journey.id, width, false)) lacking.push(`${journey.id} at ${width} px`);
+      if (anyLess && !has(journey.id, width, true)) lacking.push(`${journey.id} at ${width} px under less motion`);
+    }
+  }
+  return lacking;
+}
+
 /** The page: each journey's screens then and now, the paints then and now, and what less motion found. */
 export function acceptanceMarkdown({ walks, paint, baseline, baselinePaints = null, commit, date }) {
   const full = walks.filter(walk => !walk.header.lessMotion), less = walks.filter(walk => walk.header.lessMotion);
@@ -111,6 +129,7 @@ ${now.overlaps} with controls that overlap. ${now.axeRun ? `${now.axe} with a fi
   }
   if (paint) {
     const { profile, pages } = paint;
+    if (!pages || !Object.keys(pages).length) throw new Error('paint.json holds no page.');
     parts.push('## The first paints, on a slow phone',
       `Each page loaded ${Object.values(pages)[0].runs} times with nothing cached, at ${profile.viewport.replace('x', ' by ')}, on the baseline's slow phone. The median; the baseline's where it painted the page. A paint is this machine's on this day.`,
       table(['Page', 'Largest paint', 'The largest is', 'Layout shift', 'Pictures loaded'],
@@ -152,6 +171,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     };
     if (!folder || !named('--commit') || !named('--date')) throw new Error('Usage: node scripts/ux/acceptance.mjs <folder> --commit <sha> --date <day>');
     const { walks, paint } = readWalks(resolve(folder));
+    const lacking = missingWalks(walks);
+    if (lacking.length) throw new Error(`The folder is not the whole acceptance. Missing: ${lacking.join('; ')}.`);
     const text = readFileSync(join(root, 'docs/art/journeys/baseline.md'), 'utf8');
     process.stdout.write(acceptanceMarkdown({ walks, paint, baseline: parseBaseline(text), baselinePaints: parseBaselinePaints(text), commit: named('--commit'), date: named('--date') }));
   } catch (error) {

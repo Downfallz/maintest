@@ -1,24 +1,27 @@
-// Less motion across every screen (docs/art/ux-craft-plan.md, UX14; ADR 0197): a journey walked with the system's
-// wish for less motion records, screen by screen, every animation that moved something across the screen since the
-// last screen. Under less motion travel becomes a fade and ambience stops, so a walk is held to none. Each in-page
-// function uses nothing from this module, as `measureInPage` does.
+// Less motion across every screen (docs/art/ux-craft-plan.md, UX14; ADR 0197): a journey walked with the system's wish for
+// less motion records, screen by screen, every animation that moved something across the screen since the last screen.
+// Under less motion travel becomes a fade and ambience stops, so a walk is held to none. The in-page function uses
+// nothing from this module, as `measureInPage` does.
 
 /** What moves a thing across the screen. A fade, a colour or a size of text is not travel. */
 export const TRAVEL = ['transform', 'translate', 'scale', 'rotate'];
 
+/** The page's way out: what the watch sees leaves the page at once, so a navigation or a second person loses nothing. */
+export const TRAVEL_BINDING = '__journeyTravelKeep';
+
 /**
- * Runs in the page before any of its scripts (`addInitScript`): keeps on `globalThis.__journeyTravel` every CSS
- * transition, CSS animation and `element.animate` call that moves one of `TRAVEL` and lasts a millisecond or more.
- * The classic sheet's net cuts a duration to 0.01 ms under less motion: that plays nothing a player sees.
+ * Runs in the page before any of its scripts (`addInitScript`): hands `binding` every CSS transition, CSS animation and
+ * `animate` call that moves one of `travel` and lasts a millisecond or more, on an element or on its `::before` and
+ * `::after`, and every scroll asked to be smooth. The classic sheet's net cuts a duration to 0.01 ms under less motion:
+ * that plays nothing a player sees. Marks the page as watched, so a page without the watch is not read as still.
  */
-export function watchTravelInPage(travel) {
-  const seen = new Set();
-  globalThis.__journeyTravel = seen;
-  const name = node => {
+export function watchTravelInPage({ travel, binding }) {
+  globalThis.__journeyTravelWatched = true;
+  const name = (node, pseudo = '') => {
     if (!(node instanceof Element)) return 'the page';
-    if (node.id) return `#${node.id}`;
+    if (node.id) return `#${node.id}${pseudo}`;
     const classes = [...node.classList].slice(0, 2).map(one => `.${one}`).join('');
-    return `${node.tagName.toLowerCase()}${classes}`;
+    return `${node.tagName.toLowerCase()}${classes}${pseudo}`;
   };
   // A property travels when its keyframes do not all hold the same value: a frame that leaves it out takes the
   // element's own, so it counts as a different one.
@@ -30,43 +33,69 @@ export function watchTravelInPage(travel) {
     const timing = animation.effect?.getComputedTiming?.();
     return Boolean(timing) && (timing.activeDuration === Infinity || timing.activeDuration >= 1);
   };
-  const keep = (node, what) => seen.add(`${name(node)} ${what}`);
-  // A transition's length, read from the element's style: one of 0.01 ms has ended before its event arrives.
-  const transitionLength = (node, property) => {
-    const style = getComputedStyle(node);
+  const keep = (node, what, pseudo = '') => globalThis[binding]?.(`${name(node, pseudo)} ${what}`);
+  // A transition's length, read from the style of the element or its pseudo-element: one of 0.01 ms has ended before
+  // its event arrives.
+  const transitionLength = (node, property, pseudo) => {
+    const style = getComputedStyle(node, pseudo || null);
     const properties = style.transitionProperty.split(',').map(one => one.trim());
     const lengths = style.transitionDuration.split(',').map(one => Number.parseFloat(one) * (one.trim().endsWith('ms') ? 1 : 1000));
     const index = properties.includes(property) ? properties.lastIndexOf(property) : properties.lastIndexOf('all');
     return index < 0 ? 0 : lengths[index % lengths.length];
   };
   addEventListener('transitionrun', event => {
-    if (travel.includes(event.propertyName) && transitionLength(event.target, event.propertyName) >= 1) keep(event.target, `transition ${event.propertyName}`);
+    if (travel.includes(event.propertyName) && transitionLength(event.target, event.propertyName, event.pseudoElement) >= 1) {
+      keep(event.target, `transition ${event.propertyName}`, event.pseudoElement);
+    }
   }, true);
   addEventListener('animationstart', event => {
-    const animation = event.target.getAnimations?.().find(one => one.animationName === event.animationName);
+    // `subtree` is what lists a pseudo-element's animations; the target and the pseudo pick this one among them.
+    const animation = event.target.getAnimations?.({ subtree: true }).find(one => one.animationName === event.animationName
+      && one.effect?.target === event.target && (one.effect?.pseudoElement ?? '') === (event.pseudoElement ?? ''));
     if (!animation || !lasting(animation)) return;
-    for (const property of moved(animation.effect.getKeyframes())) keep(event.target, `animation ${event.animationName} ${property}`);
+    for (const property of moved(animation.effect.getKeyframes())) keep(event.target, `animation ${event.animationName} ${property}`, event.pseudoElement);
   }, true);
   const animate = Element.prototype.animate;
-  Element.prototype.animate = function (...args) {
-    const animation = animate.apply(this, args);
-    if (lasting(animation)) for (const property of moved(animation.effect.getKeyframes())) keep(this, `animate ${property}`);
+  Element.prototype.animate = function (keyframes, options) {
+    const animation = animate.call(this, keyframes, options);
+    if (lasting(animation)) for (const property of moved(animation.effect.getKeyframes())) keep(this, `animate ${property}`, options?.pseudoElement ?? '');
     return animation;
   };
+  // A smooth scroll glides the page however the sheets cut their durations.
+  for (const [owner, method] of [[Element.prototype, 'scrollIntoView'], [Element.prototype, 'scrollTo'], [Element.prototype, 'scrollBy'], [Element.prototype, 'scroll'], [window, 'scrollTo'], [window, 'scrollBy'], [window, 'scroll']]) {
+    const original = owner[method];
+    owner[method] = function (...args) {
+      if (args[0]?.behavior === 'smooth') keep(this, `${method} smooth`);
+      return original.apply(this, args);
+    };
+  }
 }
 
-/** Runs in the page: what travelled since the last read, sorted, and forgets it. */
-export function takeTravelInPage() {
-  const seen = globalThis.__journeyTravel;
-  if (!seen) return null;
-  const lines = [...seen].sort();
-  seen.clear();
-  return lines;
+/** Runs in the page: whether the watch is on it. A page without it would read as still. */
+export function travelWatchedInPage() {
+  return globalThis.__journeyTravelWatched === true;
+}
+
+/**
+ * Watch every page of a browser's context: returns `take()`, what travelled on any of its pages since the last take,
+ * sorted, once each.
+ */
+export async function watchTravel(context) {
+  const kept = new Set();
+  await context.exposeBinding(TRAVEL_BINDING, (_source, line) => { kept.add(line); });
+  await context.addInitScript(watchTravelInPage, { travel: TRAVEL, binding: TRAVEL_BINDING });
+  return {
+    take() {
+      const lines = [...kept].sort();
+      kept.clear();
+      return lines;
+    },
+  };
 }
 
 /**
  * What a walk under less motion found, a line a fault: a screen reached after something travelled, or a screen
- * still animating at rest (ambience that did not stop). Empty when the walk holds.
+ * still animating at rest. Empty when the walk holds.
  */
 export function lessMotionFaults(screens) {
   if (!Array.isArray(screens) || !screens.length) throw new Error('No screens to read: a walk under less motion reaches at least one.');

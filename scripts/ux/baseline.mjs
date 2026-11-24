@@ -31,7 +31,9 @@ const table = (header, rows) => [`| ${header.join(' | ')} |`, `| ${header.map(()
 const seconds = spread => (spread ? `${(spread.median / 1000).toFixed(1)} s (${(spread.fastest / 1000).toFixed(1)} to ${(spread.slowest / 1000).toFixed(1)})` : 'not painted');
 
 /** The page, from the measures of each journey and width ({ header, screens }) and the paints, if any. */
-export function baselineMarkdown(walks, paint, { commit, date }) {
+export function baselineMarkdown(all, paint, { commit, date }) {
+  // A walk under less motion is read by acceptance.mjs, not laid out a second time beside its own walk.
+  const walks = all.filter(walk => !walk.header.lessMotion);
   if (!walks.length) throw new Error('No measures to lay out.');
   const parts = [`# The journeys' baseline
 

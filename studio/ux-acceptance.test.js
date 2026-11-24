@@ -9,7 +9,9 @@ import { join } from 'node:path';
 import { JOURNEYS } from '../scripts/ux/journeys.mjs';
 import { parseArguments } from '../scripts/ux/journey.mjs';
 import { measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
-import { acceptanceMarkdown, parseBaseline, parseBaselinePaints, tally } from '../scripts/ux/acceptance.mjs';
+import { acceptanceMarkdown, missingWalks, parseBaseline, parseBaselinePaints, tally } from '../scripts/ux/acceptance.mjs';
+import { baselineMarkdown } from '../scripts/ux/baseline.mjs';
+import { VIEWPORTS } from '../scripts/ux/set.mjs';
 import { TRAVEL, lessMotionFaults } from '../scripts/ux/motion.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -99,14 +101,36 @@ test('the faults of less motion refuse a walk that has no screens or was not wal
   assert.throws(() => lessMotionFaults([{ name: 'one', measures: measured('one') }]), /not walked under less motion/);
   assert.deepEqual(lessMotionFaults([{ name: 'one', measures: measured('one', { travel: [] }) }]), []);
   assert.deepEqual(TRAVEL, ['transform', 'translate', 'scale', 'rotate']);
+  assert.throws(() => lessMotionFaults([{ name: 'one', measures: { ...measured('one'), travel: null } }]), /not walked under less motion/);
 });
 
 test('a walk\'s header says it was walked under less motion, and only then', () => {
   const lines = measuresLines({ journey: 'doors', viewport: { width: 390, height: 844 }, axe: true, lessMotion: true, screens: [] });
   assert.equal(parseMeasures(lines).header.lessMotion, true);
   assert.equal(parseMeasures(measuresLines({ journey: 'doors', viewport: { width: 390, height: 844 }, axe: true, screens: [] })).header.lessMotion, undefined);
+});
+
+test('the tally counts the screens over one filled action, with a finding of axe, and the words under the floor', () => {
   const tallied = tally([walk('doors', [measured('a', { filled: 2, axe: { 'color-contrast': 1 } }), measured('b')])]);
   assert.deepEqual(tallied, { screens: 2, overFilled: 1, wordsUnder: 0, overlaps: 0, axe: 1, axeRun: true, animating: 0 });
+});
+
+test('the paints are refused when paint.json holds no page', () => {
+  assert.throws(() => acceptanceMarkdown({ walks: [walk('doors', [measured('a')])], paint: { profile: { viewport: '390x844' }, pages: {} }, baseline: parseBaseline(BASELINE), commit: 'a', date: 'b' }), /paint\.json holds no page/);
+});
+
+test('a folder lacks every journey at every width not walked, and all the walks under less motion once one is there', () => {
+  const every = JOURNEYS.flatMap(journey => VIEWPORTS.map(({ width }) => walk(journey.id, [measured('a')], { width })));
+  assert.deepEqual(missingWalks(every), []);
+  assert.deepEqual(missingWalks(every.slice(1)), [`${JOURNEYS[0].id} at 320 px`]);
+  const oneLess = [...every, walk('doors', [measured('a', { travel: [] })], { lessMotion: true, width: 390 })];
+  assert.equal(missingWalks(oneLess).length, JOURNEYS.length * VIEWPORTS.length - 1);
+  assert.ok(missingWalks(oneLess).includes('doors at 320 px under less motion'));
+});
+
+test('the baseline\'s page leaves out the walks under less motion', () => {
+  const page = baselineMarkdown([walk('doors', [measured('only')]), walk('doors', [measured('only', { travel: [] })], { lessMotion: true })], null, { commit: 'a', date: 'b' });
+  assert.equal(page.split('\n').filter(line => line.startsWith('| only |')).length, 1);
 });
 
 test('--less-motion walks journeys, never a strip, and needs one named', () => {
@@ -114,9 +138,10 @@ test('--less-motion walks journeys, never a strip, and needs one named', () => {
   assert.equal(parseArguments(['doors']).lessMotion, false);
   assert.throws(() => parseArguments(['--less-motion']), /--less-motion walks journeys: name one, or --all/);
   assert.throws(() => parseArguments(['lobby', '--strip', 'menu', '--less-motion']), /a strip films with the animations stopped/);
+  assert.throws(() => parseArguments(['--all', '--paint', '--less-motion']), /the paints are measured with full motion/);
 });
 
-test('the script refuses a missing flag and a folder with no walk, on stderr, with exit 1', () => {
+test('the script refuses a missing flag, a folder with no walk and a folder short of a walk, on stderr, with exit 1', () => {
   const usage = spawnSync(process.execPath, [script, 'nowhere', '--commit', '--date', '2026-11-24'], { encoding: 'utf8' });
   assert.equal(usage.status, 1);
   assert.match(usage.stderr, /Usage/);
@@ -125,12 +150,18 @@ test('the script refuses a missing flag and a folder with no walk, on stderr, wi
   try {
     const empty = spawnSync(process.execPath, [script, folder, '--commit', 'a', '--date', 'b'], { encoding: 'utf8' });
     assert.equal(empty.status, 1);
-    assert.match(empty.stderr, /No walk to read against the baseline/);
+    assert.match(empty.stderr, /not the whole acceptance\. Missing: doors at 320 px; doors at 390 px;/);
     assert.equal(empty.stdout, '');
-    writeFileSync(join(folder, 'doors-390.measures.jsonl'), measuresLines({ journey: 'doors', viewport: { width: 390, height: 844 }, axe: true, screens: [{ name: 'sign-in-panel', measures: measured('sign-in-panel') }] }));
-    const one = spawnSync(process.execPath, [script, folder, '--commit', 'a', '--date', 'b'], { encoding: 'utf8' });
-    assert.equal(one.status, 0, one.stderr);
-    assert.match(one.stdout, /^# The journeys at acceptance$/m);
+    const write = (journey, viewport) => writeFileSync(join(folder, `${journey}-${viewport.width}.measures.jsonl`), measuresLines({ journey, viewport, axe: true, screens: [{ name: 'sign-in-panel', measures: measured('sign-in-panel') }] }));
+    write('doors', VIEWPORTS[1]);
+    const short = spawnSync(process.execPath, [script, folder, '--commit', 'a', '--date', 'b'], { encoding: 'utf8' });
+    assert.equal(short.status, 1);
+    assert.match(short.stderr, /not the whole acceptance\. Missing: doors at 320 px;/);
+    assert.equal(short.stdout, '');
+    for (const journey of JOURNEYS) for (const viewport of VIEWPORTS) write(journey.id, viewport);
+    const whole = spawnSync(process.execPath, [script, folder, '--commit', 'a', '--date', 'b'], { encoding: 'utf8' });
+    assert.equal(whole.status, 0, whole.stderr);
+    assert.match(whole.stdout, /^# The journeys at acceptance$/m);
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }

@@ -17,7 +17,7 @@ here hold what can be held on every change. Every screen's line, then and now, i
 | One filled action a screen? | Yes. 20 screens had more than one; none has now. The new player's home went from 5 to 1. |
 | The floor of text size? | Held in the match's frame and its windows: their smallest text went from 7 and 9 px to 11. Across all screens, the words under 11 px went from 2,314 to 10. The 10 are the sign-in door's eyebrow (Beta, Invitation, Signed out) at 10 px. |
 | axe, WCAG 2.2 AA? | Nothing, on all 166 screens. It found something on 53 at the baseline. |
-| Controls that overlap? | Not held. 34 screens have two controls sharing more than 2 px, against 49 at the baseline. They are three kinds, below. |
+| Controls that overlap? | Not held. 34 screens have two controls sharing more than 2 px, against 49 at the baseline. They fall into three kinds, listed below. |
 | The budgets? | All held. The five pages' largest paints are 0.8 to 2.3 s on the slow phone, within 2.5 s. Their shifts are 0.00 to 0.08, within 0.1. The bytes are held by `studio/ux-pictures.test.js`. |
 | Less motion? | With the system's less motion, nothing travelled on the way to any of the 166 screens, and nothing animated at rest. |
 | The sheets? | The twelve contact sheets, and the twelve under less motion, are on one page for the owner. |
@@ -41,11 +41,11 @@ walk.
 | Controls that overlap at 320 and 390 px | 1 | 0 | 34 screens, of three kinds | no |
 | Pictures on a new player's home | 0 | what its brief asks | 6 `<img>`: the featured space's ground and creature, and the four lessons' paintings | yes |
 
-The overlaps, read on the match's and the windows' screens at both widths (the lobby's and Friends' were not read
-one by one):
+The overlaps, read on the match's and the windows' screens at both widths (the lobby's and Friends' screens were
+counted, not read one by one):
 
 - **A list that scrolls under its window's sticky foot or head.** A node of the Mutation Tree under Choose, a
-  mutation under the planning sheet's Close, History's rows under Load earlier rounds and Latest, and the result's
+  mutation under its sheet's Close, History's rows under Load earlier rounds and Latest, and the result's
   creatures under Rematch, Replay and Report. The control underneath cannot be pressed until it is scrolled clear.
   The measure counts it as it counts any two boxes.
 - **Two in the frame.** At 390 px the menu's button covers 15 px of the match's Settings, on every screen of the
@@ -54,7 +54,8 @@ one by one):
 - **The lobby's.** The pop-ups offer stands over the round's bar, as [its brief](journeys/lobby.md) says. The
   waiting room at 390 px and an invited friend's row at 320 px were not read.
 
-The first kind is what a scrolling window does. The two in the frame are faults, left to a later stage of the frame.
+The first kind is what a scrolling window does. The two in the frame are faults. They are left open ("What is
+left").
 
 ## The budgets
 
@@ -79,12 +80,21 @@ are a machine's, not a phone's (ADR 0197). A phone's paint is part of the physic
 `node scripts/ux/journey.mjs --all --less-motion` walks every journey at both widths with the system's wish for
 less motion, the one every page reads (ADR 0197). On the way to each screen the walk keeps every CSS transition, CSS
 animation and `animate` call of a millisecond or more that moves a `transform`, a `translate`, a `scale` or a
-`rotate` (`scripts/ux/motion.mjs`). At rest it counts what still animates. On all 166 screens, nothing travelled,
-and nothing animated at rest.
+`rotate`, on an element or on its `::before` and `::after`, and every scroll asked to be smooth
+(`scripts/ux/motion.mjs`). It reads every person's pages, the friend's too, and what a page saw leaves it at once,
+so a navigation loses nothing. At rest it counts every animation still running, whatever it is. On all 166 screens,
+nothing travelled, and nothing animated at rest.
 
-With full motion the same walk counts 24 screens animating at rest: the screen's one ambience. That is the mist
-drifting behind the creature on the home, the Colossus breathing on the showcase, and the waiting room's three
-dots. All three stop under less motion.
+With full motion the same walk counts 24 screens with an animation running at rest. Read on the screens, each is
+one thing: the mist drifting behind the creature on the home, the Colossus breathing on the showcase, and the
+waiting room's three dots. All three stop under less motion.
+
+A watch of travel does not show that a window still fades under less motion. A page that relied on the classic
+sheet's net alone would pass it, its windows cut to nothing. `motion-kit.spec.js` holds the fade: under less
+motion, every window of seven pages still fades.
+
+The walk never presses the lobby's pager of finished games, which scrolls the list smoothly whatever the motion
+(`table/lobby.js`). The watch would see it; it is left open.
 
 `studio/browser/table.motion.js` holds it on every change, on the real engine, with two controls. A fixture page
 shows the watch keeps a transition, a keyframe animation and a call to `animate` that travel. It also shows the
@@ -98,9 +108,12 @@ pages; the walk reads the system's. The canvas is the battle's: its less motion 
 
 ## The sheets
 
-The contact sheets of this walk, each journey at both widths, with full motion and with less, are published on one
-page for the owner: [Pages' craft sheets](https://claude.ai/artifact/1Z1rSLFRHNon4qi6nxx8hV), private to the owner. The sheets themselves are not
-committed. `node scripts/ux/journey.mjs --all --out <folder>`, then the same with `--less-motion`, writes them again.
+The contact sheets of this walk, each journey at both widths, with full motion and with less, are on one page for
+the owner, private to them:
+
+[Pages' craft sheets](https://claude.ai/artifact/1Z1rSLFRHNon4qi6nxx8hV)
+
+They are not committed. `node scripts/ux/journey.mjs --all --out <folder>`, then the same with `--less-motion`, writes them again.
 
 ## The gates only the owner can close
 
@@ -137,9 +150,10 @@ No device and no person is in a session. These two stay open until the owner clo
 ## What is left
 
 - The two overlaps in the frame: the menu's button over the match's Settings at 390 px, and the Order button over a
-  creature at 320 px. The lobby's overlaps not read one by one.
+  creature at 320 px. The lobby's overlaps, counted but not read one by one.
+- The lobby's pager of finished games scrolls smoothly under less motion.
 - The door's three eyebrows at 10 px.
 - What UX13 left in `scripts/ux/access-known.json`: text at 200% and spaced, and forced colours on the creatures.
-- The sound-off clip at natural speed (UX11), and the book's word on how the windows feel at full speed (UX12).
-  The physical-phone gate is where both are read.
+- Two things only a person can judge: the sound-off clip at natural speed (UX11), and how the windows feel at full
+  speed (UX12). Both are read at the physical-phone gate.
 - UX15, a lesson before an account, is the plan's last stage and comes after this record.
