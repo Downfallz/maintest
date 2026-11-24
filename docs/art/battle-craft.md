@@ -310,8 +310,8 @@ Measured in this session on `main` at `49efe5d`, the bundle built with `npm --pr
   when the blow lands. It is not `Phaser.Cameras.Scene2D.Camera#pan`: the scroll moves the field by the share the
   zoom grew, so the caster stays where it stood on the screen. The view is then the fitted one scaled about the
   caster, so no edge of the field comes into it. One capstone in each family has it, at strength 0.5 from 200 ms to
-  the contact (Crushing Stomp 0.6): Crushing Stomp, Devour, Incinerate, Void Pulse and Death Wail (#950). Settled
-  by the owner, 2026-11-22: these five, as filmed (#1088). `staging-ladder.test.js` holds them.
+  the contact (Crushing Stomp 0.6): Crushing Stomp, Devour, Incinerate, Void Pulse and Death Wail (#950). The owner
+  settled it on 2026-11-22: these five, as filmed (#1088). `studio/staging-ladder.test.js` checks the five.
 
 ## Particles
 
