@@ -189,6 +189,12 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .push-offer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .push-offer-actions button { min-height: 44px; }
 .push-offer-actions button[hidden] { display: none; }
+/* While the card stands, the page's own filled action takes its outline form, so a screen shows one gold: the card's
+   Turn on (#1128, the owner's answer). It is still the page's action, in the same place, and comes back when the card goes. */
+body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *),
+body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *):hover:not(:disabled) {
+  background: transparent; border-color: var(--gold); color: var(--gold);
+}
 
 /* The icon set (icons.js, ADR 0198): a drawing in the identity's line, in the colour and at the size of the text
    it sits in. It is never alone in a control without a name. */

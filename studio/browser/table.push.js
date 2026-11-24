@@ -124,6 +124,12 @@ async function withLobbyHost(context, accounts, body) {
   }
 }
 
+// The filled actions of the page outside the card that are drawn filled (a gold, plain or graded): while the card
+// stands, the page's own take their outline form, with no fill, so a screen shows one gold (#1128, the owner's answer).
+const goldOutsideTheCard = page => page.evaluate(() => [...document.querySelectorAll(':is(button, a).primary')]
+  .filter(one => !one.closest('#push-offer') && one.checkVisibility())
+  .filter(one => { const look = getComputedStyle(one); return look.backgroundImage.includes('gradient') || look.backgroundColor !== 'rgba(0, 0, 0, 0)'; }).length);
+
 // The offer in the lobby (N4): a signed-in player whose game against a person waits on the other player is offered
 // pop-ups by the page's own card, never the browser's prompt first; Not now waits a week, Don't ask again ends it.
 test('the lobby offers pop-ups when a game against a person waits, and keeps the answer', async ({ page, context }) => {
@@ -141,8 +147,11 @@ test('the lobby offers pop-ups when a game against a person waits, and keeps the
     await expect(page.locator('#push-offer-on')).toHaveText('Turn on');
     // A region, not a window: the focus stays where the player is.
     expect(await page.evaluate(() => document.getElementById('push-offer').contains(document.activeElement))).toBe(false);
+    // Polled: the button eases its colours over the kit's fast beat.
+    await expect.poll(() => goldOutsideTheCard(page)).toBe(0);
     await page.locator('#push-offer-later').click();
     await expect(offer).toBeHidden();
+    await expect.poll(() => goldOutsideTheCard(page)).toBeGreaterThan(0);
     expect(JSON.parse(await page.evaluate(() => localStorage.getItem('downfall.push-offer'))).asked).toBe(1);
     await page.reload();
     await expect(page.locator('#my-tables')).not.toContainText('Finding');
