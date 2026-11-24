@@ -463,7 +463,6 @@ test('the end of the first tutorial offers pop-ups through the account\'s switch
   // Signed in, the header's own stream is the last one opened: the seat is read again by opening the page again.
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#push-offer')).toBeVisible();
-  // The end card's Next takes its outline form while the card stands, so the screen shows one gold (#1128).
   // The end card's filled action takes its outline form while the card stands, so the screen shows one gold (#1128):
   // the kit's graded gold is gone, and only the edge along its cut corners is drawn.
   await expect(page.locator('#coach-again')).toBeVisible();

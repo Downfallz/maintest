@@ -4,6 +4,7 @@ The filled gold action (`.primary`) and the base slate button.
 
 - One `.primary` per screen: the thing the player came to do. It is gold with grain, label in `accent-ink`, two corners cut by `cut-action` (10px). Hover fills it with `accent-strong`.
 - Everything else is the base button: `raised` fill, `line` border, `radius-soft`, at least 44px tall. Hover turns the border `gold`; disabled drops to 50% opacity.
+- While the pop-ups offer stands, the page's own `.primary` takes its outline form, so the offer's Turn on is the screen's one gold (#1128): no fill, a `gold` edge drawn along the cut corners, `gold` label, a 14% `gold` wash on hover and a `gold` ring inside. A window opened over the offer keeps its own filled `.primary`.
 - Focus: base buttons show a 3px `gold` ring offset 4px. The cut `.primary` keeps its ring inside, 2px `accent-ink` at offset -5px, because the clip would hide an outer ring.
 - `.primary` works on a `<button>` or an `<a>`. Never ivory text on gold. The consumer provides the label: a verb that says what happens.
 - A press answers on the button itself by the motion kit: a lighter shade, and under full motion it sinks to 98% in `motion-fast`. Nothing to add in a page sheet.

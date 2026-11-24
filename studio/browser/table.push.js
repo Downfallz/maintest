@@ -130,8 +130,12 @@ async function withLobbyHost(context, accounts, body) {
 const goldOutsideTheCard = page => page.evaluate(() => [...document.querySelectorAll(':is(button, a).primary')]
   .filter(one => !one.closest('#push-offer, dialog') && one.checkVisibility())
   .filter(one => { const look = getComputedStyle(one); return /linear-gradient\(rgb/.test(look.backgroundImage) || look.backgroundColor !== 'rgba(0, 0, 0, 0)'; }).length);
-// The ring a keyboard gives the page's action: gold on the outline form, as the ink one would vanish on soot.
-const ringOf = (page, selector) => page.evaluate(selector => { const one = document.querySelector(selector); one.focus(); return getComputedStyle(one).outlineColor; }, selector);
+// The ring a keyboard gives the page's action: gold on the outline form, as the ink one would vanish on soot. Its style
+// says the kit's ring is drawn at all: without it the colour would read the words' gold, the outline's fallback.
+const ringOf = (page, selector) => page.evaluate(selector => {
+  const one = document.querySelector(selector); one.focus(); const look = getComputedStyle(one);
+  return { color: look.outlineColor, style: look.outlineStyle };
+}, selector);
 
 // The offer in the lobby (N4): a signed-in player whose game against a person waits on the other player is offered
 // pop-ups by the page's own card, never the browser's prompt first; Not now waits a week, Don't ask again ends it.
@@ -153,9 +157,9 @@ test('the lobby offers pop-ups when a game against a person waits, and keeps the
     // Polled: the button eases its colours over the kit's fast beat.
     await expect.poll(() => goldOutsideTheCard(page)).toBe(0);
     const gold = await page.locator('#push-offer').evaluate(card => getComputedStyle(card.querySelector('#push-offer-on')).backgroundColor);
-    expect(await ringOf(page, '#featured-action')).toBe(gold);
+    expect(await ringOf(page, '#featured-action')).toEqual({ color: gold, style: 'solid' });
     await page.evaluate(() => document.activeElement?.blur());
-    // A window opened over the card keeps its own filled action: the card is behind its backdrop.
+    // A window opened over the card keeps its own filled action: it is that window's one gold.
     await page.evaluate(() => document.getElementById('join-dialog').showModal());
     await expect.poll(() => page.locator('#join-dialog button.primary').evaluate(join => getComputedStyle(join).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
     await page.evaluate(() => document.getElementById('join-dialog').close());

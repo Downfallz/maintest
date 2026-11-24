@@ -33,7 +33,7 @@ dialog .eyebrow, .lobby-hero .eyebrow, .featured .eyebrow, .scene-head .eyebrow,
 .home-dialog > .dialog-heading::after { left: 24px; right: 24px; bottom: -8px; }
 
 /* The one filled action of a screen: gold, with two corners cut the way the rune is. The focus ring sits inside,
-   because a cut shape clips whatever is drawn outside it. */
+   because a cut shape clips whatever is drawn outside it. The outline form below draws its edge along this 10px cut. */
 :is(button, a).primary {
   border: 1px solid transparent; border-radius: 0; color: var(--accent-ink);
   background: var(--tex-grain), linear-gradient(var(--gold), color-mix(in srgb, var(--gold) 86%, var(--accent-wash)));
@@ -191,8 +191,8 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 .push-offer-actions button[hidden] { display: none; }
 /* While the card stands, the page's own filled action takes its outline form, so a screen shows one gold: the card's
    Turn on (#1128, the owner's answer). It is still the page's action, in the same place, and comes back when the card
-   goes. A window opened over the card keeps its own filled action: the card is behind its backdrop. The cut clips the
-   border at the two cut corners, so the edge is drawn along them; the focus ring and the hover are gold on soot. */
+   goes. A window opened over the card keeps its own filled action, that window's one gold. The cut clips the border at
+   the two cut corners, so the edge is drawn along them, as wide as the cut above; the ring and the hover are gold on soot. */
 body:has(> .push-offer:not([hidden])) :is(button, a).primary:not(.push-offer *, dialog *) {
   --cut-line: linear-gradient(to top right, transparent calc(50% - 1px), var(--gold) calc(50% - 1px) 50%, transparent 50%);
   background: var(--cut-line) right top / 10px 10px no-repeat border-box, var(--cut-line) left bottom / 10px 10px no-repeat border-box, transparent;

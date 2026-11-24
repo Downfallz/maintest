@@ -887,7 +887,7 @@ not ask again. At a tutorial's end it asks through the account's switch, since a
   filled: the steps are the answer. Install the app, Not now and Don't ask again are quiet. While the card stands,
   the page's own filled action takes its outline form (no fill, gold edge, gold words), so a screen shows one gold
   (#1128, the owner's answer; `table/identity.css`, `table.push.js`). It comes back filled when the card goes. A
-  window opened over the card keeps its own filled action: the card is behind its backdrop.
+  window opened over the card keeps its own filled action, that window's one gold.
 
 ### Words
 
