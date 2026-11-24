@@ -549,8 +549,8 @@ test('the pop-ups offer reads what it covers again when the focus moves and when
     document.querySelectorAll('#actor-layer .creature')[at].focus(); card.hidden = false; window.dispatchEvent(new Event('resize'));
   }, index);
   expect(await page.evaluate(at => { const one = document.querySelectorAll('#actor-layer .creature')[at]; return { focused: document.activeElement === one, inert: one.inert }; }, index)).toEqual({ focused: true, inert: false });
-  await page.locator('#push-offer-on').focus();
-  await expect.poll(() => page.evaluate(at => document.querySelectorAll('#actor-layer .creature')[at].inert, index)).toBe(true);
+  // Read in the same turn as the focus moves: no later redraw of the page may be what makes it inert.
+  expect(await page.evaluate(at => { document.getElementById('push-offer-on').focus(); return document.querySelectorAll('#actor-layer .creature')[at].inert; }, index)).toBe(true);
   await page.locator('#push-offer-on').click();
   await expect(page.locator('#push-offer-said')).not.toBeEmpty();
   await expect.poll(async () => (await covered()).filter(one => one.covered !== one.inert)).toEqual([]);

@@ -175,6 +175,8 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
     // it changes size (Turn on answered: the said line and Close take the answers' room).
     for (const settled of ['animationend', 'animationcancel', 'transitionend']) el('push-offer').addEventListener?.(settled, cover);
     if (win?.ResizeObserver) new win.ResizeObserver(() => cover()).observe(el('push-offer'));
+    // A control kept for its focus is made inert as soon as the focus goes elsewhere, so it cannot be reached again.
+    doc.addEventListener?.('focusin', () => { if (made.size || !el('push-offer').hidden) cover(); });
   }
   const platform = offerPlatform(nav, win);
   // The browser's own install prompt, kept for the card's Install on Android: raised once, used once.
