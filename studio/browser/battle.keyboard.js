@@ -134,12 +134,12 @@ test('a whole round is played by keyboard and each action is told in one live re
     };
     try {
       await expect.poll(untold, { timeout: 20000 }).toEqual([]);
-    } catch (failure) {
+    } catch (error_) {
       // What was said last and what was not told, so a red run on a runner names the action without its trace.
       const said = (await page.evaluate(() => window.liveSaid)).filter(one => one.region === 'playback-announcement').slice(-6);
       const missing = new Set(await untold());
       const events = actions.filter(([sequence]) => missing.has(sequence)).map(([sequence, entry]) => ({ sequence, event: entry.event }));
-      throw new Error(`every action of round 1 was told: untold ${JSON.stringify(events)}; last told ${JSON.stringify(said)}`, { cause: failure });
+      throw new Error(`every action of round 1 was told: untold ${JSON.stringify(events)}; last told ${JSON.stringify(said)}`, { cause: error_ });
     }
     const said = await page.evaluate(() => window.liveSaid);
     const told = said.filter(one => one.region === 'playback-announcement');
