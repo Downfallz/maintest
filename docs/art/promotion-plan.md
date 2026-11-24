@@ -1,6 +1,6 @@
 # Plan: promotion, from the real game to a published post
 
-Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 to P5 are built; P6 is next.
+Status: accepted, 2026-11-23 (the owner settled the questions at the end). P1 to P6 are built; P7 is next.
 
 ## What the owner asked for
 
@@ -258,6 +258,26 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
 6. **P6, `/promo`.** The skill: a request in words ("a 20-second vertical clip of the Brute's Pummel") becomes the
    shots, the cut, the brief, the post's draft and the contact sheet, as a pull request. A `promo-producer`
    agent writes the words of a post, held to the brand's voice. `studio/prompts.test.js` holds what they name.
+
+   *Built (2026-11-24)*: `.claude/skills/promo/SKILL.md` and `.claude/agents/promo-producer.md`. The skill reads
+   the request into posts (what each shows, its ratio, its length, its channels, its day), reuses a shot or writes
+   one, on a scenario it cuts from two bots when none holds the moment (`scenario-generate`, then
+   `scenario-check --trace` to see the field). It films each shot, looks at the sheets, lays out the cut and, when
+   a model is to make something, the brief and its pack. The `promo-producer` writes the words. The skill then
+   checks the batch with the scripts' own refusals and the gate, and publishes a contact sheet page in French. It
+   ships the batch as one pull request. After the merge it gives the owner a numbered step a shot to film it into
+   the `promo` container from `main`, since only `main` may write there (ADR 0206). The producer writes in the
+   showcase's voice (`showcase/copy.mjs`: concrete, second person, "tu" in French, no hype), in the words a player
+   reads, and counts against `CHANNELS` and `CARD_LIMITS`. It writes only the words of the files under
+   `promo/cuts/`, `promo/briefs/` and `promo/calendar/` it is given.
+
+   Tests: `studio/prompts.test.js` (every path, anchor and label the two name; the skill films, cuts, briefs and
+   checks with the five promotion scripts, hands the words to the producer, ships, and publishes nothing; the
+   producer names the limits where the scripts export them, and only channels the calendar declares).
+
+   Left to later stages: no batch is made in this pull request. The first, run by hand, is the first of the two P8
+   waits for. A post that shows a generated file waits for its intake, so a brief and its post come in two
+   batches. The pull request carries no checklist yet (P7).
 7. **P7, the checklist.** The pull request of a batch carries, per post, the file's link, the words, the channel
    and the hour, in the order the owner posts them on a phone; the owner answers with each post's link and a
    session marks it `published`. No secret, no platform API. Tests: a channel's ratio and caption limit.

@@ -8,6 +8,13 @@ post uses go to the `promo` container of the table's storage account, recorded h
 ([ADR 0206](../docs/adr/0206-write-the-promotion-media-to-a-private-container-as-their-own-identity.md),
 `media.json`).
 
+## A batch
+
+`/promo` (`.claude/skills/promo/SKILL.md`) turns a request in words ("a 20-second vertical clip of the Brute's
+Pummel") into a batch: the shots it needs, filmed; the cut; a brief when a model is to make something; each post's
+draft in the calendar; and a contact sheet page for the owner. The `promo-producer` agent writes the words, in the
+showcase's voice and within each channel's limit. The batch is one pull request, and merging it approves its posts.
+
 ## A shot
 
 One file per shot under `shots/`, named after the shot: `shots/brute-mirror-round-3.json` is the shot
