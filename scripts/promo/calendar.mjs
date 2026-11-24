@@ -22,12 +22,17 @@ const units = text => text.length;
 const ADDRESSES = [/(?<![@\w.-])https?:\/\/\S+/gi, /(?<![@\w.-])[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?![@.\w-])\S*/gi];
 const LIGHT = [[0x0000, 0x10ff], [0x2000, 0x200d], [0x2010, 0x201f], [0x2032, 0x2037]];
 // X leaves the punctuation that ends a sentence out of an address: it counts as characters.
-const TRAILING = /[.,;:!?'"»…)\]]+$/u;
+const TRAILING = new Set(`.,;:!?'"»…)]`);
+const trailing = address => {
+  let end = address.length;
+  while (end > 0 && TRAILING.has(address[end - 1])) end -= 1;
+  return address.slice(end);
+};
 function weighted(text) {
   let addresses = 0;
   const rest = ADDRESSES.reduce((left, pattern) => left.replace(pattern, address => {
     addresses += 1;
-    return TRAILING.exec(address)?.[0] ?? '';
+    return trailing(address);
   }), text);
   let count = addresses * 23;
   for (const character of rest) {
