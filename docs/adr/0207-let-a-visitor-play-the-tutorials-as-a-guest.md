@@ -35,18 +35,18 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
   removes. The registry refuses a guest a linked way in as well (`LinkAsync`).
 - **It lives as long as the browser keeps its cookie.** A session lives thirty days from its last renewal, which
   follows its use. The hourly job (`table-tend`, `IdleGuests`) removes a guest last used thirty-one days ago: by
-  then no browser holds a session of it. It reads the last use from the account's activity (ADR 0174), within the
-  hour that time lags, and its making when no activity was kept. With the account go its binding, its name, its
+  then no browser holds a session of it. It takes the last use from the account's activity (ADR 0174), which lags by
+  up to an hour. When no activity was kept, it takes the time the guest was made. With the account go its binding, its name, its
   game settings and tutorials, and its activity. A guest holds no seat, friend, device, notice or feedback, so
-  nothing else is kept for it. The job writes the account from its own process (ADR 0162). That is safe here because
+  nothing else is kept for it. The job runs in its own process (ADR 0162). Removing a guest is safe there because
   no session of a guest that old exists for the API process to act on.
 - **Signing in with a provider upgrades it.** A guest who signs in with an identity no account holds is asked a name
   as any new player is. Choosing it (`POST /api/account` with the ticket) upgrades the guest
-  (`AccountRegistry.UpgradeAsync`). The account keeps its id, so its tutorials, and its making time. The provider's
+  (`AccountRegistry.UpgradeAsync`). The account keeps its id and its making time, so its tutorials stay with it. The provider's
   identity replaces the guest's, the chosen name replaces the drawn one, and the generation is raised, so every other
   copy of the guest's cookie ends. The writes go as a registration's do, the new name first. A guest who signs in
-  with an identity an account already holds is signed in to that account, and the guest is removed at once: its
-  cookie is replaced, so nothing could reach it again. Its tutorials do not join that account.
+  with an identity an account already holds is signed in to that account. The guest is removed at once: its cookie
+  is replaced, so nothing can reach it. Its tutorials do not join that account.
 - **Making a guest is counted.** Ten guests an hour from one network address, an IPv6 address by its /64
   (`RequestAddress`), and three hundred an hour from every address together. Past either, the answer is
   `429 Account.TooManyGuests` with `Retry-After`. As the guests' feedback is counted (ADR 0189), the count is held
@@ -59,13 +59,13 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
   migrates, the upgrade is one account changing its identity and name.
 - Good: the list is closed by default. A route nobody thought of for guests is refused to them, not open.
 - Good: the host keeps no email and no provider identity for a guest; what it keeps goes after a month unused.
-- Bad: one more kind of account is written by anyone who asks. The counts bound it to three hundred an hour, about
+- Bad: anyone can now make an account of one more kind. The counts bound it to three hundred an hour, about
   seven thousand a day at worst, each a few small documents. The operator's list of players shows them, by their
   `Guest-` names.
 - Bad: a guest who signs in to an account they already have loses the guest's tutorial progress. Merging it is left
   out: the account's own progress is the one its player made.
 - Bad: an upgrade that stops after the account is written leaves the guest's binding, which reaches nothing, and
-  its drawn name held. One drawn name in nearly a million is lost.
+  its drawn name held. Each such failure loses one drawn name, one in nearly a million.
 - Neutral: no page changes here. UX15 builds the journey on these routes; `/api/account` and every sign-in answer
   say `guest` on the account so the page can tell. A guest's lobby page reads `403 Account.GuestNotAllowed` until
   UX15 decides what it shows.

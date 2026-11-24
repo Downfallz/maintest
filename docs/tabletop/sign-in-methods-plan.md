@@ -248,10 +248,10 @@ and 4. The recommended answer:
      name, and raises the generation. A sign-in to an account that exists signs in to it and removes the guest.
    - The count: `GuestMaking`, ten an hour per address (an IPv6 /64) and three hundred an hour in all, held in
      memory and hashed, `429 Account.TooManyGuests`. Closed registration makes none.
-   - The lifetime: `table-tend` (`IdleGuests`) removes a guest last used 31 days ago, the session's thirty days and
-     a day, with its binding, name, settings, tutorials and activity.
+   - The lifetime: `table-tend` (`IdleGuests`) removes a guest last used 31 days ago, the session's thirty days plus
+     one day, with its binding, name, settings, tutorials and activity.
    - Left: the journey (UX15), and what a guest's lobby page shows when its routes answer 403; feedback from a
-     lesson, which would need the hourly job to forget a guest's feedback; the panel's *Run now* pass does not
+     lesson (the hourly job would have to remove a guest's feedback); the panel's *Run now* pass does not
      remove guests; a guest who signs in to an account it already has loses the guest's tutorial progress.
 6. **P6, Microsoft.** `MicrosoftSignIn` (personal accounts, PKCE, no secret), as P3, with `microsoftClientId`
    and the owner's steps in `infra/README.md`.
