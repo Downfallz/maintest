@@ -65,3 +65,9 @@ test('an older offline.js that meets a kit without its plate leaves the room as 
   assert.throws(() => drawPlate({ ...doc, createElement: () => { throw new Error('a kit that changed'); } }, room));
   assert.deepEqual(room.children, [], 'nothing drawn: the page\'s load handler removes the empty room');
 });
+
+test('the offline page keeps a ring for the focus under forced colours, since it loads no sheet of the table (UX13)', () => {
+  const page = read('./offline.html');
+  assert.match(page, /@media \(forced-colors: active\) \{ :focus-visible \{ outline: 2px solid Highlight/);
+  assert.match(page, /button:focus-visible \{ outline: 3px solid/);
+});

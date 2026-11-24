@@ -2247,3 +2247,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 @media (max-height: 520px) {
   .battle-page #combat-help { font-size: .6875rem; }
 }
+
+/* More contrast (UX13): the words of a tempo's chip and of a spell's target in the ink, the tempo kept in the edge. */
+@media (prefers-contrast: more) {
+  .actor-chip[data-kind="tempo"], .spell-card-target, .target-cost > small { color: var(--ink); }
+}

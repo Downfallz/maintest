@@ -355,7 +355,7 @@ These come from decisions already taken. No pattern below is an exception to the
 - **Less motion and screen reader**: none to reduce.
 - **Here**: no control under 44 px on the battle screens walked. On the table's pages the menu's button is 34 px
   wide, the footer's links 12 px tall, the rulebook's contents 17. On the showcase, 27 of the field guide's 85
-  controls are under 24 px. UX6, UX9, UX11; UX13 turns axe's rule for it on.
+  controls are under 24 px. UX6, UX9, UX11; the tag `wcag22aa` turns axe's rule for it on (below).
 
 ### The centre of the screen
 
@@ -792,7 +792,8 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Cost**: room for the mark.
 - **Less motion and screen reader**: the word beside the colour is what a screen reader says.
 - **Here**: the teams are `--ally` and `--enemy`, health `--health` and `--health-low`. UX11 checks that each
-  carries a mark; UX13 checks forced colours and more contrast, which Playwright can emulate.
+  carries a mark. Since UX13, `studio/browser/table.access.js` emulates forced colours and more contrast on every
+  screen of the journeys (`scripts/ux/access.mjs`): a ring, an icon or a state lost, and words under 7:1.
 
 ### Readable text
 
@@ -807,8 +808,9 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Cost**: room, again: at 320 px a larger label means fewer words or a second line.
 - **Less motion and screen reader**: none to reduce.
 - **Here**: the frame goes down to 7 px; a caption of the showcase is 8 px. The plan proposes a floor of 11 px
-  for the frame, or what the owner approves on UX11's sheet: below Xbox's 18, and said so. UX13 checks 200% and
-  the text spacing.
+  for the frame, or what the owner approves on UX11's sheet: below Xbox's 18, and said so. Since UX13 every screen
+  is read again with the text spacing of 1.4.12 and with the text at 200%: a word cut, a page that scrolls sideways,
+  two controls on top of each other.
 
 ### A status told without moving the focus
 
@@ -824,8 +826,8 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Cost**: none.
 - **Less motion and screen reader**: this is the screen reader's form of every arrival in this book.
 - **Here**: `table/battle.html` already has regions: `#connection` and `#round-toast` as status, the coach's
-  lines and `#playback-announcement` as polite, seven errors as alerts. UX13 makes a whole turn told in one
-  region and tests it.
+  lines and `#playback-announcement` as polite, seven errors as alerts. Since UX13, `studio/browser/battle.keyboard.js` plays a whole
+  round and holds that each action it played was told in `#playback-announcement` and in no other region.
 
 ### A window that holds the focus
 
@@ -858,8 +860,8 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Cost**: a second rendering of the board, in elements. It is the largest cost of this group.
 - **Less motion and screen reader**: this is the screen reader's form of the board.
 - **Here**: axe finds nothing inside a canvas. What of the battle is reachable without the canvas is the battle
-  plans' matter (`docs/tabletop/battle-ux-parity-plan.md`); UX13 tests a whole turn by keyboard and lists what
-  stays.
+  plans' matter (`docs/tabletop/battle-ux-parity-plan.md`); `studio/browser/battle.keyboard.js` plays a whole round on the real engine by
+  Tab and Enter alone (UX13); what stays for a person is in the plan's UX13 note.
 
 ### No flash
 
@@ -873,8 +875,11 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
   dark page is one change, not a flash, if it does not repeat.
 - **Cost**: none.
 - **Less motion and screen reader**: unchanged: the limit holds for everyone.
-- **Here**: UX13 builds a flash guard on the brightest window. Inside the canvas, the battle craft's book has its
-  own entry.
+- **Here**: the flash guard (`scripts/ux/flash.mjs`, UX13) films every window a strip shows entering and holds it
+  to three flashes a second; the brightest is named in the test's report. Each cell of the screen is read against
+  its running extreme since its last change, not the frame before, so a ramp whose steps are each under 10% still
+  counts once it adds up; the screen flashes when a quarter of its cells do. Inside the canvas, the battle craft's
+  book has its own entry.
 
 ### What moves can be stopped
 
@@ -913,7 +918,7 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
   cannot be focused at 320 px. axe's `target-size` rule carries the tags `wcag22aa` and `wcag258`, among others, and
   is off by default: a scan turns it on by naming one of its tags in `runOnly`, which `scripts/ux/measures.mjs` does with
   `wcag22aa`. This was read in the axe-core 4.14.1 package the suite pins (`getRules()` and `ruleShouldRun`) on
-  2026-11-23. UX2 measures, UX13 gates.
+  2026-11-23. UX2 measures; since UX13, `studio/browser/table.access.js` holds every screen to no finding of axe.
 
 ### What stays for a person
 
@@ -923,7 +928,7 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Pages**: nothing a page does.
 - **Cost**: a person's hour, and the owner's devices.
 - **Less motion and screen reader**: this is where a screen reader is heard, not emulated.
-- **Here**: the gates of `docs/tabletop/battle-ux-acceptance.md` are all still open. UX13 lists what stays for
+- **Here**: the gates of `docs/tabletop/battle-ux-acceptance.md` are all still open. The plan's UX13 note lists what stays for
   the owner; UX14 records the two gates only the owner can close.
 
 ## What the platform offers a static page

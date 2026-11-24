@@ -20,6 +20,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { JOURNEYS } from './journeys.mjs';
+import { checkScreen } from './access.mjs';
 import { AXE_TAGS, TARGET, TARGET_MINIMUM, TEXT_FLOOR, axeInPage, measureInPage, measuresLines, watchShiftInPage } from './measures.mjs';
 import { PAINT_RUNS, judgePaints, paints } from './paint.mjs';
 import { measureContrast } from './contrast.mjs';
@@ -121,7 +122,7 @@ async function film(page, act, { frames = 12, interval = 40 } = {}) {
  * interaction. It throws when the walk misses a screen it
  * names or reaches one it does not. `scale` is the screen's density: 1 for a sheet, 2 for a picture a page shows.
  */
-export async function walkJourney(browser, journey, viewport, { showcase, axe = null, strip = null, frames, interval, scale = 1 } = {}) {
+export async function walkJourney(browser, journey, viewport, { showcase, axe = null, access = false, strip = null, frames, interval, scale = 1 } = {}) {
   const filmed = strip ? journey.strips?.[strip] : null;
   if (strip && !filmed) throw new Error(`The ${journey.id} journey has no strip named ${strip}: ${Object.keys(journey.strips ?? {}).join(', ') || 'none'}.`);
   const set = await raiseSet(showcase);
@@ -164,7 +165,9 @@ export async function walkJourney(browser, journey, viewport, { showcase, axe = 
           await on.evaluate(axe);
           measures.axe = await on.evaluate(axeInPage, AXE_TAGS);
         }
-        screens.push({ name, staged, measures, png: await picture(on, measures, viewport, asSeen) });
+        // UX13: the checks of accessibility, beside the measures and never in them, so a walk's line stays the same.
+        const checks = access && axe ? await checkScreen(on, AXE_TAGS) : undefined;
+        screens.push({ name, staged, measures, ...(checks ? { checks } : {}), png: await picture(on, measures, viewport, asSeen) });
       },
     };
     try { await journey.walk(walk); } catch (error) {

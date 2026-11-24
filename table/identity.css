@@ -440,3 +440,21 @@ dialog .dialog-heading.scene-head { justify-content: normal; align-items: normal
   :root:not([data-motion="less"]) .motion-strip[data-ambient="playing"] > img { animation: motion-strip var(--motion-strip) steps(var(--frames), jump-none) forwards; }
 }
 /* END MOTION KIT */
+
+/* Forced colours (UX13, ADR 0197): the system repaints text, borders and backgrounds and drops every box-shadow.
+   A ring drawn with a shadow alone, and a state carried by a background or a tint of gold, are then lost. The focus
+   keeps an outline in the system's own Highlight, and a control in a state is underlined in it, whatever the rule
+   that drew it. `!important` because the rings and states are drawn by many rules of more weight; it applies only
+   here, where the system has the last word anyway. */
+@media (forced-colors: active) {
+  :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px !important; }
+  :is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current]:not([aria-current="false"])) {
+    color: Highlight !important; text-decoration-line: underline !important; text-decoration-thickness: 2px !important; text-underline-offset: 4px !important;
+  }
+}
+
+/* More contrast (UX13, ADR 0197): when the system asks for it, words reach 7:1 (WCAG 1.4.6). The quiet shade
+   becomes the ink; a page's own shade that stays under 7:1 is raised in its sheet. */
+@media (prefers-contrast: more) {
+  :root { --muted: var(--ink); }
+}

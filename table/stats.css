@@ -24,3 +24,8 @@
 .leaned-portrait { width: 40px; height: 40px; object-fit: cover; border-radius: var(--radius-soft); flex: none; }
 .row-portrait { width: 24px; height: 24px; object-fit: cover; border-radius: var(--radius-soft); vertical-align: middle; margin-inline-end: 8px; }
 .leaned-spell strong { font: 650 20px/1.2 var(--font-text); }
+
+/* More contrast (UX13): the leaning's headings in the ink rather than the ember. */
+@media (prefers-contrast: more) {
+  .stats-leaned .leaned h3 { color: var(--ink); }
+}

@@ -1,0 +1,3 @@
+- A walk check that focuses by script and skips a control when `:focus-visible` does not match passes vacuously when the one Tab leaves the page; count what was checked (UX13 access.mjs).
+- A flash guard that thresholds the change frame to frame misses a flash whose ramp spans frames; compare against the running extreme (UX13 flash.mjs).
+- A known-findings list whose stale lines are only annotated is not a ratchet: a fixed finding stays and its return passes silently (UX13 access-known.json).
