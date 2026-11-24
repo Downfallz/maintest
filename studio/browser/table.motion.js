@@ -102,7 +102,10 @@ test('the watch keeps what travels, on a pseudo-element too, and leaves a fade a
     })));
     // What the watch kept reaches the walk when the page's events fire: waited for, never timed (studio/AGENTS.md).
     const seen = new Set();
-    await expect.poll(() => { for (const line of watch.take()) seen.add(line); return [...seen].sort(); }).toEqual([
+    await expect.poll(() => {
+      for (const line of watch.take()) seen.add(line);
+      return [...seen].sort((a, b) => a.localeCompare(b));
+    }).toEqual([
       '#after::after transition transform', '#before::before animation rise transform', '#far scrollIntoView smooth',
       '#rise animation rise transform', '#slide transition translate', '#spin animate rotate']);
     // Then the page goes: what it kept was already out of it, and a take forgets what it took.

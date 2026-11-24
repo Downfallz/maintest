@@ -42,27 +42,24 @@ export function cells(screen, axe) {
 export function parseBaseline(text) {
   const byTitle = new Map(JOURNEYS.map(journey => [journey.title, journey.id]));
   const tables = {};
-  let journey = null, width = null, header = null;
+  const at = { journey: null, width: null, header: null };
   for (const line of text.split('\n')) {
-    const heading = /^## (.+)$/.exec(line), at = /^At (\d+) by \d+:$/.exec(line);
-    if (heading) {
-      journey = byTitle.get(heading[1]) ?? null;
-      width = null;
-      header = null;
-    } else if (at && journey) {
-      width = Number(at[1]);
-      header = null;
-    } else if (!line.startsWith('|')) {
-      // A line of prose ends a table: the next one starts with its own header.
-      if (line.trim()) header = null;
-    } else if (journey && width) {
-      const row = line.slice(1, -1).split('|').map(cell => cell.trim());
-      if (!header) header = row;
-      else if (!row.every(cell => /^-+$/.test(cell))) keepRow(tables, journey, width, header, row);
-    }
+    const heading = /^## (.+)$/.exec(line), size = /^At (\d+) by \d+:$/.exec(line);
+    if (heading) Object.assign(at, { journey: byTitle.get(heading[1]) ?? null, width: null, header: null });
+    else if (size && at.journey) Object.assign(at, { width: Number(size[1]), header: null });
+    // A line of prose ends a table: the next one starts with its own header.
+    else if (!line.startsWith('|')) at.header = line.trim() ? null : at.header;
+    else if (at.journey && at.width) readRow(tables, at, line);
   }
   if (!Object.keys(tables).length) throw new Error('The baseline holds no table of a journey.');
   return tables;
+}
+
+/** A line of a table: its header first, then its rows, the line under the header left out. */
+function readRow(tables, at, line) {
+  const row = line.slice(1, -1).split('|').map(cell => cell.trim());
+  if (!at.header) at.header = row;
+  else if (!row.every(cell => /^-+$/.test(cell))) keepRow(tables, at.journey, at.width, at.header, row);
 }
 
 /** One row of the baseline, kept by its journey, its width and its screen's name, `(staged)` left out. */
