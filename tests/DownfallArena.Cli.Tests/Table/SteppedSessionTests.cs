@@ -492,25 +492,12 @@ public sealed class SteppedSessionTests : IDisposable
     /// <summary>Waits until the bot's answers to what both seats are asked at once are in the journal.</summary>
     private async Task BotHeld(PlayerOptionsKind kind)
     {
-        for (var attempt = 0; attempt < 500; attempt++)
-        {
-            if ((await Decisions()).Any(decision => decision.Slot == PlayerSlot.Player2 && decision.Decision.Kind == kind))
-            {
-                return;
-            }
-
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"The bot never answered its {kind}.");
+        await Waits.UntilAsync(async () => (await Decisions()).Any(decision => decision.Slot == PlayerSlot.Player2 && decision.Decision.Kind == kind), $"the bot answered its {kind}", TestContext.Current.CancellationToken);
     }
 
     private static async Task<Asking> Waiting(SteppedPerson person, PlayerOptionsKind kind)
     {
-        for (var attempt = 0; attempt < 500 && person.Waiting?.Kind != kind; attempt++)
-        {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => person.Waiting?.Kind == kind, $"the seat was asked for its {kind}", TestContext.Current.CancellationToken);
 
         var waiting = person.Waiting.ShouldNotBeNull();
         waiting.Kind.ShouldBe(kind);
