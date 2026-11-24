@@ -1,1 +1,4 @@
 - A pinning test named for a property ("one Stage III spell in each family") that asserts only a fixed list of names: ask it to assert the property its name claims, or rename it (#1088, a9926b3).
+- A state rule that strips a control's fill must carry its `:focus-visible` too: the kit's ring was drawn in the ink colour on gold, invisible once the fill went (#1128, e4fe4ee).
+- A page-wide `body:has(...)` restyle reaches every modal the page opens and every page that mounts the module (the battle view too): read it against `dialog *` and each mounter (#1128, e4fe4ee).
+- A spec that reads a focus ring's `outlineColor` on a control whose `color` is that same colour proves nothing: `outline-color` resolves to `currentcolor` when no `:focus-visible` rule matched. Also assert `outlineStyle` (or focus by keyboard) (#1128, 54af6e3).

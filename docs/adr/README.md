@@ -229,5 +229,6 @@ UPDATE_INDEXES=1 dotnet test --project tests/DownfallArena.Architecture.Tests
 | [0204](0204-let-one-account-hold-several-ways-to-sign-in.md) | Let one account hold several ways to sign in | Accepted. Amends [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) (an account is keyed by one or more identities, not by Google's `sub` alone). |
 | [0205](0205-show-the-game-filmed-in-promotion-and-label-what-a-model-makes.md) | Show the game filmed in promotion, and label what a model makes | Accepted |
 | [0206](0206-write-the-promotion-media-to-a-private-container-as-their-own-identity.md) | Write the promotion's media to a private container, as an identity of their own | Accepted |
+| [0207](0207-let-a-visitor-play-the-tutorials-as-a-guest.md) | Let a visitor play the tutorials as a guest | Accepted. Amends [0122](0122-a-player-signs-in-with-google-and-owns-their-seats.md) and [0204](0204-let-one-account-hold-several-ways-to-sign-in.md) (an account can be a guest, which no provider vouches for), and question 5 of [accounts-plan.md](../tabletop/accounts-plan.md) (playing a tutorial needs no sign-in). |
 
 <!-- index:end -->

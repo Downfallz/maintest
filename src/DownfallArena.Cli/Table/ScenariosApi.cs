@@ -46,6 +46,9 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
     /// <summary>The tutorials, for any signed-in account.</summary>
     public const string TutorialsRoute = "/api/tutorials";
 
+    /// <summary>Whether the scenario id is one of the tutorials this host ships: what a guest may open (ADR 0207).</summary>
+    public bool Teaches(string id) => store.Teaches(id);
+
     public static bool Names(string path) =>
         path == Prefix || path == TutorialsRoute || path.StartsWith(Prefix + "/", StringComparison.Ordinal) || path.StartsWith(TutorialsRoute + "/", StringComparison.Ordinal);
 

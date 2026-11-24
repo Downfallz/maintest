@@ -50,7 +50,11 @@ run for this brief: the paints are the baseline's (home-new: largest paint 1.9 s
 home's shift 0.21 on the slow phone once the footer waits with the panel). On the fast walk every screen's shift is
 0.00. At 320 by 568 the walk could not press the match's Settings after `home-waiting`: that is the match's, UX11's.
 `--paint` held to the budget (#962) read a new player's home on 2026-11-23 at 2.6 s, its shift 0.01: over the 2.5 s budget,
-the one page that fails the run on that machine.
+the one page that fails the run on that machine. The last paint was the featured lesson's goal (`#featured-detail`).
+It stayed unseen until `/api/tutorials` answered, behind four levels of imports and a dozen reads. Since #1207 the
+page preloads every module `lobby.js` reaches and a signed-in account's lessons are read first. On one cloud
+session's machine, five loads each, the home went from 2,544–2,596 ms to 2,164–2,180 ms, and the sign-in panel
+from 2,416–2,444 ms to 2,184–2,212 ms.
 The pop-ups offer, briefed last, is filmed since #1126: the walk's host has push keys of its own
 (`scripts/ux/set.mjs`), and the walker's browser stands in for one never asked, as `studio/browser/table.push.js`
 does, from `home-waiting` on (`home-push-offer`) and through the lessons (`lesson-1-push-offer`).
@@ -884,7 +888,10 @@ yields when the moment passes, the player's own turn come: it goes, unanswered, 
 not ask again. At a tutorial's end it asks through the account's switch, since a practice seat answers no push route.
 
 - **Filled action**: Turn on. On an iPhone outside the home screen there is no Turn on, and the card has none
-  filled: the steps are the answer. Install the app, Not now and Don't ask again are quiet.
+  filled: the steps are the answer. Install the app, Not now and Don't ask again are quiet. While the card stands,
+  the page's own filled action takes its outline form (no fill, gold edge, gold words), so a screen shows one gold
+  (#1128, the owner's answer; `table/identity.css`, `table.push.js`). It comes back filled when the card goes. A
+  window opened over the card keeps its own filled action, that window's one gold.
 
 ### Words
 
@@ -989,13 +996,14 @@ do: a card fading out over the featured action would hold it longer. Nothing mov
 - At 320 by 568 the card, two rows of answers on Android, covers the foot of the lobby's featured space, its
   actions with it, until it is answered or the moment passes. The first film (#1126, `home-push-offer`) shows it
   covers them at 390 by 844 too: the answers fit one row, and the card still hides the title's second line and both
-  actions. Not built, and the owner's to choose: room held at the
-  page's foot while the card stands; a moment heard while a window is open waiting for it to close; or the lobby
-  waiting until no game is the player's to play, which amends
-  question 4 of [the notifications plan](../../tabletop/notifications-plan.md#questions-the-owner-settled-2026-11-22).
+  actions. Settled by the owner (#1128, 2026-11-24): the card still covers them, and the page's own filled action
+  takes its outline form while the card stands, so only Turn on is gold. The owner did not choose the other three:
+  room held at the page's foot, a moment waiting for a window to close, or the lobby waiting until no game is the
+  player's to play.
 - In the battle view the card stands at the top, over the round's bar, so lesson 1's end card in the dock stays
   free: the round's bar and the header's tools are under it until it is answered (6 overlaps at 320 in the first
-  film; Leave the tutorial stays on the end card).
+  film; Leave the tutorial stays on the end card). While the card stands, the end card's filled Play again takes its
+  outline form too, so the screen's one gold is Turn on (#1128; `battle-services.spec.js`).
 - "Done, briefly, then the card goes": briefed as Done and a quiet Close, with no clock. A card that left by
   itself would be the page's one timer that moves something; if the owner wants it, the hold is a value the kit
   lacks, asked of the kit (`*Kit*:`).

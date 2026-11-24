@@ -562,8 +562,8 @@ async function load(doc, win = globalThis) {
 
 if (typeof document !== 'undefined') {
   // The claws on the arch: the rules hold the game up (docs/art/journeys/pages.md). Loaded apart, and its failure let
-  // go, so the book draws whatever the worker kept. Offline the worker gives the kit and this painting's 354 and 708 px
-  // files (#1060): a screen that asks for a wider one, a phone of density 3 among them, has a band of soot and words.
+  // go, so the book draws whatever the worker kept. Offline the worker gives the kit and this painting's 354, 708 and
+  // 1062 px files (#1060, #1149): a screen that asks for a wider one has a band of soot and words.
   import('./picture.js').then(({ wearPageHead }) => wearPageHead(document, 'latch-under-the-arch', { page: 'table/rules', focus: '50% 55%' })).catch(() => {});
   await load(document);
 }

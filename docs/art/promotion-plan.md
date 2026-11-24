@@ -149,8 +149,9 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    operators do. `.github/workflows/promo-film.yml`, by hand, films a shot on a runner in a job with no token, then
    writes the film and its sheet under their SHA-256 from a job that runs none of the repository's code; its summary
    gives each file's line of `promo/media.json` (`scripts/promo/media.mjs`). The owner's steps are in
-   [promo-identity.md](../../infra/runbooks/promo-identity.md). The workflow is unproven: its environment admits
-   only `main`, no upload has run, and the Bicep was not compiled here (no `az` in a session): #1190.
+   [promo-identity.md](../../infra/runbooks/promo-identity.md). Proven on `main` on 2026-11-24 (#1190): the
+   deployment made the container, and the first run filmed `brute-pummel-round-3` at 9:16 and wrote its film and
+   sheet, the first lines of `promo/media.json`, once the film's job installed `ffmpeg` (#1220).
 
    Tests: `studio/promo-shoot.test.js` (the film's refusals, the seat's answer to each question, the frames' ends,
    the sheet's frames, the margins, and an MP4 of 90 frames at the length, size and count asked, the same bytes

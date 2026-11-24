@@ -25,9 +25,12 @@ export const BATTLE_MODULE = 'table/battle-page-art.js', BATTLE_PAGE = 'table/ba
 const ROLES = new Set(['largest', 'first', 'lazy', 'wide']);
 const ASKED = 'asked of the owner';
 
-/** The widths a picture is sent at: each width it is drawn at, once and twice, never past its painting. */
-export function widthsOf(drawn, sourceWidth) {
-  const all = [...new Set(drawn.flatMap(width => [width, width * 2]).map(width => Math.min(Math.round(width), sourceWidth)))].sort((a, b) => a - b);
+/**
+ * The widths a picture is sent at: each width it is drawn at, once and twice, never past its painting, and each width
+ * `dense` names three times as wide too, for a phone of density 3 (#1149).
+ */
+export function widthsOf(drawn, sourceWidth, dense = []) {
+  const all = [...new Set([...drawn.flatMap(width => [width, width * 2]), ...dense.map(width => width * 3)].map(width => Math.min(Math.round(width), sourceWidth)))].sort((a, b) => a - b);
   // Two files a tenth apart are one file sent twice: the larger serves both.
   return all.filter((width, index) => index === all.length - 1 || all[index + 1] > width * 1.1);
 }
@@ -60,7 +63,9 @@ export const encodingOf = (picture, encoding) => (picture.quality === undefined 
 
 /** What a picture was derived from: its declaration, its paintings' bytes and the encoding. A change to any is a new origin. */
 export function origin(picture, paintings, encoding) {
-  const hash = createHash('sha256').update(JSON.stringify([picture.name, picture.source ?? picture.frames, picture.drawn, encoding]));
+  // `dense` joins the origin only where it is declared, so a picture without one keeps its files.
+  const declared = [picture.name, picture.source ?? picture.frames, picture.drawn, encoding, ...(picture.dense ? [picture.dense] : [])];
+  const hash = createHash('sha256').update(JSON.stringify(declared));
   for (const painting of paintings) hash.update(sha(painting));
   return hash.digest('hex').slice(0, 16);
 }
@@ -102,11 +107,23 @@ export function budgetOf(art, page, density) {
 }
 
 const paintingsOf = picture => picture.frames ?? [picture.source];
+/** The widths a phone of density 3 draws a picture at, on every page `dense` names, each once. */
+export const denseWidths = picture => [...new Set(Object.values(picture.dense ?? {}).flat())];
+
+/**
+ * A `dense` width whose file three times as wide is not sent: folded into a larger one within a tenth, which the
+ * worker, keeping files up to three times the width, would not keep either (#1149).
+ */
+function foldedDense(picture, sourceWidth, widths) {
+  return denseWidths(picture).filter(width => !widths.includes(Math.min(Math.round(width * 3), sourceWidth)))
+    .map(width => `${picture.name}: a phone of density 3 draws it at ${width} px, and its ${width * 3} px file is folded into a larger one: the worker would keep none for it`);
+}
 const phoneOf = picture => (picture.phone ? { phone: picture.phone } : {});
 const groupOf = picture => (picture.group ? { group: picture.group } : {});
+const denseOf = picture => (picture.dense ? { dense: picture.dense } : {});
 // Where CSS cuts the painting is carried to the module and is no part of its files: changing it derives nothing.
 const focusOf = picture => (picture.focus === undefined ? {} : { focus: picture.focus });
-const carried = picture => ({ ...phoneOf(picture), ...groupOf(picture), ...focusOf(picture) });
+const carried = picture => ({ ...phoneOf(picture), ...denseOf(picture), ...groupOf(picture), ...focusOf(picture) });
 
 /** A declaration's `focus`: two percentages a box that cuts the painting centres on; a strip is never cut. */
 function focusProblems(picture, name) {
@@ -125,7 +142,7 @@ function declared(picture) {
   if ('quality' in picture && !(Number.isInteger(picture.quality) && picture.quality >= 1 && picture.quality <= 100))
     problems.push(`${name}: its quality is a whole number from 1 to 100, or absent to take the kit's`);
   for (const [page, role] of Object.entries(picture.pages ?? {})) if (!ROLES.has(role)) problems.push(`${name}: on ${page} it is largest, first, lazy or wide, not ${role}`);
-  return [...problems, ...phoneProblems(picture, name), ...groupProblems(picture, name), ...focusProblems(picture, name)];
+  return [...problems, ...phoneProblems(picture, name), ...denseProblems(picture, name), ...groupProblems(picture, name), ...focusProblems(picture, name)];
 }
 
 /** A declaration's `group`: for each page that draws one picture of a set at a time, the set's name. */
@@ -158,6 +175,18 @@ function phoneProblems(picture, name) {
   });
 }
 
+/** A declaration's `dense`: for each page a phone of density 3 draws the picture on, its widths, each listed in `drawn`. */
+function denseProblems(picture, name) {
+  if (!('dense' in picture)) return [];
+  const dense = picture.dense;
+  if (!dense || typeof dense !== 'object' || Array.isArray(dense)) return [`${name}: dense gives each page the widths a phone of density 3 draws it at`];
+  return Object.entries(dense).flatMap(([page, widths]) => {
+    if (!picture.pages?.[page]) return [`${name}: dense names ${page}, a page that does not draw it`];
+    if (!Array.isArray(widths) || !widths.length) return [`${name}: on ${page} a phone of density 3 draws it at one width or more`];
+    return widths.filter(width => !picture.drawn?.includes(width)).map(width => `${name}: on ${page} a phone of density 3 draws it at ${width} px, a width its drawn does not list`);
+  });
+}
+
 /** One derived file held against what the module says of it. */
 function fileProblems(name, size, files, read) {
   if (!files.includes(size.file)) return [`${name}: ${size.file} is missing from ${FOLDER}`];
@@ -176,9 +205,12 @@ function pictureProblems(picture, entry, { authored, read, files }) {
   try { paintings = paintingsOf(picture).map(read); } catch { return [`${picture.name}: a painting it names is not in the repository`]; }
   const problems = [], frames = paintings.length, same = (one, other) => JSON.stringify(one) === JSON.stringify(other);
   if (entry.from !== origin(picture, paintings, encodingOf(picture, authored.encoding))) problems.push(`${picture.name}: its painting or its declaration changed since it was derived: ${again}`);
-  if (!same(entry.pages, picture.pages ?? {}) || !same(entry.drawn, picture.drawn) || !same(entry.phone, picture.phone) || !same(entry.group, picture.group) || entry.focus !== picture.focus || entry.frames !== frames)
+  if (!same(entry.pages, picture.pages ?? {}) || !same(entry.drawn, picture.drawn) || !same(entry.phone, picture.phone) || !same(entry.dense, picture.dense) || !same(entry.group, picture.group) || entry.focus !== picture.focus || entry.frames !== frames)
     problems.push(`${picture.name}: the module does not say what the declaration says: ${again}`);
-  try { widths = widthsOf(picture.drawn, Math.min(...paintings.map(one => paintingSize(one).width))); } catch { return [...problems, `${picture.name}: a painting it names is neither a PNG nor a WebP file`]; }
+  let sourceWidth;
+  try { sourceWidth = Math.min(...paintings.map(one => paintingSize(one).width)); } catch { return [...problems, `${picture.name}: a painting it names is neither a PNG nor a WebP file`]; }
+  widths = widthsOf(picture.drawn, sourceWidth, denseWidths(picture));
+  problems.push(...foldedDense(picture, sourceWidth, widths));
   const sent = entry.sizes.map(size => size.width / frames);
   if (!same(sent, widths)) problems.push(`${picture.name}: it is sent at ${widths.join(', ')} px, and the module names ${sent.join(', ')}: ${again}`);
   return [...problems, ...entry.sizes.flatMap(size => fileProblems(picture.name, size, files, read))];
@@ -207,10 +239,11 @@ function entriesText(art) {
   return Object.entries(art).map(([name, entry]) => {
     const sizes = entry.sizes.map(size => `      { file: '${size.file}', width: ${size.width}, height: ${size.height}, bytes: ${size.bytes} },`).join('\n');
     const phone = entry.phone ? ` phone: ${JSON.stringify(entry.phone)},` : '';
+    const dense = entry.dense ? ` dense: ${JSON.stringify(entry.dense)},` : '';
     const group = entry.group ? ` group: ${JSON.stringify(entry.group)},` : '';
     const focus = entry.focus === undefined ? '' : ` focus: '${entry.focus}',`;
     const from = entry.from === undefined ? '' : `from: '${entry.from}', `;
-    return `  '${name}': {\n    ${from}frames: ${entry.frames}, drawn: ${JSON.stringify(entry.drawn)}, pages: ${JSON.stringify(entry.pages)},${phone}${group}${focus}\n    sizes: [\n${sizes}\n    ],\n  },`;
+    return `  '${name}': {\n    ${from}frames: ${entry.frames}, drawn: ${JSON.stringify(entry.drawn)}, pages: ${JSON.stringify(entry.pages)},${phone}${dense}${group}${focus}\n    sizes: [\n${sizes}\n    ],\n  },`;
   });
 }
 
@@ -219,8 +252,9 @@ export const battleArt = art => Object.fromEntries(Object.entries(art).filter(([
 
 const LEGEND = ['// The pictures a page draws, each at the sizes it is sent: `drawn` is the width it is drawn at, the phone\'s first;',
   '// `frames` is over 1 for a strip, its frames side by side; `pages` says where it is asked for first; `phone`, the',
-  '// widths a page draws it at on the phone when it draws more than the first; `group`, the set a page draws it one',
-  '// of at a time; `focus`, where a box that cuts it centres the cut.'];
+  '// widths a page draws it at on the phone when it draws more than the first; `dense`, the widths a phone of density 3',
+  '// draws it at, also sent three times as wide; `group`, the set a page draws it one of at a time; `focus`, where a',
+  '// box that cuts it centres the cut.'];
 
 /**
  * The text of table/page-art.js: every page's pictures. Those the battle draws are its module's, imported, so each
@@ -292,7 +326,9 @@ async function derive() {
       const paintings = paintingsOf(picture), bytes = paintings.map(read), encoding = encodingOf(picture, authored.encoding), from = origin(picture, bytes, encoding);
       const kept = before[picture.name];
       if (kept?.from === from && kept.sizes.every(size => list().includes(size.file))) { art[picture.name] = { from, frames: kept.frames, drawn: picture.drawn, pages: picture.pages ?? {}, ...carried(picture), sizes: kept.sizes }; continue; }
-      const widths = widthsOf(picture.drawn, Math.min(...bytes.map(one => paintingSize(one).width)));
+      const sourceWidth = Math.min(...bytes.map(one => paintingSize(one).width)), widths = widthsOf(picture.drawn, sourceWidth, denseWidths(picture));
+      const folded = foldedDense(picture, sourceWidth, widths);
+      if (folded.length) throw new Error(folded.join('\n'));
       const jobs = widths.map(width => ({ sources: paintings.map(path => fileURLToPath(new URL(path, ROOT))), width, out: join(work, `${picture.name}-${width}.webp`), ...encoding }));
       // NOSONAR S4036: python3 is found on the PATH of whoever derives a picture; nothing a visitor sends reaches this.
       const ran = spawnSync('python3', [fileURLToPath(new URL('encode.py', import.meta.url))], { input: JSON.stringify(jobs), encoding: 'utf8' }); // NOSONAR

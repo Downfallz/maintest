@@ -675,6 +675,15 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   the account and forgets its devices. The console says
   `Way in added (<provider>) to account <id>.`, `Way in removed (<provider>) from account <id>.` and
   `Way in refused (<provider>) for account <id>: <code or status>.`.
+- A visitor plays the tutorials as a guest (sign-in methods plan, P5, ADR 0207): `POST /api/account/guest` makes an
+  account under a drawn name (`Guest-7KQ2`) and signs it in, ten guests an hour from one address, three hundred from all addresses
+  (`429 Account.TooManyGuests`), none while registration is closed. A guest calls only its account, the sign-ins, its
+  game settings and the tutorials, and its own tutorial's seat; every other route answers
+  `403 Account.GuestNotAllowed`. A provider's sign-in followed by a name upgrades it, keeping its id and tutorials; a
+  sign-in to an account it already has removes the guest. `table-tend` removes a guest unused for 31 days, with its
+  name, settings, tutorials and activity, and reports `Guests: <n> unused for 31 days removed.`. The console says
+  `Guest made: account <id>.`, `Guest upgraded (<provider>): account <id>.` and
+  `Guest left for an account of its own (<provider>): account <id> removed.`; sign-in counts list `guest` as a provider.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
   also given. `dev` signs in by a typed name and is refused off the loopback address.
 - `--admins <acct_id>[,...]` (or `DOWNFALL_ADMINS`) names the accounts that are the operator once signed in,
@@ -836,7 +845,9 @@ One pass of what is due on the tables, then exit (ADR 0162), kept as a run for t
 - every begun game with a seat its player left and no move for a day ended with that seat conceding (ADR 0170);
 - every piece of feedback closed more than 180 days ago deleted (ADR 0189);
 - with `--sign-in` or `--accounts google|dev`, every notice older than 90 days erased from its account's notice
-  log, and a log left empty removed (ADR 0201, #1118).
+  log, and a log left empty removed (ADR 0201, #1118);
+- with `--sign-in` or `--accounts google|dev`, every guest last used 31 days ago removed, with its name, settings,
+  tutorials and activity (ADR 0207).
 
 What the hourly job runs. The tables it picks up take no bot turn.
 

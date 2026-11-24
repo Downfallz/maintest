@@ -27,6 +27,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   });
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
+    // In the order the page asks: a read the home's first paint waits for is asked before the rest (#1207).
+    (state.requested ??= []).push(path);
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
     if (path === '/api/me') return json({ accounts: state.mode === 'google' ? 'signin' : state.mode, signIn: signIn ?? (state.mode === 'google' ? [{ provider: 'google', clientId: 'test-client' }] : []), account: state.account, operator, notice });
@@ -385,7 +387,8 @@ test('a sign out from the statistics lands on the home\'s goodbye, and a reload 
   const state = await home(page);
   // The host serves the home at /lobby; the mock host serves it under /table/ (navigation.js replaces to /lobby).
   const asked = [];
-  await page.route('**/lobby', route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 302, headers: { location: '/table/lobby.html' } }); });
+  // The path alone: a glob of **/lobby also takes /api/lobby, which the faster home now asks before the check (#1207).
+  await page.route(url => url.pathname === '/lobby', route => { asked.push(new URL(route.request().url()).pathname); return route.fulfill({ status: 302, headers: { location: '/table/lobby.html' } }); });
   await page.goto('/table/stats.html');
   await expect(page.locator('body')).toHaveAttribute('data-home', 'member');
   await page.locator('#account-menu summary').click();
@@ -1498,6 +1501,17 @@ test('a lesson\'s creature breathes on the home, and is still behind the Friends
     expect(await running()).toBe(0);
     await page.evaluate(() => new Promise(requestAnimationFrame));
   }
+  expect(state.errors).toEqual([]);
+});
+
+// The featured space waits for the lessons and the games; the lessons were asked last, behind a dozen reads, and
+// a new player's home painted over its budget on the slow phone (#1207).
+test('a signed-in player\'s lessons are asked for before the lobby reads that player\'s games', async ({ page }) => {
+  const state = await home(page, { games: [], tutorials: series('skipped') });
+  await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'lesson');
+  const asked = state.requested.slice(state.requested.indexOf('/api/me'));
+  expect(asked).toEqual(expect.arrayContaining(['/api/tutorials', '/api/lobby/adopt']));
+  expect(asked.indexOf('/api/tutorials')).toBeLessThan(asked.indexOf('/api/lobby/adopt'));
   expect(state.errors).toEqual([]);
 });
 

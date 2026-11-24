@@ -237,4 +237,6 @@ operator open a table for a named player.
 3. **Renaming.** Recommended: not in the first version.
 4. **Shared device.** Recommended: still allowed, held by one account, never ranked.
 5. **Reading without an account.** Recommended: the public lobby stays readable signed out; only playing needs a
-   sign-in.
+   sign-in. *Amended by [ADR 0207](../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md) (2026-11-24)*: a
+   visitor plays the tutorials as a guest, an account the host makes without a provider; everything else still
+   needs a sign-in.

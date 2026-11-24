@@ -36,6 +36,12 @@ public static class AccountErrors
     /// <summary>Removing an identity the account does not hold.</summary>
     public static readonly DomainError IdentityNotLinked = new("Account.IdentityNotLinked", "This account does not use that way to sign in.");
 
+    /// <summary>A route a guest may not call (ADR 0207): a guest plays the tutorials and nothing else.</summary>
+    public static readonly DomainError GuestNotAllowed = new("Account.GuestNotAllowed", "Guests play the tutorials. Sign in to do this.");
+
+    /// <summary>Upgrading an account that is not a guest (ADR 0207).</summary>
+    public static readonly DomainError NotAGuest = new("Account.NotAGuest", "This account is not a guest.");
+
     public static readonly DomainError NotFound = new("Account.NotFound", "There is no such account.");
 
     /// <summary>A sign-in refused because the operator suspended the account (ADR 0178), saying why.</summary>

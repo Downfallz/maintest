@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.SharedKernel.Primitives;
@@ -22,6 +23,10 @@ public sealed class AccountRegistry
     private readonly IAccountStore _store;
     private readonly TimeProvider _clock;
     private readonly Func<AccountId> _newId;
+    private readonly Func<string> _guestCode;
+
+    /// <summary>How many names a new guest is drawn before the host gives up on making it: each is one in nearly a million.</summary>
+    public const int GuestDraws = 8;
 
     // A generation is read, raised and written back: two at once would both write the same number, and one that
     // stalled could write back a number already passed, bringing revoked sessions back -- or write back an account
@@ -29,13 +34,115 @@ public sealed class AccountRegistry
     // runs at most one replica (ADR 0080), so one lock in the process is the whole of the ordering.
     private static readonly SemaphoreSlim Writes = new(1, 1);
 
-    public AccountRegistry(IAccountStore store, TimeProvider clock, Func<AccountId>? newId = null)
+    /// <param name="guestCode">Draws a guest's code (ADR 0207); a random one of <see cref="Username.GuestAlphabet" /> unless a test draws its own.</param>
+    public AccountRegistry(IAccountStore store, TimeProvider clock, Func<AccountId>? newId = null, Func<string>? guestCode = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(clock);
         _store = store;
         _clock = clock;
         _newId = newId ?? AccountId.New;
+        _guestCode = guestCode ?? DrawGuestCode;
+    }
+
+    private static string DrawGuestCode() => RandomNumberGenerator.GetString(Username.GuestAlphabet, Username.GuestCodeLength);
+
+    /// <summary>
+    /// Makes a guest (ADR 0207): an account no provider vouches for, under an identity of the host's own, a random
+    /// <c>guest:&lt;subject&gt;</c> nobody can sign in with, and a name the host draws (<c>Guest-7KQ2</c>). It is written
+    /// as a registration is, the name held first. A name somebody holds is drawn again, <see cref="GuestDraws" /> times
+    /// at most, then refused as taken.
+    /// </summary>
+    public async Task<Result<Account>> MakeGuestAsync(CancellationToken cancellationToken = default)
+    {
+        var identity = new ExternalIdentity(ExternalIdentity.Guest, Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)));
+        for (var draw = 0; draw < GuestDraws; draw++)
+        {
+            var made = await RegisterAsync(identity, Username.Guest(_guestCode()), cancellationToken);
+            if (made.IsSuccess || made.Error != AccountErrors.UsernameTaken)
+            {
+                return made;
+            }
+        }
+
+        return Result.Failure<Account>(AccountErrors.UsernameTaken);
+    }
+
+    /// <summary>
+    /// Upgrades a guest (ADR 0207) with the identity a provider just vouched for and the name its player chose: the
+    /// account keeps its id, so its tutorials, and loses the guest's identity and name. The writes go in the order a
+    /// stop between any two leaves the account reachable: the new name held, the identity bound to the account, the
+    /// account written with that identity alone and a raised generation (every other copy of the guest's cookie ends),
+    /// then the guest's binding and name freed. Asking again finishes an upgrade that stopped before the account was
+    /// written; one that stopped after leaves the guest's binding, which reaches nothing, and its name held. Refused for an account
+    /// that is not a guest, an identity another account holds, and a name somebody else holds.
+    /// </summary>
+    public async Task<Result<Account>> UpgradeAsync(AccountId id, ExternalIdentity identity, string? candidate, CancellationToken cancellationToken = default)
+    {
+        if (identity.Provider == ExternalIdentity.Guest)
+        {
+            throw new ArgumentException("A guest is upgraded with a provider's identity, not another guest's.", nameof(identity));
+        }
+
+        var name = Username.Create(candidate);
+        if (name.IsFailure)
+        {
+            return Result.Failure<Account>(name.Error);
+        }
+
+        await Writes.WaitAsync(cancellationToken);
+        try
+        {
+            if (await _store.FindAsync(id, cancellationToken) is not { } account)
+            {
+                return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            if (account.Identities.ByProvider(ExternalIdentity.Guest) is not { } guest)
+            {
+                return Result.Failure<Account>(AccountErrors.NotAGuest);
+            }
+
+            if (account.Suspension is { } suspension)
+            {
+                return Result.Failure<Account>(AccountErrors.Suspended(suspension));
+            }
+
+            var reservation = new UsernameReservation(name.Value, id, _clock.GetUtcNow());
+            if (await ReserveAsync(reservation, guest, cancellationToken) is not { } held || held.Account != id)
+            {
+                return Result.Failure<Account>(AccountErrors.UsernameTaken);
+            }
+
+            if (!await BindAsync(identity, id, cancellationToken))
+            {
+                await ReleaseUnlessNamedAsync(reservation, account, cancellationToken);
+                return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
+            }
+
+            var upgraded = account with { Identities = AccountIdentities.Of(identity), Username = name.Value, Generation = account.Generation + 1 };
+            await _store.SaveAsync(upgraded, cancellationToken);
+            await _store.UnbindSubjectAsync(guest, id, cancellationToken);
+            if (account.Username.Key != name.Value.Key)
+            {
+                await _store.ReleaseUsernameAsync(new UsernameReservation(account.Username, id, account.CreatedAt), cancellationToken);
+            }
+
+            return Result.Success(upgraded);
+        }
+        finally
+        {
+            Writes.Release();
+        }
+    }
+
+    // A name held for an upgrade refused afterwards is freed again, unless it is the one the account already has.
+    private async Task ReleaseUnlessNamedAsync(UsernameReservation reservation, Account account, CancellationToken cancellationToken)
+    {
+        if (reservation.Username.Key != account.Username.Key)
+        {
+            await _store.ReleaseUsernameAsync(reservation, cancellationToken);
+        }
     }
 
     /// <summary>
@@ -147,6 +254,12 @@ public sealed class AccountRegistry
             if (account.Suspension is { } suspension)
             {
                 return Result.Failure<Account>(AccountErrors.Suspended(suspension));
+            }
+
+            // A guest gains a way in by its upgrade alone (ADR 0207), which also gives it a name of its own.
+            if (account.IsGuest || identity.Provider == ExternalIdentity.Guest)
+            {
+                return Result.Failure<Account>(AccountErrors.GuestNotAllowed);
             }
 
             if (generation is { } asked && asked != account.Generation)
@@ -344,18 +457,18 @@ public sealed class AccountRegistry
     public async Task<Result<Account>> RegisterAsync(ExternalIdentity identity, string? candidate, CancellationToken cancellationToken = default)
     {
         var name = Username.Create(candidate);
-        if (name.IsFailure)
-        {
-            return Result.Failure<Account>(name.Error);
-        }
+        return name.IsFailure ? Result.Failure<Account>(name.Error) : await RegisterAsync(identity, name.Value, cancellationToken);
+    }
 
+    private async Task<Result<Account>> RegisterAsync(ExternalIdentity identity, Username name, CancellationToken cancellationToken)
+    {
         if (await _store.FindBySubjectAsync(identity, cancellationToken) is { } bound && !await ReleaseIfHoldsNobodyAsync(identity, bound, cancellationToken))
         {
             return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
         }
 
         var now = _clock.GetUtcNow();
-        var reservation = new UsernameReservation(name.Value, _newId(), now);
+        var reservation = new UsernameReservation(name, _newId(), now);
         var held = await ReserveAsync(reservation, identity, cancellationToken);
         if (held is null)
         {
@@ -367,7 +480,7 @@ public sealed class AccountRegistry
         var resumed = held.Account != reservation.Account;
         var account = resumed
             ? await _store.FindAsync(held.Account, cancellationToken)
-            : new Account(reservation.Account, AccountIdentities.Of(identity), name.Value, now, Generation: 1);
+            : new Account(reservation.Account, AccountIdentities.Of(identity), name, now, Generation: 1);
         if (account is null)
         {
             // The interrupted account went between reading its name and reading it: somebody reclaimed both.

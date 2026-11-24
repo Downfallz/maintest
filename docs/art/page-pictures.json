@@ -74,7 +74,8 @@
       "source": "docs/art/sources/pages/scenes/latch-under-the-arch.webp",
       "drawn": [351, 640, 354, 1280],
       "pages": { "showcase/404": "largest", "table/rules": "lazy" },
-      "phone": { "table/rules": [354] }
+      "phone": { "table/rules": [354] },
+      "dense": { "table/rules": [354] }
     },
     {
       "name": "parasite-offline",

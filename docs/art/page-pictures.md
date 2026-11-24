@@ -48,6 +48,9 @@ One entry in `docs/art/page-pictures.json`:
   first of `drawn`, or at more than one, each listed in `drawn`. The battle draws a spell's portrait at 40 px on a card and at 24 px in
   the journal's rows: `"drawn": [40, 24]`, `"phone": { "table/battle": [40, 24] }`. A page it does not name draws it
   at the first width.
+- `dense` (optional): for a page whose file a phone of density 3 must find, the widths that phone draws it at, each
+  listed in `drawn`; the kit also sends each three times as wide. The rulebook's head is drawn 354 px wide on a phone,
+  and a phone of density 3 asks for 1062, which the worker keeps (#1149): `"dense": { "table/rules": [354] }`.
 - `group` (optional): for each page that draws one picture of a set at a time, the set's name, in lower case, digits
   and hyphens. The statistics page draws one mutation, the one the player acquires most, out of 21. Each of
   the 21 pictures carries `"group": { "table/stats": "leaned-mutation" }`. The budget counts a group as its heaviest member, not their sum

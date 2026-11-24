@@ -42,7 +42,8 @@ export function measureInPage({ floor, target, minimum }) {
     if (size < floor) small += count;
   }
 
-  // The brand's gold, as the page declares it: an action is filled when its background is made of it.
+  // The brand's gold, as the page declares it: an action is filled when its background is made of it, a plain colour or
+  // a gradient that starts gold. An outline's edge, a gradient that starts transparent, is no fill (#1128).
   const probe = document.createElement('span');
   const golds = ['--gold', '--accent-strong', '--brand-gold', '--brand-gold-bright'].map(token => {
     probe.style.backgroundColor = ''; probe.style.backgroundColor = `var(${token})`;
@@ -58,7 +59,7 @@ export function measureInPage({ floor, target, minimum }) {
   let filled = 0, under = 0, tiny = 0;
   for (const [node, box] of boxes) {
     const style = getComputedStyle(node);
-    if (golds.some(gold => style.backgroundColor === gold || style.backgroundImage.includes(gold))) filled++;
+    if (golds.some(gold => style.backgroundColor === gold || style.backgroundImage.includes(`gradient(${gold}`))) filled++;
     if (box.width < target || box.height < target) under++;
     if (box.width < minimum || box.height < minimum) tiny++;
   }

@@ -67,6 +67,8 @@ Every flag of `table` is in docs/reference/commands.md.
 - The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
   cannot pair a page with another deploy's bundle. Its own modules, in the page and in every `import './x.js'`, carry
   one release tag instead, so each keeps one address and runs once; write them bare, the host stamps them. `sw.js` keeps its name.
+- `lobby.html` preloads every module `lobby.js` reaches (#1207). A module it starts to import is added to that list;
+  `lobby.test.js` fails when the list and the imports differ, and on a dynamic `import()` (`scripts/module-imports.mjs`).
 - 320 px wide first, 44 px touch targets, no document scrolling in the battle view.
 - The words a player reads come from docs/domain/player-terminology.md, not from the domain's own.
   `terminology.test.js` holds them to its EN column and refuses the legacy words and sentences they

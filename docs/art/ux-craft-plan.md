@@ -369,7 +369,9 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    the sheets' CSS, not measured. A painting is made smaller and never cut, so a ground that covers its box is sent
    whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` only reported the paints until #962.
    It now exits 1 when a page's median is over the budget's two times. Its first run on 2026-11-23 found
-   `table/home` over: a largest paint of 2.6 s (2,552 to 2,576 ms, the text), its shift 0.01.
+   `table/home` over: a largest paint of 2.6 s (2,552 to 2,576 ms, the text), its shift 0.01. #1207 brought it to
+   2.2 s (the lobby's modules preloaded, the lessons read first): `main` read 2.6 s and the fix 2.2 s on one
+   machine, where `--paint` now exits 0.
    The design system's page is not republished: the owner runs `/design-system`
    after the merge, as for UX4.
 6. **UX6, the showcase.** The first door shows the game played: a round in pictures of the real battle view,

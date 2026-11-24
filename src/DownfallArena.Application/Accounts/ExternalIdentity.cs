@@ -10,6 +10,12 @@ public readonly record struct ExternalIdentity
     public const string Discord = "discord";
     public const string Development = "dev";
 
+    /// <summary>
+    /// A guest's identity (ADR 0207): made by the host, never by a provider, and proved by nothing but the guest's
+    /// session cookie. No route signs in with it.
+    /// </summary>
+    public const string Guest = "guest";
+
     public ExternalIdentity(string provider, string subject)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(provider);
