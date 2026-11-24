@@ -21,15 +21,30 @@ internal static class Waits
     /// <param name="what">What was waited for, as the failure says it.</param>
     public static async Task UntilAsync(Func<Task<bool>> done, string what, CancellationToken cancellationToken)
     {
+        if (!await HoldsAsync(done, cancellationToken))
+        {
+            throw new TimeoutException($"Not within {Within}: {what}.");
+        }
+    }
+
+    /// <summary>Whether <paramref name="done" /> holds before <see cref="Within" /> has passed: for a test that asserts the answer with a message of its own.</summary>
+    public static Task<bool> HoldsAsync(Func<bool> done, CancellationToken cancellationToken) =>
+        HoldsAsync(() => Task.FromResult(done()), cancellationToken);
+
+    /// <summary>Whether <paramref name="done" /> answers true before <see cref="Within" /> has passed.</summary>
+    public static async Task<bool> HoldsAsync(Func<Task<bool>> done, CancellationToken cancellationToken)
+    {
         var deadline = DateTimeOffset.UtcNow + Within;
         while (!await done())
         {
             if (DateTimeOffset.UtcNow > deadline)
             {
-                throw new TimeoutException($"Not within {Within}: {what}.");
+                return false;
             }
 
             await Task.Delay(Between, cancellationToken);
         }
+
+        return true;
     }
 }
