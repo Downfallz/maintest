@@ -1088,6 +1088,11 @@ body:has(dialog:modal:not(.docked-sheet, #order-dialog)) #round-toast { animatio
    progress line, the Close in the far corner on its own fill. The creature's list sits under the band, on soot. */
 #atlas-dialog .atlas-band.scene-head { display: grid; grid-template-columns: minmax(0, 1fr); align-items: normal; gap: 0; padding: 0; }
 #atlas-dialog .atlas-band.scene-head > #atlas-close { grid-area: 1 / 1; justify-self: end; align-self: start; margin: 8px; }
+/* A window's head grows to 200 px on a wide and tall screen (identity.css): the tree's band is about 1,240 px wide
+   there, and at 120 it kept a tenth of the painting's height, the three trails cut to a slice of their middle. */
+@media (min-width: 744px) and (min-height: 760px) {
+  #atlas-dialog .atlas-band.scene-head::after { max-height: 200px; }
+}
 /* A wide, tall screen has room for the list in the band's lower corner, under the Close, on its own fill. */
 @media (min-width: 820px) and (min-height: 601px) {
   #atlas-dialog .atlas-header:has(> .atlas-band.scene-head) { display: grid; }
