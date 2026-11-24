@@ -686,8 +686,8 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   (`429 Account.TooManyGuests`), none while registration is closed. A guest calls only its account, the sign-ins, its
   game settings and the tutorials, and its own tutorial's seat; every other route answers
   `403 Account.GuestNotAllowed`. A provider's sign-in followed by a name upgrades it, keeping its id and tutorials; a
-  sign-in to an account it already has removes the guest. `table-tend` removes a guest unused for 31 days, with its
-  name, settings, tutorials and activity, and reports `Guests: <n> unused for 31 days removed.`. The console says
+  sign-in to an account it already has removes the guest. `table-tend`, and the panel's *Run now*, remove a guest unused for 31 days, with its
+  name, settings, tutorials and activity; `table-tend` reports `Guests: <n> unused for 31 days removed.`. The console says
   `Guest made: account <id>.`, `Guest upgraded (<provider>): account <id>.` and
   `Guest left for an account of its own (<provider>): account <id> removed.`; sign-in counts list `guest` as a provider.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is

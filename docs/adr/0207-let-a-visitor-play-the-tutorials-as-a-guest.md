@@ -79,7 +79,7 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Neutral: no page changes here. UX15 builds the journey on these routes; `/api/account` and every sign-in answer
   say `guest` on the account so the page can tell. A guest's lobby page reads `403 Account.GuestNotAllowed` until
   UX15 decides what it shows.
-- Neutral: the panel's *Run now* pass does not remove guests; the hourly job does.
+- Neutral: the panel's *Run now* pass removes the idle guests as the hourly job does (#1225).
 
 ## Alternatives considered
 
