@@ -65,6 +65,10 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Bad: the host-wide count can be spent by one actor with thirty addresses, or thirty IPv6 /64s, for an hour: no
   visitor becomes a guest until it passes, and they are told to sign in. That is the price of a bound on what the
   store is asked to keep; the provider sign-ins are not affected.
+- Bad: an upgrade that stops between binding the identity and writing the account, asked again with another name,
+  leaves the first name held for the account for good. A player who meets it can rename.
+- Neutral: a player cannot type a name that starts with `Guest-` or `guest_`, and so cannot rename to one either,
+  even to change the case of a name they already hold; a player who registered one before keeps it.
 - Neutral: a request with a session is checked against the list before its route, which reads the account. While
   the account store is out of service and the account is not in the 30-second cache, such a request answers
   `503 Account.Unavailable` rather than be let past the list on a guess.

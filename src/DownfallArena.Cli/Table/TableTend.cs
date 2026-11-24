@@ -383,7 +383,7 @@ internal static class TableTend
         public IdleGuests? Guests { get; init; }
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago and the notices past 90 days.</summary>
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago, the notices past 90 days and the guests unused for 31 days.</summary>
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
     internal static async Task<Tended> TendAsync(Chores chores, DateTimeOffset now, Action<Tended>? progress = null)
     {
@@ -397,12 +397,6 @@ internal static class TableTend
         if (suspended is not null)
         {
             done = done with { Released = await suspended.ReleaseAsync(now) };
-            progress?.Invoke(done);
-        }
-
-        if (chores.Guests is { } guests)
-        {
-            done = done with { GuestsRemoved = await guests.RemoveAsync(now) };
             progress?.Invoke(done);
         }
 
@@ -432,6 +426,13 @@ internal static class TableTend
         if (notices is not null)
         {
             done = done with { NoticesErased = await EraseNoticesAsync(notices) };
+            progress?.Invoke(done);
+        }
+
+        // The guests no browser can reach (ADR 0207), last too: a store that fails costs this stage alone.
+        if (chores.Guests is { } guests)
+        {
+            done = done with { GuestsRemoved = await guests.RemoveAsync(now) };
             progress?.Invoke(done);
         }
 

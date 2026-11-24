@@ -76,6 +76,19 @@ public sealed class IdleGuestsTests : IDisposable
     }
 
     [Fact]
+    public async Task Accounts_that_cannot_be_listed_remove_no_guest_and_say_so_rather_than_stop_the_pass()
+    {
+        var failing = Substitute.For<Application.Accounts.Ports.IAccountStore>();
+        failing.ListAsync(Arg.Any<CancellationToken>()).Returns<Task<IReadOnlyList<Account>>>(_ => throw new IOException("out of service (a test)"));
+        var said = new List<string>();
+
+        var removed = await new IdleGuests(failing, _activity, _preferences, _clock) { Said = said.Add }.RemoveAsync(_clock.GetUtcNow());
+
+        removed.ShouldBe(0);
+        said.ShouldHaveSingleItem().ShouldStartWith("  Guests: the accounts could not be listed");
+    }
+
+    [Fact]
     public async Task A_guest_used_since_is_kept_its_lifetime_from_that_use()
     {
         var guest = await GuestAsync();

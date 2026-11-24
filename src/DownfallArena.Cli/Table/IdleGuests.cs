@@ -23,13 +23,25 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
     /// <summary>Removes every guest last used <see cref="KeptFor" /> or more before <paramref name="now" />, and says how many went.</summary>
     public async Task<int> RemoveAsync(DateTimeOffset now)
     {
-        var guests = (await accounts.ListAsync()).Where(account => account.IsGuest).ToList();
-        if (guests.Count == 0)
+        List<Account> guests;
+        Dictionary<SharedKernel.Identifiers.AccountId, AccountActivity> used;
+        try
         {
+            guests = [.. (await accounts.ListAsync()).Where(account => account.IsGuest)];
+            if (guests.Count == 0)
+            {
+                return 0;
+            }
+
+            used = (await activity.ListAsync()).ToDictionary(one => one.Account);
+        }
+        catch (Exception failure) when (Unreadable(failure))
+        {
+            // The pass goes on without this stage: the next one removes them.
+            Said($"  Guests: the accounts could not be listed, so none was removed: {HttpHost.OneLine(failure)}");
             return 0;
         }
 
-        var used = (await activity.ListAsync()).ToDictionary(one => one.Account);
         var registry = new AccountRegistry(accounts, clock);
         var removed = 0;
         foreach (var listed in guests.Where(guest => Idle(guest, used.GetValueOrDefault(guest.Id), now)))
@@ -61,7 +73,7 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
                     removed++;
                 }
             }
-            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            catch (Exception failure) when (Unreadable(failure))
             {
                 Said($"  Account {listed.Id}: a guest unused for {KeptFor.TotalDays:0} days could not be removed: {HttpHost.OneLine(failure)}");
             }
@@ -69,6 +81,10 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
 
         return removed;
     }
+
+    // A store out of service, or a document that does not read: what stops this stage and never the pass.
+    private static bool Unreadable(Exception failure) =>
+        TableRegistry.StoreFails(failure) || failure is System.Text.Json.JsonException or InvalidDataException or FormatException or ArgumentException;
 
     // Last used: its last sign-in or request, or its making when neither was kept.
     private static bool Idle(Account guest, AccountActivity? kept, DateTimeOffset now)
