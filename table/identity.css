@@ -276,6 +276,13 @@ html[data-feedback-muted] #settings-dialog .settings-feedback { display: none; }
 /* A page's head (the ladder, the statistics, the rulebook) is read on its painting at the pages' floor of 11 px, written
    once here rather than page by page (#1150). The match's and the windows' heads keep their own sizes. */
 .page-head .eyebrow { font-size: 11px; }
+/* A wide and tall screen lets a head grow (#1106's desktop finding): capped at 120 px, a page's band 1280 px wide was
+   about 11:1 and cut its 3:1 painting to a thin slice of its middle, the creature's head out of view. A page's band
+   takes up to 300 px; a window's head 200, so its filled action stays in view. */
+@media (min-width: 744px) and (min-height: 760px) {
+  .scene-head.page-head::after { max-height: 300px; }
+  dialog .dialog-heading.scene-head::after { max-height: 200px; }
+}
 @media (max-height: 600px) {
   .scene-head::after { max-height: 64px; }
   .scene-head > .scene-words { margin: 4px; padding: 4px 8px; }
