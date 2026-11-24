@@ -16,8 +16,8 @@ test('a host that says nothing about accounts has them off', () => {
 });
 
 test('the ways in are the providers the host lists, in its order, that this page can draw', () => {
-  assert.deepEqual(signInWays({ signIn: [{ provider: 'microsoft', clientId: 'ms' }, { provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }] }),
-    [{ provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }]);
+  assert.deepEqual(signInWays({ signIn: [{ provider: 'facebook', clientId: 'fb' }, { provider: 'microsoft', clientId: 'ms' }, { provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }] }),
+    [{ provider: 'microsoft', clientId: 'ms' }, { provider: 'discord', clientId: '1311' }, { provider: 'google', clientId: 'id' }]);
   assert.deepEqual(signInWays({ signIn: [null, { provider: 7 }, 'google', { provider: 'google', clientId: 9 }] }), [{ provider: 'google', clientId: null }]);
   assert.deepEqual(signInWays({ accounts: 'dev' }), []);
   assert.deepEqual(signInWays({ signIn: 'google' }), []);
@@ -260,4 +260,24 @@ test('a sign out forgets the tab\'s proof of a recent sign-in', async () => {
   forgetRecentSignIn(storage);
 
   assert.equal(recentSignIn(storage), null);
+});
+
+test('Microsoft\'s button leaves for personal accounts\' authorize page with its own state kept in the tab', async () => {
+  const { mountAccount } = await import('./account.js');
+  const doc = anyPage();
+  const session = tabStore();
+  const went = [];
+  const win = { location: { origin: 'https://play.example', search: '', assign: url => went.push(url) } };
+  const signIn = [{ provider: 'discord', clientId: '1311' }, { provider: 'microsoft', clientId: 'ms-app' }];
+  await mountAccount(doc, { readMe: async () => ({ accounts: 'signin', signIn, account: null }), google: async () => ({}), session, win });
+
+  await doc.getElementById('microsoft-button').listeners.click();
+
+  const url = new URL(went.at(-1));
+  const kept = JSON.parse(session.kept.get('downfall.microsoftSignIn'));
+  assert.equal(`${url.origin}${url.pathname}`, 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize');
+  assert.equal(url.searchParams.get('client_id'), 'ms-app');
+  assert.equal(url.searchParams.get('redirect_uri'), 'https://play.example/signin/microsoft');
+  assert.equal(url.searchParams.get('state'), kept.state);
+  assert.equal(session.kept.has('downfall.discordSignIn'), false);
 });

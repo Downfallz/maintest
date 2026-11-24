@@ -84,6 +84,9 @@ jobs:
           # The Discord application players may also sign in with (sign-in methods plan, P3), a public client. Public: it
           # is in Discord's own authorize address. Unset, Discord is not offered.
           DISCORD_CLIENT_ID: ${{ vars.TABLE_DISCORD_CLIENT_ID }}
+          # The Microsoft application players may also sign in with, personal accounts only (sign-in methods plan, P6), a
+          # public client. Public: it is in Microsoft's own authorize address. Unset, Microsoft is not offered.
+          MICROSOFT_CLIENT_ID: ${{ vars.TABLE_MICROSOFT_CLIENT_ID }}
           # The player accounts that are the operator once signed in (ADR 0175), by id, comma-separated; unset, none.
           ADMIN_ACCOUNTS: ${{ vars.TABLE_ADMIN_ACCOUNTS }}
           NAME_PREFIX: ${{ vars.TABLE_NAME_PREFIX }}
@@ -115,7 +118,7 @@ jobs:
             --name "table-${GITHUB_RUN_ID}" \
             --template-file infra/main.bicep \
             --parameters image="$IMAGE" signInClientId="$SIGN_IN_CLIENT_ID" operators="$OPERATORS" \
-              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" discordClientId="$DISCORD_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
+              namePrefix="${NAME_PREFIX:-downfall}" pushKeys="$PUSH_KEYS" googleClientId="$GOOGLE_CLIENT_ID" discordClientId="$DISCORD_CLIENT_ID" microsoftClientId="$MICROSOFT_CLIENT_ID" adminAccounts="$ADMIN_ACCOUNTS" relaySku="$relay" \
               customDomain="$CUSTOM_DOMAIN" onlyCloudflare="$ONLY_CLOUDFLARE" promoWriter="$PROMO_WRITER" \
             --parameters @"$RUNNER_TEMP/alerts.parameters.json" \
             --query properties.outputs --output json > "$RUNNER_TEMP/outputs.json"

@@ -1,4 +1,5 @@
-// Signing in with Discord (sign-in methods plan, P3; #1194): the lobby's button leaves for Discord's authorize page,
+// Signing in with Discord (sign-in methods plan, P3; #1194), and with Microsoft the same way (P6): the lobby's button
+// leaves for Discord's authorize page,
 // which is routed here to a page that sends the browser back to /signin/discord with a code and a state, as Discord
 // does; the return page posts the code to a mocked host and goes back to the lobby. The return page and its modules are
 // served from table/ at the root, as the table host serves them.
@@ -10,6 +11,8 @@ import { fileURLToPath } from 'node:url';
 const table = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'table');
 const DISCORD_APP = '1311111111111111111';
 const AUTHORIZE = 'https://discord.com/oauth2/authorize**';
+const MICROSOFT_APP = '6731de76-14a6-49ae-97bc-6eba6914391e';
+const MICROSOFT_AUTHORIZE = 'https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize**';
 
 /**
  * The lobby of a host that signs in with Google and Discord, nobody signed in. `discord` answers the code the return
@@ -23,8 +26,9 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
       const button = document.createElement('button'); button.textContent = 'Continue with Google'; button.style.height = '44px'; el.append(button);
     } } } };
   });
-  // Discord's authorize page: it sends the browser back to the redirect it was given, with the state the page sent.
-  await page.route(AUTHORIZE, route => {
+  // Discord's and Microsoft's authorize pages: each sends the browser back to the redirect it was given, with the
+  // state the page sent.
+  await page.route(url => url.href.startsWith(AUTHORIZE.slice(0, -2)) || url.href.startsWith(MICROSOFT_AUTHORIZE.slice(0, -2)), route => {
     const asked = new URL(route.request().url());
     seen.authorized.push(asked);
     const query = back(asked.searchParams.get('state'));
@@ -34,16 +38,16 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
     return route.fulfill({ contentType: 'text/html', body });
   });
   // The return page, and the files it names from the root, as the table host serves them.
-  await page.route(/\/signin\/discord(\?|$)/, route => route.fulfill({ contentType: 'text/html', body: readFileSync(join(table, 'signin.html'), 'utf8') }));
+  await page.route(/\/signin\/(discord|microsoft)(\?|$)/, route => route.fulfill({ contentType: 'text/html', body: readFileSync(join(table, 'signin.html'), 'utf8') }));
   await page.route(/^http:\/\/127\.0\.0\.1:\d+\/(fonts\/)?[\w.-]+\.(js|css|svg|woff2)(\?.*)?$/, route => route.fulfill({ path: join(table, new URL(route.request().url()).pathname) }));
   await page.route(/\/lobby(\?|$)/, route => route.fulfill({ status: 302, headers: { location: '/table/lobby.html' } }));
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
     if (path === '/api/me') {
-      return route.fulfill({ json: { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'test-client' }, { provider: 'discord', clientId: DISCORD_APP }], account: null, operator: false, notice: null } });
+      return route.fulfill({ json: { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'test-client' }, { provider: 'discord', clientId: DISCORD_APP }, { provider: 'microsoft', clientId: MICROSOFT_APP }], account: null, operator: false, notice: null } });
     }
-    if (path === '/api/account/discord') {
-      seen.posted.push(route.request().postDataJSON());
+    if (path === '/api/account/discord' || path === '/api/account/microsoft') {
+      seen.posted.push(path === '/api/account/discord' ? route.request().postDataJSON() : { microsoft: route.request().postDataJSON() });
       const answer = discord();
       return route.fulfill({ status: answer.status ?? 200, json: answer.json });
     }
@@ -151,5 +155,25 @@ test('a lobby the back-forward cache gives back gives the Discord button back', 
   await page.evaluate(() => dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })));
 
   await expect(discordButton(page)).toBeEnabled();
+  expect(seen.errors).toEqual([]);
+});
+
+test('a new player back from Microsoft is asked for a name in the lobby, its button under Discord\'s', async ({ page }) => {
+  const seen = await lobby(page);
+  const microsoftButton = page.getByRole('button', { name: 'Continue with Microsoft' });
+  const discord = await discordButton(page).boundingBox();
+  const microsoft = await microsoftButton.boundingBox();
+  expect(microsoft.y).toBeGreaterThanOrEqual(discord.y + discord.height);
+  expect(microsoft.height).toBeGreaterThanOrEqual(44);
+
+  await microsoftButton.click();
+
+  await expect(page.getByRole('dialog', { name: 'Choose your player name' })).toBeVisible();
+  const asked = seen.authorized[0];
+  expect(asked.origin + asked.pathname).toBe('https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize');
+  expect(asked.searchParams.get('client_id')).toBe(MICROSOFT_APP);
+  expect(asked.searchParams.get('scope')).toBe('openid');
+  const origin = new URL(page.url()).origin;
+  expect(seen.posted).toEqual([{ microsoft: { code: 'the-code', verifier: expect.stringMatching(/^[\w-]{43}$/), redirect: `${origin}/signin/microsoft` } }]);
   expect(seen.errors).toEqual([]);
 });

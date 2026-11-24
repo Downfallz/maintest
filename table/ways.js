@@ -6,11 +6,11 @@
 // account is reached. The host decides what may be added or removed; this page draws what it answered.
 
 import { accountRequest, answerGoogle, confirmAction, loadGoogle, prepareGoogle, forgetRecentSignIn, recentSignIn, signInWays } from './account.js';
-import { startDiscord } from './discord.js';
+import { CODE_FLOWS, startCodeFlow } from './codeflow.js';
 
 export const WAYS_ROUTE = '/api/account/identities';
 
-// A note handed to Settings in the same tab, by the Discord return page or by a sign in again.
+// A note handed to Settings in the same tab, by a provider's return page or by a sign in again.
 const NOTE = 'downfall.waysNote';
 
 /** How a player reads a provider's name; a provider this page does not know by its own name, capitalised. */
@@ -134,7 +134,7 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
       words.append(name, hint);
       item.append(words);
       if (row.held && row.removable) item.append(removeButton(row.provider));
-      if (!row.held && row.provider === 'discord') item.append(discordButton(row));
+      if (!row.held && Object.hasOwn(CODE_FLOWS, row.provider)) item.append(codeFlowButton(row));
       if (!row.held && row.provider === 'google') item.append(googleSlot(row));
       return item;
     }));
@@ -169,20 +169,20 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
     return button;
   }
 
-  function discordButton(row) {
+  function codeFlowButton(row) {
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'secondary';
     button.textContent = 'Add';
-    button.setAttribute('aria-label', 'Add Discord');
+    button.setAttribute('aria-label', `Add ${row.name}`);
     button.addEventListener('click', async () => {
       quiet();
-      // Asked before leaving: a sign-in too old would be refused only once Discord has sent the player back.
+      // Asked before leaving: a sign-in too old would be refused only once the provider has sent the player back.
       if (!recentOrAsk()) return;
       button.disabled = true;
       win.addEventListener?.('pageshow', event => { if (event.persisted) button.disabled = false; }, { once: true });
       try {
-        await startDiscord({ clientId: row.clientId, origin: win.location.origin, purpose: 'link', storage: session, go: url => win.location.assign(url) });
+        await startCodeFlow({ provider: row.provider, clientId: row.clientId, origin: win.location.origin, purpose: 'link', storage: session, go: url => win.location.assign(url) });
       } catch (error) {
         say('ways-problem', error.message);
         button.disabled = false;

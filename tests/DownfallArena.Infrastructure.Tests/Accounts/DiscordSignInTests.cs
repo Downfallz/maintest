@@ -149,6 +149,17 @@ public sealed class DiscordSignInTests : IDisposable
         (await Discord().SignInAsync(Proof(), Cancel)).ShouldBeNull();
     }
 
+    [Fact]
+    public async Task An_app_discord_refuses_is_unavailable_not_a_refusal_of_the_player()
+    {
+        _discord.ExchangeStatus = HttpStatusCode.Unauthorized;
+        _discord.Error = "invalid_client";
+
+        var refused = await Should.ThrowAsync<SignInUnavailableException>(() => Discord().SignInAsync(Proof(), Cancel));
+
+        refused.Message.ShouldBe("Discord refuses the app (invalid_client): see infra/runbooks/sign-ins.md.");
+    }
+
     [Theory]
     [InlineData(HttpStatusCode.InternalServerError)]
     [InlineData(HttpStatusCode.BadGateway)]
@@ -302,6 +313,8 @@ public sealed class DiscordSignInTests : IDisposable
 
         public HttpStatusCode ExchangeStatus { get; set; } = HttpStatusCode.OK;
 
+        public string Error { get; set; } = "invalid_grant";
+
         public bool Garbled { get; set; }
 
         public bool Unreachable { get; set; }
@@ -371,7 +384,7 @@ public sealed class DiscordSignInTests : IDisposable
             Exchanges.Add(form);
             if (ExchangeStatus != HttpStatusCode.OK)
             {
-                var refused = Json(ExchangeStatus, """{"error":"invalid_grant"}""");
+                var refused = Json(ExchangeStatus, $$"""{"error":"{{Error}}"}""");
                 if (RetryAfter is { } wait)
                 {
                     refused.Headers.RetryAfter = new RetryConditionHeaderValue(wait);
