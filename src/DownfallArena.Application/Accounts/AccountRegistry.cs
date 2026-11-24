@@ -146,14 +146,7 @@ public sealed class AccountRegistry
                 cancellationToken);
             if (upgraded.IsFailure)
             {
-                // A try refused after an earlier one held the name and bound the identity: another process changed the
-                // account meanwhile (deleted, suspended or upgraded it). What was written for this upgrade goes.
-                if (reservation is not null && last!.Username.Key != reservation.Username.Key)
-                {
-                    await _store.ReleaseUsernameAsync(reservation, cancellationToken);
-                }
-
-                await UnbindRefusedAsync(bound, upgraded, last, identity, id, cancellationToken);
+                await UndoRefusedUpgradeAsync(reservation, bound, upgraded, last, identity, id, cancellationToken);
                 return upgraded;
             }
 
@@ -170,6 +163,20 @@ public sealed class AccountRegistry
         {
             Writes.Release();
         }
+    }
+
+    // A try refused after an earlier one held the name and bound the identity: another process changed the account
+    // meanwhile (deleted, suspended or upgraded it). What was written for this upgrade goes, but for a name the account
+    // now carries.
+    private async Task UndoRefusedUpgradeAsync(
+        UsernameReservation? reservation, bool bound, Result<Account> upgraded, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    {
+        if (reservation is not null && last!.Username.Key != reservation.Username.Key)
+        {
+            await _store.ReleaseUsernameAsync(reservation, cancellationToken);
+        }
+
+        await UnbindRefusedAsync(bound, upgraded, last, identity, id, cancellationToken);
     }
 
     // An identity a try bound itself, then a later try refused (#1217): the account does not list it, so its binding
@@ -700,17 +707,7 @@ public sealed class AccountRegistry
             var account = read?.Account;
             if (account is not null && account.Identities.Contains(identity))
             {
-                // Its own name held an hour for it under another one would be free to anybody (AbandonedAsync): held
-                // afresh before it is taken up, so a registration cannot free it under the write that names it.
-                if (account.Username.Key == holder.Username.Key || _clock.GetUtcNow() - holder.ReservedAt < AbandonedAfter)
-                {
-                    return holder;
-                }
-
-                await _store.ReleaseUsernameAsync(holder, cancellationToken);
-                return await _store.TryReserveUsernameAsync(reservation with { Account = holder.Account }, cancellationToken)
-                    ? reservation with { Account = holder.Account }
-                    : null;
+                return await TakenUpAsync(holder, account, reservation, cancellationToken);
             }
 
             if (!await AbandonedAsync(holder, account, cancellationToken))
@@ -728,6 +725,23 @@ public sealed class AccountRegistry
         }
 
         return await _store.TryReserveUsernameAsync(reservation, cancellationToken) ? reservation : null;
+    }
+
+    /// <summary>
+    /// A name the asking account holds already, taken up again. Its own name held an hour for it under another one
+    /// would be free to anybody (<see cref="AbandonedAsync(UsernameReservation, Account?, CancellationToken)" />): it is
+    /// held afresh before it is taken up, so a registration cannot free it under the write that names it.
+    /// </summary>
+    private async Task<UsernameReservation?> TakenUpAsync(UsernameReservation holder, Account account, UsernameReservation reservation, CancellationToken cancellationToken)
+    {
+        if (account.Username.Key == holder.Username.Key || _clock.GetUtcNow() - holder.ReservedAt < AbandonedAfter)
+        {
+            return holder;
+        }
+
+        var afresh = reservation with { Account = holder.Account };
+        await _store.ReleaseUsernameAsync(holder, cancellationToken);
+        return await _store.TryReserveUsernameAsync(afresh, cancellationToken) ? afresh : null;
     }
 
     private async Task<bool> AbandonedAsync(UsernameReservation holder, CancellationToken cancellationToken) =>
