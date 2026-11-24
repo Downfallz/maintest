@@ -48,8 +48,9 @@ for (const journey of JOURNEYS) {
     }
     const known = KNOWN[journey.id] ?? [];
     expect(known.filter(line => / axe /.test(line)), 'axe is held to none').toEqual([]);
-    expect(unknownFindings(found, known), 'found, and not in scripts/ux/access-known.json').toEqual([]);
-    expect(goneFindings(found, known), 'fixed: cut these lines from scripts/ux/access-known.json').toEqual([]);
+    // Both at once, so a failed run says every line to add and every line to cut.
+    expect({ found: unknownFindings(found, known), fixed: goneFindings(found, known) },
+      'found: add to scripts/ux/access-known.json, or fix; fixed: cut from it').toEqual({ found: [], fixed: [] });
   });
 }
 
