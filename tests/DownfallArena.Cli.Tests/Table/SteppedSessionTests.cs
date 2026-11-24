@@ -440,10 +440,9 @@ public sealed class SteppedSessionTests : IDisposable
     }
 
     /// <summary>
-    /// Waits until the journal is stable: it refused a bot's turn, the session read the match again and tried once more, and
-    /// was refused again. The journal refuses every append after, so what a test reads then is where the table stays,
-    /// however late it reads (#1212). A journal that took the third try, or a read taken at the first refusal, let a
-    /// loaded runner move the table between the refusal and the reading.
+    /// Waits until the journal has refused a bot's turn and its next try, the match read again in between. It refuses every
+    /// append after that, so the table stays where it is however late a test reads it (#1212). Reading at the first
+    /// refusal, with a journal that took the fourth try, let a slow runner move the table before the read.
     /// </summary>
     private async Task Failed(SteppedSession session) =>
         await Waits.UntilAsync(() => _journal.Failed >= 2 && session.LastFailure is not null, "the journal refused a turn and its next try", TestContext.Current.CancellationToken);

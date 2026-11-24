@@ -626,9 +626,9 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
     }
 
     /// <summary>
-    /// Keeps the match as a step left it, unless a later step's is already kept, and says what it changed. The match
-    /// read again where its journal already was is kept and changes nothing: a bot's turn refused and read again before
-    /// the next try moves no page (#1212).
+    /// Keeps the match as a step left it, unless the match of a later step is already kept, and says what it changed.
+    /// If the match is read again and its journal has not moved, nothing changed: a refused bot turn, read again
+    /// before the next try, tells the table's pages nothing (#1212).
     /// </summary>
     private void Take(JournaledState state)
     {

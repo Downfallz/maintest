@@ -36,7 +36,7 @@ dotnet run --project src/DownfallArena.Cli -- studio
   API's match is replaced by the rebuilt one under its running session: the likely cause of #1187.
 - A host composed over the emulator opens its queues by their one name for the whole account (`agent-turns`,
   `notices`): its test never relies on a queue starting empty, and cleans up in `finally` (#1181).
-- A table host test waits on an event (`RecordedPush.FirstSent`, `Session.Outcome`) or `Waits.UntilAsync`, a deadline
-  in time, never on a count of looks (#1214). A signal is sent to a child process (`ChildCli`), never to the test run (#1205).
+- A table host test waits on an event (`RecordedPush.FirstSent`, `Session.Outcome`) or on `Waits.UntilAsync`, which
+  gives up after a deadline. It never waits on a fixed number of polls (#1214). A signal goes to a child process (`ChildCli`), never to the test run (#1205).
 - A flag or a route is described in docs/reference/commands.md and table/README.md, not in `AGENTS.md`.
 - `--format` and `--declaration` are refused by `benchmark` (and `--declaration` by `studio` and `--practice`).
