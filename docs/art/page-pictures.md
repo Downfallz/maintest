@@ -184,8 +184,9 @@ smallest file that fills the width drawn at twice the density, for each width th
 (`phone`), each file once, and a `group` as its heaviest member. `studio/ux-pictures.test.js` fails when a page
 goes over, and when a budget is so loose it holds nothing: either number more than 1.5 times what the page loads,
 plus 4 KiB (#1107). Adding a picture to a page raises its number in the
-same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are read by
-`node scripts/ux/journey.mjs --paint`.
+same change, with the reason in the pull request. The two times, 2.5 s and 0.1, are ADR 0197's and are held by
+`node scripts/ux/journey.mjs --paint`: it loads the pages a player opens first by these names, and exits 1 when a
+page's median largest paint or shift is over them (#962).
 
 ## A picture asked of the owner
 

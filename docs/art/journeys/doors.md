@@ -52,17 +52,21 @@ Screens of the walk this brief leaves out, and why:
   scrolls can take the focus. Its targets: 17 of 92 were under 44 px at 390, 11 on UX6's film; axe still found
   the 12 `link-in-text-block` and the table on that film. The next walk confirms these. A brief of its own can
   follow if the owner asks. The field guide, the other reference page, has its brief since the scene paintings'
-  S4 ([The mutation field guide](#the-mutation-field-guide-showcase-mutations)).
+  S4 ([The mutation field guide](#the-mutation-field-guide-showcase-mutations-showcase-mutations-family-showcase-mutations-entry)).
 - `first-lesson-brief`: the same window as `lesson-1-brief` of the lessons' journey, which UX8 briefs. What UX7
   owns is the step into it, briefed as the last beat of the name window.
 
-## The showcase's home (`showcase-home`, `showcase-home-fr`)
+## The showcase's home (`showcase-home`, `showcase-home-fr`, `showcase-home-story`, `showcase-home-modes`)
 
 ### Job
 
 The first door. A visitor who knows nothing arrives from a link or a search, learns what the game is, and leaves
 for the game with Play now. Built by `showcase/page.mjs` from `showcase/copy.mjs`, styled by
 `showcase/showcase.css`.
+
+The walk also films the home's two scenes, far below its first screen, each as the visitor sees it once scrolled to:
+`showcase-home-story` the Predator at rest in the creator's note (`#story`), `showcase-home-modes` the broken charge
+in Who you play (`#modes`) (#1044).
 
 - **Filled action**: Play now (Jouer), in the hero. The second Play now at the foot of the page is a gold
   outline with the same words: the measure counted two filled actions before UX6 and counts one now. The
@@ -199,8 +203,9 @@ in a visible tab, and one ambience at a time: the round's strip below is ambienc
   paintings in one section is a choice the owner may refuse: the charge could replace the breach as the section's
   ground, but words on a painting wait for S6's scrim and contrast measure. The critique looks at the seam at
   390 and at 1280 px.
-- The walk films the top of the home, so neither scene is on its sheet. The critique reads full-page shots at 320,
-  390 and 1280 px in both languages; the walk may gain a screen scrolled to `#modes`, in a change of its own.
+- The walk filmed only the top of the home until #1044: `showcase-home-story` and `showcase-home-modes` now put each
+  scene on the sheet, at 320 and 390 px, in English. The seat at 1280 px and the French page are still read on
+  the critique's full-page shots.
 - The charge drawn at 1250 px weighs 185,362 B, sent to a wide screen only; the budget counts the phone's.
 
 ## A round seen played (`showcase-round`)
@@ -297,13 +302,16 @@ nothing animating at rest on this screen: the strip had not come into view.
 - The pictures' text inside them (a chip, a tab's label) is the battle view's at about 0.9 of its size at 390 and
   0.74 at 320: it is a picture of the screen, not words to read, and the `alt` carries it.
 
-## The mutation field guide (`showcase-mutations`)
+## The mutation field guide (`showcase-mutations`, `showcase-mutations-family`, `showcase-mutations-entry`)
 
 Briefed for [the scene paintings' S4](../scene-paintings-plan.md#stages), on `b2a9544`. Read on the walk
 `node scripts/ux/journey.mjs doors --out <folder>` at 390 and 320 px with its measures, which film only the top of
 the page, and on the session's own shots of the three family heads and of the Ironhide, Blightweaver and Parasite
 entries opened, at 390, 320 and 1280 px, in English and in French. The scenes below were read in the build and the
 register ([scenes/README.md](../sources/pages/scenes/README.md)), not seen drawn: the critique sees them.
+Since #1044 the walk films two of them as the visitor sees them: `showcase-mutations-family`, the page opened at
+`#family-predator`, the Predator family's head; and `showcase-mutations-entry`, the page opened at
+`#form-parasite`, the Parasite's entry opened by its link.
 
 ### Job
 
@@ -408,9 +416,8 @@ None.
 
 ### Left
 
-- The walk films only the guide's top, so no scene is in its sheet. The critique reads shots of the three family
-  heads and the three entries opened, at 320, 390 and 1280 px, in both languages. The walk may gain them as
-  screens of `scripts/ux/journeys.mjs` (a family scrolled to, an entry opened), in a change of its own.
+- The walk films one family's head and one entry opened (#1044), the Predator's and the Parasite's. The two other
+  heads, the Ironhide and Blightweaver entries, the 1280 px seat and the French page are still read on shots.
 - Two scenes drift from their forms, the Blightweaver's amber gas and the moult's spined crest (the plan's
   question 3, kept by the owner). Beside the Blightweaver's own picture, lime green, the amber shows most: the
   owner sees it on the sheet of the entry opened.

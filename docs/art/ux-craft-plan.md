@@ -367,8 +367,10 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
    to `showcase/showcase.css`. No strip is committed: the first is UX6's, from the battle's films, and the
    encoder's strip was tried by hand, not in the gate. The `drawn` widths for a wide screen are estimated from
    the sheets' CSS, not measured. A painting is made smaller and never cut, so a ground that covers its box is sent
-   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` reports the paints and holds them to
-   nothing: the budget's two times are read by a person. The design system's page is not republished: the owner runs `/design-system`
+   whole. Deriving needs Pillow and its bytes change with the encoder's version. `--paint` only reported the paints until #962.
+   It now exits 1 when a page's median is over the budget's two times. Its first run on 2026-11-23 found
+   `table/home` over: a largest paint of 2.6 s (2,552 to 2,576 ms, the text), its shift 0.01.
+   The design system's page is not republished: the owner runs `/design-system`
    after the merge, as for UX4.
 6. **UX6, the showcase.** The first door shows the game played: a round in pictures of the real battle view,
    taken from the films the battle craft makes, beside the three sentences. Its pictures at the size they are
@@ -595,7 +597,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     - At 320 by 568, Create & play → is still below the first screen.
     - A rating remembered lives in one browser, and a long ladder has no link to the player's row.
     - The budget counts all 21 paintings, although the page loads one. The painting's fade-in is the browser's.
-    - `--paint` was not run on the two pages.
+    - `--paint` measures the two pages since #992, signed in after a ranked game: the ladder 0.8 s, the statistics
+      1.8 s, both within 2.5 s; not before a ranked game.
     - How the ladder counts restates ADR 0124 until the rulebook has a ladder section.
     - The walk records that the match's Settings cannot be pressed when Walker concedes: UX11's and UX12's.
 11. **UX11, the match's frame.** The round's bar, the order of play, the labels and the dock: the floor of text
