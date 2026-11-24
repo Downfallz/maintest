@@ -1,4 +1,28 @@
 {
   "format": "downfall.promo.generated.v1",
-  "files": []
+  "files": [
+    {
+      "brief": "brute-pummel-key-art",
+      "makes": "key-art",
+      "shot": "brute-pummel-round-3",
+      "ratio": "9:16",
+      "references": [
+        {
+          "file": "frame-6.50s.png",
+          "sha256": "27dbafdbf4e711bfbb38295088a88de1dec34038ce7f52cbe889bbbc6bdde49e"
+        },
+        {
+          "file": "frame-7.00s.png",
+          "sha256": "1937dde1a39c79aeda3f02f496cb8d8afa53430bb04f37cd972020a137038b1d"
+        }
+      ],
+      "type": "png",
+      "sha256": "4abd793434f05a2e727b65692ae7d1ec8708584e903959ebf72f65e0e45cbf39",
+      "bytes": 2526287,
+      "model": "Astra 6.2 high",
+      "date": "2026-11-24",
+      "prompt": "# Key art of the Brute's Pummel, from the filmed round 3\n\nMake a painted key art of the moment the reference frames show. It is for the game's launch and its store banners.\n\nOne Brute brings its huge front paw down on the other, on the battle's own ground, at dusk. Painted, heavy and still.\n\n## The reference\n\nStart from the attached frames of Downfall Instinct, a turn-based tactics game, filmed as it plays: the shot \"brute-pummel-round-3\", titled \"A Brute pummels the other at the top of round 3\".\n- frame-6.50s.png, the first of 2, in the order the game plays them\n- frame-7.00s.png, the second of 2, in the order the game plays them\nFrame it at 9:16, 1080 by 1920 pixels.\n\n## What the frames show, in the game's words\n\n- The ground, as the game paints it: painted dark-fantasy ritual site under a golden eclipse; ruined basalt architecture, teal mist, cracked stone foreground, low horizon, open floor for creatures.\n- Brute (two on the field), of the Brute family: heavy, low quadruped, enormous front paws, organic shell. It reads as impact, posture, resonance and mass. Like every creature of the game: distinctive bone-mask skull, hooked claws, bony dorsal protrusions.\n- The spell Pummel, which deals 2 damage to one enemy. The game stages it as: hammer with a huge front paw.\n\n## The palette\n\nThe creatures keep their own colours: charcoal/slate blue, desaturated gray, bone ivory and limited ochre/burnt-orange accents. Bright warm gold is the game's sign for what can be done: it stays off the creatures' bodies, whose own amber is dimmer and smaller.\nThe rest keeps to the brand's colours, mostly slate and soot, with bone and ivory light, gold only in a small share of the picture (the eclipse, the light of the blow) and copper as a small detail:\n- slate #0b1519\n- ivory #ece9dc\n- muted #adb8bd\n- gold #e7c183\n- gold bright #ffe2a6\n- ember #d39c85\n- soot #070d10\n- bone #d8c7a7\nThe teams' tints stay as the frames show them.\n\n## What not to do\n\n- No words, letters, numbers or logo: words are added later, over the picture.\n- Keep each creature as the frames draw it: its shape, its number of legs, its colours. Add no creature, weapon or armour the frames do not show.\n- Show no moment the frames do not hold: no other spell, no other place, no interface the game does not have.\n",
+      "blob": "generated/brute-pummel-key-art/4abd793434f05a2e727b65692ae7d1ec8708584e903959ebf72f65e0e45cbf39.png"
+    }
+  ]
 }
