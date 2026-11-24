@@ -34,8 +34,8 @@ the address of whatever navigation failed.
 - Bad: no page loads `offline.js` online, so the worker asks for it again each time it keeps a `page-art.js` that
   differs from its copy (#1061): one request a deploy. If that request fails, an older `offline.js` meets a newer kit
   until the next one; it fails to the page's words.
-- Neutral: other pages read offline (the rulebook) now find the kit. The rulebook's head is kept at 354 and 708 px,
-  about 37 KB; a screen that asks for a wider file, a phone of density 3 among them, shows the band without it. Other
+- Neutral: other pages read offline (the rulebook) now find the kit. The rulebook's head is kept at 354, 708 and
+  1062 px, about 90 KB (#1149); a screen that asks for a wider file shows the band without it. Other
   pages' paintings are not kept, and stay empty.
 
 ## Alternatives considered

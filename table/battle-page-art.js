@@ -3,8 +3,9 @@
 // page's to them (#1016).
 // The pictures a page draws, each at the sizes it is sent: `drawn` is the width it is drawn at, the phone's first;
 // `frames` is over 1 for a strip, its frames side by side; `pages` says where it is asked for first; `phone`, the
-// widths a page draws it at on the phone when it draws more than the first; `group`, the set a page draws it one
-// of at a time; `focus`, where a box that cuts it centres the cut.
+// widths a page draws it at on the phone when it draws more than the first; `dense`, the widths a phone of density 3
+// draws it at, also sent three times as wide; `group`, the set a page draws it one of at a time; `focus`, where a
+// box that cuts it centres the cut.
 export const BATTLE_PAGE_ART = {
   'crushing-stomp-aftermath': {
     from: '9100714c0207ac57', frames: 1, drawn: [358,620], pages: {"table/battle":"lazy"}, phone: {"table/battle":[358]},

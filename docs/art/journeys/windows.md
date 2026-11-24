@@ -569,6 +569,7 @@ None.
   what the creature could cast while it chooses a tempo. Done (#1034, the owner's answer): under 660 px tall the
   pinned head folds: the heading row shrinks to the height of its text, each tempo is a 44 px row of its mark and its
   name (its line kept for the ear), and the first reference card's head shows under it (`battle-tempo.spec.js`).
+  Settled by the owner (#1111, 2026-11-24): on a short phone the tempo's line stays out of sight, kept for the ear.
 - Pummel's crit chip here keeps its hint written ("Precision · current"), where the spellbook's grey chip at
   Instinct writes the chance alone: two forms of one fact on two sheets. Whether the reference takes the
   spellbook's grey chip is a choice for the owner, not P7's.

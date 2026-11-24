@@ -613,8 +613,9 @@ error (a 52x from Cloudflare for a host that is down), never the shared ones, wh
 The worker also keeps the offline page's plate (ADR 0200): `offline.js`, the picture kit (`picture.js`,
 `picture-form.js`, `picture-focus.js`, `page-art.js`, `battle-page-art.js`) and the plate's two files, which it reads off
 `page-art.js`, and keeps them again when a fresh `page-art.js` names other files. It keeps the rulebook's head painting
-the same way, at its phone width and twice it (354 and 708 px today, #1060). A screen that asks for a wider file, a
-phone of density 3 among them, shows the band without it. The kit is refreshed whenever a page loads it. The worker asks
+the same way, at its phone width, twice it and three times it (354, 708 and 1062 px today, #1060, #1149). A screen
+that asks for a wider file, a phone 430 px wide at density 3 among them (it asks for the 1280), shows the band
+without it. The kit is refreshed whenever a page loads it. The worker asks
 for `offline.js` again each time it keeps a `page-art.js` that differs from its copy (#1061). Loading a painting never
 keeps it: the worker keeps the files `page-art.js` names, when it reads that file. The offline page names its files
 from the root: it is shown at the failed page's address.

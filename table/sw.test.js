@@ -360,14 +360,14 @@ test('installing keeps the offline page\'s script, the picture kit and the plate
   assert.ok(!w.store.has('/page-art/parasite-under-slate-323.aaaaaaaa.webp'), 'only the plate is kept, not every picture');
 });
 
-test('installing keeps the rulebook\'s head painting at the sizes a phone asks for, and no other of its files (#1060)', async () => {
+test('installing keeps the rulebook\'s head painting at the sizes a phone asks for, a phone of density 3 among them, and no other of its files (#1060, #1149)', async () => {
   const real = readFileSync(new URL('./page-art.js', import.meta.url), 'utf8');
   const w = offlineWorker({ network: async path => ({ ...answer(`installed ${path}`), text: async () => (path === '/page-art.js' ? real : '') }) });
 
   await install(w);
 
   const head = [...w.store.keys()].filter(path => path.startsWith('/page-art/latch-under-the-arch-'));
-  assert.deepEqual(head.map(path => Number(path.match(/-(\d+)\./)[1])).sort((a, b) => a - b), [354, 708]);
+  assert.deepEqual(head.map(path => Number(path.match(/-(\d+)\./)[1])).sort((a, b) => a - b), [354, 708, 1062]);
   for (const path of head) assert.ok(real.includes(`file: '${path.slice('/page-art/'.length)}'`));
 });
 

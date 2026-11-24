@@ -26,8 +26,9 @@ const PAGE_ART = '/page-art.js';
 const KEPT_FILES = new Set([...RULEBOOK_OWN, ...RULEBOOK_SHARED, ...OFFLINE_SCRIPTS]);
 
 // The paintings kept with them, as page-art.js names their files: the offline page's plate, every size of it, and the
-// rulebook's head (#1060) at its phone width and twice it, the owner's choice: 354 and 708 px, about 37 KB. A screen that
-// asks for a wider file, a phone of density 3 among them, has a band of soot with its words.
+// rulebook's head (#1060) at its phone width, twice it and three times it, the owner's choices (#1060, #1149): 354, 708
+// and 1062 px, the last for a phone of density 3 (`dense`). A screen that asks for a wider file has a band of soot with
+// its words.
 const KEPT_PICTURES = [{ name: 'parasite-offline' }, { name: 'latch-under-the-arch', phone: 'table/rules' }];
 
 // The files of the kept paintings, as page-art.js names them (scripts/ux/pictures.mjs writes one entry a picture, its
@@ -38,10 +39,14 @@ function pictureFiles(pageArt) {
     if (!entry) return [];
     const sizes = [...entry[2].matchAll(/file: '([^']+)', width: (\d+)/g)].map(([, file, width]) => ({ file, width: Number(width) }));
     if (!phone) return sizes.map(size => `/page-art/${size.file}`);
-    const widths = entry[1].match(new RegExp(String.raw`phone: \{[^}]*"${phone}":\[([\d,]+)\]`));
-    const widest = widths ? 2 * Math.max(...widths[1].split(',').map(Number)) : 0;
+    const widest = Math.max(2 * widestOf(entry[1], 'phone', phone), 3 * widestOf(entry[1], 'dense', phone));
     return sizes.filter(size => size.width <= widest).map(size => `/page-art/${size.file}`);
   });
+}
+// The widest width an entry's `phone` or `dense` names for a page, or 0 when it names none.
+function widestOf(entry, field, page) {
+  const widths = entry.match(new RegExp(String.raw`${field}: \{[^}]*"${page}":\[([\d,]+)\]`));
+  return widths ? Math.max(...widths[1].split(',').map(Number)) : 0;
 }
 const isPictureFile = path => KEPT_PICTURES.some(({ name }) => path.startsWith(`/page-art/${name}-`));
 

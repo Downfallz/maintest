@@ -45,7 +45,8 @@ variants into slate. Copper is a secondary decorative accent, not a new gameplay
 | `--cut` | 12px | The cut corner of a card; a window sets 16px, a docked sheet 0px |
 | `--tex-grain`, `--tex-soot`, `--tex-rule` | SVG data URIs | Bone grain, soot smudges, the rune that opens a title's rule |
 
-- Bone is what is read first; gold is what can be done. One filled gold action a screen.
+- Bone is what is read first; gold is what can be done. One filled gold action a screen: while the pop-ups offer
+  stands, the page's own takes its outline form (#1128).
 - Marcellus has one weight. Do not ask it for bold; use size, colour or the sans-serif.
 - A pill is a counter. Buttons, tags, fields and chips are square.
 - The cut corner belongs to the filled action, a card and a centred window. A sheet docked to an edge is square.

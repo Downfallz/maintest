@@ -58,6 +58,9 @@ What the still shows is what a player sees, with three choices made for every sh
 - the practice's banner (`#practice-band`) is hidden, since a match has none. The rest of the page stays as it is,
   so a still of a practice still names its opponent the practice bot: the shot is a practice against a bot.
 
+The page stays whole, the owner's choice (#1174, 2026-11-24): a shot hides nothing more than the practice's banner,
+even where the 9:16 still reads as a phone's screen. A post frames the still with its own title card (P3, the cut).
+
 One shot gives the same bytes each time on one machine and one build of Chromium; the real-engine journey
 `studio/browser/table.promo.js` holds it.
 
