@@ -127,6 +127,12 @@ internal sealed record CliOptions
     public string? MicrosoftClientId { get; init; }
 
     /// <summary>
+    /// Where the sign-in providers' client ids are read when their flags are not given: the process's environment,
+    /// unless a test gives its own (#1239), as the test classes running in parallel share the process's.
+    /// </summary>
+    public Func<string, string?> Variables { get; init; } = Environment.GetEnvironmentVariable;
+
+    /// <summary>
     /// The accounts that are the operator when signed in, by their ids, comma-separated (ADR 0172);
     /// <c>DOWNFALL_ADMINS</c> when not given.
     /// </summary>

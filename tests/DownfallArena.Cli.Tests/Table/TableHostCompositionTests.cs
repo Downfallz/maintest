@@ -552,6 +552,80 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>
+    /// The panel's "Run now" removes the guests unused for a month (ADR 0207, #1225), as the hourly job does: the
+    /// pass is built here and not in <c>TableTend.ComposeAsync</c>, so leaving its guests out went unseen. A guest made
+    /// through the host's own route goes, with its game settings and its activity; a player's account, as old, stays.
+    /// </summary>
+    [Fact]
+    public async Task A_pass_run_from_the_panel_removes_the_guests_unused_for_a_month()
+    {
+        var clock = new ShiftedClock();
+        using var later = new HostedTables(store: null, clock: clock);
+        var host = await ComposeAsync(services: later.Services);
+        var mark = await SignInAsync(host, "MarkF");
+        var made = await host.Accounts!.HandleAsync("POST", AccountApi.GuestRoute, "", new AccountRequest(null, Secure: true, "203.0.113.7"));
+        made.Status.ShouldBe(200);
+        var guest = AccountId.Parse(Json(made).GetProperty("account").GetProperty("id").GetString()!);
+        var session = made.Headers!.Single(header => header.Key == "Set-Cookie").Value.Split(';')[0][(AccountSessions.Cookie.Length + 1)..];
+        (await host.Accounts.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":1.5,"help":false,"reducedMotion":true,"reactions":false}""", Signed(session))).Status.ShouldBe(200);
+        var target = Path.Combine(_root, "playtest");
+        var (preferences, activity) = (await ArtifactStores.OpenPreferencesAsync(target, Cancel), await ArtifactStores.OpenActivityAsync(target, Cancel));
+        (await preferences.GetAsync(guest, Cancel)).ShouldNotBeNull();
+        (await activity.FindAsync(guest, Cancel)).ShouldNotBeNull();
+        clock.Advance(IdleGuests.KeptFor + TimeSpan.FromDays(1));
+
+        var pass = await host.Admin.Jobs!.HandleAsync("POST", JobsApi.TendRoute, null, "op");
+
+        pass.Status.ShouldBe(200);
+        var accounts = await ArtifactStores.OpenAccountsAsync(target, Cancel);
+        (await accounts.FindAsync(guest, Cancel)).ShouldBeNull();
+        (await accounts.FindAsync(mark.Id, Cancel)).ShouldNotBeNull();
+        (await preferences.GetAsync(guest, Cancel)).ShouldBeNull();
+        (await activity.FindAsync(guest, Cancel)).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Each provider's client id is read from its variable when no flag gives it (#1239): production passes the flags,
+    /// so only this test fails when a fallback is deleted. The variables are read through the options' own
+    /// (<c>CliOptions.Variables</c>), not the process's environment, which the test classes running in parallel share.
+    /// </summary>
+    [Fact]
+    public async Task Without_their_flags_the_host_reads_each_provider_client_id_from_its_variable()
+    {
+        var variables = new Dictionary<string, string>
+        {
+            [TableHost.GoogleClientIdEnvironment] = "1234.apps.googleusercontent.com",
+            [TableHost.DiscordClientIdEnvironment] = "1311111111111111111",
+            [TableHost.MicrosoftClientIdEnvironment] = "6731de76-14a6-49ae-97bc-6eba6914391e",
+        };
+
+        _host = (await TableHost.ComposeAsync(
+            _hosted.Services,
+            new CliOptions
+            {
+                Command = "table",
+                Output = "out.csv",
+                Record = Path.Combine(_root, "playtest"),
+                Accounts = AccountsMode.SignIn,
+                SignIn = [ExternalIdentity.Google, ExternalIdentity.Discord, ExternalIdentity.Microsoft],
+                Variables = name => variables.GetValueOrDefault(name),
+                Lobby = true,
+                Port = FreePort(),
+            },
+            HostedTables.Rules,
+            null,
+            Path.Combine(AppContext.BaseDirectory, "table"),
+            null,
+            Cancel)).ShouldNotBeNull();
+
+        _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([
+            ("google", "1234.apps.googleusercontent.com"),
+            ("discord", "1311111111111111111"),
+            ("microsoft", "6731de76-14a6-49ae-97bc-6eba6914391e"),
+        ]);
+    }
+
+    /// <summary>
     /// A host told <c>--turns worker</c> over a container (#1181): <c>table-worker</c> takes the bots' turns in a process of
     /// its own, so this host starts no worker of its own beside it, and a turn put on the queue is still there for it.
     /// That nothing took it is read once the host's notices worker, started after where the turns' would be, has sent
