@@ -47,6 +47,41 @@ public sealed class FileNoticeStoreTests : NoticeStoreContract, IDisposable
         (await store.ReadAsync(account, Cancel)).Entries.ShouldBe(entries);
     }
 
+    /// <summary>A log another revision wrote, with fields this one does not know: marking it read keeps them (#1211).</summary>
+    [Fact]
+    public async Task Changing_a_log_keeps_the_fields_this_revision_does_not_know()
+    {
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var path = Path.Combine(_root, "notices", $"{account.Value}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, NoticeFields.Written, Cancel);
+        var store = new FileNoticeStore(_root);
+
+        var read = await store.ReadAsync(account, Cancel);
+        (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
+
+        NoticeFields.ShouldKeepThem(await File.ReadAllTextAsync(path, Cancel));
+    }
+
+    /// <summary>An entry of a kind this revision skips goes at its next write, and its id handed out again does not take its fields.</summary>
+    [Fact]
+    public async Task An_entry_given_the_id_of_one_of_a_kind_this_revision_skips_does_not_take_its_fields()
+    {
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var path = Path.Combine(_root, "notices", $"{account.Value}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, """
+            { "entries": [ { "id": 2, "kind": "tournament", "title": "t", "body": "b", "url": "/", "tag": "x", "at": "2026-11-22T20:00:00+00:00", "read": false, "icon": "cup" } ] }
+            """, Cancel);
+        var store = new FileNoticeStore(_root);
+        var read = await store.ReadAsync(account, Cancel);
+        NoticeEntry[] entries = [new(2, NoticeKind.Left, "bastien left the table", "b", "/", "match:t1", DateTimeOffset.UnixEpoch, false)];
+
+        (await store.WriteAsync(account, entries, read.Version, Cancel)).ShouldBeTrue();
+
+        (await File.ReadAllTextAsync(path, Cancel)).ShouldNotContain("cup");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

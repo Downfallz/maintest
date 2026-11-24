@@ -1077,7 +1077,7 @@ internal sealed class AccountApi
 
         if (!PushSubscription.OnKnownService(subscription.Endpoint))
         {
-            return Problem(400, "Account.UnknownPushService", "This browser's push service is not one this host sends to.");
+            return Problem(400, "Account.UnknownPushService", PushTest.UnknownServiceMessage);
         }
 
         if (await notices.IsGoneAsync(who.Account.Id, subscription.Endpoint))
@@ -1135,6 +1135,11 @@ internal sealed class AccountApi
         }
 
         var test = await notices.TestAsync(who.Account.Id, Read<BrowserSubscription>(body)?.Endpoint);
+        if (test.UnknownService)
+        {
+            return Problem(400, "Account.UnknownPushService", test.Message);
+        }
+
         return StudioResponse.OfJson(new { sent = test.Sent, message = test.Message }, Web, test.Sent ? 200 : 502);
     }
 

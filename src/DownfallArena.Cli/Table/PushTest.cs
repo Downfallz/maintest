@@ -3,6 +3,18 @@ namespace DownfallArena.Cli.Table;
 /// <summary>What a test notice came to (<see cref="PushNotices.TestAsync" />): sent, or not, and said how.</summary>
 internal sealed record PushTest(bool Sent, string Message)
 {
+    /// <summary>What the subscribe routes and the push tests say of a push service this host does not send to.</summary>
+    public const string UnknownServiceMessage = "This browser's push service is not one this host sends to.";
+
+    /// <summary>
+    /// A test on a subscription on no push service this host sends to (#1209): said as the subscribe routes refuse one,
+    /// which its route answers with their status and code, since a new subscription on that service would be refused too.
+    /// </summary>
+    public static readonly PushTest OnUnknownService = new(false, UnknownServiceMessage) { UnknownService = true };
+
+    /// <summary>Whether the subscription is on no push service this host sends to; its route answers 400, not 502.</summary>
+    public bool UnknownService { get; init; }
+
     /// <summary>
     /// A test the push service refused, said with its status when it answered one: its own words can carry the
     /// service's response text, so they go to the console only (#786).

@@ -33,7 +33,7 @@ internal sealed class RecordedPush : IPushSender
         }
     }
 
-    public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+    public async Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
     {
         if (Lag > TimeSpan.Zero)
         {
@@ -44,7 +44,7 @@ internal sealed class RecordedPush : IPushSender
         {
             Sent.Add((to.Endpoint, payload, topic));
             _first.TrySetResult();
-            return !Gone.Contains(to.Endpoint);
+            return Gone.Contains(to.Endpoint) ? PushSent.Gone : PushSent.Taken;
         }
     }
 }

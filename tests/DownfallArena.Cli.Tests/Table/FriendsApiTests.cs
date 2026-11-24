@@ -241,10 +241,10 @@ public sealed class FriendsApiTests : IDisposable
     {
         public List<(string Endpoint, string Payload, string Topic)> Sent { get; } = [];
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             Sent.Add((to.Endpoint, payload, topic));
-            return Task.FromResult(true);
+            return Task.FromResult(PushSent.Taken);
         }
     }
 }

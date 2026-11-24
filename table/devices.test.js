@@ -44,7 +44,7 @@ test('only a 410 from the host means the browser must make a new subscription', 
 });
 
 /** The panel's elements as the page draws them, and a browser that holds one subscription. */
-function harness({ notices = { turns: true, invitations: true, results: true }, held = true, storage = null } = {}) {
+function harness({ notices = { turns: true, invitations: true, results: true }, held = true, storage = null, testRefused = null } = {}) {
   const calls = [];
   const listeners = {};
   const element = id => ({ id, hidden: false, checked: false, disabled: false, textContent: '', addEventListener: (type, listener) => { listeners[`${id}:${type}`] = listener; } });
@@ -62,6 +62,7 @@ function harness({ notices = { turns: true, invitations: true, results: true }, 
     if (path === '/api/account/preferences') return notices ? { notices } : {};
     if (path === '/api/account/preferences/notices') return { notices: body };
     if (path === '/api/account/push') return { notices: method === 'PUT' };
+    if (path === '/api/account/push/test' && testRefused) throw testRefused;
     return {};
   };
   const doc = { getElementById: id => elements[id] ?? null };
@@ -195,4 +196,18 @@ test('a browser that cannot push is read once the host\'s key is, so the offer c
   await settled();
   assert.deepEqual(unable.offerState(), { ready: true, keyed: true, subscribed: false, permission: 'default', hotseat: false });
   assert.equal(devices.offerState().ready, false, 'nobody signed in there');
+});
+
+test('a test on a push service the host does not send to turns the switch off and lets go of the browser\'s subscription (#1209)', async () => {
+  const refused = Object.assign(new Error('This browser\'s push service is not one this host sends to.'), { status: 400, code: 'Account.UnknownPushService' });
+  const h = harness({ testRefused: refused });
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  h.listeners['device-test:click']();
+  await settled();
+
+  assert.equal(h.calls.at(-1), 'unsubscribe');
+  assert.equal(h.elements['device-toggle'].checked, false);
+  assert.match(h.elements['device-result'].textContent, /not one this host sends to/);
 });

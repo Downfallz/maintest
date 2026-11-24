@@ -28,10 +28,24 @@ public sealed class FileDeviceStore : IDeviceStore
         return new DeviceListRead(text is null ? [] : DeviceDocuments.Read(text), version);
     }
 
-    public Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Reads the document again, to write back the fields this revision does not know (#1211). A write is refused,
+    /// without being tried, when the version has moved since it was read.
+    /// </summary>
+    public async Task<bool> SaveAsync(AccountId account, IReadOnlyList<PushDevice> devices, string? version, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(devices);
-        return ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices), version, cancellationToken);
+        string? before = null;
+        if (version is not null && devices.Count > 0)
+        {
+            (before, var current) = await ConditionalFile.ReadAsync(FullPath(account), cancellationToken);
+            if (!string.Equals(current, version, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return await ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
     }
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default) =>

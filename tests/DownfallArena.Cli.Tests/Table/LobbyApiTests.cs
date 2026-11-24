@@ -737,22 +737,27 @@ public sealed class LobbyApiTests : IDisposable
         table.Seats[0].Push.ShouldNotBeNull("the seat was given another subscription while the test was in flight, and that one answered nothing");
     }
 
-    /// <summary>A subscription kept before the host checked its push service is never called: no push service said anything about it (#1176).</summary>
+    /// <summary>
+    /// A subscription kept before the host checked its push service is never called, and is forgotten: the test answers
+    /// in the subscribe route's words, not "gone", since subscribing again on that service would be refused the same way (#1209).
+    /// </summary>
     [Fact]
-    public async Task A_test_on_a_subscription_kept_on_a_push_service_the_host_does_not_know_says_it_is_gone_without_naming_a_push_service()
+    public async Task A_test_on_a_subscription_kept_on_a_push_service_the_host_does_not_know_forgets_it_and_answers_as_subscribing_would()
     {
         using var sender = new WebPushSender(PushKeys.Generate() with { Subject = "mailto:table@example.org" });
         var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
         var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
         var table = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!;
+        var subscribing = await lobby.HandleAsync("PUT", "/api/lobby/push", JsonSerializer.Serialize(new { endpoint = "https://slow.example/one", keys = new { p256dh = BrowserKey, auth = BrowserAuth } }), table.Seats[0].Token);
         table.Seats[0].Push = new PushSubscription("https://slow.example/one", BrowserKey, BrowserAuth);
 
         var test = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", table.Seats[0].Token);
 
-        test.Status.ShouldBe(502);
-        var message = JsonDocument.Parse(test.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull();
-        message.ShouldContain("gone", Case.Sensitive, "the pages forget a subscription whose test says gone");
-        message.ShouldNotContain("push service", Case.Insensitive);
+        test.Status.ShouldBe(subscribing.Status);
+        var answer = JsonDocument.Parse(test.Body).RootElement;
+        answer.GetProperty("error").GetString().ShouldBe("Lobby.UnknownPushService");
+        answer.GetProperty("message").GetString().ShouldBe(JsonDocument.Parse(subscribing.Body).RootElement.GetProperty("message").GetString());
+        answer.GetProperty("message").GetString().ShouldNotBeNull().ShouldNotContain("gone", Case.Sensitive, "the pages ask to subscribe again on a test that says gone");
         table.Seats[0].Push.ShouldBeNull();
     }
 
@@ -767,16 +772,16 @@ public sealed class LobbyApiTests : IDisposable
         /// <summary>Run while the send is in flight: what a browser or the next player does to the seat meanwhile.</summary>
         public Action? Replace { get; set; }
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             if (Failure is { } failure)
             {
-                return Task.FromException<bool>(failure);
+                return Task.FromException<PushSent>(failure);
             }
 
             Sent.Add(payload);
             Replace?.Invoke();
-            return Task.FromResult(!Gone);
+            return Task.FromResult(Gone ? PushSent.Gone : PushSent.Taken);
         }
     }
 
@@ -817,7 +822,7 @@ public sealed class LobbyApiTests : IDisposable
 
     private sealed class NothingSent : IPushSender
     {
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default) => Task.FromResult(PushSent.Taken);
     }
 
     /// <summary>A table composed by hand, registered and recorded as the lobby and the admin panel do it.</summary>

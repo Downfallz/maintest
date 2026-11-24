@@ -110,3 +110,10 @@ test('a push service the host does not send to is said without asking for a retr
   assert.doesNotMatch(h.control.model().message, /try again/i);
   assert.ok(h.calls.includes('unsubscribe'), 'the subscription this page made is let go of');
 });
+test('a test on a push service the host does not send to lets the subscription go and hides the test (#1209)', async () => {
+  const h = harness({ held: true }); await tick();
+  h.transport.pushTest = async () => { h.calls.push('host-test'); return { ok: false, status: 400, body: { error: 'Lobby.UnknownPushService', message: 'This browser\'s push service is not one this host sends to.' } }; };
+  await h.control.test();
+  assert.deepEqual(h.calls.slice(-2), ['host-test', 'unsubscribe']);
+  assert.equal(h.control.model().testShown, false); assert.match(h.control.model().message, /not one this host sends to/);
+});

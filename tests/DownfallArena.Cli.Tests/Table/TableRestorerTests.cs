@@ -775,14 +775,14 @@ public sealed class TableRestorerTests : IDisposable
     {
         public List<string> Sent { get; } = [];
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             lock (Sent)
             {
                 Sent.Add(payload);
             }
 
-            return Task.FromResult(true);
+            return Task.FromResult(PushSent.Taken);
         }
     }
 

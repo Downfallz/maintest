@@ -681,7 +681,7 @@ public sealed class LobbyInvitationsTests : IDisposable
 
         public TaskCompletionSource Began { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public async Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public async Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             Sent.Add((to.Endpoint, payload, topic));
             Began.TrySetResult();
@@ -690,7 +690,7 @@ public sealed class LobbyInvitationsTests : IDisposable
                 await hold.Task;
             }
 
-            return !Gone.Contains(to.Endpoint);
+            return Gone.Contains(to.Endpoint) ? PushSent.Gone : PushSent.Taken;
         }
     }
 

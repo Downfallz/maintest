@@ -378,7 +378,7 @@ public abstract class NoticeWorkerContract
 
         public List<string> Sent { get; } = [];
 
-        public Task<bool> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
+        public Task<PushSent> SendAsync(PushSubscription to, string payload, string topic, CancellationToken cancellationToken = default)
         {
             if (Failures > 0)
             {
@@ -394,11 +394,11 @@ public abstract class NoticeWorkerContract
 
             if (Gone)
             {
-                return Task.FromResult(false);
+                return Task.FromResult(PushSent.Gone);
             }
 
             Sent.Add(to.Endpoint);
-            return Task.FromResult(true);
+            return Task.FromResult(PushSent.Taken);
         }
     }
 }
