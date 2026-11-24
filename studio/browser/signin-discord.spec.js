@@ -62,6 +62,17 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
 
 const discordButton = page => page.getByRole('button', { name: 'Continue with Discord' });
 
+// The height a finger can press: the 40 px face Google's own button has, and the strip above and below it that still
+// presses the button (lobby.css), read where the page would send a tap.
+const touchHeight = locator => locator.evaluate(button => {
+  const box = button.getBoundingClientRect(), x = box.left + box.width / 2;
+  const presses = y => button.contains(document.elementFromPoint(x, y));
+  let top = box.top, bottom = box.bottom - 1;
+  while (presses(top - 1)) top--;
+  while (presses(bottom + 1)) bottom++;
+  return bottom - top + 1;
+});
+
 test('the Discord button sits under Google\'s, as tall as a finger needs', async ({ page }) => {
   const seen = await lobby(page);
 
@@ -69,7 +80,9 @@ test('the Discord button sits under Google\'s, as tall as a finger needs', async
   const discord = await discordButton(page).boundingBox();
 
   expect(discord.y).toBeGreaterThanOrEqual(google.y + google.height);
-  expect(discord.height).toBeGreaterThanOrEqual(44);
+  expect(discord.height).toBe(40);
+  expect(await touchHeight(discordButton(page))).toBeGreaterThanOrEqual(44);
+  expect(discord.width).toBe(google.width);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(seen.errors).toEqual([]);
 });
@@ -164,7 +177,8 @@ test('a new player back from Microsoft is asked for a name in the lobby, its but
   const discord = await discordButton(page).boundingBox();
   const microsoft = await microsoftButton.boundingBox();
   expect(microsoft.y).toBeGreaterThanOrEqual(discord.y + discord.height);
-  expect(microsoft.height).toBeGreaterThanOrEqual(44);
+  expect(await touchHeight(microsoftButton)).toBeGreaterThanOrEqual(44);
+  expect(microsoft.width).toBe(discord.width);
 
   await microsoftButton.click();
 
