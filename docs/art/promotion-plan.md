@@ -240,14 +240,15 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    them. A post is named by its day; its front matter gives its channels, its media (`cut <cut>`,
    `still <shot> <ratio>`, `film <shot> <ratio>` or `generated <sha256>`, each one the repository holds) and its
    status, and its body a title and its words under `## en` and `## fr`. Its words are the same on each of its
-   channels and fit the smallest of their limits (`CHANNELS`: a Short's title 100 characters, a Reddit title 300, X
-   280, Bluesky 300, TikTok and Reels 2200, Discord 2000). A post that shows a restyled clip says so in each
-   language (ADR 0205). A `published` post gives `link <channel>: https://...` for each channel, and is not dated
-   after today; a post not published gives no link. The first post, `2026-12-01-brute-pummel-answer`, a draft, puts
+   channels and fit each of their limits (`CHANNELS`: a Short's title 100, a Reddit title 300, X 280, Bluesky 300,
+   TikTok and Reels 2200, Discord 2000), counted as the channel counts or more: UTF-16 units, and X's own weights
+   (an emoji two, an address 23). A post that shows a restyled clip says so in each language (ADR 0205). A
+   `published` post gives `link <channel>: https://...` on that channel's site for each channel, and is not dated
+   after today, Montreal's day; a post not published gives no link. The first post, `2026-12-01-brute-pummel-answer`, a draft, puts
    the cut `brute-pummel-answer` on the vertical feeds, X and Bluesky.
 
    Tests: `studio/promo-calendar.test.js` (a post's name, its media missing or not held, a channel not of the
-   launch or named twice, words over a channel's limit counted in characters, words missing in a language, the
+   launch or named twice, words over a channel's limit as it counts them, words missing in a language, the
    restyled label, the links by status, the keys, the command's exit codes, a spell named in French as the battle
    names it); the English words are scanned with the pages' (`table/terminology.test.js`).
 

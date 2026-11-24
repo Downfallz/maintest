@@ -1361,7 +1361,8 @@ node scripts/promo/calendar.mjs --calendar <folder>
 
 Checks the promotion's calendar (docs/art/promotion-plan.md, P5; promo/README.md#the-calendar): each post of
 `promo/calendar/`, named by its date, names its channels, the media the repository holds, its words in English and
-French within each channel's limit, and its status, with the link of each channel once published. Prints how many
+French within each channel's limit as that channel counts, and its status, with the link of each channel, on its
+site, once published. Prints how many
 posts it holds by status. Exit 1 on a post it refuses, on a calendar missing or without a post, and on another
 argument.
 

@@ -282,20 +282,27 @@ Fury frappe en premier. Ta Brute riposte avec Pummel. Tactique au tour par tour,
   `still <shot> <ratio>` or `film <shot> <ratio>` (a shot of `shots/`, taken or filmed at that ratio), or
   `generated <sha256>` (a line of `generated.json`).
 - `status` is `draft`, `approved` (its pull request is merged) or `published`. A published post gives the link of
-  each of its channels, one line each: `link x: https://x.com/...`. A post not published gives none.
+  each of its channels, one line each, on that channel's own site: `link x: https://x.com/...`. A post not
+  published gives none.
 - The `#` heading says what the post is, for the owner who reads the calendar. Under `## en` and `## fr` are its
-  words, the same on each of its channels: they fit the smallest of their limits (`CHANNELS` in
-  `scripts/promo/calendar.mjs`, in characters: a Short's title 100, a Reddit title 300, X 280, Bluesky 300, TikTok
-  and Reels 2200, Discord 2000). Words longer than a channel takes are a post of their own, for the channels that
-  take them.
+  words, the same on each of its channels: they fit each of their limits (`CHANNELS` in
+  `scripts/promo/calendar.mjs`: a Short's title 100, a Reddit title 300, X 280, Bluesky 300, TikTok and Reels
+  2200, Discord 2000). Each is counted as its channel counts, or more: in UTF-16 units, where an emoji is two; on X,
+  with its own weights, where an emoji, an ellipsis or French's narrow space before "?" is two and an address 23.
+  Words too long for a channel go in a separate post, for the channels that take them.
 - A post that shows a restyled clip says so in its words, "Gameplay restyled by a model." and "Partie restylisée
   par un modèle." (ADR 0205).
 
-The English words are scanned as the pages' are (`table/terminology.test.js`), and a spell keeps the name the
-battle shows in the French words too, as in a cut. A post is refused when it is not named by a real day, has a key
-not in this format, names no channel or one not of the launch, has no media or media the repository does not hold,
-lacks its words in a language or has words over a channel's limit, or gives a link before it is published; a
-published post is refused without the link of each channel, or dated after today (`studio/promo-calendar.test.js`).
+The title and the English words are scanned as the pages' are (`table/terminology.test.js`), and a spell keeps the
+name the battle shows in the French words too, as in a cut. A post is refused when (`studio/promo-calendar.test.js`):
+
+- its name is not a real day and a name, or the calendar holds a file that is not a post;
+- its front matter has a key not in this format, no channel, or a channel not of the launch;
+- it has no media, or media the repository does not hold;
+- it has no title before its words, or lacks its words in a language;
+- its words are over a channel's limit, or show a restyled clip without saying so;
+- it gives a link before it is published, or a link off its channel's site;
+- it is published without the link of each channel, or dated after today, Montreal's day.
 
 ```bash
 node scripts/promo/calendar.mjs   # promo/calendar/ read and checked

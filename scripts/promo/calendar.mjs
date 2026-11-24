@@ -8,22 +8,45 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readGenerated } from './brief.mjs';
 import { readShot, root } from './shoot.mjs';
 
+// Characters as most platforms count them, at the most: UTF-16 units, which are never fewer than the code points
+// or the graphemes a platform counts (an emoji is two).
+const units = text => text.length;
+
+// What X counts: 23 for each address, 1 for a character of the Latin, Greek, Cyrillic and other early ranges and of
+// the usual punctuation, 2 for any other (an emoji, an ellipsis, the narrow space French puts before "?").
+const ADDRESS = /\bhttps?:\/\/\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|gg|app|co|ca|fr)\b\S*/gi;
+const LIGHT = [[0x0000, 0x10ff], [0x2000, 0x200d], [0x2010, 0x201f], [0x2032, 0x2037]];
+function weighted(text) {
+  const addresses = text.match(ADDRESS) ?? [];
+  const rest = text.replace(ADDRESS, '');
+  let count = addresses.length * 23;
+  for (const character of rest) {
+    const point = character.codePointAt(0);
+    count += LIGHT.some(([low, high]) => point >= low && point <= high) ? 1 : 2;
+  }
+  return count;
+}
+
 /**
- * The channels of the launch (the plan's question 5), each with the most characters its post's words may hold: the
- * title of a Short, a Reddit post's title, a post on X or Bluesky, the caption of a TikTok or a Reel, a Discord
- * message. Counted in characters (code points), never fewer than the platforms count.
+ * The channels of the launch (the plan's question 5), each with the most characters its post's words may hold, as
+ * it counts them: the title of a Short, a Reddit post's title, a post on X or Bluesky, the caption of a TikTok or a
+ * Reel, a Discord message. Each also names the hosts its posts' links are on.
  */
 export const CHANNELS = Object.freeze({
-  'youtube-shorts': Object.freeze({ limit: 100 }),
-  tiktok: Object.freeze({ limit: 2200 }),
-  'instagram-reels': Object.freeze({ limit: 2200 }),
-  reddit: Object.freeze({ limit: 300 }),
-  x: Object.freeze({ limit: 280 }),
-  bluesky: Object.freeze({ limit: 300 }),
-  discord: Object.freeze({ limit: 2000 }),
+  'youtube-shorts': Object.freeze({ limit: 100, count: units, hosts: ['youtube.com', 'youtu.be'] }),
+  tiktok: Object.freeze({ limit: 2200, count: units, hosts: ['tiktok.com'] }),
+  'instagram-reels': Object.freeze({ limit: 2200, count: units, hosts: ['instagram.com'] }),
+  reddit: Object.freeze({ limit: 300, count: units, hosts: ['reddit.com', 'redd.it'] }),
+  x: Object.freeze({ limit: 280, count: weighted, hosts: ['x.com', 'twitter.com'] }),
+  bluesky: Object.freeze({ limit: 300, count: units, hosts: ['bsky.app'] }),
+  discord: Object.freeze({ limit: 2000, count: units, hosts: ['discord.com', 'discord.gg'] }),
 });
+
+/** Today in Montreal, where the owner posts: a post published this evening is not dated tomorrow. */
+export const montrealToday = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(now);
 
 export const STATUSES = Object.freeze(['draft', 'approved', 'published']);
 export const LANGUAGES = Object.freeze(['en', 'fr']);
@@ -36,7 +59,6 @@ const NAME = /^(\d{4})-(\d{2})-(\d{2})-[a-z0-9][a-z0-9-]*\.md$/;
 const SLUG = /^[a-z0-9][a-z0-9-]*$/;
 
 const list = value => value.split(',').map(item => item.trim()).filter(Boolean);
-const characters = text => [...text].length;
 
 // The day a file is named by, if the calendar has it.
 function dayOf(name, refuse) {
@@ -50,7 +72,7 @@ function dayOf(name, refuse) {
 
 // The front matter's lines, and the body after it.
 function split(text, refuse) {
-  const lines = text.replaceAll('\r\n', '\n').split('\n');
+  const lines = text.replace(/^\uFEFF/, '').replaceAll('\r\n', '\n').split('\n');
   if (lines[0] !== '---') refuse('a post starts with its "---" front matter: channels, media, status.');
   const end = lines.indexOf('---', 1);
   if (end < 0) refuse('the front matter ends with a "---" line.');
@@ -72,8 +94,9 @@ function split(text, refuse) {
 
 // The title, and the words under each language's heading.
 function words(body, refuse) {
-  const title = body.find(line => line.startsWith('# '))?.slice(2).trim();
-  if (!title) refuse('the post has its title, a "# " heading, for the owner who reads the calendar.');
+  const first = body.findIndex(line => line.startsWith('## '));
+  const title = body.slice(0, first < 0 ? body.length : first).find(line => line.startsWith('# '))?.slice(2).trim();
+  if (!title) refuse('the post has its title, a "# " heading before its words, for the owner who reads the calendar.');
   const sections = new Map();
   let current;
   for (const line of body) {
@@ -82,6 +105,8 @@ function words(body, refuse) {
       if (!LANGUAGES.includes(current)) refuse(`"## ${current}" is not a language of a post: ${LANGUAGES.map(language => `"## ${language}"`).join(', ')}.`);
       if (sections.has(current)) refuse(`"## ${current}" is given twice.`);
       sections.set(current, []);
+    } else if (current && line.startsWith('# ')) {
+      refuse(`the post has one title, before its words, not ${JSON.stringify(line)} under "## ${current}".`);
     } else if (current) {
       sections.get(current).push(line);
     }
@@ -99,13 +124,17 @@ function words(body, refuse) {
 function medium(entry, { cuts, shots, generated, refuse }) {
   const [kind, name, ratio, ...rest] = entry.split(/\s+/);
   const usage = 'each medium is "cut <cut>", "still <shot> <ratio>", "film <shot> <ratio>" or "generated <sha256>"';
-  if (rest.length || !name) refuse(`${usage}, not ${JSON.stringify(entry)}.`);
+  if (rest.length || !name || ((kind === 'still' || kind === 'film') && ratio === undefined)) refuse(`${usage}, not ${JSON.stringify(entry)}.`);
   switch (kind) {
     case 'cut': {
       if (ratio !== undefined) refuse(`${usage}, not ${JSON.stringify(entry)}.`);
       const path = join(cuts, `${name}.json`);
       if (!SLUG.test(name) || !existsSync(path)) refuse(`the cut ${JSON.stringify(name)} is one promo/cuts/ does not hold.`);
-      return { kind, name, ratio: JSON.parse(readFileSync(path, 'utf8')).ratio };
+      try {
+        return { kind, name, ratio: JSON.parse(readFileSync(path, 'utf8')).ratio };
+      } catch (error) {
+        return refuse(`the cut ${name} is not a cut's JSON (${error.message}).`);
+      }
     }
     case 'still':
     case 'film': {
@@ -137,7 +166,8 @@ export function readPost(path, {
   cuts = join(root, 'promo/cuts'),
   shots = join(root, 'promo/shots'),
   generated = join(root, 'promo/generated.json'),
-  today = new Date().toISOString().slice(0, 10),
+  today = montrealToday(),
+  readRecord = file => readGenerated(file, { shots, until: today }),
 } = {}) {
   const file = basename(path);
   const refuse = why => { throw new Error(`${path}: ${why}`); };
@@ -154,15 +184,21 @@ export function readPost(path, {
   if (entries.length === 0) refuse('"media" names what the post shows: a cut, a still, a film or a generated file.');
   if (new Set(entries).size !== entries.length) refuse('"media" names a medium twice.');
   let record;
-  const readRecord = () => {
-    record ??= existsSync(generated) ? JSON.parse(readFileSync(generated, 'utf8')).files ?? [] : [];
+  const lines = () => {
+    if (!record) {
+      try {
+        record = readRecord(generated);
+      } catch (error) {
+        refuse(`it names a generated file, and ${error.message}`);
+      }
+    }
     return record;
   };
-  const media = entries.map(entry => medium(entry, { cuts, shots, generated: readRecord, refuse }));
+  const media = entries.map(entry => medium(entry, { cuts, shots, generated: lines, refuse }));
 
   for (const language of LANGUAGES) {
-    const count = characters(said[language]);
     for (const channel of channels) {
+      const count = CHANNELS[channel].count(said[language]);
       if (count > CHANNELS[channel].limit) refuse(`its words in ${language} are ${count} characters, and ${channel} takes ${CHANNELS[channel].limit}.`);
     }
     if (media.some(item => item.makes === 'restyled-clip') && !said[language].includes(RESTYLED[language])) {
@@ -174,7 +210,9 @@ export function readPost(path, {
   if (!STATUSES.includes(status)) refuse(`"status" is ${STATUSES.slice(0, -1).join(', ')} or ${STATUSES.at(-1)}.`);
   for (const [channel, link] of links) {
     if (!channels.includes(channel)) refuse(`"link ${channel}" names ${channel}, which is not one of its channels.`);
-    if (!/^https:\/\/[^\s/]+\/\S*$/.test(link)) refuse(`"link ${channel}" is the post's https:// address.`);
+    const host = /^https:\/\/([^\s/]+)\/\S*$/.exec(link)?.[1]?.toLowerCase();
+    if (!host) refuse(`"link ${channel}" is the post's https:// address.`);
+    if (!CHANNELS[channel].hosts.some(known => host === known || host.endsWith(`.${known}`))) refuse(`"link ${channel}" is on ${CHANNELS[channel].hosts.join(' or ')}, not ${host}.`);
   }
   if (status === 'published') {
     if (date > today) refuse(`it is published, and dated ${date}, after today (${today}).`);
@@ -188,7 +226,10 @@ export function readPost(path, {
 /** Every post of the calendar, in the order of their dates. Refuses a folder that is missing or holds no post. */
 export function readCalendar(folder, options = {}) {
   if (!existsSync(folder)) throw new Error(`${folder}: the calendar is missing.`);
-  const names = readdirSync(folder).filter(name => name.endsWith('.md') && name !== 'README.md').sort((a, b) => a.localeCompare(b));
+  const entries = readdirSync(folder).filter(name => name !== 'README.md');
+  const other = entries.find(name => !name.endsWith('.md'));
+  if (other) throw new Error(`${join(folder, other)}: the calendar holds posts only, each a YYYY-MM-DD-<name>.md file.`);
+  const names = entries.sort((a, b) => a.localeCompare(b));
   if (names.length === 0) throw new Error(`${folder}: the calendar holds no post.`);
   return names.map(name => readPost(join(folder, name), options));
 }
