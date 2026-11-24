@@ -20,6 +20,8 @@ test('a picture is sent at the size it is drawn, once and twice, and never past 
   assert.deepEqual(widthsOf([533, 1440], 1672), [533, 1066, 1440, 1672], 'twice 1440 stops at the painting');
   assert.deepEqual(widthsOf([308, 620], 1536), [308, 620, 1240], 'a size within a tenth of a larger one is not kept twice');
   assert.deepEqual(widthsOf([2000], 1536), [1536]);
+  assert.deepEqual(widthsOf([354, 1280], 1536, [354]), [354, 708, 1062, 1280, 1536], 'a width a phone of density 3 draws is also sent three times as wide (#1149)');
+  assert.deepEqual(widthsOf([600], 1536, [600]), [600, 1200, 1536], 'three times stops at the painting');
 });
 
 test('a WebP file says its width and its height, in each of its three forms', () => {
@@ -236,6 +238,9 @@ test('a declaration is refused when a role is unknown, a name is no file name, o
   assert.match(bad({ phone: null }), /phone gives each page the widths it draws/);
   assert.match(bad({ phone: [533] }), /phone gives each page the widths it draws/);
   assert.match(bad({ phone: { 'showcase/home': [533] } }), /eclipse-ground: phone names showcase\/home, a page that does not draw it/);
+  assert.match(bad({ dense: { 'table/sign-in': [99] } }), /eclipse-ground: on table\/sign-in a phone of density 3 draws it at 99 px, a width its drawn does not list/);
+  assert.match(bad({ dense: [533] }), /dense gives each page the widths a phone of density 3 draws/);
+  assert.match(bad({ dense: { 'showcase/home': [533] } }), /eclipse-ground: dense names showcase\/home, a page that does not draw it/);
   assert.match(check({ authored: { ...authored, pictures: [...authored.pictures, authored.pictures[0]] }, art: PAGE_ART, read, list }).join('\n'), /eclipse-ground is declared twice/);
   for (const focus of ['33% 60%', null, {}, []]) assert.match(bad({ focus }), /eclipse-ground: a focus is two percentages/, JSON.stringify(focus));
   assert.match(bad({ source: undefined, frames: ['a.webp', 'b.webp'], focus: '50% 50%' }), /eclipse-ground: a strip is never cut, and takes no focus/);

@@ -1114,9 +1114,9 @@ the painting (#1060).
 - **Lazy**, as on the ladder.
 - **Offline.** `rules.js` imports nothing of its own today. It loads `picture.js` with a dynamic `import()` whose failure
   is caught, so a book read offline draws whatever is kept. The worker keeps the picture kit for the offline plate, so
-  the module loads, and the head's painting at its phone width and twice it, 354 and 708 px, about 37 KB (#1060, the
-  owner's choice). A screen that asks for a wider file, a phone of density 3 among them (it asks for the 1280), has a
-  band of soot with its words.
+  the module loads, and the head's painting at its phone width, twice it and three times it, 354, 708 and 1062 px,
+  about 90 KB (#1060, #1149, the owner's choices). A screen that asks for a wider file, a phone 430 px wide at
+  density 3 among them (it asks for the 1280), has a band of soot with its words.
 
 ### States
 
@@ -1127,8 +1127,8 @@ the painting (#1060).
 - **Waiting**: none: a language is drawn from the book already read, or read once.
 - **Error**: the book could not be read: `#rules-problem` says so (alert); the head stays. Read, not seen.
 - **Offline**: the worker gives the copy this device kept, and `#rules-kept` says the table may play a newer one. On a
-  phone of density 2 or less the band wears its painting, which the worker keeps; on a screen that asks for a wider
-  file it is soot with its words. Read in
+  phone of density 2, or of density 3 up to 390 px wide, the band wears its painting, which the worker keeps; on a
+  screen that asks for a wider file it is soot with its words. Read in
   `table/sw.js` and `table/rules.js`, and held by `sw.test.js`, not seen.
 
 ### Motion
@@ -1173,8 +1173,11 @@ The head has no beat. The contents' disclosures open at once.
 - Done (#1059): the eyebrow is at 11 px, as the ladder's; no target is under 44 px; axe finds nothing at 320. The
   baseline's lines are the walk's of `987374a`, before this; the next walk writes them again.
 - The head's choices are the ladder's. Here too the `start` side is the brighter one, chosen for the eye.
-- Done (#1060): with no network the band wears its painting on a phone of density 2 or less. A phone of density 3
-  asks for the 1280 px file, which is not kept: keeping it is about 68 KB more, the owner's to decide.
+- Done (#1060): with no network the band wears its painting on a phone of density 2 or less.
+- Done (#1149, the owner's option 2): the head is also derived at 1062 px for a phone of density 3 (`dense` in
+  `docs/art/page-pictures.json`), and the worker keeps it, 52,676 bytes more. Chromium takes it at 375 and 390 px
+  wide at density 3 and at 412 px at 2.625. A phone 430 px wide at density 3 still asks for the 1280 px file, which
+  is not kept.
 
 ## The offline page (`offline`)
 
