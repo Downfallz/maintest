@@ -28,6 +28,9 @@ internal sealed class AccountApi
     private const string NoticesRoute = Prefix + "/notices";
     private const string IdentitiesRoute = Prefix + "/identities";
 
+    /// <summary>Where a visitor is made a guest (ADR 0207).</summary>
+    public const string GuestRoute = Prefix + "/guest";
+
     // What a route that needs a signed-in account answers to nobody.
     private const string SignInRequiredCode = "Account.SignInRequired";
     private const string SignInFirst = "Sign in first.";
@@ -114,6 +117,7 @@ internal sealed class AccountApi
 
     private readonly SignInCounts _counts = new();
     private readonly SignInAttempts _attempts = new();
+    private readonly GuestMaking _guests = new();
 
     /// <summary>
     /// Says the sign-ins' counts once their minute is over. Run on every request the account API answers, and by the
@@ -464,6 +468,7 @@ internal sealed class AccountApi
                 ("POST", Prefix) => await RegisterAsync(body, request),
                 ("POST", Prefix + "/dev") => await DevelopmentAsync(body, request),
                 ("POST", Prefix + "/signout") => await SignOutAsync(body, request),
+                ("POST", GuestRoute) => await MakeGuestAsync(request),
                 ("DELETE", Prefix) => await DeleteAsync(body, request),
                 ("PUT", PushRoute) => await RegisterDeviceAsync(body, request),
                 ("DELETE", PushRoute) => await ForgetDeviceAsync(body, request),
@@ -488,7 +493,72 @@ internal sealed class AccountApi
     }
 
     /// <summary>The account as a page is told it: its id and its name, and nothing else the host keeps.</summary>
-    public static object Describe(Account account) => new { id = account.Id.Value, username = account.Username.Value };
+    public static object Describe(Account account) => new { id = account.Id.Value, username = account.Username.Value, guest = account.IsGuest };
+
+    /// <summary>
+    /// The guest a session cookie proves (ADR 0207), or null: no session, one this host does not honour, or an account
+    /// that is not a guest. Read from the cache as <see cref="WhoAsync" /> reads, and writes nothing: the host asks it of
+    /// every request that carries a session, before the route that answers it.
+    /// </summary>
+    public async Task<Account?> GuestAsync(AccountRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return _sessions.Read(request.Session) is { } claim
+            && await AccountAsync(claim.Account, cancellationToken) is { IsGuest: true } account
+            && account.Generation == claim.Generation
+            && account.Suspension is null
+                ? account
+                : null;
+    }
+
+    /// <summary>
+    /// Makes the visitor a guest (ADR 0207) and signs it in: the same session cookie as any account's. A visitor already
+    /// signed in is answered the account it has, guest or not, and no other is made. Refused while registration is closed
+    /// (ADR 0177), and past the address's or the host's count of guests an hour.
+    /// </summary>
+    private async Task<StudioResponse> MakeGuestAsync(AccountRequest request)
+    {
+        if (await WhoAsync(request) is { } who)
+        {
+            return Answer(new { account = Describe(who.Account) }, who.Renewed);
+        }
+
+        if (await RegistrationClosedAsync())
+        {
+            return Refused(AccountErrors.RegistrationClosed);
+        }
+
+        if (_guests.Take(request.Address, Clock.GetUtcNow()) is { } wait)
+        {
+            var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return Problem(429, "Account.TooManyGuests", "Too many guests from your network just now. Try again later, or sign in.") with
+            {
+                Headers = [new KeyValuePair<string, string>("Retry-After", seconds)],
+            };
+        }
+
+        Counted(SignInCounts.Step.Started, ExternalIdentity.Guest);
+        Result<Account> made;
+        try
+        {
+            made = await _registry.MakeGuestAsync();
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            Counted(SignInCounts.Step.Unavailable, ExternalIdentity.Guest);
+            Said($"  Guest not made: {HttpHost.OneLine(failure)}");
+            return AccountsUnavailable();
+        }
+
+        if (made.IsFailure)
+        {
+            Counted(SignInCounts.Step.Refused, ExternalIdentity.Guest);
+            return Refused(made.Error);
+        }
+
+        Said($"  Guest made: account {made.Value.Id}.");
+        return await SignedInAsync(made.Value, request, ExternalIdentity.Guest);
+    }
 
     private async Task<StudioResponse> MeAsync(AccountRequest request)
     {
@@ -517,7 +587,29 @@ internal sealed class AccountApi
 
         if (await _registry.FindAsync(identity) is { } account)
         {
-            return await SignedInAsync(account, request, name);
+            var guest = await GuestAsync(request);
+            var signedIn = await SignedInAsync(account, request, name);
+            // Only a guest other than the account signed in, and still a guest in the store: one upgraded meanwhile into
+            // that very account, while this process still held it as a guest, is that account now.
+            if (guest is not null && guest.Id != account.Id && signedIn.Status == 200)
+            {
+                // The guest's cookie is replaced by the account's: nothing reaches the guest again (ADR 0207). A store
+                // that fails leaves it to the hourly job, and the player signed in all the same.
+                try
+                {
+                    if (await FreshAsync(guest.Id) is { IsGuest: true })
+                    {
+                        await ForgetAsync(guest.Id);
+                        Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
+                    }
+                }
+                catch (Exception failure) when (TableRegistry.StoreFails(failure))
+                {
+                    Said($"  Guest left for an account of its own ({name}): account {guest.Id} could not be removed: {HttpHost.OneLine(failure)}");
+                }
+            }
+
+            return signedIn;
         }
 
         // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
@@ -750,6 +842,9 @@ internal sealed class AccountApi
             : Problem(403, "Account.SignInAgain", "For your safety, sign in again to change how you sign in.");
     }
 
+    private static StudioResponse AccountsUnavailable() =>
+        Problem(503, "Account.Unavailable", "Accounts cannot be written right now. Try again in a minute.");
+
     private static StudioResponse WaysUnavailable() =>
         Problem(503, "Account.Unavailable", "Your ways to sign in cannot be changed right now. Try again in a minute.");
 
@@ -816,7 +911,40 @@ internal sealed class AccountApi
             return Refused(AccountErrors.RegistrationClosed);
         }
 
+        // A guest who chooses a name becomes that account (ADR 0207): its id, and so its tutorials, are kept.
+        if (await GuestAsync(request) is { } guest)
+        {
+            Result<Account> upgraded;
+            try
+            {
+                upgraded = await _registry.UpgradeAsync(guest.Id, identity, asked!.Username);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                // Some of its writes may have gone through: the account is read afresh next time.
+                _cache.TryRemove(guest.Id, out _);
+                Said($"  Guest not upgraded ({identity.Provider}): account {guest.Id}: {HttpHost.OneLine(failure)}");
+                return AccountsUnavailable();
+            }
+
+            if (upgraded.IsFailure)
+            {
+                return Refused(upgraded.Error);
+            }
+
+            _cache[guest.Id] = (upgraded.Value, Clock.GetUtcNow());
+            Said($"  Guest upgraded ({identity.Provider}): account {guest.Id}.");
+            return await SignedInAsync(upgraded.Value, request, identity.Provider);
+        }
+
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
+        if (registered.IsFailure && registered.Error == AccountErrors.AlreadyRegistered && await _registry.FindAsync(identity) is { } held)
+        {
+            // The ticket is the host's own proof of the identity, so the account it reaches signs in: an upgrade asked
+            // again after its answer was lost lands here, its guest's cookie ended by the upgrade (ADR 0207).
+            return await SignedInAsync(held, request, identity.Provider);
+        }
+
         return registered.IsSuccess ? await SignedInAsync(registered.Value, request, identity.Provider) : Refused(registered.Error);
     }
 

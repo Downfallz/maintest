@@ -14,6 +14,7 @@ public sealed record Username
     public const int MaximumLength = 20;
 
     private static readonly SearchValues<char> Letters = SearchValues.Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    private static readonly SearchValues<char> GuestCode = SearchValues.Create("23456789ABCDEFGHJKMNPQRSTUVWXYZ");
     private static readonly SearchValues<char> Allowed = SearchValues.Create("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-");
 
     // Words a card or a page already means something by, and every agent the lobby or the admin panel can
@@ -47,8 +48,35 @@ public sealed record Username
         }
 
         var name = new Username(value);
-        return Reserved.Contains(name.Key) ? Result.Failure<Username>(AccountErrors.UsernameReserved) : Result.Success(name);
+        return Reserved.Contains(name.Key) || IsGuestName(name.Key) ? Result.Failure<Username>(AccountErrors.UsernameReserved) : Result.Success(name);
     }
+
+    /// <summary>What every guest's name starts with (ADR 0207); no player types a name that does.</summary>
+    public const string GuestPrefix = "Guest-";
+
+    /// <summary>The letters and digits a guest's code is drawn from: none that reads as another (0 and O, 1, I and L).</summary>
+    public const string GuestAlphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+    /// <summary>How many characters a guest's code has.</summary>
+    public const int GuestCodeLength = 4;
+
+    /// <summary>
+    /// A guest's name, drawn by the host (ADR 0207): <see cref="GuestPrefix" /> and a code of <see cref="GuestCodeLength" />
+    /// characters of <see cref="GuestAlphabet" />, such as <c>Guest-7KQ2</c>. Reserved: <see cref="Create" /> refuses it.
+    /// </summary>
+    public static Username Guest(string code)
+    {
+        ArgumentNullException.ThrowIfNull(code);
+        if (code.Length != GuestCodeLength || code.AsSpan().ContainsAnyExcept(GuestCode))
+        {
+            throw new ArgumentException($"A guest's code is {GuestCodeLength} characters of {GuestAlphabet}.", nameof(code));
+        }
+
+        return new Username(GuestPrefix + code);
+    }
+
+    // Guest-7KQ2 and guest_7kq2 alike: one look-alike typed by a player would pass for a guest's.
+    private static bool IsGuestName(string key) => key.StartsWith("guest-", StringComparison.Ordinal) || key.StartsWith("guest_", StringComparison.Ordinal);
 
     /// <summary>
     /// A name a store already holds. Not checked against today's rules: a rule added later must not make an

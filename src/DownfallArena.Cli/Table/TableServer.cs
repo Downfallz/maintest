@@ -1,4 +1,5 @@
 using System.Net;
+using DownfallArena.Application.Accounts;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Infrastructure.Learning;
@@ -306,6 +307,15 @@ internal sealed class TableServer : IDisposable
         }
 
         var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request), RequestAddress.Of(request));
+        var token = request.Headers[TableApi.TokenHeader];
+
+        // A guest plays the tutorials and nothing else (ADR 0207): what it may call is a list, checked here before any
+        // route answers, so a route added later is closed to guests until it is listed.
+        if (await GuestRefusalAsync(method, path, token, account) is { } guestRefused)
+        {
+            return guestRefused;
+        }
+
         if (AccountApi.Names(path))
         {
             return _accounts is null
@@ -340,8 +350,6 @@ internal sealed class TableServer : IDisposable
                 ? StudioResponse.OfPlainText(404, "This host keeps no scenarios to practise: it records nothing, or players do not sign in here.")
                 : await Scenarios.HandleAsync(method, path, account);
         }
-
-        var token = request.Headers[TableApi.TokenHeader];
 
         if (FeedbackApi.Names(path))
         {
@@ -406,6 +414,57 @@ internal sealed class TableServer : IDisposable
         await LobbyApi.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
     }
+
+    /// <summary>
+    /// The answer that refuses a guest's request (ADR 0207), or null where it may go on: a request with no guest's session,
+    /// a route <see cref="GuestRoutes" /> lists, or the seat of the guest's own tutorial, found by the practice's token.
+    /// </summary>
+    private async Task<StudioResponse?> GuestRefusalAsync(string method, string path, string? token, AccountRequest account)
+    {
+        if (_accounts is null || string.IsNullOrEmpty(account.Session))
+        {
+            return null;
+        }
+
+        Account? guest;
+        try
+        {
+            guest = await _accounts.GuestAsync(account);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            // Whether the session is a guest's cannot be read: the request is not let past the list on a guess.
+            Console.WriteLine($"  Whether a session is a guest's could not be read: {HttpHost.OneLine(failure)}");
+            return StudioResponse.OfJson(new { error = "Account.Unavailable", message = "Accounts cannot be read right now. Try again in a minute." }, ArtifactJson.LineOptions, status: 503);
+        }
+
+        if (guest is null)
+        {
+            return null;
+        }
+
+        var teaches = Scenarios is { } scenarios ? scenarios.Teaches : (Func<string, bool>)(_ => false);
+        if (GuestRoutes.Allows(method, path, teaches))
+        {
+            return null;
+        }
+
+        // The practice's token opens what the practice's own API answers, and nothing a route before it names: the lobby,
+        // friends, push and the rest read the cookie, not the token. Feedback is one of those: a guest sends none
+        // (ADR 0207), so none names an account the hourly job removes.
+        if (!NamedBeforeTheTables(path) && Practices?.ByToken(token) is { } practice && practice.Account == guest.Id.ToString() && teaches(practice.Scenario))
+        {
+            return null;
+        }
+
+        var refused = AccountErrors.GuestNotAllowed;
+        return StudioResponse.OfJson(new { error = refused.Code, message = refused.Message }, ArtifactJson.LineOptions, status: 403);
+    }
+
+    /// <summary>Whether a route this host answers before it looks for a table by its token names the path.</summary>
+    private static bool NamedBeforeTheTables(string path) =>
+        AccountApi.Names(path) || FriendsApi.Names(path) || LeaderboardApi.Names(path) || StatsApi.Names(path)
+        || ScenariosApi.Names(path) || FeedbackApi.Names(path) || AdminApi.Names(path) || path.StartsWith(LobbyApi.Prefix, StringComparison.Ordinal);
 
     private static StudioResponse StartingUp() =>
         StudioResponse.OfPlainText(503, "This host is starting: its tables are being rebuilt. Try again in a moment.") with

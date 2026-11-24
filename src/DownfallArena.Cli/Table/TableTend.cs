@@ -42,6 +42,9 @@ internal static class TableTend
 
         /// <summary>How many accounts' notice logs let go of what was past 90 days (ADR 0201, #1118).</summary>
         public int NoticesErased { get; init; }
+
+        /// <summary>How many guests no browser could reach any more were removed (ADR 0207).</summary>
+        public int GuestsRemoved { get; init; }
     }
 
     /// <summary>How often the job runs (infra/main.bicep): the warning is sent by the one pass of that interval that finds a quarter left.</summary>
@@ -108,6 +111,9 @@ internal static class TableTend
         /// <summary>The accounts' notice logs (ADR 0201), the bell's news kept whether or not the job can push; none on a host that signs nobody in.</summary>
         public AccountNoticeLog? Notices { get; init; }
 
+        /// <summary>The guests no browser can reach any more (ADR 0207); none on a host that signs nobody in.</summary>
+        public IdleGuests? Guests { get; init; }
+
         /// <summary>What the job's pass tends, every stage of it.</summary>
         public Chores Chores => new(Registry, Lobby, Clock)
         {
@@ -116,6 +122,7 @@ internal static class TableTend
             Feedback = Feedback,
             FeedbackIndex = FeedbackStore,
             Notices = Notices,
+            Guests = Guests,
         };
 
         public void Dispose() => Registry.Dispose();
@@ -163,6 +170,10 @@ internal static class TableTend
             : new Friends(await ArtifactStores.OpenFriendsAsync(target), await ArtifactStores.OpenAccountsAsync(target), clock);
         // The accounts suspended a day ago (ADR 0178), whose seats are offered to other players.
         var suspendedAccounts = options.Accounts == AccountsMode.Off ? null : await ArtifactStores.OpenAccountsAsync(target);
+        // The guests no browser can reach any more (ADR 0207), removed with what was kept for them.
+        var guests = suspendedAccounts is null
+            ? null
+            : new IdleGuests(suspendedAccounts, await ArtifactStores.OpenActivityAsync(target), await ArtifactStores.OpenPreferencesAsync(target), clock);
 
         // Feedback closed 180 days ago is let go of (ADR 0189); a store that cannot be opened costs that alone.
         // Through the index's store (#866), so what is let go of leaves the index too.
@@ -180,7 +191,7 @@ internal static class TableTend
         var lobby = new LobbyApi(registry, composer, clock) { Friends = friends, Changes = composer.Lobby, Notifier = composer.Notifier };
         var suspended = suspendedAccounts is null ? null : new SuspendedSeats(suspendedAccounts, lobby);
 
-        return new Tending(registry, lobby, composer, relay, clock) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log };
+        return new Tending(registry, lobby, composer, relay, clock) { Suspended = suspended, Feedback = feedback, FeedbackStore = feedbackStore, Notices = composer.Notifier?.Log, Guests = guests };
     }
 
     /// <summary>What a pass did, a line for the pass and one for each table, account or feedback it touched.</summary>
@@ -210,6 +221,11 @@ internal static class TableTend
         if (tended.NoticesErased > 0)
         {
             said($"  Notices: the bells of {tended.NoticesErased} account{(tended.NoticesErased == 1 ? string.Empty : "s")} let go of what was older than {AccountNoticeLog.KeptFor.TotalDays:0} days.");
+        }
+
+        if (tended.GuestsRemoved > 0)
+        {
+            said($"  Guests: {tended.GuestsRemoved} unused for {IdleGuests.KeptFor.TotalDays:0} days removed.");
         }
 
         if (tended.FeedbackLetGo > 0)
@@ -362,9 +378,12 @@ internal static class TableTend
 
         /// <summary>The accounts' notice logs (ADR 0201), swept for what is past 90 days (#1118); none on a host that signs nobody in.</summary>
         public AccountNoticeLog? Notices { get; init; }
+
+        /// <summary>The guests no browser can reach any more (ADR 0207); none on a host that signs nobody in.</summary>
+        public IdleGuests? Guests { get; init; }
     }
 
-    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago and the notices past 90 days.</summary>
+    /// <summary>One pass: the sweep, the invitations that ran out, the games whose player's time ran out, the games whose open seat nobody took, the players whose time reaches its last quarter, then the feedback closed long enough ago, the notices past 90 days and the guests unused for 31 days.</summary>
     /// <param name="progress">Told what the pass has done after each stage, so a pass that stops partway is known by what it did.</param>
     internal static async Task<Tended> TendAsync(Chores chores, DateTimeOffset now, Action<Tended>? progress = null)
     {
@@ -407,6 +426,13 @@ internal static class TableTend
         if (notices is not null)
         {
             done = done with { NoticesErased = await EraseNoticesAsync(notices) };
+            progress?.Invoke(done);
+        }
+
+        // The guests no browser can reach (ADR 0207), last too: a store that fails costs this stage alone.
+        if (chores.Guests is { } guests)
+        {
+            done = done with { GuestsRemoved = await guests.RemoveAsync(now) };
             progress?.Invoke(done);
         }
 

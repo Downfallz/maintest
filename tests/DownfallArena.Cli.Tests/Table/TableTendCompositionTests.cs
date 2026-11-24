@@ -126,6 +126,23 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task The_job_removes_a_guest_nobody_used_for_its_sessions_lifetime_and_a_day_and_keeps_a_player()
+    {
+        var host = await HostAsync();
+        var (_, player) = await SignInAsync(host, "MarkF");
+        var made = await host.Accounts!.HandleAsync("POST", AccountApi.GuestRoute, "", new AccountRequest(null, Secure: true, "203.0.113.7"));
+        var guest = AccountId.Parse(JsonDocument.Parse(made.Body).RootElement.GetProperty("account").GetProperty("id").GetString()!);
+        var job = await JobAsync();
+
+        var early = await TableTend.TendAsync(job.Chores, DateTimeOffset.UtcNow + AccountSessions.Lifetime);
+        var tended = await TableTend.TendAsync(job.Chores, DateTimeOffset.UtcNow + IdleGuests.KeptFor + TimeSpan.FromHours(1));
+
+        (early.GuestsRemoved, tended.GuestsRemoved).ShouldBe((0, 1));
+        (await host.Accounts.FreshAsync(guest, Cancel)).ShouldBeNull();
+        (await host.Accounts.FreshAsync(player, Cancel)).ShouldNotBeNull();
+    }
+
+    [Fact]
     public async Task Without_push_keys_a_game_the_job_times_out_is_kept_in_each_player_s_bell()
     {
         var host = await HostAsync();
