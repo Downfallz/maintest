@@ -156,7 +156,7 @@ test('a creature of the report shows its illustration large, as the inspection d
   const zoom = page.locator('#match-zoom'), picture = page.locator('#match-zoom-close');
   // On a phone the row hides its portrait: its name is the way in.
   const fallen = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open');
-  await expect(fallen).toHaveAccessibleName('Show Creature 3 large');
+  await expect(fallen).toHaveAccessibleName('Creature 3 fallen show large');
   await fallen.click();
   await expect(zoom).toBeVisible(); await expect(picture).toBeFocused();
   await expect(picture).toHaveAttribute('data-defeated', 'true');

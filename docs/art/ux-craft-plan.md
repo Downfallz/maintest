@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX12b are built; UX13 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX13 are built; UX14 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -759,6 +759,50 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     development dependency of the browser suite, named in the ADR of UX4), a whole turn by keyboard, a turn told in
     one live region, forced colours and more contrast, text spacing and 200%, the flash guard on the brightest
     window. What stays for a person is listed for the owner. Tests: these.
+
+    *Built (2026-11-24)*: `studio/browser/table.access.js`, a real-engine journey, walks the six journeys at 320 by
+    568 and 390 by 844 and checks every screen (`scripts/ux/access.mjs`). axe on the rules of WCAG 2.2 AA, held to
+    none. Under more contrast, axe's rule of 7:1. Under forced colours, an icon or a state lost, and a page with no rule that keeps the focus's ring (the check reads
+    the sheets and never moves the focus, which a walk's page answers). With
+    the text spaced as WCAG 1.4.12 asks, then at 200%: a word cut, a page that scrolls sideways, two controls on top
+    of each other. The walk's measures are unchanged; the checks ride beside them. A fixture page holds that each
+    check finds its fault. The tag `wcag22aa` turns axe's target-size rule on (the craft book, "What a test can see").
+
+    Fixed here: the last finding of axe, `label-content-name-mismatch`, on the bell (named by its drawn count first,
+    `bellName` in `table/inbox.js`) and on the result's creatures (named by their words, `battle/src/match.ts`); the 14
+    findings under 7:1 under more contrast (`--muted` becomes the ink, and three shades of the battle and the
+    statistics); under forced colours, a ring in Highlight for every focus and an underline for a control in a state
+    (`table/identity.css`, `showcase/showcase.css`), where 18 rings and 23 states were lost.
+
+    `studio/browser/battle.keyboard.js` plays round 1 on the real engine by Tab and Enter alone: Upkeep, the mutation,
+    the ties, the tempos, the order, each cast and its targets, each result read. Every action the round resolved is
+    told in `#playback-announcement`, and no other live region says it again. `studio/browser/keys.js` is the press
+    by keyboard both it and `battle-parity.spec.js` use.
+
+    The flash guard, `scripts/ux/flash.mjs` (WCAG 2.3.1: a pair of opposing changes of 10% of luminance, the darker
+    under 0.8, over a quarter of the screen), films the windows a strip shows entering: the menu, Create and the
+    match's Settings, 30 frames 40 ms apart. None flashes. The brightest is the menu, at a mean luminance of 0.049:
+    every window is dark. `studio/ux-flash.test.js` holds the thresholds; `studio/ux-access.test.js` the lines and the list.
+
+    Left, in `scripts/ux/access-known.json`, a journey's list each: what the checks found and this stage did not fix,
+    489 lines read without an element's place among its siblings. A finding not in the list fails the journey; one the
+    list holds and the walk no longer finds is said in the report, so the list is cut in the change that fixes it.
+    axe is never in it. What it holds:
+    - Text at 200% and spaced, in the match's frame and windows and in the lessons: 359 pairs of controls on top of each
+      other and 44 boxes that cut their words. The frame is laid out for 11 px words at 320 px; doubled, the bar's buttons meet the
+      order of play. A later stage of the frame, or a choice of the owner (a floor for 200% in the battle).
+    - Under forced colours, 83 controls whose icon keeps its own colour: the creatures on the field, the order of play,
+      the spell cards (their portraits and health bars are drawn in colours that carry the team). Repainting them would
+      lose the team; `forced-color-adjust` on them is a choice for the frame's stage.
+    - At 320 px with the text spaced, one page that scrolls sideways.
+
+    What stays for a person, for the owner (docs/tabletop/battle-ux-acceptance.md, "Remaining acceptance gates"):
+    1. A screen reader on a phone: VoiceOver on an iPhone and TalkBack on Android, one lesson and one round each. Does
+       each action read once, in order, without the focus moving?
+    2. Text at 200% set in the phone's own settings, on the lobby and a match: what is cut, what overlaps.
+    3. Windows' high contrast (forced colours) on a real screen: is every creature's team still told apart?
+    4. A newcomer watched, and a physical phone in a hand: UX14's two gates.
+    Not checked here: less motion across every screen (UX14), a keyboard on the pages other than the match.
 14. **UX14, acceptance.** The five journeys filmed again against the baseline, the table of measures above, the
     budgets, less motion across every screen, the sheets published. The record goes in `docs/art/`, with the two
     gates only the owner can close: a newcomer watched, a physical phone.

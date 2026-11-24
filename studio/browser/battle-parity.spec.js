@@ -3,6 +3,7 @@ import { openSpells } from './battle-spells-fixture.js';
 import { teamTempos } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
 import { decided } from './decision.js';
+import { keyboardActivate } from './keys.js';
 
 // Cross-feature presentation acceptance. These are declared fixture responses, not a second game engine.
 // battle.loop.js separately plays both declaration modes against the actual host.
@@ -62,19 +63,6 @@ async function mount(page) {
   return state;
 }
 
-// Find controls with real Tab navigation: no locator.focus(), synthetic clicks, or pointer actions. A control behind the
-// focus in the page's order is reached with Shift+Tab, as a person would, rather than by tabbing round the whole page.
-async function keyboardActivate(page, selector) {
-  const target = page.locator(selector); await expect(target).toBeVisible(); await expect(target).toBeEnabled();
-  const behind = await target.evaluate(node => {
-    const active = document.activeElement;
-    return Boolean(active && active !== document.body && node.compareDocumentPosition(active) & Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-  const key = behind ? 'Shift+Tab' : 'Tab';
-  for (let n = 0; n < 100 && !await target.evaluate(node => node === document.activeElement); n++) await page.keyboard.press(key);
-  await expect(target).toBeFocused(); await expect(target).toBeInViewport();
-  await page.keyboard.press('Enter');
-}
 async function combat(page, state) {
   state.view = { ...state.view, waitingFor: 'Action', waitingAsked: 20, waitingCreature: 1, feed: [],
     board: { ...state.view.board, roundNumber: 9, phase: 'Combat', subPhase: 'Activation',

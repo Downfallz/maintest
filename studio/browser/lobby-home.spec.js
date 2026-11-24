@@ -1210,7 +1210,7 @@ test('the bell counts what waits for the player and acts on each: play a turn, a
   const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
   await expect(bell).toBeInViewport();
   await expect(badge).toHaveText('3');
-  await expect(bell).toHaveAccessibleName('Notifications · 3 waiting');
+  await expect(bell).toHaveAccessibleName('Notifications 3 · 3 waiting');
   await bell.click();
   const dialog = page.locator('#inbox-dialog');
   await expect(dialog).toBeVisible();
@@ -1242,7 +1242,7 @@ test('with push off the bell still shows the news, counts it until the window is
   const state = await home(page, { incoming: [], games: [], news });
   const bell = page.locator('#inbox-open'), badge = page.locator('#inbox-badge');
   await expect(badge).toHaveText('1');
-  await expect(bell).toHaveAccessibleName('Notifications · nothing waiting · 1 new');
+  await expect(bell).toHaveAccessibleName('Notifications 1 · nothing waiting · 1 new');
   await bell.click();
   const dialog = page.locator('#inbox-dialog');
   await expect(dialog.locator('.inbox-group h3')).toHaveText(['News · 2']);
