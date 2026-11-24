@@ -527,6 +527,34 @@ test('the pop-ups offer makes the creatures it covers inert until it is answered
   await page.locator('#push-offer-later').click(); await expect(page.locator('#push-offer')).toBeHidden();
   await expect.poll(async () => (await read()).filter(one => one.inert)).toEqual([]);
 });
+// A creature that holds the focus when the card arrives keeps it, and is made inert once the focus goes elsewhere; the
+// card that changes size after Turn on covers again what it now covers (#1206, review).
+test('the pop-ups offer reads what it covers again when the focus moves and when its answer changes its size', async ({ page }) => {
+  const h = await mount(page, { over: false, account: { id: 'acct_one', username: 'Marc' } });
+  h.view = { ...h.view, practice: { tutorial: { order: 1, of: 4, done: true, title: 'Your first combat', steps: [{ id: 'one', title: 'One' }], shown: 1 } } };
+  await page.setViewportSize({ width: 320, height: 568 }); await page.reload();
+  await expect(page.locator('#push-offer')).toBeVisible();
+  const covered = () => page.evaluate(() => {
+    const card = document.getElementById('push-offer').getBoundingClientRect();
+    return [...document.querySelectorAll('#actor-layer .creature')].map(one => {
+      const box = one.getBoundingClientRect();
+      return { covered: Math.min(box.right, card.right) - Math.max(box.left, card.left) > 2 && Math.min(box.bottom, card.bottom) - Math.max(box.top, card.top) > 2, inert: one.inert };
+    });
+  });
+  await expect.poll(async () => (await covered()).filter(one => one.covered !== one.inert)).toEqual([]);
+  // The card stepped aside a moment while a covered creature takes the focus, then stands again over it.
+  const index = (await covered()).findIndex(one => one.covered);
+  await page.evaluate(at => {
+    const card = document.getElementById('push-offer'); card.hidden = true; window.dispatchEvent(new Event('resize'));
+    document.querySelectorAll('#actor-layer .creature')[at].focus(); card.hidden = false; window.dispatchEvent(new Event('resize'));
+  }, index);
+  expect(await page.evaluate(at => { const one = document.querySelectorAll('#actor-layer .creature')[at]; return { focused: document.activeElement === one, inert: one.inert }; }, index)).toEqual({ focused: true, inert: false });
+  await page.locator('#push-offer-on').focus();
+  await expect.poll(() => page.evaluate(at => document.querySelectorAll('#actor-layer .creature')[at].inert, index)).toBe(true);
+  await page.locator('#push-offer-on').click();
+  await expect(page.locator('#push-offer-said')).not.toBeEmpty();
+  await expect.poll(async () => (await covered()).filter(one => one.covered !== one.inert)).toEqual([]);
+});
 test('a bot\'s move makes no offer of pop-ups', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'bot', name: 'Greedy' } });
   h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };

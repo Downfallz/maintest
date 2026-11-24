@@ -107,8 +107,10 @@ The recap a player reads on coming back to a game (docs/tabletop/async-recap-pla
 
 ## Notifications
 
-A player reads "notification", never "push service", and "this table", never "host" (#1233). Settings, the seat
-page and the battle view say a refusal in one sentence, the host's (`PushTest.UnknownServiceMessage`).
+What a notification service answers is said as "notification service", never "push service", and its refusal as
+"this table", never "host" (#1233). Settings, the seat page and the battle view say a refusal in one sentence, the
+host's (`PushTest.UnknownServiceMessage`). The other sentences of the notification pages that still say "host" are
+still undecided.
 
 | What the page shows | Player-facing EN | Player-facing FR |
 | --- | --- | --- |
