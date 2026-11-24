@@ -13,6 +13,13 @@ public sealed record Account(AccountId Id, AccountIdentities Identities, Usernam
     public AccountSuspension? Suspension { get; init; }
 
     /// <summary>
+    /// An identity removed from the account whose binding may still name it (#1216): written with the removal, before
+    /// the binding goes, and cleared once it has. Whatever stops between the two, the next link, removal or deletion of
+    /// the account removes the binding, so the provider's identifier is not kept with no owner. None most of the time.
+    /// </summary>
+    public ExternalIdentity? Unbinding { get; init; }
+
+    /// <summary>
     /// Whether the account is a guest (ADR 0207): one the host made without any provider, which plays the tutorials and
     /// nothing else until a provider's sign-in upgrades it.
     /// </summary>

@@ -7,7 +7,8 @@ namespace DownfallArena.Application.Tests.Support;
 /// <summary>
 /// The account store's contract in memory; <see cref="RefuseNextBinding" /> plays a registration that lost a race,
 /// <see cref="FailNextBinding" /> one whose host stopped before it bound its sign-in, <see cref="BeforeNextBinding" /> another
-/// writer getting there first.
+/// writer getting there first, <see cref="BeforeNextAccountWrite" /> another host writing the account between a read and a
+/// write, <see cref="FailNextAccountWrite" /> a host that stopped before it wrote the account.
 /// </summary>
 internal sealed class MemoryAccountStore : IAccountStore
 {
@@ -16,6 +17,18 @@ internal sealed class MemoryAccountStore : IAccountStore
     public Dictionary<ExternalIdentity, AccountId> Subjects { get; } = [];
 
     public Dictionary<string, UsernameReservation> Names { get; } = [];
+
+    // A version names the very record read: any write after it, even of an equal record, is another one.
+    private readonly Dictionary<string, Account> _versions = [];
+
+    /// <summary>Runs once just before the next write or removal of an account: another host landing between a read and it.</summary>
+    public Action? BeforeNextAccountWrite { get; set; }
+
+    /// <summary>Makes the next write of an account throw: a host that stopped before it.</summary>
+    public bool FailNextAccountWrite { get; set; }
+
+    /// <summary>How many writes of an account were refused because another came first.</summary>
+    public int RefusedWrites { get; private set; }
 
     public bool RefuseNextBinding { get; set; }
 
@@ -46,6 +59,81 @@ internal sealed class MemoryAccountStore : IAccountStore
         }
     }
 
+    public async Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default)
+    {
+        if (await FindAsync(id, cancellationToken) is not { } account)
+        {
+            return null;
+        }
+
+        var version = Guid.NewGuid().ToString("N");
+        lock (Accounts)
+        {
+            _versions[version] = account;
+        }
+
+        return new AccountRead(account, version);
+    }
+
+    public async Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default)
+    {
+        await BeforeWriteAsync(cancellationToken);
+        lock (Accounts)
+        {
+            if (!Unchanged(account.Id, version))
+            {
+                RefusedWrites++;
+                return false;
+            }
+
+            Accounts[account.Id] = account;
+            return true;
+        }
+    }
+
+    public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default)
+    {
+        RunBeforeNextAccountWrite();
+        lock (Accounts)
+        {
+            if (!Unchanged(id, version))
+            {
+                RefusedWrites++;
+                return Task.FromResult(false);
+            }
+
+            return Task.FromResult(Accounts.Remove(id));
+        }
+    }
+
+    private bool Unchanged(AccountId id, string version) =>
+        _versions.TryGetValue(version, out var read) && Accounts.TryGetValue(id, out var current) && ReferenceEquals(read, current);
+
+    private async Task BeforeWriteAsync(CancellationToken cancellationToken)
+    {
+        if (SlowWrites)
+        {
+            await Task.Delay(5, cancellationToken);
+        }
+
+        if (FailNextAccountWrite)
+        {
+            FailNextAccountWrite = false;
+            throw new IOException("The store went away.");
+        }
+
+        RunBeforeNextAccountWrite();
+    }
+
+    private void RunBeforeNextAccountWrite()
+    {
+        if (BeforeNextAccountWrite is { } before)
+        {
+            BeforeNextAccountWrite = null;
+            before();
+        }
+    }
+
     public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default)
     {
         lock (Accounts)
@@ -56,11 +144,7 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public async Task SaveAsync(Account account, CancellationToken cancellationToken = default)
     {
-        if (SlowWrites)
-        {
-            await Task.Delay(5, cancellationToken);
-        }
-
+        await BeforeWriteAsync(cancellationToken);
         lock (Accounts)
         {
             Accounts[account.Id] = account;
@@ -69,6 +153,7 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default)
     {
+        RunBeforeNextAccountWrite();
         lock (Accounts)
         {
             return Task.FromResult(Accounts.Remove(id));

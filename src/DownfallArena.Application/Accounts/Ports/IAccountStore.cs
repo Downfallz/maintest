@@ -17,11 +17,27 @@ public interface IAccountStore
     /// </summary>
     Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Writes the account whole, replacing what was there.</summary>
+    /// <summary>The account and the version of what was read, or null when there is none.</summary>
+    Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the account whole, replacing what was there: for an account just made, which nobody else can have read.
+    /// A change to an account read before goes through <see cref="SaveIfUnchangedAsync" />.
+    /// </summary>
     Task SaveAsync(Account account, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the account over the version read (<see cref="AccountRead.Version" />); false, writing nothing, when the
+    /// account was written or deleted since. Another process (the release beside this one during a deploy) is what
+    /// it guards against: within one, the registry orders its own writes.
+    /// </summary>
+    Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default);
 
     /// <summary>Removes the account record; its indexes are the caller's to release. False when there was none.</summary>
     Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes the account record if it is still the version read; false, removing nothing, when it changed or went.</summary>
+    Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default);
 
     Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default);
 

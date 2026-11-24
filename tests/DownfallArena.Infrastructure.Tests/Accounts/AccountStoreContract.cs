@@ -51,6 +51,85 @@ public abstract class AccountStoreContract
     }
 
     [Fact]
+    public async Task A_write_over_the_version_read_replaces_the_account()
+    {
+        var store = await StoreAsync();
+        var account = AnAccount();
+        await store.SaveAsync(account, Cancel);
+        var read = (await store.ReadAsync(account.Id, Cancel)).ShouldNotBeNull();
+
+        var written = await store.SaveIfUnchangedAsync(read.Account with { Generation = 2 }, read.Version, Cancel);
+
+        written.ShouldBeTrue();
+        (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull().Generation.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task A_write_over_a_version_another_write_passed_is_refused_and_writes_nothing()
+    {
+        var store = await StoreAsync();
+        var account = AnAccount();
+        await store.SaveAsync(account, Cancel);
+        var read = (await store.ReadAsync(account.Id, Cancel)).ShouldNotBeNull();
+        await store.SaveAsync(account with { Generation = 5 }, Cancel);
+
+        var written = await store.SaveIfUnchangedAsync(read.Account with { Generation = 2 }, read.Version, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.FindAsync(account.Id, Cancel)).ShouldNotBeNull().Generation.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task A_write_over_the_version_of_an_account_deleted_since_is_refused_and_writes_nothing()
+    {
+        var store = await StoreAsync();
+        var account = AnAccount();
+        await store.SaveAsync(account, Cancel);
+        var read = (await store.ReadAsync(account.Id, Cancel)).ShouldNotBeNull();
+        await store.DeleteAsync(account.Id, Cancel);
+
+        var written = await store.SaveIfUnchangedAsync(read.Account with { Generation = 2 }, read.Version, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.FindAsync(account.Id, Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_removal_of_the_version_read_removes_the_account_and_of_a_passed_one_is_refused()
+    {
+        var store = await StoreAsync();
+        var kept = AnAccount("Kept");
+        var removed = AnAccount("Removed");
+        await store.SaveAsync(kept, Cancel);
+        await store.SaveAsync(removed, Cancel);
+        var keptRead = (await store.ReadAsync(kept.Id, Cancel)).ShouldNotBeNull();
+        var removedRead = (await store.ReadAsync(removed.Id, Cancel)).ShouldNotBeNull();
+        await store.SaveAsync(kept with { Generation = 2 }, Cancel);
+
+        var refused = await store.DeleteIfUnchangedAsync(kept.Id, keptRead.Version, Cancel);
+        var deleted = await store.DeleteIfUnchangedAsync(removed.Id, removedRead.Version, Cancel);
+
+        refused.ShouldBeFalse();
+        deleted.ShouldBeTrue();
+        (await store.FindAsync(kept.Id, Cancel)).ShouldNotBeNull();
+        (await store.FindAsync(removed.Id, Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task An_identity_whose_binding_is_still_going_reads_back_with_the_account()
+    {
+        var store = await StoreAsync();
+        var discord = new ExternalIdentity(ExternalIdentity.Discord, "80351110224678912");
+        var account = AnAccount() with { Unbinding = discord };
+        await store.SaveAsync(account, Cancel);
+
+        var read = (await store.ReadAsync(account.Id, Cancel)).ShouldNotBeNull();
+
+        read.Account.Unbinding.ShouldBe(discord);
+        read.Account.ShouldBe(account);
+    }
+
+    [Fact]
     public async Task An_account_with_several_identities_reads_them_back_in_order()
     {
         var store = await StoreAsync();

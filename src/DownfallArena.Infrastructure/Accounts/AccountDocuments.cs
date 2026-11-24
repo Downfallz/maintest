@@ -45,6 +45,7 @@ internal static class AccountDocuments
             Suspension = account.Suspension is { } suspension
                 ? new SuspensionRecord(suspension.Reason, suspension.By, suspension.At)
                 : null,
+            Unbinding = account.Unbinding is { } unbinding ? new IdentityRecord(unbinding.Provider, unbinding.Subject) : null,
         },
         Web);
 
@@ -61,6 +62,7 @@ internal static class AccountDocuments
             Suspension = record.Suspension is { } suspension
                 ? new AccountSuspension(suspension.Reason, suspension.By, suspension.At)
                 : null,
+            Unbinding = record.Unbinding is { } unbinding ? new ExternalIdentity(unbinding.Provider, unbinding.Subject) : null,
         };
     }
 
@@ -101,12 +103,15 @@ internal static class AccountDocuments
 
     // Suspension is missing from a record written before ADR 0178, and from every account in good standing.
     // Identities is missing from a record written before ADR 0204; Provider and Subject stay the first identity, so
-    // the image before it still reads an account written after (the way back).
+    // the image before it still reads an account written after (the way back). Unbinding is missing but while a
+    // removal is between its writes (#1216); an image before it ignores it, and the binding waits for the next removal.
     private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation)
     {
         public SuspensionRecord? Suspension { get; init; }
 
         public IReadOnlyList<IdentityRecord?>? Identities { get; init; }
+
+        public IdentityRecord? Unbinding { get; init; }
     }
 
     private sealed record IdentityRecord(string Provider, string Subject);

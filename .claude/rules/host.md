@@ -36,6 +36,8 @@ paths:
 - An operator action that writes several records writes first the record the guards read. If the action is cut
   short, asking again finishes the rest; until then that record names one record too many, which the reads skip
   (`MergeIdea.MergingAsync`, #724).
+- A recovery path a store write promises ("doing it again finishes the job") is reachable through the route, and
+  its test fails the second write once (`AccountRegistry.UnlinkAsync`, #1216).
 - A listing route counts its storage reads per row. One read added to each table of `GET /api/lobby/mine` is paid
   on every account change, as the inbox fetches it again each time (#724).
 - When a conditional write is refused because the file moved, read it again. If a file read before is gone, the

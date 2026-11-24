@@ -29,7 +29,13 @@ names its provider, and the `by-subject` index is keyed by provider and subject.
   back by the next link or registration, under the lock links and removals take.
 - **Removing an identity signs the account out everywhere** (`UnlinkAsync`): the generation is raised in the same
   write as the removal, so whoever came in through the identity removed is signed out too. The account is written
-  first, then its entry removed; an entry left behind reaches nothing.
+  first, keeping the identity removed as `unbinding`, then its entry removed, then the account written without it.
+  An entry left behind reaches nothing, and the next removal, link or deletion of the account removes it; removing
+  the same way again from Settings finishes it too (#1216).
+- **Every write of an account read before is conditional on the version read** (the blob's ETag, the file's hash):
+  during a deploy the release beside this one writes the same accounts, which the registry's lock does not reach.
+  A write refused is read again and decided again; an account gone is not written back, and what was bound or
+  held for it goes (#1217).
 - **Never by email.** The host keeps no email (ADR 0122 holds), so it never joins two identities because a provider
   says they share an address. So someone who opens a provider account with your address cannot reach yours.
 - **A record written before this reads as one identity.** A new record lists `identities` and keeps the first one

@@ -250,9 +250,18 @@ public sealed class TableServerGuestTests : IAsyncDisposable
 
         public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
 
+        public Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default) =>
+            Failing ? throw new IOException("The account store is out of service (a test).") : inner.ReadAsync(id, cancellationToken);
+
         public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
 
+        public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default) =>
+            inner.SaveIfUnchangedAsync(account, version, cancellationToken);
+
         public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+
+        public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default) =>
+            inner.DeleteIfUnchangedAsync(id, version, cancellationToken);
 
         public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.FindBySubjectAsync(identity, cancellationToken);
 
