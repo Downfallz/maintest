@@ -9,13 +9,16 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, w
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricMax, metricTotal, noticeCounts, render, revisions, tending } from '../scripts/ops/report.mjs';
+import { GIVEN_UP, concerns, cost, logLines, mask, metricLatest, metricMax, metricTotal, noticeCounts, render, revisions, signInCounts, tending } from '../scripts/ops/report.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const NOW = '2026-11-16T10:23:00Z';
 
 const metric = (...values) => ({ value: [{ timeseries: [{ data: values.map((total) => ({ total, average: total, maximum: total })) }] }] });
 const logs = (...rows) => ({ tables: [{ columns: [{ name: 'app' }, { name: 'line' }, { name: 'n' }], rows }] });
+const signins = (...rows) => ({
+  tables: [{ columns: ['provider', 'started', 'finished', 'refused', 'unavailable', 'limited'].map((name) => ({ name })), rows }],
+});
 const notices = (...rows) => ({ tables: [{ columns: [{ name: 'outcome' }, { name: 'kind' }, { name: 'n' }, { name: 'givenUp' }], rows }] });
 
 const healthy = () => ({
@@ -51,6 +54,7 @@ const healthy = () => ({
   },
   logs: logs(),
   notices: notices(['sent', 'turn', 12, 0], ['sent', 'match', 3, 0], ['gone', 'turn', 1, 0]),
+  signins: signins(['google', 9, 7, 1, 0, 0]),
   cost: { properties: { columns: [{ name: 'Cost' }, { name: 'Currency' }], rows: [[0.42, 'CAD']] } },
   budget: { value: [{ properties: { amount: 5, currentSpend: { amount: 0.42, unit: 'CAD' } } }] },
 });
@@ -139,6 +143,34 @@ test('the notices reading counts the worker\'s own lines, in their own words', (
   assert.ok(query.includes("Notice (sent|refused|gone) \\("), 'the outcome');
   assert.ok(query.includes("givenUp = countif(Log_s has 'tries, onto')"), 'the give-ups, as the alert hears them');
   assert.ok(read('infra/main.bicep').includes('Log_s has "tries, onto"'), 'the alert');
+});
+
+test('the sign-ins are counted by provider and printed on one line, the busiest provider first (#1171)', () => {
+  const reading = signins(['google', 9, 7, 1, 0, 0], ['discord', 14, 3, 2, 1, 8], ['discord', 1, 1, 0, 0, 0]);
+  assert.deepEqual(signInCounts(reading), [
+    { provider: 'discord', started: 15, finished: 4, refused: 2, unavailable: 1, limited: 8 },
+    { provider: 'google', started: 9, finished: 7, refused: 1, unavailable: 0, limited: 0 },
+  ]);
+  assert.deepEqual(signInCounts({ tables: [] }), []);
+  const text = render({ ...healthy(), signins: reading }, NOW);
+  assert.match(text, /^Connexions 24 h : discord 15 commencées, 4 abouties, 2 refusées, 1 indisponible, 8 limitées ; google 9 commencées, 7 abouties, 1 refusée$/m);
+  assert.match(render({ ...healthy(), signins: signins() }, NOW), /^Connexions 24 h : aucune$/m);
+  assert.match(render({ ...healthy(), signins: { error: 'no' } }, NOW), /Non lu : connexions/);
+  assert.deepEqual(concerns({ ...healthy(), signins: reading }, NOW), [], 'a count is read, not a concern');
+});
+
+test('the sign-ins reading sums the host\'s one line a minute per provider, in its own words', () => {
+  const read = (path) => readFileSync(join(root, path), 'utf8');
+  const counts = read('src/DownfallArena.Cli/Table/SignInCounts.cs');
+  assert.ok(counts.includes('$"  Sign-ins ({provider}): {counts[(int)Step.Started]} started, '), 'the line');
+  for (const step of ['started', 'finished', 'refused', 'unavailable', 'limited']) {
+    assert.ok(counts.includes(`} ${step}`), step);
+  }
+  const query = read('scripts/ops/read.sh');
+  assert.ok(query.includes("extract(@'Sign-ins \\(([a-z]+)\\): ', 1, Log_s)"), 'the provider');
+  for (const step of ['started', 'finished', 'refused', 'unavailable', 'limited']) {
+    assert.ok(query.includes(`${step} = sum(toint(extract(@'(\\d+) ${step}\\b', 1, Log_s)))`), step);
+  }
 });
 
 test('the cost is a concern from 80 % of the budget', () => {
@@ -296,7 +328,7 @@ test('the readings go one file each, and one that fails is written as its error 
     assert.match(tools.read('executions').error, /AuthorizationFailed/);
     assert.deepEqual(tools.read('revisions-table'), { value: [] });
     assert.deepEqual(tools.read('lobby'), { url: 'https://downfall-table.example.test', status: 200, seconds: 0.5 });
-    for (const name of ['5xx', 'budget', 'cost', 'logs', 'notices', 'queue', 'restarts-table', 'restarts-worker', 'revisions-worker']) {
+    for (const name of ['5xx', 'budget', 'cost', 'logs', 'notices', 'queue', 'restarts-table', 'restarts-worker', 'revisions-worker', 'signins']) {
       assert.ok(tools.files().includes(`${name}.json`), name);
     }
     assert.match(tools.log('az'), /api\.loganalytics\.io\/v1\/workspaces\/ws-1\/query/);

@@ -38,6 +38,11 @@ GitHub, in Azure or anywhere else. Every line of the log is the table's own text
   did not answer, so one notice retried twice counts two; `abandonnées` are the notices given up on after five tries,
   a "your turn" included, kept a week on `notices-dlq` (the admin panel's Jobs tab, *Notices*). The tab counts by
   UTC day from the worker's own store, so its numbers and the report's 24 hours do not match exactly.
+- `Connexions 24 h`: the host's sign-in counts, one line a minute per provider (#1171), summed. `commencées` are
+  proofs that reached a provider, `abouties` sessions issued, `refusées` proofs the provider refused, or that met a
+  suspended account or closed registration, `indisponibles` the provider out of service, `limitées` posts refused
+  because their address had spent its count: five sign-ins a minute its provider does not vouch for, twenty people
+  vouched for, or eight being checked at once (#1193). Many `limitées`, or `refusées` far above `abouties`, is a script posting forged proofs.
 - The cost is Cost Management's month to date, which lags by up to a day.
 
 ## Rules

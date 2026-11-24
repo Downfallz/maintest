@@ -32,6 +32,7 @@ const AZURE_READINGS = {
   queue: 'files',
   logs: 'journal',
   notices: 'notifications',
+  signins: 'connexions',
   cost: 'coût',
   budget: 'budget',
 };
@@ -176,6 +177,28 @@ export function noticeCounts(reading) {
   return all;
 }
 
+const SIGN_IN_STEPS = ['started', 'finished', 'refused', 'unavailable', 'limited'];
+
+/**
+ * The sign-ins of the 24 hours (#1171), from the signins reading: a provider each, its steps summed, the busiest first.
+ * A provider is a sign-in method's name: no person.
+ */
+export function signInCounts(reading) {
+  const table = reading?.tables?.[0];
+  if (!table) return [];
+  const column = (name) => table.columns.findIndex((each) => each.name === name);
+  const provider = column('provider');
+  const steps = SIGN_IN_STEPS.map((step) => [step, column(step)]);
+  const all = new Map();
+  for (const row of table.rows) {
+    const name = String(row[provider]);
+    const held = all.get(name) ?? Object.fromEntries([['provider', name], ...SIGN_IN_STEPS.map((step) => [step, 0])]);
+    for (const [step, index] of steps) held[step] += Number(row[index]) || 0;
+    all.set(name, held);
+  }
+  return [...all.values()].sort((a, b) => b.started - a.started || a.provider.localeCompare(b.provider));
+}
+
 /** The month to date from Cost Management, whatever the account calls its cost column. */
 export function cost(reading) {
   const columns = (reading?.properties?.columns ?? []).map((column) => column.name);
@@ -309,6 +332,23 @@ function noticeLines(reading) {
   ];
 }
 
+// A step said only when it happened, but for the sign-ins begun.
+const SIGN_IN_WORDS = [
+  ['finished', 'aboutie'],
+  ['refused', 'refusée'],
+  ['unavailable', 'indisponible'],
+  ['limited', 'limitée'],
+];
+
+function signInLines(reading) {
+  if (!usable(reading)) return [];
+  const counted = signInCounts(reading);
+  const each = counted.map((one) =>
+    [`${one.provider} ${plural(one.started, 'commencée')}`, ...SIGN_IN_WORDS.filter(([step]) => one[step] > 0).map(([step, word]) => plural(one[step], word))].join(', '),
+  );
+  return [`Connexions 24 h : ${each.length === 0 ? 'aucune' : each.join(' ; ')}`];
+}
+
 function costLines(readings) {
   const spent = cost(readings.cost);
   if (!spent) return [];
@@ -342,6 +382,7 @@ export function render(readings, now) {
         usable(readings.queue) && `Files : ${plural(metricLatest(readings.queue), 'message')} en attente`,
         ...journalLines(readings.logs),
         ...noticeLines(readings.notices),
+        ...signInLines(readings.signins),
         ...costLines(readings),
       ]
     : ["Azure non lu : pas d'identité ops (infra/runbooks/ops-identity.md)"];

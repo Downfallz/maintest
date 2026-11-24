@@ -72,6 +72,17 @@ ContainerAppConsoleLogs_CL
 | summarize n = countif(isnotempty(outcome)), givenUp = countif(Log_s has 'tries, onto') by outcome, kind
 KQL
 
+# The sign-ins of the last 24 hours (#1171), from the host's one line a minute per provider: "Sign-ins (discord):
+# 3 started, 2 finished, 1 refused, 0 unavailable, 0 limited.", summed by provider.
+read -r -d '' SIGNINS <<'KQL'
+ContainerAppConsoleLogs_CL
+| where TimeGenerated > ago(1d)
+| where Log_s has 'Sign-ins ('
+| extend provider = extract(@'Sign-ins \(([a-z]+)\): ', 1, Log_s)
+| where isnotempty(provider)
+| summarize started = sum(toint(extract(@'(\d+) started\b', 1, Log_s))), finished = sum(toint(extract(@'(\d+) finished\b', 1, Log_s))), refused = sum(toint(extract(@'(\d+) refused\b', 1, Log_s))), unavailable = sum(toint(extract(@'(\d+) unavailable\b', 1, Log_s))), limited = sum(toint(extract(@'(\d+) limited\b', 1, Log_s))) by provider
+KQL
+
 # The month to date, as Cost Management reads it for the resource group.
 COST='{"type":"ActualCost","timeframe":"MonthToDate","dataset":{"granularity":"None","aggregation":{"totalCost":{"name":"Cost","function":"Sum"}}}}'
 
@@ -110,9 +121,11 @@ if [[ "${AZURE:-0}" == "1" ]]; then
   if [[ -n "$workspace" ]]; then
     reading logs post "$logs_api/v1/workspaces/$workspace/query" "$(jq -n --arg query "$ERRORS" '{query: $query, timespan: "P1D"}')" --resource "$logs_api"
     reading notices post "$logs_api/v1/workspaces/$workspace/query" "$(jq -n --arg query "$NOTICES" '{query: $query, timespan: "P1D"}')" --resource "$logs_api"
+    reading signins post "$logs_api/v1/workspaces/$workspace/query" "$(jq -n --arg query "$SIGNINS" '{query: $query, timespan: "P1D"}')" --resource "$logs_api"
   else
     echo '{"error": "no Log Analytics workspace in the resource group"}' > "$dir/logs.json"
     echo '{"error": "no Log Analytics workspace in the resource group"}' > "$dir/notices.json"
+    echo '{"error": "no Log Analytics workspace in the resource group"}' > "$dir/signins.json"
   fi
 
   reading cost post "$arm$group/providers/Microsoft.CostManagement/query?api-version=2023-03-01" "$COST"

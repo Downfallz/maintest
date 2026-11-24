@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Friends;
@@ -116,6 +117,15 @@ internal static class TableHost
             stopping.Cancel();
         };
         Console.CancelKeyPress += stop;
+
+        // The platform stops a replica it scales in, or to zero, with SIGTERM: the host stops as on Ctrl+C, so what it
+        // holds until then (the sign-in counts of the minute, #1171) is said rather than cut off with the process.
+        using var terminated = PosixSignalRegistration.Create(PosixSignal.SIGTERM, context =>
+        {
+            context.Cancel = true;
+            stopping.Cancel();
+        });
+        Task? serving = null;
         try
         {
             // Serving starts before the open tables are indexed: the container's platform waits a minute for the
@@ -123,7 +133,7 @@ internal static class TableHost
             // place yet with "try again in a moment" (TableServer.Starting), which keeps what ADR 0091 asked of
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
-            var serving = server.RunAsync(stopping.Token);
+            serving = server.RunAsync(stopping.Token);
             var running = await StartAsync(host, clock, stopping.Token);
             if (serving.IsFaulted)
             {
@@ -176,7 +186,13 @@ internal static class TableHost
         }
         catch (OperationCanceledException) when (stopping.IsCancellationRequested)
         {
-            // Ctrl+C while the tables were being rebuilt: nothing was half-served, and the records are as they were.
+            // Ctrl+C or SIGTERM while the tables were being rebuilt: nothing was half-served, and the records are as they
+            // were. The server is let stop first, so what it says on stopping (the sign-in counts) is said.
+            if (serving is not null)
+            {
+                await serving;
+            }
+
             return 0;
         }
         finally

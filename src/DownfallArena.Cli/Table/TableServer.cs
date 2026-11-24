@@ -99,7 +99,18 @@ internal sealed class TableServer : IDisposable
     /// <summary>Whether only this machine can reach the table, which is a thing its players are told.</summary>
     public bool IsLoopback => _host.IsLoopback;
 
-    public Task RunAsync(CancellationToken cancellationToken) => _host.RunAsync(cancellationToken);
+    /// <summary>Serves until stopped, then says the sign-in counts the minute had not said yet (#1171).</summary>
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _host.RunAsync(cancellationToken);
+        }
+        finally
+        {
+            _accounts?.SayCounts();
+        }
+    }
 
     public void Dispose() => _host.Dispose();
 
@@ -231,6 +242,8 @@ internal sealed class TableServer : IDisposable
 
     private async Task<StudioResponse> AnswerAsync(HttpListenerRequest request, string body)
     {
+        // The minute's sign-in counts are said on any request after it, a page's file too, not only on the next sign-in (#1171).
+        _accounts?.SayCountsIfDue();
         var path = request.Url?.AbsolutePath ?? "/";
         if (Starting && JoinCodes.Names(path))
         {
@@ -292,7 +305,7 @@ internal sealed class TableServer : IDisposable
             Console.WriteLine($"  Session {gone} let go of: finished and unread, or never begun and nobody came.");
         }
 
-        var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request));
+        var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request), RequestAddress.Of(request));
         if (AccountApi.Names(path))
         {
             return _accounts is null
