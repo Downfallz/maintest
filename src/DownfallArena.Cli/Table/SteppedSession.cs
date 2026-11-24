@@ -625,7 +625,11 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         }
     }
 
-    /// <summary>Keeps the match as a step left it, unless a later step's is already kept, and says what it changed.</summary>
+    /// <summary>
+    /// Keeps the match as a step left it, unless the match of a later step is already kept, and says what it changed.
+    /// If the match is read again and its journal has not moved, nothing changed: a refused bot turn, read again
+    /// before the next try, tells the table's pages nothing (#1212).
+    /// </summary>
     private void Take(JournaledState state)
     {
         Seated(state.SeatChanges);
@@ -634,7 +638,7 @@ internal sealed class SteppedSession : ITableSession, IAgentTurnTaker
         {
             if (_state is null || state.Position.Lines >= _state.Position.Lines)
             {
-                kept = true;
+                kept = _state?.Position != state.Position;
                 _state = state;
                 _journaled = _marks.TryGetValue(state.Position, out var traced) ? traced : _journaled;
                 foreach (var passed in _marks.Keys.Where(position => position.Lines < state.Position.Lines))

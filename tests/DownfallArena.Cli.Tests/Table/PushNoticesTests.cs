@@ -216,8 +216,14 @@ public sealed class PushNoticesTests : IDisposable
         var person = table.Seats[0].Person!;
         var marked = false;
         Asking? next = null;
-        for (var attempt = 0; attempt < 1500 && next is null; attempt++)
+        var deadline = DateTimeOffset.UtcNow + Waits.Within;
+        while (next is null)
         {
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new TimeoutException($"Not within {Waits.Within}: the seat asked again after casts.");
+            }
+
             var waiting = person.Waiting;
             if (waiting is null)
             {
@@ -442,10 +448,7 @@ public sealed class PushNoticesTests : IDisposable
         await QueuedOnce(outbox);
         (await table.Api.HandleAsync("GET", "/api/seat/player1", "", table.Seats[0].Token, null, $"?shown={asked}")).Status.ShouldBe(200);
 
-        for (var attempt = 0; attempt < 250 && outbox.Bodies.Count > 0; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => outbox.Bodies.Count == 0, "the notice was taken back off the queue", TestContext.Current.CancellationToken);
 
         outbox.Bodies.ShouldBeEmpty("taken back while still hidden, before the grace is over");
     }
@@ -503,10 +506,7 @@ public sealed class PushNoticesTests : IDisposable
     /// <summary>The asking's "your turn" on the queue, once the task that puts it there has.</summary>
     private static async Task QueuedOnce(InMemoryWorkChannel outbox)
     {
-        for (var attempt = 0; attempt < 250 && outbox.Bodies.Count == 0; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => outbox.Bodies.Count > 0, "a notice went on the queue", TestContext.Current.CancellationToken);
 
         QueuedNotice.Parse(outbox.Bodies.ShouldHaveSingleItem())!.Turn!.Seat.ShouldBe("player1");
     }
@@ -544,10 +544,7 @@ public sealed class PushNoticesTests : IDisposable
     private static async Task<long> Asked(PlayedTable table, long after = 0)
     {
         var person = table.Seats[0].Person!;
-        for (var attempt = 0; attempt < 300 && (person.Waiting?.Asked ?? 0) <= after; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => (person.Waiting?.Asked ?? 0) > after, "the seat was asked something new", TestContext.Current.CancellationToken);
 
         // The asking is raised right after it is set; a moment for the notice task to have started its grace,
         // so that moving the clock finds a timer to fire.

@@ -119,6 +119,9 @@ export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bi
     const error = new Error(result.message || `The host answered ${response.status}. Try again.`);
     error.code = result.error;
     error.status = response.status;
+    // How long the host asks the page to wait before posting again, in seconds (`Retry-After`), or null.
+    const after = response.headers?.get?.('Retry-After');
+    error.retryAfter = after && /^\d+$/.test(after.trim()) ? Number(after) : null;
     throw error;
   }
   // Every sign-in's answer carries it, whichever page or provider made it.
@@ -289,7 +292,9 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
     try {
       answerGoogle('signin', response => request('/api/account/google', { credential: response.credential }).then(signedIn).catch(error => say('sign-in-problem', error.message)));
       const id = prepareGoogle(await google(), way.clientId);
-      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large' });
+      // The width of Discord's and Microsoft's beside it (lobby.css), or the room there is at 320 px.
+      const room = el('sign-in-ways')?.clientWidth || 280;
+      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large', logo_alignment: 'left', width: Math.min(280, room) });
     } catch (error) {
       say('sign-in-problem', error.message);
     }

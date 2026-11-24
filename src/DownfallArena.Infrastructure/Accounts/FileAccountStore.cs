@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.SharedKernel.Identifiers;
@@ -9,7 +11,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// it, so a reader never sees half of one; an index entry is moved without overwriting, which is the
 /// create-if-absent the registry relies on. A conditional removal reads then deletes, so it and every index write
 /// take one lock: otherwise a name reserved between the read and the delete would be the one deleted. The lock is
-/// the process's, which is what a laptop's table is: one host over one directory.
+/// the process's, which is what a laptop's table is: one host over one directory. The version is the hash of the record
+/// as read. A conditional write or removal compares it with the file under the same lock.
 /// </summary>
 public sealed class FileAccountStore : IAccountStore
 {
@@ -25,6 +28,11 @@ public sealed class FileAccountStore : IAccountStore
 
     public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.AccountPath(id), cancellationToken) is { } json ? AccountDocuments.ReadAccount(json) : null;
+
+    public async Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default) =>
+        await ReadAsync(AccountDocuments.AccountPath(id), cancellationToken) is { } json ? new AccountRead(AccountDocuments.ReadAccount(json), VersionOf(json)) : null;
+
+    private static string VersionOf(string json) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
 
     public async Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default)
     {
@@ -53,8 +61,29 @@ public sealed class FileAccountStore : IAccountStore
         await WriteAsync(AccountDocuments.AccountPath(account.Id), AccountDocuments.Write(account), overwrite: true, cancellationToken);
     }
 
+    public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        var path = AccountDocuments.AccountPath(account.Id);
+        return ExclusivelyAsync(
+            async () => await IsVersionAsync(path, version, cancellationToken)
+                && await WriteAsync(path, AccountDocuments.Write(account), overwrite: true, cancellationToken),
+            cancellationToken);
+    }
+
     public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Delete(AccountDocuments.AccountPath(id)));
+
+    public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        var path = AccountDocuments.AccountPath(id);
+        return ExclusivelyAsync(async () => await IsVersionAsync(path, version, cancellationToken) && Delete(path), cancellationToken);
+    }
+
+    private async Task<bool> IsVersionAsync(string relative, string version, CancellationToken cancellationToken) =>
+        await ReadAsync(relative, cancellationToken) is { } json && string.Equals(VersionOf(json), version, StringComparison.Ordinal);
 
     public async Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.SubjectPath(identity), cancellationToken) is { } json ? AccountDocuments.ReadSubject(json) : null;
@@ -78,7 +107,9 @@ public sealed class FileAccountStore : IAccountStore
     {
         ArgumentNullException.ThrowIfNull(reservation);
         return ExclusivelyAsync(
-            async () => (await FindUsernameAsync(reservation.Username, cancellationToken))?.Account == reservation.Account
+            async () => await FindUsernameAsync(reservation.Username, cancellationToken) is { } held
+                && held.Account == reservation.Account
+                && held.ReservedAt == reservation.ReservedAt
                 && Delete(AccountDocuments.NamePath(reservation.Username)),
             cancellationToken);
     }

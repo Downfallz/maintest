@@ -17,11 +17,27 @@ public interface IAccountStore
     /// </summary>
     Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Writes the account whole, replacing what was there.</summary>
+    /// <summary>The account and the version of what was read, or null when there is none.</summary>
+    Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the account whole, replacing what was there: for an account just made, which nobody else can have read.
+    /// A change to an account read before goes through <see cref="SaveIfUnchangedAsync" />.
+    /// </summary>
     Task SaveAsync(Account account, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the account only if it is still at the version read (<see cref="AccountRead.Version" />). Returns false and
+    /// writes nothing when the account was written or deleted since. It guards against another process (the release
+    /// beside this one during a deploy, the hourly job); within one process, the registry orders its own writes.
+    /// </summary>
+    Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default);
 
     /// <summary>Removes the account record; its indexes are the caller's to release. False when there was none.</summary>
     Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes the account record if it is still the version read; false, removing nothing, when it changed or went.</summary>
+    Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default);
 
     Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default);
 
@@ -37,7 +53,10 @@ public interface IAccountStore
     /// <summary>Holds the name for the account if nobody holds it yet; false when somebody already does.</summary>
     Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default);
 
-    /// <summary>Frees the name if it is still held for that reservation's account; false otherwise.</summary>
+    /// <summary>
+    /// Frees the name if it is still that very reservation, the same account holding it since the same time; false
+    /// otherwise. A name judged abandoned and held again since by its account is not the one judged (#1227).
+    /// </summary>
     Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default);
 
     /// <summary>

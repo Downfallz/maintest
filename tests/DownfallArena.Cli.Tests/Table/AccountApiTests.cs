@@ -801,6 +801,7 @@ public sealed class AccountApiTests : IDisposable
 
         answer.Status.ShouldBe(503);
         Json(answer).GetProperty("error").GetString().ShouldBe("Account.ProviderUnavailable");
+        (answer.Headers ?? []).ShouldNotContain(header => header.Key == "Retry-After");
         said.ShouldBe(["  Sign-in unavailable (discord): Discord answered 503."]);
         (await SaidAfterAMinuteAsync(api, said))[^1].ShouldBe("  Sign-ins (discord): 1 started, 0 finished, 0 refused, 1 unavailable, 0 limited.");
     }
@@ -1090,6 +1091,18 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_provider_busy_for_a_moment_answers_503_with_how_long_to_wait()
+    {
+        var api = await ApiAsync(AccountsMode.SignIn, new Busy());
+
+        var answer = await api.HandleAsync("POST", "/api/account/busy", """{"code":"the-code"}""", From("203.0.113.7"));
+
+        answer.Status.ShouldBe(503);
+        Json(answer).GetProperty("error").GetString().ShouldBe("Account.ProviderUnavailable");
+        answer.Headers!.Single(header => header.Key == "Retry-After").Value.ShouldBe("2");
+    }
+
+    [Fact]
     public async Task A_body_that_is_no_proof_spends_nothing_of_the_address_s_count()
     {
         var api = await ApiAsync();
@@ -1267,6 +1280,17 @@ public sealed class AccountApiTests : IDisposable
 
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
             throw new HttpRequestException("The keys could not be fetched.");
+    }
+
+    /// <summary>A provider asked by as many sign-ins as it takes at once: unavailable for a moment.</summary>
+    private sealed class Busy : ISignInProvider
+    {
+        public string Name => "busy";
+
+        public string? ClientId => null;
+
+        public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
+            throw new SignInUnavailableException("Busy is being asked by as many sign-ins as the host allows at once.") { RetryAfter = TimeSpan.FromSeconds(2) };
     }
 
     /// <summary>A provider that refuses every proof and counts how often it was asked.</summary>

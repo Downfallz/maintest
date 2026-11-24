@@ -49,7 +49,7 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
     if (path === '/api/account/discord' || path === '/api/account/microsoft') {
       seen.posted.push(path === '/api/account/discord' ? route.request().postDataJSON() : { microsoft: route.request().postDataJSON() });
       const answer = discord();
-      return route.fulfill({ status: answer.status ?? 200, json: answer.json });
+      return route.fulfill({ status: answer.status ?? 200, headers: answer.headers, json: answer.json });
     }
     if (path === '/api/lobby') return route.fulfill({ json: { recording: true, format: '3v3', formats: ['3v3'], ongoing: 0, open: 0 } });
     if (['/api/lobby/adopt', '/api/lobby/mine', '/api/lobby/resume'].includes(path)) return route.fulfill({ json: { tables: [], invitations: [] } });
@@ -62,6 +62,17 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
 
 const discordButton = page => page.getByRole('button', { name: 'Continue with Discord' });
 
+// The height a finger can press: the 40 px face Google's own button has, and the strip above and below it that still
+// presses the button (lobby.css), read where the page would send a tap.
+const touchHeight = locator => locator.evaluate(button => {
+  const box = button.getBoundingClientRect(), x = box.left + box.width / 2;
+  const presses = y => button.contains(document.elementFromPoint(x, y));
+  let top = box.top, bottom = box.bottom - 1;
+  while (presses(top - 1)) top--;
+  while (presses(bottom + 1)) bottom++;
+  return bottom - top + 1;
+});
+
 test('the Discord button sits under Google\'s, as tall as a finger needs', async ({ page }) => {
   const seen = await lobby(page);
 
@@ -69,7 +80,9 @@ test('the Discord button sits under Google\'s, as tall as a finger needs', async
   const discord = await discordButton(page).boundingBox();
 
   expect(discord.y).toBeGreaterThanOrEqual(google.y + google.height);
-  expect(discord.height).toBeGreaterThanOrEqual(44);
+  expect(discord.height).toBe(40);
+  expect(await touchHeight(discordButton(page))).toBeGreaterThanOrEqual(44);
+  expect(discord.width).toBe(google.width);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(seen.errors).toEqual([]);
 });
@@ -128,6 +141,24 @@ test('a sign-in the host refuses for its network\'s count says the host\'s words
   expect(seen.errors).toEqual([]);
 });
 
+test('a sign-in the host was too busy to check for a second is posted once more and signs in (#1204)', async ({ page }) => {
+  const message = 'Too many sign-ins from your network just now. Try again in a minute.';
+  const answers = [{ status: 429, headers: { 'Retry-After': '1' }, json: { error: 'Account.TooManySignIns', message } }, { json: { needsUsername: true, ticket: 'name-ticket' } }];
+  await page.clock.install();
+  const seen = await lobby(page, { discord: () => answers.shift() });
+
+  await discordButton(page).click();
+  await expect(page.locator('#signin-state')).toHaveText('Checking your sign-in…');
+  await expect.poll(() => seen.posted.length).toBe(1);
+  // The wait the host asked for, and the up to one second more the page adds.
+  await page.clock.fastForward(2000);
+
+  await expect(page.getByRole('dialog', { name: 'Choose your player name' })).toBeVisible();
+  expect(seen.posted).toHaveLength(2);
+  expect(seen.posted[1]).toEqual(seen.posted[0]);
+  expect(seen.errors).toEqual([]);
+});
+
 test('back from Discord\'s authorize page leaves the Discord button pressable', async ({ page }) => {
   const seen = await lobby(page, { back: () => null });
   await discordButton(page).click();
@@ -164,7 +195,8 @@ test('a new player back from Microsoft is asked for a name in the lobby, its but
   const discord = await discordButton(page).boundingBox();
   const microsoft = await microsoftButton.boundingBox();
   expect(microsoft.y).toBeGreaterThanOrEqual(discord.y + discord.height);
-  expect(microsoft.height).toBeGreaterThanOrEqual(44);
+  expect(await touchHeight(microsoftButton)).toBeGreaterThanOrEqual(44);
+  expect(microsoft.width).toBe(discord.width);
 
   await microsoftButton.click();
 

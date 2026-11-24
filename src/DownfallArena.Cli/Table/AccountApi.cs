@@ -671,7 +671,8 @@ internal sealed class AccountApi
                 Said($"  Sign-in unavailable ({name}): {exception.Message}");
             }
 
-            return (default, Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute."));
+            var unavailable = Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
+            return (default, exception.RetryAfter is { } shortly ? unavailable with { Headers = [RetryAfter(shortly)] } : unavailable);
         }
         finally
         {
@@ -788,7 +789,8 @@ internal sealed class AccountApi
             return stale;
         }
 
-        if (who.Account.Identities.ByProvider(name) is not { } identity)
+        // A removal that stopped before its binding went keeps the identity apart (#1216): removing it again finishes it.
+        if ((who.Account.Identities.ByProvider(name) ?? (who.Account.Unbinding is { } pending && pending.Provider == name ? pending : null)) is not { } identity)
         {
             return WayRefused(AccountErrors.IdentityNotLinked);
         }
@@ -880,12 +882,15 @@ internal sealed class AccountApi
     private StudioResponse Limited(string provider, TimeSpan wait)
     {
         Counted(SignInCounts.Step.Limited, provider);
-        var seconds = Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
         return Problem(429, "Account.TooManySignIns", "Too many sign-ins from your network just now. Try again in a minute.") with
         {
-            Headers = [new KeyValuePair<string, string>("Retry-After", seconds)],
+            Headers = [RetryAfter(wait)],
         };
     }
+
+    /// <summary>A wait as <c>Retry-After</c> says it: whole seconds, at least one.</summary>
+    private static KeyValuePair<string, string> RetryAfter(TimeSpan wait) =>
+        new("Retry-After", Math.Max(1, (long)Math.Ceiling(wait.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>Gives the address's place back however the provider answered, and counts the answer: a person vouched for once.</summary>
     private void Settle(AccountRequest request, string provider, SignInAttempts.Outcome outcome, ExternalIdentity? vouched)

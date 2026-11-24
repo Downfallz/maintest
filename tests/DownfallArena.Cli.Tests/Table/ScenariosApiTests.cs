@@ -63,10 +63,7 @@ public sealed class ScenariosApiTests : IDisposable
     {
         var table = await _hosted.Composer.ComposeAsync(HostedTables.Bots, Cancel);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         await table.RecordAsync(Cancel);
         var cut = await Admin().HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = table.Id, round = 2, seat = "player2", title = "Second round" }), "operator");
@@ -335,16 +332,7 @@ public sealed class ScenariosApiTests : IDisposable
             sent.Status.ShouldBe(204, Encoding.UTF8.GetString(sent.Body));
         }
 
-        for (var waited = 0; waited < 50; waited++)
-        {
-            view = await ViewAsync();
-            if (view.GetProperty("options").GetProperty("kind").GetString() != "Speed")
-            {
-                break;
-            }
-
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.HoldsAsync(async () => (view = await ViewAsync()).GetProperty("options").GetProperty("kind").GetString() != "Speed", Cancel);
 
         return view.GetProperty("options").GetProperty("kind").GetString();
     }
@@ -1751,16 +1739,8 @@ public sealed class ScenariosApiTests : IDisposable
         }
     }
 
-    /// <summary>Whether <paramref name="condition" /> holds within five seconds, read 50 ms apart.</summary>
-    private static async Task<bool> EventuallyAsync(Func<bool> condition)
-    {
-        for (var waited = 0; waited < 100 && !condition(); waited++)
-        {
-            await Task.Delay(50, Cancel);
-        }
-
-        return condition();
-    }
+    /// <summary>Whether <paramref name="condition" /> holds within <see cref="Waits.Within" />.</summary>
+    private static Task<bool> EventuallyAsync(Func<bool> condition) => Waits.HoldsAsync(condition, Cancel);
 
     [Fact]
     public async Task A_plain_scenario_s_practice_carries_no_tutorial()
@@ -1827,11 +1807,7 @@ public sealed class ScenariosApiTests : IDisposable
     private static async Task<JsonElement> WaitingForAsync(ScenarioPlay play, Func<JsonElement, bool> until)
     {
         var view = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
-        for (var waited = 0; waited < 100 && !until(view); waited++)
-        {
-            await Task.Delay(50, Cancel);
-            view = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token));
-        }
+        await Waits.HoldsAsync(async () => until(view = Read(await play.Api.HandleAsync("GET", "/api/seat/player1", "", play.Token))), Cancel);
 
         until(view).ShouldBeTrue(view.ToString());
         return view;

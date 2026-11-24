@@ -36,6 +36,14 @@ paths:
 - An operator action that writes several records writes first the record the guards read. If the action is cut
   short, asking again finishes the rest; until then that record names one record too many, which the reads skip
   (`MergeIdea.MergingAsync`, #724).
+- When a store write promises "ask again and it finishes", the route lets the player ask again, and the test makes
+  one write fail, then asks again through the route (`AccountRegistry.UnlinkAsync`, #1216).
+- A read-decide-write retry whose decision writes to the store (a binding, a name held) undoes those writes on
+  every refusal a later try can reach, not only on the account gone (`AccountRegistry.LinkAsync`, #1217).
+- A release or a delete made on a judgement of staleness is conditional on the very record judged (its version, or
+  its time), not only on its owner: the owner may have taken it up again since (`ReleaseUsernameAsync`, #1227).
+- The hourly job and the worker hold their own registry and lock: a write they race with the API is conditional on
+  what they decided on, checked again on every try, not only on the version read (`IdleGuests`, #1217).
 - A listing route counts its storage reads per row. One read added to each table of `GET /api/lobby/mine` is paid
   on every account change, as the inbox fetches it again each time (#724).
 - When a conditional write is refused because the file moved, read it again. If a file read before is gone, the

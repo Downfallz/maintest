@@ -143,10 +143,7 @@ public sealed class WaitingRoomTests : IDisposable
         outcome.Value.Winner.ShouldBe(PlayerSlot.Player2);
 
         // The session closes its files after the outcome; the store is only torn down once it has.
-        for (var attempt = 0; attempt < 300 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         table.IsFinished.ShouldBeTrue();
     }
@@ -199,10 +196,7 @@ public sealed class WaitingRoomTests : IDisposable
 
     private static async Task<Asking> Asked(ISeatPerson person, long after = 0)
     {
-        for (var attempt = 0; attempt < 300 && (person.Waiting is null || person.Waiting.Asked == after); attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => person.Waiting is { } waiting && waiting.Asked != after, "the seat was asked something new", TestContext.Current.CancellationToken);
 
         return person.Waiting.ShouldNotBeNull("the seat was never asked anything");
     }

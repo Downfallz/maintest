@@ -17,7 +17,7 @@ import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ENCODING, RATIOS, filmNames, readShot, root, sha256, stillName } from './shoot.mjs';
+import { ENCODING, RATIOS, filmNames, montrealToday, readShot, root, sha256, stillName } from './shoot.mjs';
 
 export const BRIEF_FORMAT = 'downfall.promo.brief.v1';
 export const GENERATED_FORMAT = 'downfall.promo.generated.v1';
@@ -391,7 +391,7 @@ export function isDay(text) {
   return !Number.isNaN(day.getTime()) && day.toISOString().startsWith(text);
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => montrealToday();
 
 // One line of the record: its brief read, and every field what the intake writes.
 function checkLine(file, at, { briefs, shots, until, refuse }) {

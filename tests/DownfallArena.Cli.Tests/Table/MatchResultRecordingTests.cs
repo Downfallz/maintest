@@ -27,10 +27,7 @@ public sealed class MatchResultRecordingTests : IDisposable
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(60), Cancel);
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
     }
 
     [Fact]

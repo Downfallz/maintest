@@ -506,18 +506,10 @@ public sealed class TablePilotTests : IDisposable
     /// </summary>
     private static async Task Decided(Table table, PlayerSlot slot)
     {
-        for (var attempt = 0; attempt < 500; attempt++)
-        {
-            var reading = await table.Journal.ReadAsync(table.Run.SessionId, TestContext.Current.CancellationToken);
-            if (reading.Decisions.Any(decision => decision.Slot == slot))
-            {
-                return;
-            }
-
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"The bot in {slot} never decided anything.");
+        await Waits.UntilAsync(
+            async () => (await table.Journal.ReadAsync(table.Run.SessionId, TestContext.Current.CancellationToken)).Decisions.Any(decision => decision.Slot == slot),
+            $"the bot in {slot} decided something",
+            TestContext.Current.CancellationToken);
     }
 
     /// <summary>The table under test: the routes, the session they are over, its recording and its journal.</summary>

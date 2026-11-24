@@ -37,11 +37,7 @@ public sealed class TableEndedBeforeRecordedTests
         // The end of a table that records nothing is marked as its outcome is observed, which may be just before
         // the first record or just after it: either way the index ends up saying it is not open.
         var listed = await hosted.Index.OpenAsync(0, 10, TestContext.Current.CancellationToken);
-        for (var waited = 0; listed.Count > 0 && waited < 100; waited++)
-        {
-            await Task.Delay(50, TestContext.Current.CancellationToken);
-            listed = await hosted.Index.OpenAsync(0, 10, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(async () => (listed = await hosted.Index.OpenAsync(0, 10, TestContext.Current.CancellationToken)).Count == 0, "the table left the index of open tables", TestContext.Current.CancellationToken);
 
         listed.ShouldBeEmpty();
     }
@@ -51,10 +47,7 @@ public sealed class TableEndedBeforeRecordedTests
     {
         var table = await hosted.Composer.ComposeAsync(HostedTables.Bots, TestContext.Current.CancellationToken);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
-        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
-        {
-            await Task.Delay(100, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         table.IsFinished.ShouldBeTrue();
         return table;

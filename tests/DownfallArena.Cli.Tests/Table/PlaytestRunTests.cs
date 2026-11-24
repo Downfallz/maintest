@@ -293,17 +293,7 @@ public sealed class PlaytestRunTests : IDisposable
     /// <summary>The bots take their turns behind the table, so a test waits for the question rather than assuming it.</summary>
     private static async Task Waiting(SteppedPerson person, string kind)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
-        {
-            if (person.Waiting?.Kind.ToString() == kind)
-            {
-                return;
-            }
-
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"The seat never waited for {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+        await Waits.UntilAsync(() => person.Waiting?.Kind.ToString() == kind, $"the seat waited for {kind}", TestContext.Current.CancellationToken);
     }
 
     /// <summary>

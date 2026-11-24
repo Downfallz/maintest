@@ -424,25 +424,12 @@ public sealed class TableRegistryTests : IDisposable
     /// <summary>The forgetting runs once the driver has stopped, on its own task, so a test waits for it.</summary>
     private static async Task ForgottenBy(MatchTraceRecorder recorder, MatchId matchId)
     {
-        for (var attempt = 0; attempt < 300 && recorder.Length(matchId) > 0; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => recorder.Length(matchId) == 0, "the match's trace was forgotten", TestContext.Current.CancellationToken);
     }
 
     private static async Task Forgotten(IMatchRepository repository, MatchId matchId)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
-        {
-            if (await repository.FindAsync(matchId, TestContext.Current.CancellationToken) is null)
-            {
-                return;
-            }
-
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException("The repository still holds the match of a table that was let go of.");
+        await Waits.UntilAsync(async () => await repository.FindAsync(matchId, TestContext.Current.CancellationToken) is null, "the repository dropped the match of the released table", TestContext.Current.CancellationToken);
     }
 
     /// <summary>
@@ -483,10 +470,7 @@ public sealed class TableRegistryTests : IDisposable
     /// <summary>The closing runs after the outcome, on its own task, so a test waits for it rather than assuming it.</summary>
     private static async Task Finished(PlayedTable table)
     {
-        for (var attempt = 0; attempt < 300 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         table.IsFinished.ShouldBeTrue("the closing should have marked the table finished");
     }

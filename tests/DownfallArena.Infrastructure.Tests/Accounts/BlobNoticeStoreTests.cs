@@ -11,6 +11,7 @@ public sealed class BlobNoticeStoreTests : NoticeStoreContract
 {
     private const string Account = "devstoreaccount1";
     private const string Key = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+    private readonly BlobReads _reads = new();
     private BlobContainerClient? _container;
 
     private static readonly Uri Endpoint = new(Environment.GetEnvironmentVariable("AZURITE_BLOB_ENDPOINT") ?? "http://127.0.0.1:10000/devstoreaccount1");
@@ -29,9 +30,12 @@ public sealed class BlobNoticeStoreTests : NoticeStoreContract
             }
         }
 
-        _container = new BlobContainerClient(new Uri($"{Endpoint}/notices-{Guid.CreateVersion7():N}"), new StorageSharedKeyCredential(Account, Key));
+        _container = new BlobContainerClient(new Uri($"{Endpoint}/notices-{Guid.CreateVersion7():N}"), new StorageSharedKeyCredential(Account, Key), _reads.Options());
         return await BlobNoticeStore.OpenAsync(_container, Cancel);
     }
+
+    protected override async Task<INoticeStore> OtherStoreAsync(INoticeStore store) =>
+        await BlobNoticeStore.OpenAsync(new BlobContainerClient(_container!.Uri, new StorageSharedKeyCredential(Account, Key)), Cancel);
 
     /// <summary>A log another revision wrote, with fields this one does not know: marking it read keeps them (#1211).</summary>
     [Fact]
@@ -46,5 +50,70 @@ public sealed class BlobNoticeStoreTests : NoticeStoreContract
         (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
 
         NoticeFields.ShouldKeepThem((await blob.DownloadContentAsync(Cancel)).Value.Content.ToString());
+    }
+
+    /// <summary>A write over the version just read keeps the fields this revision does not know without a second GET (#1232).</summary>
+    [Fact]
+    public async Task Writing_over_the_version_read_reads_the_log_no_second_time()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var blob = _container!.GetBlobClient($"notices/{account.Value}.json");
+        await blob.UploadAsync(BinaryData.FromString(NoticeFields.Written), Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        _reads.Reset();
+
+        (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
+
+        _reads.Count.ShouldBe(0);
+        NoticeFields.ShouldKeepThem((await blob.DownloadContentAsync(Cancel)).Value.Content.ToString());
+    }
+
+    /// <summary>A store that did not read the log itself, another process's, reads it again to keep those fields.</summary>
+    [Fact]
+    public async Task Writing_over_a_version_another_store_read_still_keeps_the_fields_this_revision_does_not_know()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var blob = _container!.GetBlobClient($"notices/{account.Value}.json");
+        await blob.UploadAsync(BinaryData.FromString(NoticeFields.Written), Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        var other = await OtherStoreAsync(store);
+
+        (await other.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
+
+        NoticeFields.ShouldKeepThem((await blob.DownloadContentAsync(Cancel)).Value.Content.ToString());
+    }
+
+    /// <summary>Forgetting an account lets go of what this store kept of it, push keys among it (ADR 0203): the next write reads again.</summary>
+    [Fact]
+    public async Task Forgetting_an_account_lets_go_of_what_was_kept_of_its_read()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        await _container!.GetBlobClient($"notices/{account.Value}.json").UploadAsync(BinaryData.FromString(NoticeFields.Written), Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        await store.ForgetAsync(account, Cancel);
+        _reads.Reset();
+
+        (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeFalse();
+
+        _reads.Count.ShouldBe(1);
+    }
+
+    /// <summary>Emptying the log lets go of what was kept of it too.</summary>
+    [Fact]
+    public async Task Emptying_the_log_lets_go_of_what_was_kept_of_its_read()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        await _container!.GetBlobClient($"notices/{account.Value}.json").UploadAsync(BinaryData.FromString(NoticeFields.Written), Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        (await store.WriteAsync(account, [], read.Version, Cancel)).ShouldBeTrue();
+        _reads.Reset();
+
+        (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeFalse();
+
+        _reads.Count.ShouldBe(1);
     }
 }

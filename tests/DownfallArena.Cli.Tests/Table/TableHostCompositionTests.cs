@@ -173,10 +173,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
 
         table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(60), Cancel);
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         return table;
     }
@@ -302,10 +299,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var table = await HeldAsync(host, mark.Id);
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
-        for (var attempt = 0; attempt < 300 && table.Seats[0].Person!.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.Seats[0].Person!.Waiting is not null, "the first seat was asked something", Cancel);
 
         var asked = table.Seats[0].Person!.Waiting.ShouldNotBeNull().Asked;
 
@@ -324,10 +318,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
         var noticing = await TableHost.StartNoticesAsync(host.Channels, host.Notices, host.Push, host.Registry, TimeProvider.System, stopping.Token);
-        for (var attempt = 0; attempt < 300 && _sender.Sent.Count == 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
 
         await stopping.CancelAsync();
         await noticing;
@@ -356,15 +347,25 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
-        for (var attempt = 0; attempt < 600 && _sender.Count == 0; attempt++)
-        {
-            await Task.Delay(50, Cancel);
-        }
+        var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
 
         await stopping.CancelAsync();
-        await running;
+        await started.Running;
         _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF"]);
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_with_its_turns_in_its_process_the_host_starts_no_worker_of_the_turns()
+    {
+        var host = await ComposeAsync();
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+        var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+
+        await stopping.CancelAsync();
+        await started.Running;
+        started.Turns.ShouldBe(TurnsTaken.InProcess);
     }
 
     [Fact]
@@ -387,11 +388,12 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await table.RecordAsync(Cancel);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
-        await Task.WhenAny(table.Session.Outcome, Task.Delay(TimeSpan.FromSeconds(60), Cancel));
+        var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        await Task.WhenAny(table.Session.Outcome, Task.Delay(Waits.Within, Cancel));
 
         await stopping.CancelAsync();
-        await running;
+        await started.Running;
+        started.Turns.ShouldBe(TurnsTaken.ByThisHost);
         table.Session.Outcome.IsCompleted.ShouldBeTrue("the understudies' turns went on the queue and the host's worker took them");
     }
 
@@ -475,11 +477,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         table.Session.Begin();
 
         var queued = 0;
-        for (var attempt = 0; attempt < 250 && queued == 0 && _sender.Sent.Count == 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-            queued = await host.Notices!.CountAsync(Cancel);
-        }
+        await Waits.UntilAsync(async () => (queued = await host.Notices!.CountAsync(Cancel)) > 0 || _sender.Count > 0, "the turn went on the notices queue, or was sent", Cancel);
 
         queued.ShouldBe(1);
         (await host.Notices!.PeekAsync(1, Cancel)).ShouldBeEmpty("the turn itself is queued, hidden until its grace is over, not a push to a device");
@@ -552,6 +550,80 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     }
 
     /// <summary>
+    /// The panel's "Run now" removes the guests unused for a month (ADR 0207, #1225), as the hourly job does: the
+    /// pass is built here and not in <c>TableTend.ComposeAsync</c>, so leaving its guests out went unseen. A guest made
+    /// through the host's own route goes, with its game settings and its activity; a player's account, as old, stays.
+    /// </summary>
+    [Fact]
+    public async Task A_pass_run_from_the_panel_removes_the_guests_unused_for_a_month()
+    {
+        var clock = new ShiftedClock();
+        using var later = new HostedTables(store: null, clock: clock);
+        var host = await ComposeAsync(services: later.Services);
+        var mark = await SignInAsync(host, "MarkF");
+        var made = await host.Accounts!.HandleAsync("POST", AccountApi.GuestRoute, "", new AccountRequest(null, Secure: true, "203.0.113.7"));
+        made.Status.ShouldBe(200);
+        var guest = AccountId.Parse(Json(made).GetProperty("account").GetProperty("id").GetString()!);
+        var session = made.Headers!.Single(header => header.Key == "Set-Cookie").Value.Split(';')[0][(AccountSessions.Cookie.Length + 1)..];
+        (await host.Accounts.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":1.5,"help":false,"reducedMotion":true,"reactions":false}""", Signed(session))).Status.ShouldBe(200);
+        var target = Path.Combine(_root, "playtest");
+        var (preferences, activity) = (await ArtifactStores.OpenPreferencesAsync(target, Cancel), await ArtifactStores.OpenActivityAsync(target, Cancel));
+        (await preferences.GetAsync(guest, Cancel)).ShouldNotBeNull();
+        (await activity.FindAsync(guest, Cancel)).ShouldNotBeNull();
+        clock.Advance(IdleGuests.KeptFor + TimeSpan.FromDays(1));
+
+        var pass = await host.Admin.Jobs!.HandleAsync("POST", JobsApi.TendRoute, null, "op");
+
+        pass.Status.ShouldBe(200);
+        var accounts = await ArtifactStores.OpenAccountsAsync(target, Cancel);
+        (await accounts.FindAsync(guest, Cancel)).ShouldBeNull();
+        (await accounts.FindAsync(mark.Id, Cancel)).ShouldNotBeNull();
+        (await preferences.GetAsync(guest, Cancel)).ShouldBeNull();
+        (await activity.FindAsync(guest, Cancel)).ShouldBeNull();
+    }
+
+    /// <summary>
+    /// Each provider's client id is read from its variable when no flag gives it (#1239): production passes the flags,
+    /// so only this test fails when a fallback is deleted. The variables are read through the options' own
+    /// (<c>CliOptions.Variables</c>), not the process's environment, which the test classes running in parallel share.
+    /// </summary>
+    [Fact]
+    public async Task Without_their_flags_the_host_reads_each_provider_client_id_from_its_variable()
+    {
+        var variables = new Dictionary<string, string>
+        {
+            [TableHost.GoogleClientIdEnvironment] = "1234.apps.googleusercontent.com",
+            [TableHost.DiscordClientIdEnvironment] = "1311111111111111111",
+            [TableHost.MicrosoftClientIdEnvironment] = "6731de76-14a6-49ae-97bc-6eba6914391e",
+        };
+
+        _host = (await TableHost.ComposeAsync(
+            _hosted.Services,
+            new CliOptions
+            {
+                Command = "table",
+                Output = "out.csv",
+                Record = Path.Combine(_root, "playtest"),
+                Accounts = AccountsMode.SignIn,
+                SignIn = [ExternalIdentity.Google, ExternalIdentity.Discord, ExternalIdentity.Microsoft],
+                Variables = name => variables.GetValueOrDefault(name),
+                Lobby = true,
+                Port = FreePort(),
+            },
+            HostedTables.Rules,
+            null,
+            Path.Combine(AppContext.BaseDirectory, "table"),
+            null,
+            Cancel)).ShouldNotBeNull();
+
+        _host.Accounts!.SignIn.Select(provider => (provider.Name, provider.ClientId)).ShouldBe([
+            ("google", "1234.apps.googleusercontent.com"),
+            ("discord", "1311111111111111111"),
+            ("microsoft", "6731de76-14a6-49ae-97bc-6eba6914391e"),
+        ]);
+    }
+
+    /// <summary>
     /// A host told <c>--turns worker</c> over a container (#1181): <c>table-worker</c> takes the bots' turns in a process of
     /// its own, so this host starts no worker of its own beside it, and a turn put on the queue is still there for it.
     /// That nothing took it is read once the host's notices worker, started after where the turns' would be, has sent
@@ -577,13 +649,13 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             await turns.SendAsync(turn, cancellationToken: Cancel);
             using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
-            var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+            var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
             await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
             var left = await turns.PeekAsync(32, Cancel);
 
             await stopping.CancelAsync();
-            await running;
-            host.Mode.ShouldBe(TurnsMode.Worker);
+            await started.Running;
+            started.Turns.ShouldBe(TurnsTaken.ByTableWorker, "the host starts no worker of the turns, whenever that worker would have polled");
             left.Select(work => work.Body).ShouldContain(turn, "the turn is table-worker's to take");
         }
         finally

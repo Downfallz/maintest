@@ -9,6 +9,8 @@ public sealed class FileDeviceStoreTests : DeviceStoreContract, IDisposable
 
     protected override Task<IDeviceStore> StoreAsync() => Task.FromResult<IDeviceStore>(new FileDeviceStore(_root));
 
+    protected override Task<IDeviceStore> OtherStoreAsync(IDeviceStore store) => Task.FromResult<IDeviceStore>(new FileDeviceStore(_root));
+
     /// <summary>A list another revision wrote, with fields this one does not know: adding a device keeps them (#1211).</summary>
     [Fact]
     public async Task Changing_a_list_keeps_the_fields_this_revision_does_not_know()

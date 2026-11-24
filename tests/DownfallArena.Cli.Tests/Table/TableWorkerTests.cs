@@ -43,18 +43,12 @@ public sealed class TableWorkerTests : IDisposable
         var over = new TableWorker.Over(new FileArtifactStore(_hosted.RunsDirectory), _hosted.Index, _channels);
         var working = TableWorker.WorkAsync(services.Services, HostedTables.Rules, over, sender: null, stopping.Token);
 
-        for (var waited = 0; waited < 600 && (await _hosted.Stored!.RecordAsync(table.Id, Cancel))?.Status != TableRecord.Finished; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(async () => (await _hosted.Stored!.RecordAsync(table.Id, Cancel))?.Status == TableRecord.Finished, "the table's record says finished", Cancel);
 
         var beforeTheHost = (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status;
         await table.Session.CatchUpAsync(Cancel);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; waited < 300 && !(table.IsFinished && table.Run!.IsClosed); waited++)
-        {
-            await Task.Delay(50, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished && table.Run!.IsClosed, "the table finished and its run closed", Cancel);
 
         await stopping.CancelAsync();
         await working;

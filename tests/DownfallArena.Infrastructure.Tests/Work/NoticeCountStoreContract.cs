@@ -10,6 +10,12 @@ public abstract class NoticeCountStoreContract
 
     protected abstract Task<INoticeCountStore> StoreAsync();
 
+    /// <summary>
+    /// A second store over the same days, as another process opens it: one that kept nothing of what
+    /// <paramref name="store" /> read (#1232). The same store for an adapter with one copy in memory.
+    /// </summary>
+    protected virtual Task<INoticeCountStore> OtherStoreAsync(INoticeCountStore store) => Task.FromResult(store);
+
     private static readonly DateOnly Monday = new(2026, 11, 23);
 
     [Fact]
@@ -62,5 +68,21 @@ public abstract class NoticeCountStoreContract
         (await store.ReadAsync(Monday.AddDays(-6), Cancel)).Counts.ShouldNotBeEmpty();
         (await store.ReadAsync(Monday.AddDays(-7), Cancel)).Version.ShouldBeNull();
         (await store.ReadAsync(Monday.AddDays(-30), Cancel)).Version.ShouldBeNull();
+    }
+
+    /// <summary>The text this store kept of its read does not let its write past another store's since (#1232).</summary>
+    [Fact]
+    public async Task A_write_over_the_version_read_is_refused_once_another_store_wrote_since()
+    {
+        var store = await StoreAsync();
+        var other = await OtherStoreAsync(store);
+        await store.WriteAsync(Monday, [new("turn", 1, 0, 0)], null, Cancel);
+        var read = await store.ReadAsync(Monday, Cancel);
+        (await other.WriteAsync(Monday, [new("turn", 2, 0, 0)], (await other.ReadAsync(Monday, Cancel)).Version, Cancel)).ShouldBeTrue();
+
+        var written = await store.WriteAsync(Monday, [new("turn", 9, 0, 0)], read.Version, Cancel);
+
+        written.ShouldBeFalse();
+        (await store.ReadAsync(Monday, Cancel)).Counts.ShouldBe([new NoticeCount("turn", 2, 0, 0)]);
     }
 }

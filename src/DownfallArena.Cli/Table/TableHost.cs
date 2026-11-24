@@ -134,7 +134,7 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             serving = server.RunAsync(stopping.Token);
-            var running = await StartAsync(host, clock, stopping.Token);
+            var running = (await StartAsync(host, clock, stopping.Token)).Running;
             if (serving.IsFaulted)
             {
                 await serving;
@@ -204,9 +204,9 @@ internal static class TableHost
     /// <summary>
     /// What a composed host runs beside its server, until stopped: the workers of the bots' turns (unless table-worker
     /// takes them), the notices' workers, and the watch of the tables it holds. What <see cref="RunAsync" /> starts, and
-    /// what the tests start to see each is started (#1159).
+    /// what the tests start to see each is started (#1159), and who it has take the bots' turns (#1213).
     /// </summary>
-    internal static async Task<Task> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<HostStarted> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
     {
         ArgumentNullException.ThrowIfNull(host);
         var working = host.Mode == TurnsMode.Worker && host.Turns is not null
@@ -218,7 +218,7 @@ internal static class TableHost
         // expiries -- is heard through the relay when there is one, and looked for every second when there is not
         // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
         var watching = host.Stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(host.Registry, clock), host.Relay, clock, stopping);
-        return Task.WhenAll(working, noticing, watching);
+        return new HostStarted(Task.WhenAll(working.Running, noticing, watching), working.Turns);
     }
 
     /// <summary>What sends a notice to a device, and the public key a page subscribes with: a host given push keys.</summary>
@@ -270,9 +270,9 @@ internal static class TableHost
         // (sign-in methods plan, P2, P3, P6). A provider without its client id is one line here rather than a page whose
         // button never draws.
         var clients = new SignInClients(
-            options.GoogleClientId ?? Environment.GetEnvironmentVariable(GoogleClientIdEnvironment),
-            options.DiscordClientId ?? Environment.GetEnvironmentVariable(DiscordClientIdEnvironment),
-            options.MicrosoftClientId ?? Environment.GetEnvironmentVariable(MicrosoftClientIdEnvironment));
+            options.GoogleClientId ?? options.Variables(GoogleClientIdEnvironment),
+            options.DiscordClientId ?? options.Variables(DiscordClientIdEnvironment),
+            options.MicrosoftClientId ?? options.Variables(MicrosoftClientIdEnvironment));
         var (providers, signInProblem) = SignInProviders.Build(
             options.SignIn,
             clients,
@@ -360,7 +360,11 @@ internal static class TableHost
     }
 
     /// <summary>The accounts' side of a host that signs players in: the accounts, the door every notice goes through, friends and players.</summary>
-    private sealed record SignedInParts(AccountApi Api, IAccountStore Store, AccountNotifier Notifier, Friends Friendships, FriendsApi Friends, PlayerDirectory Directory, PlayersApi Players);
+    private sealed record SignedInParts(AccountApi Api, IAccountStore Store, AccountNotifier Notifier, Friends Friendships, FriendsApi Friends, PlayerDirectory Directory, PlayersApi Players)
+    {
+        /// <summary>The store the activity log writes to, which the panel's pass reads the idle guests from (#1225).</summary>
+        public required IAccountActivityStore Activity { get; init; }
+    }
 
     /// <summary>The admin tabs' parts the server is built with too: the turns' queues, the notices' counts, feedback and notes.</summary>
     private sealed record Tabs(TurnQueues? Queues, NoticeCounts? NoticeCounts, FeedbackIndex? FeedbackIndex, FeedbackWrites FeedbackWrites, FeedbackMutes FeedbackMutes, OperatorNotes Notes)
@@ -490,7 +494,8 @@ internal static class TableHost
         accounts.ForgetFriends = id => friendships.ForgetAsync(id, CancellationToken.None);
         // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
         // operator's list of players read from it, the accounts and the results.
-        accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(target, cancellationToken), clock);
+        var activity = await ArtifactStores.OpenActivityAsync(target, cancellationToken);
+        accounts.Activity = new AccountActivityLog(activity, clock);
         // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
         accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(target, cancellationToken), clock);
         var directory = new PlayerDirectory(store, accounts.Activity, tables.Results, clock);
@@ -501,7 +506,7 @@ internal static class TableHost
             // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
             BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
         };
-        return new SignedInParts(accounts, store, notifier, friendships, friends, directory, players);
+        return new SignedInParts(accounts, store, notifier, friendships, friends, directory, players) { Activity = activity };
     }
 
     /// <summary>
@@ -623,6 +628,11 @@ internal static class TableHost
             Feedback = feedbackIndex is null ? null : new LetGoOfClosedFeedback(feedbackIndex.Records, clock),
             FeedbackIndex = feedbackIndex,
             Notices = signedIn?.Api.NoticeLog,
+            // The guests unused for a month (ADR 0207), removed as the hourly job removes them (#1225). The account
+            // cache needs nothing: a guest that old was last read far longer ago than the cache keeps an account.
+            Guests = signedIn is null
+                ? null
+                : new IdleGuests(signedIn.Store, signedIn.Activity, signedIn.Api.Preferences, clock),
         };
         admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
         {
@@ -826,10 +836,10 @@ internal static class TableHost
         options.Turns ?? CliOptions.TryParseTurns(Environment.GetEnvironmentVariable(TurnsEnvironment)) ?? TurnsMode.Process;
 
     /// <summary>The bots' turns put on the queue for table-worker, in a process of its own (ADR 0162): no worker here.</summary>
-    private static Task TakenByTheWorker(IWorkChannel turns)
+    private static HostStarted TakenByTheWorker(IWorkChannel turns)
     {
         Console.WriteLine($"  Turns: through the queue {turns.Name}, taken by {CliOptions.WorkerCommand} in a process of its own.");
-        return Task.CompletedTask;
+        return new HostStarted(Task.CompletedTask, TurnsTaken.ByTableWorker);
     }
 
     /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
@@ -850,14 +860,14 @@ internal static class TableHost
     /// <summary>
     /// The two workers of the queued turns (ADR 0159, phase 5): one takes the turns the queue says tables owe, the
     /// other keeps for good what the first gave up on. In a host told <c>--turns queue</c>, and in
-    /// <c>table-worker</c> (ADR 0162); none when the turns are taken in this process.
+    /// <c>table-worker</c> (ADR 0162); none when the turns are taken in this process. It says which it started (#1213).
     /// </summary>
-    internal static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<HostStarted> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
     {
         if (channels is null || turns is null)
         {
             Console.WriteLine("  Turns: the bots' turns are taken in this process (--turns queue hands them to a worker).");
-            return Task.CompletedTask;
+            return new HostStarted(Task.CompletedTask, TurnsTaken.InProcess);
         }
 
         var poison = await channels.OpenAsync(PoisonedWork.QueueOf(turns.Name), stopping);
@@ -868,7 +878,7 @@ internal static class TableHost
         };
         var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
         Console.WriteLine($"  Turns: through the queue {turns.Name}, given up on after {AgentTurnWorker.MostDeliveries} deliveries onto {poison.Name}, kept for good on {deadLetters.Name}.");
-        return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
+        return new HostStarted(Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping)), TurnsTaken.ByThisHost);
     }
 
     /// <summary>

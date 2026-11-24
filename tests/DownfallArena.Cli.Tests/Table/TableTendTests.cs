@@ -440,10 +440,7 @@ public sealed class TableTendTests : IDisposable
         table.Session.Begin();
         foreach (var seat in table.Seats)
         {
-            for (var attempt = 0; attempt < 300 && seat.Person!.Waiting is null; attempt++)
-            {
-                await Task.Delay(20, Cancel);
-            }
+            await Waits.UntilAsync(() => seat.Person!.Waiting is not null, "the seat was asked something", Cancel);
         }
 
         return table;

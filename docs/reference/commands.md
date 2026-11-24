@@ -663,19 +663,24 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   over http. Discord or Microsoft out of service, slow, rate-limiting or refusing the app itself (`invalid_client`,
   `unauthorized_client`) is `503 Account.ProviderUnavailable` and a line of its own,
   `Sign-in unavailable (<provider>): <why>.`, once a minute; the host asks each at most 30 times a minute, 4 at once,
-  and not at all until a 429's `Retry-After` has passed. `POST /api/account/<provider>` is checked by network
-  address before the provider is asked: five sign-ins a minute its provider does not vouch for (thirty for the /64s
-  of one IPv6 /48), twenty people vouched for, eight checked at once; past that it is answered
+  and not at all until a 429's `Retry-After` has passed. A sign-in refused because 4 exchanges are already under way
+  carries `Retry-After: 2`. After that 503, or a 429 whose `Retry-After` is 5 seconds or less, the return page posts
+  the same code once more, up to a second later than asked (#1204).
+  `POST /api/account/<provider>` is checked by network address before the provider is asked: five sign-ins a minute
+  its provider does not vouch for (thirty for the /64s of one IPv6 /48), twenty people vouched for, eight checked at
+  once; past that it is answered
   `429 Account.TooManySignIns` with `Retry-After` (#1193, `table/README.md`). The host
   writes its sign-in counts as one console line a minute per provider, and when it stops,
   `Sign-ins (<provider>): … started, … finished, … refused, … unavailable, … limited.`, which the ops report sums
-  (#1171). A code is used once: a second post of the same code is refused. A client
+  (#1171). A sign-in the return page posted again after a short refusal counts as started twice, and its first post
+  as unavailable or limited (#1204). A code is used once: a second post of the same code is refused. A client
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
   `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
   identity that provider's proof vouches for, under the same per-address count as a sign-in (one per provider; `409 Account.IdentityTaken` when another account
-  uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`).
+  uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`),
+  or finishes a removal of that provider that stopped before its entry went (#1216).
   Both ask for a sign-in of this account made in the last ten minutes: every sign-in's answer carries `recent`,
   which the page sends back; without it they answer `403 Account.SignInAgain`. A removal ends every other session of
   the account and forgets its devices. The console says
@@ -686,8 +691,9 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   (`429 Account.TooManyGuests`), none while registration is closed. A guest calls only its account, the sign-ins, its
   game settings and the tutorials, and its own tutorial's seat; every other route answers
   `403 Account.GuestNotAllowed`. A provider's sign-in followed by a name upgrades it, keeping its id and tutorials; a
-  sign-in to an account it already has removes the guest. `table-tend` removes a guest unused for 31 days, with its
-  name, settings, tutorials and activity, and reports `Guests: <n> unused for 31 days removed.`. The console says
+  sign-in to an account it already has removes the guest. `table-tend` and the panel's *Run now* remove a guest
+  unused for 31 days, with its name, settings, tutorials and activity. Only `table-tend` reports
+  `Guests: <n> unused for 31 days removed.`. The console says
   `Guest made: account <id>.`, `Guest upgraded (<provider>): account <id>.` and
   `Guest left for an account of its own (<provider>): account <id> removed.`; sign-in counts list `guest` as a provider.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
@@ -1351,6 +1357,20 @@ to `artifacts/promo/generated/<brief>/`, and adds its line to `promo/generated.j
 (the pack's, or `--prompt`'s file) and the pack's references by hash. It exits 1 when it refuses the brief. It also
 exits 1 on an intake with no model or no day, a day after today, a missing or stale pack, a file already recorded, or
 a file that is not what its kind comes back as (a picture, an MP4 for a restyled clip, either for a transition).
+
+### promo/calendar.mjs
+
+```bash
+node scripts/promo/calendar.mjs
+node scripts/promo/calendar.mjs --calendar <folder>
+```
+
+Checks the promotion's calendar (docs/art/promotion-plan.md, P5; promo/README.md#the-calendar): each post of
+`promo/calendar/`, named by its date, names its channels, the media the repository holds, its words in English and
+French within each channel's limit as that channel counts, and its status, with the link of each channel, on its
+site, once published. Prints how many
+posts it holds by status. Exit 1 on a post it refuses, on a calendar missing or without a post, and on another
+argument.
 
 ### promo/cut.mjs
 

@@ -16,4 +16,9 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <!-- What the stores keep of a read (TextsRead) is internal to them; its tests count the reads it saves. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DownfallArena.Infrastructure.Tests" />
+  </ItemGroup>
+
 </Project>
