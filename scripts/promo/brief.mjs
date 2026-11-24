@@ -187,8 +187,8 @@ function reach(targeting) {
   const origin = targeting?.origin;
   if (origin === 'Self') return 'itself';
   const most = targeting?.maxTargets ?? 1;
-  const one = origin === 'Ally' ? 'ally' : 'enemy';
-  return most === 1 ? `one ${one}` : `up to ${most} ${origin === 'Ally' ? 'allies' : 'enemies'}`;
+  const [one, many] = origin === 'Ally' ? ['ally', 'allies'] : ['enemy', 'enemies'];
+  return most === 1 ? `one ${one}` : `up to ${most} ${many}`;
 }
 
 /** What each kind of effect does, in a player's words, from its amount. */
@@ -284,7 +284,10 @@ function shownLines(brief, words) {
     const many = one.count > 1 ? ` (${COUNTS[one.count] ?? one.count} on the field)` : '';
     lines.push(`- ${one.name}${many}, of the ${one.family} family: ${lowerFirst(one.look)}. It reads as ${one.reads.toLowerCase()}. Like every creature of the game: ${words.anatomy}.`);
   }
-  for (const one of words.spells) lines.push(`- The spell ${one.name}, which ${one.does}.${one.cue ? ` The game stages it as: ${one.cue.toLowerCase()}.` : ''}`);
+  for (const one of words.spells) {
+    const staged = one.cue ? ` The game stages it as: ${one.cue.toLowerCase()}.` : '';
+    lines.push(`- The spell ${one.name}, which ${one.does}.${staged}`);
+  }
   return lines;
 }
 
@@ -296,6 +299,12 @@ function refusals(brief) {
   lines.push('- Show no moment the frames do not hold: no other spell, no other place, no interface the game does not have.');
   if (brief.makes === 'restyled-clip') lines.push('- Keep every move, its timing and the camera frame for frame: only the look changes. The post says the clip is restyled.');
   return lines;
+}
+
+// The references, one a line, with their order when there are several.
+function referenceLines(files) {
+  if (files.length === 1) return [`- ${files[0]}`];
+  return files.map((file, index) => `- ${file}, ${ORDINALS[index]} of ${files.length}, in the order the game plays them`);
 }
 
 /** The prompt of a brief: what to make, from which frames, what they show in the game's words, and what not to do. */
@@ -314,7 +323,7 @@ export function prompt(brief, { base = root } = {}) {
     '## The reference',
     '',
     `Start from the attached ${attached} of Downfall Instinct, a turn-based tactics game, filmed as it plays: the shot "${brief.shot.name}", titled "${brief.shot.title}".`,
-    ...references(brief).map((file, index, all) => `- ${file}${all.length > 1 ? `, ${ORDINALS[index]} of ${all.length}, in the order the game plays them` : ''}`),
+    ...referenceLines(references(brief)),
     `Frame it at ${brief.ratio}, ${width * scale} by ${height * scale} pixels.`,
     '',
     '## What the frames show, in the game\'s words',
@@ -487,12 +496,17 @@ export function parseArguments(argv) {
     else if (options.brief) throw new Error('Name one brief.');
     else options.brief = word;
   }
+  checkOptions(options);
+  return options;
+}
+
+// The options that go together, and those that do not.
+function checkOptions(options) {
   if (!options.brief) throw new Error('Usage: node scripts/promo/brief.mjs promo/briefs/<brief>.json [--check] [--frames <folder>] [--out <folder>] | --intake <file> --model "<model>" --date YYYY-MM-DD [--prompt <file>]');
   if (options.check && options.intake) throw new Error('Name --check or --intake, not both.');
   if (!options.intake && (options.model || options.date || options.prompt)) throw new Error('--model, --date and --prompt go with --intake.');
   if ((options.check || options.intake) && options.frames) throw new Error('--frames goes with writing a pack, not with --check or --intake.');
   if (options.check && options.out) throw new Error('--out goes with writing a pack or an intake, not with --check.');
-  return options;
 }
 
 const shownPath = path => path.startsWith(`${root}${sep}`) ? relative(root, path) : path;
