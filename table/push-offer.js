@@ -151,21 +151,20 @@ export function mountPushOffer(doc, { source, storage = null, nav = globalThis.n
   }
   // The controls this card made inert, given back when it no longer covers them, or goes.
   const made = new Set();
+  // Whether two boxes share more than a hair each way, as the walk's measure of overlaps counts them.
+  const overlap = (box, other) => Math.min(box.right, other.right) - Math.max(box.left, other.left) > 2
+    && Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top) > 2;
+  // The controls the card covers now. A control with the focus keeps it, made inert the focus would fall to the
+  // page's body; one made inert by the page itself is the page's.
+  function coveredNow(card) {
+    if (card.hidden || !placed()) return new Set();
+    const box = resting(card);
+    return new Set([...doc.querySelectorAll(covers)].filter(one => !card.contains(one) && (!one.inert || made.has(one))
+      && one !== doc.activeElement && overlap(box, one.getBoundingClientRect())));
+  }
   function cover() {
     if (!covers) return;
-    const card = el('push-offer');
-    const box = card.hidden || !placed() ? null : resting(card);
-    const under = new Set();
-    if (box) {
-      for (const one of doc.querySelectorAll(covers)) {
-        // A control with the focus keeps it: made inert, the focus would fall to the page's body.
-        if (card.contains(one) || (one.inert && !made.has(one)) || one === doc.activeElement) continue;
-        const other = one.getBoundingClientRect();
-        const wide = Math.min(box.right, other.right) - Math.max(box.left, other.left);
-        const tall = Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top);
-        if (wide > 2 && tall > 2) under.add(one);
-      }
-    }
+    const under = coveredNow(el('push-offer'));
     for (const one of made) if (!under.has(one)) { one.inert = false; made.delete(one); }
     for (const one of under) { one.inert = true; made.add(one); }
   }
