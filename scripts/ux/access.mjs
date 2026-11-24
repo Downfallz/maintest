@@ -98,7 +98,7 @@ export function forcedColoursInPage() {
   const kin = node => [...(node.parentElement?.children ?? [])]
     .filter(one => one !== node && one.tagName === node.tagName && shown(one) && !inState(one) && one.className === node.className);
   const lost = node => { const others = kin(node); return others.length > 0 && others.every(one => look(one) === look(node)); };
-  const state = all.filter(inState).filter(lost).map(name);
+  const state = all.filter(inState).filter(lost).map(node => name(node));
 
   // The icons: each shape's paint, against the control's own colour.
   const own = paint => paint !== 'none' && !/rgba\(\d+, \d+, \d+, 0\)/.test(paint);
@@ -110,7 +110,7 @@ export function forcedColoursInPage() {
     const colour = getComputedStyle(node).color;
     return [...node.querySelectorAll('svg path, svg circle, svg rect, svg line, svg polyline, svg polygon, svg ellipse')]
       .some(shape => shown(shape.closest('svg')) && repainted(shape, colour));
-  }).map(name);
+  }).map(node => name(node));
 
   // The ring: the focus is never moved here, since a walk's page answers it (a notice hides on a blur, a coach
   // moves on). A page keeps a ring under forced colours when a rule it holds draws an outline for `:focus-visible`
@@ -147,7 +147,7 @@ export function lossInPage() {
   const words = node => [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && /[\p{L}\p{N}]/u.test(child.textContent));
   const clipped = [within, ...within.querySelectorAll('*')]
     .filter(node => !node.closest('svg, canvas, script, style, template') && shown(node) && words(node) && cuts(node))
-    .map(name);
+    .map(node => name(node));
 
   const meet = (a, b) => {
     if (a.contains(b) || b.contains(a)) return false;
