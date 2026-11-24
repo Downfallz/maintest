@@ -1211,7 +1211,8 @@ fall under 4.5:1 (`scripts/ux/contrast.mjs`). A box under 4.5:1 is counted, as a
 not stop the walk. Two walks of one journey give the same lines (`studio/browser/table.journey.js`), the shift aside: it
 moves by a hundredth with the order a page's parts arrive in, and is read on the slow phone by `--paint`. A picture
 is counted `oversized` when the width its chosen srcset candidate declares is over twice the pixels it is drawn on
-(`object-fit` included), and `undersized` when it is under them; an SVG is neither. The walk fails when it misses a
+(`object-fit` included), and `undersized` when it is under them; an SVG is neither, and a file another picture of
+the screen draws at its own size is not `oversized`: the browser reuses it from its cache (#1179). The walk fails when it misses a
 screen its journey names, when a screen never comes to rest (40 reads, 250 ms apart), when the host refuses a setup
 post, or when the page throws. A strip fails on the same page error.
 

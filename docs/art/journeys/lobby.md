@@ -23,7 +23,9 @@ portrait tablet keeps the portrait, which its tall box stretches less
 than it would the landscape. The 841 px file is the largest there is, so a 3× phone or a portrait tablet draws it
 somewhat stretched. The Rupture's portrait is 941 px wide, its 2× file that width. The home's first-paint budget is 288 KiB,
 and 600 KiB for all its pictures across every state (`docs/art/page-budget.json`). It was 832 KiB until #1120 took
-the breach and sky portraits away (#1107).
+the breach and sky portraits away (#1107). The lesson's eclipse portrait is encoded at quality 70, not the kit's 82
+(#1137): its 841 px file is 97,356 bytes instead of 147,518, and it looks the same at 390 by 844 at 2×. The first
+paint takes 238,346 bytes of the 288 KiB budget.
 
 | Featured state | Portrait source |
 | --- | --- |

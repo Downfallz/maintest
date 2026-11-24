@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { PAGE_ART } from '../table/page-art.js';
-import { asked, battleArt, battleModuleText, budgetOf, check, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
+import { asked, battleArt, battleModuleText, budgetOf, check, encodingOf, fileName, moduleText, origin, paintingSize, phoneSize, widthsOf, webpSize } from '../scripts/ux/pictures.mjs';
 import { everyPagesPictures } from '../battle/live-guard.mjs';
 import { BATTLE_PAGE_ART } from '../table/battle-page-art.js';
 
@@ -156,6 +156,21 @@ test('a focus is carried to the module, and held there, without deriving a file 
   const art = { ...PAGE_ART, [one.name]: { ...PAGE_ART[one.name], focus: '30% 60%' } };
   assert.deepEqual(check({ authored: focused, art, read, list }), []);
   assert.match(moduleText(art), new RegExp(`'${one.name}': \\{\\n    from: '[0-9a-f]+', frames: 1, drawn: \\[[\\d,]+\\], pages: \\{[^}]+\\}, focus: '30% 60%',\\n`));
+});
+
+test('a picture may carry its own quality: part of its origin, so it derives again, and no other picture\'s (#1137)', () => {
+  const list = () => readdirSync(new URL('table/page-art', root)), one = authored.pictures.find(picture => !('quality' in picture));
+  const paintings = [read(one.source)];
+  assert.deepEqual(encodingOf(one, authored.encoding), authored.encoding, 'without one, the kit\'s encoding');
+  assert.equal(origin(one, paintings, encodingOf(one, authored.encoding)), PAGE_ART[one.name].from, 'a picture without one keeps its files');
+  const lighter = { ...one, quality: 70 };
+  assert.deepEqual(encodingOf(lighter, authored.encoding), { ...authored.encoding, quality: 70 });
+  assert.notEqual(origin(lighter, paintings, encodingOf(lighter, authored.encoding)), PAGE_ART[one.name].from, 'its own quality is a new origin');
+  const declared = picture => ({ ...authored, pictures: authored.pictures.map(other => (other.name === one.name ? picture : other)) });
+  assert.match(check({ authored: declared(lighter), art: PAGE_ART, read, list }).join('\n'), new RegExp(`${one.name}: its painting or its declaration changed`));
+  for (const quality of [0, 101, 82.5, '70']) {
+    assert.match(check({ authored: declared({ ...one, quality }), art: PAGE_ART, read, list }).join('\n'), new RegExp(`${one.name}: its quality is a whole number from 1 to 100`), String(quality));
+  }
 });
 
 test('the module the pages import is what the script writes from its entries', () => {

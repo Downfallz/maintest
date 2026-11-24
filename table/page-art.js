@@ -89,9 +89,10 @@ function everyPage() {
     ],
   },
   'colossus': {
-    from: '29f75d9b7aae0da7', frames: 1, drawn: [308,620,850], pages: {"showcase/home":"largest"},
+    from: '5c333ced58f15677', frames: 1, drawn: [243,620,850], pages: {"showcase/home":"largest"},
     sizes: [
-      { file: 'colossus-308.1855df35.webp', width: 308, height: 205, bytes: 22748 },
+      { file: 'colossus-243.adb0dced.webp', width: 243, height: 162, bytes: 16710 },
+      { file: 'colossus-486.f2548c5f.webp', width: 486, height: 324, bytes: 42488 },
       { file: 'colossus-620.1401d6c5.webp', width: 620, height: 413, bytes: 59698 },
       { file: 'colossus-850.6e9e5752.webp', width: 850, height: 567, bytes: 95322 },
       { file: 'colossus-1240.fe20d153.webp', width: 1240, height: 827, bytes: 171150 },
@@ -233,10 +234,10 @@ function everyPage() {
     ],
   },
   'home-ground-eclipse': {
-    from: '4c0bc165590d63a6', frames: 1, drawn: [390,760], pages: {"table/home":"largest"},
+    from: 'c176fa949a2db46b', frames: 1, drawn: [390,760], pages: {"table/home":"largest"},
     sizes: [
-      { file: 'home-ground-eclipse-390.25efd29d.webp', width: 390, height: 867, bytes: 42686 },
-      { file: 'home-ground-eclipse-841.372d3460.webp', width: 841, height: 1870, bytes: 147518 },
+      { file: 'home-ground-eclipse-390.919124fa.webp', width: 390, height: 867, bytes: 27864 },
+      { file: 'home-ground-eclipse-841.181932ac.webp', width: 841, height: 1870, bytes: 97356 },
     ],
   },
   'empty-bank': {

@@ -24,6 +24,8 @@
 
 /* UX10 (docs/art/journeys/pages.md): a player is their initial, Your place comes first on a phone, the rating and
    the record are drawn, and the empty page opens the game that fills it. */
+/* The rest of the ladder's and the statistics' eyebrows (Your place, Against the bots, At a glance) at the pages'
+   floor; the head's is identity.css's .page-head .eyebrow (#1150). */
 .lobby-page .eyebrow { font-size: 11px; }
 .ladder .player-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .ladder .player .account-initial { width: 28px; height: 28px; font-size: 14px; flex: none; }
