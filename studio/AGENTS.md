@@ -35,6 +35,8 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   engine: a measure that reads a clock or an id breaks it. A new screen of a journey also needs its line in the baseline.
   A walk's setup `request.post` (an account, a lesson skipped) checks `ok()` and throws: a refusal otherwise
   goes unseen: the walk measures the wrong screen, or fails later somewhere unrelated (#1093).
+- `browser/table.access.js` (UX13) walks every journey with the checks of `scripts/ux/access.mjs`. A finding not in
+  `scripts/ux/access-known.json` fails it; a change that fixes one cuts its line there. axe is never in the list.
 - `journey-briefs.test.js` holds each brief of `docs/art/journeys/` to its nine parts, to the screens its journey's
   walk names (`scripts/ux/journeys.mjs`), to the craft book's headings and to the declared tokens: a screen or a
   heading renamed there renames it in the brief, in the same change.

@@ -190,7 +190,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ENGINE: chromium
-    timeout-minutes: 25
+    # The checks of accessibility (table.access.js, UX13) walk every journey at two widths: about eight minutes a
+    # project on top of the twelve the job took before them.
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:

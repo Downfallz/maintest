@@ -100,6 +100,15 @@ export function bellLabel(waiting, unread = 0) {
 }
 
 /**
+ * The bell's name: its drawn count first, the words it shows (WCAG 2.5.3), then what the count is made of.
+ * With nothing to count it draws no number and is named by `bellLabel` alone.
+ */
+export function bellName(waiting, unread = 0) {
+  const count = waiting + unread;
+  return count ? `Notifications ${badgeText(count)} · ${bellLabel(waiting, unread).slice('Notifications · '.length)}` : bellLabel(waiting, unread);
+}
+
+/**
  * The bell and its window. It reads the player's games and friends itself when the host says the player's lists
  * changed (ADR 0164), unless the page that mounts it handed it the same lists (`feed`, `feedFriends`) within `fresh`
  * milliseconds. Every action is the one the lobby or the Friends panel already offers, sent to the same route.
@@ -178,7 +187,7 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     bell.hidden = !account;
     badge.textContent = badgeText(count);
     badge.hidden = count === 0;
-    bell.setAttribute('aria-label', bellLabel(waiting, unread));
+    bell.setAttribute('aria-label', bellName(waiting, unread));
     // Where the bar has no room for the bell (the battle view under 360 px, battle.css), the menu holds it: the
     // same count on the menu's button, and an entry that opens the same window (home-navigation.md, "The bell").
     // The menu's button says the count too, as its description: its drawn badge is silent.

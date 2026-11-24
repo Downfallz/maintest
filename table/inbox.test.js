@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { badgeText, bellLabel, inboxCount, inboxItems, mountInbox, readUpTo } from './inbox.js';
+import { badgeText, bellLabel, bellName, inboxCount, inboxItems, mountInbox, readUpTo } from './inbox.js';
 
 const table = (id, seats, extra = {}) => ({ id, format: '3v3', over: false, waiting: false, round: 4, seats, ...extra });
 const me = { seat: 'player1', kind: 'person', name: 'MarcF' };
@@ -268,4 +268,12 @@ test('a read of the news alone that answers after a later read of the lists keep
   slow.release();
   await settled();
   assert.doesNotMatch(h.doc.byId['menu-inbox-said'].textContent, /new/);
+});
+
+test('the bell is named by the count it draws first, then what the count is made of (WCAG 2.5.3)', () => {
+  assert.equal(bellName(0), 'Notifications · nothing waiting');
+  assert.equal(bellName(2), 'Notifications 2 · 2 waiting');
+  assert.equal(bellName(1, 2), 'Notifications 3 · 1 waiting · 2 new');
+  assert.equal(bellName(0, 1), 'Notifications 1 · nothing waiting · 1 new');
+  assert.equal(bellName(120), `Notifications ${badgeText(120)} · 120 waiting`);
 });

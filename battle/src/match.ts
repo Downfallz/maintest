@@ -47,7 +47,6 @@ const portrait = (fighter: Fighter) => {
 function zoomable(fighter: Fighter, className: string) {
   const button = document.createElement('button'); button.type = 'button'; button.className = `${className} match-zoom-open`;
   button.dataset.form = fighter.form || 'base-creature'; button.dataset.art = artOf(fighter); button.dataset.figure = figureOf(fighter); button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
-  button.setAttribute('aria-label', `Show ${fighter.name} large`);
   return button;
 }
 const figure = (value: number, small = '') => {
@@ -66,7 +65,7 @@ function mvpCard(report: Report) {
   words.append(node('p', 'match-mvp-eyebrow', 'Creature of the match'), node('strong', '', fighter.name),
     node('p', 'match-mvp-line', [`${fighter.dealt} damage`, fighter.kills ? `${fighter.kills} KO` : '', fighter.healed ? `${fighter.healed} healed` : ''].filter(Boolean).join(' · ')));
   card.setAttribute('aria-label', `Creature of the match: ${fighter.name}, ${words.lastChild?.textContent ?? ''}`);
-  const open = zoomable(fighter, 'match-mvp-portrait'); open.append(portrait(fighter));
+  const open = zoomable(fighter, 'match-mvp-portrait'); open.append(portrait(fighter), node('span', 'unseen', `Show ${fighter.name} large`));
   card.append(open, words);
   return [card];
 }
@@ -95,8 +94,9 @@ function sideTable(side: Report['sides'][number], label: string, report: Report,
     if (fighter.id === report.mvp) row.dataset.mvp = 'true';
     const who = node('th', 'match-who'); who.setAttribute('scope', 'row');
     const name = node('span', 'match-name', fighter.name);
-    if (!fighter.alive) name.append(node('small', 'match-fallen', 'fallen'));
-    const inner = zoomable(fighter, 'match-who-inner'); inner.append(portrait(fighter), name); who.append(inner);
+    if (!fighter.alive) name.append(' ', node('small', 'match-fallen', 'fallen'));
+    // Named by what it shows, the name and "fallen", then the unseen words of what a tap does (WCAG 2.5.3).
+    const inner = zoomable(fighter, 'match-who-inner'); inner.append(portrait(fighter), name, node('span', 'unseen', 'show large')); who.append(inner);
     const dealt = figure(fighter.dealt, fighter.bleed ? `${fighter.bleed} bleed` : '');
     const bar = node('span', 'match-share'); bar.style.setProperty('--share', String(report.top.dealt ? fighter.dealt / report.top.dealt : 0)); dealt.prepend(bar);
     row.append(who, dealt, figure(fighter.healed, fighter.regen ? `${fighter.regen} regen` : ''), figure(fighter.taken), figure(fighter.blocked), figure(fighter.kills));
