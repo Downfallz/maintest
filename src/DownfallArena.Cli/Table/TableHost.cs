@@ -134,7 +134,7 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             serving = server.RunAsync(stopping.Token);
-            var running = await StartAsync(host, clock, stopping.Token);
+            var running = (await StartAsync(host, clock, stopping.Token)).Running;
             if (serving.IsFaulted)
             {
                 await serving;
@@ -204,13 +204,19 @@ internal static class TableHost
     /// <summary>
     /// What a composed host runs beside its server, until stopped: the workers of the bots' turns (unless table-worker
     /// takes them), the notices' workers, and the watch of the tables it holds. What <see cref="RunAsync" /> starts, and
-    /// what the tests start to see each is started (#1159).
+    /// what the tests start to see each is started (#1159), and who it has take the bots' turns (#1213).
     /// </summary>
-    internal static async Task<Task> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<HostStarted> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
     {
         ArgumentNullException.ThrowIfNull(host);
-        var working = host.Mode == TurnsMode.Worker && host.Turns is not null
-            ? TakenByTheWorker(host.Turns)
+        var turns = (host.Mode, host.Channels, host.Turns) switch
+        {
+            (TurnsMode.Worker, _, not null) => TurnsTaken.ByTableWorker,
+            (_, not null, not null) => TurnsTaken.ByThisHost,
+            _ => TurnsTaken.InProcess,
+        };
+        var working = turns == TurnsTaken.ByTableWorker
+            ? TakenByTheWorker(host.Turns!)
             : await StartWorkersAsync(host.Channels, host.Turns, host.Registry, clock, stopping);
         var noticing = await StartNoticesAsync(host.Channels, host.Notices, host.Push, host.Registry, clock, stopping, host.NoticeCounts);
 
@@ -218,7 +224,7 @@ internal static class TableHost
         // expiries -- is heard through the relay when there is one, and looked for every second when there is not
         // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
         var watching = host.Stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(host.Registry, clock), host.Relay, clock, stopping);
-        return Task.WhenAll(working, noticing, watching);
+        return new HostStarted(Task.WhenAll(working, noticing, watching), turns);
     }
 
     /// <summary>What sends a notice to a device, and the public key a page subscribes with: a host given push keys.</summary>

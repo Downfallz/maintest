@@ -356,15 +356,25 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await host.Notifier!.NotifyAsync(mark.Id, News, Cancel);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
-        for (var attempt = 0; attempt < 600 && _sender.Count == 0; attempt++)
-        {
-            await Task.Delay(50, Cancel);
-        }
+        var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
 
         await stopping.CancelAsync();
-        await running;
+        await started.Running;
         _sender.Sent.Select(sent => sent.Endpoint).ShouldBe(["https://fcm.googleapis.com/fcm/send/MarkF"]);
+    }
+
+    [Fact]
+    public async Task Started_as_it_runs_with_its_turns_in_its_process_the_host_starts_no_worker_of_the_turns()
+    {
+        var host = await ComposeAsync();
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
+
+        var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+
+        await stopping.CancelAsync();
+        await started.Running;
+        started.Turns.ShouldBe(TurnsTaken.InProcess);
     }
 
     [Fact]
@@ -387,11 +397,12 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         await table.RecordAsync(Cancel);
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
-        await Task.WhenAny(table.Session.Outcome, Task.Delay(TimeSpan.FromSeconds(60), Cancel));
+        var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        await Task.WhenAny(table.Session.Outcome, Task.Delay(Waits.Within, Cancel));
 
         await stopping.CancelAsync();
-        await running;
+        await started.Running;
+        started.Turns.ShouldBe(TurnsTaken.ByThisHost);
         table.Session.Outcome.IsCompleted.ShouldBeTrue("the understudies' turns went on the queue and the host's worker took them");
     }
 
@@ -577,13 +588,13 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
             await turns.SendAsync(turn, cancellationToken: Cancel);
             using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
 
-            var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+            var started = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
             await _sender.FirstSent.WaitAsync(Waits.Within, Cancel);
             var left = await turns.PeekAsync(32, Cancel);
 
             await stopping.CancelAsync();
-            await running;
-            host.Mode.ShouldBe(TurnsMode.Worker);
+            await started.Running;
+            started.Turns.ShouldBe(TurnsTaken.ByTableWorker, "the host starts no worker of the turns, whenever that worker would have polled");
             left.Select(work => work.Body).ShouldContain(turn, "the turn is table-worker's to take");
         }
         finally

@@ -181,7 +181,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         var table = await BegunAsync(host, mark.Id, bastien.Id);
         var job = await JobAsync();
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        var running = (await TableHost.StartAsync(host, TimeProvider.System, stopping.Token)).Running;
 
         (await TableTend.TendAsync(new(job.Registry, job.Lobby, TimeProvider.System) { Composer = job.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25))).TimedOut.ShouldBe([table.Id]);
         for (var attempt = 0; attempt < 600 && !table.Session.Outcome.IsCompleted; attempt++)
