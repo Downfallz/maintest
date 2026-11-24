@@ -269,6 +269,6 @@ Each page loaded 5 times with nothing cached, at 390 by 844, on the baseline's s
 
 ## Less motion
 
-Every journey walked again with the system's wish for less motion (`--less-motion`): 166 screens. On the way to each, the walk keeps every transition, keyframe animation or `animate` call that moves a thing across the screen (`scripts/ux/motion.mjs`); at rest, what still animates.
+Every journey walked again with the system's wish for less motion (`--less-motion`): 166 screens. On the way to each, on every person's pages, the walk keeps every transition, keyframe animation or `animate` call that moves a thing across the screen, on an element or its `::before` and `::after`, and every smooth scroll (`scripts/ux/motion.mjs`); at rest, every animation still running.
 
 Nothing travelled, and nothing animated at rest.

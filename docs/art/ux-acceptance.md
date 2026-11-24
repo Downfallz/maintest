@@ -83,7 +83,8 @@ animation and `animate` call of a millisecond or more that moves a `transform`, 
 `rotate`, on an element or on its `::before` and `::after`, and every scroll asked to be smooth
 (`scripts/ux/motion.mjs`). It reads every person's pages, the friend's too, and what a page saw leaves it at once,
 so a navigation loses nothing. At rest it counts every animation still running, whatever it is. On all 166 screens,
-nothing travelled, and nothing animated at rest.
+nothing travelled, and nothing animated at rest. That walk ran the pages of `5ee9f5c` with the watch as this
+record's pull request leaves it.
 
 With full motion the same walk counts 24 screens with an animation running at rest. Read on the screens, each is
 one thing: the mist drifting behind the creature on the home, the Colossus breathing on the showcase, and the
@@ -94,7 +95,7 @@ sheet's net alone would pass it, its windows cut to nothing. `motion-kit.spec.js
 motion, every window of seven pages still fades.
 
 The walk never presses the lobby's pager of finished games, which scrolls the list smoothly whatever the motion
-(`table/lobby.js`). The watch would see it; it is left open.
+(`table/lobby.js`). The watch would see it; it is left open (#1275).
 
 `studio/browser/table.motion.js` holds it on every change, on the real engine, with two controls. A fixture page
 shows the watch keeps a transition, a keyframe animation and a call to `animate` that travel. It also shows the
@@ -150,8 +151,8 @@ No device and no person is in a session. These two stay open until the owner clo
 ## What is left
 
 - The two overlaps in the frame: the menu's button over the match's Settings at 390 px, and the Order button over a
-  creature at 320 px. The lobby's overlaps, counted but not read one by one.
-- The lobby's pager of finished games scrolls smoothly under less motion.
+  creature at 320 px (#1276). The lobby's overlaps, counted but not read one by one.
+- The lobby's pager of finished games scrolls smoothly under less motion (#1275).
 - The door's three eyebrows at 10 px.
 - What UX13 left in `scripts/ux/access-known.json`: text at 200% and spaced, and forced colours on the creatures.
 - Two things only a person can judge: the sound-off clip at natural speed (UX11), and how the windows feel at full

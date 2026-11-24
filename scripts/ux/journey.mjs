@@ -258,6 +258,11 @@ export function walked(taken, blocks) {
   return Object.assign(taken, { blocked: blocks });
 }
 
+/** What a walk under less motion found moving, a line each, named by its journey and its width: any fails the run. */
+export function lessMotionLines(id, viewport, screens) {
+  return lessMotionFaults(screens).map(line => `${id} at ${viewport.width} px under less motion, ${line}`);
+}
+
 /** What a walk or a strip had to press by script, a line each, named by its journey and its width. */
 export function blockedLines(id, viewport, taken) {
   return taken.blocked.map(line => `${id} at ${viewport.width} px, ${line}`);
@@ -342,7 +347,9 @@ async function main(argv) {
         await writeFile(sheet, await journeySheet(browser, journey, viewport, screens, lessMotion));
         await writeFile(measures, measuresLines({ journey: journey.id, viewport, axe: Boolean(axe), lessMotion, blocked: screens.blocked, screens }));
         console.log(sheet); console.log(measures);
-        if (lessMotion) for (const line of lessMotionFaults(screens)) { console.error(`${journey.id} at ${viewport.width} px under less motion, ${line}`); process.exitCode = 1; }
+        const moving = lessMotion ? lessMotionLines(journey.id, viewport, screens) : [];
+        for (const line of moving) console.error(line);
+        if (moving.length) process.exitCode = 1;
         for (const line of blockedLines(journey.id, viewport, screens)) console.error(line);
       }
     }

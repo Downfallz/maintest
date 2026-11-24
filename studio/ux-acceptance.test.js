@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { JOURNEYS } from '../scripts/ux/journeys.mjs';
-import { parseArguments } from '../scripts/ux/journey.mjs';
+import { lessMotionLines, parseArguments } from '../scripts/ux/journey.mjs';
 import { measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
 import { acceptanceMarkdown, missingWalks, parseBaseline, parseBaselinePaints, tally } from '../scripts/ux/acceptance.mjs';
 import { baselineMarkdown } from '../scripts/ux/baseline.mjs';
@@ -104,6 +104,12 @@ test('the faults of less motion refuse a walk that has no screens or was not wal
   assert.throws(() => lessMotionFaults([{ name: 'one', measures: { ...measured('one'), travel: null } }]), /not walked under less motion/);
 });
 
+test('what moved under less motion is said with its journey and its width, and a still walk says nothing', () => {
+  const moving = [{ name: 'home', measures: measured('home', { travel: ['#door transition translate'] }) }];
+  assert.deepEqual(lessMotionLines('lobby', VIEWPORTS[0], moving), ['lobby at 320 px under less motion, home: #door transition translate']);
+  assert.deepEqual(lessMotionLines('lobby', VIEWPORTS[1], [{ name: 'home', measures: measured('home', { travel: [] }) }]), []);
+});
+
 test('a walk\'s header says it was walked under less motion, and only then', () => {
   const lines = measuresLines({ journey: 'doors', viewport: { width: 390, height: 844 }, axe: true, lessMotion: true, screens: [] });
   assert.equal(parseMeasures(lines).header.lessMotion, true);
@@ -159,6 +165,10 @@ test('the script refuses a missing flag, a folder with no walk and a folder shor
     assert.match(short.stderr, /not the whole acceptance\. Missing: doors at 320 px;/);
     assert.equal(short.stdout, '');
     for (const journey of JOURNEYS) for (const viewport of VIEWPORTS) write(journey.id, viewport);
+    const painless = spawnSync(process.execPath, [script, folder, '--commit', 'a', '--date', 'b'], { encoding: 'utf8' });
+    assert.equal(painless.status, 1);
+    assert.match(painless.stderr, /Missing: paint\.json/);
+    writeFileSync(join(folder, 'paint.json'), JSON.stringify({ profile: { viewport: '390x844' }, pages: { 'table/sign-in': { runs: 5, largestPaintMs: { median: 2000 }, largestIs: 'text', shift: { median: 0 }, pictureBytes: 1024 } } }));
     const whole = spawnSync(process.execPath, [script, folder, '--commit', 'a', '--date', 'b'], { encoding: 'utf8' });
     assert.equal(whole.status, 0, whole.stderr);
     assert.match(whole.stdout, /^# The journeys at acceptance$/m);

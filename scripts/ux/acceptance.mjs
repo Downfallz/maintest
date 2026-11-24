@@ -144,7 +144,7 @@ ${now.overlaps} with controls that overlap. ${now.axeRun ? `${now.axe} with a fi
     const faults = less.flatMap(walk => lessMotionFaults(walk.screens).map(line => `${walk.header.journey} at ${width(walk)} px, ${line}`));
     const screens = less.reduce((sum, walk) => sum + walk.screens.length, 0);
     parts.push('## Less motion',
-      `Every journey walked again with the system's wish for less motion (\`--less-motion\`): ${screens} screens. On the way to each, the walk keeps every transition, keyframe animation or \`animate\` call that moves a thing across the screen (\`scripts/ux/motion.mjs\`); at rest, what still animates.`,
+      `Every journey walked again with the system's wish for less motion (\`--less-motion\`): ${screens} screens. On the way to each, on every person's pages, the walk keeps every transition, keyframe animation or \`animate\` call that moves a thing across the screen, on an element or its \`::before\` and \`::after\`, and every smooth scroll (\`scripts/ux/motion.mjs\`); at rest, every animation still running.`,
       faults.length ? faults.map(line => `- ${line}`).join('\n') : 'Nothing travelled, and nothing animated at rest.');
   }
   return `${parts.join('\n\n')}\n`;
@@ -171,7 +171,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     };
     if (!folder || !named('--commit') || !named('--date')) throw new Error('Usage: node scripts/ux/acceptance.mjs <folder> --commit <sha> --date <day>');
     const { walks, paint } = readWalks(resolve(folder));
-    const lacking = missingWalks(walks);
+    const lacking = [...missingWalks(walks), ...(paint ? [] : ['paint.json, the paints (`--paint`)'])];
     if (lacking.length) throw new Error(`The folder is not the whole acceptance. Missing: ${lacking.join('; ')}.`);
     const text = readFileSync(join(root, 'docs/art/journeys/baseline.md'), 'utf8');
     process.stdout.write(acceptanceMarkdown({ walks, paint, baseline: parseBaseline(text), baselinePaints: parseBaselinePaints(text), commit: named('--commit'), date: named('--date') }));

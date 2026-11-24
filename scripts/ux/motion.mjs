@@ -40,7 +40,8 @@ export function watchTravelInPage({ travel, binding }) {
     const style = getComputedStyle(node, pseudo || null);
     const properties = style.transitionProperty.split(',').map(one => one.trim());
     const lengths = style.transitionDuration.split(',').map(one => Number.parseFloat(one) * (one.trim().endsWith('ms') ? 1 : 1000));
-    const index = properties.includes(property) ? properties.lastIndexOf(property) : properties.lastIndexOf('all');
+    // The last entry naming the property, or `all`, wins, as in the cascade of a transition list.
+    const index = Math.max(properties.lastIndexOf(property), properties.lastIndexOf('all'));
     return index < 0 ? 0 : lengths[index % lengths.length];
   };
   addEventListener('transitionrun', event => {

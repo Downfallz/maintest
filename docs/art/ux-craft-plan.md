@@ -842,11 +842,13 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     motion, the arguments, the script's refusals, the record's parts) and `table.motion.js`.
 
     Left:
-    - The two overlaps in the frame, and the sign-in door's three eyebrows at 10 px (Beta, Invitation, Signed out).
+    - The two overlaps in the frame (#1276), and the sign-in door's three eyebrows at 10 px (Beta, Invitation, Signed
+      out).
     - The two gates only the owner can close, with a block to paste each ([the record](ux-acceptance.md), "The
       gates only the owner can close"), and the four checks UX13 left for a person.
     - The lobby's overlaps were counted, not read one by one.
-    - The lobby's pager of finished games scrolls smoothly under less motion (`table/lobby.js`); the walk never presses it.
+    - The lobby's pager of finished games scrolls smoothly under less motion (`table/lobby.js`, #1275); the walk never
+      presses it.
 15. **UX15, a lesson before an account.** A visitor plays tutorial 1 as a guest, from either door, and is asked
     to sign in when it ends, with what the account keeps. Needs an ADR that amends question 5 of
     `accounts-plan.md`: what a guest is on the host, what it may reach, how long it lives, and how its lesson
