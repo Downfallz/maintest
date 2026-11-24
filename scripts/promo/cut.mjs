@@ -176,10 +176,10 @@ export function cardPages(cut, language) {
   // At the top of what the feed leaves clear: the creatures' names and the battle view's dock are lower down.
   const band = `left:${margin('left')};right:${margin('right')};top:${zone.top > 0 ? `${zone.top * 100}%` : '6%'}`;
   return {
-    title: page(`<main class="card card-title">${brandMark()}<h1 class="title">${escape(cut.titleCard[language])}</h1><div class="rule"></div></main>`),
-    captions: cut.shots.map(stretch => page(`<div class="caption" style="${band}"><p>${escape(stretch.caption[language])}</p></div>`)),
+    title: page(`<main class="card card-title">${brandMark()}<h1 class="title" data-lines="3">${escape(cut.titleCard[language])}</h1><div class="rule"></div></main>`),
+    captions: cut.shots.map(stretch => page(`<div class="caption" style="${band}"><p data-lines="2">${escape(stretch.caption[language])}</p></div>`)),
     end: page(`<main class="card card-end">${brandMark()}<p class="name">Downfall Instinct</p><div class="rule"></div>`
-      + `<p class="site">${SITE}</p><p class="note">${escape(END_NOTE[language])}</p></main>`),
+      + `<p class="site">${SITE}</p><p class="note" data-lines="1">${escape(END_NOTE[language])}</p></main>`),
   };
 }
 
@@ -197,7 +197,9 @@ export async function drawCards(browser, cut, language) {
       const page = await context.newPage();
       await page.setContent(html);
       await page.evaluate(() => document.fonts.ready);
-      const over = await page.locator(words).evaluate(node => node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1);
+      // Lines counted by the box's height over the line's: a glyph's ascent past its line box is not a line more.
+      const over = await page.locator(words).evaluate(node => Math.round(node.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(node).lineHeight)) > Number(node.dataset.lines)
+        || node.scrollWidth > node.clientWidth + 1);
       if (over) throw new Error(`${cut.name}: ${what} in ${language} runs over its card.`);
       const png = await page.screenshot({ omitBackground: clear });
       await page.close();

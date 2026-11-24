@@ -20,7 +20,7 @@ body { font-family: var(--font-text); color: var(--ink); -webkit-font-smoothing:
 
 /* The title is carved in bone, with the hairline the pages draw under a title. */
 .title {
-  margin: 0; max-width: 100%; max-height: calc(3 * 1.15em); overflow: hidden;
+  margin: 0; max-width: 100%;
   font: 400 9.5vmin/1.15 var(--font-display); color: var(--bone); overflow-wrap: break-word;
 }
 .rule {
@@ -38,4 +38,4 @@ body { font-family: var(--font-text); color: var(--ink); -webkit-font-smoothing:
   position: absolute; box-sizing: border-box; padding: 2.4vmin 3.6vmin;
   background: var(--paper-glass); border-left: .8vmin solid var(--bone); border-radius: var(--radius-sharp);
 }
-.caption p { margin: 0; max-height: calc(2 * 1.25em); overflow: hidden; font-size: 4.6vmin; line-height: 1.25; color: var(--ink); overflow-wrap: break-word; }
+.caption p { margin: 0; font-size: 4.6vmin; line-height: 1.25; color: var(--ink); overflow-wrap: break-word; }
