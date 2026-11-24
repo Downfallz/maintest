@@ -233,10 +233,10 @@ public sealed class SteppedSessionTests : IDisposable
         var (session, _, _) = await Opened(_host, people: false);
         var api = Api(session);
         var journaled = session.Journaled;
-        _journal.FailTheNext(3);
+        _journal.FailEvery();
 
         session.Begin();
-        await Failed();
+        await Failed(session);
         var shown = await FeedNextAsync(api);
 
         shown.ShouldBe(journaled.ShouldNotBeNull());
@@ -253,10 +253,10 @@ public sealed class SteppedSessionTests : IDisposable
         var (session, _, _) = await Opened(_host, people: false);
         var api = Api(session);
         var before = api.Changes.Version;
-        _journal.FailTheNext(3);
+        _journal.FailEvery();
 
         session.Begin();
-        await Failed();
+        await Failed(session);
 
         api.Changes.Version.ShouldBe(before);
     }
@@ -439,16 +439,13 @@ public sealed class SteppedSessionTests : IDisposable
         return payload.RootElement.GetProperty("feedNext").GetInt32();
     }
 
-    /// <summary>Waits until the journal has refused an append.</summary>
-    private async Task Failed()
-    {
-        for (var attempt = 0; attempt < 500 && _journal.Failed == 0; attempt++)
-        {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-
-        _journal.Failed.ShouldBeGreaterThan(0);
-    }
+    /// <summary>
+    /// Waits until the journal has refused a bot's turn and its next try, the match read again in between. It refuses every
+    /// append after that, so the table stays where it is however late a test reads it (#1212). Reading at the first
+    /// refusal, with a journal that took the fourth try, let a slow runner move the table before the read.
+    /// </summary>
+    private async Task Failed(SteppedSession session) =>
+        await Waits.UntilAsync(() => _journal.Failed >= 2 && session.LastFailure is not null, "the journal refused a turn and its next try", TestContext.Current.CancellationToken);
 
     /// <summary>A table with its person in seat 1 and a bot that can be held in seat 2, or two bots.</summary>
     /// <param name="handover">The round the person's seat is theirs from, a bot holding it until then; none for a seat theirs from the start.</param>
@@ -494,25 +491,12 @@ public sealed class SteppedSessionTests : IDisposable
     /// <summary>Waits until the bot's answers to what both seats are asked at once are in the journal.</summary>
     private async Task BotHeld(PlayerOptionsKind kind)
     {
-        for (var attempt = 0; attempt < 500; attempt++)
-        {
-            if ((await Decisions()).Any(decision => decision.Slot == PlayerSlot.Player2 && decision.Decision.Kind == kind))
-            {
-                return;
-            }
-
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"The bot never answered its {kind}.");
+        await Waits.UntilAsync(async () => (await Decisions()).Any(decision => decision.Slot == PlayerSlot.Player2 && decision.Decision.Kind == kind), $"the bot answered its {kind}", TestContext.Current.CancellationToken);
     }
 
     private static async Task<Asking> Waiting(SteppedPerson person, PlayerOptionsKind kind)
     {
-        for (var attempt = 0; attempt < 500 && person.Waiting?.Kind != kind; attempt++)
-        {
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => person.Waiting?.Kind == kind, $"the seat was asked for its {kind}", TestContext.Current.CancellationToken);
 
         var waiting = person.Waiting.ShouldNotBeNull();
         waiting.Kind.ShouldBe(kind);
@@ -532,6 +516,9 @@ public sealed class SteppedSessionTests : IDisposable
         public int Failed => Volatile.Read(ref _failed);
 
         public void FailTheNext(int appends) => Volatile.Write(ref _failing, appends);
+
+        /// <summary>Refuses every append from now on, as a store out for longer than the test reads.</summary>
+        public void FailEvery() => FailTheNext(int.MaxValue);
 
         public void LoseTheNextAnswer() => Volatile.Write(ref _losing, 1);
 

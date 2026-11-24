@@ -98,17 +98,11 @@ public sealed class TableWorkerNoticesTests : IDisposable
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
         var working = TableWorker.WorkAsync(_hosted.Services, HostedTables.Rules, Over(devices, relay: null), sender, stopping.Token);
         var episodes = Path.Combine(_hosted.RunsDirectory, table.Id, RunRecorder.EpisodesFile);
-        for (var waited = 0; waited < 600 && (await Log.ListAsync(first, Cancel)).Count == 0; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(async () => (await Log.ListAsync(first, Cancel)).Count > 0, "the bell holds an entry", Cancel);
 
         // The pushes leave the worker after the bell's write, and are sent from the queue after that: waited for until
         // every one put on the queue is sent, never for a time (#1162).
-        for (var waited = 0; waited < 600 && sender is not null && (sender.Count < pushes || sender.Count < _channels.SentOn(QueuedNotice.Queue)); waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(() => sender is null || (sender.Count >= pushes && sender.Count >= _channels.SentOn(QueuedNotice.Queue)), "every push put on the queue was sent", Cancel);
 
         await stopping.CancelAsync();
         await working;

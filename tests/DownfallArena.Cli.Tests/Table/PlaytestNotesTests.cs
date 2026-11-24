@@ -185,7 +185,7 @@ public sealed class PlaytestNotesTests : IDisposable
     /// <summary>Passes, goes Standard and keeps any tie order until the seat is asked to target or to act.</summary>
     private static async Task PlayUntilTheSlot((TableApi Api, SteppedSession Session, SteppedPerson Person, string Token, PlaytestRun Run) table)
     {
-        for (var attempt = 0; attempt < 600; attempt++)
+        for (var deadline = DateTimeOffset.UtcNow + Waits.Within; DateTimeOffset.UtcNow < deadline;)
         {
             switch (table.Person.Waiting)
             {
@@ -669,10 +669,7 @@ public sealed class PlaytestNotesTests : IDisposable
     /// <summary>Waits until the seat is asked something, whatever it is: the bot takes its turn in between.</summary>
     private static async Task Settle(SteppedPerson person)
     {
-        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => person.Waiting is not null, "the seat was asked something", TestContext.Current.CancellationToken);
     }
 
     /// <summary>The seat's tied creatures as its options list them, which is the order that changes nothing.</summary>
@@ -687,17 +684,7 @@ public sealed class PlaytestNotesTests : IDisposable
     /// <summary>The bot's turns are taken behind a tap, so a test waits for the question rather than assuming it.</summary>
     private static async Task Waiting(SteppedPerson person, string kind)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
-        {
-            if (person.Waiting?.Kind.ToString() == kind)
-            {
-                return;
-            }
-
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"The seat never waited for {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+        await Waits.UntilAsync(() => person.Waiting?.Kind.ToString() == kind, $"the seat waited for {kind}", TestContext.Current.CancellationToken);
     }
 
     private static string Text(StudioResponse response) => Encoding.UTF8.GetString(response.Body);

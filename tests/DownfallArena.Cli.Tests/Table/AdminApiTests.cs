@@ -681,10 +681,7 @@ public sealed class AdminApiTests : IDisposable
         var admin = Admin(OperatorGate.WithToken(OperatorToken));
         var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", OperatorToken, null));
         var table = (await _registry.ByIdAsync(played, TestContext.Current.CancellationToken)).ShouldNotBeNull();
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         await _registry.RemoveAsync(played, TestContext.Current.CancellationToken);
 
@@ -720,10 +717,7 @@ public sealed class AdminApiTests : IDisposable
         var principal = behindPlatform ? "mark@example.test" : null;
         var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", token, principal));
         var table = (await _registry.ByIdAsync(played, TestContext.Current.CancellationToken)).ShouldNotBeNull();
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         var answer = await admin.HandleAsync("GET", $"/api/lobby/tables/{played}/replay", "", token, principal);
 
@@ -838,10 +832,7 @@ public sealed class AdminApiTests : IDisposable
         var admin = new AdminApi(registry, silent.Composer, OperatorGate.WithToken(OperatorToken), TimeProvider.System, "Rules 2 creatures (a test)");
         var played = Opened(await admin.HandleAsync("POST", "/api/tables", """{"player1":"greedy","player2":"greedy"}""", OperatorToken, null));
         var table = (await registry.ByIdAsync(played, TestContext.Current.CancellationToken)).ShouldNotBeNull();
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", TestContext.Current.CancellationToken);
 
         var listed = JsonDocument.Parse(Text(await admin.HandleAsync("GET", "/api/tables", "", OperatorToken, null))).RootElement.GetProperty("tables").EnumerateArray().Single();
 

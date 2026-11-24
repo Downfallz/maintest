@@ -26,7 +26,8 @@ public sealed class TableHostWorkersTests : IDisposable
 
         var working = await TableHost.StartWorkersAsync(null, null, registry, TimeProvider.System, Cancel);
 
-        working.IsCompleted.ShouldBeTrue();
+        working.Running.IsCompleted.ShouldBeTrue();
+        working.Turns.ShouldBe(TurnsTaken.InProcess);
     }
 
     [Fact]
@@ -38,11 +39,12 @@ public sealed class TableHostWorkersTests : IDisposable
         using var stopping = new CancellationTokenSource();
 
         var working = await TableHost.StartWorkersAsync(channels, turns, registry, TimeProvider.System, stopping.Token);
-        var runningBeforeTheStop = !working.IsCompleted;
+        var runningBeforeTheStop = !working.Running.IsCompleted;
         await stopping.CancelAsync();
-        await working.WaitAsync(TimeSpan.FromSeconds(10), Cancel);
+        await working.Running.WaitAsync(Waits.Within, Cancel);
 
         runningBeforeTheStop.ShouldBeTrue();
+        working.Turns.ShouldBe(TurnsTaken.ByThisHost);
     }
 
     [Fact]

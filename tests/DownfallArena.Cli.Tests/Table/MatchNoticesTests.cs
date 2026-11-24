@@ -56,10 +56,7 @@ public sealed class MatchNoticesTests : IDisposable
 
         table.Session.Begin();
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(60), Cancel);
-        for (var attempt = 0; attempt < 500 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
     }
 
     private (string Title, string Body) NoticeTo(string name)

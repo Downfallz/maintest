@@ -421,10 +421,7 @@ public sealed class LobbyApiTests : IDisposable
         table.Session.HasBegun.ShouldBeTrue();
         foreach (var seat in table.Seats)
         {
-            for (var attempt = 0; attempt < 300 && seat.Person!.Waiting is null; attempt++)
-            {
-                await Task.Delay(20, TestContext.Current.CancellationToken);
-            }
+            await Waits.UntilAsync(() => seat.Person!.Waiting is not null, "the seat was asked something", TestContext.Current.CancellationToken);
 
             var asked = seat.Person!.Waiting.ShouldNotBeNull().Asked;
             var pass = JsonSerializer.Serialize(new { kind = "Evolution", pass = true, asked });

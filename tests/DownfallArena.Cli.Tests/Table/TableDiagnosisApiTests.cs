@@ -44,10 +44,7 @@ public sealed class TableDiagnosisApiTests : IDisposable
 
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
-        for (var waited = 0; waited < 100 && (await table.Session.SnapshotAsync(Domain.Matches.PlayerSlot.Player1)).Value.Waiting is null; waited++)
-        {
-            await Task.Delay(50, Cancel);
-        }
+        await Waits.UntilAsync(async () => (await table.Session.SnapshotAsync(Domain.Matches.PlayerSlot.Player1)).Value.Waiting is not null, "the first seat was asked something", Cancel);
 
         await table.RecordAsync(Cancel);
         return (registry, table);
@@ -70,18 +67,9 @@ public sealed class TableDiagnosisApiTests : IDisposable
     /// <summary>The seat's view once its person is asked their first question.</summary>
     private static async Task<SeatSnapshot> AskedAsync(PlayedTable table, Domain.Matches.PlayerSlot slot)
     {
-        for (var waited = 0; waited < 100; waited++)
-        {
-            var read = (await table.Session.SnapshotAsync(slot)).Value;
-            if (read.Waiting is not null)
-            {
-                return read;
-            }
-
-            await Task.Delay(50, Cancel);
-        }
-
-        throw new TimeoutException($"{slot} was never asked.");
+        SeatSnapshot? read = null;
+        await Waits.UntilAsync(async () => (read = (await table.Session.SnapshotAsync(slot)).Value).Waiting is not null, $"{slot} was asked", Cancel);
+        return read!;
     }
 
     [Fact]

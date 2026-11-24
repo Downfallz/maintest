@@ -112,10 +112,7 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         table.Session.Begin();
         foreach (var seat in table.Seats)
         {
-            for (var attempt = 0; attempt < 300 && seat.Person!.Waiting is null; attempt++)
-            {
-                await Task.Delay(20, Cancel);
-            }
+            await Waits.UntilAsync(() => seat.Person!.Waiting is not null, "the seat was asked something", Cancel);
         }
 
         var asked = table.Seats[0].Person!.Waiting.ShouldNotBeNull().Asked;
@@ -181,13 +178,10 @@ public sealed class TableTendCompositionTests : IAsyncDisposable
         var table = await BegunAsync(host, mark.Id, bastien.Id);
         var job = await JobAsync();
         using var stopping = CancellationTokenSource.CreateLinkedTokenSource(Cancel);
-        var running = await TableHost.StartAsync(host, TimeProvider.System, stopping.Token);
+        var running = (await TableHost.StartAsync(host, TimeProvider.System, stopping.Token)).Running;
 
         (await TableTend.TendAsync(new(job.Registry, job.Lobby, TimeProvider.System) { Composer = job.Composer }, DateTimeOffset.UtcNow + TimeSpan.FromHours(25))).TimedOut.ShouldBe([table.Id]);
-        for (var attempt = 0; attempt < 600 && !table.Session.Outcome.IsCompleted; attempt++)
-        {
-            await Task.Delay(50, Cancel);
-        }
+        await Task.WhenAny(table.Session.Outcome, Task.Delay(Waits.Within, Cancel));
 
         await stopping.CancelAsync();
         await running;

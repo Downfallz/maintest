@@ -82,10 +82,7 @@ public sealed class FeedbackIssueTests : IDisposable
     {
         var table = await _hosted.Composer.ComposeAsync(HostedTables.Bots, Cancel);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         await table.RecordAsync(Cancel);
         return table.Id;
@@ -429,18 +426,16 @@ public sealed class FeedbackIssueTests : IDisposable
     private static async Task<JsonElement> AskedInRoundTwoAsync(PlayedTable table)
     {
         var seat = table.Seats[0];
-        for (var waited = 0; waited < 300; waited++)
-        {
-            var view = Read(await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token));
-            if (view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number)
+        var view = default(JsonElement);
+        await Waits.UntilAsync(
+            async () =>
             {
-                return view;
-            }
-
-            await Task.Delay(100, Cancel);
-        }
-
-        throw new TimeoutException("The first seat was never asked in round 2.");
+                view = Read(await table.Api.HandleAsync("GET", $"/api/seat/{seat.Name}", string.Empty, seat.Token));
+                return view.GetProperty("board").GetProperty("roundNumber").GetInt32() == 2 && view.TryGetProperty("waitingAsked", out var asked) && asked.ValueKind == JsonValueKind.Number;
+            },
+            "the first seat was asked in round 2",
+            Cancel);
+        return view;
     }
 
     /// <summary>The first seat's speed for its first creature still without one, journaled before it answers.</summary>
@@ -456,10 +451,7 @@ public sealed class FeedbackIssueTests : IDisposable
     private static async Task FinishedAsync(PlayedTable table)
     {
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         await table.RecordAsync(Cancel);
     }

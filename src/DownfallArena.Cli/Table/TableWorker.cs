@@ -216,7 +216,7 @@ internal static class TableWorker
         using var running = CancellationTokenSource.CreateLinkedTokenSource(stopping);
         try
         {
-            var working = await TableHost.StartWorkersAsync(over.Channels, turns, registry, clock, running.Token);
+            var working = (await TableHost.StartWorkersAsync(over.Channels, turns, registry, clock, running.Token)).Running;
             // What it sent is counted beside the API's (N6), in the store the Jobs tab reads.
             var counts = outbox is null ? null : await TableHost.OpenNoticeCountsAsync(over.NoticeCountsAt, clock, running.Token);
             var noticing = await TableHost.StartNoticesAsync(over.Channels, outbox, push, registry, clock, running.Token, counts);

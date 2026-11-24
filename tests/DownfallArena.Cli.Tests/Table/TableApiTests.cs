@@ -641,7 +641,7 @@ public sealed partial class TableApiTests : IDisposable
         Func<int, string> body,
         PlayerOptionsKind until)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
+        for (var deadline = DateTimeOffset.UtcNow + Waits.Within; DateTimeOffset.UtcNow < deadline;)
         {
             switch (table.Person.Waiting)
             {
@@ -760,26 +760,13 @@ public sealed partial class TableApiTests : IDisposable
     /// <summary>The bots' turns are taken behind a tap, so a test waits for the question rather than assuming it.</summary>
     private static async Task Waiting(SteppedPerson person, string kind)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
-        {
-            if (person.Waiting?.Kind.ToString() == kind)
-            {
-                return;
-            }
-
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
-
-        throw new InvalidOperationException($"The seat never waited for {kind}; it is waiting for {person.Waiting?.Kind.ToString() ?? "nothing"}.");
+        await Waits.UntilAsync(() => person.Waiting?.Kind.ToString() == kind, $"the seat waited for {kind}", TestContext.Current.CancellationToken);
     }
 
     /// <summary>Waits until the seat's person is asked something, whatever it is.</summary>
     private static async Task Asked(SteppedPerson person)
     {
-        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, TestContext.Current.CancellationToken);
-        }
+        await Waits.UntilAsync(() => person.Waiting is not null, "the seat was asked something", TestContext.Current.CancellationToken);
 
         person.Waiting.ShouldNotBeNull("the seat was never asked anything");
     }

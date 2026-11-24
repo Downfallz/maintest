@@ -111,10 +111,7 @@ public sealed class TableIndexingTests : IDisposable
         var code = table.Seats[1].Code.ShouldNotBeNull();
 
         (await table.Api.HandleAsync("POST", "/api/seat/player1/concede", string.Empty, table.Seats[0].Token)).Status.ShouldBe(200);
-        for (var attempt = 0; attempt < 500 && (await _index.OpenAsync(0, 10, Cancel)).Count > 0; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(async () => (await _index.OpenAsync(0, 10, Cancel)).Count == 0, "the table left the index of open tables", Cancel);
 
         (await _index.OpenAsync(0, 10, Cancel)).ShouldBeEmpty();
         (await _index.CodeAsync(code, Cancel)).ShouldBeNull();
@@ -156,10 +153,7 @@ public sealed class TableIndexingTests : IDisposable
 
     private static async Task<long> AskedAsync(ISeatPerson person)
     {
-        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => person.Waiting is not null, "the seat was asked something", Cancel);
 
         return person.Waiting.ShouldNotBeNull().Asked;
     }
@@ -168,10 +162,7 @@ public sealed class TableIndexingTests : IDisposable
     private async Task DivergedAsync(string id)
     {
         var path = Path.Combine(_hosted.RunsDirectory, id, PlaytestRun.JournalFile);
-        for (var attempt = 0; attempt < 300 && (File.Exists(path) ? File.ReadAllLines(path).Length : 0) < 2; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => (File.Exists(path) ? File.ReadAllLines(path).Length : 0) >= 2, "the journal holds two lines", Cancel);
 
         var lines = (await File.ReadAllLinesAsync(path, Cancel)).Select(line => System.Text.Json.Nodes.JsonNode.Parse(line)!.AsObject()).ToList();
         lines[1]["slot"] = (string?)lines[1]["slot"] == "player1" ? "player2" : "player1";

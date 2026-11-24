@@ -134,7 +134,7 @@ internal static class TableHost
             // it: a page polling a seat never reads it as lost.
             server.Starting = true;
             serving = server.RunAsync(stopping.Token);
-            var running = await StartAsync(host, clock, stopping.Token);
+            var running = (await StartAsync(host, clock, stopping.Token)).Running;
             if (serving.IsFaulted)
             {
                 await serving;
@@ -204,9 +204,9 @@ internal static class TableHost
     /// <summary>
     /// What a composed host runs beside its server, until stopped: the workers of the bots' turns (unless table-worker
     /// takes them), the notices' workers, and the watch of the tables it holds. What <see cref="RunAsync" /> starts, and
-    /// what the tests start to see each is started (#1159).
+    /// what the tests start to see each is started (#1159), and who it has take the bots' turns (#1213).
     /// </summary>
-    internal static async Task<Task> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<HostStarted> StartAsync(ComposedHost host, TimeProvider clock, CancellationToken stopping)
     {
         ArgumentNullException.ThrowIfNull(host);
         var working = host.Mode == TurnsMode.Worker && host.Turns is not null
@@ -218,7 +218,7 @@ internal static class TableHost
         // expiries -- is heard through the relay when there is one, and looked for every second when there is not
         // (ADR 0162, 0165). A host that records nothing shares its tables with nobody.
         var watching = host.Stored is null ? Task.CompletedTask : WatchAsync(new TableWatch(host.Registry, clock), host.Relay, clock, stopping);
-        return Task.WhenAll(working, noticing, watching);
+        return new HostStarted(Task.WhenAll(working.Running, noticing, watching), working.Turns);
     }
 
     /// <summary>What sends a notice to a device, and the public key a page subscribes with: a host given push keys.</summary>
@@ -836,10 +836,10 @@ internal static class TableHost
         options.Turns ?? CliOptions.TryParseTurns(Environment.GetEnvironmentVariable(TurnsEnvironment)) ?? TurnsMode.Process;
 
     /// <summary>The bots' turns put on the queue for table-worker, in a process of its own (ADR 0162): no worker here.</summary>
-    private static Task TakenByTheWorker(IWorkChannel turns)
+    private static HostStarted TakenByTheWorker(IWorkChannel turns)
     {
         Console.WriteLine($"  Turns: through the queue {turns.Name}, taken by {CliOptions.WorkerCommand} in a process of its own.");
-        return Task.CompletedTask;
+        return new HostStarted(Task.CompletedTask, TurnsTaken.ByTableWorker);
     }
 
     /// <summary>A work queue, or none when it cannot be opened: the bots' turns are then taken in this process, which is said.</summary>
@@ -860,14 +860,14 @@ internal static class TableHost
     /// <summary>
     /// The two workers of the queued turns (ADR 0159, phase 5): one takes the turns the queue says tables owe, the
     /// other keeps for good what the first gave up on. In a host told <c>--turns queue</c>, and in
-    /// <c>table-worker</c> (ADR 0162); none when the turns are taken in this process.
+    /// <c>table-worker</c> (ADR 0162); none when the turns are taken in this process. It says which it started (#1213).
     /// </summary>
-    internal static async Task<Task> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
+    internal static async Task<HostStarted> StartWorkersAsync(IWorkChannels? channels, IWorkChannel? turns, TableRegistry registry, TimeProvider clock, CancellationToken stopping)
     {
         if (channels is null || turns is null)
         {
             Console.WriteLine("  Turns: the bots' turns are taken in this process (--turns queue hands them to a worker).");
-            return Task.CompletedTask;
+            return new HostStarted(Task.CompletedTask, TurnsTaken.InProcess);
         }
 
         var poison = await channels.OpenAsync(PoisonedWork.QueueOf(turns.Name), stopping);
@@ -878,7 +878,7 @@ internal static class TableHost
         };
         var keeper = new DeadLetterWorker(poison, deadLetters, clock, Environment.MachineName) { Said = Console.WriteLine };
         Console.WriteLine($"  Turns: through the queue {turns.Name}, given up on after {AgentTurnWorker.MostDeliveries} deliveries onto {poison.Name}, kept for good on {deadLetters.Name}.");
-        return Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping));
+        return new HostStarted(Task.WhenAll(worker.RunAsync(stopping), keeper.RunAsync(stopping)), TurnsTaken.ByThisHost);
     }
 
     /// <summary>

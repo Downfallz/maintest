@@ -408,10 +408,7 @@ public sealed class FeedbackApiTests : IDisposable
     {
         var table = await _hosted.Composer.ComposeAsync(HostedTables.Bots, Cancel);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         await table.RecordAsync(Cancel);
         var cut = await new ScenarioAdminApi(scenarios, _hosted.Stored!, _hosted.Composer).HandleAsync("POST", ScenarioAdminApi.Route, JsonSerializer.Serialize(new { session = table.Id, round = 2, seat = "player2" }), "operator");
