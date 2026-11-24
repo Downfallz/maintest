@@ -255,6 +255,14 @@ internal sealed partial class TableFiles
             ["/admin-diagnosis.js"] = (Path.Combine(tableDirectory, "admin-diagnosis.js"), JavaScript),
         };
 
+        foreach (var (route, (path, contentType)) in _routes)
+        {
+            if (contentType == JavaScript && route != "/sw.js" && !route.StartsWith("/battle-build/", StringComparison.Ordinal))
+            {
+                _modules.Add(path);
+            }
+        }
+
         foreach (var art in HorizonArt)
         {
             _routes[$"/battle-art/horizon/{art}.webp"] = (Path.Combine(tableDirectory, "battle-art", "horizon", $"{art}.webp"), Webp);
@@ -363,6 +371,17 @@ internal sealed partial class TableFiles
             return Page(path);
         }
 
+        if (_modules.Contains(path))
+        {
+            return Module(path);
+        }
+
+        return Unchanged(path, contentType);
+    }
+
+    // A file's bytes as they are on disk.
+    private ServedFile Unchanged(string path, string contentType)
+    {
         var written = File.GetLastWriteTimeUtc(path);
         if (_served.TryGetValue(path, out var held) && held.Written == written)
         {
@@ -374,24 +393,63 @@ internal sealed partial class TableFiles
         return made;
     }
 
+    // The page's own modules: every one of them, and every name one gives another, carries the release's tag, so
+    // a page of one deploy cannot run a module of another. Each module is named by the one tag of them all, not by its
+    // own: `./account.js?v=<release>` is the same address in the page and in every module that imports it, so the
+    // browser runs it once. `ways.js` of one deploy importing `account.js` of the one before refused to load, and the
+    // return from Discord stayed on "Checking your sign-in…". The worker keeps its bare name, since a worker is
+    // registered at one address, and the bundles are named by their own tags below. A module loaded later by
+    // `import('./picture.js')` is named the same way, or it would be a second copy of one the page already runs.
+    private readonly HashSet<string> _modules = new(StringComparer.Ordinal);
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (string Release, ServedFile File)> _stampedModules = new(StringComparer.Ordinal);
+
+    [GeneratedRegex("(?<lead>\\b(?:from|import)\\s*\\(?\\s*)(?<quote>['\"])(?<name>\\./[^'\"?#:/]+\\.js)\\k<quote>")]
+    private static partial Regex ImportedModule();
+
+    private ServedFile Module(string path)
+    {
+        var release = Release();
+        var raw = Unchanged(path, JavaScript);
+        if (_stampedModules.TryGetValue(path, out var held) && held.Release == release && held.File.Written == raw.Written)
+        {
+            return held.File;
+        }
+
+        var stamped = ImportedModule().Replace(Encoding.UTF8.GetString(raw.Raw), match =>
+            _routes.ContainsKey(match.Groups["name"].Value[1..])
+                ? $"{match.Groups["lead"].Value}{match.Groups["quote"].Value}{match.Groups["name"].Value}?v={release}{match.Groups["quote"].Value}"
+                : match.Value);
+        var made = ServedFile.Of(Encoding.UTF8.GetBytes(stamped), raw.Written, compress: true);
+        _stampedModules[path] = (release, made);
+        return made;
+    }
+
+    // The release's tag: the hash of every module's bytes as they are on disk, so it changes with any one of them.
+    private string Release()
+    {
+        var tags = _modules.Order(StringComparer.Ordinal).Select(path => File.Exists(path) ? Unchanged(path, JavaScript).Tag : "-");
+        return Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', tags))))[..12];
+    }
+
     // A page names its stylesheets and the battle's bundles with the tag of the file it names
     // (`battle-build/live.js?v=<tag>`), so the page and what it runs are the same deploy's. Every one of them is answered
     // no-cache, but a cache between the host and the phone may keep a script longer than it was told, and a page of one
     // deploy running the bundle of another dies at its first missing element: renaming `coach-continue` to `coach-again`
-    // left every battle on "Connecting…". The page's own modules are not stamped: one of them imports another by its
-    // bare name (`./navigation.js`), and a stamped name beside it would be a second copy of that module, run twice.
-    // The bundles import no module beside the page by name. They do fetch the effects kit, `battle-build/fx.js`,
+    // left every battle on "Connecting…". The page's own modules are named by the release's tag, as every module
+    // that imports one names it (above). The bundles import no module beside the page by name. They do fetch the effects kit, `battle-build/fx.js`,
     // by a name that carries the hash of the kit they were built with (ADR 0196). The host does not read that
     // `?v`: it serves the kit it has, and the hash keeps a cache keyed by address from mixing two deploys.
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, StampedPage> _pages = new(StringComparer.Ordinal);
 
-    [GeneratedRegex("(?<lead>\\b(?:src|href)=\")(?<name>(?:battle-build/[^\"?#:]+\\.js|[^\"?#:]+\\.css))\"")]
+    [GeneratedRegex("(?<lead>\\b(?:src|href)=\")(?<name>[^\"?#:]+\\.(?:js|css))\"")]
     private static partial Regex NamedAsset();
 
     private ServedFile Page(string path)
     {
         var written = File.GetLastWriteTimeUtc(path);
-        if (_pages.TryGetValue(path, out var held) && held.Written == written && held.Names.All(one => TagOf(one.Route) == one.Tag))
+        var release = Release();
+        if (_pages.TryGetValue(path, out var held) && held.Written == written && held.Release == release && held.Names.All(one => TagOf(one.Route) == one.Tag))
         {
             return held.File;
         }
@@ -400,9 +458,14 @@ internal sealed partial class TableFiles
         var stamped = NamedAsset().Replace(File.ReadAllText(path), match =>
         {
             var route = "/" + match.Groups["name"].Value.TrimStart('/');
-            if (!_routes.ContainsKey(route))
+            if (!_routes.TryGetValue(route, out var named))
             {
                 return match.Value;
+            }
+
+            if (_modules.Contains(named.Path))
+            {
+                return $"{match.Groups["lead"].Value}{match.Groups["name"].Value}?v={release}\"";
             }
 
             var tag = TagOf(route);
@@ -410,7 +473,7 @@ internal sealed partial class TableFiles
             return tag is null ? match.Value : $"{match.Groups["lead"].Value}{match.Groups["name"].Value}?v={tag[1..13]}\"";
         });
 
-        var made = new StampedPage(written, [.. names], ServedFile.Of(Encoding.UTF8.GetBytes(stamped), written, compress: true));
+        var made = new StampedPage(written, release, [.. names], ServedFile.Of(Encoding.UTF8.GetBytes(stamped), written, compress: true));
         _pages[path] = made;
         return made.File;
     }
@@ -422,5 +485,5 @@ internal sealed partial class TableFiles
         return File.Exists(path) ? Served(path, contentType).Tag : null;
     }
 
-    private sealed record StampedPage(DateTime Written, IReadOnlyList<(string Route, string? Tag)> Names, ServedFile File);
+    private sealed record StampedPage(DateTime Written, string Release, IReadOnlyList<(string Route, string? Tag)> Names, ServedFile File);
 }

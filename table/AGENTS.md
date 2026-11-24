@@ -65,7 +65,8 @@ Every flag of `table` is in docs/reference/commands.md.
   match's windows are in the kit, its docked sheets (`.docked-sheet`) fade in and leave at once, and
   `battle/src/windows.ts` holds their focus (UX12): a new window gets its frame control in the map `live.ts` gives it.
 - The host serves a page with its stylesheets and `battle-build/` bundles named `?v=<tag>` (`TableFiles`), so a cache
-  cannot pair a page with another deploy's bundle. A module another module imports keeps its bare name.
+  cannot pair a page with another deploy's bundle. Its own modules, in the page and in every `import './x.js'`, carry
+  one release tag instead, so each keeps one address and runs once; write them bare, the host stamps them. `sw.js` keeps its name.
 - 320 px wide first, 44 px touch targets, no document scrolling in the battle view.
 - The words a player reads come from docs/domain/player-terminology.md, not from the domain's own.
   `terminology.test.js` holds them to its EN column and refuses the legacy words and sentences they

@@ -61,9 +61,9 @@ public sealed class TableFilesCachingTests : IDisposable
     [InlineData("gzip", "gzip")]
     public void A_script_is_sent_compressed_to_a_browser_that_takes_it_and_reads_back_as_the_file(string accepted, string encoding)
     {
-        var raw = File.ReadAllBytes(Path.Combine(Shipped, "lobby.js"));
+        var raw = File.ReadAllBytes(Path.Combine(Shipped, "motion.js"));
 
-        var answer = Files.Get("/lobby.js", null, accepted);
+        var answer = Files.Get("/motion.js", null, accepted);
 
         Header(answer, "Content-Encoding").ShouldBe(encoding);
         answer.Body.Length.ShouldBeLessThan(raw.Length);
@@ -85,10 +85,10 @@ public sealed class TableFilesCachingTests : IDisposable
     [Fact]
     public void A_browser_that_takes_no_compression_is_sent_the_file_as_it_is()
     {
-        var answer = Files.Get("/lobby.js", null, null);
+        var answer = Files.Get("/motion.js", null, null);
 
         answer.Headers!.ShouldNotContain(header => header.Key == "Content-Encoding");
-        answer.Body.ShouldBe(File.ReadAllBytes(Path.Combine(Shipped, "lobby.js")));
+        answer.Body.ShouldBe(File.ReadAllBytes(Path.Combine(Shipped, "motion.js")));
     }
 
     [Fact]
