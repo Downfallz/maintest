@@ -945,12 +945,14 @@ test('notices marked read on another page move the bell alone, and the lobby rea
   state.openRelay();
   await expect.poll(() => state.relays.length).toBe(1);
   await expect.poll(() => state.since('/api/lobby/mine') > 0 && state.since('/api/account/notices') > 0).toBe(true);
-  const reads = state.mineReads, news = state.newsReads;
+  const reads = state.mineReads, news = state.newsReads, friendReads = state.friendReads;
 
   await state.say('account notices 2');
 
   await expect.poll(() => state.newsReads).toBeGreaterThan(news);
   expect(state.mineReads).toBe(reads);
+  // The bell's and the Friends panel's own filters: neither reads its lists again.
+  expect(state.friendReads).toBe(friendReads);
   await state.say('account 3');
   await expect.poll(() => state.mineReads).toBeGreaterThan(reads);
   expect(state.errors).toEqual([]);

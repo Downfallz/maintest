@@ -507,7 +507,8 @@ back, because 4 exchanges were already under way, the 503 carries `Retry-After: 
 return page keeps the code and the verifier in memory. A 429 or a 503 whose `Retry-After` is 5 seconds or less is
 waited out once, saying "Checking your sign-in…", and the same proof is posted again (#1204). The page adds up to a
 second at random, so the pages a burst refused do not all post again together. This helps a burst of sign-ins, not a
-slow provider: a second refusal is said on the page.
+slow provider: a second refusal is said on the page. Only the host's own codes are retried
+(`Account.TooManySignIns`, `Account.ProviderUnavailable`): a proxy's 503 may come after the code was spent.
 
 `--sign-in microsoft --microsoft-client-id <id>` (or `DOWNFALL_MICROSOFT_CLIENT_ID`) adds personal Microsoft
 accounts (P6) the same way, through `codeflow.js` as Discord: its button leaves for the `consumers` authorize page

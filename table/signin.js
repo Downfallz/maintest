@@ -28,8 +28,11 @@ export const RETRY_WITHIN_S = 5;
 /**
  * Whether a refusal is one to wait out once with the same code: the host was too busy to ask the provider (429 for the
  * address's sign-ins at once, 503 for the provider's), so the code was never spent, and it said to come back shortly.
+ * Only the host's own codes: a proxy's 503 can come after the host already spent the code.
  */
-export const worthAnotherTry = error => [429, 503].includes(error?.status) && Number.isInteger(error.retryAfter) && error.retryAfter <= RETRY_WITHIN_S;
+const SHORT_REFUSALS = { 429: 'Account.TooManySignIns', 503: 'Account.ProviderUnavailable' };
+export const worthAnotherTry = error => Object.hasOwn(SHORT_REFUSALS, error?.status ?? '') && error.code === SHORT_REFUSALS[error.status]
+  && Number.isInteger(error.retryAfter) && error.retryAfter <= RETRY_WITHIN_S;
 
 const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
 

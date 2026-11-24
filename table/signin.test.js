@@ -172,7 +172,8 @@ test('Microsoft added from Settings goes to its identities route and says Micros
   assert.equal(returnProblem('failed', 'microsoft'), 'Microsoft could not sign you in. Try again from the lobby.');
 });
 
-const busy = (status, retryAfter) => Object.assign(new Error('Too many sign-ins from your network just now. Try again in a minute.'), { status, retryAfter });
+const HOST_CODES = { 429: 'Account.TooManySignIns', 503: 'Account.ProviderUnavailable' };
+const busy = (status, retryAfter, code = HOST_CODES[status]) => Object.assign(new Error('Too many sign-ins from your network just now. Try again in a minute.'), { status, retryAfter, code });
 
 test('a short 429 is waited out once, saying the sign-in is being checked, and the same code then signs in', async () => {
   const doc = page();
@@ -224,8 +225,9 @@ test('a second short 429 says the host\'s message, with the way back, and is not
   assert.equal(doc.getElementById('signin-back').hidden, false);
 });
 
-test('a wait longer than five seconds, none said, or another refusal is not tried again', async () => {
-  for (const refusal of [busy(429, 6), busy(503, null), busy(401, 1), new Error('The host answered 500. Try again.')]) {
+test('a wait longer than five seconds, none said, a 503 the host did not write, or another refusal is not tried again', async () => {
+  // A 503 with no host code is a proxy's or the platform's: the host may have spent the code already.
+  for (const refusal of [busy(429, 6), busy(503, null), busy(401, 1), busy(503, 1, null), new Error('The host answered 500. Try again.')]) {
     let asked = 0, waited = false;
 
     const outcome = await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc: page(), storage: tab(kept), request: async () => { asked += 1; throw refusal; }, pause: async () => { waited = true; } });

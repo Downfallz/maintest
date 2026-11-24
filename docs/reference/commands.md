@@ -672,7 +672,8 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   `429 Account.TooManySignIns` with `Retry-After` (#1193, `table/README.md`). The host
   writes its sign-in counts as one console line a minute per provider, and when it stops,
   `Sign-ins (<provider>): … started, … finished, … refused, … unavailable, … limited.`, which the ops report sums
-  (#1171). A code is used once: a second post of the same code is refused. A client
+  (#1171). A sign-in the return page posted again after a short refusal counts as started twice, and its first post
+  as unavailable or limited (#1204). A code is used once: a second post of the same code is refused. A client
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
