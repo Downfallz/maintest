@@ -236,10 +236,11 @@ function everyPage() {
     ],
   },
   'home-ground-eclipse': {
-    from: 'c176fa949a2db46b', frames: 1, drawn: [390,760], pages: {"table/home":"largest"},
+    from: '38726885ba0a1d88', frames: 1, drawn: [390,760], pages: {"table/home":"largest"},
     sizes: [
-      { file: 'home-ground-eclipse-390.919124fa.webp', width: 390, height: 867, bytes: 27864 },
-      { file: 'home-ground-eclipse-841.181932ac.webp', width: 841, height: 1870, bytes: 97356 },
+      { file: 'home-ground-eclipse-390.54c49da0.webp', width: 390, height: 845, bytes: 43332 },
+      { file: 'home-ground-eclipse-780.fe057886.webp', width: 780, height: 1690, bytes: 149206 },
+      { file: 'home-ground-eclipse-1200.3344c52f.webp', width: 1200, height: 2600, bytes: 253238 },
     ],
   },
   'empty-bank': {
