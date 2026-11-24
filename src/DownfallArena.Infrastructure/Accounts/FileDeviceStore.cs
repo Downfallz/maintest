@@ -54,13 +54,20 @@ public sealed class FileDeviceStore : IDeviceStore
             }
         }
 
-        return await ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
+        var written = await ConditionalFile.WriteAsync(FullPath(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
+        if (devices.Count == 0)
+        {
+            _read.Forget(account);
+        }
+
+        return written;
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         _read.Forget(account);
-        return ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
+        await ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
+        _read.Forget(account);
     }
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, DeviceDocuments.PathOf(account));

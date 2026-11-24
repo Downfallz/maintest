@@ -54,7 +54,13 @@ public sealed class BlobNoticeStore : INoticeStore
             }
         }
 
-        return await ConditionalBlob.WriteAsync(Blob(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
+        var written = await ConditionalBlob.WriteAsync(Blob(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
+        if (entries.Count == 0)
+        {
+            _read.Forget(account);
+        }
+
+        return written;
     }
 
     public async Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
@@ -71,10 +77,11 @@ public sealed class BlobNoticeStore : INoticeStore
         return accounts;
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         _read.Forget(account);
-        return _container.DeleteBlobIfExistsAsync(NoticeDocuments.PathOf(account), cancellationToken: cancellationToken);
+        await _container.DeleteBlobIfExistsAsync(NoticeDocuments.PathOf(account), cancellationToken: cancellationToken);
+        _read.Forget(account);
     }
 
     private BlobClient Blob(AccountId account) => _container.GetBlobClient(NoticeDocuments.PathOf(account));

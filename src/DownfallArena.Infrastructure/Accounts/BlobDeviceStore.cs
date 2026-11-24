@@ -59,13 +59,20 @@ public sealed class BlobDeviceStore : IDeviceStore
             }
         }
 
-        return await ConditionalBlob.WriteAsync(Blob(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
+        var written = await ConditionalBlob.WriteAsync(Blob(account), devices.Count == 0 ? null : DeviceDocuments.Write(devices, before), version, cancellationToken);
+        if (devices.Count == 0)
+        {
+            _read.Forget(account);
+        }
+
+        return written;
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         _read.Forget(account);
-        return _container.DeleteBlobIfExistsAsync(DeviceDocuments.PathOf(account), cancellationToken: cancellationToken);
+        await _container.DeleteBlobIfExistsAsync(DeviceDocuments.PathOf(account), cancellationToken: cancellationToken);
+        _read.Forget(account);
     }
 
     private BlobClient Blob(AccountId account) => _container.GetBlobClient(DeviceDocuments.PathOf(account));

@@ -1,4 +1,5 @@
 using DownfallArena.Infrastructure.Accounts;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Infrastructure.Tests.Accounts;
 
@@ -96,5 +97,32 @@ public sealed class TextsReadTests
         await texts.AtAsync(2, "v1", Stored("stored", "v1"), Cancel);
         (await texts.AtAsync(256, "v1", Stored("stored", "v1"), Cancel)).ShouldBe((true, "kept"));
         _reads.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_text_kept_past_its_lifetime_is_read_again()
+    {
+        var time = new FakeTimeProvider();
+        var texts = new TextsRead<string>(time);
+        texts.Remember("a", "kept", "v1");
+
+        time.Advance(TextsRead<string>.Lifetime);
+
+        (await texts.AtAsync("a", "v1", Stored("stored", "v1"), Cancel)).ShouldBe((true, "stored"));
+        _reads.ShouldBe(1);
+    }
+
+    /// <summary>What another process erased leaves here goes at the next use past its lifetime (ADR 0203).</summary>
+    [Fact]
+    public void Texts_past_their_lifetime_are_let_go_at_the_next_use_though_never_asked_for()
+    {
+        var time = new FakeTimeProvider();
+        var texts = new TextsRead<string>(time);
+        texts.Remember("erased", "keys", "v1");
+        time.Advance(TextsRead<string>.Lifetime);
+
+        texts.Remember("other", "kept", "v1");
+
+        texts.Count.ShouldBe(1);
     }
 }

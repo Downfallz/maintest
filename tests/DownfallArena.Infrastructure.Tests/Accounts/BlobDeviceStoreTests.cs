@@ -84,4 +84,36 @@ public sealed class BlobDeviceStoreTests : DeviceStoreContract
 
         DeviceFields.ShouldKeepThem((await blob.DownloadContentAsync(Cancel)).Value.Content.ToString());
     }
+
+    /// <summary>Forgetting an account lets go of what this store kept of it, push keys among it (ADR 0203): the next write reads again.</summary>
+    [Fact]
+    public async Task Forgetting_an_account_lets_go_of_what_was_kept_of_its_read()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        await _container!.GetBlobClient($"devices/{account.Value}.json").UploadAsync(BinaryData.FromString(DeviceFields.Written), Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        await store.ForgetAsync(account, Cancel);
+        _reads.Reset();
+
+        (await store.SaveAsync(account, DeviceFields.Added(read.Devices), read.Version, Cancel)).ShouldBeFalse();
+
+        _reads.Count.ShouldBe(1);
+    }
+
+    /// <summary>Saving an empty list lets go of what was kept of it too.</summary>
+    [Fact]
+    public async Task Saving_an_empty_list_lets_go_of_what_was_kept_of_its_read()
+    {
+        var store = await StoreAsync();
+        var account = SharedKernel.Identifiers.AccountId.New();
+        await _container!.GetBlobClient($"devices/{account.Value}.json").UploadAsync(BinaryData.FromString(DeviceFields.Written), Cancel);
+        var read = await store.ReadAsync(account, Cancel);
+        (await store.SaveAsync(account, [], read.Version, Cancel)).ShouldBeTrue();
+        _reads.Reset();
+
+        (await store.SaveAsync(account, DeviceFields.Added(read.Devices), read.Version, Cancel)).ShouldBeFalse();
+
+        _reads.Count.ShouldBe(1);
+    }
 }

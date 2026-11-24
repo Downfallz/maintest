@@ -50,7 +50,13 @@ public sealed class FileNoticeStore : INoticeStore
             }
         }
 
-        return await ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
+        var written = await ConditionalFile.WriteAsync(FullPath(account), entries.Count == 0 ? null : NoticeDocuments.Write(entries, before), version, cancellationToken);
+        if (entries.Count == 0)
+        {
+            _read.Forget(account);
+        }
+
+        return written;
     }
 
     public Task<IReadOnlyList<AccountId>> AccountsAsync(CancellationToken cancellationToken = default)
@@ -64,10 +70,11 @@ public sealed class FileNoticeStore : INoticeStore
         return Task.FromResult(accounts);
     }
 
-    public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
+    public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         _read.Forget(account);
-        return ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
+        await ConditionalFile.DeleteAsync(FullPath(account), cancellationToken);
+        _read.Forget(account);
     }
 
     private string FullPath(AccountId account) => Path.Combine(RootDirectory, NoticeDocuments.PathOf(account));
