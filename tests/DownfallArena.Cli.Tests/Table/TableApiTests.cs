@@ -641,7 +641,7 @@ public sealed partial class TableApiTests : IDisposable
         Func<int, string> body,
         PlayerOptionsKind until)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
+        for (var deadline = DateTimeOffset.UtcNow + Waits.Within; DateTimeOffset.UtcNow < deadline;)
         {
             switch (table.Person.Waiting)
             {
