@@ -306,6 +306,15 @@ internal sealed class TableServer : IDisposable
         }
 
         var account = new AccountRequest(request.Cookies[AccountSessions.Cookie]?.Value, Secure(request), RequestAddress.Of(request));
+        var token = request.Headers[TableApi.TokenHeader];
+
+        // A guest plays the tutorials and nothing else (ADR 0207): what it may call is a list, checked here before any
+        // route answers, so a route added later is closed to guests until it is listed.
+        if (await GuestRefusalAsync(method, path, token, account) is { } guestRefused)
+        {
+            return guestRefused;
+        }
+
         if (AccountApi.Names(path))
         {
             return _accounts is null
@@ -340,8 +349,6 @@ internal sealed class TableServer : IDisposable
                 ? StudioResponse.OfPlainText(404, "This host keeps no scenarios to practise: it records nothing, or players do not sign in here.")
                 : await Scenarios.HandleAsync(method, path, account);
         }
-
-        var token = request.Headers[TableApi.TokenHeader];
 
         if (FeedbackApi.Names(path))
         {
@@ -405,6 +412,33 @@ internal sealed class TableServer : IDisposable
         table.Touch(now);
         await LobbyApi.SeatReachedAsync(table, token);
         return await table.Api.HandleAsync(method, path, body, token, request.Headers["If-None-Match"], request.Url?.Query);
+    }
+
+    /// <summary>
+    /// The answer that refuses a guest's request (ADR 0207), or null where it may go on: a request with no guest's session,
+    /// a route <see cref="GuestRoutes" /> lists, or the seat of the guest's own tutorial, found by the practice's token.
+    /// </summary>
+    private async Task<StudioResponse?> GuestRefusalAsync(string method, string path, string? token, AccountRequest account)
+    {
+        if (_accounts is null || string.IsNullOrEmpty(account.Session) || await _accounts.GuestAsync(account) is not { } guest)
+        {
+            return null;
+        }
+
+        var teaches = Scenarios is { } scenarios ? scenarios.Teaches : (Func<string, bool>)(_ => false);
+        if (GuestRoutes.Allows(method, path, teaches))
+        {
+            return null;
+        }
+
+        // Feedback is not a seat's route: a guest sends none (ADR 0207), so none names an account the hourly job removes.
+        if (!FeedbackApi.Names(path) && Practices?.ByToken(token) is { } practice && practice.Account == guest.Id.ToString() && teaches(practice.Scenario))
+        {
+            return null;
+        }
+
+        var refused = Application.Accounts.AccountErrors.GuestNotAllowed;
+        return StudioResponse.OfJson(new { error = refused.Code, message = refused.Message }, ArtifactJson.LineOptions, status: 403);
     }
 
     private static StudioResponse StartingUp() =>

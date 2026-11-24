@@ -11,4 +11,10 @@ public sealed record Account(AccountId Id, AccountIdentities Identities, Usernam
 {
     /// <summary>Why the operator suspended the account, and since when; none for an account in good standing.</summary>
     public AccountSuspension? Suspension { get; init; }
+
+    /// <summary>
+    /// Whether the account is a guest (ADR 0207): one the host made without any provider, which plays the tutorials and
+    /// nothing else until a provider's sign-in upgrades it.
+    /// </summary>
+    public bool IsGuest => Identities.ByProvider(ExternalIdentity.Guest) is not null;
 }

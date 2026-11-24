@@ -1,7 +1,7 @@
 # Plan: more ways to sign in, and a guest
 
-Status: accepted, 2026-11-23. The owner settled the four questions (at the end) and question 5 with P4. P1 to P4 are
-built; P5 and P6 are not.
+Status: accepted, 2026-11-23. The owner settled the four questions (at the end) and question 5 with P4. P1 to P5 are
+built; P6 is not.
 
 ## What the owner asked for
 
@@ -231,6 +231,28 @@ and 4. The recommended answer:
    `POST /api/account/guest`, the route list, `table-tend` removing old guests. No page: UX15 builds the journey
    on it. Tests: a guest reaches the tutorials and is refused everything else; upgrading keeps the id and the
    tutorials; an old guest is removed; the address count.
+
+   *Built (2026-11-24)*: [ADR 0207](../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md) amends ADR 0122,
+   ADR 0204 and accounts-plan question 5.
+
+   - The guest: `POST /api/account/guest` makes an account under `guest:<random>`, an identity no route signs in
+     with, and a drawn name (`Guest-7KQ2`, `Username.Guest`; a typed `Guest-` or `guest_` name is reserved), and
+     signs it in with the usual cookie. A visitor signed in gets the account it has. `Account.IsGuest`, and `guest`
+     on the account in every answer that describes it.
+   - The list: `GuestRoutes`, checked by `TableServer` before any route answers. A guest reaches its account, the
+     sign-ins and the name check, its game settings, `/api/me`, the tutorials (list, marks, description, practice)
+     and its own tutorial's seat by the practice's token. Everything else, feedback from the lesson included, is
+     `403 Account.GuestNotAllowed`. `LinkAsync` refuses a guest too.
+   - The upgrade: a provider's sign-in with a new identity asks a name, and `POST /api/account` with a guest's
+     session calls `AccountRegistry.UpgradeAsync`. It keeps the id, so the tutorials, replaces the identity and the
+     name, and raises the generation. A sign-in to an account that exists signs in to it and removes the guest.
+   - The count: `GuestMaking`, ten an hour per address (an IPv6 /64) and three hundred an hour in all, held in
+     memory and hashed, `429 Account.TooManyGuests`. Closed registration makes none.
+   - The lifetime: `table-tend` (`IdleGuests`) removes a guest last used 31 days ago, the session's thirty days and
+     a day, with its binding, name, settings, tutorials and activity.
+   - Left: the journey (UX15), and what a guest's lobby page shows when its routes answer 403; feedback from a
+     lesson, which would need the hourly job to forget a guest's feedback; the panel's *Run now* pass does not
+     remove guests; a guest who signs in to an account it already has loses the guest's tutorial progress.
 6. **P6, Microsoft.** `MicrosoftSignIn` (personal accounts, PKCE, no secret), as P3, with `microsoftClientId`
    and the owner's steps in `infra/README.md`.
 
