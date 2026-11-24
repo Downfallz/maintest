@@ -20,6 +20,8 @@
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
 - For how the battle looks in motion (`docs/art/battle-craft-plan.md`): `battle-designer` writes the storyboard of
   a spell, a move or the ground (`docs/art/storyboards/`) and reads its film strip against it; it writes no code.
+- For the promotion (`docs/art/promotion-plan.md`): `promo-producer` writes the words of a post and a cut's cards,
+  in the showcase's voice and within each channel's limit; it films nothing.
 - For how the pages look, read and move (`docs/art/ux-craft-plan.md`): `ux-designer` writes the brief of a journey,
   a screen at a time (`docs/art/journeys/`), and reads its contact sheet and measures against it; it writes no code.
 - Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request
@@ -37,7 +39,8 @@
   repository and republished to its page), `/battle-pass` (one pass on a family of spells, the movement or
   the ground: the storyboard, the build, the film strip, the critique, the sheets shown to the owner),
   `/ux-pass` (one pass on a journey of the pages: the brief, the build, the film, the critique, the sheets shown
-  to the owner).
+  to the owner), `/promo` (a request in words becomes a batch of posts: the shots filmed, the cut, the brief, the
+  posts' drafts and a contact sheet, as one pull request).
 - `studio/prompts.test.js` checks what an agent or a skill names in backticks: every repository path exists,
   a heading named as an anchor (`table/README.md#routes`) is in its file, a label is declared in
   `.github/labels.json`, and a `search/issues` query names `is:issue` or `is:pr` (GitHub refuses it otherwise).

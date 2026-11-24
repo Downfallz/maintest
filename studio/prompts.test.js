@@ -19,6 +19,7 @@ const NOT_YET_THERE = [
   'data/dst/', // DataBuilder's output (ADR 0009)
   'table/battle-build/', // the battle bundle, built from battle/
   'artifacts/design-system/', // the design system's folder, built by scripts/design-system/build.mjs
+  'artifacts/promo/', // the promotion's stills, films, cuts and packs, written by scripts/promo/
   '.claude/agent-memory/', // an agent's memory folder, made on its first write
 ];
 
@@ -181,4 +182,51 @@ test('ship answers a round of review with one push, and does not cancel a run th
   }
   // A run held for is answered even when it ends green and sends nothing.
   assert.match(events, /send_later/);
+});
+
+// /promo turns a request into a batch of posts (docs/art/promotion-plan.md, P6). It films with the promotion's
+// scripts and checks with their own refusals, the promo-producer writes the words, and nothing leaves for a
+// platform: the owner publishes by hand (the plan's question 4).
+test('promo films, cuts, briefs and checks with the promotion scripts, and has the producer write the words', () => {
+  const promo = readFileSync(join(root, '.claude/skills/promo/SKILL.md'), 'utf8');
+  for (const script of ['shoot.mjs', 'cut.mjs', 'brief.mjs', 'calendar.mjs', 'media.mjs']) {
+    assert.match(promo, new RegExp(`node scripts/promo/${script.replace('.', '\\.')}`), script);
+  }
+  assert.match(promo, /`promo-producer`/);
+  assert.ok(existsSync(join(root, '.claude/agents/promo-producer.md')));
+  assert.match(promo, /Nothing is posted from here/);
+  assert.match(promo, /No post is published, scheduled or sent from a session/);
+  assert.match(promo, /`\/ship`/);
+  // The workflow writes a shot's film and sheet, not a cut: the cut reaches the owner on the contact sheet page.
+  const workflow = readFileSync(join(root, '.github/workflows/promo-film.yml'), 'utf8');
+  // Nor a still: the workflow only films. A cut and a still reach the owner on the contact sheet page.
+  assert.doesNotMatch(workflow, /cut\.mjs/);
+  assert.doesNotMatch(workflow, /--still|still-/);
+  assert.match(promo, /Each cut's MP4, one a language, and each still at full size are files of the\s+page too/);
+  assert.match(promo, /For each new shot and each ratio a post shows as `film`,/);
+  // A scenario tried is written outside scenarios/, where every file is a listed scenario and a test.
+  assert.doesNotMatch(promo, /--out scenarios\//);
+});
+
+test('the promo producer counts against the limits the scripts hold, and writes only the words', async () => {
+  const producer = readFileSync(join(root, '.claude/agents/promo-producer.md'), 'utf8');
+  const { CHANNELS } = await import('../scripts/promo/calendar.mjs');
+  const { CARD_LIMITS } = await import('../scripts/promo/cut.mjs');
+  assert.ok(CHANNELS && CARD_LIMITS, 'the limits it names are exported where it says');
+  assert.match(producer, /`CHANNELS` in\s+`scripts\/promo\/calendar\.mjs`/);
+  assert.match(producer, /`CARD_LIMITS` in `scripts\/promo\/cut\.mjs`/);
+  assert.match(producer, /`showcase\/copy\.mjs` \(the voice/);
+  assert.match(producer, /`docs\/domain\/player-\w+\.md` \(the words a player\s+reads/);
+  assert.match(producer, /write the words of the files you are given under `promo\/cuts\/` and `promo\/calendar\/`, and nothing\s+else/);
+  // Each limit the producer gives is the one the calendar holds for that channel, and the card's at 9:16.
+  const limits = [...producer.matchAll(/(\d+) when `([a-z-]+)`(?: or `([a-z-]+)`)? is/g)];
+  assert.ok(limits.length >= 3, 'the producer gives the channels\' limits');
+  for (const [, limit, ...channels] of limits) {
+    for (const channel of channels.filter(Boolean)) assert.equal(CHANNELS[channel]?.limit, Number(limit), channel);
+  }
+  const card = /at\s+9:16 a title holds (\d+) and a caption (\d+)/.exec(producer);
+  assert.ok(card, 'the producer gives the cards\' limits at 9:16');
+  assert.deepEqual([Number(card[1]), Number(card[2])], [CARD_LIMITS.title['9:16'], CARD_LIMITS.caption['9:16']]);
+  // The producer writes no brief's ask: it is the owner's words (promo/README.md#a-brief).
+  assert.match(producer, /`ask` is the owner's own words/);
 });
