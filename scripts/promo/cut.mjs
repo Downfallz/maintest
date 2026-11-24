@@ -4,9 +4,9 @@
 // names shots of `promo/shots/` and the seconds of their films it keeps; the cards are drawn by the browser from the
 // brand's tokens (`cards.css`, `docs/art/branding.css`), and the words come from the cut's file, in English and French.
 //
-//   node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json --check        # the cut read and checked, no browser
-//   node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json                # artifacts/promo/cuts/<cut>/
-//   node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json --lang fr --out <folder>
+//   node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json --check        # the cut read and checked, no browser
+//   node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json                # artifacts/promo/cuts/<cut>/
+//   node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json --lang fr --out <folder>
 //
 // A cut reads its shots' frames where `shoot.mjs --film` writes them (`artifacts/promo/<shot>/frames-9x16/`, or
 // `--frames <folder>` holding one folder a shot); drawing the cards needs the browser suite's Playwright, assembling
@@ -144,12 +144,21 @@ export function brandMark() {
   return svg.replace(/<svg /, '<svg class="mark" aria-hidden="true" ').replace(/fill="#[0-9a-f]{3,8}"/i, 'fill="currentColor"');
 }
 
+/**
+ * The palette with the display face carried in it: refused when the palette no longer names the font's file, since a
+ * card would then fall back to another face, and the browser measure the words in it.
+ */
+export function withFont(palette, base64) {
+  const source = "url('/fonts/marcellus-latin-400.woff2')";
+  if (!palette.includes(source)) throw new Error(`docs/art/branding.css no longer loads the display face from ${source}: the cards would draw in another face.`);
+  return palette.replace(source, `url(data:font/woff2;base64,${base64})`);
+}
+
 // The palette and the font, as the pages read them, with the font carried in the page: a card is drawn from a
 // page of its own, served by no host.
 function brandStyle() {
   const font = readFileSync(join(root, 'table/fonts/marcellus-latin-400.woff2')).toString('base64');
-  const palette = readFileSync(join(root, 'docs/art/branding.css'), 'utf8').replace("url('/fonts/marcellus-latin-400.woff2')", `url(data:font/woff2;base64,${font})`);
-  return palette + readFileSync(join(root, 'scripts/promo/cards.css'), 'utf8');
+  return withFont(readFileSync(join(root, 'docs/art/branding.css'), 'utf8'), font) + readFileSync(join(root, 'scripts/promo/cards.css'), 'utf8');
 }
 
 const escape = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -157,14 +166,15 @@ const escape = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace
 /**
  * The page of each card of a cut in one language: the title card, one caption a stretch (on a clear ground, laid over
  * the shot's frames) and the end card. A caption's band sits inside the margins the feed covers at the ratio
- * (`SAFE_ZONES`), at their foot.
+ * (`SAFE_ZONES`), at their top.
  */
 export function cardPages(cut, language) {
   const style = `<style>${brandStyle()}</style>`;
-  const page = body => `<!doctype html><html lang="${language}"><head><meta charset="utf-8">${style}</head><body>${body}</body></html>`;
+  const page = body => `<!doctype html><html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${style}</head><body>${body}</body></html>`;
   const zone = SAFE_ZONES[cut.ratio];
   const margin = side => `${Math.max(zone[side] * 100, 6)}%`;
-  const band = `left:${margin('left')};right:${margin('right')};bottom:${zone.bottom > 0 ? `${zone.bottom * 100}%` : '8%'}`;
+  // At the top of what the feed leaves clear: the creatures' names and the battle view's dock are lower down.
+  const band = `left:${margin('left')};right:${margin('right')};top:${zone.top > 0 ? `${zone.top * 100}%` : '6%'}`;
   return {
     title: page(`<main class="card card-title">${brandMark()}<h1 class="title">${escape(cut.titleCard[language])}</h1><div class="rule"></div></main>`),
     captions: cut.shots.map(stretch => page(`<div class="caption" style="${band}"><p>${escape(stretch.caption[language])}</p></div>`)),
@@ -180,7 +190,8 @@ export function cardPages(cut, language) {
 export async function drawCards(browser, cut, language) {
   const { viewport, density } = framing(cut.ratio, cut.size);
   const pages = cardPages(cut, language);
-  const context = await browser.newContext({ viewport, deviceScaleFactor: density, reducedMotion: 'reduce' });
+  // A desktop page of the size asked, whatever the caller's defaults: a mobile one would lay out at 980 px.
+  const context = await browser.newContext({ viewport, deviceScaleFactor: density, isMobile: false, hasTouch: false, reducedMotion: 'reduce', locale: 'en-US', timezoneId: 'UTC' });
   try {
     const draw = async (html, words, what, clear) => {
       const page = await context.newPage();

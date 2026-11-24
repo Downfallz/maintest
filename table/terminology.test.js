@@ -296,6 +296,13 @@ const sources = () => [
   ...files('battle/src')
     .filter(path => /\.[jt]s$/.test(path))
     .map(path => ({ path, texts: scriptText(read(path)) })),
+  // The words a promotion's cut lays over the game (promo/README.md#a-cut): its title card and its captions.
+  ...files('promo/cuts')
+    .filter(path => path.endsWith('.json'))
+    .map(path => {
+      const cut = JSON.parse(read(path));
+      return { path, texts: [cut.titleCard?.en, ...(cut.shots ?? []).map(stretch => stretch.caption?.en)].filter(text => typeof text === 'string') };
+    }),
 ];
 
 function violations(files) {

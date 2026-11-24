@@ -1318,8 +1318,8 @@ browser on a shot they refuse (promo/README.md), and `--film` on a shot without 
 ### promo/cut.mjs
 
 ```bash
-node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json --check
-node scripts/promo/cut.mjs promo/cuts/brute-pummel-15s.json
+node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json --check
+node scripts/promo/cut.mjs promo/cuts/brute-pummel-answer.json
 node scripts/promo/cut.mjs promo/cuts/<cut>.json --lang fr --frames <folder> --out <folder>
 ```
 
@@ -1329,8 +1329,8 @@ filmed shot with its caption laid over it, and the end card, into one silent H.2
 printed with its SHA-256, size, frame count and length. The cards are drawn by Chromium from the brand's tokens;
 `ffmpeg` joins them with the frames `shoot.mjs --film` wrote (`artifacts/promo/<shot>/frames-<ratio>/`, or
 `--frames <folder>/<shot>/frames-<ratio>/`). `--lang` makes one language. `--check` reads and checks the cut
-without a browser. Exit 1 on a cut it refuses, on words the browser finds over their card, and on a stretch whose
-frames are not filmed yet, with the command that films them.
+without a browser. It exits 1 when it refuses a cut, when the browser finds words over their card, or when a
+stretch's frames are not filmed yet (it prints the command that films them).
 
 ### promo/media.mjs
 

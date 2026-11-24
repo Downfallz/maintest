@@ -78,6 +78,7 @@ test('the journey film plays its real-engine journey', () => {
 test('the promotion\'s still plays its real-engine journey, from the script and from the shots it reads', () => {
   assert.deepEqual(plan(['scripts/promo/shoot.mjs'], specs), { ...nothing, realEngine: true });
   assert.deepEqual(plan(['promo/shots/brute-mirror-round-3.json'], specs), { ...nothing, realEngine: true });
+  assert.deepEqual(plan(['promo/cuts/brute-pummel-answer.json'], specs), { ...nothing, realEngine: true });
   assert.deepEqual(plan(['promo/README.md'], specs), nothing);
   // The scenario a shot plays, directly under scenarios/: the still opens it on the host.
   assert.deepEqual(plan(['scenarios/greedy-1v1-round-3.json'], specs), { ...nothing, realEngine: true, image: true });

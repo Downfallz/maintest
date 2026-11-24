@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { CARD_LIMITS, CUT_FORMAT, END_NOTE, LANGUAGES, assemble, assembly, brandMark, cardPages, cutName, framesOf, parseArguments, readCut } from '../scripts/promo/cut.mjs';
+import { CARD_LIMITS, CUT_FORMAT, END_NOTE, LANGUAGES, assemble, assembly, brandMark, withFont, cardPages, cutName, framesOf, parseArguments, readCut } from '../scripts/promo/cut.mjs';
 import { filmFacts, hasEncoder, root } from '../scripts/promo/shoot.mjs';
 
 const script = fileURLToPath(new URL('../scripts/promo/cut.mjs', import.meta.url));
@@ -114,6 +114,12 @@ test('the cards draw with the brand\'s tokens, not raw colours, as the pages do'
   assert.match(brandMark(), /fill="currentColor"/);
 });
 
+test('the cards carry the display face, and refuse a palette that no longer names its file', () => {
+  assert.match(withFont("src: url('/fonts/marcellus-latin-400.woff2') format('woff2');", 'AAAA'), /url\(data:font\/woff2;base64,AAAA\)/);
+  assert.throws(() => withFont('src: url("/fonts/marcellus.woff2");', 'AAAA'), /no longer loads the display face/);
+  assert.match(cardPages(withCut(cut()), 'en').title, /data:font\/woff2;base64,/);
+});
+
 test('the end card says the site and the showcase\'s own line in each language', () => {
   assert.deepEqual(END_NOTE, { en: 'Beta · Free to play', fr: 'Bêta · Gratuit' });
   const pages = cardPages(withCut(cut()), 'fr');
@@ -123,9 +129,9 @@ test('the end card says the site and the showcase\'s own line in each language',
   assert.match(cardPages(withCut(cut({ titleCard: { en: 'Fire & <ice>', fr: 'x' } })), 'en').title, /Fire &amp; &lt;ice&gt;/);
 });
 
-test('a caption sits inside the margins a vertical feed covers', () => {
+test('a caption sits inside the margins a vertical feed covers, at their top', () => {
   const [caption] = cardPages(withCut(cut()), 'en').captions;
-  assert.match(caption, /bottom:25%/);
+  assert.match(caption, /top:13\.02/);
   assert.match(caption, /right:13\.88/);
 });
 
