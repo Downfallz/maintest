@@ -69,6 +69,14 @@ test('a refusal keeps the hosts code so the page can tell a lapsed sign-in from 
   await assert.rejects(refused, error => error.code === 'Account.UsernameTaken' && /already has/.test(error.message));
 });
 
+test('a refusal that says when to come back carries its Retry-After, in seconds', async () => {
+  const busy = { ok: false, status: 429, headers: new Headers({ 'Retry-After': '1' }), text: async () => JSON.stringify({ error: 'Account.TooManySignIns', message: 'Too many sign-ins from your network just now. Try again in a minute.' }) };
+  const plain = { ok: false, status: 503, headers: new Headers(), text: async () => JSON.stringify({ error: 'Account.ProviderUnavailable', message: 'Down.' }) };
+
+  await assert.rejects(accountRequest('/api/account/discord', {}, async () => busy), error => error.status === 429 && error.retryAfter === 1);
+  await assert.rejects(accountRequest('/api/account/discord', {}, async () => plain), error => error.retryAfter === null);
+});
+
 test('after signing in a player goes back only to a seat or an invitation of this host', () => {
   assert.equal(signInPath('/play?invite=abc'), '/lobby?next=%2Fplay%3Finvite%3Dabc');
   assert.equal(nextPath('?next=%2Fplay%3Finvite%3Dabc'), '/play?invite=abc');

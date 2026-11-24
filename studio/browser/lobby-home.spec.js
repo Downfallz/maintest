@@ -11,7 +11,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null, holdCreate = null, signIn = null, ways = null } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null, holdCreate = null, signIn = null, ways = null, relay = false } = {}) {
   const state = { holdInvitation, holdCreate, news, holdFirstNews, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
@@ -104,6 +104,9 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
       state.friends = { ...state.friends, friends: [friend, challenger], incoming: [] }; return json({});
     }
     if (path === '/api/lobby/push') return json({ publicKey: null });
+    // The lobby's stream through the relay, when the test sends its changes itself (ADR 0164). It opens once the test
+    // says so, so its `ready` is read on a page that has finished its first reads.
+    if (path === '/api/lobby/negotiate' && relay) { await state.relayHeld; return json({ url: `ws://${new URL(route.request().url()).host}/relay` }); }
     // The account's notice log (ADR 0201), when the test keeps one: listed, then marked read up to an id.
     if (path === '/api/account/notices' && state.news) {
       state.newsReads = (state.newsReads ?? 0) + 1;
@@ -136,6 +139,16 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     }
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
+  if (relay) {
+    state.relays = [];
+    state.relayHeld = new Promise(resolve => { state.openRelay = resolve; });
+    await page.routeWebSocket('**/relay', socket => { state.relays.push(socket); state.openedAt = state.requested.length; socket.onClose(() => { state.relays = state.relays.filter(one => one !== socket); }); });
+    // How often a route was asked since the open stream opened: its `ready` reads the lists and the bell's news.
+    state.since = path => state.requested.slice(state.openedAt).filter(one => one === path).length;
+    // What the host's stream says next, on the page's one open stream: a page opens it again when who is signed in
+    // is known, and closes the one before.
+    state.say = async data => { await expect.poll(() => state.relays.length).toBe(1); state.relays[0].send(data); };
+  }
   // A tutorial's own page is the battle view's to test: here it is only where the lobby leads.
   await page.route('**/battle?scenario=*', route => route.fulfill({ contentType: 'text/html', body: '<title>Tutorial</title>' }));
   await page.goto(`/table/lobby.html${search}`);
@@ -921,6 +934,47 @@ test('the first ranked result that arrives while the statistics are open is anno
     drawStats(document, { ranked: { games: 1, won: 1, lost: 0, drawn: 0 }, streak: { outcome: 'won', length: 1 }, bestWinStreak: 1, averageRounds: 3, withTeams: 1, mutations: [], spells: [] });
   });
   await expect(page.locator('#stats-status')).toHaveText('Your record is now 1–0–0.');
+});
+
+// Notices marked read on another page say `account notices`: the bell reads them, the lists are not read again
+// (#1152, #1210). The bell's read of the same change is the sign that the change arrived.
+test('notices marked read on another page move the bell alone, and the lobby reads its lists again only for its own change', async ({ page }) => {
+  const state = await home(page, { relay: true, news: [] });
+  await expect(page.locator('.mine-group.players .game-card')).toHaveCount(1);
+  await expect.poll(() => state.newsReads).toBeGreaterThan(0);
+  state.openRelay();
+  await expect.poll(() => state.relays.length).toBe(1);
+  await expect.poll(() => state.since('/api/lobby/mine') > 0 && state.since('/api/account/notices') > 0).toBe(true);
+  const reads = state.mineReads, news = state.newsReads, friendReads = state.friendReads;
+
+  await state.say('account notices 2');
+
+  await expect.poll(() => state.newsReads).toBeGreaterThan(news);
+  expect(state.mineReads).toBe(reads);
+  // The bell's and the Friends panel's own filters: neither reads its lists again.
+  expect(state.friendReads).toBe(friendReads);
+  await state.say('account 3');
+  await expect.poll(() => state.mineReads).toBeGreaterThan(reads);
+  expect(state.errors).toEqual([]);
+});
+
+test('the statistics are read again when the player\'s own lists change, not when notices are marked read elsewhere', async ({ page }) => {
+  const state = await home(page, { relay: true, news: [] });
+  state.openRelay();
+  let reads = 0;
+  const empty = { ranked: { games: 0, won: 0, lost: 0, drawn: 0 }, streak: null, bestWinStreak: 0, averageRounds: null, withTeams: 0, mutations: [], spells: [] };
+  await page.route('**/api/stats', route => { reads += 1; return route.fulfill({ json: empty }); });
+  await page.goto('/table/stats.html');
+  await expect.poll(() => reads === 2 && state.since('/api/account/notices') > 0).toBe(true);
+  const news = state.newsReads;
+
+  await state.say('account notices 2');
+
+  await expect.poll(() => state.newsReads).toBeGreaterThan(news);
+  expect(reads).toBe(2);
+  await state.say('account 3');
+  await expect.poll(() => reads).toBe(3);
+  expect(state.errors).toEqual([]);
 });
 
 test('a player not on the ladder is told how to get on it, and the action opens a ranked table for another player', async ({ page }) => {

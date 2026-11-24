@@ -273,6 +273,20 @@ public sealed class AccountIdentitiesApiTests : IDisposable
 
         answer.Status.ShouldBe(503);
         Error(answer).ShouldBe("Account.ProviderUnavailable");
+        (answer.Headers ?? []).ShouldNotContain(header => header.Key == "Retry-After");
+    }
+
+    [Fact]
+    public async Task A_provider_busy_for_a_moment_says_how_long_to_wait_before_adding_it_again()
+    {
+        var api = await ApiAsync(new Unreachable("other") { RetryAfter = TimeSpan.FromSeconds(2) });
+        var session = await MarkSignedInAsync(api);
+
+        var answer = await api.HandleAsync("POST", Route + "/other", Proof("x"), Signed(session));
+
+        answer.Status.ShouldBe(503);
+        Error(answer).ShouldBe("Account.ProviderUnavailable");
+        answer.Headers!.Single(header => header.Key == "Retry-After").Value.ShouldBe("2");
     }
 
     [Fact]
@@ -450,8 +464,11 @@ public sealed class AccountIdentitiesApiTests : IDisposable
 
         public string? ClientId => null;
 
+        /// <summary>How soon it says to come back, as a provider whose places at once are all taken.</summary>
+        public TimeSpan? RetryAfter { get; init; }
+
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
-            throw new SignInUnavailableException("out of reach");
+            throw new SignInUnavailableException("out of reach") { RetryAfter = RetryAfter };
     }
 
     private sealed class FixedClock(DateTimeOffset start) : TimeProvider

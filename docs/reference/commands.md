@@ -663,13 +663,17 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   over http. Discord or Microsoft out of service, slow, rate-limiting or refusing the app itself (`invalid_client`,
   `unauthorized_client`) is `503 Account.ProviderUnavailable` and a line of its own,
   `Sign-in unavailable (<provider>): <why>.`, once a minute; the host asks each at most 30 times a minute, 4 at once,
-  and not at all until a 429's `Retry-After` has passed. `POST /api/account/<provider>` is checked by network
-  address before the provider is asked: five sign-ins a minute its provider does not vouch for (thirty for the /64s
-  of one IPv6 /48), twenty people vouched for, eight checked at once; past that it is answered
+  and not at all until a 429's `Retry-After` has passed. A sign-in refused because 4 exchanges are already under way
+  carries `Retry-After: 2`. After that 503, or a 429 whose `Retry-After` is 5 seconds or less, the return page posts
+  the same code once more, up to a second later than asked (#1204).
+  `POST /api/account/<provider>` is checked by network address before the provider is asked: five sign-ins a minute
+  its provider does not vouch for (thirty for the /64s of one IPv6 /48), twenty people vouched for, eight checked at
+  once; past that it is answered
   `429 Account.TooManySignIns` with `Retry-After` (#1193, `table/README.md`). The host
   writes its sign-in counts as one console line a minute per provider, and when it stops,
   `Sign-ins (<provider>): … started, … finished, … refused, … unavailable, … limited.`, which the ops report sums
-  (#1171). A code is used once: a second post of the same code is refused. A client
+  (#1171). A sign-in the return page posted again after a short refusal counts as started twice, and its first post
+  as unavailable or limited (#1204). A code is used once: a second post of the same code is refused. A client
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):

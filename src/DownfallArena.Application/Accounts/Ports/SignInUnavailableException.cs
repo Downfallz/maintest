@@ -28,4 +28,11 @@ public sealed class SignInUnavailableException : Exception
     /// answering 503: otherwise one address could spend the budget of every player without its count rising.
     /// </summary>
     public bool ProviderAnswered { get; init; }
+
+    /// <summary>
+    /// How soon the same proof may be posted again, when the provider was never asked and only the host's own limit
+    /// stood in the way for a moment: the route says it as <c>Retry-After</c>, and the return page waits it out once
+    /// (#1204). Null when nothing says the wait is short.
+    /// </summary>
+    public TimeSpan? RetryAfter { get; init; }
 }
