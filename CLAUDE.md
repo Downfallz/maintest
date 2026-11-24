@@ -20,8 +20,8 @@
   `playtest-app-architect` (the app ADR). Use them for their purpose instead of doing it all inline.
 - For how the battle looks in motion (`docs/art/battle-craft-plan.md`): `battle-designer` writes the storyboard of
   a spell, a move or the ground (`docs/art/storyboards/`) and reads its film strip against it; it writes no code.
-- For the promotion (`docs/art/promotion-plan.md`): `promo-producer` writes the words of a post, a cut's cards and a
-  brief's ask, in the showcase's voice and within each channel's limit; it films nothing.
+- For the promotion (`docs/art/promotion-plan.md`): `promo-producer` writes the words of a post and a cut's cards,
+  in the showcase's voice and within each channel's limit; it films nothing.
 - For how the pages look, read and move (`docs/art/ux-craft-plan.md`): `ux-designer` writes the brief of a journey,
   a screen at a time (`docs/art/journeys/`), and reads its contact sheet and measures against it; it writes no code.
 - Skills in `.claude/skills/`: the pipeline from an idea to a merged pull request

@@ -25,11 +25,15 @@ F=<the scratchpad directory>/promo && mkdir -p "$F"
 dotnet build && dotnet run --project tools/DownfallArena.DataBuilder -- data data/dst
 npm --prefix battle ci --ignore-scripts && npm --prefix battle run build
 npm --prefix studio/browser ci --ignore-scripts
+command -v ffmpeg ffprobe   # a film and a cut need both
 ```
+
+Without `ffmpeg` and `ffprobe` nothing is filmed: install them (`apt-get install -y ffmpeg`), or say so to the
+owner and stop.
 
 1. **Read the request.** Name each post it asks for: what it shows (a creature, a spell, a moment), its ratio
    (`9:16` for the vertical feeds, `16:9`, `1:1`), how long, its channels (among the launch's seven), its day.
-   A day the owner did not give is the calendar's next free day, never one before today, Montreal's day. A
+   A day the owner did not give is the first day with no file under `promo/calendar/`, never one before today, Montreal's day. A
    request that needs gameplay made from a prompt alone, or a channel off the launch's list, is refused and said
    why (ADR 0205, the plan's question 5). Ask the owner (AskUserQuestion) only what changes what is filmed.
 
@@ -38,13 +42,15 @@ npm --prefix studio/browser ci --ignore-scripts
    moment no scenario holds is cut first, from a match of two bots, reading the rounds it offers before choosing:
 
    ```bash
-   dotnet run --project src/DownfallArena.Cli -- scenario-generate --p1 greedy --p2 greedy --seed <N> --format 1v1
-   dotnet run --project src/DownfallArena.Cli -- scenario-generate --p1 greedy --p2 greedy --seed <N> --format 1v1 --round <N> --out scenarios/<name>.json
-   dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario scenarios/<name>.json --trace
+   dotnet run --project src/DownfallArena.Cli -- scenario-generate --p1 greedy --p2 greedy --seed <N> --format <format>
+   dotnet run --project src/DownfallArena.Cli -- scenario-generate --p1 greedy --p2 greedy --seed <N> --format <format> --round <N> --out "$F/try.json"
+   dotnet run --project src/DownfallArena.Cli -- scenario-check --scenario "$F/try.json" --trace
    ```
 
-   The trace shows the creatures at the cut: keep a seed whose field holds the creature the request names, and
-   name the file after what it shows (55 characters at most, never `tutorial-` or `bug-`).
+   `<format>` is the one the request shows (`1v1`, `2v2` or `3v3`). Each try is written in `$F`, never under
+   `scenarios/`, where a file becomes a listed scenario and a test. The trace shows the creatures at the cut: keep a
+   seed whose field holds the creature the request names, and move only that file to `scenarios/`, named after
+   what it shows (55 characters at most, never `tutorial-` or `bug-`).
 
 3. **Film them**, each shot at each ratio a post needs, then look at each sheet yourself (the Read tool reads a
    PNG): the creature is there, the spell is cast, nothing covers it.
@@ -80,8 +86,7 @@ npm --prefix studio/browser ci --ignore-scripts
    waits for that intake: it is not in this batch's calendar.
 
 6. **The words.** Give the `promo-producer` the request, the files to fill (each post under `promo/calendar/`,
-   `draft`, its channels and media written; the cut's cards; the brief's `ask` if you did not take the owner's own
-   words), each shot's title, the spells each film casts, and the paths of the sheets. Read what it wrote against
+   `draft`, its channels and media written; the cut's cards; never the brief's `ask`, which is the owner's own words), each shot's title, the spells each film casts, and the paths of the sheets. Read what it wrote against
    the sheets: a caption that names what the stretch does not show is rewritten. Then check and assemble the cut
    (step 4), and look at its cards: a caption covers no creature's name.
 
@@ -100,17 +105,20 @@ npm --prefix studio/browser ci --ignore-scripts
    a captioned frame a stretch and the end card, the still, the brief's prompt and its reference frames. Load the `artifact-design` skill, and take the
    page's colours and type from `docs/art/branding.css` (slate ground, bone words, one gold accent, Marcellus for
    titles only). Write the page in `$F`, and publish it with the `Artifact` tool, the pictures as its files. One page a batch, updated
-   in place when the batch is filmed again. The films stay in `$F` and `artifacts/promo/`: they are not committed.
+   in place when the batch is filmed again. Each cut's MP4, one a language, is a file of the page too: until a
+   workflow writes cuts to the `promo` container, the page is where the owner takes a cut from. The films stay in
+   `$F` and `artifacts/promo/`: they are not committed.
 
 9. **`/ship`.** The pull request names each post, the page's link, and what waits for the owner: a brief's pack to
-   generate, a choice the batch could not make. Merging it approves the posts: a session then sets each one to
-   `approved`.
+   generate, a choice the batch could not make. Merging it approves the posts; the next batch's pull request sets
+   the merged batch's posts to `approved` (P7's checklist will do it).
 
 ## After the merge
 
-The films a post shows are written to the `promo` container from `main` only, by the owner's workflow (ADR 0206).
-Give the owner a numbered step a shot, the way through GitHub on a phone: *Actions*, *Film a promotion shot*,
-*Run workflow*, the branch `main`, the shot's file and its ratio. Its summary gives the lines of `promo/media.json`
+The workflow writes to the `promo` container from `main` only (ADR 0206), and it writes a shot's film and sheet,
+not a cut: a post whose media is `cut <cut>` is taken from the contact sheet page (step 8). For each new shot and
+each ratio a post shows as `film` or `still`, give the owner one numbered step, the way through GitHub on a phone:
+*Actions*, *Film a promotion shot*, *Run workflow*, the branch `main`, the shot's file and the ratio. Its summary gives the lines of `promo/media.json`
 that a session adds in a pull request of its own (`node scripts/promo/media.mjs` checks them).
 
 ## Rules

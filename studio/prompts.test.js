@@ -197,6 +197,13 @@ test('promo films, cuts, briefs and checks with the promotion scripts, and has t
   assert.match(promo, /Nothing is posted from here/);
   assert.match(promo, /No post is published, scheduled or sent from a session/);
   assert.match(promo, /`\/ship`/);
+  // The workflow writes a shot's film and sheet, not a cut: the cut reaches the owner on the contact sheet page.
+  const workflow = readFileSync(join(root, '.github/workflows/promo-film.yml'), 'utf8');
+  assert.doesNotMatch(workflow, /cut\.mjs/);
+  assert.match(promo, /Each cut's MP4, one a language, is a file of the page too/);
+  assert.match(promo, /For each new shot and\s+each ratio/);
+  // A scenario tried is written outside scenarios/, where every file is a listed scenario and a test.
+  assert.doesNotMatch(promo, /--out scenarios\//);
 });
 
 test('the promo producer counts against the limits the scripts hold, and writes only the words', async () => {
@@ -208,9 +215,16 @@ test('the promo producer counts against the limits the scripts hold, and writes 
   assert.match(producer, /`CARD_LIMITS` in `scripts\/promo\/cut\.mjs`/);
   assert.match(producer, /`showcase\/copy\.mjs` \(the voice/);
   assert.match(producer, /`docs\/domain\/player-\w+\.md` \(the words a player\s+reads/);
-  assert.match(producer, /write the words of the files you are given under `promo\/cuts\/`, `promo\/briefs\/` and `promo\/calendar\/`, and nothing\s+else/);
-  // Each channel the producer names with a limit is one the calendar declares.
-  for (const [, channel] of producer.matchAll(/when `([a-z-]+)` is (?:a channel|one)/g)) {
-    assert.ok(Object.hasOwn(CHANNELS, channel), channel);
+  assert.match(producer, /write the words of the files you are given under `promo\/cuts\/` and `promo\/calendar\/`, and nothing\s+else/);
+  // Each limit the producer gives is the one the calendar holds for that channel, and the card's at 9:16.
+  const limits = [...producer.matchAll(/(\d+) when `([a-z-]+)`(?: or `([a-z-]+)`)? is/g)];
+  assert.ok(limits.length >= 3, 'the producer gives the channels\' limits');
+  for (const [, limit, ...channels] of limits) {
+    for (const channel of channels.filter(Boolean)) assert.equal(CHANNELS[channel]?.limit, Number(limit), channel);
   }
+  const card = /at\s+9:16 a title holds (\d+) and a caption (\d+)/.exec(producer);
+  assert.ok(card, 'the producer gives the cards\' limits at 9:16');
+  assert.deepEqual([Number(card[1]), Number(card[2])], [CARD_LIMITS.title['9:16'], CARD_LIMITS.caption['9:16']]);
+  // The producer writes no brief's ask: it is the owner's words (promo/README.md#a-brief).
+  assert.match(producer, /`ask` is the owner's own words/);
 });
