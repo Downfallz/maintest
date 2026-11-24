@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, waitsOnAPerson, latestFinished, seatPushSource } from './lobby.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { reachedModules } from '../scripts/module-imports.mjs';
 import { activateSeats, forget, heldSeats, savedSeats, selectTableSeats } from './session.js';
 
 function storage() {
@@ -414,4 +417,23 @@ test('a table\'s action is named by its visible words first, then the battle, wh
 
 test('an empty ladder or statistics page opens a ranked table for another player', () => {
   assert.deepEqual(rematchRequest('?rematch=person'), { opponent: 'person', friend: null, format: null, ranked: true });
+});
+
+// The home's text waits for every module lobby.js reaches: the page asks for all of them at once, not one level of
+// imports after the other, which cost a new player's home its paint budget on the slow phone (#1207). motion.js
+// is loaded by its own script.
+test('the lobby page preloads every module lobby.js reaches, and nothing else', () => {
+  const folder = fileURLToPath(new URL('.', import.meta.url));
+  const page = readFileSync(new URL('./lobby.html', import.meta.url), 'utf8');
+  // Every <link> whose rel names modulepreload, whatever the order of its attributes; one with no href is refused.
+  const links = [...page.matchAll(/<link\b[^>]*>/g)].map(found => found[0]).filter(tag => /\brel="[^"]*\bmodulepreload\b/.test(tag));
+  const preloaded = links.map(tag => {
+    const href = /\bhref="([^"]+)"/.exec(tag);
+    assert.ok(href, `a preload names no module: ${tag}`);
+    return `/${href[1]}`;
+  });
+  assert.equal(new Set(preloaded).size, preloaded.length, 'a module is preloaded twice');
+  assert.equal(preloaded[0], '/lobby.js');
+  const reached = [...reachedModules(folder, ['lobby.js'])].filter(path => path !== '/motion.js');
+  assert.deepEqual([...preloaded].sort(), reached.sort());
 });
