@@ -49,6 +49,15 @@ test('an unsteady line, marked ~, is neither new when a walk finds it nor gone w
   assert.deepEqual(goneFindings([], known), ['320 a: spacing wide']);
 });
 
+test('the pages that load no sheet of the table keep the focus\'s ring under forced colours as identity.css does', () => {
+  const ring = /@media \(forced-colors: active\) \{\s*:focus-visible \{ ([^}]*) \}/;
+  const [table, showcase, offline] = ['../table/identity.css', '../showcase/showcase.css', '../table/offline.html']
+    .map(path => ring.exec(readFileSync(new URL(path, import.meta.url), 'utf8'))?.[1]);
+  assert.ok(table, 'identity.css keeps a ring under forced colours');
+  assert.equal(showcase, table, 'the showcase writes the same ring');
+  assert.equal(offline, table, 'the offline page writes the same ring');
+});
+
 test('the list of what is known names journeys and screens that exist, at the two widths, and never axe', () => {
   const known = JSON.parse(readFileSync(new URL('../scripts/ux/access-known.json', import.meta.url), 'utf8'));
   for (const [journey, lines] of Object.entries(known)) {

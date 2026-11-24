@@ -878,8 +878,8 @@ read in [the Recommendation](https://www.w3.org/TR/WCAG22/) and in
 - **Here**: the flash guard (`scripts/ux/flash.mjs`, UX13) films every window a strip shows entering and holds it
   to three flashes a second; the brightest is named in the test's report. Each cell of the screen is read against
   its running extreme since its last change, not the frame before, so a ramp whose steps are each under 10% still
-  counts once it adds up; the screen flashes when a quarter of its cells do. Inside the canvas, the battle craft's book has its
-  own entry.
+  counts once it adds up; the screen flashes when a quarter of its cells do. Inside the canvas, the battle craft's
+  book has its own entry.
 
 ### What moves can be stopped
 

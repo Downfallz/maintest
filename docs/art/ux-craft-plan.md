@@ -761,42 +761,46 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     window. What stays for a person is listed for the owner. Tests: these.
 
     *Built (2026-11-24)*: `studio/browser/table.access.js`, a real-engine journey, walks the six journeys at 320 by
-    568 and 390 by 844 and checks every screen (`scripts/ux/access.mjs`). axe on the rules of WCAG 2.2 AA, held to
-    none. Under more contrast, axe's rule of 7:1. Under forced colours, an icon or a state lost, and a page with no rule that keeps the focus's ring (the check reads
-    the sheets and never moves the focus, which a walk's page answers). With
-    the text spaced as WCAG 1.4.12 asks, then at 200%: a word cut, a page that scrolls sideways, two controls on top
-    of each other. The walk's measures are unchanged; the checks ride beside them. A fixture page holds that each
-    check finds its fault. The tag `wcag22aa` turns axe's target-size rule on (the craft book, "What a test can see").
+    568 and 390 by 844 and checks every screen (`scripts/ux/access.mjs`). axe runs on the rules of WCAG 2.2 AA and is
+    held to none. Under more contrast, axe runs its rule of 7:1. Under forced colours, the check flags an icon or a
+    state lost, and a page with no rule that keeps a ring for the focus. It reads the sheets and never moves the
+    focus, since a walk's page reacts to the focus; so it sees a page with no such rule, not a ring one control loses
+    to a rule of its own. With the text spaced as WCAG 1.4.12 asks, then at 200%, it flags a word cut, a page that
+    scrolls sideways, and two controls on top of each other. The walk's measures are unchanged; the checks ride
+    beside them. A fixture page holds that each check finds its fault. The tag `wcag22aa` turns axe's target-size
+    rule on (the craft book, "What a test can see").
 
-    Fixed here: the last finding of axe, `label-content-name-mismatch`, on the bell (named by its drawn count first,
-    `bellName` in `table/inbox.js`) and on the result's creatures (named by their words, `battle/src/match.ts`); the 14
-    findings under 7:1 under more contrast (`--muted` becomes the ink, and three shades of the battle and the
-    statistics); under forced colours, a ring in Highlight for every focus and an underline for a control in a state
-    (`table/identity.css`, `showcase/showcase.css`), where 18 rings and 23 states were lost.
+    Fixed: the last finding of axe, `label-content-name-mismatch`, on the bell (named by its drawn count first,
+    `bellName` in `table/inbox.js`) and on the result's creatures (named by their words, `battle/src/match.ts`; the
+    zoom's way back names the creature from `data-name`). The 14 findings below 7:1 under more contrast: `--muted`
+    takes the ink's colour, and three shades of the battle and the statistics take it too. Under forced colours, a
+    ring in Highlight for every focus and an underline for a control in a state (`table/identity.css`,
+    `showcase/showcase.css`). 18 rings and 23 states were lost. The offline page loads no sheet of the table, so it
+    writes the same ring itself, and the worker's cache is renamed so an installed worker takes the new page.
 
     `studio/browser/battle.keyboard.js` plays round 1 on the real engine by Tab and Enter alone: Upkeep, the mutation,
     the ties, the tempos, the order, each cast and its targets, each result read. Every action the round resolved is
-    told in `#playback-announcement`, and no other live region says it again. `studio/browser/keys.js` is the press
-    by keyboard both it and `battle-parity.spec.js` use.
+    told in `#playback-announcement`, and no other live region repeats it. `studio/browser/keys.js` is the key-press
+    helper it and `battle-parity.spec.js` share.
 
-    The flash guard, `scripts/ux/flash.mjs` (WCAG 2.3.1: a pair of opposing changes of 10% of luminance, the darker
-    under 0.8, over a quarter of the screen), reads each cell against its running extreme since its last change, so
-    a ramp of small steps counts once it adds up, and films the windows a strip shows entering: the menu, Create and the
-    match's Settings, 30 frames 40 ms apart. None flashes. The brightest is the menu, at a mean luminance of 0.049:
-    every window is dark. `studio/ux-flash.test.js` holds the thresholds; `studio/ux-access.test.js` the lines and the list.
+    The flash guard is `scripts/ux/flash.mjs`. It counts a flash as WCAG 2.3.1 does: a pair of opposing changes of
+    10% of luminance, the darker under 0.8, over a quarter of the screen. It reads each cell against its running
+    extreme since its last change, so a ramp of small steps counts once it adds up. It films the windows the film
+    strips show opening (the menu, Create and the match's Settings), 30 frames 40 ms apart. None flashes. The brightest
+    is the menu, at a mean luminance of 0.049: every window is dark. `studio/ux-flash.test.js` holds the thresholds;
+    `studio/ux-access.test.js` the lines and the list.
 
-    Left, in `scripts/ux/access-known.json`, a journey's list each: what the checks found and this stage did not fix,
-    495 lines read without an element's place among its siblings. A finding not in the list fails the journey, and so
-    does one the list holds and the walk no longer finds (`goneFindings`): the list is cut in the change that fixes
-    it, so a finding that comes back is new again. 28 of the lines are marked `~ `, unsteady: three walks of one
-    tree, and the session that wrote the list, did not all find them (a creature on the field, a coach's card or the
-    order of play placed a frame sooner or later, all overlaps or cuts under 200% and spacing). They are never new and
-    never gone; the other 467 hold both ways. The offline page lost its ring under forced colours: it loads no sheet
-    of the table, so it now writes the rule itself.
-    axe is never in it. What it holds:
-    - Text at 200% and spaced, in the match's frame and windows and in the lessons: 359 pairs of controls on top of each
-      other and 44 boxes that cut their words. The frame is laid out for 11 px words at 320 px; doubled, the bar's buttons meet the
-      order of play. A later stage of the frame, or a choice of the owner (a floor for 200% in the battle).
+    Not fixed: each journey has a list in `scripts/ux/access-known.json` of what the checks found and this stage did
+    not fix, 495 lines in all. A line names the finding without the element's place among its siblings. A finding not
+    in the list fails the journey, and so does a line the walk no longer finds (`goneFindings`): the change that fixes
+    a finding removes its line, so a finding that returns fails again. 28 lines are marked `~ ` (unsteady): three
+    walks of the same tree, and the session that wrote the list, did not all find them. A creature on the field, a
+    coach's card or the order of play lands a frame sooner or later, so these overlaps and cuts come and go. They never
+    fail the walk; the other 467 hold both ways. axe findings are never in the list. It holds:
+    - Text at 200% and spaced: 365 pairs of controls on top of each other (339 steady) and 46 boxes that cut their
+      words (44 steady). Most are in the match's frame (148), its windows (124) and the lessons (100), the rest in the
+      lobby (38) and the pages (1). The frame is laid out for small words at 320 px; doubled, the bar's buttons meet
+      the order of play. A later stage of the frame decides, or the owner does (a floor for 200% in the battle).
     - Under forced colours, 83 controls whose icon keeps its own colour: the creatures on the field, the order of play,
       the spell cards (their portraits and health bars are drawn in colours that carry the team). Repainting them would
       lose the team; `forced-color-adjust` on them is a choice for the frame's stage.

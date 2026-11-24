@@ -47,6 +47,7 @@ const portrait = (fighter: Fighter) => {
 function zoomable(fighter: Fighter, className: string) {
   const button = document.createElement('button'); button.type = 'button'; button.className = `${className} match-zoom-open`;
   button.dataset.form = fighter.form || 'base-creature'; button.dataset.art = artOf(fighter); button.dataset.figure = figureOf(fighter); button.dataset.side = fighter.side; button.dataset.defeated = String(!fighter.alive);
+  button.dataset.name = fighter.name;
   return button;
 }
 const figure = (value: number, small = '') => {
@@ -187,7 +188,7 @@ export function matchControls(controller: Controller, beforeOpen: () => void, re
       image.src = art;
     }
     picture.dataset.side = open.dataset.side ?? 'ally'; picture.dataset.defeated = open.dataset.defeated ?? 'false';
-    picture.setAttribute('aria-label', `Back to the battle report from ${open.getAttribute('aria-label')?.replace(/^Show | large$/g, '') ?? 'the creature'}`);
+    picture.setAttribute('aria-label', `Back to the battle report from ${open.dataset.name ?? 'the creature'}`);
     zoomedFrom = open; zoom.hidden = false; picture.focus({ preventScroll: true });
   });
   picture.addEventListener('click', () => unzoom());

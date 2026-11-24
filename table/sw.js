@@ -5,7 +5,7 @@
 // plate, and the rulebook (ADR 0191), given only when the network cannot answer.
 
 const OFFLINE = '/offline.html';
-const CACHE = 'downfall-offline-v2';
+const CACHE = 'downfall-offline-v3';
 
 // The rulebook's page and everything it loads besides the menu, which it draws without: kept at install and refreshed
 // each time the network answers, so the rules a player last read can be read again with no network. Only a path whose

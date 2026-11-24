@@ -5,8 +5,8 @@ import { keyboardActivate } from './keys.js';
 
 // A whole turn by keyboard on the real engine, told in one live region (docs/art/ux-craft-plan.md, UX13). A
 // returning player, tips muted, plays round 1 from its Upkeep to the next round's: the mutation, the team's tempos,
-// the order, each cast and its targets, and every result read, each by Tab and Enter alone. Nothing is clicked and
-// no control is focused by script. What each resolved action did is said in `#playback-announcement`, and no other
+// the order, each cast and its targets, and every result read, each by Tab and Enter alone. Past the invitation's door,
+// where the seat is taken, nothing is clicked and no control is focused by script. What each resolved action did is said in `#playback-announcement`, and no other
 // live region says it again.
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(() => {
@@ -25,8 +25,10 @@ function listen() {
   const read = () => {
     for (const region of regions()) {
       const text = region.textContent.replace(/\s+/g, ' ').trim();
-      if (!text || last.get(region) === text) continue;
-      last.set(region, text);
+      // A region says the same words again for another action: the action is what is new, not the words.
+      const said = `${text}\u0000${document.getElementById('battle')?.dataset.sequence ?? ''}`;
+      if (!text || last.get(region) === said) continue;
+      last.set(region, said);
       window.liveSaid.push({ region: region.id || region.className || region.tagName, text, sequence: Number(document.getElementById('battle')?.dataset.sequence ?? NaN) });
     }
   };
@@ -113,7 +115,7 @@ test('a whole round is played by keyboard and each action is told in one live re
     const told = said.filter(one => one.region === 'playback-announcement');
     expect(told.length, 'the round was told in #playback-announcement').toBeGreaterThan(0);
     for (const one of told) {
-      const elsewhere = said.filter(other => other.region !== 'playback-announcement' && other.text === one.text);
+      const elsewhere = said.filter(other => other.region !== 'playback-announcement' && other.text.includes(one.text));
       expect(elsewhere, `"${one.text}" is told once`).toEqual([]);
     }
     for (const [sequence] of actions) {

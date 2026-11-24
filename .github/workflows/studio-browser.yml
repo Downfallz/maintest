@@ -191,8 +191,8 @@ jobs:
     env:
       ENGINE: chromium
     # The checks of accessibility (table.access.js, UX13) walk every journey at two widths: about eight minutes a
-    # project on top of the twelve the job took before them.
-    timeout-minutes: 35
+    # project on top of the twelve the job took before them, and room for a retry of the lessons' five.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:

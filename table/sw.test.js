@@ -256,7 +256,7 @@ function offlineWorker({ network, cached = 'offline page', kept = {} }) {
       keys: async () => [...store.keys()].map(path => ({ url: `https://table.example${path}` })),
       delete: async request => store.delete(new URL(request.url).pathname),
     }),
-    keys: async () => ['downfall-offline-v0', 'downfall-offline-v1', 'downfall-offline-v2'],
+    keys: async () => ['downfall-offline-v0', 'downfall-offline-v1', 'downfall-offline-v2', 'downfall-offline-v3'],
     delete: async name => { deleted.push(name); return true; },
   };
   const handlers = {};
@@ -622,7 +622,7 @@ test('activating keeps only the worker\'s own cache', async () => {
   w.handlers.activate({ waitUntil: promise => { waited = promise; } });
   await waited;
 
-  assert.deepEqual(w.deleted, ['downfall-offline-v0', 'downfall-offline-v1']);
+  assert.deepEqual(w.deleted, ['downfall-offline-v0', 'downfall-offline-v1', 'downfall-offline-v2']);
 });
 
 test('a focused window on the lobby does not stand in for the notice: only the game does', async () => {

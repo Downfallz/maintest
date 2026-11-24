@@ -159,6 +159,7 @@ test('a creature of the report shows its illustration large, as the inspection d
   await expect(fallen).toHaveAccessibleName('Creature 3 fallen show large');
   await fallen.click();
   await expect(zoom).toBeVisible(); await expect(picture).toBeFocused();
+  await expect(picture).toHaveAccessibleName('Back to the battle report from Creature 3');
   await expect(picture).toHaveAttribute('data-defeated', 'true');
   // The illustration its mutations gave it, once loaded (the base one here, none bought).
   await expect.poll(() => picture.evaluate(one => one.style.backgroundImage)).toContain('battle-art/evolutions/base-creature.webp');
@@ -168,6 +169,7 @@ test('a creature of the report shows its illustration large, as the inspection d
   // The creature of the match zooms from its portrait; a tap on the picture gives the report back.
   await page.locator('#match-mvp .match-zoom-open').click();
   await expect(picture).toHaveAttribute('data-side', 'ally'); await expect(picture).toHaveAttribute('data-defeated', 'false');
+  await expect(picture).toHaveAccessibleName(/^Back to the battle report from \S/);
   await picture.click();
   await expect(zoom).toBeHidden(); await expect(page.locator('#match-dialog')).toBeVisible();
 });
