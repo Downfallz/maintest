@@ -249,9 +249,11 @@ and 4. The recommended answer:
    - The count: `GuestMaking`, ten an hour per address (an IPv6 /64) and three hundred an hour in all, held in
      memory and hashed, `429 Account.TooManyGuests`. Closed registration makes none.
    - The lifetime: `table-tend` (`IdleGuests`) removes a guest last used 31 days ago, the session's thirty days plus
-     one day, with its binding, name, settings, tutorials and activity; the panel's *Run now* pass as well (#1225).
+     one day, with its binding, name, settings, tutorials and activity. The panel's *Run now* pass removes it too
+     (#1225).
    - Left: the journey (UX15), and what a guest's lobby page shows when its routes answer 403; feedback from a
-     lesson (the hourly job would have to remove a guest's feedback); a guest who signs in to an account it already has loses the guest's tutorial progress.
+     lesson (the hourly job would have to remove a guest's feedback); and a guest who signs in to an account it
+     already has loses its tutorial progress.
 6. **P6, Microsoft.** `MicrosoftSignIn` (personal accounts, PKCE, no secret), as P3, with `microsoftClientId`
    and the owner's steps in `infra/README.md`.
 

@@ -347,7 +347,7 @@ internal static class TableHost
     {
         public IChangeRelay? Relay { get; init; }
 
-        /// <summary>Where a variable a flag stands in for is read: the process's environment unless a test gives its own.</summary>
+        /// <summary>Where the sign-in providers' client ids are read without their flags: the process's environment unless a test gives its own.</summary>
         public Func<string, string?> Variables { get; init; } = Environment.GetEnvironmentVariable;
     }
 
@@ -370,7 +370,11 @@ internal static class TableHost
     }
 
     /// <summary>The accounts' side of a host that signs players in: the accounts, the door every notice goes through, friends and players.</summary>
-    private sealed record SignedInParts(AccountApi Api, IAccountStore Store, AccountNotifier Notifier, Friends Friendships, FriendsApi Friends, PlayerDirectory Directory, PlayersApi Players);
+    private sealed record SignedInParts(AccountApi Api, IAccountStore Store, AccountNotifier Notifier, Friends Friendships, FriendsApi Friends, PlayerDirectory Directory, PlayersApi Players)
+    {
+        /// <summary>The store the activity log writes to, which the panel's pass reads the idle guests from (#1225).</summary>
+        public required IAccountActivityStore Activity { get; init; }
+    }
 
     /// <summary>The admin tabs' parts the server is built with too: the turns' queues, the notices' counts, feedback and notes.</summary>
     private sealed record Tabs(TurnQueues? Queues, NoticeCounts? NoticeCounts, FeedbackIndex? FeedbackIndex, FeedbackWrites FeedbackWrites, FeedbackMutes FeedbackMutes, OperatorNotes Notes)
@@ -500,7 +504,8 @@ internal static class TableHost
         accounts.ForgetFriends = id => friendships.ForgetAsync(id, CancellationToken.None);
         // When each account last signed in and was last seen (ADR 0174), beside the accounts too, and the
         // operator's list of players read from it, the accounts and the results.
-        accounts.Activity = new AccountActivityLog(await ArtifactStores.OpenActivityAsync(target, cancellationToken), clock);
+        var activity = await ArtifactStores.OpenActivityAsync(target, cancellationToken);
+        accounts.Activity = new AccountActivityLog(activity, clock);
         // The host's settings (ADR 0177), beside the accounts too: who may make an account, and the notice.
         accounts.Settings = new HostSettingsCache(await ArtifactStores.OpenHostSettingsAsync(target, cancellationToken), clock);
         var directory = new PlayerDirectory(store, accounts.Activity, tables.Results, clock);
@@ -511,7 +516,7 @@ internal static class TableHost
             // The operator's: the bot's own name, and the level a player knows it by (ADR 0180).
             BotNamed = spec => levels.OperatorName(spec, LobbyApi.BotName(agents.FirstOrDefault(agent => string.Equals(agent.Value, spec, StringComparison.OrdinalIgnoreCase))?.Label ?? spec)),
         };
-        return new SignedInParts(accounts, store, notifier, friendships, friends, directory, players);
+        return new SignedInParts(accounts, store, notifier, friendships, friends, directory, players) { Activity = activity };
     }
 
     /// <summary>
@@ -637,7 +642,7 @@ internal static class TableHost
             // cache needs nothing: a guest that old was last read far longer ago than the cache keeps an account.
             Guests = signedIn is null
                 ? null
-                : new IdleGuests(signedIn.Store, await ArtifactStores.OpenActivityAsync(tables.Target, cancellationToken), signedIn.Api.Preferences, clock),
+                : new IdleGuests(signedIn.Store, signedIn.Activity, signedIn.Api.Preferences, clock),
         };
         admin.Jobs = new JobsApi(tendLog, clock, async (now, progress) =>
         {

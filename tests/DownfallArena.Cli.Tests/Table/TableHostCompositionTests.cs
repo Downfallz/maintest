@@ -554,7 +554,7 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
     /// <summary>
     /// The panel's "Run now" removes the guests unused for a month (ADR 0207, #1225), as the hourly job does: the
     /// pass is built here and not in <c>TableTend.ComposeAsync</c>, so leaving its guests out went unseen. A guest made
-    /// through the host's own route goes; a player's account, as old, stays.
+    /// through the host's own route goes, with its game settings and its activity; a player's account, as old, stays.
     /// </summary>
     [Fact]
     public async Task A_pass_run_from_the_panel_removes_the_guests_unused_for_a_month()
@@ -566,14 +566,22 @@ public sealed class TableHostCompositionTests : IAsyncDisposable
         var made = await host.Accounts!.HandleAsync("POST", AccountApi.GuestRoute, "", new AccountRequest(null, Secure: true, "203.0.113.7"));
         made.Status.ShouldBe(200);
         var guest = AccountId.Parse(Json(made).GetProperty("account").GetProperty("id").GetString()!);
+        var session = made.Headers!.Single(header => header.Key == "Set-Cookie").Value.Split(';')[0][(AccountSessions.Cookie.Length + 1)..];
+        (await host.Accounts.HandleAsync("PUT", "/api/account/preferences", """{"pace":"auto","speed":1.5,"help":false,"reducedMotion":true,"reactions":false}""", Signed(session))).Status.ShouldBe(200);
+        var target = Path.Combine(_root, "playtest");
+        var (preferences, activity) = (await ArtifactStores.OpenPreferencesAsync(target, Cancel), await ArtifactStores.OpenActivityAsync(target, Cancel));
+        (await preferences.GetAsync(guest, Cancel)).ShouldNotBeNull();
+        (await activity.FindAsync(guest, Cancel)).ShouldNotBeNull();
         clock.Advance(IdleGuests.KeptFor + TimeSpan.FromDays(1));
 
         var pass = await host.Admin.Jobs!.HandleAsync("POST", JobsApi.TendRoute, null, "op");
 
         pass.Status.ShouldBe(200);
-        var accounts = await ArtifactStores.OpenAccountsAsync(Path.Combine(_root, "playtest"), Cancel);
+        var accounts = await ArtifactStores.OpenAccountsAsync(target, Cancel);
         (await accounts.FindAsync(guest, Cancel)).ShouldBeNull();
         (await accounts.FindAsync(mark.Id, Cancel)).ShouldNotBeNull();
+        (await preferences.GetAsync(guest, Cancel)).ShouldBeNull();
+        (await activity.FindAsync(guest, Cancel)).ShouldBeNull();
     }
 
     /// <summary>
