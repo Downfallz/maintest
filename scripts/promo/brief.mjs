@@ -29,18 +29,26 @@ export const GENERATED_FORMAT = 'downfall.promo.generated.v1';
 export const KINDS = Object.freeze({
   'key-art': 'Make a painted key art of the moment the reference frames show. It is for the game\'s launch and its store banners.',
   background: 'Make a painted background in the world of the reference frames, with no creature in it. Words and cards will sit on it.',
-  transition: 'Make a short painted transition between two moments of the reference frames, for a clip to pass from one to the other.',
+  transition: 'Make a short painted transition from the first reference frame to the last, for a clip to pass from one moment to the other: one picture, or a few seconds of video.',
   'styled-still': 'Repaint the reference frame: the same creatures, poses and places, in a richer painted finish.',
   thumbnail: 'Make a thumbnail for a clip: the moment of the reference frames, read at a glance on a phone.',
   'restyled-clip': 'Restyle the reference clip, video to video: keep every creature, move, cut and timing, and repaint only the look.',
 });
 
-/** The kinds of file a generated part comes back as, by how its bytes start, and the extension it is kept under. */
+/** What each kind comes back as: a picture, a video, or either for a transition. */
+const PICTURES = Object.freeze(['png', 'jpg', 'webp']);
+export const RETURNS = Object.freeze(Object.fromEntries(Object.keys(KINDS).map(kind => [kind,
+  { 'restyled-clip': ['mp4'], transition: [...PICTURES, 'mp4'] }[kind] ?? PICTURES])));
+
+// The brands an MP4 names after `ftyp`: HEIC, AVIF and QuickTime share the box and are not MP4.
+const MP4_BRANDS = new Set(['isom', 'iso2', 'iso4', 'iso5', 'iso6', 'mp41', 'mp42', 'avc1', 'dash', 'M4V ']);
+
+/** The kinds of file a generated part comes back as, by how its bytes start. */
 const TYPES = Object.freeze([
   { type: 'png', test: bytes => bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
   { type: 'jpg', test: bytes => bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff])) },
   { type: 'webp', test: bytes => bytes.subarray(0, 4).toString('latin1') === 'RIFF' && bytes.subarray(8, 12).toString('latin1') === 'WEBP' },
-  { type: 'mp4', test: bytes => bytes.subarray(4, 8).toString('latin1') === 'ftyp' },
+  { type: 'mp4', test: bytes => bytes.subarray(4, 8).toString('latin1') === 'ftyp' && MP4_BRANDS.has(bytes.subarray(8, 12).toString('latin1')) },
 ]);
 
 const KEYS = new Set(['format', 'title', 'makes', 'shot', 'ratio', 'frames', 'clip', 'ask']);
@@ -48,31 +56,74 @@ const CLIP_KEYS = new Set(['start', 'seconds']);
 const RECORD_KEYS = ['brief', 'makes', 'shot', 'ratio', 'references', 'type', 'sha256', 'bytes', 'model', 'date', 'prompt', 'blob'];
 
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isText = value => typeof value === 'string' && value.trim() !== '';
+const isHash = value => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 const listed = keys => keys.map(key => JSON.stringify(key)).join(', ');
+const sameKeys = (object, keys) => Object.keys(object).sort((a, b) => a.localeCompare(b)).join() === [...keys].sort((a, b) => a.localeCompare(b)).join();
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
+const isName = value => typeof value === 'string' && NAME.test(value);
 
 /** The brand's colours a painting may use: the grounds, the light and the accents, not the pages' surfaces and lines. */
 const PAINTED_COLOURS = Object.freeze(['--brand-slate', '--brand-soot', '--brand-bone', '--brand-ivory', '--brand-muted', '--brand-gold', '--brand-gold-bright', '--brand-ember']);
 const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
 const ORDINALS = Object.freeze(['the first', 'the second', 'the third', 'the fourth']);
+const COUNTS = Object.freeze(['', 'one', 'two', 'three', 'four', 'five', 'six']);
 
 /** A reference frame's file in the pack: `frame-6.50s.png`. */
 export const frameName = seconds => `frame-${seconds.toFixed(2)}s.png`;
 
-// A time in a film, in seconds, on one of its frames and inside it.
+// A time in a film, in seconds, on one of its frames.
 function onFrame(value, film, at, refuse) {
   const frames = value * film.fps;
   if (typeof value !== 'number' || value < 0 || Math.abs(frames - Math.round(frames)) > 1e-6) refuse(`${at} is a number of seconds from 0, on a frame of the film's ${film.fps} a second.`);
   return Math.round(frames);
 }
 
+// A brief's frames: one to four times of the shot's film, each on a frame and inside it, two at least for a transition.
+function readFrames(brief, shot, refuse) {
+  if (brief.frames === undefined) {
+    if (brief.makes === 'transition') refuse('a transition passes between two moments: "frames" names two of the shot\'s film at least.');
+    return [];
+  }
+  if (!shot.film) refuse(`"frames" are seconds of a film, and ${shot.name} has none: leave them out for its still.`);
+  if (!Array.isArray(brief.frames) || brief.frames.length === 0 || brief.frames.length > 4) refuse('"frames" lists one to four times, in seconds, of the shot\'s film.');
+  if (brief.makes === 'transition' && brief.frames.length < 2) refuse('a transition passes between two moments: "frames" names two of the shot\'s film at least.');
+  const last = shot.film.seconds * shot.film.fps;
+  const frames = brief.frames.map((seconds, index) => {
+    const at = `"frames"[${index}]`;
+    const frame = onFrame(seconds, shot.film, at, refuse);
+    if (frame >= last) refuse(`${at} is ${seconds} s, past the ${shot.film.seconds} s of ${shot.name}'s film.`);
+    return { seconds, frame, file: frameName(seconds) };
+  });
+  if (new Set(frames.map(one => one.frame)).size !== frames.length) refuse('"frames" names a frame twice.');
+  return frames;
+}
+
+// A restyled clip's stretch of the shot's film; nothing for another kind.
+function readClip(brief, shot, refuse) {
+  if (brief.makes !== 'restyled-clip') {
+    if (brief.clip !== undefined) refuse('"clip" is for a restyled clip only.');
+    return null;
+  }
+  if (!shot.film) refuse(`a restyled clip starts from a film, and ${shot.name} has none.`);
+  if (!isObject(brief.clip)) refuse('a restyled clip gives its "clip": the "start" and "seconds" of the shot\'s film it restyles.');
+  const extra = Object.keys(brief.clip).filter(key => !CLIP_KEYS.has(key));
+  if (extra.length) refuse(`unknown key ${listed(extra)} in "clip".`);
+  const start = brief.clip.start ?? 0;
+  const first = onFrame(start, shot.film, '"clip.start"', refuse);
+  const count = onFrame(brief.clip.seconds, shot.film, '"clip.seconds"', refuse);
+  if (count === 0) refuse('"clip.seconds" is over 0.');
+  if (start + brief.clip.seconds > shot.film.seconds) refuse(`"clip" keeps ${start} s to ${start + brief.clip.seconds} s of ${shot.name}, whose film lasts ${shot.film.seconds} s.`);
+  return { start, seconds: brief.clip.seconds, first, count, file: `clip-${brief.ratio.replace(':', 'x')}.mp4` };
+}
+
 /**
  * A brief's file, read and checked: refused when it names a kind a model may not make, a shot `promo/shots/` does
- * not hold or a ratio it is not taken at, frames past its film or on a shot never filmed, a restyled clip without
- * its stretch, or anything it does not know. Returns the brief with its name and its shot read.
+ * not hold or a ratio it is not taken at, frames past its film or on a shot never filmed, a transition with fewer
+ * than two frames, a restyled clip without its stretch, or anything it does not know. Returns the brief with its
+ * name and its shot read.
  */
 export function readBrief(path, { shots = join(root, 'promo/shots'), readOne = readShot } = {}) {
-  const name = basename(path, '.json');
   let brief;
   try {
     brief = JSON.parse(readFileSync(path, 'utf8'));
@@ -84,43 +135,17 @@ export function readBrief(path, { shots = join(root, 'promo/shots'), readOne = r
   if (brief.format !== BRIEF_FORMAT) refuse(`"format" is "${BRIEF_FORMAT}".`);
   const unknown = Object.keys(brief).filter(key => !KEYS.has(key));
   if (unknown.length) refuse(`unknown key ${listed(unknown)}.`);
-  if (typeof brief.title !== 'string' || !brief.title.trim()) refuse('"title" says what the brief asks for, for the person who picks it.');
+  if (!isText(brief.title)) refuse('"title" says what the brief asks for, for the person who picks it.');
   if (!Object.hasOwn(KINDS, brief.makes)) refuse(`"makes" is what a model may make (ADR 0205): one of ${Object.keys(KINDS).join(', ')}. Gameplay from a prompt alone is not one.`);
-  if (typeof brief.ask !== 'string' || !brief.ask.trim()) refuse('"ask" says, in a sentence or two, what the picture should be.');
-  if (typeof brief.shot !== 'string' || !NAME.test(brief.shot) || !existsSync(join(shots, `${brief.shot}.json`))) {
+  if (!isText(brief.ask)) refuse('"ask" says, in a sentence or two, what the picture should be.');
+  if (!isName(brief.shot) || !existsSync(join(shots, `${brief.shot}.json`))) {
     refuse(`"shot" names ${JSON.stringify(brief.shot)}, which promo/shots/ does not hold: a model starts from the game filmed.`);
   }
   const shot = readOne(join(shots, `${brief.shot}.json`));
   if (!shot.ratios.includes(brief.ratio)) refuse(`"ratio" is one of the shot's: ${shot.ratios.join(', ')}.`);
-
-  let frames = [];
-  if (brief.frames !== undefined) {
-    if (!shot.film) refuse(`"frames" are seconds of a film, and ${shot.name} has none: leave them out for its still.`);
-    if (!Array.isArray(brief.frames) || brief.frames.length === 0 || brief.frames.length > 4) refuse('"frames" lists one to four seconds of the shot\'s film.');
-    frames = brief.frames.map((seconds, index) => {
-      const at = `"frames"[${index}]`;
-      const frame = onFrame(seconds, shot.film, at, refuse);
-      if (frame >= shot.film.seconds * shot.film.fps) refuse(`${at} is ${seconds} s, past the ${shot.film.seconds} s of ${shot.name}'s film.`);
-      return { seconds, frame, file: frameName(seconds) };
-    });
-    if (new Set(frames.map(one => one.frame)).size !== frames.length) refuse('"frames" names a frame twice.');
-  }
-
-  let clip = null;
-  if (brief.makes === 'restyled-clip') {
-    if (!shot.film) refuse(`a restyled clip starts from a film, and ${shot.name} has none.`);
-    if (!isObject(brief.clip)) refuse('a restyled clip gives its "clip": the "start" and "seconds" of the shot\'s film it restyles.');
-    const extra = Object.keys(brief.clip).filter(key => !CLIP_KEYS.has(key));
-    if (extra.length) refuse(`unknown key ${listed(extra)} in "clip".`);
-    const start = brief.clip.start ?? 0;
-    const first = onFrame(start, shot.film, '"clip.start"', refuse);
-    const count = onFrame(brief.clip.seconds, shot.film, '"clip.seconds"', refuse);
-    if (count === 0) refuse('"clip.seconds" is over 0.');
-    if (start + brief.clip.seconds > shot.film.seconds) refuse(`"clip" keeps ${start} s to ${start + brief.clip.seconds} s of ${shot.name}, whose film lasts ${shot.film.seconds} s.`);
-    clip = { start, seconds: brief.clip.seconds, first, count, file: `clip-${brief.ratio.replace(':', 'x')}.mp4` };
-  } else if (brief.clip !== undefined) refuse('"clip" is for a restyled clip only.');
-
-  return { name, title: brief.title.trim(), makes: brief.makes, ask: brief.ask.trim(), shot, ratio: brief.ratio, frames, clip };
+  const frames = readFrames(brief, shot, refuse);
+  const clip = readClip(brief, shot, refuse);
+  return { name: basename(path, '.json'), title: brief.title.trim(), makes: brief.makes, ask: brief.ask.trim(), shot, ratio: brief.ratio, frames, clip };
 }
 
 /** The references a brief hands the model, by file name: its frames, its clip, or the shot's still. */
@@ -131,11 +156,18 @@ export function references(brief) {
   return files;
 }
 
-// The tiers a scenario's creatures took before its cut, each seat's in order, once each; the roster's creature
-// when none evolved. These are the creatures the shot shows.
-function shownTiers(scenario) {
-  const evolved = (scenario.before ?? []).filter(action => action.kind === 'Evolution' && typeof action.tier === 'string').map(action => action.tier);
-  return [...new Set(evolved)];
+/**
+ * The form each creature of a scenario has at its cut: the last tier it evolved into, or none for a creature that
+ * never evolved. A team of `teamSize` a seat: the creatures are numbered from 1 for both seats.
+ */
+export function shownForms(scenario) {
+  const forms = new Map();
+  const count = 2 * (scenario.match?.rules?.teamSize ?? 1);
+  for (let creature = 1; creature <= count; creature++) forms.set(creature, null);
+  for (const action of scenario.before ?? []) {
+    if (action.kind === 'Evolution' && typeof action.tier === 'string' && Number.isInteger(action.creature)) forms.set(action.creature, action.tier);
+  }
+  return [...forms.values()];
 }
 
 // A row of a table in a Markdown file, by its first cell, as its cells.
@@ -152,22 +184,39 @@ function spellCue(markdown, name) {
 
 // What a spell's targeting reaches, in a player's words.
 function reach(targeting) {
-  const who = { Enemy: 'enemy', Ally: 'ally', Self: 'self' }[targeting?.origin] ?? String(targeting?.origin ?? '').toLowerCase();
-  if (who === 'self') return 'itself';
+  const origin = targeting?.origin;
+  if (origin === 'Self') return 'itself';
   const most = targeting?.maxTargets ?? 1;
-  return most === 1 ? `one ${who}` : `up to ${most} ${who === 'ally' ? 'allies' : 'enemies'}`;
+  const one = origin === 'Ally' ? 'ally' : 'enemy';
+  return most === 1 ? `one ${one}` : `up to ${most} ${origin === 'Ally' ? 'allies' : 'enemies'}`;
 }
 
-// What one effect does, from its numbers.
-function effectWords(effect) {
-  const kind = effect.kind.replaceAll(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-  const amount = effect.amount ?? effect.amountPerRound;
-  const words = amount === undefined ? `gives ${kind}` : `deals ${amount} ${kind}${effect.amountPerRound === undefined ? '' : ' a round'}`;
-  return effect.durationRounds ? `${words} for ${effect.durationRounds} rounds` : words;
+/** What each kind of effect does, in a player's words, from its amount. */
+export const EFFECT_WORDS = Object.freeze({
+  Damage: amount => `deals ${amount} damage`,
+  Heal: amount => `heals ${amount} health`,
+  EnergyGain: amount => `gives ${amount} energy`,
+  EnergyDrain: amount => `drains ${amount} energy`,
+  DefenseBuff: amount => `raises defense by ${amount}`,
+  DefenseDebuff: amount => `lowers defense by ${amount}`,
+  DamageBuff: amount => `raises damage by ${amount}`,
+  InitiativeDebuff: amount => `lowers initiative by ${amount}`,
+  Stun: () => 'stuns',
+  Bleed: amount => `bleeds ${amount} health a round`,
+  Regeneration: amount => `restores ${amount} health a round`,
+});
+
+/** What one effect does, from its numbers; an effect this script was never taught is refused. */
+export function effectWords(effect) {
+  const words = EFFECT_WORDS[effect.kind];
+  if (!words) throw new Error(`scripts/promo/brief.mjs does not know the effect ${JSON.stringify(effect.kind)}: teach it EFFECT_WORDS.`);
+  const said = words(effect.amount ?? effect.amountPerRound);
+  if (!effect.durationRounds) return said;
+  return `${said} for ${effect.durationRounds} round${effect.durationRounds === 1 ? '' : 's'}`;
 }
 
 /** Every spell the authored content declares, by id. */
-function spellsById(folder) {
+export function spellsById(folder) {
   const spells = new Map();
   const walk = path => {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
@@ -183,41 +232,70 @@ function spellsById(folder) {
   return spells;
 }
 
+// The look of each form on the field, from the art direction, once a form with how many creatures take it.
+function creatureWords(forms, { base, direction }) {
+  const families = JSON.parse(readFileSync(join(base, 'data/presentation/mutation-art.json'), 'utf8'));
+  const counted = new Map();
+  for (const form of forms) counted.set(form, (counted.get(form) ?? 0) + 1);
+  return [...counted].map(([id, count]) => {
+    const tier = id ? JSON.parse(readFileSync(join(base, 'data/Tiers', `${id.split(':')[1]}.${id.split(':')[2]}.json`), 'utf8')) : null;
+    const row = (tier && tableRow(direction, families[id]?.family ?? '')) || tableRow(direction, 'Base Creature');
+    return { id, count, name: tier?.name ?? 'Creature', family: row[0].split(' (')[0], look: row[1], reads: row[2] };
+  });
+}
+
 /**
- * The game's own words for what the shot shows: each creature's form by its name in `data/Tiers/`, its family in
- * `data/presentation/mutation-art.json` and its look in the art direction's visual language; each spell the film
- * casts by its name and numbers in `data/Spells/` and its staging cue in the art direction.
+ * The game's own words for what the shot shows: the ground in `battle/ART.md`; each creature's form at the cut by its
+ * name in `data/Tiers/`, its family in `data/presentation/mutation-art.json` and its look in the art direction's
+ * visual language; each spell the film casts by its name and numbers in `data/Spells/` and its staging cue there.
  */
 export function shownWords(shot, { base = root } = {}) {
   const scenario = JSON.parse(readFileSync(join(base, 'scenarios', shot.scenario), 'utf8'));
   const direction = readFileSync(join(base, 'docs/art/creature-art-direction.md'), 'utf8');
-  const families = JSON.parse(readFileSync(join(base, 'data/presentation/mutation-art.json'), 'utf8'));
-  const tiers = shownTiers(scenario);
-  const creatures = tiers.length
-    ? tiers.map(id => {
-      const tier = JSON.parse(readFileSync(join(base, 'data/Tiers', `${id.split(':')[1]}.${id.split(':')[2]}.json`), 'utf8'));
-      const family = families[id]?.family ?? 'creature';
-      const look = tableRow(direction, family) ?? tableRow(direction, 'Base Creature');
-      return { id, name: tier.name, family: look[0].split(' (')[0], look: look[1], reads: look[2] };
-    })
-    : [{ id: scenario.match.roster[0], name: 'Creature', family: 'Base Creature', ...(([, look, reads]) => ({ look, reads }))(tableRow(direction, 'Base Creature')) }];
   const spells = spellsById(join(base, 'data/Spells'));
   const casts = (shot.film?.casts ?? []).map(id => {
     const spell = spells.get(id);
-    const cue = spellCue(direction, spell.name);
-    return { id, name: spell.name, does: `${spell.effects.map(effectWords).join(' and ')} to ${reach(spell.targeting)}`, cue };
+    return { id, name: spell.name, does: `${spell.effects.map(effectWords).join(' and ')} to ${reach(spell.targeting)}`, cue: spellCue(direction, spell.name) };
   });
   const shared = /Shared anatomy across all: ([^.]+)\. Palette: ([^.]+)\./.exec(direction);
   if (!shared) throw new Error('docs/art/creature-art-direction.md no longer says the shared anatomy and palette of the creatures.');
   const ground = tableRow(readFileSync(join(base, 'battle/ART.md'), 'utf8'), '`table/battle-art/eclipse-battle.webp`');
   if (!ground) throw new Error('battle/ART.md no longer describes the eclipse battlefield.');
-  return { creatures, spells: casts, anatomy: shared[1].trim(), creaturePalette: shared[2].trim(), ground: lowerFirst(ground[2].replace(/;[^;]*$/, '.')) };
+  return {
+    creatures: creatureWords(shownForms(scenario), { base, direction }),
+    spells: casts,
+    anatomy: shared[1].trim(),
+    creaturePalette: shared[2].trim(),
+    ground: lowerFirst(ground[2].replace(/^wide \d+:\d+ /i, '').replace(/;[^;]*$/, '.')),
+  };
 }
 
-/** The brand's palette, as `docs/art/branding.css` declares it: each `--brand-` token and its colour. */
+/** The brand's palette, as `docs/art/branding.css` declares it: each `--brand-` token, its name and its colour. */
 export function palette(base = root) {
   const css = readFileSync(join(base, 'docs/art/branding.css'), 'utf8');
   return [...css.matchAll(/--brand-([a-z-]+):\s*(#[0-9a-f]{6})\s*;/gi)].map(([, token, colour]) => ({ token: `--brand-${token}`, name: token.replaceAll('-', ' '), colour: colour.toLowerCase() }));
+}
+
+// What the frames show: the ground, the creatures unless the picture has none, and the spells.
+function shownLines(brief, words) {
+  const lines = [`- The ground, as the game paints it: ${words.ground}`];
+  if (brief.makes === 'background') return lines;
+  for (const one of words.creatures) {
+    const many = one.count > 1 ? ` (${COUNTS[one.count] ?? one.count} on the field)` : '';
+    lines.push(`- ${one.name}${many}, of the ${one.family} family: ${lowerFirst(one.look)}. It reads as ${one.reads.toLowerCase()}. Like every creature of the game: ${words.anatomy}.`);
+  }
+  for (const one of words.spells) lines.push(`- The spell ${one.name}, which ${one.does}.${one.cue ? ` The game stages it as: ${one.cue.toLowerCase()}.` : ''}`);
+  return lines;
+}
+
+// What the model must not do, by kind.
+function refusals(brief) {
+  const lines = ['- No words, letters, numbers or logo: words are added later, over the picture.'];
+  if (brief.makes === 'background') lines.push('- No creature: the background is the ground alone.');
+  else lines.push('- Keep each creature as the frames draw it: its shape, its number of legs, its colours. Add no creature, weapon or armour the frames do not show.');
+  lines.push('- Show no moment the frames do not hold: no other spell, no other place, no interface the game does not have.');
+  if (brief.makes === 'restyled-clip') lines.push('- Keep every move, its timing and the camera frame for frame: only the look changes. The post says the clip is restyled.');
+  return lines;
 }
 
 /** The prompt of a brief: what to make, from which frames, what they show in the game's words, and what not to do. */
@@ -225,6 +303,7 @@ export function prompt(brief, { base = root } = {}) {
   const { width, height } = RATIOS[brief.ratio];
   const scale = brief.shot.size / Math.min(width, height);
   const words = shownWords(brief.shot, { base });
+  const attached = [brief.clip && 'clip', brief.frames.length && 'frames', !brief.clip && !brief.frames.length && 'frame'].filter(Boolean).join(' and ');
   const lines = [
     `# ${brief.title}`,
     '',
@@ -234,15 +313,13 @@ export function prompt(brief, { base = root } = {}) {
     '',
     '## The reference',
     '',
-    `Start from the attached ${brief.clip ? 'clip and frames' : 'frames'} of Downfall Instinct, a turn-based tactics game, filmed as it plays: the shot "${brief.shot.name}", titled "${brief.shot.title}".`,
+    `Start from the attached ${attached} of Downfall Instinct, a turn-based tactics game, filmed as it plays: the shot "${brief.shot.name}", titled "${brief.shot.title}".`,
     ...references(brief).map((file, index, all) => `- ${file}${all.length > 1 ? `, ${ORDINALS[index]} of ${all.length}, in the order the game plays them` : ''}`),
     `Frame it at ${brief.ratio}, ${width * scale} by ${height * scale} pixels.`,
     '',
     '## What the frames show, in the game\'s words',
     '',
-    `- The ground, as the game paints it: ${words.ground}`,
-    ...words.creatures.map(one => `- ${one.name}, of the ${one.family} family: ${lowerFirst(one.look)}. It reads as ${one.reads.toLowerCase()}. Like every creature of the game: ${words.anatomy}.`),
-    ...words.spells.map(one => `- The spell ${one.name}, which ${one.does}.${one.cue ? ` The game stages it as: ${one.cue.toLowerCase()}.` : ''}`),
+    ...shownLines(brief, words),
     '',
     '## The palette',
     '',
@@ -253,32 +330,36 @@ export function prompt(brief, { base = root } = {}) {
     '',
     '## What not to do',
     '',
-    '- No words, letters, numbers or logo: words are added later, over the picture.',
-    '- Keep each creature as the frames draw it: its shape, its number of legs, its colours. Add no creature, weapon or armour the frames do not show.',
-    '- Show no moment the frames do not hold: no other spell, no other place, no interface the game does not have.',
+    ...refusals(brief),
   ];
-  if (brief.makes === 'restyled-clip') lines.push('- Keep every move, its timing and the camera frame for frame: only the look changes. The post says the clip is restyled.');
   return `${lines.join('\n')}\n`;
 }
 
+const frameFile = (folder, frame) => join(folder, `${String(frame).padStart(6, '0')}.png`);
+
 /** The pack's folder holds the prompt, its references and `pack.json`; returns what it wrote. */
-export function writePack(brief, { from = join(root, 'artifacts/promo', brief.shot.name), out = join(root, 'artifacts/promo/briefs', brief.name), base = root, encode = encodeClip } = {}) {
-  const film = filmNames(brief.ratio);
-  const sources = brief.frames.map(one => ({ file: one.file, path: join(from, film.frames, `${String(one.frame).padStart(6, '0')}.png`) }));
+export function writePack(brief, { from = join(root, 'artifacts/promo', brief.shot.name), out = packFolder(brief), base = root, encode = encodeClip } = {}) {
+  const film = join(from, filmNames(brief.ratio).frames);
+  const sources = brief.frames.map(one => ({ file: one.file, path: frameFile(film, one.frame) }));
   if (!brief.frames.length && !brief.clip) sources.push({ file: stillName(brief.ratio), path: join(from, stillName(brief.ratio)) });
-  const how = brief.shot.film ? `--film --ratio ${brief.ratio}` : `--still --ratio ${brief.ratio}`;
-  const lacking = [...sources.map(one => one.path), ...(brief.clip ? [join(from, film.frames, `${String(brief.clip.first + brief.clip.count - 1).padStart(6, '0')}.png`)] : [])].find(path => !existsSync(path));
-  if (lacking) throw new Error(`${shownPath(lacking)} is missing: run node scripts/promo/shoot.mjs promo/shots/${brief.shot.name}.json ${how}`);
+  const needed = sources.map(one => one.path);
+  if (brief.clip) needed.push(frameFile(film, brief.clip.first + brief.clip.count - 1));
+  const lacking = needed.find(path => !existsSync(path));
+  const how = brief.shot.film ? '--film' : '--still';
+  if (lacking) throw new Error(`${shownPath(lacking)} is missing: run node scripts/promo/shoot.mjs promo/shots/${brief.shot.name}.json ${how} --ratio ${brief.ratio}`);
   mkdirSync(out, { recursive: true });
   const text = prompt(brief, { base });
   writeFileSync(join(out, 'prompt.md'), text);
   for (const one of sources) copyFileSync(one.path, join(out, one.file));
-  if (brief.clip) encode(join(from, film.frames), brief.shot.film.fps, brief.clip, join(out, brief.clip.file));
+  if (brief.clip) encode(film, brief.shot.film.fps, brief.clip, join(out, brief.clip.file));
   const files = references(brief).map(file => ({ file, sha256: sha256(readFileSync(join(out, file))) }));
   const pack = { brief: brief.name, makes: brief.makes, shot: brief.shot.name, ratio: brief.ratio, prompt: sha256(text), references: files };
   writeFileSync(join(out, 'pack.json'), `${JSON.stringify(pack, null, 2)}\n`);
   return pack;
 }
+
+/** Where a brief's pack is written: `artifacts/promo/briefs/<brief>/`. */
+export const packFolder = brief => join(root, 'artifacts/promo/briefs', brief.name);
 
 /** The ffmpeg arguments that encode a clip's stretch of a film's frames, as a film is encoded (`ENCODING`). */
 export function clipArguments(folder, fps, clip, out) {
@@ -294,15 +375,40 @@ function encodeClip(folder, fps, clip, out) {
 /** What a generated file is, by how its bytes start: png, jpg, webp or mp4, or null. */
 export const fileType = bytes => TYPES.find(one => one.test(bytes))?.type ?? null;
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const isDay = text => typeof text === 'string' && DAY.test(text) && new Date(`${text}T00:00:00Z`).toISOString().startsWith(text);
+/** Whether `text` is a day of the calendar, as YYYY-MM-DD. */
+export function isDay(text) {
+  if (typeof text !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const day = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(day.getTime()) && day.toISOString().startsWith(text);
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+// One line of the record: its brief read, and every field what the intake writes.
+function checkLine(file, at, { briefs, shots, until, refuse }) {
+  if (!isObject(file) || !sameKeys(file, RECORD_KEYS)) refuse(`${at} has exactly ${RECORD_KEYS.join(', ')}.`);
+  if (!isName(file.brief) || !existsSync(join(briefs, `${file.brief}.json`))) refuse(`${at} answers the brief ${JSON.stringify(file.brief)}, which promo/briefs/ does not hold.`);
+  const brief = readBrief(join(briefs, `${file.brief}.json`), { shots });
+  if (file.makes !== brief.makes || file.shot !== brief.shot.name || file.ratio !== brief.ratio) refuse(`${at} is the brief's ${brief.makes} of ${brief.shot.name} at ${brief.ratio}.`);
+  if (!RETURNS[file.makes].includes(file.type)) refuse(`${at} is a ${RETURNS[file.makes].join(', ')} file, as a ${file.makes} comes back.`);
+  if (!isText(file.model)) refuse(`${at} names the model that made it.`);
+  if (!isDay(file.date) || file.date > until) refuse(`${at} gives the day it was made, as YYYY-MM-DD, no later than today.`);
+  if (!isText(file.prompt)) refuse(`${at} keeps the prompt it was made from.`);
+  const names = references(brief);
+  if (!Array.isArray(file.references) || file.references.length !== names.length || file.references.some((one, index) => !isObject(one) || !sameKeys(one, ['file', 'sha256']) || one.file !== names[index] || !isHash(one.sha256))) {
+    refuse(`${at} names the references it started from, each {"file", "sha256"}: ${names.join(', ')}.`);
+  }
+  if (!isHash(file.sha256)) refuse(`${at} gives its SHA-256 as 64 hexadecimal digits.`);
+  if (!Number.isInteger(file.bytes) || file.bytes <= 0) refuse(`${at} gives its size in bytes.`);
+  if (file.blob !== `generated/${file.brief}/${file.sha256}.${file.type}`) refuse(`${at} goes to generated/${file.brief}/${file.sha256}.${file.type}, its hash under its brief.`);
+}
 
 /**
  * The record of what models made: each file by its hash, with the brief it answers, the model and the day it was
- * made, the prompt it was made from, and the shot's references it started from. Refused when a line lacks any of
- * them. Returns the files.
+ * made, the prompt it was made from, and the references it started from, by hash. Refused when a line lacks any of
+ * them or says otherwise than its brief. Returns the files.
  */
-export function readGenerated(path, { briefs = join(root, 'promo/briefs') } = {}) {
+export function readGenerated(path, { briefs = join(root, 'promo/briefs'), shots = join(root, 'promo/shots'), until = today() } = {}) {
   let record;
   try {
     record = JSON.parse(readFileSync(path, 'utf8'));
@@ -313,58 +419,68 @@ export function readGenerated(path, { briefs = join(root, 'promo/briefs') } = {}
   if (record?.format !== GENERATED_FORMAT || !Array.isArray(record.files)) refuse(`the record is {"format": "${GENERATED_FORMAT}", "files": [...]}.`);
   const seen = new Set();
   record.files.forEach((file, index) => {
-    const at = `file ${index + 1}`;
-    if (!isObject(file) || Object.keys(file).sort((a, b) => a.localeCompare(b)).join() !== [...RECORD_KEYS].sort((a, b) => a.localeCompare(b)).join()) refuse(`${at} has exactly ${RECORD_KEYS.join(', ')}.`);
-    if (!NAME.test(file.brief) || !existsSync(join(briefs, `${file.brief}.json`))) refuse(`${at} answers the brief ${JSON.stringify(file.brief)}, which promo/briefs/ does not hold.`);
-    if (!Object.hasOwn(KINDS, file.makes)) refuse(`${at} is one of what a model may make: ${Object.keys(KINDS).join(', ')}.`);
-    if (typeof file.model !== 'string' || !file.model.trim()) refuse(`${at} names the model that made it.`);
-    if (!isDay(file.date)) refuse(`${at} gives the day it was made, as YYYY-MM-DD.`);
-    if (typeof file.prompt !== 'string' || !file.prompt.trim()) refuse(`${at} keeps the prompt it was made from.`);
-    if (!Array.isArray(file.references) || file.references.length === 0) refuse(`${at} names the shot's references it started from.`);
-    if (!/^[0-9a-f]{64}$/.test(file.sha256)) refuse(`${at} gives its SHA-256 as 64 hexadecimal digits.`);
-    if (!Number.isInteger(file.bytes) || file.bytes <= 0) refuse(`${at} gives its size in bytes.`);
-    if (file.blob !== `generated/${file.brief}/${file.sha256}.${file.type}`) refuse(`${at} goes to generated/${file.brief}/${file.sha256}.${file.type}, its hash under its brief.`);
-    if (seen.has(file.sha256)) refuse(`${at} records ${file.sha256} twice.`);
+    checkLine(file, `file ${index + 1}`, { briefs, shots, until, refuse });
+    if (seen.has(file.sha256)) refuse(`file ${index + 1} records ${file.sha256} twice.`);
     seen.add(file.sha256);
   });
   return record.files;
 }
 
+// The pack the owner was handed: its pack.json for this brief, and the prompt it holds unless one is given.
+function readPack(brief, pack, promptText, refuse) {
+  const file = join(pack, 'pack.json');
+  if (!existsSync(file)) refuse(`${shownPath(file)} is missing: the file answers a pack, written by node scripts/promo/brief.mjs promo/briefs/${brief.name}.json.`);
+  const facts = JSON.parse(readFileSync(file, 'utf8'));
+  if (facts.brief !== brief.name || facts.makes !== brief.makes || facts.shot !== brief.shot.name || facts.ratio !== brief.ratio) refuse(`${shownPath(file)} is not the pack of the brief as it stands: write the pack again.`);
+  if (promptText !== undefined) {
+    if (!isText(promptText)) refuse('give the prompt it was made from (--prompt <file>).');
+    return { text: promptText, references: facts.references };
+  }
+  const text = readFileSync(join(pack, 'prompt.md'), 'utf8');
+  if (sha256(text) !== facts.prompt) refuse(`${shownPath(join(pack, 'prompt.md'))} changed since the pack was written: give the prompt used with --prompt <file>.`);
+  return { text, references: facts.references };
+}
+
 /**
- * The owner's file taken in, unchanged: refused without the model that made it, the day, or a prompt; when it is not
- * a picture (or, for a restyled clip, an MP4); when the day is after today; or when the record holds it already. The
- * file is copied under its hash to `store`, and its line added to the record. Returns the line.
+ * The owner's file taken in, unchanged: refused without the model that made it or the day; when the day is after
+ * today; without the brief's pack, or with its prompt changed and no prompt given; when it is not what its kind comes
+ * back as; or when the record holds it already. The prompt is the pack's (or `promptText`, the one the owner used),
+ * and the references are the pack's files by hash. The file is copied under its hash to `store`, and its line added
+ * to the record. Returns the line.
  */
-export function intake(brief, file, { model, date, promptText, today = new Date().toISOString().slice(0, 10), record = join(root, 'promo/generated.json'), store = join(root, 'artifacts/promo/generated'), briefs = join(root, 'promo/briefs') } = {}) {
+export function intake(brief, file, options = {}) {
+  const { model, date, promptText, until = today(), pack = packFolder(brief), record = join(root, 'promo/generated.json'), store = join(root, 'artifacts/promo/generated'), briefs = join(root, 'promo/briefs') } = options;
   const refuse = why => { throw new Error(`${file}: ${why}`); };
-  if (typeof model !== 'string' || !model.trim()) refuse('name the model that made it (--model "ChatGPT, GPT-image-1"): a generated file comes in with where it came from.');
+  if (!isText(model)) refuse('name the model that made it (--model "ChatGPT, GPT-image-1"): a generated file comes in with where it came from.');
   if (!isDay(date)) refuse('give the day it was made (--date YYYY-MM-DD).');
-  if (date > today) refuse(`${date} is after today, ${today}.`);
-  const text = promptText ?? prompt(brief);
-  if (typeof text !== 'string' || !text.trim()) refuse('give the prompt it was made from (--prompt <file>).');
+  if (date > until) refuse(`${date} is after today, ${until}.`);
+  const used = readPack(brief, pack, promptText, refuse);
   if (!existsSync(file)) refuse('no such file.');
   const bytes = readFileSync(file);
   const type = fileType(bytes);
-  const wanted = brief.makes === 'restyled-clip' ? ['mp4'] : ['png', 'jpg', 'webp'];
-  if (!wanted.includes(type)) refuse(`a ${brief.makes} comes back as ${wanted.join(', ')}; this file is ${type ?? 'none of png, jpg, webp or mp4'}.`);
-  const files = existsSync(record) ? readGenerated(record, { briefs }) : [];
+  if (!RETURNS[brief.makes].includes(type)) refuse(`a ${brief.makes} comes back as ${RETURNS[brief.makes].join(', ')}; this file is ${type ?? 'none of png, jpg, webp or mp4'}.`);
+  const files = existsSync(record) ? readGenerated(record, { briefs, until }) : [];
   const hash = sha256(bytes);
   if (files.some(one => one.sha256 === hash)) refuse(`the record holds it already (${hash}).`);
-  const line = { brief: brief.name, makes: brief.makes, shot: brief.shot.name, ratio: brief.ratio, references: references(brief), type, sha256: hash, bytes: bytes.length, model: model.trim(), date, prompt: text, blob: `generated/${brief.name}/${hash}.${type}` };
+  const line = { brief: brief.name, makes: brief.makes, shot: brief.shot.name, ratio: brief.ratio, references: used.references, type, sha256: hash, bytes: bytes.length, model: model.trim(), date, prompt: used.text, blob: `generated/${brief.name}/${hash}.${type}` };
   mkdirSync(join(store, brief.name), { recursive: true });
   copyFileSync(file, join(store, brief.name, `${hash}.${type}`));
   writeFileSync(record, `${JSON.stringify({ format: GENERATED_FORMAT, files: [...files, line] }, null, 2)}\n`);
   return line;
 }
 
+const VALUED = new Set(['--intake', '--model', '--date', '--prompt', '--frames', '--out']);
+
 export function parseArguments(argv) {
   const options = { brief: null, check: false, intake: null, model: null, date: null, prompt: null, frames: null, out: null };
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
     if (word === '--check') options.check = true;
-    else if (['--intake', '--model', '--date', '--prompt', '--frames', '--out'].includes(word)) {
-      if (index + 1 >= argv.length) throw new Error(`${word} needs a value.`);
-      options[word.slice(2)] = argv[++index];
+    else if (VALUED.has(word)) {
+      const value = argv[index + 1];
+      if (value === undefined || value.startsWith('--')) throw new Error(`${word} needs a value.`);
+      options[word.slice(2)] = value;
+      index++;
     } else if (word.startsWith('--')) throw new Error(`Unknown option ${word}.`);
     else if (options.brief) throw new Error('Name one brief.');
     else options.brief = word;
@@ -372,6 +488,8 @@ export function parseArguments(argv) {
   if (!options.brief) throw new Error('Usage: node scripts/promo/brief.mjs promo/briefs/<brief>.json [--check] [--frames <folder>] [--out <folder>] | --intake <file> --model "<model>" --date YYYY-MM-DD [--prompt <file>]');
   if (options.check && options.intake) throw new Error('Name --check or --intake, not both.');
   if (!options.intake && (options.model || options.date || options.prompt)) throw new Error('--model, --date and --prompt go with --intake.');
+  if ((options.check || options.intake) && options.frames) throw new Error('--frames goes with writing a pack, not with --check or --intake.');
+  if (options.check && options.out) throw new Error('--out goes with writing a pack or an intake, not with --check.');
   return options;
 }
 
@@ -384,17 +502,16 @@ function main(argv) {
     process.stdout.write(prompt(brief));
     return;
   }
+  const out = options.out ? resolve(options.out) : packFolder(brief);
   if (options.intake) {
     const promptText = options.prompt ? readFileSync(resolve(options.prompt), 'utf8') : undefined;
-    const line = intake(brief, resolve(options.intake), { model: options.model, date: options.date, promptText });
+    const line = intake(brief, resolve(options.intake), { model: options.model, date: options.date, promptText, pack: out });
     console.log(`promo/generated.json: ${line.blob}  ${line.bytes} bytes, ${line.model}, ${line.date}`);
     return;
   }
-  const out = options.out ? resolve(options.out) : undefined;
-  const pack = writePack(brief, { ...(options.frames ? { from: join(resolve(options.frames), brief.shot.name) } : {}), ...(out ? { out } : {}) });
-  const folder = out ?? join(root, 'artifacts/promo/briefs', brief.name);
-  console.log(`${shownPath(join(folder, 'prompt.md'))}  sha256:${pack.prompt}`);
-  for (const one of pack.references) console.log(`${shownPath(join(folder, one.file))}  sha256:${one.sha256}`);
+  const pack = writePack(brief, { ...(options.frames ? { from: join(resolve(options.frames), brief.shot.name) } : {}), out });
+  console.log(`${shownPath(join(out, 'prompt.md'))}  sha256:${pack.prompt}`);
+  for (const one of pack.references) console.log(`${shownPath(join(out, one.file))}  sha256:${one.sha256}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

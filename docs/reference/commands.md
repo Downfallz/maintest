@@ -1342,14 +1342,15 @@ node scripts/promo/brief.mjs promo/briefs/<brief>.json --intake <file> --model "
 ```
 
 Writes the prompt pack of a promotion's brief (docs/art/promotion-plan.md, P4; promo/README.md): `prompt.md`, the
-shot's reference frames (or its still, or the stretch of its film a restyled clip starts from, encoded with
-`ffmpeg`) and `pack.json` with each file's SHA-256, under `artifacts/promo/briefs/<brief>/` (`--out` elsewhere). It
-reads the frames `shoot.mjs` wrote (`artifacts/promo/<shot>/`, or `--frames <folder>/<shot>/`) and prints the
-command that films them when they are missing. `--check` prints the prompt without frames. `--intake` copies the
-file the owner generated from it, unchanged and named by its hash, to `artifacts/promo/generated/<brief>/`, and adds its
-line to `promo/generated.json`: the model, the day, the prompt (the brief's, or `--prompt`'s file) and the shot's
-references. It exits 1 when it refuses the brief. It also exits 1 on an intake with no model or no day, a day after
-today, a file already recorded, or a file that is not a picture (an MP4, for a restyled clip).
+shot's reference frames (or its still, or the stretch of its film a restyled clip starts from, encoded with `ffmpeg`)
+and `pack.json` with each file's SHA-256, under `artifacts/promo/briefs/<brief>/` (`--out` elsewhere). It reads the
+frames `shoot.mjs` wrote (`artifacts/promo/<shot>/`, or `--frames <folder>/<shot>/`) and prints the command that
+films them when they are missing. `--check` prints the prompt without frames. `--intake` copies the file the owner
+generated from the pack (read from `artifacts/promo/briefs/<brief>/`, or `--out`), unchanged and named by its hash,
+to `artifacts/promo/generated/<brief>/`, and adds its line to `promo/generated.json`: the model, the day, the prompt
+(the pack's, or `--prompt`'s file) and the pack's references by hash. It exits 1 when it refuses the brief. It also
+exits 1 on an intake with no model or no day, a day after today, a missing or stale pack, a file already recorded, or
+a file that is not what its kind comes back as (a picture, an MP4 for a restyled clip, either for a transition).
 
 ### promo/cut.mjs
 

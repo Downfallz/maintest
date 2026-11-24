@@ -189,6 +189,8 @@ starts from.
 - `frames` lists one to four times, in seconds, in the shot's film, each on a frame. The frame at each time is a
   reference the model starts from. Without `frames`, the shot's still is the reference.
 - `clip`, for a `restyled-clip` only and required there: the `start` and `seconds` of the film it restyles.
+- A `transition` names two frames at least: it passes from the first to the last. A `background` has no creature,
+  so its prompt names only the ground.
 - `ask` says in a sentence or two what the picture should be, in the owner's words.
 
 ```bash
@@ -200,7 +202,7 @@ The pack is `prompt.md`, the reference files and `pack.json` (each file's SHA-25
 names the references. It describes what they show in the game's own words, never in new ones:
 
 - the ground, as [battle/ART.md](../battle/ART.md) describes the eclipse battlefield;
-- each creature the scenario's seats evolved into before its cut: its name (`data/Tiers/`), its family
+- each creature on the field at the scenario's cut, at its last form (how many take it, when more than one): its name (`data/Tiers/`), its family
   (`data/presentation/mutation-art.json`), its look and the anatomy all creatures share
   ([the art direction](../docs/art/creature-art-direction.md#the-visual-language));
 - each spell the film casts: its name and what it does (`data/Spells/`), and its staging cue in the art direction.
@@ -227,15 +229,25 @@ No session calls a model's API until the owner says the prompts are proven (the 
 node scripts/promo/brief.mjs promo/briefs/brute-pummel-key-art.json --intake <file> --model "ChatGPT, GPT-image-1" --date 2026-11-24
 ```
 
-The file comes in unchanged: copied under its SHA-256 to `artifacts/promo/generated/<brief>/`, and its line added to
-`generated.json`, with where it came from:
+The file answers the pack the owner was handed: the intake reads `pack.json` and `prompt.md` from the brief's pack
+(`artifacts/promo/briefs/<brief>/`, or `--out <folder>`). The file comes in unchanged: copied under its SHA-256 to
+`artifacts/promo/generated/<brief>/`, and its line added to `generated.json`, with where it came from:
 
 ```json
-{ "brief": "brute-pummel-key-art", "makes": "key-art", "shot": "brute-pummel-round-3", "ratio": "9:16", "references": ["frame-6.50s.png", "frame-7.00s.png"], "type": "png", "sha256": "<64 hex>", "bytes": 1234567, "model": "ChatGPT, GPT-image-1", "date": "2026-11-24", "prompt": "<the prompt>", "blob": "generated/brute-pummel-key-art/<sha256>.png" }
+{ "brief": "brute-pummel-key-art", "makes": "key-art", "shot": "brute-pummel-round-3", "ratio": "9:16", "references": [{ "file": "frame-6.50s.png", "sha256": "<64 hex>" }, { "file": "frame-7.00s.png", "sha256": "<64 hex>" }], "type": "png", "sha256": "<64 hex>", "bytes": 1234567, "model": "ChatGPT, GPT-image-1", "date": "2026-11-24", "prompt": "<the prompt>", "blob": "generated/brute-pummel-key-art/<sha256>.png" }
 ```
 
-`prompt` is the brief's prompt, or the file `--prompt` names when the owner changed it before generating. The intake
-is refused when the model or the day is missing, when the day is after today, when the file is already recorded, or
-when the file is not a PNG, JPEG or WebP (an MP4 for a restyled clip). The type is read from the bytes, not the name.
-A line of `generated.json` without its model, day, prompt or references is refused too (`studio/promo-brief.test.js`).
-`blob` is the file's path in the `promo` container. The record also keeps its hash.
+`prompt` is the pack's prompt, or the file `--prompt` names when the owner changed it before generating.
+`references` are the pack's files, by hash, so a file made from another take can be told apart. The intake is
+refused when:
+
+- the model or the day is missing, or the day is after today;
+- the brief has no pack, the pack is of the brief as it was before a change, or its `prompt.md` changed and no
+  `--prompt` is given;
+- the file is already recorded;
+- the file is not what its kind comes back as: a PNG, JPEG or WebP, an MP4 for a restyled clip, either for a
+  transition. The type is read from the bytes, not the name: a HEIC, an AVIF or a QuickTime file is none of them.
+
+A line of `generated.json` is refused when it lacks its model, day, prompt or references, says another kind, shot or
+ratio than its brief, or names a type its kind does not come back as (`studio/promo-brief.test.js`). `blob` is the
+file's path in the `promo` container. The record also keeps its hash.
