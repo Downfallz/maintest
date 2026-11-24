@@ -160,10 +160,7 @@ public sealed class LobbyAccountsTests : IDisposable
 
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
-        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.Seats[0].Person!.Waiting is not null, "the first seat was asked something", Cancel);
 
         Turns(Read(await lobby.HandleAsync("GET", "/api/lobby/page/all/1", ""))).ShouldBe([true, false]);
     }
@@ -192,10 +189,7 @@ public sealed class LobbyAccountsTests : IDisposable
         var before = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
         table.Seats[0].Person!.Arrive();
         table.Session.Begin();
-        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.Seats[0].Person!.Waiting is not null, "the first seat was asked something", Cancel);
 
         var unvisited = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
         (await table.Api.HandleAsync("PUT", "/api/seat/player1/seen", """{ "sequence": 0 }""", table.Seats[0].Token)).Status.ShouldBe(200);
@@ -225,10 +219,7 @@ public sealed class LobbyAccountsTests : IDisposable
         var onTurn = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
         var pass = $$"""{"kind":"Evolution","pass":true,"asked":{{asked.Asked}}}""";
         (await table.Api.HandleAsync("POST", "/api/seat/player1/decision", pass, table.Seats[0].Token)).Status.ShouldBe(204);
-        for (var attempt = 0; attempt < 250 && table.Seats[0].Person!.Waiting is not null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.Seats[0].Person!.Waiting is null, "the first seat's question was answered", Cancel);
 
         var answered = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
 
@@ -360,10 +351,7 @@ public sealed class LobbyAccountsTests : IDisposable
         table.Seats[0].Person!.Arrive();
         table.Seats[1].Person!.Arrive();
         table.Session.Begin();
-        for (var attempt = 0; attempt < 250 && !table.Seats.Any(seat => seat.Person!.Waiting is not null); attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.Seats.Any(seat => seat.Person!.Waiting is not null), "a seat was asked something", Cancel);
 
         var listed = Read(await lobby.HandleAsync("GET", "/api/lobby/mine", "", player: mark)).GetProperty("tables")[0];
 
@@ -373,10 +361,7 @@ public sealed class LobbyAccountsTests : IDisposable
 
     private static async Task<Asking> WaitingAsync(TableSeat seat)
     {
-        for (var attempt = 0; attempt < 250 && seat.Person!.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => seat.Person!.Waiting is not null, "the seat was asked something", Cancel);
 
         return seat.Person!.Waiting.ShouldNotBeNull();
     }
