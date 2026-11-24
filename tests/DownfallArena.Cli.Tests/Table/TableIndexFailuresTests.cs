@@ -204,10 +204,7 @@ public sealed class TableIndexFailuresTests : IDisposable
         await registry.AddAsync(table, place, Cancel);
         await table.RecordAsync(Cancel);
         await table.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
-        for (var waited = 0; !table.IsFinished && waited < 300; waited++)
-        {
-            await Task.Delay(100, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         var record = (await _hosted.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull();
         record.Status.ShouldBe(TableRecord.Finished);
