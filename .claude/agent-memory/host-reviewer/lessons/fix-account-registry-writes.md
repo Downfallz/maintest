@@ -1,0 +1,5 @@
+# host-reviewer lessons, #1216/#1217/#1227 PR (conditional account writes)
+
+- The hourly job (IdleGuests) builds its own AccountRegistry, so its static `Writes` lock is another process's: account races with the API are daily, not "only during a deploy". A retry loop that re-reads and deletes whatever is there (DeleteAsync) deletes a guest upgraded meanwhile; the caller's condition (IsGuest) must ride every try (#1217 PR, 5ef99b2).
+- A side effect inside a retried read-decide-write closure (BindAsync in LinkAsync/UpgradeAsync's WriteAsync change) is undone only on the one failure the caller checks (NotFound): a retry that decides otherwise (SessionEnded, ProviderLinked, NotAGuest, tries exhausted) leaves an orphan `by-subject` blob DeleteAsync never reaches (#1217 PR).
+- A new field on the account document (Unbinding) is dropped by the older image's unconditional SaveAsync during the deploy or a rollback: the ADR's "an image before it ignores it" is false whenever that image writes (#1216 PR, #1108/#1129 shape).

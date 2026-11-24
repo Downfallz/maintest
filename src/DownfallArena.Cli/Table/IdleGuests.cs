@@ -68,7 +68,8 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
                     await activity.ForgetAsync(guest.Id);
                 }
 
-                if (await registry.DeleteAsync(guest.Id))
+                // Deleted only while it is still a guest: the API may upgrade it meanwhile, under no lock this process holds.
+                if (await registry.DeleteAsync(guest.Id, account => account.IsGuest))
                 {
                     removed++;
                 }

@@ -1,6 +1,7 @@
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Tests.Support;
 using DownfallArena.SharedKernel.Identifiers;
+using DownfallArena.SharedKernel.Primitives;
 
 namespace DownfallArena.Application.Tests.Accounts;
 
@@ -144,6 +145,84 @@ public sealed class AccountWriteOrderTests
 
         _store.Accounts.ShouldBeEmpty();
         _store.Subjects.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task A_way_added_whose_retry_finds_the_session_ended_leaves_no_binding()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.BeforeNextAccountWrite = () => _store.Accounts[mark.Id] = mark with { Generation = mark.Generation + 1 };
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, mark.Generation, Cancel);
+
+        linked.Error.ShouldBe(AccountErrors.SessionEnded);
+        _store.Subjects.Keys.ShouldBe([Google]);
+    }
+
+    [Fact]
+    public async Task A_way_added_whose_retry_finds_another_of_its_provider_leaves_no_binding()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        var otherDiscord = new ExternalIdentity(ExternalIdentity.Discord, "11111111111111111");
+        _store.BeforeNextAccountWrite = () =>
+        {
+            _store.Subjects[otherDiscord] = mark.Id;
+            _store.Accounts[mark.Id] = mark with { Identities = mark.Identities.With(otherDiscord) };
+        };
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, cancellationToken: Cancel);
+
+        linked.Error.ShouldBe(AccountErrors.ProviderLinked);
+        _store.Subjects.Keys.ShouldBe([Google, otherDiscord], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task An_upgrade_whose_retry_finds_the_account_suspended_leaves_no_binding_and_no_name()
+    {
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        var suspension = new AccountSuspension("Spam.", "operator", _clock.GetUtcNow());
+        _store.BeforeNextAccountWrite = () => _store.Accounts[guest.Id] = guest with { Suspension = suspension };
+
+        var upgraded = await Registry().UpgradeAsync(guest.Id, Google, "MarkF", Cancel);
+
+        upgraded.Error.ShouldBe(AccountErrors.Suspended(suspension));
+        _store.Subjects.ShouldNotContainKey(Google);
+        _store.Names.ShouldNotContainKey("markf");
+    }
+
+    [Fact]
+    public async Task A_guest_deletion_that_finds_the_guest_upgraded_meanwhile_removes_nothing()
+    {
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        var upgraded = guest with { Identities = AccountIdentities.Of(Google), Username = Username.Create("MarkF").Value };
+        _store.BeforeNextAccountWrite = () =>
+        {
+            _store.Subjects[Google] = guest.Id;
+            _store.Accounts[guest.Id] = upgraded;
+        };
+
+        var deleted = await Registry().DeleteAsync(guest.Id, account => account.IsGuest, Cancel);
+
+        deleted.ShouldBeFalse();
+        _store.Accounts[guest.Id].ShouldBe(upgraded);
+        _store.Subjects[Google].ShouldBe(guest.Id);
+    }
+
+    [Fact]
+    public async Task A_name_held_over_an_hour_and_taken_up_again_by_its_account_is_held_afresh()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.FailNextAccountWrite = true;
+        await Should.ThrowAsync<IOException>(() => Registry().RenameAsync(mark.Id, "Marcus", Cancel));
+        _clock.Advance(AccountRegistry.AbandonedAfter * 2);
+        Result<Account>? registered = null;
+        _store.BeforeNextAccountWrite = () => registered = Registry().RegisterAsync(Discord, "Marcus", Cancel).GetAwaiter().GetResult();
+
+        var renamed = await Registry().RenameAsync(mark.Id, "Marcus", Cancel);
+
+        renamed.Value.Username.Value.ShouldBe("Marcus");
+        registered.ShouldNotBeNull().Error.ShouldBe(AccountErrors.UsernameTaken);
+        _store.Names["marcus"].Account.ShouldBe(mark.Id);
     }
 
     [Fact]

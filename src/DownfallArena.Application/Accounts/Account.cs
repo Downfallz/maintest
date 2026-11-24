@@ -13,9 +13,10 @@ public sealed record Account(AccountId Id, AccountIdentities Identities, Usernam
     public AccountSuspension? Suspension { get; init; }
 
     /// <summary>
-    /// An identity removed from the account whose binding may still name it (#1216): written with the removal, before
-    /// the binding goes, and cleared once it has. Whatever stops between the two, the next link, removal or deletion of
-    /// the account removes the binding, so the provider's identifier is not kept with no owner. None most of the time.
+    /// An identity just removed from the account, whose binding may still exist (#1216). It is written with the
+    /// removal, before the binding goes, and cleared once the binding has gone. If the work stops between the two, the
+    /// next link, removal or deletion of the account removes the binding, so the provider's identifier is not kept with
+    /// no owner. Null when no removal is in progress.
     /// </summary>
     public ExternalIdentity? Unbinding { get; init; }
 

@@ -65,9 +65,9 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Bad: the host-wide count can be spent by one actor with thirty addresses, or thirty IPv6 /64s, for an hour: no
   visitor becomes a guest until it passes, and they are told to sign in. That is the price of a bound on what the
   store is asked to keep; the provider sign-ins are not affected.
-- Neutral: an upgrade that stops between binding the identity and writing the account, asked again with another
-  name, leaves the first name held for the account for an hour; a name held an hour for an account under another
-  name is then free to the next player who asks for it (#1227). A rename that stops between its writes is the same.
+- Neutral: an upgrade that stops between binding the identity and writing the account, then is asked again with
+  another name, holds the first name for an hour. After that hour anyone may take it (#1227). A rename that stops
+  between its writes is the same.
 - Neutral: a player cannot type a name that starts with `Guest-` or `guest_`, and so cannot rename to one either,
   even to change the case of a name they already hold; a player who registered one before keeps it.
 - Neutral: a request with a session is checked against the list before its route, which reads the account. While
@@ -76,7 +76,7 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Bad: a guest who signs in to an account they already have loses the guest's tutorial progress. Merging it is left
   out: the account's own progress is the one its player made.
 - Neutral: an upgrade that stops after the account is written leaves the guest's binding, which reaches nothing,
-  kept on the account until its next removal, link or deletion (#1216), and its drawn name held an hour (#1227).
+  on the account until its next removal, link or deletion (#1216). Its drawn name stays held for an hour (#1227).
 - Neutral: no page changes here. UX15 builds the journey on these routes; `/api/account` and every sign-in answer
   say `guest` on the account so the page can tell. A guest's lobby page reads `403 Account.GuestNotAllowed` until
   UX15 decides what it shows.

@@ -11,8 +11,8 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// it, so a reader never sees half of one; an index entry is moved without overwriting, which is the
 /// create-if-absent the registry relies on. A conditional removal reads then deletes, so it and every index write
 /// take one lock: otherwise a name reserved between the read and the delete would be the one deleted. The lock is
-/// the process's, which is what a laptop's table is: one host over one directory. A version is the hash of the record
-/// read, and a conditional write or removal compares it under the same lock.
+/// the process's, which is what a laptop's table is: one host over one directory. The version is the hash of the record
+/// as read. A conditional write or removal compares it with the file under the same lock.
 /// </summary>
 public sealed class FileAccountStore : IAccountStore
 {

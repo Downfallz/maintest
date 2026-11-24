@@ -103,8 +103,9 @@ internal static class AccountDocuments
 
     // Suspension is missing from a record written before ADR 0178, and from every account in good standing.
     // Identities is missing from a record written before ADR 0204; Provider and Subject stay the first identity, so
-    // the image before it still reads an account written after (the way back). Unbinding is missing but while a
-    // removal is between its writes (#1216); an image before it ignores it, and the binding waits for the next removal.
+    // the image before it still reads an account written after (the way back). Unbinding is missing except while a
+    // removal is between its writes (#1216). An image before it reads the record without it and drops it on its next
+    // write: the entry left then waits for the next link or registration of that identity, as it did before.
     private sealed record AccountRecord(string Id, string Provider, string Subject, string Username, DateTimeOffset CreatedAt, int Generation)
     {
         public SuspensionRecord? Suspension { get; init; }

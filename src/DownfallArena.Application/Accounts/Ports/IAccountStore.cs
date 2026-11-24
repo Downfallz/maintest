@@ -27,9 +27,9 @@ public interface IAccountStore
     Task SaveAsync(Account account, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Writes the account over the version read (<see cref="AccountRead.Version" />); false, writing nothing, when the
-    /// account was written or deleted since. Another process (the release beside this one during a deploy) is what
-    /// it guards against: within one, the registry orders its own writes.
+    /// Writes the account only if it is still at the version read (<see cref="AccountRead.Version" />). Returns false and
+    /// writes nothing when the account was written or deleted since. It guards against another process (the release
+    /// beside this one during a deploy, the hourly job); within one process, the registry orders its own writes.
     /// </summary>
     Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default);
 

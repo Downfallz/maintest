@@ -79,9 +79,10 @@ public sealed class AccountRegistry
     /// stop between any two leaves the account reachable: the new name held, the identity bound to the account, the
     /// account written with that identity alone and a raised generation (every other copy of the guest's cookie ends),
     /// then the guest's binding and name freed. The account keeps the guest's identity as <see cref="Account.Unbinding" />
-    /// until its binding is gone. Asking again finishes an upgrade that stopped before the account was written; asked with
-    /// another name, the first name held is freed an hour on (<see cref="AbandonedAfter" />, #1227). One that stopped after
-    /// leaves the guest's binding to the next removal or deletion, and its drawn name to the hour. Refused for an account
+    /// until its binding is gone. Asking again finishes an upgrade that stopped before the account was written. Asked with
+    /// another name, the first name is freed an hour later (<see cref="AbandonedAfter" />, #1227). An upgrade that stopped
+    /// after the account was written leaves the guest's binding to the next removal, link or deletion, and the drawn name
+    /// held for an hour. Refused for an account
     /// that is not a guest, an identity another account holds, and a name somebody else holds.
     /// </summary>
     public async Task<Result<Account>> UpgradeAsync(AccountId id, ExternalIdentity identity, string? candidate, CancellationToken cancellationToken = default)
@@ -102,10 +103,13 @@ public sealed class AccountRegistry
         {
             UsernameReservation? reservation = null;
             Account? before = null;
+            Account? last = null;
+            var bound = false;
             var upgraded = await WriteAsync(
                 id,
                 async account =>
                 {
+                    last = account;
                     if (account.Identities.ByProvider(ExternalIdentity.Guest) is not { } guest)
                     {
                         return Result.Failure<Account>(AccountErrors.NotAGuest);
@@ -129,6 +133,7 @@ public sealed class AccountRegistry
                         return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
                     }
 
+                    bound = true;
                     return Result.Success(account with
                     {
                         Identities = AccountIdentities.Of(identity),
@@ -140,13 +145,14 @@ public sealed class AccountRegistry
                 cancellationToken);
             if (upgraded.IsFailure)
             {
-                if (upgraded.Error == AccountErrors.NotFound && reservation is not null)
+                // A try refused after an earlier one held the name and bound the identity: another process changed the
+                // account meanwhile (deleted, suspended or upgraded it). What was written for this upgrade goes.
+                if (reservation is not null && (last is null || last.Username.Key != reservation.Username.Key))
                 {
-                    // The account went meanwhile (the other release deleted it): what was written for it goes too.
                     await _store.ReleaseUsernameAsync(reservation, cancellationToken);
-                    await _store.UnbindSubjectAsync(identity, id, cancellationToken);
                 }
 
+                await UnbindRefusedAsync(bound, upgraded, last, identity, id, cancellationToken);
                 return upgraded;
             }
 
@@ -162,6 +168,16 @@ public sealed class AccountRegistry
         finally
         {
             Writes.Release();
+        }
+    }
+
+    // An identity a try bound, then a later try refused (#1217): the account read last does not list it, so its
+    // binding holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it.
+    private async Task UnbindRefusedAsync(bool bound, Result<Account> written, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    {
+        if (bound && written.IsFailure && last?.Identities.Contains(identity) != true)
+        {
+            await _store.UnbindSubjectAsync(identity, id, cancellationToken);
         }
     }
 
@@ -248,8 +264,8 @@ public sealed class AccountRegistry
 
     /// <summary>
     /// Reads the account, asks what it becomes, and writes that over the version read (#1217); while another process
-    /// wrote it first, reads it again and asks again, so a change is decided on what is there, never on what was. A
-    /// failure, or the very account read, writes nothing; an account gone is <see cref="AccountErrors.NotFound" />, and
+    /// wrote it first, reads it again and asks again, so a change is decided on the account as it is now, never as it
+    /// was. A failure, or a change that returns the account unchanged, writes nothing; an account gone is <see cref="AccountErrors.NotFound" />, and
     /// nothing is written back. Every try lost, it throws, as a store out of service does.
     /// </summary>
     private async Task<Result<Account>> WriteAsync(AccountId id, Func<Account, Task<Result<Account>>> change, CancellationToken cancellationToken)
@@ -289,8 +305,9 @@ public sealed class AccountRegistry
     }
 
     /// <summary>
-    /// The account written again without the identity whose binding just went. A write lost meanwhile, or failed, leaves
-    /// it kept for the next link, removal or deletion, which find its binding gone: what the caller asked is done.
+    /// Writes the account again without <see cref="Account.Unbinding" />, after the binding has gone. If the account went
+    /// meanwhile, the caller is answered what it wrote: what it asked for is done. A store that fails here throws, as
+    /// anywhere, and the account keeps <see cref="Account.Unbinding" /> until the next link, removal or deletion.
     /// </summary>
     private async Task<Result<Account>> UnboundAsync(Account written, ExternalIdentity identity, CancellationToken cancellationToken)
     {
@@ -317,10 +334,12 @@ public sealed class AccountRegistry
         try
         {
             var bound = false;
+            Account? last = null;
             var linked = await WriteAsync(
                 id,
                 async account =>
                 {
+                    last = account;
                     if (account.Suspension is { } suspension)
                     {
                         return Result.Failure<Account>(AccountErrors.Suspended(suspension));
@@ -357,12 +376,7 @@ public sealed class AccountRegistry
                     return Result.Success(finished with { Identities = finished.Identities.With(identity) });
                 },
                 cancellationToken);
-            if (bound && linked.IsFailure && linked.Error == AccountErrors.NotFound)
-            {
-                // The account went between the binding and its write (the other release deleted it).
-                await _store.UnbindSubjectAsync(identity, id, cancellationToken);
-            }
-
+            await UnbindRefusedAsync(bound, linked, last, identity, id, cancellationToken);
             return linked;
         }
         finally
@@ -459,17 +473,21 @@ public sealed class AccountRegistry
     /// <summary>
     /// Removes the account (ADR 0122): its sign-ins first, so nobody signs in to it again, then the account, then its
     /// name, which another player may then take. The same sign-ins can register afresh afterwards, under a new id. A
-    /// binding a removal left (<see cref="Account.Unbinding" />) goes with them. The account is removed only as it was
-    /// read: a way in the other release added meanwhile is read again and goes too (#1217). False when there is no such account.
+    /// binding a removal left (<see cref="Account.Unbinding" />) goes with them. The account is removed only if it is
+    /// unchanged since it was read; a way in that another process added meanwhile is read again and removed too
+    /// (#1217). False when there is no such account.
     /// </summary>
-    public async Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default)
+    public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => DeleteAsync(id, still: null, cancellationToken);
+
+    /// <param name="still">What the account must still be, checked on every read: the sweep of idle guests deletes a guest, never the player's account it was upgraded to meanwhile by another process. False when it no longer is.</param>
+    public async Task<bool> DeleteAsync(AccountId id, Func<Account, bool>? still, CancellationToken cancellationToken = default)
     {
         await Writes.WaitAsync(cancellationToken);
         try
         {
             for (var tried = 0; tried < Tries; tried++)
             {
-                if (await _store.ReadAsync(id, cancellationToken) is not { Account: var account } read)
+                if (await _store.ReadAsync(id, cancellationToken) is not { Account: var account } read || still?.Invoke(account) == false)
                 {
                     return false;
                 }
@@ -662,10 +680,21 @@ public sealed class AccountRegistry
         var holder = await _store.FindUsernameAsync(reservation.Username, cancellationToken);
         if (holder is not null)
         {
-            var account = await _store.FindAsync(holder.Account, cancellationToken);
+            var read = await _store.ReadAsync(holder.Account, cancellationToken);
+            var account = read?.Account;
             if (account is not null && account.Identities.Contains(identity))
             {
-                return holder;
+                // Its own name held an hour for it under another one would be free to anybody (AbandonedAsync): held
+                // afresh before it is taken up, so a registration cannot free it under the write that names it.
+                if (account.Username.Key == holder.Username.Key || _clock.GetUtcNow() - holder.ReservedAt < AbandonedAfter)
+                {
+                    return holder;
+                }
+
+                await _store.ReleaseUsernameAsync(holder, cancellationToken);
+                return await _store.TryReserveUsernameAsync(reservation with { Account = holder.Account }, cancellationToken)
+                    ? reservation with { Account = holder.Account }
+                    : null;
             }
 
             if (!await AbandonedAsync(holder, account, cancellationToken))
@@ -675,10 +704,10 @@ public sealed class AccountRegistry
 
             await _store.ReleaseUsernameAsync(holder, cancellationToken);
             // An account under the name it holds was never bound: a registration that stopped. One under another name
-            // is somebody's, and keeps its own.
-            if (account is not null && account.Username.Key == holder.Username.Key)
+            // is somebody's, and keeps its own. It goes only as it was read.
+            if (read is not null && read.Account.Username.Key == holder.Username.Key)
             {
-                await _store.DeleteAsync(account.Id, cancellationToken);
+                await _store.DeleteIfUnchangedAsync(read.Account.Id, read.Version, cancellationToken);
             }
         }
 
@@ -690,9 +719,10 @@ public sealed class AccountRegistry
 
     /// <summary>
     /// A name is abandoned when it has been held an hour for an account that was never written, or for one none of
-    /// whose identities is bound to it: both are a registration that stopped between its writes. So is one held an
-    /// hour for an account under another name: a rename or an upgrade that stopped between its writes, or was asked
-    /// again with another name (#1227), and the old name of one that stopped before freeing it.
+    /// whose identities is bound to it: both are a registration that stopped between its writes. A name is also
+    /// abandoned when it has been held an hour for an account that now has another name. That happens when a rename or
+    /// an upgrade stopped between its writes, when an upgrade was asked again with another name (#1227), or when the
+    /// old name was never freed.
     /// </summary>
     private async Task<bool> AbandonedAsync(UsernameReservation holder, Account? account, CancellationToken cancellationToken) =>
         _clock.GetUtcNow() - holder.ReservedAt >= AbandonedAfter
