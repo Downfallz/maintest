@@ -96,9 +96,10 @@ npm --prefix studio/browser ci --ignore-scripts
    Then `/verify` and `/browser-check`: a new shot or cut plays the promotion's journey (`studio/browser/plan.js`).
 
 8. **The contact sheet.** One page, in French, read on a phone: for each post its day, its channels, its words in
-   English and French, and what it shows: the film's sheet with the feeds' margins hatched, the cut's title card
-   and end card, the still, the brief's prompt and its reference frames. Load the `artifact-design` skill, write
-   the page in `$F`, and publish it with the `Artifact` tool, the pictures as its files. One page a batch, updated
+   English and French, and what it shows: the film's sheet with the feeds' margins hatched, the cut's title card,
+   a captioned frame a stretch and the end card, the still, the brief's prompt and its reference frames. Load the `artifact-design` skill, and take the
+   page's colours and type from `docs/art/branding.css` (slate ground, bone words, one gold accent, Marcellus for
+   titles only). Write the page in `$F`, and publish it with the `Artifact` tool, the pictures as its files. One page a batch, updated
    in place when the batch is filmed again. The films stay in `$F` and `artifacts/promo/`: they are not committed.
 
 9. **`/ship`.** The pull request names each post, the page's link, and what waits for the owner: a brief's pack to

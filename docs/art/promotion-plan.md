@@ -265,8 +265,8 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    `scenario-check --trace` to see the field). It films each shot, looks at the sheets, lays out the cut and, when
    a model is to make something, the brief and its pack. The `promo-producer` writes the words. The skill then
    checks the batch with the scripts' own refusals and the gate, and publishes a contact sheet page in French. It
-   ships the batch as one pull request. After the merge it gives the owner a numbered step a shot to film it into
-   the `promo` container from `main`, since only `main` may write there (ADR 0206). The producer writes in the
+   ships the batch as one pull request. Only `main` may write the `promo` container (ADR 0206). So after the
+   merge, the skill gives the owner a numbered step a shot, to film it there from `main`. The producer writes in the
    showcase's voice (`showcase/copy.mjs`: concrete, second person, "tu" in French, no hype), in the words a player
    reads, and counts against `CHANNELS` and `CARD_LIMITS`. It writes only the words of the files under
    `promo/cuts/`, `promo/briefs/` and `promo/calendar/` it is given.
