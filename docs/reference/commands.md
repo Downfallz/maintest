@@ -1345,11 +1345,11 @@ Writes the prompt pack of a promotion's brief (docs/art/promotion-plan.md, P4; p
 shot's reference frames (or its still, or the stretch of its film a restyled clip starts from, encoded with
 `ffmpeg`) and `pack.json` with each file's SHA-256, under `artifacts/promo/briefs/<brief>/` (`--out` elsewhere). It
 reads the frames `shoot.mjs` wrote (`artifacts/promo/<shot>/`, or `--frames <folder>/<shot>/`) and prints the
-command that films them when they are missing. `--check` prints the prompt without frames. `--intake` takes the
-file the owner generated from it, unchanged, under its hash to `artifacts/promo/generated/<brief>/`, and adds its
+command that films them when they are missing. `--check` prints the prompt without frames. `--intake` copies the
+file the owner generated from it, unchanged and named by its hash, to `artifacts/promo/generated/<brief>/`, and adds its
 line to `promo/generated.json`: the model, the day, the prompt (the brief's, or `--prompt`'s file) and the shot's
-references. It exits 1 on a brief it refuses, and on an intake without its model or its day, dated after today, of
-a file that is not a picture (an MP4 for a restyled clip), or already recorded.
+references. It exits 1 when it refuses the brief. It also exits 1 on an intake with no model or no day, a day after
+today, a file already recorded, or a file that is not a picture (an MP4, for a restyled clip).
 
 ### promo/cut.mjs
 

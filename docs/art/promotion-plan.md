@@ -197,14 +197,20 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
 
    *Built (2026-11-24)*: `promo/briefs/*.json` (the format is in [promo/README.md](../../promo/README.md#a-brief))
    and `scripts/promo/brief.mjs`. A brief names what a model may make (`key-art`, `background`, `transition`,
-   `styled-still`, `thumbnail`, `restyled-clip`; there is no kind for gameplay from a prompt), the shot, its ratio,
-   and the seconds of its film to start from. Without them, the shot's still is used. A restyled clip names a
-   stretch, encoded the way a film is. The pack is `prompt.md`, those frames copied as shot, and `pack.json` with
-   each file's SHA-256. The prompt says what the frames show in the game's words: the forms the scenario's seats
-   evolved into before its cut, by their name in `data/Tiers/`, their family in `data/presentation/mutation-art.json`
-   and their look in the art direction's visual language; the spells the film casts, by name and numbers, with their
-   staging cue; the `--brand-` palette; and what not to do (no words or logo, nothing the frames do not hold). The
-   first brief, `brute-pummel-key-art`, asks for a key art of the Brute's Pummel from two frames of the Pummel film.
+   `styled-still`, `thumbnail` or `restyled-clip`; there is no kind for gameplay from a prompt), the shot, its ratio,
+   and the times in its film to start from. Without frames, the shot's still is the reference. A restyled clip names
+   a stretch of the film, cut and encoded with the options `shoot.mjs` encodes a film with. The pack is `prompt.md`,
+   those frames copied unchanged, and `pack.json` with each file's SHA-256. The prompt gives, in the game's words:
+
+   - the ground, from `battle/ART.md`;
+   - the forms the scenario's seats evolved into before its cut, by their name (`data/Tiers/`), their family
+     (`data/presentation/mutation-art.json`), and their look and shared anatomy in the art direction;
+   - the spells the film casts, by name and effect, with their staging cue;
+   - the colours: the creatures' own, bright gold kept off their bodies, and the brand's colours a painting may use;
+   - what not to do: no words or logo, nothing the frames do not hold.
+
+   The first brief, `brute-pummel-key-art`, asks for a key art of the Brute's Pummel from two frames of the Pummel
+   film (6.5 s, the Brute about to act; 7 s, the Pummel landed). Filmed and packed in this session.
 
    The intake (`--intake <file> --model --date`, plus `--prompt` when the owner changed the prompt) keeps the file
    unchanged under its SHA-256 in `artifacts/promo/generated/<brief>/` and adds its line to `promo/generated.json`:
@@ -212,14 +218,14 @@ Reddit, X, Bluesky and Discord, from the launch (question 5).
    model or day, a day after today, a file whose bytes are not a picture (or not an MP4, for a restyled clip), and a
    file already recorded.
 
-   Tests: `studio/promo-brief.test.js` (the refusals of a brief; the pack names the Brute's look, Pummel's cost,
-   damage and cue, and the palette's tokens; the frames copied unchanged and hashed; the clip's arguments; the intake
+   Tests: `studio/promo-brief.test.js` (the refusals of a brief; the pack names the Brute's look, Pummel's damage and
+   cue, the ground and the colours by name; the frames copied unchanged and hashed; the clip's arguments; the intake
    refused without its provenance and kept unchanged once; the record's refusals; the command's exit codes).
 
    Left to later stages: the call to the model's API waits for the owner to say the prompts are proven (question 2).
    The generated file stays in the session: no workflow writes it to the `promo` container yet, as `promo-film.yml`
-   does for a film (an issue). The shot does not name the spells the opponent casts in the film, so the prompt names
-   only the filmed seat's.
+   does for a film. The prompt names only what the scenario holds at its cut and the spells the filmed seat casts: in
+   the Pummel film the opponent mutates into Frenzied and casts Fury, which the prompt does not name.
 5. **P5, the calendar.** `promo/calendar/`, its test, and the launch's milestones as posts once there is a date.
    Tests: the refusals named above.
 6. **P6, `/promo`.** The skill: a request in words ("a 20-second vertical clip of the Brute's Pummel") becomes the

@@ -186,8 +186,8 @@ starts from.
 - `makes` is one of what a model may make: `key-art`, `background`, `transition`, `styled-still`, `thumbnail` or
   `restyled-clip`. There is no kind for gameplay made from a prompt alone.
 - `shot` names a shot of `shots/`, and `ratio` one of its ratios: the picture is framed at it.
-- `frames` lists one to four seconds of the shot's film, each on a frame: the references the model starts from.
-  Without them, a shot's still is the reference.
+- `frames` lists one to four times, in seconds, in the shot's film, each on a frame. The frame at each time is a
+  reference the model starts from. Without `frames`, the shot's still is the reference.
 - `clip`, for a `restyled-clip` only and required there: the `start` and `seconds` of the film it restyles.
 - `ask` says in a sentence or two what the picture should be, in the owner's words.
 
@@ -196,15 +196,26 @@ node scripts/promo/brief.mjs promo/briefs/brute-pummel-key-art.json --check   # 
 node scripts/promo/brief.mjs promo/briefs/brute-pummel-key-art.json           # artifacts/promo/briefs/brute-pummel-key-art/
 ```
 
-The pack is `prompt.md`, the reference files and `pack.json` (each file's SHA-256). The prompt says what to make,
-names the references, and gives what they show in the game's own words, never a new description: each creature's
-form by its name (`data/Tiers/`), its family (`data/presentation/mutation-art.json`) and its look in
-[the art direction](../docs/art/creature-art-direction.md#the-visual-language); each spell the film casts by its name
-and numbers (`data/Spells/`) and its staging cue there. The creatures are those the scenario's seats evolved into
-before its cut. Then the brand's palette, the `--brand-` tokens of `docs/art/branding.css`, and what not to do: no
-words or logo (a cut lays its own), no creature, limb, spell or moment the frames do not hold, and, for a restyled
-clip, every move and its timing kept. A brief is refused when it names a kind a model may not make, a missing shot,
-another ratio, frames off its film, or a key not in this format (`studio/promo-brief.test.js`).
+The pack is `prompt.md`, the reference files and `pack.json` (each file's SHA-256). The prompt says what to make and
+names the references. It describes what they show in the game's own words, never in new ones:
+
+- the ground, as [battle/ART.md](../battle/ART.md) describes the eclipse battlefield;
+- each creature the scenario's seats evolved into before its cut: its name (`data/Tiers/`), its family
+  (`data/presentation/mutation-art.json`), its look and the anatomy all creatures share
+  ([the art direction](../docs/art/creature-art-direction.md#the-visual-language));
+- each spell the film casts: its name and what it does (`data/Spells/`), and its staging cue in the art direction.
+
+Then the colours: the creatures' own palette from the art direction, with bright gold kept off their bodies, and the
+brand's colours a painting may use (slate, soot, bone, ivory, muted, gold, bright gold and ember, read from
+`docs/art/branding.css`), by name and hex. Last, what not to do: no words or logo, and no creature, limb, spell or
+moment the frames do not hold. For a restyled clip, every move and its timing are kept.
+
+A brief is refused when it names (`studio/promo-brief.test.js`):
+
+- a kind a model may not make;
+- a missing shot, or a ratio the shot is not taken at;
+- frames off its film, or frames of a shot that has no film;
+- a key not in this format.
 
 The owner pastes `prompt.md` into ChatGPT or Gemini through their own account, with the reference files attached,
 and hands the file back as for a painting ([page-pictures.md](../docs/art/page-pictures.md#a-picture-asked-of-the-owner)).
@@ -223,8 +234,8 @@ The file comes in unchanged: copied under its SHA-256 to `artifacts/promo/genera
 { "brief": "brute-pummel-key-art", "makes": "key-art", "shot": "brute-pummel-round-3", "ratio": "9:16", "references": ["frame-6.50s.png", "frame-7.00s.png"], "type": "png", "sha256": "<64 hex>", "bytes": 1234567, "model": "ChatGPT, GPT-image-1", "date": "2026-11-24", "prompt": "<the prompt>", "blob": "generated/brute-pummel-key-art/<sha256>.png" }
 ```
 
-`prompt` is the brief's prompt, or the file `--prompt` names when the owner changed it before generating. The
-intake is refused without the model or the day, with a day after today, for a file that is not a PNG, JPEG or WebP
-(an MP4 for a restyled clip), read from its bytes and not its name, or for a file the record holds already. A line of
-`generated.json` without its model, day, prompt or references is refused too (`studio/promo-brief.test.js`). The
-`blob` is where the file goes in the `promo` container; the record keeps its hash.
+`prompt` is the brief's prompt, or the file `--prompt` names when the owner changed it before generating. The intake
+is refused when the model or the day is missing, when the day is after today, when the file is already recorded, or
+when the file is not a PNG, JPEG or WebP (an MP4 for a restyled clip). The type is read from the bytes, not the name.
+A line of `generated.json` without its model, day, prompt or references is refused too (`studio/promo-brief.test.js`).
+`blob` is the file's path in the `promo` container. The record also keeps its hash.

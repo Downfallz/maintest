@@ -48,13 +48,15 @@ test('the pack names the real creature and the real spell in the game\'s own wor
   const words = shownWords(readShot(join(repository, 'promo/shots/brute-pummel-round-3.json')));
   assert.deepEqual(words.creatures.map(one => one.name), ['Brute']);
   assert.match(words.creatures[0].look, /enormous front paws/);
-  assert.deepEqual(words.spells, [{ id: 'spell:pummel:v1', name: 'Pummel', does: 'costs 1 energy; damage 2, on one enemy', cue: 'Hammer with a huge front paw' }]);
+  assert.deepEqual(words.spells, [{ id: 'spell:pummel:v1', name: 'Pummel', does: 'deals 2 damage to one enemy', cue: 'Hammer with a huge front paw' }]);
+  assert.match(words.anatomy, /bone-mask skull/);
+  assert.match(words.ground, /golden eclipse/);
   const text = prompt(readBrief(keyArt));
-  for (const words of ['Brute, of the Brute family: Heavy, low quadruped, enormous front paws', 'The spell Pummel: costs 1 energy; damage 2, on one enemy',
-    'hammer with a huge front paw', 'frame-6.50s.png', '1080 by 1920', '--brand-gold: #e7c183', 'No words, letters, numbers or logo']) {
+  for (const words of ['Brute, of the Brute family: heavy, low quadruped, enormous front paws', 'The spell Pummel, which deals 2 damage to one enemy',
+    'hammer with a huge front paw', 'frame-6.50s.png, the first of 2', '1080 by 1920', 'gold #e7c183', 'stays off the creatures\' bodies', 'No words, letters, numbers or logo']) {
     assert.ok(text.includes(words), `the prompt says "${words}"`);
   }
-  assert.doesNotMatch(text, /restyled/, 'a key art is not a restyled clip');
+  assert.doesNotMatch(text, /restyled|--brand-|on accent|panel/, 'a key art is not a restyled clip, and a model reads colours, not the pages\' tokens');
 });
 
 test('the palette is the brand\'s tokens, as branding.css declares them', () => {

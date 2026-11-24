@@ -27,12 +27,12 @@ export const GENERATED_FORMAT = 'downfall.promo.generated.v1';
  * prompt alone: every kind starts from frames of a filmed shot, and a restyled clip from a stretch of its film.
  */
 export const KINDS = Object.freeze({
-  'key-art': 'A painted key art of the moment the reference frames show, for the launch and the store\'s banners outside the screenshots.',
-  background: 'A painted background in the world of the reference frames, with no creature in it, for a card or a post to sit on.',
-  transition: 'A short painted transition between two moments of the reference frames, for a cut to pass from one to the other.',
-  'styled-still': 'The reference frame repainted: the same creatures, poses and places, in a richer painted finish.',
-  thumbnail: 'A thumbnail for a clip: the moment of the reference frames, read at a glance on a phone.',
-  'restyled-clip': 'The reference clip restyled, video to video: every creature, move, cut and timing kept, only the look repainted.',
+  'key-art': 'Make a painted key art of the moment the reference frames show. It is for the game\'s launch and its store banners.',
+  background: 'Make a painted background in the world of the reference frames, with no creature in it. Words and cards will sit on it.',
+  transition: 'Make a short painted transition between two moments of the reference frames, for a clip to pass from one to the other.',
+  'styled-still': 'Repaint the reference frame: the same creatures, poses and places, in a richer painted finish.',
+  thumbnail: 'Make a thumbnail for a clip: the moment of the reference frames, read at a glance on a phone.',
+  'restyled-clip': 'Restyle the reference clip, video to video: keep every creature, move, cut and timing, and repaint only the look.',
 });
 
 /** The kinds of file a generated part comes back as, by how its bytes start, and the extension it is kept under. */
@@ -50,6 +50,11 @@ const RECORD_KEYS = ['brief', 'makes', 'shot', 'ratio', 'references', 'type', 's
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const listed = keys => keys.map(key => JSON.stringify(key)).join(', ');
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
+
+/** The brand's colours a painting may use: the grounds, the light and the accents, not the pages' surfaces and lines. */
+const PAINTED_COLOURS = Object.freeze(['--brand-slate', '--brand-soot', '--brand-bone', '--brand-ivory', '--brand-muted', '--brand-gold', '--brand-gold-bright', '--brand-ember']);
+const lowerFirst = text => text.charAt(0).toLowerCase() + text.slice(1);
+const ORDINALS = Object.freeze(['the first', 'the second', 'the third', 'the fourth']);
 
 /** A reference frame's file in the pack: `frame-6.50s.png`. */
 export const frameName = seconds => `frame-${seconds.toFixed(2)}s.png`;
@@ -157,7 +162,7 @@ function reach(targeting) {
 function effectWords(effect) {
   const kind = effect.kind.replaceAll(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
   const amount = effect.amount ?? effect.amountPerRound;
-  const words = amount === undefined ? kind : `${kind} ${amount}${effect.amountPerRound === undefined ? '' : ' a round'}`;
+  const words = amount === undefined ? `gives ${kind}` : `deals ${amount} ${kind}${effect.amountPerRound === undefined ? '' : ' a round'}`;
   return effect.durationRounds ? `${words} for ${effect.durationRounds} rounds` : words;
 }
 
@@ -200,15 +205,19 @@ export function shownWords(shot, { base = root } = {}) {
   const casts = (shot.film?.casts ?? []).map(id => {
     const spell = spells.get(id);
     const cue = spellCue(direction, spell.name);
-    return { id, name: spell.name, does: `costs ${spell.energyCost} energy; ${spell.effects.map(effectWords).join(', ')}, on ${reach(spell.targeting)}`, cue };
+    return { id, name: spell.name, does: `${spell.effects.map(effectWords).join(' and ')} to ${reach(spell.targeting)}`, cue };
   });
-  return { creatures, spells: casts };
+  const shared = /Shared anatomy across all: ([^.]+)\. Palette: ([^.]+)\./.exec(direction);
+  if (!shared) throw new Error('docs/art/creature-art-direction.md no longer says the shared anatomy and palette of the creatures.');
+  const ground = tableRow(readFileSync(join(base, 'battle/ART.md'), 'utf8'), '`table/battle-art/eclipse-battle.webp`');
+  if (!ground) throw new Error('battle/ART.md no longer describes the eclipse battlefield.');
+  return { creatures, spells: casts, anatomy: shared[1].trim(), creaturePalette: shared[2].trim(), ground: lowerFirst(ground[2].replace(/;[^;]*$/, '.')) };
 }
 
 /** The brand's palette, as `docs/art/branding.css` declares it: each `--brand-` token and its colour. */
 export function palette(base = root) {
   const css = readFileSync(join(base, 'docs/art/branding.css'), 'utf8');
-  return [...css.matchAll(/--brand-([a-z-]+):\s*(#[0-9a-f]{6})\s*;/gi)].map(([, token, colour]) => ({ token: `--brand-${token}`, colour: colour.toLowerCase() }));
+  return [...css.matchAll(/--brand-([a-z-]+):\s*(#[0-9a-f]{6})\s*;/gi)].map(([, token, colour]) => ({ token: `--brand-${token}`, name: token.replaceAll('-', ' '), colour: colour.toLowerCase() }));
 }
 
 /** The prompt of a brief: what to make, from which frames, what they show in the game's words, and what not to do. */
@@ -219,30 +228,33 @@ export function prompt(brief, { base = root } = {}) {
   const lines = [
     `# ${brief.title}`,
     '',
-    `Make: ${brief.makes}. ${KINDS[brief.makes]}`,
+    KINDS[brief.makes],
     '',
     brief.ask,
     '',
     '## The reference',
     '',
-    `Start from the attached ${brief.clip ? 'clip and frames' : 'frames'} of Downfall Instinct, a turn-based tactics game, filmed as it plays (the shot "${brief.shot.name}": ${brief.shot.title}).`,
-    ...references(brief).map(file => `- ${file}`),
+    `Start from the attached ${brief.clip ? 'clip and frames' : 'frames'} of Downfall Instinct, a turn-based tactics game, filmed as it plays: the shot "${brief.shot.name}", titled "${brief.shot.title}".`,
+    ...references(brief).map((file, index, all) => `- ${file}${all.length > 1 ? `, ${ORDINALS[index]} of ${all.length}, in the order the game plays them` : ''}`),
     `Frame it at ${brief.ratio}, ${width * scale} by ${height * scale} pixels.`,
     '',
     '## What the frames show, in the game\'s words',
     '',
-    ...words.creatures.map(one => `- ${one.name}, of the ${one.family} family: ${one.look}. It reads as ${one.reads.toLowerCase()}.`),
-    ...words.spells.map(one => `- The spell ${one.name}: ${one.does}.${one.cue ? ` Staged as: ${one.cue.toLowerCase()}.` : ''}`),
+    `- The ground, as the game paints it: ${words.ground}`,
+    ...words.creatures.map(one => `- ${one.name}, of the ${one.family} family: ${lowerFirst(one.look)}. It reads as ${one.reads.toLowerCase()}. Like every creature of the game: ${words.anatomy}.`),
+    ...words.spells.map(one => `- The spell ${one.name}, which ${one.does}.${one.cue ? ` The game stages it as: ${one.cue.toLowerCase()}.` : ''}`),
     '',
     '## The palette',
     '',
-    'Keep to the brand\'s colours: a dark slate ground, ivory light, gold for what matters.',
-    ...palette(base).map(one => `- ${one.token}: ${one.colour}`),
+    `The creatures keep their own colours: ${words.creaturePalette}. Bright warm gold is the game's sign for what can be done: it stays off the creatures' bodies, whose own amber is dimmer and smaller.`,
+    'The rest keeps to the brand\'s colours, mostly slate and soot, with bone and ivory light, gold only in a small share of the picture (the eclipse, the light of the blow) and copper as a small detail:',
+    ...palette(base).filter(one => PAINTED_COLOURS.includes(one.token)).map(one => `- ${one.name} ${one.colour}`),
+    'The teams\' tints stay as the frames show them.',
     '',
     '## What not to do',
     '',
-    '- No words, letters, numbers or logo: the cut lays its own words over the picture.',
-    '- Keep each creature as the frames draw it: its shape, its number of legs, its colours. Add no creature, no weapon, no armour made by hand.',
+    '- No words, letters, numbers or logo: words are added later, over the picture.',
+    '- Keep each creature as the frames draw it: its shape, its number of legs, its colours. Add no creature, weapon or armour the frames do not show.',
     '- Show no moment the frames do not hold: no other spell, no other place, no interface the game does not have.',
   ];
   if (brief.makes === 'restyled-clip') lines.push('- Keep every move, its timing and the camera frame for frame: only the look changes. The post says the clip is restyled.');
