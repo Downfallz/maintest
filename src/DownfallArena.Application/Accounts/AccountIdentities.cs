@@ -38,6 +38,20 @@ public sealed record AccountIdentities
 
     public bool Contains(ExternalIdentity identity) => _all.Contains(identity);
 
+    /// <summary>The identity of this provider the list holds, or null: an account holds one per provider (sign-in methods plan, P4).</summary>
+    public ExternalIdentity? ByProvider(string provider)
+    {
+        foreach (var identity in _all)
+        {
+            if (identity.Provider == provider)
+            {
+                return identity;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>The list with this identity added at the end; the same list when it already holds it.</summary>
     public AccountIdentities With(ExternalIdentity identity) => Contains(identity) ? this : new AccountIdentities(_all.Add(identity));
 

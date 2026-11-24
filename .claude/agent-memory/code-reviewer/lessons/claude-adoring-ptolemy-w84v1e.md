@@ -1,0 +1,1 @@
+- A pinning test named for a property ("one Stage III spell in each family") that asserts only a fixed list of names: ask it to assert the property its name claims, or rename it (#1088, a9926b3).

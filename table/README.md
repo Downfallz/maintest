@@ -516,6 +516,19 @@ only the admin panel names the bot itself beside its level. A seat link opened s
 the host when the page starts and again a few seconds after the table changes (ADR 0164), so an opponent who takes the open place shows up by name. A card of an unfinished game says whose turn it is: *Your turn* in gold when one of this
 browser's seats is being asked, otherwise the name of the player the match is waiting on, or both players.
 
+Settings, Account, *Ways to sign in* lists the providers the account uses and the others the host offers (P4,
+ADR 0204). *Add* runs that provider's own sign-in (Google's button drawn in the row, or Discord's authorize page,
+whose return page adds Discord and opens Settings again on the lobby) and posts the proof to
+`POST /api/account/identities/<provider>`: the way in is the one the provider vouches for, never one the page names.
+An account uses one way per provider, and a way another account uses is refused. Both ask for a sign-in made in the
+last ten minutes: every sign-in's answer carries `recent`, a proof the page keeps in the tab's `sessionStorage` and
+sends back, never a cookie, so a session cookie taken from a device left signed in cannot change how the account is
+reached. Without it Settings offers *Sign out and sign in again*, and opens Account again after the sign-in. *Remove* is
+`DELETE /api/account/identities/<provider>`; the last way in is never removed. Removing one ends every other session of
+the account and forgets its devices, as *Sign out everywhere* does, and keeps this browser signed in. The host
+says `Way in added (<provider>) to account <id>.`, `Way in removed (<provider>) from account <id>.` and
+`Way in refused (<provider>) for account <id>: <code or status>.` on the console, never the provider's identifier.
+
 The account menu's *Delete account…* (`DELETE /api/account {"username":"<their name>"}`) deletes the account once
 its player types their name: its seats in unfinished games are offered to other players, its name and sign-in are
 freed, and every session of it stops working. The lobby's *What we keep* panel says what an account holds.
@@ -804,6 +817,9 @@ the store cannot open or keep is 503 `Lobby.Unavailable`. A relay that is out is
 | `GET /api/me` | anyone | Who is signed in, whether they are the operator, and the host's notice (ADR 0177). |
 | `/signin/discord` | anyone | The page Discord returns a sign-in to (sign-in methods plan, P3): it checks the tab's state, posts the code and goes back to the lobby. |
 | `POST /api/account/<provider>` | anyone | Signs in with a provider the host lists (`google`: `{"credential": "<ID token>"}`; `discord`: `{"code", "verifier", "redirect"}`): the account's session, or a ticket and `needsUsername` for a new player; 401 `Account.SignInRejected` for a proof the provider does not vouch for, 404 `Account.NoProvider` for a provider the host does not list, 503 `Account.ProviderUnavailable` for a provider that cannot be asked right now, 409 `Account.RegistrationClosed` for a new player while registration is closed, 429 `Account.TooManySignIns` with `Retry-After` past an address's count: five sign-ins a minute its provider does not vouch for (thirty for an IPv6 /48), twenty people vouched for, eight checked at once (#1193). |
+| `GET /api/account/identities` | account | The providers the account signs in with, in the order added, and whether each can be removed (`{"identities": [{"provider", "removable"}]}`), never their identifiers (P4, ADR 0204). |
+| `POST /api/account/identities/<provider>` | account, signed in within ten minutes | Adds a way in: the body is the provider's sign-in proof, as for `POST /api/account/<provider>`, with `recent`, the proof a sign-in's answer handed the page. Answers with the account's updated ways; 403 `Account.SignInAgain` without a recent sign-in of this account, 404 `Account.NoProvider`, 400 `Account.BadRequest`, 401 `Account.SignInRejected`, 503 `Account.ProviderUnavailable` as for a sign-in, 409 `Account.IdentityTaken` for a way another account uses, 409 `Account.ProviderLinked` for a second way through one provider, 429 `Account.TooManySignIns` past the address's count, as for a sign-in, 403 `Account.Suspended`, 503 `Account.Unavailable` when the store fails. |
+| `DELETE /api/account/identities/<provider>` | account, signed in within ten minutes | Removes a way in (`{"recent"}`), whether or not the host still offers its provider; every other session ends and the devices are forgotten, and this browser gets a new session. 403 `Account.SignInAgain`, 409 `Account.LastIdentity` for the only one, 404 `Account.IdentityNotLinked` for one the account does not use, 503 `Account.Unavailable` when the store fails (with the new session when only the devices could not be forgotten). |
 | `POST /api/account` | anyone | Registers a new player with the ticket and the name chosen (`{"ticket", "username"}`), and signs them in. |
 | `POST /api/account/dev` | anyone, loopback | Signs in by a typed name on a `--accounts dev` host; 404 elsewhere. |
 | `DELETE /api/account` | account | Deletes the account. |

@@ -11,7 +11,7 @@ const battle = {
 };
 const held = { table: battle, seats: [{ seat: 'player1', token: 'seat-token' }] };
 
-async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null, holdCreate = null } = {}) {
+async function home(page, { account = player, mode = 'dev', delayMine = false, operator = false, meDown = false, notice = null, registrationClosed = false, games = null, finished = { players: [], bots: [] }, opponents = [], tutorials = null, opensTutorial = false, search = '', invitations = [], incoming = [challenger], publicTables = [battle], scenarios = null, newAccount = false, invited = null, holdInvitation = null, lobbyDown = false, news = null, holdFirstNews = null, holdCreate = null, signIn = null, ways = null } = {}) {
   const state = { holdInvitation, holdCreate, news, holdFirstNews, account, mode, meDown, offline: lobbyDown, mineReads: 0, friendReads: 0, finishedReads: [], privateReads: [], release: null, invitations, publicTables,
     friends: { friends: [friend], incoming, outgoing: [] } };
   const errors = [];
@@ -31,7 +31,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     (state.asked ??= []).push(path);
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
-    if (path === '/api/me') return json({ accounts: state.mode === 'google' ? 'signin' : state.mode, signIn: state.mode === 'google' ? [{ provider: 'google', clientId: 'test-client' }] : [], account: state.account, operator, notice });
+    if (path === '/api/me') return json({ accounts: state.mode === 'google' ? 'signin' : state.mode, signIn: signIn ?? (state.mode === 'google' ? [{ provider: 'google', clientId: 'test-client' }] : []), account: state.account, operator, notice });
     // A first sign-in while the operator has registration closed (ADR 0177) is refused rather than asked for a name.
     if (path === '/api/account/google' && registrationClosed) return route.fulfill({ status: 409, json: { error: 'Account.RegistrationClosed', message: 'New accounts are closed for now. Try again later.' } });
     // A first sign-in names itself in the name window: the host hands a ticket, then takes the name.
@@ -45,6 +45,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     }
     // A table asked for is noted and refused: the dialog's request is what the tests read.
     if (path === '/api/lobby/tables' && route.request().method() === 'POST') { state.created = route.request().postDataJSON(); if (state.holdCreate) await state.holdCreate; return route.fulfill({ status: 409, json: { message: 'All tables are occupied.' } }); }
+    if (ways && path.startsWith('/api/account/identities')) return ways.answer(route, path);
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
     if (path === '/api/lobby') {
@@ -673,6 +674,66 @@ test('the account menu holds Settings, Report or suggest and Sign out; the accou
   await page.locator('#action-confirm').click();
   await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
   expect(state.signouts).toEqual([{ everywhere: true }]);
+});
+
+// Settings' ways to sign in (sign-in methods plan, P4), shaped as AccountIdentitiesApiTests answers them.
+async function waysHost(page, { recent = true } = {}) {
+  const ways = { identities: [{ provider: 'google', removable: true }, { provider: 'discord', removable: true }], removals: [], reads: 0 };
+  if (recent) await page.addInitScript(() => sessionStorage.setItem('downfall.recentSignIn', JSON.stringify({ value: 'r1.proof', at: Date.now() })));
+  ways.answer = (route, path) => {
+    if (path === '/api/account/identities') { ways.reads += 1; return route.fulfill({ json: { identities: ways.identities } }); }
+    if (route.request().method() === 'DELETE') {
+      ways.removals.push([path, route.request().headers()['content-type'], route.request().postDataJSON()]);
+      ways.identities = [{ provider: 'google', removable: false }];
+      return route.fulfill({ json: { identities: ways.identities } });
+    }
+    return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
+  };
+  return ways;
+}
+
+const offered = [{ provider: 'google', clientId: 'test-client' }, { provider: 'discord', clientId: '1311' }];
+
+test('at 320 px Settings, Account lists the ways to sign in, and removing one asks first, then keeps the last', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  const ways = await waysHost(page);
+  await home(page, { mode: 'google', signIn: offered, ways });
+  expect(ways.reads).toBe(0);
+
+  const dialog = await openAccountSettings(page, 'Account');
+  const rows = dialog.locator('#ways-list > li');
+  await expect(rows.locator('strong')).toHaveText(['Google', 'Discord']);
+  const remove = dialog.getByRole('button', { name: 'Remove Discord' });
+  expect((await remove.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await noOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath('settings-ways-320.jpg'), type: 'jpeg', quality: 85, animations: 'disabled' });
+
+  await remove.click();
+  await expect(page.locator('#action-title')).toHaveText('Remove Discord?');
+  await expect(page.locator('#action-detail')).toContainText('Every other device is signed out');
+  await page.locator('#action-confirm').click();
+
+  await expect(page.locator('#ways-note')).toHaveText('Discord removed. Other devices are signed out.');
+  await expect(page.locator('#ways-note')).toBeFocused();
+  await expect(rows.locator('strong')).toHaveText(['Google', 'Discord']);
+  await expect(rows.nth(0)).toContainText('Your only way to sign in');
+  await expect(dialog.getByRole('button', { name: 'Remove Google' })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Add Discord' })).toBeVisible();
+  expect(ways.removals).toEqual([['/api/account/identities/discord', 'application/json', { recent: 'r1.proof' }]]);
+  expect(ways.reads).toBe(1);
+});
+
+test('without a recent sign-in in the tab, removing a way asks to sign in again and asks the host nothing', async ({ page }) => {
+  const ways = await waysHost(page, { recent: false });
+  await home(page, { mode: 'google', signIn: offered, ways });
+
+  const dialog = await openAccountSettings(page, 'Account');
+  await dialog.getByRole('button', { name: 'Remove Discord' }).click();
+
+  await expect(page.locator('#ways-problem')).toContainText('sign in again');
+  await expect(dialog.getByRole('button', { name: 'Sign out and sign in again' })).toBeVisible();
+  await expect(page.locator('#action-dialog')).not.toHaveAttribute('open', '');
+  expect(ways.removals).toEqual([]);
 });
 
 for (const file of ['leaderboard', 'battle', 'index']) {

@@ -26,6 +26,11 @@ internal sealed class AccountApi
     private const string PreferencesRoute = Prefix + "/preferences";
     private const string NoticePreferencesRoute = PreferencesRoute + "/notices";
     private const string NoticesRoute = Prefix + "/notices";
+    private const string IdentitiesRoute = Prefix + "/identities";
+
+    // What a route that needs a signed-in account answers to nobody.
+    private const string SignInRequiredCode = "Account.SignInRequired";
+    private const string SignInFirst = "Sign in first.";
 
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
@@ -468,6 +473,9 @@ internal sealed class AccountApi
                 ("GET", PreferencesRoute) => await PreferencesAsync(request),
                 ("PUT", PreferencesRoute) => await SavePreferencesAsync(body, request),
                 ("PUT", NoticePreferencesRoute) => await SaveNoticePreferencesAsync(body, request),
+                ("GET", IdentitiesRoute) => await IdentitiesAsync(request),
+                ("POST", _) when WayOf(path) is { } added => await AddWayAsync(added, body, request),
+                ("DELETE", _) when WayOf(path) is { } removed => await RemoveWayAsync(removed, body, request),
                 ("GET", _) when path.StartsWith(NamesPrefix, StringComparison.Ordinal) => await NameAsync(Uri.UnescapeDataString(path[NamesPrefix.Length..])),
                 ("POST", _) when ProviderOf(path) is { } provider => await ProviderAsync(provider, body, request),
                 _ => Problem(404, "Account.NoRoute", "No such account route."),
@@ -501,47 +509,10 @@ internal sealed class AccountApi
             return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
         }
 
-        var proof = Proof(body);
-        if (proof is null)
+        var (identity, refusal) = await VouchedAsync(provider, body, request, counted: true);
+        if (refusal is not null)
         {
-            return Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object.");
-        }
-
-        // Checked by address before the provider is asked (#1193): its budget is every player's, not one address's.
-        if (request.Address is { } address && _attempts.Admit(address, Clock.GetUtcNow()) is { } wait)
-        {
-            return Limited(name, wait);
-        }
-
-        // Counted only once the provider answered: a provider that fails unexpectedly cost the address nothing.
-        var outcome = SignInAttempts.Outcome.Unchecked;
-        ExternalIdentity? vouched = null;
-        try
-        {
-            Counted(SignInCounts.Step.Started, name);
-            vouched = await provider.SignInAsync(proof);
-            outcome = SignInAttempts.Outcome.Refused;
-        }
-        catch (SignInUnavailableException exception)
-        {
-            // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
-            // Why is said once a minute: every post would otherwise write it again.
-            if (Counted(SignInCounts.Step.Unavailable, name) == 1)
-            {
-                Said($"  Sign-in unavailable ({name}): {exception.Message}");
-            }
-
-            return Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute.");
-        }
-        finally
-        {
-            Settle(request, name, outcome, vouched);
-        }
-
-        if (vouched is not { } identity || identity.Provider != name)
-        {
-            Counted(SignInCounts.Step.Refused, name);
-            return Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again.");
+            return refusal;
         }
 
         if (await _registry.FindAsync(identity) is { } account)
@@ -558,6 +529,251 @@ internal sealed class AccountApi
 
         return Answer(new { needsUsername = true, ticket = _sessions.Ticket(identity) });
     }
+
+    /// <summary>
+    /// The identity the provider vouches for from what the page posted, or the answer that refuses it: a body that is
+    /// not one object, an address past its count (#1193), a proof the provider refuses or answers for another provider,
+    /// a provider out of reach.
+    /// <paramref name="counted" /> says the sign-in's steps, which only a sign-in counts.
+    /// </summary>
+    private async Task<(ExternalIdentity Identity, StudioResponse? Refusal)> VouchedAsync(ISignInProvider provider, string body, AccountRequest request, bool counted)
+    {
+        var name = provider.Name;
+        var proof = Proof(body);
+        if (proof is null)
+        {
+            return (default, Problem(400, "Account.BadRequest", "A sign-in is posted as one JSON object."));
+        }
+
+        // Checked by address before the provider is asked (#1193): its budget is every player's, not one address's.
+        if (request.Address is { } address && _attempts.Admit(address, Clock.GetUtcNow()) is { } wait)
+        {
+            return (default, Limited(name, wait));
+        }
+
+        // Counted only once the provider answered: a provider that fails unexpectedly cost the address nothing.
+        var outcome = SignInAttempts.Outcome.Unchecked;
+        ExternalIdentity? vouched = null;
+        try
+        {
+            if (counted)
+            {
+                Counted(SignInCounts.Step.Started, name);
+            }
+
+            vouched = await provider.SignInAsync(proof);
+            outcome = SignInAttempts.Outcome.Refused;
+        }
+        catch (SignInUnavailableException exception)
+        {
+            // Not the player's fault, and not a refusal: counted apart, so an outage does not read as players turned away.
+            // Why is said once a minute: every post would otherwise write it again.
+            if (Counted(SignInCounts.Step.Unavailable, name) == 1)
+            {
+                Said($"  Sign-in unavailable ({name}): {exception.Message}");
+            }
+
+            return (default, Problem(503, "Account.ProviderUnavailable", "That sign-in cannot be checked right now. Try again in a minute."));
+        }
+        finally
+        {
+            Settle(request, name, outcome, vouched);
+        }
+
+        if (vouched is not { } identity || identity.Provider != name)
+        {
+            if (counted)
+            {
+                Counted(SignInCounts.Step.Refused, name);
+            }
+
+            return (default, Problem(401, "Account.SignInRejected", "Your sign-in could not be checked. Sign in again."));
+        }
+
+        return (identity, null);
+    }
+
+    /// <summary>The provider a ways-to-sign-in path names after <c>/identities/</c>, in lower-case letters; null for any other path.</summary>
+    private static string? WayOf(string path) =>
+        path.StartsWith(IdentitiesRoute + "/", StringComparison.Ordinal) && path[(IdentitiesRoute.Length + 1)..] is { Length: > 0 } name && name.All(char.IsAsciiLetterLower)
+            ? name
+            : null;
+
+    /// <summary>
+    /// The ways into an account as a page is told them: each one's provider, in the order added, and whether the host
+    /// would remove it; never its identifier. The page draws Remove where the host says so.
+    /// </summary>
+    private static object Ways(Account account) => new
+    {
+        identities = account.Identities.All.Select(identity => new { provider = identity.Provider, removable = account.Identities.Without(identity).IsSuccess }).ToArray(),
+    };
+
+    /// <summary>Settings' ways to sign in (sign-in methods plan, P4): the providers the signed-in account uses.</summary>
+    private async Task<StudioResponse> IdentitiesAsync(AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return SignInRequired("Sign in to see how you sign in.");
+        }
+
+        return Answer(Ways(who.Account), who.Renewed);
+    }
+
+    /// <summary>
+    /// Adds a way into the signed-in account (ADR 0204): the identity is the one the provider vouches for from the
+    /// proof posted now, never one the request names. One per provider; one another account uses is refused.
+    /// Sessions are left alone. Asks for a recent sign-in (<see cref="RecentlySignedIn" />).
+    /// </summary>
+    private async Task<StudioResponse> AddWayAsync(string name, string body, AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return SignInRequired("Sign in to add a way to sign in.");
+        }
+
+        if (!_providers.TryGetValue(name, out var provider))
+        {
+            return Problem(404, "Account.NoProvider", "This host does not sign in that way.");
+        }
+
+        if (RecentlySignedIn(who.Account, body) is { } stale)
+        {
+            return stale;
+        }
+
+        var (identity, refusal) = await VouchedAsync(provider, body, request, counted: false);
+        if (refusal is not null)
+        {
+            // The account is named, never the provider's identifier: a takeover is traced by the account it reached.
+            Said($"  Way in refused ({name}) for account {who.Account.Id}: {refusal.Status}.");
+            return refusal;
+        }
+
+        Result<Account> linked;
+        try
+        {
+            linked = await _registry.LinkAsync(who.Account.Id, identity, who.Account.Generation);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            // The failure's type alone: a file store's message names the by-subject path, the provider's identifier.
+            Said($"  Way in not added ({name}) to account {who.Account.Id}: {failure.GetType().Name}.");
+            return WaysUnavailable();
+        }
+
+        if (linked.IsFailure)
+        {
+            Said($"  Way in refused ({name}) for account {who.Account.Id}: {linked.Error.Code}.");
+            return WayRefused(linked.Error);
+        }
+
+        _cache[linked.Value.Id] = (linked.Value, _sessions.Clock.GetUtcNow());
+        Said($"  Way in added ({name}) to account {linked.Value.Id}.");
+        return Answer(Ways(linked.Value), who.Renewed);
+    }
+
+    /// <summary>
+    /// Removes a way into the signed-in account (ADR 0204), whether or not the host still offers its provider; never
+    /// the last. Every session of the account ends with it, and its devices are forgotten, as with "sign out
+    /// everywhere": whoever came in through it is out. The browser that asked is handed a new session, even when
+    /// forgetting the devices fails after the removal. Asks for a recent sign-in.
+    /// </summary>
+    private async Task<StudioResponse> RemoveWayAsync(string name, string body, AccountRequest request)
+    {
+        if (await WhoAsync(request) is not { } who)
+        {
+            return SignInRequired("Sign in to remove a way to sign in.");
+        }
+
+        if (RecentlySignedIn(who.Account, body) is { } stale)
+        {
+            return stale;
+        }
+
+        if (who.Account.Identities.ByProvider(name) is not { } identity)
+        {
+            return WayRefused(AccountErrors.IdentityNotLinked);
+        }
+
+        Result<Account> unlinked;
+        try
+        {
+            unlinked = await _registry.UnlinkAsync(who.Account.Id, identity, who.Account.Generation);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            // The account may be written and its generation raised, the entry left behind: its cookie may be dead
+            // too, so the page reads the account again.
+            _cache.TryRemove(who.Account.Id, out _);
+            Said($"  Way in not removed ({name}) from account {who.Account.Id}: {failure.GetType().Name}.");
+            return WaysUnavailable();
+        }
+
+        if (unlinked.IsFailure)
+        {
+            return WayRefused(unlinked.Error);
+        }
+
+        var account = unlinked.Value;
+        _cache[account.Id] = (account, _sessions.Clock.GetUtcNow());
+        var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
+        if (Devices is { } devices)
+        {
+            try
+            {
+                await devices.ForgetAsync(account.Id);
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Way in removed ({name}) from account {account.Id}, its devices not forgotten: {failure.GetType().Name}.");
+                return Problem(503, "Account.Unavailable", "The way to sign in is removed, but your devices could not be signed out. Sign out everywhere from Settings.") with
+                {
+                    Headers = [new KeyValuePair<string, string>("Set-Cookie", cookie)],
+                };
+            }
+        }
+
+        Said($"  Way in removed ({name}) from account {account.Id}.");
+        return Answer(Ways(account), cookie);
+    }
+
+    /// <summary>
+    /// Null when the posted <c>recent</c> proves this account signed in within <see cref="AccountSessions.RecentFor" />;
+    /// otherwise the 403 that asks the player to sign in again. The session cookie alone is not enough to change how
+    /// an account is reached: a cookie taken from a device left signed in would hand the account over for good.
+    /// </summary>
+    private StudioResponse? RecentlySignedIn(Account account, string body)
+    {
+        var proof = string.IsNullOrWhiteSpace(body) ? null : Proof(body);
+        return _sessions.ReadRecent(proof?["recent"]) == account.Id
+            ? null
+            : Problem(403, "Account.SignInAgain", "For your safety, sign in again to change how you sign in.");
+    }
+
+    private static StudioResponse WaysUnavailable() =>
+        Problem(503, "Account.Unavailable", "Your ways to sign in cannot be changed right now. Try again in a minute.");
+
+    private static StudioResponse WayRefused(DomainError error)
+    {
+        if (error == AccountErrors.SessionEnded)
+        {
+            return SignInRequired(error.Message);
+        }
+
+        var status = 403;
+        if (error == AccountErrors.IdentityNotLinked || error == AccountErrors.NotFound)
+        {
+            status = 404;
+        }
+        else if (error == AccountErrors.IdentityTaken || error == AccountErrors.ProviderLinked || error == AccountErrors.LastIdentity)
+        {
+            status = 409;
+        }
+
+        return Problem(status, error.Code, error.Message);
+    }
+
+    private static StudioResponse SignInRequired(string message) => Problem(401, SignInRequiredCode, message);
 
     /// <summary>A sign-in its address's count refuses (#1193), with how long until a place frees.</summary>
     private StudioResponse Limited(string provider, TimeSpan wait)
@@ -695,7 +911,7 @@ internal sealed class AccountApi
     {
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in to delete your account.");
+            return Problem(401, SignInRequiredCode, "Sign in to delete your account.");
         }
 
         if (!string.Equals(Read<RegisterBody>(body)?.Username?.Trim(), who.Account.Username.Value, StringComparison.OrdinalIgnoreCase))
@@ -721,7 +937,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+            return Problem(401, SignInRequiredCode, "Sign in to be notified on this device.");
         }
 
         var sent = Read<BrowserSubscription>(body);
@@ -749,7 +965,7 @@ internal sealed class AccountApi
         if (await WhoAsync(request) is null)
         {
             await devices.RemoveAsync(who.Account.Id, subscription.Endpoint);
-            return Problem(401, "Account.SignInRequired", "Sign in to be notified on this device.");
+            return Problem(401, SignInRequiredCode, "Sign in to be notified on this device.");
         }
 
         return Answer(new { notices = true, devices = held.Count }, who.Renewed);
@@ -765,7 +981,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         if (Read<BrowserSubscription>(body)?.Endpoint is not { Length: > 0 } endpoint)
@@ -787,7 +1003,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var test = await notices.TestAsync(who.Account.Id, Read<BrowserSubscription>(body)?.Endpoint);
@@ -807,7 +1023,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         try
@@ -832,7 +1048,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         if (Read<ReadNoticesBody>(body)?.UpTo is not { } upTo)
@@ -879,7 +1095,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var saved = await store.GetAsync(who.Account.Id);
@@ -901,7 +1117,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var asked = Read<NoticePreferencesBody>(body);
@@ -946,7 +1162,7 @@ internal sealed class AccountApi
 
         if (await WhoAsync(request) is not { } who)
         {
-            return Problem(401, "Account.SignInRequired", "Sign in first.");
+            return SignInRequired(SignInFirst);
         }
 
         var asked = Read<PreferencesBody>(body);
@@ -994,7 +1210,7 @@ internal sealed class AccountApi
 
         var cookie = AccountSessions.SetCookie(_sessions.Issue(account), request.Secure);
         Counted(SignInCounts.Step.Finished, provider);
-        return Answer(new { account = Describe(account) }, cookie);
+        return Answer(new { account = Describe(account), recent = _sessions.Recent(account) }, cookie);
     }
 
     private static StudioResponse Refused(DomainError error) => Problem(

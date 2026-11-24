@@ -432,7 +432,7 @@ that extends it.
    - A trail's head goes at an even pace and its pieces live 240 ms (#947): Revitalize, Vital Echo, Renewal Burst
      and Incinerate draw a line.
    - The slow push on a capstone is built, a `push` beat of the windup, on one Stage III spell in each family: Crushing
-     Stomp, Devour, Incinerate, Void Pulse and Death Wail (#950).
+     Stomp, Devour, Incinerate, Void Pulse and Death Wail (#950). The owner kept these five (#1088).
    - Out of the book on the owner's word: the chain between targets with Shock's flicker, the void's dark of its
      own, the ring that opens and stands, the orbit, the source above the field, the slow's own look (#950), and the
      scar that fades (#954).

@@ -130,9 +130,11 @@ public sealed class AccountRegistry
     /// written first, create-only-if-absent, so an identity another account holds is refused however close the race,
     /// then the account. A binding already naming this account is a link that stopped between its writes, finished
     /// now; one naming an account that is gone or does not list it holds nobody and is taken back. A suspended
-    /// account links nothing. Sessions are left alone.
+    /// account links nothing, nor a second identity of a provider it already holds. Sessions are left alone.
+    /// <paramref name="generation" />, when given, is the asking session's: a sign out everywhere that raised it while
+    /// the provider was being asked refuses the link, checked under the same gate as the write.
     /// </summary>
-    public async Task<Result<Account>> LinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
+    public async Task<Result<Account>> LinkAsync(AccountId id, ExternalIdentity identity, int? generation = null, CancellationToken cancellationToken = default)
     {
         await Writes.WaitAsync(cancellationToken);
         try
@@ -147,9 +149,19 @@ public sealed class AccountRegistry
                 return Result.Failure<Account>(AccountErrors.Suspended(suspension));
             }
 
+            if (generation is { } asked && asked != account.Generation)
+            {
+                return Result.Failure<Account>(AccountErrors.SessionEnded);
+            }
+
             if (account.Identities.Contains(identity))
             {
                 return Result.Success(account);
+            }
+
+            if (account.Identities.ByProvider(identity.Provider) is not null)
+            {
+                return Result.Failure<Account>(AccountErrors.ProviderLinked);
             }
 
             if (!await BindAsync(identity, id, cancellationToken))
@@ -173,8 +185,9 @@ public sealed class AccountRegistry
     /// signed out with every other session. The account is written first, then the binding removed. If the removal
     /// stops between the two, the binding reaches nothing, since the account no longer lists it, and no other
     /// account can take the identity while this one lists it. Removing it again finishes the job.
+    /// <paramref name="generation" />, when given, is the asking session's: one ended meanwhile removes nothing.
     /// </summary>
-    public async Task<Result<Account>> UnlinkAsync(AccountId id, ExternalIdentity identity, CancellationToken cancellationToken = default)
+    public async Task<Result<Account>> UnlinkAsync(AccountId id, ExternalIdentity identity, int? generation = null, CancellationToken cancellationToken = default)
     {
         await Writes.WaitAsync(cancellationToken);
         try
@@ -182,6 +195,11 @@ public sealed class AccountRegistry
             if (await _store.FindAsync(id, cancellationToken) is not { } account)
             {
                 return Result.Failure<Account>(AccountErrors.NotFound);
+            }
+
+            if (generation is { } asked && asked != account.Generation)
+            {
+                return Result.Failure<Account>(AccountErrors.SessionEnded);
             }
 
             var remaining = account.Identities.Without(identity);

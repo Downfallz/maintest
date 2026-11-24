@@ -1,7 +1,7 @@
 # Plan: more ways to sign in, and a guest
 
-Status: accepted, 2026-11-23. The owner settled the four questions (at the end). P1 to P3 are built; P4 to P6 are
-not.
+Status: accepted, 2026-11-23. The owner settled the four questions (at the end) and question 5 with P4. P1 to P4 are
+built; P5 and P6 are not.
 
 ## What the owner asked for
 
@@ -202,6 +202,30 @@ and 4. The recommended answer:
 4. **P4, ways to sign in.** Ships once P1's release is the only one running (ADR 0204). Settings lists the
    account's providers, adds one (the provider's own flow, then `POST /api/account/identities/<provider>`) and
    removes one. Tests: the routes; the journey at 320 px.
+
+   *Built (2026-11-23)*:
+
+   - The routes: `GET /api/account/identities` lists the account's providers and whether each can be removed, never
+     an identifier. `POST /api/account/identities/<provider>` adds the identity the provider vouches for from the
+     proof posted in that request. `DELETE` removes one, never the last, ends every other session, forgets the
+     devices and hands the asking browser a new session. A store failure is `503 Account.Unavailable`.
+   - One way per provider (`Account.ProviderLinked`): a player names a way by its provider, and the cap P1 left is the
+     number of providers the host offers.
+   - A recent sign-in (question 5): adding or removing asks for a sign-in of this account made in the last ten
+     minutes. Every sign-in's answer carries `recent`, signed by the host and kept in the tab's `sessionStorage`,
+     never in a cookie; without it the routes answer `403 Account.SignInAgain` and Settings offers *Sign out and sign
+     in again*.
+   - The page: Settings, Account, *Ways to sign in* (`ways.js`), read when the tab is shown. Google's button is drawn
+     in its row; Google's one configuration per page is shared with the sign-in (`answerGoogle`, `prepareGoogle`).
+     Discord leaves with `purpose: 'link'`, and `/signin/discord` adds it and opens Settings again on the lobby.
+   - The console says `Way in added|removed|refused (<provider>) ... account <id>`, never the provider's identifier.
+   - Tests: the routes (`AccountIdentitiesApiTests`), the registry, the pages, and the journey at 320 px
+     (`lobby-home.spec.js`).
+   - ADR 0204 asks that P4 ship once no release older than P1 runs. P2 and P3 were merged after P1; the running
+     revision is to be checked before this one merges.
+   - Left: a removal whose second write (the `by-subject` entry) fails leaves that entry behind, out of reach of the
+     route and of the account's deletion; the registry's writes are not conditional on what they read, against the
+     release beside them during a deploy; a notice in the bell when a way is added or removed.
 5. **P5, the guest.** The ADR UX15 asks for, amending accounts-plan question 5: what a guest is, the routes it
    reaches, its lifetime, the per-address count, the upgrade. `MakeGuestAsync`, `UpgradeAsync`,
    `POST /api/account/guest`, the route list, `table-tend` removing old guests. No page: UX15 builds the journey
@@ -222,7 +246,9 @@ a signing key and a paid developer account. Each comes back as its own stage wit
 3. **What may a guest reach?** The tutorials only (recommended, UX15); the tutorials and practice against bots;
    everything but the ladder and friends.
 4. **How long does a guest live?** 30 days after its last use (recommended); 7 days; until the browser forgets
-   its cookie.
+   its cookie.5. **(P4) What guards a change to the ways in?** Raised by the security review: a session cookie taken from a
+   device left signed in could add the taker's provider and remove the owner's. A sign-in made in the last ten
+   minutes (recommended); a notice in the bell; both; ship as is.
 
 ## Questions the owner settled (2026-11-23)
 
@@ -231,3 +257,4 @@ a signing key and a paid developer account. Each comes back as its own stage wit
 3. **What a guest reaches:** the tutorials only.
 4. **How long a guest lives:** as long as the browser keeps its cookie (thirty days, renewed on use); then
    `table-tend` removes it.
+5. **What guards a change to the ways in (P4):** a sign-in made in the last ten minutes.

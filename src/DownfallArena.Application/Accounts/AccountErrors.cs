@@ -18,6 +18,18 @@ public static class AccountErrors
     /// <summary>An identity linked to an account while another account holds it (ADR 0204).</summary>
     public static readonly DomainError IdentityTaken = new("Account.IdentityTaken", "Another account already uses this way to sign in. Sign in to that account and remove it there first.");
 
+    /// <summary>
+    /// A second identity from a provider the account already signs in with (sign-in methods plan, P4): one way in per
+    /// provider, so a player names a way by its provider. An account lists at most one way per provider the host offers.
+    /// </summary>
+    public static readonly DomainError ProviderLinked = new("Account.ProviderLinked", "This account already has a way to sign in with that service. Remove it first to add another.");
+
+    /// <summary>
+    /// A change asked by a session the account no longer honours: a sign out everywhere, or another change of the
+    /// ways in, raised its generation while the request was under way.
+    /// </summary>
+    public static readonly DomainError SessionEnded = new("Account.SessionEnded", "This session has ended. Sign in again.");
+
     /// <summary>Removing the only way into an account (ADR 0204): deleting the account is how it goes.</summary>
     public static readonly DomainError LastIdentity = new("Account.LastIdentity", "This is the only way to sign in to this account. Add another way before you remove it.");
 

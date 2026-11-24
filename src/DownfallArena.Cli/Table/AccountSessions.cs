@@ -24,8 +24,15 @@ internal sealed class AccountSessions
 
     public static readonly TimeSpan TicketLifetime = TimeSpan.FromMinutes(10);
 
+    /// <summary>
+    /// How long a sign-in counts as recent: what adding or removing a way to sign in asks for (sign-in methods plan, P4),
+    /// so a session cookie taken from a device left signed in cannot hand the account to someone else.
+    /// </summary>
+    public static readonly TimeSpan RecentFor = TimeSpan.FromMinutes(10);
+
     private const string SessionPrefix = "s1";
     private const string TicketPrefix = "t1";
+    private const string RecentPrefix = "r1";
     private static readonly TimeSpan Skew = TimeSpan.FromMinutes(1);
 
     private readonly byte[] _key;
@@ -100,6 +107,30 @@ internal sealed class AccountSessions
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The proof that this account signed in a moment ago, handed to the page in the sign-in's answer and never in a
+    /// cookie: a stolen cookie does not carry it. It names the account and when it runs out.
+    /// </summary>
+    public string Recent(Account account)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+        return Sign(string.Join('.', RecentPrefix, account.Id.Value, Seconds(_clock.GetUtcNow() + RecentFor)));
+    }
+
+    /// <summary>The account a recent sign-in proves, or null: one this host did not sign, or one that has run out.</summary>
+    public AccountId? ReadRecent(string? value)
+    {
+        if (Verified(value, RecentPrefix) is not [var id, var expires]
+            || !AccountId.TryParse(id, out var account)
+            || !long.TryParse(expires, NumberStyles.None, CultureInfo.InvariantCulture, out var seconds)
+            || seconds <= _clock.GetUtcNow().ToUnixTimeSeconds())
+        {
+            return null;
+        }
+
+        return account;
     }
 
     /// <summary>The <c>Set-Cookie</c> that keeps a session; <c>Secure</c> everywhere but a loopback host.</summary>
