@@ -704,7 +704,7 @@ public sealed class LobbyApiTests : IDisposable
         var refused = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
         refused.Status.ShouldBe(502);
         var refusal = JsonDocument.Parse(refused.Body).RootElement.GetProperty("message").GetString().ShouldNotBeNull();
-        refusal.ShouldBe("The push service refused it (403).");
+        refusal.ShouldBe("The notification service refused it (403).");
         refusal.ShouldNotContain("bad vapid", Case.Insensitive);
         table.Seats[0].Push.ShouldNotBeNull("a refusal is the service's, the subscription stays");
 

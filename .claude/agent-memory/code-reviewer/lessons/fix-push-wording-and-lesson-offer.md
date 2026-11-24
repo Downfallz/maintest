@@ -1,0 +1,3 @@
+# code-reviewer lessons (branch fix/push-wording-and-lesson-offer)
+- A DOM read keyed on creature positions, called from `render()` in `battle/src/live.ts`, runs before `scene.present` places the hit targets (`scene.onLayout`): on a fresh roster every creature is unplaced at the top-left. Hook geometry reads on `onLayout`, and probe with an `inert` setter hook, since `expect.poll` hides a transient wrong state (#1206, f675fca).
+- A glossary rule worded broadly ("never push service, never host") is broken on arrival by the sibling sentences the issue did not name: grep the player-facing strings before accepting it (#1233, f675fca).
