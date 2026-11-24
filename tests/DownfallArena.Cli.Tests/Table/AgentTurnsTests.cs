@@ -99,13 +99,7 @@ public sealed class AgentTurnsTests : IDisposable
             async (run, cancellationToken) => (await registry.ByIdAsync(run, cancellationToken))?.Session as IAgentTurnTaker,
             TimeProvider.System);
 
-        for (var look = 0; look < 600 && !table.IsOver; look++)
-        {
-            if (await worker.RunOnceAsync(Cancel) == 0)
-            {
-                await Task.Delay(10, Cancel);
-            }
-        }
+        await Waits.HoldsAsync(async () => table.IsOver || await worker.RunOnceAsync(Cancel) < 0, Cancel);
 
         table.IsOver.ShouldBeTrue("the worker took every turn the queue said the table owed");
         (await table.Session.Outcome).IsSuccess.ShouldBeTrue();
