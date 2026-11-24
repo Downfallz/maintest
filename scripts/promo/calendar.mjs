@@ -21,10 +21,15 @@ const units = text => text.length;
 // an email address is not linked, so it counts its characters.
 const ADDRESS = /(?<![@\w.-])(?:https?:\/\/\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?![@.\w-])\S*)/gi;
 const LIGHT = [[0x0000, 0x10ff], [0x2000, 0x200d], [0x2010, 0x201f], [0x2032, 0x2037]];
+// X leaves the punctuation that ends a sentence out of an address: it counts as characters.
+const TRAILING = /[.,;:!?'"»…)\]]+$/u;
 function weighted(text) {
-  const addresses = text.match(ADDRESS) ?? [];
-  const rest = text.replace(ADDRESS, '');
-  let count = addresses.length * 23;
+  let addresses = 0;
+  const rest = text.replace(ADDRESS, address => {
+    addresses += 1;
+    return TRAILING.exec(address)?.[0] ?? '';
+  });
+  let count = addresses * 23;
   for (const character of rest) {
     const point = character.codePointAt(0);
     count += LIGHT.some(([low, high]) => point >= low && point <= high) ? 1 : 2;

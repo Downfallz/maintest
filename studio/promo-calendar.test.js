@@ -133,6 +133,8 @@ test('X counts its own way: an emoji or a French narrow space twice, an address 
   assert.equal(CHANNELS.x.count('https://downfallinstinct.com/play?from=x now'), 23 + 4);
   assert.equal(CHANNELS.x.count('Watch youtu.be/ab'), 6 + 23);
   assert.equal(CHANNELS.x.count('redd.it/ab'), 23);
+  assert.equal(CHANNELS.x.count('https://downfallinstinct.com/play.'), 23 + 1);
+  assert.throws(() => withPost(post({ head: { channels: 'x' }, en: `${'a'.repeat(256)} https://downfallinstinct.com/play.` })), /281 characters, and x takes 280/);
   assert.equal(CHANNELS.x.count('a.dev'), 23);
   assert.equal(CHANNELS.x.count('me@downfallinstinctverylongdomainname.com'), 41);
 });
