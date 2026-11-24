@@ -241,7 +241,8 @@ The file answers the pack the owner was handed: the intake reads `pack.json` and
 `references` are the pack's files, by hash, so a file made from another take can be told apart. The intake is
 refused when:
 
-- the model or the day is missing, or the day is after today;
+- the model or the day is missing, or the day is after today, Montreal's day, which every promotion script reads
+  (`montrealToday` in `scripts/promo/shoot.mjs`);
 - the brief has no pack, the pack is of the brief as it was before a change, or its `prompt.md` changed and no
   `--prompt` is given;
 - the file is already recorded;

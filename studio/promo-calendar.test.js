@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CHANNELS, RESTYLED, montrealToday, readCalendar, readPost } from '../scripts/promo/calendar.mjs';
+import { montrealToday as shootToday } from '../scripts/promo/shoot.mjs';
 import { spellNamesFr } from '../showcase/field-notes.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -37,7 +38,7 @@ function withPost(text, { name = '2026-12-01-brute-answer.md', generated = [], r
     writeFileSync(path, text);
     if (record === undefined) return readPost(path, { today, readRecord: () => generated });
     const file = join(folder, 'generated.json');
-    writeFileSync(file, record);
+    if (record !== null) writeFileSync(file, record);
     return readPost(path, { today, generated: file });
   } finally {
     rmSync(folder, { recursive: true, force: true });
@@ -85,6 +86,7 @@ test('a post naming a generated file is refused when the record is not one brief
   const head = { media: `generated ${hash}` };
   assert.throws(() => withPost(post({ head }), { record: '{' }), /names a generated file, and .*not the record's JSON/s);
   assert.throws(() => withPost(post({ head }), { record: JSON.stringify({ format: 'downfall.promo.generated.v1', files: [{ sha256: hash, ratio: '9:16' }] }) }), /names a generated file/);
+  assert.throws(() => withPost(post({ head }), { record: null }), /the record .*generated\.json is missing/);
 });
 
 test('a still, a film and a generated file are media too, the shot\'s and the record\'s', () => {
@@ -129,6 +131,10 @@ test('X counts its own way: an emoji or a French narrow space twice, an address 
   assert.equal(CHANNELS.x.count('Prêt\u202f?'), 7);
   assert.equal(CHANNELS.x.count('Play at downfallinstinct.com'), 8 + 23);
   assert.equal(CHANNELS.x.count('https://downfallinstinct.com/play?from=x now'), 23 + 4);
+  assert.equal(CHANNELS.x.count('Watch youtu.be/ab'), 6 + 23);
+  assert.equal(CHANNELS.x.count('redd.it/ab'), 23);
+  assert.equal(CHANNELS.x.count('a.dev'), 23);
+  assert.equal(CHANNELS.x.count('me@downfallinstinctverylongdomainname.com'), 41);
 });
 
 test('a post without its words in each language, or its title, is refused', () => {
@@ -146,6 +152,8 @@ test('a published post gives the link of each of its channels; a post not publis
   assert.throws(() => withPost(post({ head: { status: 'published' } }), { name: '2026-11-20-a.md' }), /published.*link of bluesky/s);
   assert.throws(() => withPost(post({ head: { status: 'published' }, links: published.links.slice(0, 1) }), { name: '2026-11-20-a.md' }), /link of x/);
   assert.throws(() => withPost(post({ head: { status: 'published' }, links: [published.links[0], 'link x: https://elsewhere.example/1'] }), { name: '2026-11-20-a.md' }), /on x\.com or twitter\.com, not elsewhere\.example/);
+  assert.throws(() => withPost(post({ head: { status: 'published' }, links: [published.links[0], 'link x: https://evil.example#.x.com/a'] }), { name: '2026-11-20-a.md' }), /https:\/\/ address|not evil\.example/);
+  assert.throws(() => withPost(post({ head: { status: 'published' }, links: [published.links[0], 'link x: https://evil.example?.x.com/a'] }), { name: '2026-11-20-a.md' }), /https:\/\/ address|not evil\.example/);
   assert.throws(() => withPost(post({ ...published, links: ['link bluesky: http://bsky.app/1', published.links[1]] }), { name: '2026-11-20-a.md' }), /https/);
   assert.throws(() => withPost(post({ ...published, links: [...published.links, 'link discord: https://discord.com/1'] }), { name: '2026-11-20-a.md' }), /discord.*not one of its channels/);
   assert.throws(() => withPost(post({ links: published.links })), /draft.*no link/s);
@@ -162,6 +170,7 @@ test('a status, a key or a line the format does not have is refused', () => {
   assert.equal(withPost(`\uFEFF${post()}`).status, 'draft');
   assert.throws(() => withPost(post({ title: null, en: 'Words.\n\n# Late title' })), /a "# " heading before its words/);
   assert.throws(() => withPost(post({ en: 'Words.\n\n# Second title' })), /one title, before its words/);
+  assert.throws(() => withPost(post({ title: 'T\n\n# Second' })), /one title, not 2/);
 });
 
 // The spells a post names by the showcase's French name, which the battle does not show.
@@ -180,6 +189,9 @@ test('the calendar\'s words name a spell as the battle does, in English and in F
 test('the day is Montreal\'s, so a post published in the evening is not dated tomorrow', () => {
   assert.equal(montrealToday(new Date('2026-11-25T01:00:00Z')), '2026-11-24');
   assert.equal(montrealToday(new Date('2026-11-25T06:00:00Z')), '2026-11-25');
+  // One day for the promotion's scripts: the brief's intake checks a file's day against the same one.
+  assert.equal(montrealToday, shootToday);
+  assert.match(readFileSync(join(root, 'scripts/promo/brief.mjs'), 'utf8'), /const today = \(\) => montrealToday\(\);/);
 });
 
 test('the command exits 1 on a post it refuses, and on a calendar that is missing or holds no post', () => {
@@ -203,6 +215,8 @@ test('the command exits 1 on a post it refuses, and on a calendar that is missin
     writeFileSync(join(stray, '2026-12-01-a.md'), post());
     writeFileSync(join(stray, '2026-12-02-b.MD'), post());
     assert.match(run(stray).stderr, /holds posts only/);
+    rmSync(join(stray, '2026-12-02-b.MD'));
+    assert.match(run(stray).stdout, new RegExp(`${stray.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}: 1 post\\(s\\)`));
     assert.equal(spawnSync(process.execPath, [script, '--nope'], { encoding: 'utf8' }).status, 1);
   } finally {
     rmSync(folder, { recursive: true, force: true });

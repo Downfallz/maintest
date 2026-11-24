@@ -22,6 +22,12 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+/**
+ * Today in Montreal, where the owner makes and posts: the one day the promotion's scripts check a date against, so a
+ * file taken in this evening and a post published this evening are not dated tomorrow, as UTC would have them.
+ */
+export const montrealToday = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(now);
 export const FORMAT = 'downfall.promo.shot.v1';
 
 /**

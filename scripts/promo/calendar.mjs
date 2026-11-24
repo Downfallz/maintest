@@ -6,18 +6,20 @@
 //   node scripts/promo/calendar.mjs --calendar <folder>   # another folder
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readGenerated } from './brief.mjs';
-import { readShot, root } from './shoot.mjs';
+import { montrealToday, readShot, root } from './shoot.mjs';
 
 // Characters as most platforms count them, at the most: UTF-16 units, which are never fewer than the code points
 // or the graphemes a platform counts (an emoji is two).
 const units = text => text.length;
 
-// What X counts: 23 for each address, 1 for a character of the Latin, Greek, Cyrillic and other early ranges and of
-// the usual punctuation, 2 for any other (an emoji, an ellipsis, the narrow space French puts before "?").
-const ADDRESS = /\bhttps?:\/\/\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|gg|app|co|ca|fr)\b\S*/gi;
+// What X counts: 23 for each address it links, 1 for a character of the Latin, Greek, Cyrillic and other early
+// ranges and of the usual punctuation, 2 for any other (an emoji, an ellipsis, the narrow space French puts before
+// "?"). Anything shaped as a domain is taken for an address, the safe side since an address is never more than 23;
+// an email address is not linked, so it counts its characters.
+const ADDRESS = /(?<![@\w.-])(?:https?:\/\/\S+|[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\b(?![@.\w-])\S*)/gi;
 const LIGHT = [[0x0000, 0x10ff], [0x2000, 0x200d], [0x2010, 0x201f], [0x2032, 0x2037]];
 function weighted(text) {
   const addresses = text.match(ADDRESS) ?? [];
@@ -45,8 +47,7 @@ export const CHANNELS = Object.freeze({
   discord: Object.freeze({ limit: 2000, count: units, hosts: ['discord.com', 'discord.gg'] }),
 });
 
-/** Today in Montreal, where the owner posts: a post published this evening is not dated tomorrow. */
-export const montrealToday = (now = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Toronto' }).format(now);
+export { montrealToday };
 
 export const STATUSES = Object.freeze(['draft', 'approved', 'published']);
 export const LANGUAGES = Object.freeze(['en', 'fr']);
@@ -95,7 +96,9 @@ function split(text, refuse) {
 // The title, and the words under each language's heading.
 function words(body, refuse) {
   const first = body.findIndex(line => line.startsWith('## '));
-  const title = body.slice(0, first < 0 ? body.length : first).find(line => line.startsWith('# '))?.slice(2).trim();
+  const titles = body.slice(0, first < 0 ? body.length : first).filter(line => line.startsWith('# '));
+  if (titles.length > 1) refuse(`the post has one title, not ${titles.length}.`);
+  const title = titles[0]?.slice(2).trim();
   if (!title) refuse('the post has its title, a "# " heading before its words, for the owner who reads the calendar.');
   const sections = new Map();
   let current;
@@ -187,8 +190,10 @@ export function readPost(path, {
   const lines = () => {
     if (!record) {
       try {
+        if (!existsSync(generated)) refuse(`it names a generated file, and the record ${generated} is missing.`);
         record = readRecord(generated);
       } catch (error) {
+        if (error.message.startsWith(`${path}:`)) throw error;
         refuse(`it names a generated file, and ${error.message}`);
       }
     }
@@ -210,8 +215,14 @@ export function readPost(path, {
   if (!STATUSES.includes(status)) refuse(`"status" is ${STATUSES.slice(0, -1).join(', ')} or ${STATUSES.at(-1)}.`);
   for (const [channel, link] of links) {
     if (!channels.includes(channel)) refuse(`"link ${channel}" names ${channel}, which is not one of its channels.`);
-    const host = /^https:\/\/([^\s/]+)\/\S*$/.exec(link)?.[1]?.toLowerCase();
-    if (!host) refuse(`"link ${channel}" is the post's https:// address.`);
+    let address;
+    try {
+      address = new URL(link);
+    } catch {
+      address = undefined;
+    }
+    if (address?.protocol !== 'https:' || /\s/.test(link) || address.pathname.length < 2) refuse(`"link ${channel}" is the post's https:// address.`);
+    const host = address.hostname;
     if (!CHANNELS[channel].hosts.some(known => host === known || host.endsWith(`.${known}`))) refuse(`"link ${channel}" is on ${CHANNELS[channel].hosts.join(' or ')}, not ${host}.`);
   }
   if (status === 'published') {
@@ -242,7 +253,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     else if (argv.length) throw new Error('usage: node scripts/promo/calendar.mjs [--calendar <folder>]');
     const posts = readCalendar(folder);
     const count = status => posts.filter(post => post.status === status).length;
-    console.log(`promo/calendar: ${posts.length} post(s), ${count('draft')} draft, ${count('approved')} approved, ${count('published')} published.`);
+    console.log(`${folder.startsWith(root) ? relative(root, folder) : folder}: ${posts.length} post(s), ${count('draft')} draft, ${count('approved')} approved, ${count('published')} published.`);
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
