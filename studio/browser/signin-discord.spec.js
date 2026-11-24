@@ -131,9 +131,14 @@ test('a sign-in the host refuses for its network\'s count says the host\'s words
 test('a sign-in the host was too busy to check for a second is posted once more and signs in (#1204)', async ({ page }) => {
   const message = 'Too many sign-ins from your network just now. Try again in a minute.';
   const answers = [{ status: 429, headers: { 'Retry-After': '1' }, json: { error: 'Account.TooManySignIns', message } }, { json: { needsUsername: true, ticket: 'name-ticket' } }];
+  await page.clock.install();
   const seen = await lobby(page, { discord: () => answers.shift() });
 
   await discordButton(page).click();
+  await expect(page.locator('#signin-state')).toHaveText('Checking your sign-in…');
+  await expect.poll(() => seen.posted.length).toBe(1);
+  // The wait the host asked for, and the up to one second more the page adds.
+  await page.clock.fastForward(2000);
 
   await expect(page.getByRole('dialog', { name: 'Choose your player name' })).toBeVisible();
   expect(seen.posted).toHaveLength(2);

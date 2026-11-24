@@ -1099,7 +1099,7 @@ public sealed class AccountApiTests : IDisposable
 
         answer.Status.ShouldBe(503);
         Json(answer).GetProperty("error").GetString().ShouldBe("Account.ProviderUnavailable");
-        answer.Headers!.Single(header => header.Key == "Retry-After").Value.ShouldBe("1");
+        answer.Headers!.Single(header => header.Key == "Retry-After").Value.ShouldBe("2");
     }
 
     [Fact]
@@ -1282,7 +1282,7 @@ public sealed class AccountApiTests : IDisposable
             throw new HttpRequestException("The keys could not be fetched.");
     }
 
-    /// <summary>A provider asked by as many sign-ins as it takes at once: unavailable for a second.</summary>
+    /// <summary>A provider asked by as many sign-ins as it takes at once: unavailable for a moment.</summary>
     private sealed class Busy : ISignInProvider
     {
         public string Name => "busy";
@@ -1290,7 +1290,7 @@ public sealed class AccountApiTests : IDisposable
         public string? ClientId => null;
 
         public Task<ExternalIdentity?> SignInAsync(SignInProof proof, CancellationToken cancellationToken = default) =>
-            throw new SignInUnavailableException("Busy is being asked by as many sign-ins as the host allows at once.") { RetryAfter = TimeSpan.FromSeconds(1) };
+            throw new SignInUnavailableException("Busy is being asked by as many sign-ins as the host allows at once.") { RetryAfter = TimeSpan.FromSeconds(2) };
     }
 
     /// <summary>A provider that refuses every proof and counts how often it was asked.</summary>

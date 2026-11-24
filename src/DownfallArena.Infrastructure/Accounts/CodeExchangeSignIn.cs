@@ -38,8 +38,11 @@ public abstract class CodeExchangeSignIn : ISignInProvider, IDisposable
     /// <summary>How many sign-ins ask the provider at once, at most.</summary>
     public const int AtOnce = 4;
 
-    /// <summary>How long a sign-in refused for <see cref="AtOnce" /> is told to wait before posting the same code again.</summary>
-    public static readonly TimeSpan BusyFor = TimeSpan.FromSeconds(1);
+    /// <summary>
+    /// How long a sign-in refused for <see cref="AtOnce" /> is told to wait before posting the same code again: about
+    /// what an exchange's three calls take. A provider slower than that refuses the second post too (#1204).
+    /// </summary>
+    public static readonly TimeSpan BusyFor = TimeSpan.FromSeconds(2);
 
     /// <summary>How long a sign-in waits for the provider, all its calls together, before it is unavailable.</summary>
     public static readonly TimeSpan Patience = TimeSpan.FromSeconds(10);

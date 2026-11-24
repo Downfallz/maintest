@@ -1,0 +1,2 @@
+- A page spec that asserts a request did NOT happen right after a positive signal can be proved by mutation: Playwright is at /opt/node-tools/node_modules/playwright with Chromium in /opt/pw-browsers; shim `@playwright/test` in the copy's node_modules and run `cli.js test -c studio/browser/playwright.config.js` (#1204/#1210).
+- A retry told to wait a fixed `Retry-After` for a host-wide semaphore sends every refused page back at the same instant: ask for jitter or a wait that covers the holder's real duration (#1204, `CodeExchangeSignIn.BusyFor`).

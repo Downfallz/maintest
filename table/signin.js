@@ -33,7 +33,7 @@ export const worthAnotherTry = error => [429, 503].includes(error?.status) && Nu
 
 const sleep = ms => new Promise(resolve => { setTimeout(resolve, ms); });
 
-export async function finishCodeFlow({ win = globalThis, doc = globalThis.document, storage = win.sessionStorage, request = accountRequest, pause = sleep } = {}) {
+export async function finishCodeFlow({ win = globalThis, doc = globalThis.document, storage = win.sessionStorage, request = accountRequest, pause = sleep, random = Math.random } = {}) {
   // The page answers only at a provider's return path; anything else reads as Discord's, the first one.
   const provider = providerOfReturn(win.location.pathname) ?? 'discord';
   const label = flowLabel(provider);
@@ -54,7 +54,8 @@ export async function finishCodeFlow({ win = globalThis, doc = globalThis.docume
     } catch (error) {
       if (!worthAnotherTry(error)) throw error;
       doc.getElementById('signin-state').textContent = 'Checking your sign-in…';
-      await pause(error.retryAfter * 1000);
+      // Up to a second more, at random: the pages a room's burst refused do not all post again at the same moment.
+      await pause(error.retryAfter * 1000 + Math.floor(random() * 1000));
       return request(path, body);
     }
   };

@@ -181,10 +181,10 @@ test('a short 429 is waited out once, saying the sign-in is being checked, and t
   const answers = [() => { throw busy(429, 1); }, () => ({ needsUsername: false })];
 
   const outcome = await finishCodeFlow({ win, doc, storage: tab(kept), request: async (path, body) => { posted.push(body); return answers.shift()(); },
-    pause: async ms => { waited.push([ms, doc.getElementById('signin-state').textContent]); } });
+    pause: async ms => { waited.push([ms, doc.getElementById('signin-state').textContent]); }, random: () => 0.5 });
 
   assert.equal(outcome, 'signed-in');
-  assert.deepEqual(waited, [[1000, 'Checking your sign-in…']]);
+  assert.deepEqual(waited, [[1500, 'Checking your sign-in…']], 'the wait asked for, and up to a second more');
   assert.equal(posted.length, 2);
   assert.deepEqual(posted[1], posted[0], 'the code and verifier kept in memory are posted again');
   assert.equal(win.replaced, '/lobby?next=%2Fj%2Fabc');
@@ -195,10 +195,21 @@ test('a short 503 is waited out once too, also when adding the provider from Set
   const answers = [() => { throw busy(503, 2); }, () => ({})];
   const waited = [];
 
-  const outcome = await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc: page(), storage, request: async () => answers.shift()(), pause: async ms => { waited.push(ms); } });
+  const outcome = await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc: page(), storage, request: async () => answers.shift()(), pause: async ms => { waited.push(ms); }, random: () => 0 });
 
   assert.equal(outcome, 'linked');
   assert.deepEqual(waited, [2000]);
+});
+
+test('pages refused at the same moment do not all post again at the same moment', async () => {
+  const waits = [];
+  for (const random of [() => 0, () => 0.999]) {
+    const answers = [() => { throw busy(503, 2); }, () => ({ needsUsername: false })];
+    await finishCodeFlow({ win: windowAt('?code=abc&state=st'), doc: page(), storage: tab(kept), request: async () => answers.shift()(), pause: async ms => { waits.push(ms); }, random });
+  }
+
+  assert.equal(waits[0], 2000);
+  assert.ok(waits[1] > 2990 && waits[1] < 3000, String(waits[1]));
 });
 
 test('a second short 429 says the host\'s message, with the way back, and is not tried a third time', async () => {
