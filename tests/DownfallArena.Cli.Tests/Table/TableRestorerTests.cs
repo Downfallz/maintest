@@ -847,10 +847,7 @@ public sealed class TableRestorerTests : IDisposable
 
         await rebuilt.Session.Outcome.WaitAsync(TimeSpan.FromSeconds(30), Cancel);
         await Finished(rebuilt);
-        for (var attempt = 0; attempt < 300 && (await _after.Stored!.RecordAsync(table.Id, Cancel))?.Status != TableRecord.Finished; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(async () => (await _after.Stored!.RecordAsync(table.Id, Cancel))?.Status == TableRecord.Finished, "the table's record says finished", Cancel);
 
         (await _after.Stored!.RecordAsync(table.Id, Cancel)).ShouldNotBeNull().Status.ShouldBe(TableRecord.Finished);
         var again = await Files(table.Id, "manifest.json", "steps.jsonl", "episodes.jsonl");
@@ -973,27 +970,20 @@ public sealed class TableRestorerTests : IDisposable
     /// The bot in the other seat is asked its intents at the same time as the person (ADR 0111), and writes each
     /// one down as it declares it. A test that reads the record waits for them, or it reads the record half way.
     /// </summary>
-    private async Task OtherSeatDeclared(PlayedTable table)
+    private async Task OtherSeatDeclared(PlayedTable table) =>
+        await Waits.UntilAsync(async () => await IntentsWrittenAsync(table.Id) == HostedTables.Rules.TeamSize, "the bot in the other seat wrote its intents down", Cancel);
+
+    /// <summary>How many intents the bot in the other seat has written down; none while a line is still on its way into the file.</summary>
+    private async Task<int> IntentsWrittenAsync(string id)
     {
-        for (var attempt = 0; attempt < 300; attempt++)
+        try
         {
-            try
-            {
-                var journal = await JournalAsync(table.Id);
-                if (journal.Count(entry => (string?)entry["slot"] == "player2" && (string?)entry["kind"] == "Intent") == HostedTables.Rules.TeamSize)
-                {
-                    return;
-                }
-            }
-            catch (JsonException)
-            {
-                // A line still on its way into the file.
-            }
-
-            await Task.Delay(10, Cancel);
+            return (await JournalAsync(id)).Count(entry => (string?)entry["slot"] == "player2" && (string?)entry["kind"] == "Intent");
         }
-
-        throw new InvalidOperationException("The bot in the other seat never wrote its intents down.");
+        catch (JsonException)
+        {
+            return 0;
+        }
     }
 
     private static async Task Post(PlayedTable table, Asking question, string body)
@@ -1004,10 +994,7 @@ public sealed class TableRestorerTests : IDisposable
 
     private static async Task<Asking> Waiting(ISeatPerson person)
     {
-        for (var attempt = 0; attempt < 300 && person.Waiting is null; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => person.Waiting is not null, "the seat was asked something", Cancel);
 
         return person.Waiting.ShouldNotBeNull();
     }
@@ -1021,10 +1008,7 @@ public sealed class TableRestorerTests : IDisposable
 
     private static async Task Finished(PlayedTable table)
     {
-        for (var attempt = 0; attempt < 300 && !table.IsFinished; attempt++)
-        {
-            await Task.Delay(20, Cancel);
-        }
+        await Waits.UntilAsync(() => table.IsFinished, "the table finished", Cancel);
 
         table.IsFinished.ShouldBeTrue();
     }
