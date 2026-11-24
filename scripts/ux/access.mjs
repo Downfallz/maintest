@@ -21,7 +21,7 @@ export function doubleTextInPage({ undo = false } = {}) {
   }
   const nodes = [document.documentElement, ...document.querySelectorAll('body, body *')]
     .filter(node => !node.closest('svg, canvas, script, style, template'));
-  const sizes = nodes.map(node => parseFloat(getComputedStyle(node).fontSize));
+  const sizes = nodes.map(node => Number.parseFloat(getComputedStyle(node).fontSize));
   globalThis.__doubledText = nodes.map(node => [node, [node.style.getPropertyValue('font-size'), node.style.getPropertyPriority('font-size')]]);
   nodes.forEach((node, index) => node.style.setProperty('font-size', `${sizes[index] * 2}px`, 'important'));
   return nodes.length;
@@ -197,18 +197,21 @@ export async function checkScreen(page, tags) {
   return result;
 }
 
+/** The lines one rule of a check found: a line an element, or the rule alone when it holds of the screen. */
+function ruleLines(prefix, rule, nodes) {
+  if (Array.isArray(nodes)) return nodes.map(node => `${prefix} ${rule} ${node}`);
+  return nodes === true ? [`${prefix} ${rule}`] : [];
+}
+
 /** The lines a check found on one screen, or none: what a failed gate prints, a line an element. */
 export function findingLines(screen, found) {
-  const lines = [];
-  for (const [check, value] of Object.entries(found)) {
-    if (value === true) lines.push(`${screen}: ${check}`);
-    else if (Array.isArray(value)) for (const one of value) lines.push(`${screen}: ${check} ${one}`);
-    else if (value && typeof value === 'object') for (const [rule, nodes] of Object.entries(value)) {
-      if (Array.isArray(nodes)) for (const node of nodes) lines.push(`${screen}: ${check} ${rule} ${node}`);
-      else if (nodes === true) lines.push(`${screen}: ${check} ${rule}`);
-    }
-  }
-  return lines;
+  return Object.entries(found).flatMap(([check, value]) => {
+    const prefix = `${screen}: ${check}`;
+    if (value === true) return [prefix];
+    if (Array.isArray(value)) return value.map(one => `${prefix} ${one}`);
+    if (value && typeof value === 'object') return Object.entries(value).flatMap(([rule, nodes]) => ruleLines(prefix, rule, nodes));
+    return [];
+  });
 }
 
 /**
