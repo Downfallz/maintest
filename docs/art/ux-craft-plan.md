@@ -766,7 +766,8 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     state lost, and a page with no rule that keeps a ring for the focus. It reads the sheets and never moves the
     focus, since a walk's page reacts to the focus; so it sees a page with no such rule, not a ring one control loses
     to a rule of its own. With the text spaced as WCAG 1.4.12 asks, then at 200%, it flags a word cut, a page that
-    scrolls sideways, and two controls on top of each other. The walk's measures are unchanged; the checks ride
+    scrolls sideways, and two controls on top of each other. At 200% every element's computed size is doubled
+    (`doubleTextInPage`): many sizes of the pages are in pixels, which the root's size never reaches. The walk's measures are unchanged; the checks ride
     beside them. A fixture page holds that each check finds its fault. The tag `wcag22aa` turns axe's target-size
     rule on (the craft book, "What a test can see").
 
@@ -791,20 +792,21 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     `studio/ux-access.test.js` the lines and the list.
 
     Not fixed: each journey has a list in `scripts/ux/access-known.json` of what the checks found and this stage did
-    not fix, 495 lines in all. A line names the finding without the element's place among its siblings. A finding not
+    not fix, 587 lines in all. A line names the finding without the element's place among its siblings. A finding not
     in the list fails the journey, and so does a line the walk no longer finds (`goneFindings`): the change that fixes
-    a finding removes its line, so a finding that returns fails again. 28 lines are marked `~ ` (unsteady): three
-    walks of the same tree, and the session that wrote the list, did not all find them. A creature on the field, a
-    coach's card or the order of play lands a frame sooner or later, so these overlaps and cuts come and go. They never
-    fail the walk; the other 467 hold both ways. axe findings are never in the list. It holds:
-    - Text at 200% and spaced: 365 pairs of controls on top of each other (339 steady) and 46 boxes that cut their
-      words (44 steady). Most are in the match's frame (148), its windows (124) and the lessons (100), the rest in the
-      lobby (38) and the pages (1). The frame is laid out for small words at 320 px; doubled, the bar's buttons meet
-      the order of play. A later stage of the frame decides, or the owner does (a floor for 200% in the battle).
+    a finding removes its line, so a finding that returns fails again. 19 lines are marked `~ ` (unsteady): the
+    walks of the same tree did not all find them. A creature on the field, a coach's card or the order of play lands a
+    frame sooner or later, so these overlaps and cuts come and go. They never fail the walk; the other 568 hold both
+    ways. axe findings are never in the list. It holds:
+    - Text at 200% and spaced: 357 pairs of controls on top of each other (340 steady), 68 boxes that cut their
+      words (66 steady) and 79 screens that scroll sideways at 200%. Most are in the match's frame (161), its windows
+      (130) and the lessons (102), the rest in the lobby (56), the doors (33) and the pages (22): the showcase and the
+      rulebook are sized in pixels, and doubled they no longer fit 320 px. The frame is laid out for small words at
+      320 px; doubled, the bar's buttons meet the order of play. A later stage of the frame decides, or the owner does
+      (a floor for 200% in the battle).
     - Under forced colours, 83 controls whose icon keeps its own colour: the creatures on the field, the order of play,
       the spell cards (their portraits and health bars are drawn in colours that carry the team). Repainting them would
       lose the team; `forced-color-adjust` on them is a choice for the frame's stage.
-    - At 320 px with the text spaced, one page that scrolls sideways.
 
     What stays for a person, for the owner (docs/tabletop/battle-ux-acceptance.md, "Remaining acceptance gates"):
     1. A screen reader on a phone: VoiceOver on an iPhone and TalkBack on Android, one lesson and one round each. Does

@@ -42,7 +42,8 @@ for (const journey of JOURNEYS) {
     for (const viewport of WIDTHS) {
       const screens = await walkJourney(browser, journey, viewport, { showcase, axe, access: true });
       // Every screen, in the order the walk reached it: a lesson's card can come before its first step.
-      expect(screens.map(screen => screen.name).sort()).toEqual([...journey.screens].sort());
+      const byName = (a, b) => a.localeCompare(b);
+      expect(screens.map(screen => screen.name).sort(byName)).toEqual([...journey.screens].sort(byName));
       for (const screen of screens) found.push(...findingLines(`${viewport.width} ${screen.name}`, screen.checks));
     }
     const known = KNOWN[journey.id] ?? [];
@@ -74,7 +75,7 @@ test('no window that enters flashes more than three times a second', async ({ br
       expect(flashesASecond(frames, 40), `${strip} flashes`).toBeLessThanOrEqual(MOST_A_SECOND);
     }
   } finally { await read.close(); }
-  const brightest = brightness.reduce((one, other) => (other.mean > one.mean ? other : one));
+  const brightest = brightness.reduce((one, other) => (other.mean > one.mean ? other : one), brightness[0]);
   info.annotations.push({ type: 'brightest window', description: `${brightest.strip}, mean luminance ${brightest.mean.toFixed(3)}` });
 });
 
@@ -92,6 +93,7 @@ test('the checks find a ring, an icon, a state, a contrast and a clipped word th
       button[aria-pressed="true"] { background: #640; }
       .muted { color: #8a8a8a; }
       .cut { width: 120px; height: 1.2em; overflow: hidden; }
+      .small { font-size: 12px; } .small span { font-size: 0.5rem; }
       ${fixed ? `@media (forced-colors: active) { :focus-visible { outline: 2px solid Highlight !important; }
         [aria-pressed="true"] { text-decoration-line: underline !important; } }
       @media (prefers-contrast: more) { .muted { color: #e0e0e0; } } .cut { height: auto; }
@@ -99,7 +101,7 @@ test('the checks find a ring, an icon, a state, a contrast and a clipped word th
       </style></head><body><main><h1>Fixture</h1>
       <button type="button" aria-pressed="true">One</button><button type="button" aria-pressed="false">Two</button>
       <button type="button" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/></svg></button>
-      <p class="muted">Some quiet words.</p><p class="cut">Words that are cut when they are spaced</p></main></body></html>`;
+      <p class="muted">Some quiet words.</p><p class="small">Small <span>smaller</span></p><p class="cut">Words that are cut when they are spaced</p></main></body></html>`;
     const found = async fixed => {
       await page.setContent(fixture(fixed));
       await page.evaluate(await axeSource());
@@ -110,5 +112,14 @@ test('the checks find a ring, an icon, a state, a contrast and a clipped word th
       expect(faults, kind).toContain(kind);
     }
     expect(await found(true)).toEqual([]);
+    // Text at 200% doubles a size in pixels as it does one in rem, and gives each back.
+    const sizes = () => page.evaluate(() => [...document.querySelectorAll('.small, .small span, h1')].map(node => getComputedStyle(node).fontSize));
+    const { doubleTextInPage } = await import('../../scripts/ux/access.mjs');
+    const before = await sizes();
+    expect(before).toEqual(['32px', '12px', '8px']);
+    await page.evaluate(doubleTextInPage);
+    expect(await sizes()).toEqual(['64px', '24px', '16px']);
+    await page.evaluate(doubleTextInPage, { undo: true });
+    expect(await sizes()).toEqual(before);
   } finally { await page.close(); }
 });

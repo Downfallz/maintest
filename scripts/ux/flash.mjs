@@ -57,7 +57,7 @@ export function cellChanges(values, { step = LUMINANCE_STEP, darker = DARKER_UND
  */
 export function flashesASecond(frames, interval, { step = LUMINANCE_STEP, darker = DARKER_UNDER, area = AREA } = {}) {
   if (!Array.isArray(frames) || frames.length < 2) throw new Error('The flash guard needs two frames or more.');
-  if (!(interval > 0)) throw new Error('The flash guard needs the time between frames, in ms.');
+  if (!Number.isFinite(interval) || interval <= 0) throw new Error('The flash guard needs the time between frames, in ms.');
   const size = frames[0].length;
   if (!size || frames.some(frame => frame.length !== size)) throw new Error('Every frame of the flash guard has the same cells, and at least one.');
   const ends = [];
