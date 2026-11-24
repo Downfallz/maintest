@@ -3,11 +3,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
-using DownfallArena.SharedKernel.Identifiers;
 using DownfallArena.Cli.Hosting;
 using DownfallArena.Cli.Table;
 using DownfallArena.Infrastructure.Accounts;
 using DownfallArena.Infrastructure.Learning;
+using DownfallArena.SharedKernel.Identifiers;
 using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Cli.Tests.Table;
