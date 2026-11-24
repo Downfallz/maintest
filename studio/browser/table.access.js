@@ -36,7 +36,8 @@ test.afterAll(async () => { if (folder) await rm(folder, { recursive: true, forc
 for (const journey of JOURNEYS) {
   test(`every screen of ${journey.id} holds the checks of accessibility at 320 and 390 px`, async ({ browser }, info) => {
     test.skip(!HALVES[info.project.name]?.includes(journey.id), `${journey.id} is walked by the other project.`);
-    test.setTimeout(480000);
+    // The lessons take eight minutes on a runner once every screen's text is doubled element by element.
+    test.setTimeout(900000);
     expect(axe, 'axe-core is installed with the browser suite').not.toBeNull();
     const found = [];
     for (const viewport of WIDTHS) {
