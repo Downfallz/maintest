@@ -17,19 +17,19 @@ appears (a turn's status) moves the title up and never the buttons. The duel is 
 the width it covers: 475 px on a 390 by 844 phone (844 px tall times the painting's 0.5625 width-to-height ratio),
 950 px at 1280 px and wider (#1070). The lesson and the Great Rupture each have their own portrait painting
 (#1081). On a 390 by 844 phone each is 390 CSS pixels wide and fills the screen; at 2× the browser
-requests the 841 px WebP. When the screen is wider than it is tall (a phone turned, a desktop), the browser loads
+requests the 780 px WebP of the lesson's eclipse. When the screen is wider than it is tall (a phone turned, a desktop), the browser loads
 the landscape instead (the battlefield's eclipse for a lesson, the Rupture's own wide composition from round 6); a
 portrait tablet keeps the portrait, which its tall box stretches less
-than it would the landscape. The 841 px file is the largest there is, so a 3× phone or a portrait tablet draws it
-somewhat stretched. The Rupture's portrait is 941 px wide, its 2× file that width. The home's first-paint budget is 288 KiB,
+than it would the landscape. The eclipse's master is 1,200 by 2,600 (#1106), so its largest file is 1,200 px wide:
+a 3× phone (1,170) and a portrait tablet at 2× (about 1,084) draw it without stretching it. The Rupture's portrait is 941 px wide, its 2× file that width. The home's first-paint budget is 288 KiB,
 and 600 KiB for all its pictures across every state (`docs/art/page-budget.json`). It was 832 KiB until #1120 took
 the breach and sky portraits away (#1107). The lesson's eclipse portrait is encoded at quality 70, not the kit's 82
-(#1137): its 841 px file is 97,356 bytes instead of 147,518, and it looks the same at 390 by 844 at 2×. The first
-paint takes 238,346 bytes of the 288 KiB budget.
+(#1137); the 1,200 by 2,600 master's 780 px file is 149,206 bytes at 70. The first paint takes 290,196 bytes of the
+288 KiB budget (294,912).
 
 | Featured state | Portrait source |
 | --- | --- |
-| Lesson | `docs/art/sources/pages/eclipse-portrait.webp` |
+| Lesson | `docs/art/sources/pages/eclipse-portrait.png` |
 | From round 6 | `docs/art/sources/pages/replacements/great-rupture.webp` (landscape: `docs/art/sources/pages/replacements/great-rupture-landscape.webp`) |
 
 On a phone, the host notice lies under the header, over the painting's top, so the space keeps its full screen
@@ -187,7 +187,7 @@ table → opens the Create window on Multiplayer, Play a bot → on Solo.
 
 | Picture | Drawn at | Answers | From |
 | --- | --- | --- | --- |
-| The eclipse ground, the field a lesson stands on, the whole featured space on a phone. | 390 by 844 px | Where will I play? | `docs/art/sources/pages/eclipse-portrait.webp` |
+| The eclipse ground, the field a lesson stands on, the whole featured space on a phone. | 390 by 844 px | Where will I play? | `docs/art/sources/pages/eclipse-portrait.png` |
 | The Great Rupture, from a game's round 6, on either player's turn: the Deathstalker leaps at the Ethereal as the arch collapses. | 390 by 844 px | How far along is this game? | `docs/art/sources/pages/replacements/great-rupture.webp` |
 | The base creature, the form a lesson's team starts from, standing on the ground (tutorial 1). | 120 by 80 px | Who do I play? | `table/battle-art/evolutions/base-creature.webp` |
 | A Brute, in place of the base creature when tutorial 2 is the next lesson. | 120 by 80 px | Which lesson is this, before reading? | `table/battle-art/evolutions/brute-base.webp` |

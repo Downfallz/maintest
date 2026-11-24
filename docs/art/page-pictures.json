@@ -183,7 +183,7 @@
     },
     {
       "name": "home-ground-eclipse",
-      "source": "docs/art/sources/pages/eclipse-portrait.webp",
+      "source": "docs/art/sources/pages/eclipse-portrait.png",
       "drawn": [390, 760],
       "quality": 70,
       "pages": { "table/home": "largest" }

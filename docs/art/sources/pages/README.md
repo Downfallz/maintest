@@ -4,10 +4,9 @@ The owner's files for the pictures a brief asked for, unchanged, one file for ea
 ([a picture asked of the owner](../../page-pictures.md#a-picture-asked-of-the-owner)). The host does not serve
 this folder: `scripts/ux/pictures.mjs` derives what a page is sent from it.
 
-`eclipse-portrait.webp` is the lobby's ground for a lesson, composed for a tall phone (#1081); the replacement
+`eclipse-portrait.png` is the lobby's ground for a lesson, composed for a tall phone (#1081); the replacement
 plan's Great Rupture took the rounds from 6 ([the lobby's brief](../../journeys/lobby.md)). The owner supplied it
-(#1105): it is the owner's file, and no session redraws it. A larger master, about 1,200 to 1,700 px wide, is to
-come from the owner (#1106).
+(#1105), and its larger master, 1,200 by 2,600 (#1106): it is the owner's file, and no session redraws it.
 
 The `round-*.webp` files are not paintings: they are the real battle view, made by `scripts/ux/round.mjs` for the
 showcase's round seen played ([a picture of the game itself](../../page-pictures.md#a-picture-of-the-game-itself)).
