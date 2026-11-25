@@ -792,8 +792,10 @@ public sealed class LobbyApiTests : IDisposable
         var subscribed = await Lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token);
         var tested = await Lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
 
-        Read(subscribed).GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
-        Read(tested).GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+        subscribed.Status.ShouldBe(404);
+        JsonDocument.Parse(subscribed.Body).RootElement.GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+        tested.Status.ShouldBe(404);
+        JsonDocument.Parse(tested.Body).RootElement.GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
     }
 
     [Fact]

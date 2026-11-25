@@ -3,7 +3,7 @@ import { httpTransport, replayTransport } from './transport.js';
 import { activeSeat, holdsOn, isAsked, needsPass } from './seats.js';
 import { activateSeats, forget, heldSeats, isOperator, keeps, operatorToken, playPath, replayOf, resumeTokens, savedSeats, seatsFromLocation, selectTableSeats, tableFromLocation } from './session.js';
 import { addressAfter, battleAddress, invitationPlan, invitationText, spentLink } from './invitation.js';
-import { keyBytes, noticeButton, pushSupported, sameKey, testForgot, testReading, showOwnNotice, TAG } from './push.js';
+import { answeredWith, keyBytes, noticeButton, pushSupported, sameKey, testForgot, testReading, showOwnNotice, TAG, UNREACHABLE } from './push.js';
 import { cardCost, cardHead, cardDetails, cardStats, cardTitle, loadCatalogue, referenceLines } from './card.js';
 import { badges, chipSource, chipText, conditionDock, healthShare, healthText, laneOf, statPairs, turnOrder, liveChoice } from './board.js';
 import { declarableSpells, energyShortfall, guidedShortfall, handRows } from './hand.js';
@@ -1214,7 +1214,7 @@ async function testNotices(state) {
     // Two notices from the two ends (push.js, testReading): the page's own first, then the host's push.
     const own = await showOwn(state);
     const answer = await seat.transport.pushTest();
-    if (problem) problem.textContent = testReading({ page: own, host: answer.body?.message ?? `This table answered ${answer.status}.`, hostOk: answer.ok });
+    if (problem) problem.textContent = testReading({ page: own, host: answer.body?.message ?? answeredWith(answer.status), hostOk: answer.ok });
     if (testForgot({ status: answer.status, error: answer.body?.error, message: answer.body?.message })) {
       // The host forgot it, and the browser still holds it: let go of here too, or the next tap would get the same
       // subscription back from the browser and the host's refusal of it.
@@ -1224,7 +1224,7 @@ async function testNotices(state) {
       renderNotices(state);
     }
   } catch {
-    if (problem) problem.textContent = 'Could not reach this table. Try again.';
+    if (problem) problem.textContent = UNREACHABLE;
   } finally {
     button.disabled = false;
   }

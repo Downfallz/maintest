@@ -1137,7 +1137,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // it (ADR 0203): either one's word makes the page subscribe again.
         if (notices.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
         {
-            return (null, Problem(410, PushTest.GoneMessage));
+            return (null, Problem(410, PushTest.SeatGoneMessage));
         }
 
         return (subscription, null);

@@ -211,3 +211,14 @@ test('a test on a push service the host does not send to turns the switch off an
   assert.equal(h.elements['device-toggle'].checked, false);
   assert.match(h.elements['device-result'].textContent, /not one this table can send to/);
 });
+
+test('a test that never reaches the table says so in the player\'s words, not the browser\'s (#1266)', async () => {
+  const h = harness({ testRefused: new TypeError('Failed to fetch') });
+  h.devices.setAccount({ id: 'acct_mark' });
+  await settled();
+
+  h.listeners['device-test:click']();
+  await settled();
+
+  assert.equal(h.elements['device-result'].textContent, 'Could not reach this table. Try again.');
+});

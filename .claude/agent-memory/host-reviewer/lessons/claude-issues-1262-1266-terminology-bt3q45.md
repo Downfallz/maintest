@@ -1,0 +1,3 @@
+- `LobbyApiTests.Read` asserts a 2xx before parsing; a new test reading a refusal's `message` through it fails at once. Run the new test, do not trust the shape (#1262/#1266, 778fd3a).
+- Under the full Table namespace run, `TableIndexingTests.A_seat_offered_again...` and `TableApiTests.The_targeting_payload...` can fail and then pass alone: rerun them alone before blaming the diff (#1262/#1266).
+- `table/terminology.test.js` reads only JS string literals: a host sentence the page shows through `error.message` (devices.js -> `Account.NoPreferences` "This host keeps no game settings.") gets past it (#1266).

@@ -56,7 +56,7 @@ export function finishWords(provider) {
   const name = wayName(provider);
   return {
     title: `Finish removing ${name}?`,
-    detail: `You no longer sign in with ${name}. This finishes its removal. You stay signed in here, and pop-ups stop on every device, this one too.`,
+    detail: `You no longer sign in with ${name}. This finishes its removal. You stay signed in here. Pop-ups stop on every device, this one too.`,
     action: 'Finish removing',
   };
 }

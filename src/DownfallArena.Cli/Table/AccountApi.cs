@@ -1102,7 +1102,7 @@ internal sealed class AccountApi
 
         if (await notices.IsGoneAsync(who.Account.Id, subscription.Endpoint))
         {
-            return Problem(410, "Account.DeviceGone", PushTest.GoneMessage);
+            return Problem(410, "Account.DeviceGone", PushTest.DeviceGoneMessage);
         }
 
         var held = await devices.AddAsync(who.Account.Id, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));

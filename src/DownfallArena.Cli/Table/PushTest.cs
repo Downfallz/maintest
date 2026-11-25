@@ -13,10 +13,13 @@ internal sealed record PushTest(bool Sent, string Message)
     public const string NoNoticesMessage = "This table sends no notifications.";
 
     /// <summary>
-    /// What the subscribe routes say of a subscription its notification service said was gone (#1266): Settings shows it
-    /// when the fresh subscription it makes on a 410 is refused too.
+    /// What Settings' subscribe route says of a subscription its notification service said was gone (#1266), naming
+    /// Settings' own switch: Settings shows it when the fresh subscription it makes on a 410 is refused too.
     /// </summary>
-    public const string GoneMessage = "This subscription is gone from its notification service. Turn notifications on again.";
+    public const string DeviceGoneMessage = "This subscription is gone from its notification service. Turn \"Pop-ups on this device\" on again.";
+
+    /// <summary>The same, said by a seat's subscribe route, naming the seat page's and the battle view's button (#1266).</summary>
+    public const string SeatGoneMessage = "This subscription is gone from its notification service. Tap \"Notify me when it's my turn\" again.";
 
     /// <summary>
     /// A test on a subscription on no push service this host sends to (#1209): said as the subscribe routes refuse one,

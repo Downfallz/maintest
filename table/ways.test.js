@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keepWaysNote, mountWays, removeWay, removeWords, takeWaysNote, wayHint, wayName, wayRows } from './ways.js';
+import { finishWords, keepWaysNote, mountWays, removeWay, removeWords, takeWaysNote, wayHint, wayName, wayRows } from './ways.js';
 
 // Shaped as the host answers: GET /api/account/identities and /api/me (AccountIdentitiesApiTests, AccountApiTests).
 const me = { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'g-client' }, { provider: 'discord', clientId: '1311' }] };
@@ -66,6 +66,17 @@ test('finishing a removal that stopped is a DELETE of that way, and says it is r
   assert.equal(finish['aria-label'], 'Finish removing Discord');
   assert.deepEqual(asked, [['/api/account/identities', undefined], ['/api/account/identities/discord', 'DELETE']]);
   assert.equal(doc.getElementById('ways-note').textContent, 'Discord removed.');
+  assert.equal(doc.getElementById('action-title').textContent, 'Finish removing Discord?');
+  assert.equal(doc.getElementById('action-detail').textContent, finishWords('discord').detail);
+});
+
+test('finishing a removal says this device stays signed in and that pop-ups stop, and signs no device out', () => {
+  const words = finishWords('discord');
+
+  assert.equal(words.title, 'Finish removing Discord?');
+  assert.equal(words.detail, 'You no longer sign in with Discord. This finishes its removal. You stay signed in here. Pop-ups stop on every device, this one too.');
+  assert.equal(words.action, 'Finish removing');
+  assert.doesNotMatch(words.detail, /signed out/);
 });
 
 test('removing a way in says the other devices are signed out', () => {

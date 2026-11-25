@@ -539,9 +539,10 @@ An account uses one way per provider, and a way another account uses is refused.
 last ten minutes: every sign-in's answer carries `recent`, a proof the page keeps in the tab's `sessionStorage` and
 sends back, never a cookie, so a session cookie taken from a device left signed in cannot change how the account is
 reached. Without it Settings offers *Sign out and sign in again*, and opens Account again after the sign-in. *Remove* is
-`DELETE /api/account/identities/<provider>`; the last way in is never removed. A removal that stopped before it
-finished is listed as pending, with *Finish removing*, which asks the same route again (#1262). Removing one ends every other session of
-the account and forgets its devices, as *Sign out everywhere* does, and keeps this browser signed in. The host
+`DELETE /api/account/identities/<provider>`; the last way in is never removed. Removing one ends every other session of
+the account and forgets its devices, as *Sign out everywhere* does, and keeps this browser signed in. A removal that
+stopped before it finished is listed as pending, with *Finish removing*, which asks the same route again and forgets
+the devices, but signs no session out a second time (#1262). The host
 says `Way in added (<provider>) to account <id>.`, `Way in removed (<provider>) from account <id>.` and
 `Way in refused (<provider>) for account <id>: <code or status>.` on the console, never the provider's identifier.
 
