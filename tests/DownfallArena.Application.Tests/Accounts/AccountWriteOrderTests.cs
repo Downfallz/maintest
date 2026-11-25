@@ -275,6 +275,86 @@ public sealed class AccountWriteOrderTests
     }
 
     [Fact]
+    public async Task A_refused_way_whose_binding_another_link_adopts_after_the_cleanup_read_the_account_leaves_it()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.BeforeNextAccountWrite = () => _store.Accounts[mark.Id] = mark with { Generation = mark.Generation + 1 };
+        _store.BeforeNextUnbinding = () =>
+        {
+            _store.AdoptedElsewhere(Discord);
+            _store.Accounts[mark.Id] = mark with { Generation = mark.Generation + 2, Identities = mark.Identities.With(Discord) };
+        };
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, mark.Generation, Cancel);
+
+        linked.Error.ShouldBe(AccountErrors.SessionEnded);
+        _store.Subjects[Discord].ShouldBe(mark.Id);
+        (await Registry().FindAsync(Discord, Cancel))!.Id.ShouldBe(mark.Id);
+    }
+
+    [Fact]
+    public async Task A_refused_upgrade_whose_binding_another_upgrade_adopts_after_the_cleanup_read_the_account_leaves_it()
+    {
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        var suspension = new AccountSuspension("Spam.", "operator", _clock.GetUtcNow());
+        _store.BeforeNextAccountWrite = () => _store.Accounts[guest.Id] = guest with { Suspension = suspension };
+        _store.BeforeNextUnbinding = () =>
+        {
+            _store.AdoptedElsewhere(Google);
+            _store.Accounts[guest.Id] = guest with { Identities = AccountIdentities.Of(Google), Generation = guest.Generation + 1 };
+        };
+
+        var upgraded = await Registry().UpgradeAsync(guest.Id, Google, "MarkF", Cancel);
+
+        upgraded.IsFailure.ShouldBeTrue();
+        _store.Subjects[Google].ShouldBe(guest.Id);
+    }
+
+    [Fact]
+    public async Task A_way_added_while_every_write_of_the_account_loses_to_another_process_throws_and_leaves_a_binding_that_reaches_nothing()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.BeforeEveryAccountWrite = () => _store.Accounts[mark.Id] = _store.Accounts[mark.Id] with { };
+
+        await Should.ThrowAsync<IOException>(() => Registry().LinkAsync(mark.Id, Discord, cancellationToken: Cancel));
+
+        _store.RefusedWrites.ShouldBe(5);
+        _store.BeforeEveryAccountWrite = null;
+        _store.Subjects[Discord].ShouldBe(mark.Id);
+        _store.Accounts[mark.Id].Identities.Contains(Discord).ShouldBeFalse();
+        (await Registry().FindAsync(Discord, Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task An_upgrade_while_every_write_of_the_account_loses_to_another_process_throws_and_leaves_its_binding_and_name_held()
+    {
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        _store.BeforeEveryAccountWrite = () => _store.Accounts[guest.Id] = _store.Accounts[guest.Id] with { };
+
+        await Should.ThrowAsync<IOException>(() => Registry().UpgradeAsync(guest.Id, Google, "MarkF", Cancel));
+
+        _store.RefusedWrites.ShouldBe(5);
+        _store.BeforeEveryAccountWrite = null;
+        _store.Subjects[Google].ShouldBe(guest.Id);
+        _store.Names["markf"].Account.ShouldBe(guest.Id);
+        _store.Accounts[guest.Id].IsGuest.ShouldBeTrue();
+        (await Registry().FindAsync(Google, Cancel)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task A_deletion_while_every_removal_of_the_account_loses_to_another_process_throws_and_keeps_the_account()
+    {
+        var mark = await LinkedAsync();
+        _store.BeforeEveryAccountWrite = () => _store.Accounts[mark.Id] = _store.Accounts[mark.Id] with { };
+
+        await Should.ThrowAsync<IOException>(() => Registry().DeleteAsync(mark.Id, Cancel));
+
+        _store.RefusedWrites.ShouldBe(5);
+        _store.Accounts.ShouldContainKey(mark.Id);
+        _store.Names["markf"].Account.ShouldBe(mark.Id);
+    }
+
+    [Fact]
     public async Task A_way_added_that_found_its_binding_made_by_another_link_leaves_it_when_refused()
     {
         var mark = await RegisteredAsync(Google, "MarkF");

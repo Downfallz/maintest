@@ -361,6 +361,22 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_way_added_while_every_write_of_the_account_loses_to_another_process_is_unavailable_and_not_a_crash()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        _store.RefuseEveryAccountWrite = true;
+
+        var answer = await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+
+        answer.Status.ShouldBe(503);
+        Error(answer).ShouldBe("Account.Unavailable");
+        _store.RefusedWrites.ShouldBe(5);
+        _store.RefuseEveryAccountWrite = false;
+        Providers(await api.HandleAsync("GET", Route, "", Signed(session))).ShouldBe(["google"]);
+    }
+
+    [Fact]
     public async Task A_removal_stopped_before_its_binding_went_is_finished_by_removing_the_way_again()
     {
         var api = await ApiAsync();
@@ -495,6 +511,11 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     {
         public bool FailNextUnbinding { get; set; }
 
+        /// <summary>Refuses every conditional write of an account, as when another process always writes it first.</summary>
+        public bool RefuseEveryAccountWrite { get; set; }
+
+        public int RefusedWrites { get; private set; }
+
         public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
         {
             if (FailNextUnbinding)
@@ -514,8 +535,16 @@ public sealed class AccountIdentitiesApiTests : IDisposable
 
         public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
 
-        public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default) =>
-            inner.SaveIfUnchangedAsync(account, version, cancellationToken);
+        public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default)
+        {
+            if (RefuseEveryAccountWrite)
+            {
+                RefusedWrites++;
+                return Task.FromResult(false);
+            }
+
+            return inner.SaveIfUnchangedAsync(account, version, cancellationToken);
+        }
 
         public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
 
@@ -525,6 +554,14 @@ public sealed class AccountIdentitiesApiTests : IDisposable
         public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.FindBySubjectAsync(identity, cancellationToken);
 
         public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.TryBindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.ReadSubjectAsync(identity, cancellationToken);
+
+        public Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default) =>
+            inner.BindSubjectAsync(identity, account, over, cancellationToken);
+
+        public Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default) =>
+            inner.UnbindSubjectIfUnchangedAsync(identity, version, cancellationToken);
 
         public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) => inner.FindUsernameAsync(username, cancellationToken);
 

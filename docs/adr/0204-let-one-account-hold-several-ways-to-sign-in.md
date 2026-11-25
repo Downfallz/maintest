@@ -41,6 +41,11 @@ names its provider, and the `by-subject` index is keyed by provider and subject.
   binding and the name that try wrote are freed. Five tries lost in a row throw, as a store out of service does, and
   leave what a stop between two writes leaves. The sweep of idle guests deletes an account only while it is still
   a guest (#1217).
+- **Every write of a `by-subject` entry gives it a new version**, a link taking up an entry another link of the same
+  account made included: it rewrites the entry over the version it read. So a refused link frees its entry only as
+  the version it wrote, and leaves one another link has taken up since (#1261). A file's entry carries a mark of
+  its own, so its hash changes even when the account it names does not. A release older than this one takes an
+  entry up writing only the account, so the refused link also reads the account once more first.
 - **Never by email.** The host keeps no email (ADR 0122 holds), so it never joins two identities because a provider
   says they share an address. So someone who opens a provider account with your address cannot reach yours.
 - **A record written before this reads as one identity.** A new record lists `identities` and keeps the first one

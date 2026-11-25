@@ -104,7 +104,7 @@ public sealed class AccountRegistry
             UsernameReservation? reservation = null;
             Account? before = null;
             Account? last = null;
-            var bound = false;
+            string? made = null;
             var upgraded = await WriteAsync(
                 id,
                 async account =>
@@ -127,8 +127,8 @@ public sealed class AccountRegistry
                         return Result.Failure<Account>(AccountErrors.UsernameTaken);
                     }
 
-                    var binding = await BindAsync(identity, id, cancellationToken);
-                    bound |= binding.Made;
+                    var binding = await BindAsync(identity, id, made, cancellationToken);
+                    made = binding.Made;
                     if (!binding.Bound)
                     {
                         await ReleaseUnlessNamedAsync(reservation, account, cancellationToken);
@@ -146,7 +146,7 @@ public sealed class AccountRegistry
                 cancellationToken);
             if (upgraded.IsFailure)
             {
-                await UndoRefusedUpgradeAsync(reservation, bound, upgraded, last, identity, id, cancellationToken);
+                await UndoRefusedUpgradeAsync(reservation, made, upgraded, last, identity, id, cancellationToken);
                 return upgraded;
             }
 
@@ -169,27 +169,27 @@ public sealed class AccountRegistry
     // meanwhile (deleted, suspended or upgraded it). What was written for this upgrade goes, but for a name the account
     // now carries.
     private async Task UndoRefusedUpgradeAsync(
-        UsernameReservation? reservation, bool bound, Result<Account> upgraded, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+        UsernameReservation? reservation, string? made, Result<Account> upgraded, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
         if (reservation is not null && last!.Username.Key != reservation.Username.Key)
         {
             await _store.ReleaseUsernameAsync(reservation, cancellationToken);
         }
 
-        await UnbindRefusedAsync(bound, upgraded, last, identity, id, cancellationToken);
+        await UnbindRefusedAsync(made, upgraded, last, identity, id, cancellationToken);
     }
 
     // An identity a try bound itself, then a later try refused (#1217): the account does not list it, so its binding
-    // holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it. The
-    // account is read once more just before: another process's link may have taken the binding up since the refusal,
-    // writing only the account. What is left is the moment between that read and the removal, which no condition of
-    // the store can close, since taking a binding up writes nothing to it.
-    private async Task UnbindRefusedAsync(bool bound, Result<Account> written, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    // holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it. It
+    // goes only as the version this call wrote: another process's link that took the binding up since wrote it, so its
+    // version moved and it is left to that link (#1261). The account is read once more just before, for the release
+    // before this one during a deploy, whose link takes a binding up writing only the account.
+    private async Task UnbindRefusedAsync(string? made, Result<Account> written, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
-        if (bound && written.IsFailure && last?.Identities.Contains(identity) != true
+        if (made is not null && written.IsFailure && last?.Identities.Contains(identity) != true
             && (await _store.FindAsync(id, cancellationToken))?.Identities.Contains(identity) != true)
         {
-            await _store.UnbindSubjectAsync(identity, id, cancellationToken);
+            await _store.UnbindSubjectIfUnchangedAsync(identity, made, cancellationToken);
         }
     }
 
@@ -354,7 +354,7 @@ public sealed class AccountRegistry
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            var bound = false;
+            string? made = null;
             Account? last = null;
             var linked = await WriteAsync(
                 id,
@@ -388,8 +388,8 @@ public sealed class AccountRegistry
                         return Result.Failure<Account>(AccountErrors.ProviderLinked);
                     }
 
-                    var binding = await BindAsync(identity, id, cancellationToken);
-                    bound |= binding.Made;
+                    var binding = await BindAsync(identity, id, made, cancellationToken);
+                    made = binding.Made;
                     if (!binding.Bound)
                     {
                         return Result.Failure<Account>(AccountErrors.IdentityTaken);
@@ -398,7 +398,7 @@ public sealed class AccountRegistry
                     return Result.Success(finished with { Identities = finished.Identities.With(identity) });
                 },
                 cancellationToken);
-            await UnbindRefusedAsync(bound, linked, last, identity, id, cancellationToken);
+            await UnbindRefusedAsync(made, linked, last, identity, id, cancellationToken);
             return linked;
         }
         finally
@@ -464,34 +464,48 @@ public sealed class AccountRegistry
     }
 
     // Binds the identity to the account: Bound when it now names it, already or once a binding that holds nobody is
-    // taken back, false when another account holds it; Made when this call wrote the binding, so a refusal later undoes
-    // only what it wrote, never a binding another link in flight made (#1217).
-    private async Task<(bool Bound, bool Made)> BindAsync(ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    // taken back, false when another account holds it. Made is the version of a binding this call made, so a refusal
+    // later undoes only what it wrote, never a binding another link in flight made (#1217); ours, the version an earlier
+    // try of the same call made, is still its own while unchanged. A binding another link of this account made is taken
+    // up by writing it over its version, so that link's cleanup, over the version it made, leaves it (#1261).
+    private async Task<(bool Bound, string? Made)> BindAsync(ExternalIdentity identity, AccountId id, string? ours, CancellationToken cancellationToken)
     {
-        if (await _store.TryBindSubjectAsync(identity, id, cancellationToken))
+        for (var tried = 0; tried < Tries; tried++)
         {
-            return (true, true);
-        }
-
-        var holder = await _store.FindBySubjectAsync(identity, cancellationToken);
-        if (holder == id)
-        {
-            return (true, false);
-        }
-
-        if (holder is { } other)
-        {
-            if (!await HoldsNobodyAsync(identity, other, cancellationToken))
+            if (await _store.BindSubjectAsync(identity, id, over: null, cancellationToken) is { } made)
             {
-                return (false, false);
+                return (true, made);
             }
 
-            await _store.UnbindSubjectAsync(identity, other, cancellationToken);
+            if (await _store.ReadSubjectAsync(identity, cancellationToken) is not { } held)
+            {
+                continue;
+            }
+
+            if (held.Account == id)
+            {
+                if (held.Version == ours)
+                {
+                    return (true, ours);
+                }
+
+                if (await _store.BindSubjectAsync(identity, id, held.Version, cancellationToken) is not null)
+                {
+                    return (true, null);
+                }
+
+                continue;
+            }
+
+            if (!await HoldsNobodyAsync(identity, held.Account, cancellationToken))
+            {
+                return (false, null);
+            }
+
+            await _store.UnbindSubjectIfUnchangedAsync(identity, held.Version, cancellationToken);
         }
 
-        return await _store.TryBindSubjectAsync(identity, id, cancellationToken)
-            ? (true, true)
-            : (await _store.FindBySubjectAsync(identity, cancellationToken) == id, false);
+        throw new IOException($"The binding of {identity.Provider} to account {id} lost {Tries} writes in a row to another process.");
     }
 
     /// <summary>

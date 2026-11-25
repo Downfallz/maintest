@@ -1,6 +1,7 @@
 using DownfallArena.Application.Accounts;
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Infrastructure.Accounts;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Infrastructure.Tests.Accounts;
 
@@ -82,6 +83,28 @@ public sealed class FileNoticeStoreTests : NoticeStoreContract, IDisposable
         (await store.WriteAsync(account, entries, read.Version, Cancel)).ShouldBeTrue();
 
         (await File.ReadAllTextAsync(path, Cancel)).ShouldNotContain("cup");
+    }
+
+    /// <summary>A file read is kept for the write after it, and let go unused within two lifetimes, its store never used again (#1260).</summary>
+    [Fact]
+    public async Task A_log_read_is_kept_for_the_write_after_it_and_let_go_within_two_lifetimes_if_none_comes()
+    {
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var path = Path.Combine(_root, "notices", $"{account.Value}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, NoticeFields.Written, Cancel);
+        var time = new FakeTimeProvider();
+        var store = new FileNoticeStore(_root, time);
+
+        var read = await store.ReadAsync(account, Cancel);
+        store.Kept.ShouldBe(1);
+        (await store.WriteAsync(account, NoticeFields.Read(read.Entries), read.Version, Cancel)).ShouldBeTrue();
+        store.Kept.ShouldBe(0);
+        await store.ReadAsync(account, Cancel);
+        time.Advance(TimeSpan.FromSeconds(2 * TextsRead<SharedKernel.Identifiers.AccountId>.LifetimeSeconds));
+
+        store.Kept.ShouldBe(0);
+        NoticeFields.ShouldKeepThem(await File.ReadAllTextAsync(path, Cancel));
     }
 
     public void Dispose()

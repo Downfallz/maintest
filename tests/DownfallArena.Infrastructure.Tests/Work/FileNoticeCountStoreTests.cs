@@ -1,6 +1,7 @@
 using DownfallArena.Application.Ports;
 using DownfallArena.Application.Work;
 using DownfallArena.Infrastructure.Work;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Infrastructure.Tests.Work;
 
@@ -53,6 +54,22 @@ public sealed class FileNoticeCountStoreTests : NoticeCountStoreContract, IDispo
         await new FileNoticeCountStore(_root).ForgetBeforeAsync(new DateOnly(2026, 11, 23), Cancel);
 
         File.Exists(other).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Days_forgotten_before_a_day_are_no_longer_kept_and_that_day_still_is()
+    {
+        Directory.CreateDirectory(_root);
+        var store = new FileNoticeCountStore(_root, new FakeTimeProvider());
+        await store.WriteAsync(NoticeCountFields.Day.AddDays(-1), [new("turn", 1, 0, 0)], null, Cancel);
+        await store.WriteAsync(NoticeCountFields.Day, [new("turn", 1, 0, 0)], null, Cancel);
+        await store.ReadAsync(NoticeCountFields.Day.AddDays(-1), Cancel);
+        await store.ReadAsync(NoticeCountFields.Day, Cancel);
+
+        await store.ForgetBeforeAsync(NoticeCountFields.Day, Cancel);
+
+        store.Kept.ShouldBe(1);
+        File.Exists(Path.Combine(_root, $"{NoticeCountFields.Day.AddDays(-1):yyyy-MM-dd}.json")).ShouldBeFalse();
     }
 
     public void Dispose()

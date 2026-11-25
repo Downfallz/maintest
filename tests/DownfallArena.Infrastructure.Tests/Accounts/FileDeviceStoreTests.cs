@@ -1,5 +1,6 @@
 using DownfallArena.Application.Accounts.Ports;
 using DownfallArena.Infrastructure.Accounts;
+using Microsoft.Extensions.Time.Testing;
 
 namespace DownfallArena.Infrastructure.Tests.Accounts;
 
@@ -57,6 +58,26 @@ public sealed class FileDeviceStoreTests : DeviceStoreContract, IDisposable
         (await store.SaveAsync(account, [read.Devices[0] with { P256dh = "BP8" }], read.Version, Cancel)).ShouldBeTrue();
 
         (await File.ReadAllTextAsync(path, Cancel)).ShouldNotContain("Pixel");
+    }
+
+    /// <summary>A file read is kept for the write after it, and its push keys let go unused within two lifetimes (#1260, ADR 0203).</summary>
+    [Fact]
+    public async Task A_list_read_is_kept_for_the_write_after_it_and_let_go_within_two_lifetimes_if_none_comes()
+    {
+        var account = SharedKernel.Identifiers.AccountId.New();
+        var path = Path.Combine(_root, "devices", $"{account.Value}.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await File.WriteAllTextAsync(path, DeviceFields.Written, Cancel);
+        var time = new FakeTimeProvider();
+        var store = new FileDeviceStore(_root, time);
+
+        await store.ListAsync(account, Cancel);
+        store.Kept.ShouldBe(0);
+        await store.ReadAsync(account, Cancel);
+        store.Kept.ShouldBe(1);
+        time.Advance(TimeSpan.FromSeconds(2 * TextsRead<SharedKernel.Identifiers.AccountId>.LifetimeSeconds));
+
+        store.Kept.ShouldBe(0);
     }
 
     public void Dispose()

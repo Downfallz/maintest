@@ -11,15 +11,25 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// </summary>
 public sealed class FileDeviceStore : IDeviceStore
 {
-    private readonly TextsRead<AccountId> _read = new();
+    private readonly TextsRead<AccountId> _read;
 
     public FileDeviceStore(string rootDirectory)
+        : this(rootDirectory, TimeProvider.System)
     {
+    }
+
+    /// <param name="time">What lets go of a text kept past its lifetime; a test's own clock.</param>
+    internal FileDeviceStore(string rootDirectory, TimeProvider time)
+    {
+        _read = new TextsRead<AccountId>(time);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
         RootDirectory = Path.GetFullPath(rootDirectory);
     }
 
     public string RootDirectory { get; }
+
+    /// <summary>How many texts this store keeps now (#1260).</summary>
+    internal int Kept => _read.Count;
 
     /// <summary>
     /// The devices, for a push or a check that saves nothing: what they read is not kept, so a worker that sends to an

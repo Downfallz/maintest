@@ -92,8 +92,36 @@ public sealed class BlobAccountStore : IAccountStore
     public async Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.SubjectPath(identity), cancellationToken) is { } read ? AccountDocuments.ReadSubject(read.Json) : null;
 
+    public async Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
+        await ReadAsync(AccountDocuments.SubjectPath(identity), cancellationToken) is { } read
+            ? new SubjectRead(AccountDocuments.ReadSubject(read.Json), read.ETag.ToString())
+            : null;
+
     public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) =>
         CreateAsync(AccountDocuments.SubjectPath(identity), AccountDocuments.WriteSubject(account), cancellationToken);
+
+    /// <summary>Uploaded with <c>If-None-Match: *</c>, or <c>If-Match</c> on the version taken up; every upload gets a new ETag.</summary>
+    public async Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var uploaded = await _container.GetBlobClient(AccountDocuments.SubjectPath(identity)).UploadAsync(
+                BinaryData.FromString(AccountDocuments.WriteSubject(account)),
+                Options(over is null ? new BlobRequestConditions { IfNoneMatch = ETag.All } : new BlobRequestConditions { IfMatch = new ETag(over) }),
+                cancellationToken);
+            return uploaded.Value.ETag.ToString();
+        }
+        catch (RequestFailedException exception) when (exception.Status is 404 or 409 or 412)
+        {
+            return null;
+        }
+    }
+
+    public Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        return DeleteIfUnchangedAsync(AccountDocuments.SubjectPath(identity), new ETag(version), cancellationToken);
+    }
 
     public async Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
     {
