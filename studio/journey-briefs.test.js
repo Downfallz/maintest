@@ -17,7 +17,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const FOLDER = 'docs/art/journeys';
 const BOOK = 'docs/art/ux-craft.md';
 // The pages that are in the folder and are not a brief: the format, and the walk before any pass.
-const NOT_A_BRIEF = new Set(['README.md', 'baseline.md']);
+const NOT_A_BRIEF = new Set(['README.md', 'baseline.md', 'acceptance.md']);
 // Where a token may be declared, as for the craft book (studio/ux-craft.test.js).
 const TOKEN_SHEETS = ['docs/art/branding.css', 'table/table.css', 'table/identity.css'];
 // What a brief may name before it exists: the walk's sheets and measures, written and never committed.

@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX13 are built; UX14 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX14 are built; UX15 is next.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -818,6 +818,37 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
 14. **UX14, acceptance.** The five journeys filmed again against the baseline, the table of measures above, the
     budgets, less motion across every screen, the sheets published. The record goes in `docs/art/`, with the two
     gates only the owner can close: a newcomer watched, a physical phone.
+
+    *Built (2026-11-24)*: [the record](ux-acceptance.md). The six journeys were walked again on `main` at `5ee9f5c`,
+    166 screens at 320 and 390 px. `scripts/ux/acceptance.mjs` reads the walk against the baseline, screen by screen,
+    into [the journeys at acceptance](journeys/acceptance.md). Nine of the plan's ten measures hold. No screen has
+    more than one filled action, against 20 at the baseline. The match's frame and windows are 11 px at least, where
+    they went down to 7 and 9. axe finds nothing on any screen, against 53. The home's shift is 0.01. The five
+    pages' paints are 0.8 to 2.3 s on the slow phone, every budget held. Overlaps do not hold: 34 screens, against
+    49. On the match and its windows they are of two kinds. One is a list scrolled under its window's sticky foot.
+    The other is two faults in the frame: at 390 px the menu's button covers 15 px of the match's Settings, and at
+    320 px the Order button covers a creature while a spell is chosen. The lobby's are the third kind of the record.
+
+    Less motion across every screen: `journey.mjs --less-motion` walks with the system's wish for less motion, and
+    keeps each transition, animation or `animate` call that moves a `transform`, `translate`, `scale` or `rotate` on
+    the way to a screen, a pseudo-element's too, and each smooth scroll, from every person's pages
+    (`scripts/ux/motion.mjs`). On all 166 screens nothing travelled and nothing animated at rest.
+    With full motion, 24 screens have one animation running at rest: the home's mist, the showcase's breath, the
+    waiting room's dots. `studio/browser/table.motion.js` holds it on the real engine, with a fixture of what the watch sees
+    and a control, the lobby walked with full motion, that shows it travel. The real-engine job's limit went from 50
+    to 60 minutes for it. The sheets, with full and with less motion, are published for the owner.
+
+    Tests: `studio/ux-acceptance.test.js` (the baseline read, `then → now`, the paints by their old names, less
+    motion, the arguments, the script's refusals, the record's parts) and `table.motion.js`.
+
+    Left:
+    - The two overlaps in the frame (#1276), and the sign-in door's three eyebrows at 10 px (Beta, Invitation, Signed
+      out).
+    - The two gates only the owner can close, with a block to paste each ([the record](ux-acceptance.md), "The
+      gates only the owner can close"), and the four checks UX13 left for a person.
+    - The lobby's overlaps were counted, not read one by one.
+    - The lobby's pager of finished games scrolls smoothly under less motion (`table/lobby.js`, #1275); the walk never
+      presses it.
 15. **UX15, a lesson before an account.** A visitor plays tutorial 1 as a guest, from either door, and is asked
     to sign in when it ends, with what the account keeps. Needs an ADR that amends question 5 of
     `accounts-plan.md`: what a guest is on the host, what it may reach, how long it lives, and how its lesson
