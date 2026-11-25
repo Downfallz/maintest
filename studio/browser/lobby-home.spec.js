@@ -758,8 +758,8 @@ for (const file of ['leaderboard', 'battle', 'index']) {
     await page.goto(`/table/${file}.html`);
     await expect(page.locator('#account-name')).toHaveText(player.username);
     // The bell reads what waits on its own on every page: the turn at Bastien's table and Alex's request. Under
-    // 360 px the battle view's bar has no room for it: the menu holds it, its count on the menu's button (UX11).
-    const folded = file === 'battle' && page.viewportSize().width < 360;
+    // 420 px the battle view's bar has no room for it: the menu holds it, its count on the menu's button (UX11, #1276).
+    const folded = file === 'battle' && page.viewportSize().width < 420;
     const badge = page.locator(folded ? '#menu-inbox-badge' : '#inbox-badge');
     await expect(badge).toHaveText('2');
     // Whole on screen, even where the header sits at the screen's top edge (the battle view on a phone).
