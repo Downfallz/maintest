@@ -215,6 +215,8 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
    gives way first and is cut shorter, so the bar stays inside the header (#669). */
 .home-header .account, .home-header #account-menu { flex: 0 1 auto; min-width: 0; }
 .home-header #account-name { min-width: 0; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A guest's chip says Guest, a word of its own and never a long name: it is not cut, whatever the text's size (UX15). */
+body[data-guest="true"]:not(.battle-page) .home-header #account-name { flex: none; max-width: none; overflow: visible; text-overflow: clip; }
 .home-header .account-chip { min-width: 0; font-size: 12px; }
 .nav-badge { display: inline-grid; place-items: center; min-width: 19px; height: 19px; border-radius: 50%; padding: 0 4px; background: var(--gold); color: var(--accent-ink); font-size: 11px; }
 /* The bell: what waits for the player (their turns, invitations, friend requests), counted on it in every page's
@@ -390,7 +392,7 @@ html #friends-dialog { width: min(720px, calc(100vw - 24px)); }
   .home-header .account-chip { padding: 4px; min-width: 44px; min-height: 44px; justify-content: center; }
   /* A guest's chip reads the word Guest, not an initial that reads as a name's (UX15); the battle's header, which has no
      room for it at 320 px, keeps the G. */
-  body[data-guest="true"]:not(.battle-page) .home-header #account-name { display: inline; max-width: none; overflow: visible; font-size: 14px; }
+  body[data-guest="true"]:not(.battle-page) .home-header #account-name { display: inline; font-size: 14px; }
   body[data-guest="true"]:not(.battle-page) .home-header .account-initial { display: none; }
   body[data-guest="true"]:not(.battle-page) .home-header .account-chip { padding-inline: 10px; }
   .home-header .account-menu { position: fixed; top: 78px; right: 18px; max-width: calc(100vw - 36px); }
