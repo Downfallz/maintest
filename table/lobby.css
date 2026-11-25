@@ -285,7 +285,8 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 }
 .sign-in-panel .sign-in-creature { position: absolute; z-index: -1; right: 2%; bottom: 6%; width: min(46%, 550px); height: auto; max-height: 86%; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 12px 8px #000a); }
 .sign-in-content { width: min(60%, 560px); min-width: 0; padding: clamp(24px, 5vw, 72px); }
-.sign-in-content .eyebrow { color: var(--brand-ember); }
+/* The pages' floor of text, 11 px, as a window's eyebrow (#1279). */
+.sign-in-content .eyebrow { color: var(--brand-ember); font-size: 11px; }
 .sign-in-content h2 { font: 400 clamp(38px, 5vw, 76px)/1.06 var(--font-display); letter-spacing: -.04em; color: var(--bone); margin: 16px 0 12px; overflow-wrap: anywhere; }
 .sign-in-panel[data-door="invited"] .sign-in-content h2 { font-size: clamp(30px, 4vw, 60px); }
 /* The title and the room it holds share one cell: the room, unseen, is the longest the title can become (door.js),
