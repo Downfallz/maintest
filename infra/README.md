@@ -9,7 +9,7 @@ studio is not here: it is on GitHub Pages (ADR 0023).
 
 | Resource | What it is for | What it costs |
 | --- | --- | --- |
-| Container app `downfall-table` | The API: the CLI's `table --lobby --platform-auth --turns worker --tended`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing idle. While a page is open, well inside the monthly free grant for a few evenings of play |
+| Container app `downfall-table` | The API: the CLI's `table --lobby --platform-auth --turns worker --tended`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing at zero. After the last request it stays up two hours, billed at the active rate (the idle rate needs a minimum above zero): 3 600 vCPU-seconds each time, so about 50 a month fit the free grant, then about 11 cents each |
 | Container app `downfall-worker` | The CLI's `table-worker`: the bots' turns the API puts on the `agent-turns` queue, the notices on `notices` (ADR 0203), and the dead letters; no ingress, 0.5 vCPU, 1 GiB, **0 to 1 replica**, scaled on the length of `agent-turns`, `agent-turns-poison`, `notices` and `notices-poison` | Nothing idle. Seconds per bot turn, and per notice while the API is down |
 | Container Apps job `downfall-tend` | The CLI's `table-tend`, at 17 minutes past every hour: closes the tables that never began, lets go of the invitations nobody answered; 0.25 vCPU, 0.5 GiB | A few seconds an hour |
 | Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
@@ -18,7 +18,8 @@ studio is not here: it is on GitHub Pages (ADR 0023).
 | Blob container `promo` | The promotion's films, sheets and pictures (ADR 0206), each named by its hash under its shot, recorded in `promo/media.json`. Written by the `downfall-table-promo` identity from `.github/workflows/promo-film.yml` (variables `AZURE_PROMO_CLIENT_ID`, `AZURE_PROMO_PRINCIPAL_ID`, `TABLE_PROMO_URL`; [runbooks/promo-identity.md](runbooks/promo-identity.md)); the operators hold the same role on it, to open, replace and delete files in the portal | Cents a month: a film is 5 to 20 MB |
 | Log Analytics workspace | The host's console lines, 30 days, capped at 0.5 GB a day | Cents, often nothing |
 
-The app scales to zero a few minutes after the last request. With the relay (ADR 0165), an open page holds its
+The app scales to zero two hours after the last request (`cooldownPeriod: 7200`; the platform's default is five
+minutes). With the relay (ADR 0165), an open page holds its
 connection to Web PubSub, not to the app, so a page left open keeps nothing awake; a page reads the app only when it
 is told something moved. Without it, or when the relay's connections are all taken (Free: 20), a page holds an
 event stream to the app instead (ADR 0119, 0164), which keeps it awake. The first request after a quiet spell waits
