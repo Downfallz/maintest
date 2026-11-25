@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { SETTLE_MS as SETTLE } from './battle-timing.js';
-import { createBattlePlayback, actionCue } from './battle-playback.js';
+import { createBattlePlayback, actionCue, createAnnouncer } from './battle-playback.js';
 const creature = (id, health = 20) => ({ id, health, maxHealth: 20, energy: 5, totalDefense: 2, isAlive: health > 0, name: `Creature ${id}` });
 const before = [creature(1), creature(2), creature(3)];
 const timeline = [1, 2, 3].map(creature => ({ creature, owner: creature === 1 ? 'Player1' : 'Player2', speed: 'Standard' }));
@@ -605,4 +605,28 @@ test('an action queued under a dialog leaves the field and the order where they 
   assert.equal(m.board.cursor, 1, 'the queued action\'s slot is the one being played, not done');
   assert.equal(m.board.creatures.find(one => one.id === '2')?.health ?? m.board.enemies.find(one => one.id === 2).health, 20);
   h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
+});
+test('the result told is named by its sequence, including one that settled without being played (#1267)', () => {
+  const h = harness(); h.receive([]); h.receive([event(4)]);
+  assert.equal(h.queue.model().told, 4, 'the action being played');
+  h.drain(); assert.equal(h.queue.model().told, 4, 'the last result read stays named once the queue drains');
+  h.receive([event(5)], {}, { animate: false });
+  assert.equal(h.queue.model().sequence, null); assert.equal(h.queue.model().told, 5, 'a settled action is told under its own sequence');
+});
+test('the announcer says a result again when the next one reads word for word the same (#1267)', () => {
+  const frames = [];
+  const region = { textContent: '', dataset: {} };
+  const announce = createAnnouncer(region, fn => frames.push(fn));
+  announce(4, 'Brace → Creature 1'); assert.equal(region.textContent, 'Brace → Creature 1'); assert.equal(region.dataset.sequence, '4');
+  announce(4, 'Brace → Creature 1'); assert.equal(frames.length, 0, 'the same result drawn again says nothing new');
+  announce(6, 'Brace → Creature 1');
+  assert.equal(region.textContent, '', 'a new result in the same words clears the region first');
+  assert.equal(region.dataset.sequence, '6');
+  announce(6, 'Brace → Creature 1');
+  assert.equal(region.textContent, '', 'a second render before the rewrite leaves the region empty, not rewritten in the same task');
+  frames.shift()(); assert.equal(region.textContent, 'Brace → Creature 1', 'then writes it again');
+  assert.equal(frames.length, 0, 'once');
+  announce(7, ''); announce(7, 'Pummel'); assert.equal(region.textContent, 'Pummel', 'a windup, then its impact, write at once');
+  announce(8, 'Pummel'); announce(9, 'Guard');
+  frames.shift()(); assert.equal(region.textContent, 'Guard', 'a rewrite overtaken by a newer result does not replace it');
 });

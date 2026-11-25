@@ -13,7 +13,7 @@ import { growthControls } from './growth';
 import { atlasControls } from './mutation-atlas';
 import { createBattleUpkeep } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
-import { createBattlePlayback } from '../../table/battle-playback.js';
+import { createAnnouncer, createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { buildRecap, recapOpensOnItsOwn } from '../../table/battle-recap.js';
@@ -67,6 +67,9 @@ interface View { board: object; over: boolean; waiting: unknown; waitingFor: str
   seen?: { sequence: number; at: string } | null; lastMoveAt?: string | null; feed?: unknown[] }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
+// Says what each resolved action did, once, in the one live region. A result that repeats the one before is said
+// again (#1267).
+const announce = createAnnouncer($('playback-announcement'), (again: () => void) => { window.setTimeout(again, 150); });
 const audio = new BattleAudio();
 const scene = new BattleScene(new URL('battle-art/', document.baseURI).href);
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -459,7 +462,7 @@ function render() {
   $('playback-result').hidden = !playbackState.summary;
   text('result-text', playbackState.summary);
   resultCard(playbackState.result as ResultCard | null);
-  text('playback-announcement', playbackState.stage === 'windup' ? '' : playbackState.summary);
+  announce(playbackState.told, playbackState.stage === 'windup' ? '' : playbackState.summary);
   $('playback-result').setAttribute('aria-label', `Action result: ${playbackState.summary}`);
   text('result-label', playbackState.active ? 'Confirmed result' : 'Last result');
   if (!playbackState.summary) $<HTMLDialogElement>('result-dialog').close();

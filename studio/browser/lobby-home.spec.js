@@ -27,7 +27,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   });
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname;
-    // In the order the page asks: a read the home's first paint waits for is asked before the rest (#1207).
+    // In the order the requests reached the test, which can differ from the order the page asks in (#1257).
     (state.requested ??= []).push(path);
     const json = value => route.fulfill({ json: value });
     if (path === '/api/me' && state.meDown) return route.fulfill({ status: 503, json: { message: 'Restarting' } });
@@ -1563,9 +1563,21 @@ test('a lesson\'s creature breathes on the home, and is still behind the Friends
 // The featured space waits for the lessons and the games; the lessons were asked last, behind a dozen reads, and
 // a new player's home painted over its budget on the slow phone (#1207).
 test('a signed-in player\'s lessons are asked for before the lobby reads that player\'s games', async ({ page }) => {
+  // The order in which the page asks, recorded in the page as each fetch is called (#1207). The route's own list gives
+  // the order in which the requests reached the test process: a loaded runner can swap two asked in the same task (#1257).
+  await page.addInitScript(() => {
+    window.asked = [];
+    const fetched = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      window.asked.push(new URL(input instanceof Request ? input.url : String(input), location.href).pathname);
+      return fetched(input, init);
+    };
+  });
   const state = await home(page, { games: [], tutorials: series('skipped') });
   await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'lesson');
-  const asked = state.requested.slice(state.requested.indexOf('/api/me'));
+  const calls = await page.evaluate(() => window.asked);
+  expect(calls).toContain('/api/me');
+  const asked = calls.slice(calls.indexOf('/api/me'));
   expect(asked).toEqual(expect.arrayContaining(['/api/tutorials', '/api/lobby/adopt']));
   expect(asked.indexOf('/api/tutorials')).toBeLessThan(asked.indexOf('/api/lobby/adopt'));
   expect(state.errors).toEqual([]);

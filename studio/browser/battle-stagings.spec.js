@@ -136,3 +136,23 @@ test('the frame time script times every step of an action, then every frame of i
   await expect(page.locator('#lab')).toHaveAttribute('data-stage', 'resolved');
   expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
 });
+
+// A caster that pays in blood and is among the recipients of its own ward receives the spell as well as the wound
+// (#946, #949), so the scene draws the staging's target beats on it too. A trail from the caster to itself would
+// have no length, so it draws none.
+test('a ward paid for in blood is staged on its caster like every other recipient, but with no trail to itself', async ({ page }) => {
+  test.setTimeout(60000);
+  const spell = 'spell:revenant_guards:v1';
+  await film(page, 'start', { spell, actor: 'a1', targets: ['a1', 'a2', 'a3'], wound: true });
+  expect(await page.locator('#lab').getAttribute('data-wound')).toBe('true');
+  const beats = new Map();
+  for (let elapsed = 0; elapsed < WINDUP_MS + IMPACT_MS; elapsed += STEP_MS) {
+    for (const one of (await kit(page)).objects) beats.set(one.creature, new Set([...(beats.get(one.creature) ?? []), one.beat]));
+    await film(page, 'advance', STEP_MS);
+  }
+  const on = id => [...(beats.get(id) ?? [])].sort();
+  for (const id of ['a1', 'a2', 'a3']) expect(on(id), `${id} holds the ward's flow`).toContain('flow');
+  for (const id of ['a2', 'a3']) expect(on(id), `the trail reaches ${id}`).toContain('trail');
+  expect(on('a1'), 'no trail from the caster to itself').not.toContain('trail');
+  await film(page, 'stop');
+});

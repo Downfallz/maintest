@@ -25,14 +25,17 @@ function listen() {
   const read = () => {
     for (const region of regions()) {
       const text = region.textContent.replace(/\s+/g, ' ').trim();
+      // A region tells the action it names (#1267). If it names none, it tells the action being played. A result
+      // settled without being played, such as the player's own cast arriving under a sheet, is told while no action plays.
+      const sequence = region.dataset.sequence ?? document.getElementById('battle')?.dataset.sequence ?? '';
       // A region says the same words again for another action: the action is what is new, not the words.
-      const said = `${text}\u0000${document.getElementById('battle')?.dataset.sequence ?? ''}`;
+      const said = `${text}\u0000${sequence}`;
       if (!text || last.get(region) === said) continue;
       last.set(region, said);
-      window.liveSaid.push({ region: region.id || region.className || region.tagName, text, sequence: Number(document.getElementById('battle')?.dataset.sequence ?? Number.NaN) });
+      window.liveSaid.push({ region: region.id || region.className || region.tagName, text, sequence: sequence === '' ? Number.NaN : Number(sequence) });
     }
   };
-  new MutationObserver(read).observe(document.body, { subtree: true, childList: true, characterData: true });
+  new MutationObserver(read).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-sequence'] });
 }
 
 const visible = (page, selector) => page.locator(selector).isVisible();
@@ -148,8 +151,11 @@ test('a whole round is played by keyboard and each action is told in one live re
       const elsewhere = said.filter(other => other.region !== 'playback-announcement' && other.text.includes(one.text));
       expect(elsewhere, `"${one.text}" is told once`).toEqual([]);
     }
-    for (const [sequence] of actions) {
+    for (const [sequence, entry] of actions) {
       expect(told.some(one => one.sequence === sequence), `action ${sequence} was told`).toBe(true);
+      // The words said under an action's sequence are that action's: they name its caster, as its result does.
+      const caster = `Creature ${entry.event.resolution.action.actor} `;
+      expect(told.filter(one => one.sequence === sequence).every(one => one.text.startsWith(caster)), `action ${sequence} was told as its own`).toBe(true);
     }
   } finally {
     await page.close();
