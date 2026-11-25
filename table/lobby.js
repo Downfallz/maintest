@@ -383,6 +383,15 @@ function statusText(state) {
 const CARD_SIZES = '(min-width: 1054px) 430px, (min-width: 761px) 50vw, calc(100vw - 36px)';
 const ROW_SIZES = '(min-width: 1344px) 1280px, calc(100vw - 36px)';
 
+/**
+ * What the home says once an account is signed in where a guest was (UX15): the same account, its tutorials kept; or
+ * another account the guest signed in to, which keeps its own. Nothing for anybody else.
+ */
+export function greetingFor(member, guestBefore) {
+  if (!member || !guestBefore) return null;
+  return member.id === guestBefore ? `Signed in as ${member.username}. Your tutorials are kept.` : `Signed in as ${member.username}.`;
+}
+
 export function mountLobby(doc, location, storage, { changes = onLobbyChange, featured = null } = {}) {
   const el = id => doc.getElementById(id);
   // Games open in the battle view (ADR 0157); only a browser that asked for the archived table opens /play.
@@ -840,6 +849,17 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     if (listing) render();
   }
   let failures = 0, retry = null;
+  // A read that failed: said, and tried again later each time, until it answers: a retry, not a clock.
+  function interrupted() {
+    // A lost connection ends the greeting: the read that comes back says the lobby's own status.
+    greeting = null;
+    el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
+    // A first read that failed still draws the featured space, from nothing, so the home is not a blank panel.
+    if (!listing) featured?.setGames(mine);
+    failures += 1;
+    globalThis.clearTimeout(retry);
+    retry = globalThis.setTimeout(() => void refresh(), Math.min(30000, 1000 * 2 ** (failures - 1)));
+  }
   async function refresh() {
     if (closed) return;
     if (loading) { refreshAgain = true; return; }
@@ -864,18 +884,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       el('lobby-status').textContent = greetingOr(listing);
       maybeRematch();
       failures = 0;
-    } catch (error) {
-      if (reading === revision && !closed) {
-        // A lost connection ends the greeting: the read that comes back says the lobby's own status.
-        greeting = null;
-        el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
-        // A first read that failed still draws the featured space, from nothing, so the home is not a blank panel.
-        if (!listing) featured?.setGames(mine);
-        // Tried again, later each time, until it answers: a retry, not a clock.
-        failures += 1;
-        globalThis.clearTimeout(retry);
-        retry = globalThis.setTimeout(() => void refresh(), Math.min(30000, 1000 * 2 ** (failures - 1)));
-      }
+    } catch {
+      if (reading === revision && !closed) interrupted();
     } finally {
       loading = false;
       if (refreshAgain) { refreshAgain = false; void refresh(); }
@@ -1174,6 +1184,26 @@ if (typeof document !== 'undefined') {
   const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson, listed });
   // Signed in as a guest a moment ago: the account it became says its tutorials are kept, once (UX15).
   let lastGuest = null;
+  const panel = document.getElementById('sign-in-panel');
+  // The door for whoever is signed in (UX15): a guest's keep panel stands under the featured lesson, before Learn to
+  // play (doors.md, the guest's home); anyone else's door stands where the doors stand, before the games.
+  function placeDoor({ guest, playable }) {
+    if (guest) {
+      door.guest();
+      document.getElementById('featured').after(panel);
+    } else {
+      document.getElementById('home-games').before(panel);
+      if (playable) door.member();
+      else door.signedOut();
+      document.getElementById('featured').hidden = false;
+    }
+    // A guest's home shows the lessons, which live with the games: the sections it may not reach are hidden by its mark.
+    document.getElementById('home-games').hidden = !playable && !guest;
+  }
+  const keepPanelFocused = () => {
+    panel.scrollIntoView?.({ block: 'start' });
+    document.getElementById('sign-in-heading').focus({ preventScroll: true });
+  };
   const next = nextPath(globalThis.location.search);
   // The offer of pop-ups (N4): made when a game against a person waits on the other player, once the switch has read
   // this browser, whichever of the two comes first.
@@ -1199,22 +1229,9 @@ if (typeof document !== 'undefined') {
       const lessons = account ? tutorials.setAccount(account) : null;
       const playable = Boolean(member) || mode === 'off';
       guestNow = guest;
-      const panel = document.getElementById('sign-in-panel');
-      if (guest) {
-        door.guest(account);
-        // The keep panel stands under the featured lesson, before Learn to play (doors.md, the guest's home).
-        document.getElementById('featured').after(panel);
-      } else {
-        // Back where the doors stand, before the games.
-        document.getElementById('home-games').before(panel);
-        if (!playable) door.signedOut();
-        else door.member();
-      }
-      // A guest's home shows the lessons, which live with the games: the sections it may not reach are hidden by its mark.
-      document.getElementById('home-games').hidden = !playable && !guest;
-      if (!guest) document.getElementById('featured').hidden = false;
+      placeDoor({ guest, playable });
       if (playable || guest) featured.playable();
-      const said = member && lastGuest ? (member.id === lastGuest ? `Signed in as ${member.username}. Your tutorials are kept.` : `Signed in as ${member.username}.`) : null;
+      const said = greetingFor(member, lastGuest);
       lastGuest = guest ? account.id : null;
       lobby.setAccount(member, mode, { guest, said });
       // A guest has no games to read: told none after the lobby, whose change of account empties the featured space.
@@ -1223,10 +1240,7 @@ if (typeof document !== 'undefined') {
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
       const opened = Boolean(await (lessons ?? tutorials.setAccount(account)));
       // Sent from a lesson's end to keep its tutorials (`/#keep-tutorials`): the keep panel takes the focus.
-      if (guest && !opened && globalThis.location.hash === '#keep-tutorials') {
-        panel.scrollIntoView?.({ block: 'start' });
-        document.getElementById('sign-in-heading').focus({ preventScroll: true });
-      }
+      if (guest && !opened && globalThis.location.hash === '#keep-tutorials') keepPanelFocused();
       return opened;
     },
   });

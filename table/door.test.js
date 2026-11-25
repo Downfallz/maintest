@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { doorPictures, doorWords, invitationKeys, invitationOf, lessonAsked, lessonWay, nameNext } from './door.js';
+import { doorName, doorPictures, doorWords, invitationKeys, invitationOf, lessonAsked, lessonWay, nameNext } from './door.js';
 
 const offered = (table, seat = 'player2') => ({ invitations: [{ token: 'inv', kind: 'invitation', seat, table }] });
 const bastiens = { format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'bastien' }, { seat: 'player2', kind: 'open', name: 'Open seat' }] };
@@ -134,4 +134,12 @@ test('a guest\'s keep panel draws no painting: the featured lesson above it says
 
 test('the name window tells a guest its tutorials and settings stay with the name it chooses', () => {
   assert.equal(nameNext({ guest: true }), 'Your tutorials and settings stay with this name.');
+});
+
+test('the panel names its door, a guest first, then an invitation, a goodbye, the lesson, and the plain door last', () => {
+  assert.equal(doorName({ guest: true, invitation: {}, left: true, lesson: true }), 'guest');
+  assert.equal(doorName({ invitation: {}, left: true, lesson: true }), 'invited');
+  assert.equal(doorName({ left: true, lesson: true }), 'left');
+  assert.equal(doorName({ lesson: true }), 'lesson');
+  assert.equal(doorName(), 'plain');
 });

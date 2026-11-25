@@ -130,6 +130,14 @@ export function lessonWay(invitation, { left = false, lesson = false, guest = fa
   return { offered, filled: offered && lesson };
 }
 
+/** The panel's door, as its sheet and the walk name it: the first that holds, a guest first. */
+export function doorName({ invitation = null, left = false, lesson = false, guest = false } = {}) {
+  if (guest) return 'guest';
+  if (invitation) return 'invited';
+  if (left) return 'left';
+  return lesson ? 'lesson' : 'plain';
+}
+
 /** Where the name window's press leads, said in it so the cue survives the page that changes after it. */
 export function nameNext({ invitation, lesson, guest = false } = {}) {
   if (guest) return 'Your tutorials and settings stay with this name.';
@@ -206,7 +214,7 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
     el('sign-in-game').textContent = words.game;
     el('sign-in-game').hidden = !words.game;
     el('sign-in-account').textContent = words.account;
-    el('sign-in-panel').dataset.door = guest ? 'guest' : invitation ? 'invited' : left ? 'left' : lesson ? 'lesson' : 'plain';
+    el('sign-in-panel').dataset.door = doorName({ invitation, left, lesson, guest });
     const next = nameNext({ invitation, guest });
     // Never hidden, only empty: a live region shown and filled in one step is often not announced.
     el('name-next').textContent = next ?? '';
