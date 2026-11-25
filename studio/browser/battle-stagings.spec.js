@@ -137,10 +137,10 @@ test('the frame time script times every step of an action, then every frame of i
   expect(await kit(page)).toEqual({ objects: [], particles: 0, changes: 0 });
 });
 
-// A caster who pays in blood and is among the recipients of its own ward receives the spell as well as the wound
-// (#946, #949): the scene draws the staging's target beats on the caster too. A trail from the caster to itself has
-// no length, so the caster draws none: its drops would stay at its own feet.
-test('a ward its caster pays for in blood is staged on the caster as on every other recipient, without a trail to itself', async ({ page }) => {
+// A caster that pays in blood and is among the recipients of its own ward receives the spell as well as the wound
+// (#946, #949), so the scene draws the staging's target beats on it too. A trail from the caster to itself would
+// have no length, so it draws none.
+test('a ward paid for in blood is staged on its caster like every other recipient, but with no trail to itself', async ({ page }) => {
   test.setTimeout(60000);
   const spell = 'spell:revenant_guards:v1';
   await film(page, 'start', { spell, actor: 'a1', targets: ['a1', 'a2', 'a3'], wound: true });

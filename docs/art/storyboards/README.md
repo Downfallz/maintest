@@ -59,6 +59,9 @@ At 1× the windup runs from 0 to 840 ms, the impact runs from 840 to 2540 ms and
 A change to `table/battle-timing.js` moves the windows: the test then says which beats and which of these
 figures to move.
 
+A `trail` runs from the caster to each recipient other than itself. A caster among its own recipients, a ward or a
+heal it casts on itself, draws no trail: one from a figure to itself would have no length (#949).
+
 `studio/storyboards.test.js` holds the format in the gate: the seven parts in order, each spell an entry of
 `data/presentation/spell-art.json`, each beat inside its window on the timings of `table/battle-timing.js`, each
 pattern a heading of the craft book, each file listed in the table above.

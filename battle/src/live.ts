@@ -67,8 +67,9 @@ interface View { board: object; over: boolean; waiting: unknown; waitingFor: str
   seen?: { sequence: number; at: string } | null; lastMoveAt?: string | null; feed?: unknown[] }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
-// What each resolved action did, said once in the one live region, a repeated result again (#1267).
-const announce = createAnnouncer($('playback-announcement'), requestAnimationFrame);
+// Says what each resolved action did, once, in the one live region. A result that repeats the one before is said
+// again (#1267).
+const announce = createAnnouncer($('playback-announcement'), (again: () => void) => { window.setTimeout(again, 150); });
 const audio = new BattleAudio();
 const scene = new BattleScene(new URL('battle-art/', document.baseURI).href);
 const motion = matchMedia('(prefers-reduced-motion: reduce)');

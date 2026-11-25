@@ -165,18 +165,21 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
     struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes, roll };
 }
 
-// The one live region tells each result once (#1267). A new result that reads word for word as the one before is
-// cleared and written again a frame later: an unchanged text is not said again by a screen reader. The same result
+// The one live region tells each result once (#1267). When a new result reads word for word like the one before,
+// the region is cleared and written again later, because a screen reader does not repeat an unchanged text. `later`
+// waits long enough for a screen reader to hear the empty region (live.ts gives it 150 ms); until then the same
+// result drawn again leaves the region empty, or the clear and the rewrite would land in one task. The same result
 // drawn again says nothing. The region carries the sequence it tells.
-export function createAnnouncer(region, nextFrame) {
-  let told = { key: null, value: '' };
+export function createAnnouncer(region, later) {
+  let told = { key: null, value: '' }, pending = false;
   return (key, value) => {
     region.dataset.sequence = key == null ? '' : String(key);
+    if (pending && key === told.key && value === told.value) return;
     const again = value !== '' && key !== told.key && value === region.textContent;
-    told = { key, value };
+    told = { key, value }; pending = false;
     if (!again) { if (region.textContent !== value) region.textContent = value; return; }
-    region.textContent = '';
-    nextFrame(() => { if (told.key === key && told.value === value) region.textContent = value; });
+    region.textContent = ''; pending = true;
+    later(() => { if (pending && told.key === key && told.value === value) { pending = false; region.textContent = value; } });
   };
 }
 
@@ -330,7 +333,7 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // The last sequence the player has been shown in full: what a page closed now would resume after.
     const unread = [current?.first ?? current?.sequence, queue[0]?.first ?? queue[0]?.sequence].filter(Number.isInteger);
     const watermark = seen === null ? null : unread.length ? Math.min(...unread) - 1 : seen;
-    // `told` names the result `summary` says, played or settled, so the live region says which action it tells.
+    // `told` is the sequence of the result `summary` describes, played or settled: the live region names the action it tells.
     return { board, frame, summary, told: shown?.sequence ?? null, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null, watermark,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       paced: current?.upkeep ?? current?.aftermath ?? null,

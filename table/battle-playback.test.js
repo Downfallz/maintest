@@ -606,7 +606,7 @@ test('an action queued under a dialog leaves the field and the order where they 
   assert.equal(m.board.creatures.find(one => one.id === '2')?.health ?? m.board.enemies.find(one => one.id === 2).health, 20);
   h.queue.resume(); assert.equal(h.queue.model().sequence, 4);
 });
-test('the result told is named by its sequence, also when it settled without being played (#1267)', () => {
+test('the result told is named by its sequence, including one that settled without being played (#1267)', () => {
   const h = harness(); h.receive([]); h.receive([event(4)]);
   assert.equal(h.queue.model().told, 4, 'the action being played');
   h.drain(); assert.equal(h.queue.model().told, 4, 'the last result read stays named once the queue drains');
@@ -622,8 +622,11 @@ test('the announcer says a result again when the next one reads word for word th
   announce(6, 'Brace → Creature 1');
   assert.equal(region.textContent, '', 'a new result in the same words clears the region first');
   assert.equal(region.dataset.sequence, '6');
+  announce(6, 'Brace → Creature 1');
+  assert.equal(region.textContent, '', 'a second render before the rewrite leaves the region empty, not rewritten in the same task');
   frames.shift()(); assert.equal(region.textContent, 'Brace → Creature 1', 'then writes it again');
-  announce(7, ''); announce(7, 'Pummel'); assert.equal(region.textContent, 'Pummel', 'a windup then its impact write at once');
+  assert.equal(frames.length, 0, 'once');
+  announce(7, ''); announce(7, 'Pummel'); assert.equal(region.textContent, 'Pummel', 'a windup, then its impact, write at once');
   announce(8, 'Pummel'); announce(9, 'Guard');
-  frames.shift()(); assert.equal(region.textContent, 'Guard', 'a rewrite overtaken by a newer result leaves the newer one');
+  frames.shift()(); assert.equal(region.textContent, 'Guard', 'a rewrite overtaken by a newer result does not replace it');
 });

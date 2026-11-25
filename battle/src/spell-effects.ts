@@ -98,8 +98,8 @@ export class SpellEffects {
     const copy = this.copies++;
     for (const beat of beats) {
       if (beat.beat === 'motif' || VIEW_BEATS.has(beat.beat)) continue;
-      // A trail keeps to the quill it follows: it is not staggered. From a caster to itself it has no length, and its
-      // drops would stay at the caster's feet: a caster among its own recipients draws none (#949).
+      // A trail follows its quill, so it is not staggered. From a caster to itself it would have no length, and its
+      // drops would stay at the caster's feet. A caster among its own recipients therefore draws none (#949).
       if (beat.beat === 'trail') { if (target.id !== origin?.id) this.play(beat, visual, target, rate, origin); }
       else if (beat.on === 'target') this.play(beat, visual, target, rate, origin, undefined, copy);
     }
