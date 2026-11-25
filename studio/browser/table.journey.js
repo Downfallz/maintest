@@ -100,3 +100,39 @@ test('the measure counts a picture sent over twice its size or under it, by the 
     await context.close();
   }
 });
+
+// Two controls overlap where both are on the screen: a button scrolled under its row's edge is cut by the row that
+// scrolls it, as the order row's names scroll under its Order button (#1276), and is not on top of that button.
+test('the measure counts two controls that overlap on the screen, not one scrolled out of its row', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'table-phone', 'A fixture page: one project reads it.');
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  try {
+    const row = shifted => `<div style="display:flex;width:300px"><button style="flex:none;width:60px;height:44px">Order</button>
+      <ol id="row" style="flex:1;min-width:0;display:flex;overflow-x:auto;margin:0;padding:0;list-style:none">
+      ${[1, 2, 3, 4].map(one => `<li><button style="width:120px;height:44px">Creature ${one}</button></li>`).join('')}</ol></div>
+      ${shifted ? '<button style="position:relative;top:-30px;left:10px;width:44px;height:44px">Over</button>' : ''}`;
+    const overlaps = async shifted => {
+      await page.setContent(`<!doctype html><html lang="en"><body style="margin:0">${row(shifted)}</body></html>`);
+      await page.locator('#row').evaluate(node => { node.scrollLeft = 150; });
+      return (await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM })).overlaps;
+    };
+    expect(await overlaps(false)).toBe(0);
+    expect(await overlaps(true)).toBe(1);
+    // A box that escapes the one that clips it still overlaps: placed fixed, placed absolute against a positioned
+    // ancestor outside the clip, or inside a modal window, which sits in the top layer whatever its parent cuts.
+    const pair = '<button style="position:absolute;left:0;top:0;width:60px;height:44px">A</button>';
+    const escaping = [
+      `${pair}<div style="overflow:hidden;width:10px;height:10px"><button style="position:fixed;left:20px;top:10px;width:60px;height:44px">B</button></div>`,
+      `<div style="position:relative">${pair}<div style="overflow:hidden;width:10px;height:10px"><button style="position:absolute;left:20px;top:10px;width:60px;height:44px">B</button></div></div>`,
+      `<div style="overflow:hidden;width:10px;height:10px"><dialog id="modal" style="margin:0;padding:0;border:0"><button style="display:block;width:60px;height:44px">A</button><button style="display:block;margin:-30px 0 0 20px;width:60px;height:44px">B</button></dialog></div>`,
+    ];
+    for (const body of escaping) {
+      await page.setContent(`<!doctype html><html lang="en"><body style="margin:0">${body}</body></html>`); // NOSONAR S9382: one page, one fixture after another.
+      await page.evaluate(() => document.getElementById('modal')?.showModal()); // NOSONAR S9382: one page, one fixture after another.
+      const { overlaps: found } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM }); // NOSONAR S9382: one page, one fixture after another.
+      expect(found, body).toBe(1);
+    }
+  } finally {
+    await page.close();
+  }
+});

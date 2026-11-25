@@ -68,7 +68,8 @@ export function accessKitInPage() {
  * Runs in the page, under forced colours, after `accessKitInPage`. What forced colours take away and a player then
  * misses:
  * - `focus`: the page, when no rule of it keeps an outline for the focus under forced colours. Forced colours drop
- *   `box-shadow`, so a ring drawn with one alone disappears.
+ *   `box-shadow`, so a ring drawn with one alone disappears. `checkScreen` replaces it with each control that loses
+ *   its ring, where the browser can say (`ringsLostInPage`).
  * - `icons`: a drawn icon inside a control painted in a colour of its own, not the control's: forced colours repaint
  *   the control's text, not an SVG's own `fill` or `stroke`.
  * - `state`: a control pressed, selected, checked or current that looks like its unpressed sibling: forced colours
@@ -114,7 +115,8 @@ export function forcedColoursInPage() {
 
   // The ring: the focus is never moved here, since a walk's page answers it (a notice hides on a blur, a coach
   // moves on). A page keeps a ring under forced colours when a rule it holds draws an outline for `:focus-visible`
-  // inside `@media (forced-colors: active)`; `focus` lists the page itself when none does.
+  // inside `@media (forced-colors: active)`; `focus` lists the page itself when none does. In Chromium
+  // `ringsLostInPage` then reads each control's own ring and replaces this list.
   const rules = sheet => { try { return [...sheet.cssRules]; } catch { return []; } };
   const ring = inner => /:focus-visible/.test(inner.selectorText ?? '') && /outline/.test(inner.style?.cssText ?? '');
   const rings = list => list.some(rule => {
@@ -124,6 +126,46 @@ export function forcedColoursInPage() {
   });
   const focus = [...document.styleSheets].some(sheet => rings(rules(sheet))) ? [] : [location.pathname];
   return { focus, icons, state };
+}
+
+/** Runs on a control under its forced `:focus-visible`: its selector when it draws no outline, or null. */
+const RINGS = 'access-rings';
+const RING_LOST = 'function () { const style = getComputedStyle(this); return style.outlineStyle === "none" || style.outlineWidth === "0px" ? globalThis.__access.name(this) : null; }';
+
+/**
+ * Under forced colours, after `accessKitInPage`: the controls of the scope that draw no outline when they hold the
+ * keyboard's focus, by selector (#1268). The focus is never moved, since a walk's page answers it (a notice hides on
+ * a blur, a coach moves on): Chromium's DevTools protocol forces `:focus` and `:focus-visible` on one control at a
+ * time, the outline is read from the cascade, and the state is taken off again. A rule placed after identity.css that
+ * takes one control's ring away is seen, as a page with no ring rule at all is. Null where the browser has no such
+ * protocol (WebKit, Firefox): the sheets' reading in `forcedColoursInPage` then stands alone.
+ */
+export async function ringsLostInPage(page) {
+  let cdp;
+  try { cdp = await page.context().newCDPSession(page); } catch { return null; }
+  try {
+    await cdp.send('DOM.enable');
+    await cdp.send('CSS.enable');
+    await cdp.send('DOM.getDocument', { depth: 0 });
+    const { result: list } = await cdp.send('Runtime.evaluate', { expression: 'globalThis.__access.controls(globalThis.__access.scope())', objectGroup: RINGS });
+    const { result: entries } = await cdp.send('Runtime.getProperties', { objectId: list.objectId, ownProperties: true });
+    const lost = [];
+    for (const entry of entries.filter(one => /^\d+$/.test(one.name))) {
+      const { objectId } = entry.value;
+      const { nodeId } = await cdp.send('DOM.requestNode', { objectId }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
+      await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['focus', 'focus-visible'] }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
+      try {
+        const { result } = await cdp.send('Runtime.callFunctionOn', { objectId, functionDeclaration: RING_LOST, returnByValue: true }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
+        if (result.value) lost.push(result.value);
+      } finally {
+        await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
+      }
+    }
+    await cdp.send('Runtime.releaseObjectGroup', { objectGroup: RINGS });
+    return lost;
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
 }
 
 /**
@@ -175,6 +217,10 @@ export async function checkScreen(page, tags) {
     result.contrast = await page.evaluate(axeFindingsInPage, { rules: [ENHANCED_CONTRAST] });
     await page.emulateMedia({ contrast: null, forcedColors: 'active' });
     result.forced = await page.evaluate(forcedColoursInPage);
+    // Each control's ring, read from the cascade, where the browser lets it be: the sheets' reading says only that
+    // some rule keeps a ring, not that every control gets it.
+    const lost = await ringsLostInPage(page);
+    if (lost) result.forced.focus = lost;
   } finally {
     await page.emulateMedia({ contrast: null, forcedColors: null });
   }
@@ -227,6 +273,12 @@ export function knownLine(line) {
  * creature on the field or a coach's card placed a frame sooner or later). It is never new, and never gone.
  */
 export const UNSTEADY = '~ ';
+
+/** The lines of the list at the widths a walk took: a width it left out is neither found nor fixed. */
+export function knownAt(known, viewports) {
+  const widths = new Set(viewports.map(one => String(one.width)));
+  return known.filter(line => widths.has(/^(?:~ )?(\d+) /.exec(line)?.[1]));
+}
 
 /** Lines in the order of their code units, the order the list is kept in. */
 const byText = (a, b) => (a < b ? -1 : Number(a > b));

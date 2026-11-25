@@ -52,6 +52,40 @@ each job's start and end.
 | The image | `rollout.yml` checks that `ghcr.io/.../downfall-table` pulls without a credential; the package is public | It stays public whatever the repository becomes |
 | Two vCPU | Playwright's default is one worker per two cores: the mock-host journeys go from two workers to one | Their wall clock and their minutes roughly double, by that arithmetic (not measured) |
 
+### Since the reading: the walks of UX13 and UX14
+
+The real-engine job grew after the week above (#1269). The checks of accessibility (`table.access.js`, UX13) walk
+every journey at 320 and 390 px and check every screen; at 200% they double every element's text. The walk under
+less motion (`table.motion.js`, UX14) walks the journeys again at both widths, without the checks.
+
+| Real-engine job, on 5033dea (UX13) | Before UX13 | With the checks |
+| --- | --- | --- |
+| table-phone | about 12 min | about 21 min |
+| table-desktop | about 12 min | about 28 min |
+
+UX14 adds about 8 minutes a project, by its own estimate. The job's limit went from 25 minutes to 60. A pull
+request that calls for the real engine paid all of it, in both projects (phone and desktop). In the week's share
+of minutes above, the real engine was 17% of CI's minutes, before either walk.
+
+The cheaper shape, two options weighed:
+
+1. *The walks on `main` and in the nightly only.* The cheapest, but a pull request that drops a focus ring or adds
+   motion is green and `main` goes red after the merge, which ADR 0182 set out to avoid.
+2. *One width on a pull request, both on `main` and in the nightly.* Chosen. A pull request walks both specs at
+   320 by 568 alone. That is the narrowest phone, where reflow, clipped words and overlaps show first. `main` and
+   the nightly walk 320 and 390 before the deployment. The real-engine job sets `UX_WALK_WIDTHS` from the event,
+   and `walkWidths` in `scripts/ux/set.mjs` reads it. The list of what is known is read at the widths walked
+   (`knownAt`), so a pull request does not call a 390 px line fixed. A pull request no longer sees a finding at
+   390 px alone, such as the menu's button over Settings (#1276). `main` finds it before the deployment.
+   A pull request that cuts or adds a 390 px line of `scripts/ux/access-known.json`, or changes the walks
+   themselves, is checked at both widths before it merges: a run of `studio-browser.yml` started by hand on its
+   branch (`workflow_dispatch`, the real engine alone), linked in the pull request.
+
+By the arithmetic, a pull request's two walks take half their minutes. The walks add about 17 minutes on
+table-phone (9 for UX13, 8 for UX14) and 24 on table-desktop (16 and 8), so a pull request saves about 9 and 12.
+Reading each control's ring under forced colours (#1268) adds a few DevTools calls a control on each screen, not
+counted here. These are estimates, not measurements. `/retro` reads the next week with M1's meter.
+
 ## The shape
 
 The reading settles the first question before any lever is pulled: no cut of the work brings 88,000 minutes a

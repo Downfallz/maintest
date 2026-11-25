@@ -64,13 +64,44 @@ export function measureInPage({ floor, target, minimum }) {
     if (box.width < minimum || box.height < minimum) tiny++;
   }
 
-  // Two controls that share more than a hair of the screen, neither holding the other.
+  // Two controls that share more than a hair of the screen, neither holding the other. What of a control is on the
+  // screen is its box cut by every ancestor on its containing-block chain that scrolls or clips it: a name of the order
+  // row scrolled under its Order button is cut by the row, not on top of the button (#1276). A box placed `fixed`
+  // escapes every ancestor but one that transforms, filters or contains it; one placed `absolute`, every ancestor up
+  // to its positioned one; a modal window or an open popover sits in the top layer, cut by none.
+  const establishes = style => style.transform !== 'none' || style.filter !== 'none' || /paint|layout|strict|content/.test(style.contain);
+  // What a box escapes after it meets an ancestor: `fixed` ends at one that establishes, `absolute` at one that is
+  // positioned too; the ancestor's own placement then starts its own escape.
+  const escapeAfter = (escaping, style) => {
+    const contained = escaping === 'fixed' ? establishes(style) : style.position !== 'static' || establishes(style);
+    const left = escaping && !contained ? escaping : null;
+    if (style.position === 'fixed') return { clips: !left, escaping: 'fixed' };
+    if (style.position === 'absolute' && left !== 'fixed') return { clips: !left, escaping: 'absolute' };
+    return { clips: !left, escaping: left };
+  };
+  const clipBy = (cut, parent, style) => {
+    const clip = parent.getBoundingClientRect();
+    if (style.overflowX !== 'visible') { cut.left = Math.max(cut.left, clip.left); cut.right = Math.min(cut.right, clip.right); }
+    if (style.overflowY !== 'visible') { cut.top = Math.max(cut.top, clip.top); cut.bottom = Math.min(cut.bottom, clip.bottom); }
+  };
+  const seen = node => {
+    const box = boxes.get(node), cut = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+    const own = getComputedStyle(node).position;
+    let escaping = own === 'absolute' || own === 'fixed' ? own : null;
+    for (let child = node, parent = node.parentElement; parent && parent !== document.documentElement && !child.matches(':modal, :popover-open'); child = parent, parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      const met = escapeAfter(escaping, style);
+      if (met.clips) clipBy(cut, parent, style);
+      escaping = met.escaping;
+    }
+    return cut;
+  };
   let overlaps = 0;
   for (let one = 0; one < controls.length; one++) {
     for (let other = one + 1; other < controls.length; other++) {
       const a = controls[one], b = controls[other];
       if (a.contains(b) || b.contains(a)) continue;
-      const first = boxes.get(a), second = boxes.get(b);
+      const first = seen(a), second = seen(b);
       const wide = Math.min(first.right, second.right) - Math.max(first.left, second.left);
       const tall = Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top);
       if (wide > 2 && tall > 2) overlaps++;

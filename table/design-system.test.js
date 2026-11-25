@@ -115,3 +115,16 @@ test('the home\'s featured space has its card, naming its parts and its one rule
   for (const part of ['.featured', '.featured-art', '.featured-status', '.featured-actions', '.featured-shortcuts']) assert.ok(readme.includes(`\`${part}\``), part);
   assert.match(readFileSync(join(card, 'preview.html'), 'utf8').split('\n')[0], /^<!-- @dsCard group="Surfaces"/);
 });
+
+test('the guidelines name what forced colours and more contrast change, as identity.css writes it (#1270)', () => {
+  const readme = readFileSync(join(source, 'README.md'), 'utf8');
+  const identity = readFileSync(join(root, 'table', 'identity.css'), 'utf8');
+  const section = /^## Forced colours and more contrast\n([\s\S]*?)(?=^## )/m.exec(readme)?.[1] ?? '';
+  assert.ok(section, 'the README has a section on forced colours and more contrast');
+  // Each rule the section names is one identity.css holds, under the media query the section names.
+  assert.match(identity, /@media \(forced-colors: active\) \{\s*:focus-visible \{ outline: 2px solid Highlight !important;/);
+  assert.match(identity, /@media \(prefers-contrast: more\) \{\s*:root \{ --muted: var\(--ink\); \}/);
+  for (const words of ['`forced-colors: active`', '`Highlight`', 'underline', '`prefers-contrast: more`', '`muted`', '7:1', 'box-shadow']) {
+    assert.ok(section.includes(words), `the section says ${words}`);
+  }
+});

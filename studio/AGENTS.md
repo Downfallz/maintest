@@ -38,7 +38,10 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
 - `browser/table.access.js` (UX13) walks every journey with the checks of `scripts/ux/access.mjs`. A finding not in
   `scripts/ux/access-known.json` fails it, and so does a line there the walk no longer finds: a change that fixes
   one cuts its line. A line marked `~ ` is unsteady (some walks find it, some do not): it never fails the walk, new
-  or gone. axe is never in the list.
+  or gone. axe is never in the list. A pull request walks 320 px alone, `main` and the nightly 320 and 390
+  (`UX_WALK_WIDTHS`, `walkWidths` in `scripts/ux/set.mjs`), and the list is read at the widths walked (`knownAt`):
+  a pull request that cuts or adds a 390 line, or changes the walks, starts `studio-browser.yml` by hand on its
+  branch and links the run (#1269).
 - `browser/table.motion.js` (UX14) walks every journey with the system's less motion: a screen reached after a
   `transform`, `translate`, `scale` or `rotate` that lasts a millisecond, or still animating at rest, fails it
   (`scripts/ux/motion.mjs`). Its watch listens on the window and hands what it sees to the walk at once: a fixture

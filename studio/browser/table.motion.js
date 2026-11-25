@@ -5,16 +5,17 @@ import { tmpdir } from 'node:os';
 import { JOURNEYS } from '../../scripts/ux/journeys.mjs';
 import { walkJourney } from '../../scripts/ux/journey.mjs';
 import { lessMotionFaults, travelWatchedInPage, watchTravel } from '../../scripts/ux/motion.mjs';
-import { buildShowcase } from '../../scripts/ux/set.mjs';
+import { VIEWPORTS, buildShowcase, walkWidths } from '../../scripts/ux/set.mjs';
 
 // Less motion across every screen (docs/art/ux-craft-plan.md, UX14; ADR 0197), on the real engine: every journey
-// walked at 320 by 568 and 390 by 844 with the system's wish for less motion. On the way to each screen nothing
+// walked at 320 by 568 and 390 by 844 (320 alone on a pull request) with the system's wish for less motion. On the way to each screen nothing
 // moves across the screen (a transform, a translate, a scale or a rotate that lasts), and at rest nothing animates:
 // travel becomes a fade, and ambience stops. The walk sets its own size, so the journeys are shared between the two
 // projects as the checks of accessibility share them (table.access.js).
 test.describe.configure({ mode: 'default' });
 const HALVES = { 'table-phone': ['doors', 'lessons'], 'table-desktop': ['lobby', 'pages', 'match', 'windows'] };
-const WIDTHS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
+// Both phones on main and in the nightly; the narrowest alone on a pull request (UX_WALK_WIDTHS, #1269).
+const WIDTHS = walkWidths();
 
 let folder, showcase;
 test.beforeAll(async () => {
@@ -43,7 +44,7 @@ test('with full motion the same watch sees the lobby travel', async ({ browser }
   test.setTimeout(300000);
   const full = { newContext: options => browser.newContext({ ...options, reducedMotion: 'no-preference' }) };
   const lobby = JOURNEYS.find(journey => journey.id === 'lobby');
-  const screens = await walkJourney(full, lobby, WIDTHS[1], { showcase, lessMotion: true });
+  const screens = await walkJourney(full, lobby, VIEWPORTS[1], { showcase, lessMotion: true });
   expect(lessMotionFaults(screens).filter(line => / (transition|animation|animate) /.test(line)).length).toBeGreaterThan(0);
 });
 
@@ -61,7 +62,7 @@ test('a walk under less motion stops on a page without the watch', async ({ brow
         await walk.screen('bare', { on: page });
       },
     };
-    await expect(walkJourney(browser, stub, WIDTHS[1], { showcase, lessMotion: true })).rejects.toThrow(/the watch of less motion is not on this page/);
+    await expect(walkJourney(browser, stub, VIEWPORTS[1], { showcase, lessMotion: true })).rejects.toThrow(/the watch of less motion is not on this page/);
   } finally {
     await bare.close();
   }

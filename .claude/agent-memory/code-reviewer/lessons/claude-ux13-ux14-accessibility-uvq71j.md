@@ -1,0 +1,2 @@
+- A clip computed by walking `parentElement` and every `overflow` ancestor ignores the containing-block chain: a `position: fixed` or `absolute` control escaping a non-positioned scroller, and a modal `<dialog>` in the top layer, are cut to nothing and their overlaps vanish (probed 1 on origin/main, 0 on 1218940, measures.mjs `seen`, #1276).
+- A gate narrowed by event (one width on pull_request) cannot verify the PR that edits the narrowed-out lines of its own known-list: ask for a workflow_dispatch run on the branch before merge (#1269, 1218940).
