@@ -48,6 +48,14 @@ public sealed class AccountGuestApiTests : IDisposable
             : said.Add,
         };
 
+    private async Task<AccountApi> DevelopmentApiAsync(List<string>? said = null) =>
+        new(new AccountRegistry(_store, _clock), new AccountSessions(await _store.SessionKeyAsync(Cancel), _clock), AccountsMode.Development, null)
+        {
+            Preferences = _preferences,
+            Said = said is null ? _ => { }
+            : said.Add,
+        };
+
     private static JsonElement Json(StudioResponse response) => JsonDocument.Parse(Encoding.UTF8.GetString(response.Body)).RootElement.Clone();
 
     private static string? Session(StudioResponse response) =>
@@ -242,6 +250,36 @@ public sealed class AccountGuestApiTests : IDisposable
 
         (answer.GetProperty("username").GetString(), answer.GetProperty("guest").GetBoolean()).ShouldBe(("MarkF", false));
         (await _store.ListAsync(Cancel)).Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_guest_typing_a_new_name_on_a_developers_host_keeps_its_id_and_its_tutorials()
+    {
+        var said = new List<string>();
+        var api = await DevelopmentApiAsync(said);
+        var (account, session) = await GuestAsync(api);
+        var id = account.GetProperty("id").GetString()!;
+        await _preferences.SaveTutorialsAsync(SharedKernel.Identifiers.AccountId.Parse(id), TutorialProgress.None.WithDone(Tutorial), Cancel);
+
+        var signedIn = await api.HandleAsync("POST", AccountApi.Prefix + "/dev", """{"username":"Walker"}""", session);
+        var me = Json(await api.HandleAsync("GET", AccountApi.Prefix, "", From("203.0.113.7", Session(signedIn)))).GetProperty("account");
+
+        (me.GetProperty("id").GetString(), me.GetProperty("username").GetString(), me.GetProperty("guest").GetBoolean()).ShouldBe((id, "Walker", false));
+        (await api.TutorialsAsync(SharedKernel.Identifiers.AccountId.Parse(id), Cancel))!.StateOf(Tutorial).ShouldBe(TutorialState.Done);
+        said.ShouldContain($"  Guest upgraded (dev): account {id}.");
+    }
+
+    [Fact]
+    public async Task A_guest_typing_a_name_an_account_holds_on_a_developers_host_is_signed_in_to_it_and_the_guest_removed()
+    {
+        var api = await DevelopmentApiAsync();
+        var walker = Json(await api.HandleAsync("POST", AccountApi.Prefix + "/dev", """{"username":"Walker"}""", From("203.0.113.9"))).GetProperty("account");
+        var (account, session) = await GuestAsync(api);
+
+        var signedIn = await api.HandleAsync("POST", AccountApi.Prefix + "/dev", """{"username":"Walker"}""", session);
+
+        Json(signedIn).GetProperty("account").GetProperty("id").GetString().ShouldBe(walker.GetProperty("id").GetString());
+        (await _store.FindAsync(SharedKernel.Identifiers.AccountId.Parse(account.GetProperty("id").GetString()!), Cancel)).ShouldBeNull();
     }
 
     /// <summary>Google, as far as these tests need it: the credential "mark" is Mark's, every other one is nobody's.</summary>

@@ -56,7 +56,7 @@ async function lobby(page, { discord = () => ({ json: { needsUsername: true, tic
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
   await page.goto('/table/lobby.html');
-  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'visitor');
   return seen;
 }
 

@@ -12,6 +12,17 @@ to sign-in or to their next battle. Both use the [official palette](../art/brand
   developer form use the existing account flow. Operator notices and account errors appear on this screen.
   [`accounts-plan.md`](accounts-plan.md#the-home-page) describes the same panel, and
   [the doors' brief](../art/journeys/doors.md) its words.
+  The plain door also offers Play the first tutorial, an outline under the ways in, and the showcase's Try a tutorial
+  first opens the lesson door (`/lobby?try=lesson`), where it is the filled action. The press makes a guest and opens
+  tutorial 1 ([ADR 0207](../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md), UX15). The page marks this
+  state `data-home="visitor"`.
+- **A guest:** the next lesson in the featured space, then the keep panel (Keep your tutorials, with the ways in,
+  whose sign-in upgrades the guest), then Learn to play. Nothing the host refuses a guest is drawn, and none of a
+  member's lists is read: no games, invitations, opponents, practices or open seats, no bell, friends, ladder,
+  statistics or report. The reads the page makes on load, before the host has said who is signed in (the open tables,
+  the lobby's stream, the report's mute), are refused a guest once and not asked again. The chip reads
+  Guest; signing out asks first, since it loses the tutorials ([the doors' brief](../art/journeys/doors.md#the-guests-home-guest-home)).
+  The page marks it `data-home="member"` with `data-guest="true"`.
 - **Signed in:** a featured space, then invitations, Your games, Learn to play and Find an opponent. The featured
   space holds the home's one filled action, by what the player came to do: a turn of theirs (a person's before a
   bot's), a game of theirs waiting on someone else, the next lesson, or a bot to play, with New battle quiet under
@@ -37,7 +48,7 @@ a viewpoint before either private board is read.
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
 | Learn to play | The lobby's Learn to play section (`/#learn-to-play`), beside Rules | Signed-in players |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
-| Settings | One dialog of tabs (below) | Guests in the main menu; signed-in players in the account menu, beside who is signed in |
+| Settings | One dialog of tabs (below) | Visitors signed out in the main menu; signed-in players and guests in the account menu, beside who is signed in |
 | Admin | Existing `/admin` page | Existing operator check |
 | Account avatar/name | Who is signed in, Settings, Game website, and Sign out (confirmed) on this device | Signed-in players |
 | Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |
@@ -132,7 +143,7 @@ after a failed request. Existing invitation and `next` redirects are preserved.
 
 ## Verification and previews
 
-`studio/browser/lobby-home.spec.js` exercises guest/member/local modes, friend acceptance and invitation,
+`studio/browser/lobby-home.spec.js` exercises visitor (signed out), guest, member and local modes, friend acceptance and invitation,
 modal focus and Escape, code validation, logout during an in-flight request, sign-in and automatic retry.
 Layout checks include 320, 390, 900, 1101, 1240, 1306, 1307 and 1440 CSS-pixel widths and a 740 × 320 landscape viewport.
 The existing table, admin and branding browser suites cover the shared styles and behaviours.
@@ -140,12 +151,12 @@ The existing table, admin and branding browser suites cover the shared styles an
 A host whose `/api/me` cannot be reached is neither signed out nor accounts-off: the introduction offers no
 sign-in it cannot complete, and its sign-in panel says the account could not be checked and to reload.
 
-The screenshots use deterministic API fixtures; the Google button is stubbed in the browser test.
+The screenshots predate ADR 0207 (a visitor signed out was then called a guest) and use deterministic API fixtures; the Google button is stubbed in the browser test.
 
-| Guest desktop | Player desktop |
+| Visitor desktop | Player desktop |
 | --- | --- |
-| ![Guest introduction](images/home-navigation/guest-desktop.jpg) | ![Player dashboard](images/home-navigation/member-desktop.jpg) |
+| ![A visitor's introduction](images/home-navigation/guest-desktop.jpg) | ![Player dashboard](images/home-navigation/member-desktop.jpg) |
 
-| Guest phone | Friends phone |
+| Visitor phone | Friends phone |
 | --- | --- |
-| ![Guest introduction on a phone](images/home-navigation/guest-phone.jpg) | ![Friends dialog on a phone](images/home-navigation/friends-phone.jpg) |
+| ![A visitor's introduction on a phone](images/home-navigation/guest-phone.jpg) | ![Friends dialog on a phone](images/home-navigation/friends-phone.jpg) |

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { doorPictures, doorWords, invitationKeys, invitationOf, nameNext } from './door.js';
+import { doorName, doorPictures, doorWords, invitationKeys, invitationOf, lessonAsked, lessonWay, nameNext } from './door.js';
 
 const offered = (table, seat = 'player2') => ({ invitations: [{ token: 'inv', kind: 'invitation', seat, table }] });
 const bastiens = { format: '3v3', seats: [{ seat: 'player1', kind: 'person', name: 'bastien' }, { seat: 'player2', kind: 'open', name: 'Open seat' }] };
@@ -90,4 +90,56 @@ test('the panel after a sign out shows the Predator at rest alone, in place of t
 test('beside the words on a wide screen, the Predator at rest is cut on its dark left, so its jaw stays in the panel', () => {
   const source = readFileSync(new URL('./door.js', import.meta.url), 'utf8');
   assert.match(source, /'predator-at-rest': \{[^}]*focus: '90% 50%'/);
+});
+
+// UX15, a lesson before an account (docs/art/journeys/doors.md): the lesson door, the plain door's second way, and the
+// guest's keep panel.
+test('the showcase\'s Try a tutorial first asks for the lesson door, and nothing else does', () => {
+  assert.equal(lessonAsked('?try=lesson'), true);
+  assert.equal(lessonAsked('?try=Lesson'), false);
+  assert.equal(lessonAsked('?next=%2F%3Ftry%3Dlesson'), false);
+  assert.equal(lessonAsked(''), false);
+});
+
+test('the lesson door offers tutorial 1 first, against a bot, with no account, and sign-in after', () => {
+  assert.deepEqual(doorWords(null, { lesson: true }), {
+    eyebrow: 'Beta',
+    title: 'Learn the game first.',
+    game: 'A turn-based duel: your three creatures mutate against another player\'s three.',
+    account: 'Tutorial 1, against a bot. No account needed.',
+  });
+});
+
+test('a guest\'s home asks it to keep its tutorials, says where they are kept and what an account opens', () => {
+  assert.deepEqual(doorWords(null, { guest: true }), {
+    eyebrow: 'Playing as a guest',
+    title: 'Keep your tutorials.',
+    game: '',
+    account: 'Your progress is kept in this browser only. An account keeps it on every device, and opens battles against bots and players, friends and the ladder.',
+  });
+});
+
+test('the lesson is filled on the lesson door, an outline on the plain door, and not offered to an invited friend, a player who signed out or a guest', () => {
+  assert.deepEqual(lessonWay(null), { offered: true, filled: false });
+  assert.deepEqual(lessonWay(null, { lesson: true }), { offered: true, filled: true });
+  assert.deepEqual(lessonWay({}, { lesson: true }), { offered: false, filled: false });
+  assert.deepEqual(lessonWay(null, { left: true }), { offered: false, filled: false });
+  assert.deepEqual(lessonWay(null, { guest: true }), { offered: false, filled: false });
+});
+
+test('a guest\'s keep panel draws no painting: the featured lesson above it says where', () => {
+  assert.deepEqual(doorPictures(null, { guest: true }), []);
+  assert.deepEqual(doorPictures(null, { lesson: true }), ['eclipse-ground', 'revenant']);
+});
+
+test('the name window tells a guest its tutorials and settings stay with the name it chooses', () => {
+  assert.equal(nameNext({ guest: true }), 'Your tutorials and settings stay with this name.');
+});
+
+test('the panel names its door, a guest first, then an invitation, a goodbye, the lesson, and the plain door last', () => {
+  assert.equal(doorName({ guest: true, invitation: {}, left: true, lesson: true }), 'guest');
+  assert.equal(doorName({ invitation: {}, left: true, lesson: true }), 'invited');
+  assert.equal(doorName({ left: true, lesson: true }), 'left');
+  assert.equal(doorName({ lesson: true }), 'lesson');
+  assert.equal(doorName(), 'plain');
 });

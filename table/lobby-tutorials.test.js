@@ -166,7 +166,8 @@ test('Learn to play stands in the main menu beside Rules, for a signed-in accoun
   const accountMenu = source.match(/<div class="account-menu">[\s\S]*?<\/div><\/details>/)[0];
   assert.match(bar, /<a id="rules-link" href="\/rules">Rules<\/a>\s*<a id="learn-link" href="\/#learn-to-play" hidden>Learn to play<\/a>/);
   assert.doesNotMatch(accountMenu, /Learn to play/);
-  assert.match(source, /el\('learn-link'\)\.hidden = !account;/);
+  assert.match(source, /el\('learn-link'\)\.hidden = !shows\.learn;/);
+  assert.match(source, /learn: Boolean\(account\),/);
 });
 
 test('the lobby is told the cards each read draws, and nothing for nobody signed in, so its featured space can offer the next', async () => {

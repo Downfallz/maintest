@@ -701,7 +701,9 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   `Guest made: account <id>.`, `Guest upgraded (<provider>): account <id>.` and
   `Guest left for an account of its own (<provider>): account <id> removed.`; sign-in counts list `guest` as a provider.
 - `--accounts google|dev`: `google` is the older spelling of `--sign-in google` and is refused when `--sign-in` is
-  also given. `dev` signs in by a typed name and is refused off the loopback address.
+  also given. `dev` signs in by a typed name and is refused off the loopback address. A guest who types a name no
+  account holds is upgraded into it, its tutorials kept, as a provider's sign-in does (ADR 0207). Like any registration
+  here, it does not read whether the operator closed registration.
 - `--admins <acct_id>[,...]` (or `DOWNFALL_ADMINS`) names the accounts that are the operator once signed in,
   beside the token or the platform's sign-in, so the menu's Admin link shows for them (ADR 0172; by id, never by
   name).

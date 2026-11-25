@@ -64,7 +64,8 @@ for (const [lang, file, other] of [['en', 'index.html', '/fr/'], ['fr', 'fr/inde
     assert.equal(/<a class="language"[^>]* href="([^"]+)"/.exec(html)?.[1], other);
     const hrefs = [...html.matchAll(/<a\b[^>]* href="([^"]+)"/g)].map(match => match[1]);
     assert.equal(hrefs.filter(href => href === game).length, 3);
-    assert.deepEqual(hrefs.filter(href => href.startsWith('https:') && href !== game), [new URL('leaderboard', game).href]);
+    // Beside the three Play now, the hero's Try a tutorial first opens the game's lesson door (UX15), and the ladder.
+    assert.deepEqual(hrefs.filter(href => href.startsWith('https:') && href !== game), [new URL('/lobby?try=lesson', game).href, new URL('leaderboard', game).href]);
     const sections = [...html.matchAll(/<section\b[^>]* aria-labelledby="([^"]+)"/g)].map(match => match[1]);
     assert.deepEqual(sections.slice(0, 4), ['title', 'duel-title', 'world-title', 'mutation-title']);
     assert.match(html, /<a class="discover" href="#duel">/);

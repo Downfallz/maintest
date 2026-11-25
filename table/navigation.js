@@ -190,20 +190,25 @@ function mountHomeNavigation(doc, win = globalThis, onTab = () => {}) {
       if (!panel.open) panel.showModal();
     },
     setAccount(account, mode) {
-      const playable = Boolean(account) || mode === 'off';
-      doc.body.dataset.home = account ? 'member' : mode === 'off' ? 'local' : 'guest';
-      el('join-open').hidden = !playable;
-      el('friends-open').hidden = !account;
-      // Signed in, Settings lives in the account menu, with who is signed in; a guest, who has no account menu,
-      // finds it in the main menu.
-      el('app-settings-open').hidden = Boolean(account);
-      el('app-settings-tab-notifications').hidden = !account;
-      el('app-settings-tab-account').hidden = !account;
-      if (!account && ['notifications', 'account'].includes(tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.settingsTab)) showTab('game');
-      el('leaderboard-link').hidden = mode === 'off';
-      el('stats-link').hidden = !account;
+      const shows = headerShows(account, mode);
+      doc.body.dataset.home = shows.home;
+      // A guest's header is a member's, without what the host refuses a guest (ADR 0207).
+      if (shows.guest) doc.body.dataset.guest = 'true';
+      else delete doc.body.dataset.guest;
+      el('join-open').hidden = !shows.join;
+      el('friends-open').hidden = !shows.friends;
+      // Signed in, Settings lives in the account menu, with who is signed in; a visitor signed out, who has no account
+      // menu, finds it in the main menu.
+      el('app-settings-open').hidden = !shows.menuSettings;
+      el('app-settings-tab-notifications').hidden = !shows.notificationsTab;
+      el('app-settings-tab-account').hidden = !shows.accountTab;
+      if (['notifications', 'account'].includes(tabs.find(tab => tab.getAttribute('aria-selected') === 'true')?.dataset.settingsTab)
+        && !(shows.notificationsTab && shows.accountTab)) showTab('game');
+      el('leaderboard-link').hidden = !shows.leaderboard;
+      el('stats-link').hidden = !shows.stats;
       // Learn to play is a signed-in account's, as the tutorials are (#669): beside Rules, in the bar.
-      el('learn-link').hidden = !account;
+      el('learn-link').hidden = !shows.learn;
+      el('feedback-open-nav').hidden = !shows.feedback;
       if (identity !== (account?.id ?? null)) {
         closePanels(false);
         if (el('action-dialog').open) el('action-dialog').close('cancel');
@@ -216,6 +221,39 @@ function mountHomeNavigation(doc, win = globalThis, onTab = () => {}) {
       el('friend-requests-badge').hidden = !count;
       el('friends-open').setAttribute('aria-label', count ? `Friends · ${count} pending request${count === 1 ? '' : 's'}` : 'Friends');
     },
+  };
+}
+
+/**
+ * The account as the member pages read it: none for a guest, whom the host refuses the lists, the bell, the devices and
+ * the ways to sign in (ADR 0207), so nothing asks them for it.
+ */
+export function memberOf(account) {
+  return account && !account.guest ? account : null;
+}
+
+/**
+ * What the header shows for whoever is signed in (`mode` is the host's accounts: `off`, `dev` or a provider's). A guest
+ * has a member's header without what the host refuses it: friends, the ladder, the statistics, a code to join, the
+ * notifications, the account's ways and report or suggest (ADR 0207, UX15). It keeps the tutorials and its settings.
+ */
+export function headerShows(account, mode) {
+  const guest = Boolean(account?.guest), member = Boolean(account) && !guest;
+  let home = 'visitor';
+  if (account) home = 'member';
+  else if (mode === 'off') home = 'local';
+  return {
+    home,
+    guest,
+    join: member || (!account && mode === 'off'),
+    friends: member,
+    menuSettings: !account,
+    notificationsTab: member,
+    accountTab: member,
+    leaderboard: mode !== 'off' && !guest,
+    stats: member,
+    learn: Boolean(account),
+    feedback: member,
   };
 }
 
@@ -254,7 +292,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   const showAgain = mountShowAgain(doc);
   // Report or suggest (ADR 0189), in the account menu: a signed-in player's, sent as the account. The battle view's own
   // sheet answers the entry there.
-  if (page !== 'battle') mountFeedback(doc, { errors: pageErrors, fallbackFocus: () => el('account-menu').querySelector('summary') });
+  const feedback = page !== 'battle' ? mountFeedback(doc, { errors: pageErrors, fallbackFocus: () => el('account-menu').querySelector('summary') }) : null;
   // The bell's actions are the Friends panel's and the lobby's: a friend accepted there is read again here, and
   // the page that mounted the navigation is told what changed.
   let friends = null;
@@ -284,7 +322,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   });
   el('code').addEventListener('input', () => { el('join-problem').hidden = true; });
   ways = mountWays(doc, { openSettings: navigation.openSettings });
-  let previous = null;
+  let previous = null, told = false;
   let lastMe = null;
   void mountAccount(doc, {
     signOutPage: HEADER_SCENE_PAGES[page] ?? null,
@@ -302,15 +340,20 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
     },
     onChange(account, mode) {
       if (previous && !account && page !== 'lobby') { location.replace('/lobby'); return; }
+      // Another account may send feedback where the last could not: a guest upgraded on the page (ADR 0207) is asked again.
+      // The first answer is the one the sheet asked about when it mounted.
+      if (told && ((previous?.id ?? null) !== (account?.id ?? null) || Boolean(previous?.guest) !== Boolean(account?.guest))) void feedback?.ask();
+      told = true;
       previous = account;
       header.hidden = game && !account;
       navigation.setAccount(account, mode);
-      devices.setAccount(account);
+      const member = memberOf(account);
+      devices.setAccount(member);
       gameSettings.setAccount(account);
       showAgain.setAccount(account);
-      friends.setAccount(account);
-      inbox.setAccount(account);
-      ways.setAccount(account, lastMe);
+      friends.setAccount(member);
+      inbox.setAccount(member);
+      ways.setAccount(member, lastMe);
       return onChange(account, mode);
     },
   });

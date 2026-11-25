@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, waitsOnAPerson, latestFinished, seatPushSource } from './lobby.js';
+import { actionName, challengeRequest, codePath, opponentOrder, reconcileRelations, finishedSummary, opponentAction, opponentRecord, friendChoice, gameKind, invitationLine, invitedState, lobbyRequest, localFinished, ongoingGames, ongoingLimit, rematchRequest, tableState, turnOf, versus, visibleTables, yourTurn, waitingGames, isRanked, createdOn, waitsOnAnother, waitsOnAPerson, latestFinished, seatPushSource, greetingFor } from './lobby.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { reachedModules } from '../scripts/module-imports.mjs';
@@ -436,4 +436,11 @@ test('the lobby page preloads every module lobby.js reaches, and nothing else', 
   assert.equal(preloaded[0], '/lobby.js');
   const reached = [...reachedModules(folder, ['lobby.js'])].filter(path => path !== '/motion.js');
   assert.deepEqual([...preloaded].sort(), reached.sort());
+});
+
+test('an account a guest became is told its tutorials are kept; another account the guest signed in to is only named (UX15)', () => {
+  assert.equal(greetingFor({ id: 'acct_a', username: 'bastien' }, 'acct_a'), 'Signed in as bastien. Your tutorials are kept.');
+  assert.equal(greetingFor({ id: 'acct_b', username: 'bastien' }, 'acct_a'), 'Signed in as bastien.');
+  assert.equal(greetingFor({ id: 'acct_a', username: 'bastien' }, null), null);
+  assert.equal(greetingFor(null, 'acct_a'), null);
 });

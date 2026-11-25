@@ -113,9 +113,12 @@ export function refusalSentence(status, answer, { inGame = false } = {}) {
   }
 }
 
-/** Whether the host has stopped this player's feedback (R3 adds the mute): the entry is then hidden. */
+/**
+ * Whether the host has stopped this player's feedback (R3 adds the mute), or keeps a guest from sending any (ADR 0207):
+ * the entry is then hidden.
+ */
 export function mutedBy(status, answer) {
-  return status === 403 && answer?.error === 'Feedback.Muted';
+  return status === 403 && (answer?.error === 'Feedback.Muted' || answer?.error === 'Account.GuestNotAllowed');
 }
 
 /**

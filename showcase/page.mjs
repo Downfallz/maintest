@@ -89,6 +89,7 @@ export function page(c, specimen, app) {
         <h1 id="title">${c.title[0]}<br><em>${c.title[1]}</em></h1>
         <p class="pitch">${c.pitch}</p>
         <div class="actions">${play(c.play, 'gold-button')}<a class="discover" href="#duel">${c.explore} <span aria-hidden="true">↓</span></a></div>
+        <a class="discover try-lesson" href="${new URL('/lobby?try=lesson', app).href}">${c.tryLesson} ${arrow}</a>
         <p class="play-note">${c.playNote}</p>
       </div><div class="specimen"><strong>${c.specimen}</strong><span>${c.specimenLine}</span></div></div>
     </section>

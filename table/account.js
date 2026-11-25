@@ -176,10 +176,29 @@ export function prepareGoogle(id, clientId) {
 export const SIGN_OUT_HEAD = { name: 'eye-still-open', form: 'head', side: 'start', focus: '70% 45%', sizes: '(min-width: 512px) 480px, calc(100vw - 32px)' };
 
 /** What a sign out's confirmation says, on this device or everywhere. The action is the filled one, Stay signed in the way back. */
-export function signOutWords(everywhere) {
+export function signOutWords(everywhere, { guest = false } = {}) {
+  // A guest's cookie is all it has: signing out loses its tutorials, so nothing is filled and the way back comes first (UX15).
+  if (guest && !everywhere) {
+    return { title: 'Lose your tutorials?', detail: 'A guest\'s progress is kept in this browser only. Sign in first to keep it.', action: 'Sign out and lose them', keep: 'Stay signed in', danger: true };
+  }
   return everywhere
     ? { title: 'Sign out everywhere?', detail: 'You will need to sign in again on every device.', action: 'Sign out everywhere', keep: 'Stay signed in' }
     : { title: 'Sign out on this device?', detail: 'You can sign in again to resume your games.', action: 'Sign out', keep: 'Stay signed in' };
+}
+
+/**
+ * How the account chip and its menu name who is signed in: a guest as one (UX15), never by the name the host drew for
+ * it, which nobody chose and nobody else sees.
+ */
+export function chipWords(account) {
+  if (account?.guest) return { name: 'Guest', initial: 'G', label: 'Account: playing as a guest', who: null, menuName: 'Playing as a guest' };
+  const name = account?.username ?? '';
+  return { name, initial: name.slice(0, 1).toUpperCase(), label: `Account: ${name}`, who: 'Signed in as', menuName: name };
+}
+
+/** Whether the sign-in panel is hidden: for a member, and where the host has no accounts. A guest keeps it (UX15). */
+export function panelHidden(state) {
+  return state.mode === 'off' || Boolean(state.account && !state.account.guest);
 }
 
 // The tab's mark that this browser just signed out, read once by the home's door (door.js): a reload, or a link
@@ -220,13 +239,15 @@ export function takeSignedOut(storage) {
  * first, and `keep` names the way back; `head` dresses the title with a scene (wearScene's options and the page's
  * name), which another confirmation, removing a friend, takes off again.
  */
-export function confirmAction(doc, title, detail, label, { filled = false, keep = 'Cancel', head = null } = {}) {
+export function confirmAction(doc, title, detail, label, { filled = false, danger = false, keep = 'Cancel', head = null } = {}) {
   const dialog = doc.getElementById('action-dialog');
   const heading = doc.getElementById('action-heading'), confirm = doc.getElementById('action-confirm'), cancel = doc.getElementById('action-cancel');
   doc.getElementById('action-title').textContent = title;
   doc.getElementById('action-detail').textContent = detail;
   confirm.textContent = label;
   confirm.classList.toggle('primary', filled);
+  // What cannot be undone wears the danger form, and the way back takes the focus.
+  confirm.classList.toggle('danger', danger);
   cancel.textContent = keep;
   if (head?.page) {
     const { name, ...options } = head;
@@ -237,6 +258,7 @@ export function confirmAction(doc, title, detail, label, { filled = false, keep 
     dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
     dialog.showModal();
     if (filled) confirm.focus();
+    else if (danger) cancel.focus();
   });
 }
 
@@ -284,7 +306,8 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
     const offered = state.mode === 'dev' || state.mode === 'off' ? [] : state.ways;
     offeredWays = offered;
     // Taken only where the window can open: a host that could not be read keeps it for the reload it asks for.
-    const handed = state.account || offered.length === 0 ? null : takeTicket(session);
+    // A guest's way in upgrades it (ADR 0207): a name handed back to it opens the window too.
+    const handed = (state.account && !state.account.guest) || offered.length === 0 ? null : takeTicket(session);
     if (handed) await signedIn({ needsUsername: true, ticket: handed });
     await withGoogle(offered.find(each => each.provider === 'google'));
   }
@@ -296,7 +319,9 @@ function mountSignIn(doc, { request, google, refresh, say, session, win }) {
       const id = prepareGoogle(await google(), way.clientId);
       // The width of Discord's and Microsoft's beside it (lobby.css), or the room there is at 320 px.
       const room = el('sign-in-ways')?.clientWidth || 280;
-      id.renderButton(el('google-button'), { theme: 'filled_black', shape: 'rectangular', text: 'continue_with', size: 'large', logo_alignment: 'left', width: Math.min(280, room) });
+      // On the lesson door the lesson is the one filled action: Google's button is its outline there (UX15).
+      const theme = el('sign-in-panel')?.dataset.door === 'lesson' ? 'outline' : 'filled_black';
+      id.renderButton(el('google-button'), { theme, shape: 'rectangular', text: 'continue_with', size: 'large', logo_alignment: 'left', width: Math.min(280, room) });
     } catch (error) {
       say('sign-in-problem', error.message);
     }
@@ -383,10 +408,12 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
   const say = (id, text = '') => { el(id).textContent = text; el(id).hidden = !text; };
   const signIn = el('sign-in-panel') ? mountSignIn(doc, { request, google, refresh, say, session, win }) : null;
 
+  let signedInAccount = null;
   async function refresh() {
     const state = accountState(await readMe().catch(() => ({ accounts: 'unavailable' })));
+    signedInAccount = state.account;
     if (signIn) {
-      el('sign-in-panel').hidden = state.mode === 'off' || Boolean(state.account);
+      el('sign-in-panel').hidden = panelHidden(state);
       el('dev-sign-in').hidden = state.mode !== 'dev';
       drawWays(doc, state);
       // Unreachable is neither signed out nor accounts-off: no way in is offered, so the panel says why.
@@ -397,14 +424,19 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
     // Somebody is signed in: a mark left by an earlier sign out is no goodbye any more.
     if (state.account) takeSignedOut(session);
     if (state.account) {
-      el('account-name').textContent = state.account.username;
-      el('account-menu').querySelector('summary').setAttribute('aria-label', `Account: ${state.account.username}`);
-      el('account-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
+      const chip = chipWords(state.account);
+      el('account-name').textContent = chip.name;
+      el('account-menu').querySelector('summary').setAttribute('aria-label', chip.label);
+      el('account-initial').textContent = chip.initial;
       // The menu and Settings' Account tab name the player too, when the page has them.
-      if (el('account-menu-name')) el('account-menu-name').textContent = state.account.username;
+      if (el('account-menu-name')) {
+        el('account-menu-name').textContent = chip.menuName;
+        const who = el('account-menu-name').previousElementSibling;
+        if (who) { who.textContent = chip.who ?? ''; who.hidden = !chip.who; }
+      }
       if (el('app-settings-name')) {
-        el('app-settings-name').textContent = state.account.username;
-        el('app-settings-initial').textContent = state.account.username.slice(0, 1).toUpperCase();
+        el('app-settings-name').textContent = chip.name;
+        el('app-settings-initial').textContent = chip.initial;
       }
     }
     // A page that goes elsewhere because of who is signed in (a link to follow, the first lesson) says so, once it
@@ -421,15 +453,18 @@ export function mountAccount(doc, { request = accountRequest, readMe = () => req
     const problemId = everywhere && el('app-settings-account-problem') ? 'app-settings-account-problem' : 'account-problem';
     el(id).addEventListener('click', async () => {
       say(problemId);
-      const words = signOutWords(everywhere);
+      // Read when pressed: the account signed in now, a guest or a member.
+      const guest = Boolean(signedInAccount?.guest);
+      const words = signOutWords(everywhere, { guest });
       el('account-menu').open = false;
       if (!everywhere) el('account-menu').querySelector('summary').focus();
       const head = signOutPage ? { ...SIGN_OUT_HEAD, page: signOutPage } : null;
-      if (!await confirmAction(doc, words.title, words.detail, words.action, { filled: true, keep: words.keep, head })) return;
+      if (!await confirmAction(doc, words.title, words.detail, words.action, { filled: !words.danger, danger: words.danger, keep: words.keep, head })) return;
       el(id).disabled = true;
       try {
         await request('/api/account/signout', await signOutBody(everywhere));
-        markSignedOut(session);
+        // A guest leaves nothing to come back to: no goodbye, the plain door (UX15).
+        if (!guest) markSignedOut(session);
         forgetRecentSignIn(session);
         await refresh();
       } catch (error) {

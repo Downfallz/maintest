@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { returningBattlePlayer, matchResult, withoutCanvas } from './battle-help-fixture.js';
-import { fitsViewport } from './fit.js';
+import { fitsViewport, settled } from './fit.js';
 import { servePageArt } from './battle-spells-fixture.js';
 test.beforeEach(returningBattlePlayer);
 const creature = (id, health) => ({ id, name: `Creature ${id}`, health, maxHealth: 30, energy: 2, totalDefense: 1,
@@ -158,6 +158,8 @@ test('a creature of the report shows its illustration large, as the inspection d
   const fallen = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open');
   await expect(fallen).toHaveAccessibleName('Creature 3 fallen show large');
   // Each creature's button is a target of 44 px, whatever its row would give it: on a phone it is the name alone (#1271).
+  // Measured once the window has risen: mid-rise it reads a fraction of a pixel short (#1114).
+  await settled(page.locator('#match-dialog'));
   const heights = await page.locator('#match-report-sides .match-zoom-open').evaluateAll(all => all.map(one => one.getBoundingClientRect().height));
   expect(heights.length).toBeGreaterThan(0);
   expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);

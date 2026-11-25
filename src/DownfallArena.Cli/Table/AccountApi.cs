@@ -587,29 +587,7 @@ internal sealed class AccountApi
 
         if (await _registry.FindAsync(identity) is { } account)
         {
-            var guest = await GuestAsync(request);
-            var signedIn = await SignedInAsync(account, request, name);
-            // Only a guest other than the account signed in, and still a guest in the store: one upgraded meanwhile into
-            // that very account, while this process still held it as a guest, is that account now.
-            if (guest is not null && guest.Id != account.Id && signedIn.Status == 200)
-            {
-                // The guest's cookie is replaced by the account's: nothing reaches the guest again (ADR 0207). A store
-                // that fails leaves it to the hourly job, and the player signed in all the same.
-                try
-                {
-                    if (await FreshAsync(guest.Id) is { IsGuest: true })
-                    {
-                        await ForgetAsync(guest.Id);
-                        Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
-                    }
-                }
-                catch (Exception failure) when (TableRegistry.StoreFails(failure))
-                {
-                    Said($"  Guest left for an account of its own ({name}): account {guest.Id} could not be removed: {HttpHost.OneLine(failure)}");
-                }
-            }
-
-            return signedIn;
+            return await SignedInLeavingGuestAsync(account, request, name);
         }
 
         // Closed means closed (ADR 0177): no name is asked of a sign-in that has no account.
@@ -916,6 +894,62 @@ internal sealed class AccountApi
     /// <summary>Whether the operator has new accounts closed (ADR 0177); a host without settings keeps them open.</summary>
     private async Task<bool> RegistrationClosedAsync() => Settings is { } settings && !(await settings.CurrentAsync()).RegistrationOpen;
 
+    /// <summary>
+    /// Signs in to an account that exists. A guest the request carries, other than that account, is removed: its cookie is
+    /// replaced by the account's, so nothing reaches the guest again, and its tutorials do not join the account (ADR 0207).
+    /// </summary>
+    private async Task<StudioResponse> SignedInLeavingGuestAsync(Account account, AccountRequest request, string name)
+    {
+        var guest = await GuestAsync(request);
+        var signedIn = await SignedInAsync(account, request, name);
+        // Only a guest other than the account signed in, and still a guest in the store: one upgraded meanwhile into
+        // that very account, while this process still held it as a guest, is that account now.
+        if (guest is not null && guest.Id != account.Id && signedIn.Status == 200)
+        {
+            // A store that fails leaves it to the hourly job, and the player signed in all the same.
+            try
+            {
+                if (await FreshAsync(guest.Id) is { IsGuest: true })
+                {
+                    await ForgetAsync(guest.Id);
+                    Said($"  Guest left for an account of its own ({name}): account {guest.Id} removed.");
+                }
+            }
+            catch (Exception failure) when (TableRegistry.StoreFails(failure))
+            {
+                Said($"  Guest left for an account of its own ({name}): account {guest.Id} could not be removed: {HttpHost.OneLine(failure)}");
+            }
+        }
+
+        return signedIn;
+    }
+
+    /// <summary>A guest who chose a name becomes that account (ADR 0207): its id, and so its tutorials, are kept.</summary>
+    private async Task<StudioResponse> UpgradedAsync(Account guest, ExternalIdentity identity, string? username, AccountRequest request)
+    {
+        Result<Account> upgraded;
+        try
+        {
+            upgraded = await _registry.UpgradeAsync(guest.Id, identity, username);
+        }
+        catch (Exception failure) when (TableRegistry.StoreFails(failure))
+        {
+            // Some of its writes may have gone through: the account is read afresh next time.
+            _cache.TryRemove(guest.Id, out _);
+            Said($"  Guest not upgraded ({identity.Provider}): account {guest.Id}: {HttpHost.OneLine(failure)}");
+            return AccountsUnavailable();
+        }
+
+        if (upgraded.IsFailure)
+        {
+            return Refused(upgraded.Error);
+        }
+
+        _cache[guest.Id] = (upgraded.Value, Clock.GetUtcNow());
+        Said($"  Guest upgraded ({identity.Provider}): account {guest.Id}.");
+        return await SignedInAsync(upgraded.Value, request, identity.Provider);
+    }
+
     private async Task<StudioResponse> RegisterAsync(string body, AccountRequest request)
     {
         var asked = Read<RegisterBody>(body);
@@ -931,30 +965,9 @@ internal sealed class AccountApi
             return Refused(AccountErrors.RegistrationClosed);
         }
 
-        // A guest who chooses a name becomes that account (ADR 0207): its id, and so its tutorials, are kept.
         if (await GuestAsync(request) is { } guest)
         {
-            Result<Account> upgraded;
-            try
-            {
-                upgraded = await _registry.UpgradeAsync(guest.Id, identity, asked!.Username);
-            }
-            catch (Exception failure) when (TableRegistry.StoreFails(failure))
-            {
-                // Some of its writes may have gone through: the account is read afresh next time.
-                _cache.TryRemove(guest.Id, out _);
-                Said($"  Guest not upgraded ({identity.Provider}): account {guest.Id}: {HttpHost.OneLine(failure)}");
-                return AccountsUnavailable();
-            }
-
-            if (upgraded.IsFailure)
-            {
-                return Refused(upgraded.Error);
-            }
-
-            _cache[guest.Id] = (upgraded.Value, Clock.GetUtcNow());
-            Said($"  Guest upgraded ({identity.Provider}): account {guest.Id}.");
-            return await SignedInAsync(upgraded.Value, request, identity.Provider);
+            return await UpgradedAsync(guest, identity, asked!.Username, request);
         }
 
         var registered = await _registry.RegisterAsync(identity, asked!.Username);
@@ -1020,7 +1033,14 @@ internal sealed class AccountApi
         Counted(SignInCounts.Step.Started, identity.Provider);
         if (await _registry.FindAsync(identity) is { } account)
         {
-            return await SignedInAsync(account, request, identity.Provider);
+            return await SignedInLeavingGuestAsync(account, request, identity.Provider);
+        }
+
+        // A guest typing a new name is upgraded, as a provider's sign-in and its name upgrade one (ADR 0207), so a walk of
+        // the lesson before an account (UX15) shows the tutorials kept.
+        if (await GuestAsync(request) is { } guest)
+        {
+            return await UpgradedAsync(guest, identity, name.Value.Value, request);
         }
 
         var registered = await _registry.RegisterAsync(identity, name.Value.Value);
