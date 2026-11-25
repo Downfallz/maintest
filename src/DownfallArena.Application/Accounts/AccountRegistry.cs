@@ -47,6 +47,29 @@ public sealed class AccountRegistry
 
     private static bool IsTriesLost(IOException exception) => exception.Data.Contains(TriesLostMark);
 
+    // A write whose refusal undoes what its tries wrote: on a refusal, and when every try was lost to another process
+    // (#1263). A store that failed, or a host that stopped, undoes nothing.
+    private static async Task<Result<Account>> UndoneIfRefusedAsync(Func<Task<Result<Account>>> write, Func<Task> undo)
+    {
+        Result<Account> written;
+        try
+        {
+            written = await write();
+        }
+        catch (IOException lost) when (IsTriesLost(lost))
+        {
+            await undo();
+            throw;
+        }
+
+        if (written.IsFailure)
+        {
+            await undo();
+        }
+
+        return written;
+    }
+
     /// <param name="guestCode">Draws a guest's code (ADR 0207); a random one of <see cref="Username.GuestAlphabet" /> unless a test draws its own.</param>
     public AccountRegistry(IAccountStore store, TimeProvider clock, Func<AccountId>? newId = null, Func<string>? guestCode = null)
     {
@@ -113,10 +136,8 @@ public sealed class AccountRegistry
             Account? before = null;
             Account? last = null;
             string? made = null;
-            Result<Account> upgraded;
-            try
-            {
-                upgraded = await WriteAsync(
+            var upgraded = await UndoneIfRefusedAsync(
+                () => WriteAsync(
                     id,
                     async account =>
                     {
@@ -154,18 +175,10 @@ public sealed class AccountRegistry
                             Unbinding = guest,
                         });
                     },
-                    cancellationToken);
-            }
-            catch (IOException lost) when (last is not null && IsTriesLost(lost))
-            {
-                // Every try lost to another process: what they wrote goes as a refusal's does (#1263).
-                await UndoRefusedUpgradeAsync(reservation, made, last, identity, id, cancellationToken);
-                throw;
-            }
-
+                    cancellationToken),
+                () => UndoRefusedUpgradeAsync(reservation, made, last, identity, id, cancellationToken));
             if (upgraded.IsFailure)
             {
-                await UndoRefusedUpgradeAsync(reservation, made, last, identity, id, cancellationToken);
                 return upgraded;
             }
 
@@ -377,10 +390,8 @@ public sealed class AccountRegistry
         {
             string? made = null;
             Account? last = null;
-            Result<Account> linked;
-            try
-            {
-                linked = await WriteAsync(
+            var linked = await UndoneIfRefusedAsync(
+                () => WriteAsync(
                     id,
                     async account =>
                     {
@@ -421,19 +432,8 @@ public sealed class AccountRegistry
 
                         return Result.Success(finished with { Identities = finished.Identities.With(identity) });
                     },
-                    cancellationToken);
-            }
-            catch (IOException lost) when (IsTriesLost(lost))
-            {
-                // Every try lost to another process: the binding goes as a refusal's does (#1263).
-                await UnbindRefusedAsync(made, last, identity, id, cancellationToken);
-                throw;
-            }
-
-            if (linked.IsFailure)
-            {
-                await UnbindRefusedAsync(made, last, identity, id, cancellationToken);
-            }
+                    cancellationToken),
+                () => UnbindRefusedAsync(made, last, identity, id, cancellationToken));
 
             return linked;
         }
