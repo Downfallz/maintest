@@ -184,7 +184,7 @@ public sealed class AccountNoticesTests
 
         var test = await _notices.TestAsync(_mark, "https://push.example/phone", Cancel);
 
-        test.Message.ShouldBe("This device's subscription could not be used. Turn notifications off and on again.");
+        test.Message.ShouldBe("This device's subscription could not be used. Turn \"Pop-ups on this device\" off and on again.");
     }
 
     private sealed class Sender : IPushSender

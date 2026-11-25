@@ -203,12 +203,12 @@ internal sealed class PushNotices(IPushSender sender, string publicKey, TimeProv
             // refused on that service too, so answer with that refusal, not "gone" (#1176, #1209).
             return sent is PushSent.UnknownService
                 ? PushTest.OnUnknownService
-                : new PushTest(false, "This subscription is gone. Tap \"Notify me when it's my turn\" again.");
+                : new PushTest(false, PushTest.SeatTestGoneMessage);
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {
             Console.WriteLine($"  Session {table.Id}: {seat.Name} could not be sent a test notice: {HttpHost.OneLine(failure)}");
-            return new PushTest(false, PushTest.Refused(failure));
+            return new PushTest(false, PushTest.Refused(failure, PushTest.SeatAgain));
         }
     }
 

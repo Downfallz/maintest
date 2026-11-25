@@ -189,7 +189,7 @@ test('ship answers a round of review with one push, and does not cancel a run th
 // platform: the owner publishes by hand (the plan's question 4).
 test('promo films, cuts, briefs and checks with the promotion scripts, and has the producer write the words', () => {
   const promo = readFileSync(join(root, '.claude/skills/promo/SKILL.md'), 'utf8');
-  for (const script of ['shoot.mjs', 'cut.mjs', 'brief.mjs', 'calendar.mjs', 'media.mjs']) {
+  for (const script of ['shoot.mjs', 'cut.mjs', 'brief.mjs', 'calendar.mjs', 'checklist.mjs', 'media.mjs']) {
     assert.match(promo, new RegExp(`node scripts/promo/${script.replace('.', '\\.')}`), script);
   }
   assert.match(promo, /`promo-producer`/);

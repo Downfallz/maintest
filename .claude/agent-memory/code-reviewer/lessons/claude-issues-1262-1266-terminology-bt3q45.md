@@ -1,0 +1,7 @@
+# code-reviewer lessons (branch claude/issues-1262-1266-terminology-bt3q45)
+
+- A new test reused its class's `Read` helper, which asserts a 2xx, on a 404 answer: red on every run, and the author's gate did not catch it. Run the Cli tests on the copy before trusting "the gate passed" (#1266, LobbyApiTests.A_seat_on_a_host_without_push_keys..., 778fd3a).
+- A wording scanner scoped to the files the issue listed misses the same sentences in a sibling (`table.js` testNotices) and the shared fallback the module calls (`account.js` accountRequest's "The host answered N."): reverting either stays green (#1266, 778fd3a).
+- A `error.message || 'Could not reach ...'` fallback never shows on a network failure: fetch throws a TypeError whose message is "Failed to fetch". Read a "could not reach" sentence against what the catch actually receives (#1266, devices.js, 778fd3a).
+- Round two moved the pages' fallbacks into shared constants (`push.js` UNREACHABLE, answeredWith) and the doc says Settings shares them, but Settings' refusals come through `accountRequest`, whose own fallback still writes "The host answered N.": a "shared fallback" claim is checked by probing the real request helper with an empty-bodied 503 (#1266, 6911a08).
+- A finding "the scanner misses file X" answered by making X import the constant, without adding X to the scanner, stays open: reverting X's import to a literal is still green (#1266, table.js, 6911a08).

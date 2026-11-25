@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { keyBytes, noticeButton, pushSupported, sameKey, testForgot, testReading } from './push.js';
+import { answeredWith, keyBytes, noticeButton, pushSupported, reachProblem, sameKey, testForgot, testReading, UNREACHABLE } from './push.js';
 
 test('a browser pushes when it has a worker, a push manager, notifications and a secure context', () => {
   const nav = { serviceWorker: {} };
@@ -76,4 +76,15 @@ test('a test answer means the host forgot the subscription when it is gone or on
   assert.equal(testForgot({ status: 400, error: 'Account.BadRequest', message: 'gone' }), false);
   assert.equal(testForgot({ status: 502, message: 'This seat has no subscription: tap "Notify me when it\'s my turn" first.' }), false);
   assert.equal(testForgot(), false);
+});
+
+test('a request that never reached the table says so, and a refusal says the table\'s own sentence (#1266)', () => {
+  assert.equal(reachProblem(new TypeError('Failed to fetch')), UNREACHABLE);
+  assert.equal(reachProblem(new TypeError('NetworkError when attempting to fetch resource.')), UNREACHABLE);
+  assert.equal(reachProblem(new Error('')), UNREACHABLE);
+  assert.equal(reachProblem(undefined), UNREACHABLE);
+  assert.equal(reachProblem(Object.assign(new Error('This table sends no notifications.'), { status: 404, own: true })), 'This table sends no notifications.');
+  assert.equal(reachProblem(Object.assign(new Error('The host answered 503. Try again.'), { status: 503, own: false })), 'This table answered 503.');
+  assert.equal(UNREACHABLE, 'Could not reach this table. Try again.');
+  assert.equal(answeredWith(503), 'This table answered 503.');
 });
