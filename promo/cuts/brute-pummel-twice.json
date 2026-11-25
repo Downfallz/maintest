@@ -1,0 +1,13 @@
+{
+  "format": "downfall.promo.cut.v1",
+  "title": "Fury hits the Brute, it answers with Pummel, takes Wild Swing and pummels again, for the vertical feeds",
+  "ratio": "9:16",
+  "titleCard": { "seconds": 3.2, "en": "Hit, answer, hit, answer again", "fr": "Coup, riposte, coup, riposte" },
+  "shots": [
+    { "shot": "brute-pummel-round-3-long", "start": 2, "seconds": 2, "caption": { "en": "Fury crits your Brute for 12.", "fr": "Fury touche ta Brute en critique : −12." } },
+    { "shot": "brute-pummel-round-3-long", "start": 5, "seconds": 4, "caption": { "en": "Your Brute casts Pummel: a crit, −4.", "fr": "Ta Brute lance Pummel : critique, −4." } },
+    { "shot": "brute-pummel-round-3-long", "start": 9, "seconds": 2.8, "caption": { "en": "You pick a tempo. Wild Swing hits both.", "fr": "Tu choisis un tempo. Wild Swing touche les deux." } },
+    { "shot": "brute-pummel-round-3-long", "start": 11.8, "seconds": 3.6, "caption": { "en": "Round 4: Pummel again, another crit.", "fr": "Round 4 : Pummel de nouveau, critique." } }
+  ],
+  "endCard": { "seconds": 4.4 }
+}
