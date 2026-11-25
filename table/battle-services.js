@@ -125,13 +125,13 @@ export function createBattleServices({ onChange, scope = globalThis }) {
       if (!valid(context)) return;
       const answer = await context.transport.pushTest();
       if (!valid(context)) return;
-      context.message = testReading({ page, host: answer.body?.message ?? `The host answered ${answer.status}.`, hostOk: answer.ok });
+      context.message = testReading({ page, host: answer.body?.message ?? `This table answered ${answer.status}.`, hostOk: answer.ok });
       if (testForgot({ status: answer.status, error: answer.body?.error, message: answer.body?.message })) {
         const held = await context.registration.pushManager.getSubscription();
         if (!valid(context)) return;
         await held?.unsubscribe(); context.push.subscribed = false;
       }
-    } catch { if (valid(context)) context.message = 'Could not reach the host. Try again.'; }
+    } catch { if (valid(context)) context.message = 'Could not reach this table. Try again.'; }
     finally { context.push.busy = false; emit(context); }
   }
   function model() {

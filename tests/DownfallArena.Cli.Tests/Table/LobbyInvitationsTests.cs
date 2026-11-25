@@ -507,6 +507,7 @@ public sealed class LobbyInvitationsTests : IDisposable
         var again = await lobby.HandleAsync("PUT", "/api/lobby/push", JsonSerializer.Serialize(new { endpoint = "https://fcm.googleapis.com/fcm/send/MarkF", keys = new { p256dh = Key, auth = Auth } }), token, mark);
 
         again.Status.ShouldBe(410);
+        Read(again).GetProperty("message").GetString().ShouldBe("This subscription is gone from its notification service. Turn notifications on again.");
         (await _devices.ListAsync(mark.Account.Id, Cancel)).ShouldBeEmpty();
     }
 

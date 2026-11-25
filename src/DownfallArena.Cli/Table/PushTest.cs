@@ -9,6 +9,15 @@ internal sealed record PushTest(bool Sent, string Message)
     /// </summary>
     public const string UnknownServiceMessage = "This browser's notification service is not one this table can send to. Try another browser.";
 
+    /// <summary>What the subscribe routes and the push tests say on a host given no push keys (#1266).</summary>
+    public const string NoNoticesMessage = "This table sends no notifications.";
+
+    /// <summary>
+    /// What the subscribe routes say of a subscription its notification service said was gone (#1266): Settings shows it
+    /// when the fresh subscription it makes on a 410 is refused too.
+    /// </summary>
+    public const string GoneMessage = "This subscription is gone from its notification service. Turn notifications on again.";
+
     /// <summary>
     /// A test on a subscription on no push service this host sends to (#1209): said as the subscribe routes refuse one,
     /// which its route answers with their status and code, since a new subscription on that service would be refused too.

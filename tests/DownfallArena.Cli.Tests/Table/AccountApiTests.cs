@@ -417,6 +417,20 @@ public sealed class AccountApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_host_without_push_keys_tells_the_player_this_table_sends_no_notifications()
+    {
+        var (api, _, _) = await NotifyingAsync();
+        var session = Session(await api.HandleAsync("POST", "/api/account/dev", """{"username":"MarkF"}""", Nobody));
+        var silent = await ApiAsync(AccountsMode.Development);
+
+        var subscribed = await silent.HandleAsync("PUT", "/api/account/push", Subscription, Signed(session));
+        var tested = await silent.HandleAsync("POST", "/api/account/push/test", "{}", Signed(session));
+
+        Json(subscribed).GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+        Json(tested).GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+    }
+
+    [Fact]
     public async Task A_device_needs_a_session_a_real_subscription_and_a_host_that_sends_notices()
     {
         var (api, _, _) = await NotifyingAsync();
@@ -497,6 +511,7 @@ public sealed class AccountApiTests : IDisposable
         test.Status.ShouldBe(502);
         again.Status.ShouldBe(410);
         Json(again).GetProperty("error").GetString().ShouldBe("Account.DeviceGone");
+        Json(again).GetProperty("message").GetString().ShouldBe("This subscription is gone from its notification service. Turn notifications on again.");
         fresh.Status.ShouldBe(200);
         (await devices.ListAsync(await IdOf(api, session), TestContext.Current.CancellationToken)).ShouldHaveSingleItem().Endpoint.ShouldBe("https://fcm.googleapis.com/fcm/send/phone-2");
     }

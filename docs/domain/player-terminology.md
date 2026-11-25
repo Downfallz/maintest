@@ -109,12 +109,27 @@ The recap a player reads on coming back to a game (docs/tabletop/async-recap-pla
 
 What a notification service answers is said as "notification service", never "push service", and its refusal as
 "this table", never "host" (#1233). Settings, the seat page and the battle view say a refusal in one sentence, the
-host's (`PushTest.UnknownServiceMessage`). The other sentences of the notification pages that still say "host" are
-still undecided.
+host's (`PushTest.UnknownServiceMessage`). The other sentences of the notification pages say "this table" and
+"notification service" too (#1266): `table/terminology.test.js` refuses "host" and "push service" in the string
+literals of `push.js`, `devices.js` and `battle-services.js`, and the host's sentences are `PushTest`'s constants.
 
 | What the page shows | Player-facing EN | Player-facing FR |
 | --- | --- | --- |
 | A browser whose notification service the table does not send to | **This browser's notification service is not one this table can send to. Try another browser.** | **Le service de notifications de ce navigateur n'est pas de ceux auxquels cette table peut envoyer. Essayez un autre navigateur.** |
+| The table could not be reached (Settings, the battle view's test) | **Could not reach this table. Try again.** | **Impossible de joindre cette table. Réessayez.** |
+| The table refused a test without a sentence of its own | **This table answered 503.** (the status) | **Cette table a répondu 503.** |
+| The body of the page's own test notice | **Shown by the page itself. One from this table should follow.** | **Affichée par la page elle-même. Une autre, envoyée par cette table, devrait suivre.** |
+| A subscription its notification service let go of, refused again | **This subscription is gone from its notification service. Turn notifications on again.** | **Cet abonnement n'existe plus chez son service de notifications. Réactivez les notifications.** |
+| A table given no push keys | **This table sends no notifications.** | **Cette table n'envoie pas de notifications.** |
+
+Settings' ways to sign in name a way whose removal stopped before it finished (#1262):
+
+| What the page shows | Player-facing EN | Player-facing FR |
+| --- | --- | --- |
+| The way's line | **Its removal did not finish. You no longer sign in with it.** | **Son retrait n'a pas abouti. Vous ne vous connectez plus avec.** |
+| Its button | **Finish removing** | **Terminer le retrait** |
+| What the button asks first | **Finish removing Discord?** *You no longer sign in with Discord. This finishes its removal. You stay signed in here, and pop-ups stop on every device, this one too.* | **Terminer le retrait de Discord ?** *Vous ne vous connectez plus avec Discord. Ceci termine son retrait. Vous restez connecté ici, et les fenêtres surgissantes s'arrêtent sur tous les appareils, celui-ci compris.* |
+| The line once done | **Discord removed.** | **Discord retiré.** |
 
 ## The ladder
 

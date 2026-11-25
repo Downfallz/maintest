@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { keepWaysNote, mountWays, removeWay, removeWords, takeWaysNote, wayName, wayRows } from './ways.js';
+import { keepWaysNote, mountWays, removeWay, removeWords, takeWaysNote, wayHint, wayName, wayRows } from './ways.js';
 
 // Shaped as the host answers: GET /api/account/identities and /api/me (AccountIdentitiesApiTests, AccountApiTests).
 const me = { accounts: 'signin', signIn: [{ provider: 'google', clientId: 'g-client' }, { provider: 'discord', clientId: '1311' }] };
@@ -36,6 +36,38 @@ test('a provider this page cannot draw a button for is not offered to add', () =
   assert.deepEqual(rows.map(row => row.provider), ['google', 'discord']);
 });
 
+// Shaped as the host answers a removal that stopped before its binding went (AccountIdentitiesApiTests,
+// A_removal_stopped_before_its_binding_went_is_listed_as_pending_so_the_page_can_finish_it, #1262).
+const stopped = [{ provider: 'google', removable: false, pending: false }, { provider: 'discord', removable: true, pending: true }];
+
+test('a way whose removal stopped is listed apart, to finish removing, and not offered to add', () => {
+  const rows = wayRows(stopped, me);
+
+  assert.deepEqual(rows.map(row => [row.provider, row.held, row.pending]), [['google', true, false], ['discord', true, true]]);
+  assert.equal(wayHint(rows[1]), 'Its removal did not finish. You no longer sign in with it.');
+});
+
+test('finishing a removal that stopped is a DELETE of that way, and says it is removed', async () => {
+  const doc = page();
+  const session = tab();
+  session.setItem('downfall.recentSignIn', JSON.stringify({ value: 'R', at: Date.now() }));
+  const asked = [];
+  const answers = [{ identities: stopped }, { identities: [{ provider: 'google', removable: false, pending: false }] }];
+  const ways = mountWays(doc, { request: async (path, body, _, method) => { asked.push([path, method]); return answers.shift(); }, session });
+  ways.setAccount({ id: 'a1', username: 'MarkF' }, me);
+  await ways.shown('account');
+  const dialog = doc.getElementById('action-dialog');
+  dialog.showModal = () => { dialog.returnValue = 'confirm'; dialog.listeners.close(); };
+  const finish = doc.getElementById('ways-list').children[1].children.at(-1);
+
+  await finish.listeners.click();
+
+  assert.equal(finish.textContent, 'Finish removing');
+  assert.equal(finish['aria-label'], 'Finish removing Discord');
+  assert.deepEqual(asked, [['/api/account/identities', undefined], ['/api/account/identities/discord', 'DELETE']]);
+  assert.equal(doc.getElementById('ways-note').textContent, 'Discord removed.');
+});
+
 test('removing a way in says the other devices are signed out', () => {
   const words = removeWords('discord');
 
@@ -56,7 +88,9 @@ test('a line for Settings is handed over once', () => {
 function page() {
   const made = new Map();
   const node = id => ({
-    id, hidden: true, textContent: '', children: [], className: '', listeners: {},
+    id, hidden: true, textContent: '', children: [], className: '', listeners: {}, dataset: {},
+    classList: { add() {}, remove() {}, toggle() {} },
+    removeAttribute() {},
     replaceChildren(...nodes) { this.children = nodes; },
     append(...nodes) { this.children.push(...nodes); },
     setAttribute(name, value) { this[name] = value; },

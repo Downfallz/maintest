@@ -1214,7 +1214,7 @@ async function testNotices(state) {
     // Two notices from the two ends (push.js, testReading): the page's own first, then the host's push.
     const own = await showOwn(state);
     const answer = await seat.transport.pushTest();
-    if (problem) problem.textContent = testReading({ page: own, host: answer.body?.message ?? `The host answered ${answer.status}.`, hostOk: answer.ok });
+    if (problem) problem.textContent = testReading({ page: own, host: answer.body?.message ?? `This table answered ${answer.status}.`, hostOk: answer.ok });
     if (testForgot({ status: answer.status, error: answer.body?.error, message: answer.body?.message })) {
       // The host forgot it, and the browser still holds it: let go of here too, or the next tap would get the same
       // subscription back from the browser and the host's refusal of it.
@@ -1224,7 +1224,7 @@ async function testNotices(state) {
       renderNotices(state);
     }
   } catch {
-    if (problem) problem.textContent = 'Could not reach the host. Try again.';
+    if (problem) problem.textContent = 'Could not reach this table. Try again.';
   } finally {
     button.disabled = false;
   }

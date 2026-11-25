@@ -700,12 +700,21 @@ internal sealed class AccountApi
 
     /// <summary>
     /// The ways into an account as a page is told them: each one's provider, in the order added, and whether the host
-    /// would remove it; never its identifier. The page draws Remove where the host says so.
+    /// would remove it; never its identifier. The page draws Remove where the host says so. A removal that stopped
+    /// before its binding went (#1216) is listed last as <c>pending</c>, so the page offers to finish it (#1262): a
+    /// <c>DELETE</c> of that provider does. A guest's identity an upgrade left behind is not listed: the player never
+    /// chose it as a way in, and the account's next link, removal or deletion lets it go.
     /// </summary>
-    private static object Ways(Account account) => new
+    private static object Ways(Account account)
     {
-        identities = account.Identities.All.Select(identity => new { provider = identity.Provider, removable = account.Identities.Without(identity).IsSuccess }).ToArray(),
-    };
+        var ways = account.Identities.All.Select(identity => new { provider = identity.Provider, removable = account.Identities.Without(identity).IsSuccess, pending = false }).ToList();
+        if (account.Unbinding is { } stopped && stopped.Provider != ExternalIdentity.Guest && account.Identities.ByProvider(stopped.Provider) is null)
+        {
+            ways.Add(new { provider = stopped.Provider, removable = true, pending = true });
+        }
+
+        return new { identities = ways };
+    }
 
     /// <summary>Settings' ways to sign in (sign-in methods plan, P4): the providers the signed-in account uses.</summary>
     private async Task<StudioResponse> IdentitiesAsync(AccountRequest request)
@@ -1071,7 +1080,7 @@ internal sealed class AccountApi
     {
         if (Notices is not { } notices || Devices is not { } devices)
         {
-            return Problem(404, "Account.NoNotices", "This host sends no notices: it has no push keys.");
+            return Problem(404, "Account.NoNotices", PushTest.NoNoticesMessage);
         }
 
         if (await WhoAsync(request) is not { } who)
@@ -1093,7 +1102,7 @@ internal sealed class AccountApi
 
         if (await notices.IsGoneAsync(who.Account.Id, subscription.Endpoint))
         {
-            return Problem(410, "Account.DeviceGone", "This subscription is gone from its push service. Subscribe again.");
+            return Problem(410, "Account.DeviceGone", PushTest.GoneMessage);
         }
 
         var held = await devices.AddAsync(who.Account.Id, new PushDevice(subscription.Endpoint, subscription.P256dh, subscription.Auth, default));
@@ -1115,7 +1124,7 @@ internal sealed class AccountApi
     {
         if (Devices is not { } devices)
         {
-            return Problem(404, "Account.NoNotices", "This host sends no notices: it has no push keys.");
+            return Problem(404, "Account.NoNotices", PushTest.NoNoticesMessage);
         }
 
         if (await WhoAsync(request) is not { } who)
@@ -1137,7 +1146,7 @@ internal sealed class AccountApi
     {
         if (Notices is not { } notices)
         {
-            return Problem(404, "Account.NoNotices", "This host sends no notices: it has no push keys.");
+            return Problem(404, "Account.NoNotices", PushTest.NoNoticesMessage);
         }
 
         if (await WhoAsync(request) is not { } who)

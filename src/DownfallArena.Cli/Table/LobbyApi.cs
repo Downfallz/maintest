@@ -1137,7 +1137,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
         // it (ADR 0203): either one's word makes the page subscribe again.
         if (notices.IsDead(subscription.Endpoint) || (account is { } signedIn && await GoneForAsync(signedIn, subscription.Endpoint)))
         {
-            return (null, Problem(410, "This subscription is gone from its push service. Subscribe again."));
+            return (null, Problem(410, PushTest.GoneMessage));
         }
 
         return (subscription, null);
@@ -1152,7 +1152,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     {
         if (push is null)
         {
-            return Problem(404, "This host sends no notices: it has no push keys.");
+            return Problem(404, PushTest.NoNoticesMessage);
         }
 
         PushSubscription? subscription = null;
@@ -1241,7 +1241,7 @@ internal sealed class LobbyApi(TableRegistry registry, TableComposer composer, T
     {
         if (push is null)
         {
-            return Problem(404, "This host sends no notices: it has no push keys.");
+            return Problem(404, PushTest.NoNoticesMessage);
         }
 
         var table = await registry.ByTokenAsync(token);

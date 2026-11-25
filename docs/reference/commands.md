@@ -677,7 +677,7 @@ days, forgotten with the account. `GET /api/account/notices` lists it, newest fi
   id given without its provider in the list is refused. Each provider signs in at `POST /api/account/<provider>`, and
   `/api/me` lists them as `signIn`. A provider the release does not know, or one named twice, is refused.
 - A signed-in player adds and removes ways to sign in from Settings (sign-in methods plan, P4, ADR 0204):
-  `GET /api/account/identities` lists the account's providers, `POST /api/account/identities/<provider>` adds the
+  `GET /api/account/identities` lists the account's providers (and, as `pending`, one whose removal stopped, #1262), `POST /api/account/identities/<provider>` adds the
   identity that provider's proof vouches for, under the same per-address count as a sign-in (one per provider; `409 Account.IdentityTaken` when another account
   uses it), and `DELETE /api/account/identities/<provider>` removes one unless it is the last (`409 Account.LastIdentity`),
   or finishes a removal of that provider that stopped before its entry went (#1216).

@@ -410,3 +410,22 @@ test('a name of several words written as a phrase is found, its capitals and an 
   const texts = scriptText("a.textContent = 'Full mutation tree'; b.title = 'Open the Mutation Tree'; c.textContent = 'MUTATION TREE · YOURS';");
   assert.deepEqual(miscased([{ path: 'script', texts }]), ['script: "Full mutation tree" writes mutation tree']);
 });
+
+// The notification modules speak of "this table" and of a "notification service" (player-terminology.md,
+// ## Notifications, #1233, #1266): the host and the push service are the engineers' words.
+const NOTIFICATION_MODULES = ['table/push.js', 'table/devices.js', 'table/battle-services.js'];
+const ENGINEERS_WORDS = /\bhosts?\b|\bpush[\s-]*services?\b/i;
+
+const engineersWords = path => literals(read(path)).map(({ text }) => text).filter(text => ENGINEERS_WORDS.test(text));
+
+test('no sentence of the notification modules tells a player "host" or "push service"', () => {
+  assert.deepEqual(NOTIFICATION_MODULES.flatMap(path => engineersWords(path).map(text => `${path}: "${text}"`)), []);
+});
+
+test('the notification modules\' scanner finds "host" and "push service" in every spelling, and not in "hosted"', () => {
+  for (const text of ['Could not reach the host.', 'The HOST answered', 'Two Hosts', 'gone from its push service', 'Push-Service', 'push  services']) {
+    assert.ok(ENGINEERS_WORDS.test(text), text);
+  }
+  assert.ok(!ENGINEERS_WORDS.test('the hosted table, or this computer at localhost, can notify.'));
+  assert.deepEqual(literals("// the host\nconst a = 'Could not reach the host. Try again.'; b = /host/;").map(({ text }) => text), ['Could not reach the host. Try again.']);
+});

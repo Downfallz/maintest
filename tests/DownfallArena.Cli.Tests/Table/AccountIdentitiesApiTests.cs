@@ -379,6 +379,37 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_removal_stopped_before_its_binding_went_is_listed_as_pending_so_the_page_can_finish_it()
+    {
+        var api = await ApiAsync();
+        var session = await MarkSignedInAsync(api);
+        await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+        _store.FailNextUnbinding = true;
+        await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
+        var again = await MarkSignedInAsync(api);
+
+        var ways = Json(await api.HandleAsync("GET", Route, "", Signed(again))).GetProperty("identities").EnumerateArray().ToArray();
+
+        ways.Select(way => (way.GetProperty("provider").GetString(), way.GetProperty("removable").GetBoolean(), way.GetProperty("pending").GetBoolean()))
+            .ShouldBe([("google", false, false), ("discord", true, true)]);
+    }
+
+    [Fact]
+    public async Task A_guest_left_behind_by_an_upgrade_that_stopped_is_not_listed_as_a_way_to_sign_in()
+    {
+        var api = await ApiAsync();
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        _store.FailNextUnbinding = true;
+        await Should.ThrowAsync<IOException>(() => Registry().UpgradeAsync(guest.Id, Mark, "MarkF", Cancel));
+        (await Registry().FindAsync(guest.Id, Cancel))!.Unbinding.ShouldNotBeNull();
+        var signedIn = await api.HandleAsync("POST", "/api/account/google", Proof(Mark.Subject), Nobody);
+
+        var answer = await api.HandleAsync("GET", Route, "", Signed(Session(signedIn)));
+
+        Providers(answer).ShouldBe(["google"]);
+    }
+
+    [Fact]
     public async Task The_way_in_the_account_registered_with_can_go_once_another_is_added()
     {
         var api = await ApiAsync();

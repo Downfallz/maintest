@@ -140,7 +140,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       state.kinds = (await request('/api/account/preferences/notices', kindsBody(checked), undefined, 'PUT')).notices ?? state.kinds;
     } catch (error) {
       state.kinds = before;
-      problem(error.message || 'Could not reach the host. Try again.');
+      problem(error.message || 'Could not reach this table. Try again.');
     } finally {
       state.saving = false;
       if (state.pending) {
@@ -238,7 +238,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
         }
       }
     } catch (error) {
-      problem(error.message || 'Could not reach the host. Try again.');
+      problem(error.message || 'Could not reach this table. Try again.');
     } finally {
       state.busy = false;
       render();
@@ -255,7 +255,7 @@ export function mountDevices(doc, { request = accountRequest, nav = globalThis.n
       const answer = await request('/api/account/push/test', { endpoint: subscription?.endpoint ?? '' });
       result(answer.message);
     } catch (error) {
-      result(error.message || 'Could not reach the host. Try again.');
+      result(error.message || 'Could not reach this table. Try again.');
       if (testForgot({ status: error.status, error: error.code, message: error.message })) {
         // The host forgot it, and the browser still holds it: let go of here too, or the next tap would get the same
         // subscription back from the browser and the host's refusal of it.

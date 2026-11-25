@@ -784,6 +784,19 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_seat_on_a_host_without_push_keys_is_told_this_table_sends_no_notifications()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var token = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!.Seats[0].Token;
+
+        var subscribed = await Lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token);
+        var tested = await Lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+
+        Read(subscribed).GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+        Read(tested).GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+    }
+
+    [Fact]
     public async Task A_subscription_needs_a_seat_token_and_a_host_with_keys()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
