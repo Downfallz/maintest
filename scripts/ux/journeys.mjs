@@ -7,7 +7,7 @@ import { GAME_ORIGIN } from '../../table/site-origins.js';
 import { answer, asked, choose, latest, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
 import { DESKTOP, VIEWPORTS, neverAskedInPage } from './set.mjs';
 
-export const WALKER = 'Walker', FRIEND = 'Rook';
+export const WALKER = 'Walker', FRIEND = 'Rook', LEARNER = 'Learner';
 const FIRST_LESSON = 'sc-repo-tutorial-your-first-combat';
 
 // The developer form stands in for Google's button: the one step of the doors a walk cannot press.
@@ -71,7 +71,8 @@ const doors = {
   id: 'doors',
   title: 'The two doors',
   screens: ['showcase-home', 'showcase-home-story', 'showcase-home-modes', 'showcase-round', 'showcase-home-fr', 'showcase-mutations',
-    'showcase-mutations-family', 'showcase-mutations-entry', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief', 'sign-out', 'signed-out-panel'],
+    'showcase-mutations-family', 'showcase-mutations-entry', 'showcase-rules', 'showcase-404', 'showcase-404-fr', 'sign-in-panel', 'invitation-sign-in', 'name-window', 'invitation-take-the-place', 'first-lesson-brief', 'sign-out', 'signed-out-panel',
+    'sign-in-panel-lesson', 'guest-lesson-brief', 'guest-lesson-complete', 'guest-home', 'guest-sign-out', 'guest-name-window', 'guest-upgraded-home'],
   strips: {
     // The seam: the showcase's Play now, pressed.
     'play-now': { at: 'showcase-home', act: ({ page }) => page.getByRole('link', { name: 'Play now' }).first().dispatchEvent('pointerdown') },
@@ -149,6 +150,41 @@ const doors = {
     await page.locator('#action-confirm').click();
     await page.locator('#sign-in-panel[data-door="left"]').waitFor({ timeout: 30000 });
     await walk.screen('signed-out-panel');
+    // A lesson before an account (UX15): the showcase's Try a tutorial first, the lesson door, a guest made on the press.
+    // The showcase's link names the published game; the walk opens the same address on its own host.
+    await page.goto(`${set.game}/lobby?try=lesson`);
+    await page.locator('#sign-in-panel[data-door="lesson"]').waitFor({ timeout: 30000 });
+    await walk.screen('sign-in-panel-lesson');
+    await page.getByRole('button', { name: 'Play the first tutorial' }).click();
+    await page.locator('#practice-brief[open]').waitFor({ timeout: 30000 });
+    await page.locator('body[data-guest="true"]').waitFor();
+    await walk.screen('guest-lesson-brief');
+    await page.locator('#practice-brief-begin').click();
+    await playLesson(page, lessons[0], { blocked: walk.blocked });
+    await page.locator('#coach-leave.keep-tutorials').waitFor({ timeout: 30000 });
+    await walk.screen('guest-lesson-complete');
+    // Sign in to keep them: the guest's home, at its keep panel.
+    await page.locator('#coach-leave').click();
+    await page.waitForURL(`${set.game}/#keep-tutorials`);
+    await page.locator('#sign-in-panel[data-door="guest"]').waitFor({ timeout: 30000 });
+    await page.locator('#featured[data-featured="lesson"]').waitFor({ timeout: 30000 });
+    await walk.screen('guest-home');
+    // Sign out asks first: a guest's tutorials are lost with it. Stay signed in keeps them.
+    await page.locator('#account-menu summary').click();
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.locator('#action-dialog[open]').waitFor();
+    await walk.screen('guest-sign-out');
+    await page.locator('#action-cancel').click();
+    // A way in with an identity no account holds asks a name, which upgrades the guest; Google's window is staged,
+    // and the developer's form, which names itself, upgrades it the same way.
+    await page.evaluate(() => document.getElementById('name-dialog').showModal());
+    await walk.screen('guest-name-window', { staged: true });
+    await page.evaluate(() => document.getElementById('name-dialog').close());
+    await page.locator('#dev-username').fill(LEARNER);
+    await page.locator('#dev-sign-in button[type="submit"]').click();
+    await page.locator('body[data-home="member"]:not([data-guest])').waitFor({ timeout: 30000 });
+    await page.getByText(`Signed in as ${LEARNER}. Your tutorials are kept.`).waitFor({ timeout: 30000 });
+    await walk.screen('guest-upgraded-home');
   },
 };
 

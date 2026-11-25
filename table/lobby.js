@@ -420,6 +420,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   let adopted = false;
   // A guest's home reads no list: the host refuses them all to a guest (ADR 0207), and its page shows the lessons.
   let closed = false;
+  // A line said once in place of the lobby's status: a guest who just became this account (UX15).
+  let greeting = null;
   const signInFirst = () => mode !== 'off' && account === null;
   const problem = (text = '') => { el('lobby-problem').textContent = text; el('lobby-problem').hidden = !text; };
   function node(tag, text, className) {
@@ -817,7 +819,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('open-tables').replaceChildren(rows, ...(tablePages ? [tablePages] : []));
     el('new-table').disabled = !listing.recording;
     featured?.setDisabled(!listing.recording);
-    el('lobby-status').textContent = statusText(listing);
+    el('lobby-status').textContent = greeting ?? statusText(listing);
     const options = listing.formats;
     if (el('format').options.length === 0) {
       el('format').replaceChildren(...options.map(format => { const option = node('option', format); option.value = format; return option; }));
@@ -857,7 +859,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       maybeLoadFinished();
       // A request waiting either way is answered elsewhere: read the opponents again until it is.
       if (account && opponents.some(one => one.relation === 'asked' || one.relation === 'asking')) void loadOpponents();
-      el('lobby-status').textContent = statusText(listing);
+      el('lobby-status').textContent = greeting ?? statusText(listing);
       maybeRematch();
       failures = 0;
     } catch (error) {
@@ -1120,11 +1122,13 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
      * Told by the sign-in whenever who is signed in changes; the lists are read again for them. `guest` says a guest is
      * signed in (`next` is then null): nothing is read, and a read under way is let go.
      */
-    setAccount(next, nextMode, { guest = false } = {}) {
+    setAccount(next, nextMode, { guest = false, said = null } = {}) {
       const changed = (next?.id ?? null) !== (account?.id ?? null) || nextMode !== mode || guest !== closed;
       account = next;
       mode = nextMode;
       closed = guest;
+      if (changed) greeting = said;
+      if (said) el('lobby-status').textContent = said;
       if (closed) { globalThis.clearTimeout(retry); el('lobby-status').textContent = ''; }
       if (changed) {
         revision += 1; adopted = false; mine = []; invitations = []; opponents = []; limit = null; finishedSeen = null; finishedReads = 0;
@@ -1155,7 +1159,17 @@ if (typeof document !== 'undefined') {
   lobby = mountLobby(document, globalThis.location, storage, { featured });
   const practiceList = mountPracticeList(document);
   const door = mountDoor(document);
-  const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson, listed: featured.setLessons });
+  // A guest's home (UX15): the next lesson featured, and its keep panel under it; with none left, the panel leads.
+  let guestNow = false;
+  const listed = cards => {
+    featured.setLessons(cards);
+    const ahead = Boolean(cards?.some(card => card.next));
+    door.lessonAhead(ahead);
+    document.getElementById('featured').hidden = guestNow && !ahead;
+  };
+  const tutorials = mountTutorials(document, { session, plain: () => plainVisit, opening: door.lesson, listed });
+  // Signed in as a guest a moment ago: the account it became says its tutorials are kept, once (UX15).
+  let lastGuest = null;
   const next = nextPath(globalThis.location.search);
   // The offer of pop-ups (N4): made when a game against a person waits on the other player, once the switch has read
   // this browser, whichever of the two comes first.
@@ -1180,16 +1194,35 @@ if (typeof document !== 'undefined') {
       // at once, so after the lobby, whose change of account empties the featured space.
       const lessons = account ? tutorials.setAccount(account) : null;
       const playable = Boolean(member) || mode === 'off';
-      if (guest) door.guest(account);
-      else if (!playable) door.signedOut();
-      else door.member();
+      guestNow = guest;
+      const panel = document.getElementById('sign-in-panel');
+      if (guest) {
+        door.guest(account);
+        // The keep panel stands under the featured lesson, before Learn to play (doors.md, the guest's home).
+        document.getElementById('featured').after(panel);
+      } else {
+        // Back where the doors stand, before the games.
+        document.getElementById('home-games').before(panel);
+        if (!playable) door.signedOut();
+        else door.member();
+      }
       // A guest's home shows the lessons, which live with the games: the sections it may not reach are hidden by its mark.
       document.getElementById('home-games').hidden = !playable && !guest;
-      if (playable) featured.playable();
-      lobby.setAccount(member, mode, { guest });
+      if (!guest) document.getElementById('featured').hidden = false;
+      if (playable || guest) featured.playable();
+      if (guest) featured.setGames([]);
+      const said = member && lastGuest ? (member.id === lastGuest ? `Signed in as ${member.username}. Your tutorials are kept.` : `Signed in as ${member.username}.`) : null;
+      lastGuest = guest ? account.id : null;
+      lobby.setAccount(member, mode, { guest, said });
       practiceList.setAccount(member);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
-      return Boolean(await (lessons ?? tutorials.setAccount(account)));
+      const opened = Boolean(await (lessons ?? tutorials.setAccount(account)));
+      // Sent from a lesson's end to keep its tutorials (`/#keep-tutorials`): the keep panel takes the focus.
+      if (guest && !opened && globalThis.location.hash === '#keep-tutorials') {
+        panel.scrollIntoView?.({ block: 'start' });
+        document.getElementById('sign-in-heading').focus({ preventScroll: true });
+      }
+      return opened;
     },
   });
   lobby.onOutstanding(navigation.setOutstanding);

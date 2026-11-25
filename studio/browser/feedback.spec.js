@@ -80,7 +80,7 @@ async function lobby(page, { account = player, muted = false } = {}) {
     return route.fulfill({ status: 404, json: { message: `Unexpected ${path}` } });
   });
   await page.goto('/table/lobby.html');
-  await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : 'visitor');
   return state;
 }
 

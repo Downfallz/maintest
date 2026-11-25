@@ -26,7 +26,7 @@ test('a guest\'s header shows the tutorials and its settings, and nothing the ho
 });
 
 test('a visitor signed out keeps the header it had', () => {
-  assert.deepEqual(headerShows(null, 'signin'), { home: 'guest', guest: false, join: false, friends: false, menuSettings: true, notificationsTab: false, accountTab: false, leaderboard: true, stats: false, learn: false, feedback: false });
+  assert.deepEqual(headerShows(null, 'signin'), { home: 'visitor', guest: false, join: false, friends: false, menuSettings: true, notificationsTab: false, accountTab: false, leaderboard: true, stats: false, learn: false, feedback: false });
   assert.equal(headerShows(null, 'off').home, 'local');
   assert.equal(headerShows(null, 'off').join, true);
 });

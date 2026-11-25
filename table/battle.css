@@ -1972,6 +1972,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .coach-end[hidden] { display: none; }
 .coach-end button, .coach-end a { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 12px; font-size: 13px; }
 .coach-end a:not(.primary) { color: var(--muted); }
+/* A guest's way to keep its tutorials (UX15) is an outline, as Play again is, not a quiet link. */
+.coach-end a.keep-tutorials:not(.primary) { color: var(--ink); border: 1px solid var(--line); text-decoration: none; }
 .coach-end a.primary { flex: 1 1 100%; justify-content: center; padding: 4px 16px; font-weight: 600; text-decoration: none; }
 .coach-end [hidden] { display: none; }
 /* Where a sheet docks under the field (a phone), the field is too short to carry the card (#650): the card moves

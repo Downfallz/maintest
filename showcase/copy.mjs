@@ -5,6 +5,8 @@ export const english = {
   play: 'Play now', kicker: 'Turn-based 3v3 combat', title: ['Evolve your', 'creatures.'],
   pitch: 'You and your opponent start with the same three creatures. During the duel, one might grow armour while another learns to heal. You can also develop both abilities on the same creature.',
   playNote: 'Beta · Free to play · No ads · No in-game purchases',
+  // UX15: a guest's first tutorial, from the hero, on the game's lesson door (`/lobby?try=lesson`).
+  tryLesson: 'Try a tutorial first',
   storyLink: 'From the creator', copyright: 'Copyright',
   rules: 'Rules', readRules: 'Read the rules',
   rulesDescription: 'The official rulebook of Downfall Instinct: how a match is played, part by part, with the numbers the game uses.',
@@ -65,6 +67,7 @@ export const french = {
   play: 'Jouer', kicker: '3 contre 3 au tour par tour', title: ['Fais évoluer', 'tes créatures.'],
   pitch: 'Ton adversaire et toi commencez avec les trois mêmes créatures. En plein duel, l’une peut se couvrir de plaques et une autre apprendre à soigner. Tu peux aussi développer les deux capacités chez la même bête.',
   playNote: 'Bêta · Gratuit · Sans pub · Sans achats intégrés',
+  tryLesson: 'Essayer d’abord un tutoriel',
   storyLink: 'Le créateur', copyright: 'Droit d’auteur',
   rules: 'Règles', readRules: 'Lire les règles',
   rulesDescription: 'Le livre de règles officiel de Downfall Instinct : comment se joue une partie, chapitre par chapitre, avec les nombres du jeu.',

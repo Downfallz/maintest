@@ -12,6 +12,15 @@ to sign-in or to their next battle. Both use the [official palette](../art/brand
   developer form use the existing account flow. Operator notices and account errors appear on this screen.
   [`accounts-plan.md`](accounts-plan.md#the-home-page) describes the same panel, and
   [the doors' brief](../art/journeys/doors.md) its words.
+  The plain door also offers Play the first tutorial, an outline under the ways in, and the showcase's Try a tutorial
+  first opens the lesson door (`/lobby?try=lesson`), where it is the filled action. The press makes a guest and opens
+  tutorial 1 ([ADR 0207](../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md), UX15). The page marks this
+  state `data-home="visitor"`.
+- **A guest:** the next lesson in the featured space, then the keep panel (Keep your tutorials, with the ways in,
+  whose sign-in upgrades the guest), then Learn to play. Nothing the host refuses a guest is drawn or read: no games,
+  invitations, opponents, practices or open seats, no bell, friends, ladder, statistics or report. The chip reads
+  Guest; signing out asks first, since it loses the tutorials ([the doors' brief](../art/journeys/doors.md#the-guests-home-new)).
+  The page marks it `data-home="member"` with `data-guest="true"`.
 - **Signed in:** a featured space, then invitations, Your games, Learn to play and Find an opponent. The featured
   space holds the home's one filled action, by what the player came to do: a turn of theirs (a person's before a
   bot's), a game of theirs waiting on someone else, the next lesson, or a bot to play, with New battle quiet under
@@ -37,7 +46,7 @@ a viewpoint before either private board is read.
 | Leaderboard | Existing `/leaderboard` page | Account hosts |
 | Learn to play | The lobby's Learn to play section (`/#learn-to-play`), beside Rules | Signed-in players |
 | Join with a code | Dialog validating an eight-character invitation and following `/j/<code>` | Signed-in players and local accounts-off hosts |
-| Settings | One dialog of tabs (below) | Guests in the main menu; signed-in players in the account menu, beside who is signed in |
+| Settings | One dialog of tabs (below) | Visitors signed out in the main menu; signed-in players and guests in the account menu, beside who is signed in |
 | Admin | Existing `/admin` page | Existing operator check |
 | Account avatar/name | Who is signed in, Settings, Game website, and Sign out (confirmed) on this device | Signed-in players |
 | Bell (Notifications) | Dialog of what waits for the player, each with its action (below) | Signed-in players |

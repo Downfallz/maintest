@@ -4,7 +4,8 @@
 // the table's page asks before a seat is taken (`/api/lobby/invitations`, ADR 0116), which needs the link's key and
 // no account, spends nothing, and answers a seat kept for a friend as spent to anybody else (ADR 0129).
 import { inviterOf, seatLabel } from './invitation.js';
-import { takeSignedOut } from './account.js';
+import { accountRequest, takeSignedOut } from './account.js';
+import { OFFERED_KEY, firstTutorial } from './lobby-tutorials.js';
 import { pictureElement, sceneElement } from './picture.js';
 import { seatsFromLocation } from './session.js';
 
@@ -27,10 +28,20 @@ const LONGEST_NAME = 'W'.repeat(20);
  * What the panel says. `invitation` is null for a plain visit; an object for an invitation, holding `inviter` and
  * `format` once the host has described it, and nothing while it has not or cannot.
  */
-export function doorWords(invitation, { left = false } = {}) {
+export function doorWords(invitation, { left = false, lesson = false, guest = false } = {}) {
+  // A guest is signed in: its home asks it to keep what it learned (UX15, ADR 0207).
+  if (guest) {
+    return {
+      eyebrow: 'Playing as a guest', title: 'Keep your tutorials.', game: '',
+      account: 'Your progress is kept in this browser only. An account keeps it on every device, and opens battles against bots and players, friends and the ladder.',
+    };
+  }
   // An invitation outranks the goodbye: it says why the visitor is here.
   if (!invitation && left) {
     return { eyebrow: 'Signed out', title: 'See you soon.', game: 'Your games wait for you.', account: 'Sign in again to resume them.' };
+  }
+  if (!invitation && lesson) {
+    return { eyebrow: 'Beta', title: 'Learn the game first.', game: gameLine('3v3'), account: 'Tutorial 1, against a bot. No account needed.' };
   }
   if (!invitation) {
     return { eyebrow: 'Beta', title: 'Sign in to play.', game: gameLine('3v3'), account: 'Your games follow you on every device.' };
@@ -54,7 +65,9 @@ export function doorWords(invitation, { left = false } = {}) {
  * A player who just signed out here sees the Predator at rest, alone: the game waits for them (the panel after a
  * sign out).
  */
-export function doorPictures(invitation, { left = false } = {}) {
+export function doorPictures(invitation, { left = false, guest = false } = {}) {
+  // A guest's keep panel stands under the featured lesson, whose painting says where (UX15).
+  if (guest) return [];
   if (invitation) return ['duel'];
   return left ? ['predator-at-rest'] : ['eclipse-ground', 'revenant'];
 }
@@ -99,8 +112,27 @@ export function invitationOf(answer) {
   return { inviter: inviterOf(offered.table, [offered]), format: offered.table.format ?? null, seat: offered.seat };
 }
 
+/**
+ * Whether the address asks for the lesson door: the showcase's Try a tutorial first (`/lobby?try=lesson`, UX15). Only the
+ * address's own `try`; nothing is made on the page's load, the guest is made on the press.
+ */
+export function lessonAsked(search) {
+  return new URLSearchParams(search ?? '').get('try') === 'lesson';
+}
+
+/**
+ * Whether the door offers tutorial 1 as a guest (ADR 0207, UX15), and whether as its one filled action: on the lesson
+ * door it is, on the plain door it is an outline under the ways in. A seat needs an account, a player who just signed out
+ * has one, and a guest is already one: none is offered it.
+ */
+export function lessonWay(invitation, { left = false, lesson = false, guest = false } = {}) {
+  const offered = !invitation && !left && !guest;
+  return { offered, filled: offered && lesson };
+}
+
 /** Where the name window's press leads, said in it so the cue survives the page that changes after it. */
-export function nameNext({ invitation, lesson } = {}) {
+export function nameNext({ invitation, lesson, guest = false } = {}) {
+  if (guest) return 'Your tutorials and settings stay with this name.';
   if (invitation?.spent) return null;
   if (invitation) {
     return invitation.inviter && invitation.seat
@@ -125,23 +157,46 @@ const asked = tokens => globalThis.fetch('/api/lobby/invitations', {
  * loads them; and `lesson(card)`, which the lobby calls when the first tutorial is about to open, to say so in the
  * name window.
  */
-export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask = asked, session = tabStorage() } = {}) {
+export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask = asked, session = tabStorage(), request = accountRequest, go = link => globalThis.location.assign(link) } = {}) {
   const el = id => doc.getElementById(id);
 
   let invitation = null;
   let signedOut = false;
   // This tab just signed out (account.js marks it once the host confirmed): the goodbye, once.
   let left = false;
+  // The showcase's Try a tutorial first (UX15): the lesson first. A guest signed in: its keep panel.
+  const lesson = lessonAsked(search);
+  let guest = false;
   // The paintings follow the door: a link the host answers as the visitor's own seat turns the panel plain.
   const place = () => {
     const art = el('sign-in-art');
-    const names = doorPictures(invitation, { left });
-    if (!art || !signedOut || art.dataset.pictures === names.join(' ')) return;
+    const names = doorPictures(invitation, { left, guest });
+    if (!art || !(signedOut || guest) || art.dataset.pictures === names.join(' ')) return;
     art.dataset.pictures = names.join(' ');
     art.replaceChildren(...names.map(name => drawn(doc, name)));
   };
+  // The lesson's way (UX15): filled and first on the lesson door, an outline under the ways in on the plain door.
+  const offer = () => {
+    const way = el('lesson-way'), form = el('dev-sign-in'), start = el('guest-start');
+    if (!way || !start) return;
+    const { offered, filled } = lessonWay(invitation, { left, lesson, guest });
+    way.hidden = !offered;
+    start.classList.toggle('primary', filled);
+    start.classList.toggle('secondary', !filled);
+    el('guest-start-line').hidden = filled;
+    el('sign-in-or').hidden = !filled;
+    // The reading and the focus order follow what is filled: the lesson before the ways in on the lesson door.
+    const or = el('sign-in-or');
+    if (filled && or && way.nextElementSibling !== or) or.before(way);
+    if (!filled && form && form.nextElementSibling !== way) form.after(way);
+    // The developer's Sign in is the filled action only where nothing else is: an outline beside the lesson, and on a
+    // guest's keep panel while a lesson is featured above it (the lobby says so with `data-lesson-ahead`).
+    const quiet = filled || (guest && el('sign-in-panel').dataset.lessonAhead === 'true');
+    el('dev-sign-in-submit')?.classList.toggle('primary', !quiet);
+    el('dev-sign-in-submit')?.classList.toggle('secondary', quiet);
+  };
   const draw = () => {
-    const words = doorWords(invitation, { left });
+    const words = doorWords(invitation, { left, lesson, guest });
     el('sign-in-eyebrow').textContent = words.eyebrow;
     el('sign-in-title').textContent = words.title;
     // An invitation's title waits for the host to name who invites: its room is held for the longest it can be, a
@@ -149,11 +204,13 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
     // The format is not known before the host answers either: the room assumes one. A spent link keeps the room too.
     el('sign-in-title-room').textContent = invitation ? doorWords({ inviter: LONGEST_NAME, format: invitation.format ?? '3v3' }).title : '';
     el('sign-in-game').textContent = words.game;
+    el('sign-in-game').hidden = !words.game;
     el('sign-in-account').textContent = words.account;
-    el('sign-in-panel').dataset.door = invitation ? 'invited' : left ? 'left' : 'plain';
-    const next = nameNext({ invitation });
+    el('sign-in-panel').dataset.door = guest ? 'guest' : invitation ? 'invited' : left ? 'left' : lesson ? 'lesson' : 'plain';
+    const next = nameNext({ invitation, guest });
     // Never hidden, only empty: a live region shown and filled in one step is often not announced.
     el('name-next').textContent = next ?? '';
+    offer();
     place();
   };
 
@@ -165,9 +222,35 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
   }
   draw();
 
+  // Play the first tutorial (ADR 0207, UX15): the host makes the guest on the press, never on the page's load, so a
+  // crawler that follows the showcase's link spends none of the guests an hour; then the page goes to tutorial 1.
+  const start = el('guest-start');
+  start?.addEventListener('click', async () => {
+    const words = start.textContent, problem = el('sign-in-problem');
+    problem.hidden = true; problem.textContent = '';
+    start.disabled = true; start.textContent = 'Opening the tutorial…'; start.setAttribute('aria-busy', 'true');
+    let leaving = false;
+    try {
+      await request('/api/account/guest', {});
+      const link = firstTutorial(await request('/api/tutorials').catch(() => null));
+      // The guest is made: with no tutorial on this host, its home says so.
+      leaving = true;
+      if (link) { try { session?.setItem?.(OFFERED_KEY, '1'); } catch { /* Opened from the press all the same. */ } go(link); } else go('/');
+    } catch (error) {
+      problem.textContent = error?.status ? error.message : 'Could not reach the host. Check the connection and try again.';
+      problem.hidden = false;
+    } finally {
+      // A page on its way to the lesson keeps the button as it is: a second press would ask again.
+      if (!leaving) { start.disabled = false; start.textContent = words; start.removeAttribute('aria-busy'); }
+    }
+  });
+  // A page brought back from the back-forward cache gives the button back.
+  globalThis.addEventListener?.('pageshow', event => { if (event.persisted && start) { start.disabled = false; start.textContent = 'Play the first tutorial'; start.removeAttribute('aria-busy'); } });
+
   return {
     signedOut() {
       signedOut = true;
+      if (guest) { guest = false; draw(); }
       if (takeSignedOut(session)) {
         left = true;
         draw();
@@ -176,6 +259,20 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
         return;
       }
       place();
+    },
+    /** A guest is signed in: the panel becomes its keep panel, the ways in kept (UX15). */
+    guest() {
+      signedOut = false;
+      if (!guest) { guest = true; left = false; draw(); }
+    },
+    /** A member is signed in: the panel is hidden by account.js; the door forgets the guest. */
+    member() {
+      if (guest) { guest = false; draw(); }
+    },
+    /** Whether a lesson is featured above a guest's keep panel: its sign-in is then an outline. */
+    lessonAhead(ahead) {
+      el('sign-in-panel').dataset.lessonAhead = String(Boolean(ahead));
+      offer();
     },
     lesson(card) {
       const next = nameNext({ lesson: card });

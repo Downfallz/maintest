@@ -1,4 +1,4 @@
-import { coachCard, coachHint, finishedSeries, leavePath, leavingSkips, nextLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
+import { coachCard, coachHint, finishedSeries, guestEnd, leavePath, leavingSkips, nextLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf } from '../../table/battle-tutorial.js';
 import { iconElement } from '../../table/icons.js';
 import { NO_CONCEPTS, RULES_BOOK, loadConcepts } from '../../table/concepts.js';
 
@@ -208,7 +208,9 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
   /** The coach card's step, its lines and its concept cards, or its end and the lesson that follows. */
   function drawCard(card: Coach, lesson: ReturnType<typeof tutorialOf>) {
     text('coach-step', card.eyebrow);
-    el('coach-lines').replaceChildren(...paragraphs(card.lines));
+    // A guest's end adds where its progress is kept and the way to keep it (UX15); the header's navigation marks a guest.
+    const keep = card.done ? guestEnd(lesson, { guest: document.body.dataset.guest === 'true' }) : null;
+    el('coach-lines').replaceChildren(...paragraphs(keep ? [...card.lines, keep.line] : card.lines));
     el('coach-cards').replaceChildren(...card.cards.map((one: Concept) => {
       const button = document.createElement('button'); button.type = 'button'; button.dataset.concept = one.id;
       const mark = document.createElement('span'); mark.setAttribute('aria-hidden', 'true'); mark.textContent = ' ⓘ';
@@ -222,8 +224,14 @@ export function tutorialControls(onChange: () => void, request: (path: string, o
     const next = card.done ? nextLesson(lesson) : null;
     el('coach-next').hidden = !next;
     if (next) { text('coach-next', next.label); el<HTMLAnchorElement>('coach-next').href = next.link; }
-    // Play again is filled only where no lesson follows: the series is the point (UX8).
-    el('coach-again').classList.toggle('primary', Boolean(card.done && !next));
+    // Play again is filled only where no lesson follows: the series is the point (UX8). A guest's sign-in takes that
+    // place at the last lesson (UX15), and takes Leave's place on every end, Leave standing in the band.
+    el('coach-again').classList.toggle('primary', Boolean(card.done && !next && !keep));
+    const leaveLink = el<HTMLAnchorElement>('coach-leave');
+    text('coach-leave', keep ? keep.label : 'Leave the tutorial');
+    leaveLink.href = keep ? keep.link : '/';
+    leaveLink.classList.toggle('primary', Boolean(keep?.filled));
+    leaveLink.classList.toggle('keep-tutorials', Boolean(keep));
   }
   /** The end arrives: its first way on takes the focus, once it stands where it stays, when nothing else holds it. */
   function focusEnd() {

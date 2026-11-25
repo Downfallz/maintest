@@ -5,6 +5,7 @@ import { settled } from './fit.js';
 const player = { id: 'acct_aaaaaaaaaaaaaaaa', username: 'MarcF' };
 const friend = { id: 'acct_bbbbbbbbbbbbbbbb', username: 'Bastien' };
 const challenger = { id: 'acct_cccccccccccccccc', username: 'Alex' };
+const guest = { id: 'acct_dddddddddddddddd', username: 'Guest-7KQ2', guest: true };
 const battle = {
   id: 'battle-one', format: '3v3', over: false, waiting: false, openSeats: 0, round: 3,
   seats: [{ seat: 'player1', kind: 'person', name: 'MarcF', turn: true }, { seat: 'player2', kind: 'person', name: 'Bastien' }],
@@ -48,6 +49,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (ways && path.startsWith('/api/account/identities')) return ways.answer(route, path);
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
+    // A guest made on the press (ADR 0207, UX15): the host's answer, as `AccountGuestApiTests` reads it.
+    if (path === '/api/account/guest') { state.guestsMade = (state.guestsMade ?? 0) + 1; if (state.refuseGuests) return route.fulfill({ status: 429, json: { error: 'Account.TooManyGuests', message: 'Too many guests from your network just now. Try again later, or sign in.' } }); state.account = guest; return json({ account: guest }); }
     if (path === '/api/lobby') {
       if (state.offline) return route.fulfill({ status: 503, json: { message: 'Offline' } });
       return json({ recording: true, format: '3v3', formats: ['3v3', '2v2', '1v1'], ongoing: state.publicTables.length, open: state.publicTables.filter(one => one.openSeats > 0).length });
@@ -153,7 +156,7 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
   await page.route('**/battle?scenario=*', route => route.fulfill({ contentType: 'text/html', body: '<title>Tutorial</title>' }));
   await page.goto(`/table/lobby.html${search}`);
   if (opensTutorial) return state;
-  await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : mode === 'off' ? 'local' : 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', account ? 'member' : mode === 'off' ? 'local' : 'visitor');
   return state;
 }
 
@@ -372,7 +375,7 @@ test('a sign out is asked under the Predator at rest, Sign out filled; the panel
   await expect(page.locator('#action-confirm')).toBeInViewport();
   await page.locator('#action-confirm').click();
   // The panel after a sign out: the Predator at rest alone, the goodbye's words, its title focused.
-  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'visitor');
   expect(state.signouts).toEqual([{ everywhere: false }]);
   const panel = page.locator('#sign-in-panel');
   await expect(panel).toHaveAttribute('data-door', 'left');
@@ -446,7 +449,7 @@ test('sign-out clears private content even when an earlier game request finishes
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.locator('#action-dialog')).toContainText('Sign out on this device?');
   await page.locator('#action-confirm').click();
-  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'visitor');
   expect(state.signouts).toEqual([{ everywhere: false }]);
   state.release();
   await expect(page.locator('#my-tables .game-card')).toHaveCount(0);
@@ -688,7 +691,7 @@ test('the account menu holds Settings, Report or suggest and Sign out; the accou
   expect(state.signouts).toBeUndefined();
   await page.locator('#sign-out-everywhere').click();
   await page.locator('#action-confirm').click();
-  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'visitor');
   expect(state.signouts).toEqual([{ everywhere: true }]);
 });
 
@@ -1404,7 +1407,7 @@ test('with nothing waiting the bell shows no count and says so; a guest has no b
   await page.locator('#account-menu summary').click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await page.locator('#action-confirm').click();
-  await expect(page.locator('body')).toHaveAttribute('data-home', 'guest');
+  await expect(page.locator('body')).toHaveAttribute('data-home', 'visitor');
   await expect(page.locator('#inbox-open')).toBeHidden();
 });
 
@@ -2222,4 +2225,64 @@ test('the window that names a new account has no word under 11 px', async ({ pag
   await page.evaluate(() => window.googleSignIn({ credential: 'a-token-google-signed' }));
   await expect(page.locator('#name-dialog')).toBeVisible();
   expect(await under11(page)).toEqual([]); expect(state.errors).toEqual([]);
+});
+
+// UX15, a lesson before an account (docs/art/journeys/doors.md): the lesson door, a guest made on the press, the
+// guest's home that asks the host nothing it refuses a guest.
+const guestSeries = done => ({ opens: null, tutorials: [
+  { id: 'sc-repo-tutorial-your-first-combat', order: 1, of: 2, title: 'Your first combat', goal: 'Cast a spell.', state: done ? 'done' : 'new', link: '/battle?scenario=sc-repo-tutorial-your-first-combat' },
+  { id: 'sc-repo-tutorial-who-acts-first', order: 2, of: 2, title: 'Who acts first', goal: 'Choose when each acts.', state: 'new', link: '/battle?scenario=sc-repo-tutorial-who-acts-first' },
+] });
+
+test('the showcase\'s lesson door offers tutorial 1 first, makes a guest only on the press, then opens tutorial 1', async ({ page }) => {
+  const state = await home(page, { account: null, search: '?try=lesson', tutorials: guestSeries(false) });
+
+  await expect(page.locator('#sign-in-panel')).toHaveAttribute('data-door', 'lesson');
+  await expect(page.getByRole('heading', { name: 'Learn the game first.' })).toBeVisible();
+  const start = page.getByRole('button', { name: 'Play the first tutorial' });
+  await expect(start).toHaveClass(/primary/);
+  await expect(page.locator('#dev-sign-in-submit')).not.toHaveClass(/primary/);
+  expect(state.guestsMade ?? 0).toBe(0);
+  await start.click();
+  await page.waitForURL('**/battle?scenario=sc-repo-tutorial-your-first-combat');
+  expect(state.guestsMade).toBe(1);
+});
+
+test('the plain door offers the lesson as an outline under the sign-in, and says the host\'s refusal of a guest', async ({ page }) => {
+  const state = await home(page, { account: null, tutorials: guestSeries(false) });
+  state.refuseGuests = true;
+
+  const start = page.getByRole('button', { name: 'Play the first tutorial' });
+  await expect(start).not.toHaveClass(/primary/);
+  await expect(page.locator('#dev-sign-in-submit')).toHaveClass(/primary/);
+  await start.click();
+  await expect(page.locator('#sign-in-problem')).toHaveText('Too many guests from your network just now. Try again later, or sign in.');
+  await expect(start).toBeEnabled();
+});
+
+test('a guest\'s home features its next lesson, asks it to keep its tutorials, and reads nothing the host refuses a guest', async ({ page }) => {
+  const state = await home(page, { account: guest, search: '#keep-tutorials', tutorials: guestSeries(true) });
+
+  await expect(page.locator('body')).toHaveAttribute('data-guest', 'true');
+  await expect(page.locator('#sign-in-panel')).toHaveAttribute('data-door', 'guest');
+  await expect(page.getByRole('heading', { name: 'Keep your tutorials.' })).toBeFocused();
+  await expect(page.locator('#featured-action')).toHaveText('Continue →');
+  await expect(page.locator('#learn-to-play')).toBeVisible();
+  for (const hidden of ['#my-games-section', '#tables-section', '#new-table', '#inbox-open', '#friends-open', '#leaderboard-link', '#stats-link', '#feedback-open-nav']) await expect(page.locator(hidden)).toBeHidden();
+  await expect(page.locator('#account-menu summary')).toHaveAttribute('aria-label', 'Account: playing as a guest');
+  await expect(page.locator('#account-name')).toHaveText('Guest');
+  expect(state.privateReads).toEqual([]);
+  expect(state.requested.filter(path => /^\/api\/(friends|account\/notices|lobby\/mine|lobby\/push)/.test(path))).toEqual([]);
+});
+
+test('a guest signing out is asked first, the safe answer focused, and lands on the plain door with no goodbye', async ({ page }) => {
+  await home(page, { account: guest, tutorials: guestSeries(true) });
+
+  await page.locator('#account-menu summary').click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Sign out and lose your tutorials?' })).toBeVisible();
+  await expect(page.locator('#action-cancel')).toBeFocused();
+  await expect(page.locator('#action-confirm')).toHaveClass(/danger/);
+  await page.locator('#action-confirm').click();
+  await expect(page.locator('#sign-in-panel')).toHaveAttribute('data-door', 'plain');
 });

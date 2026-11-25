@@ -111,6 +111,28 @@ test('a sign out is asked with its own words, the action filled and the way back
   assert.deepEqual(signOutWords(true), { title: 'Sign out everywhere?', detail: 'You will need to sign in again on every device.', action: 'Sign out everywhere', keep: 'Stay signed in' });
 });
 
+test('a guest is asked before it signs out and loses its tutorials, the safe answer first and nothing filled (UX15)', async () => {
+  const { signOutWords } = await import('./account.js');
+  assert.deepEqual(signOutWords(false, { guest: true }), {
+    title: 'Sign out and lose your tutorials?', detail: 'A guest\'s progress is kept in this browser only. Sign in first to keep it.',
+    action: 'Sign out and lose them', keep: 'Stay signed in', danger: true,
+  });
+});
+
+test('the account chip names a guest as one, never by the name the host drew for it (UX15)', async () => {
+  const { chipWords } = await import('./account.js');
+  assert.deepEqual(chipWords({ username: 'Guest-7KQ2', guest: true }), { name: 'Guest', initial: 'G', label: 'Account: playing as a guest', who: null, menuName: 'Playing as a guest' });
+  assert.deepEqual(chipWords({ username: 'bastien', guest: false }), { name: 'bastien', initial: 'B', label: 'Account: bastien', who: 'Signed in as', menuName: 'bastien' });
+});
+
+test('the panel is shown to nobody signed in and to a guest, hidden for a member and on a host without accounts', async () => {
+  const { panelHidden } = await import('./account.js');
+  assert.equal(panelHidden({ mode: 'dev', account: null }), false);
+  assert.equal(panelHidden({ mode: 'dev', account: { guest: true } }), false);
+  assert.equal(panelHidden({ mode: 'dev', account: { guest: false } }), true);
+  assert.equal(panelHidden({ mode: 'off', account: null }), true);
+});
+
 test('a sign out\'s confirmation wears the eye still open as its head, on each page that declares it, the eye in view', async () => {
   const { SIGN_OUT_HEAD } = await import('./account.js');
   const { HEADER_SCENE_PAGES } = await import('./navigation.js');

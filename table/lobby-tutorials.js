@@ -5,7 +5,8 @@
 
 import { pictureElement } from './picture.js';
 
-const OFFERED_KEY = 'downfall.arena.tutorial-offered.v1';
+/** The tab's mark that tutorial 1 was offered: it opens by itself once a tab (`opensByItself`). */
+export const OFFERED_KEY = 'downfall.arena.tutorial-offered.v1';
 
 /**
  * Each lesson's painting (docs/art/journeys/lessons.md, UX8): the series read as growth, from the creature a team

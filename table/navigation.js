@@ -240,7 +240,7 @@ export function memberOf(account) {
 export function headerShows(account, mode) {
   const guest = Boolean(account?.guest), member = Boolean(account) && !guest;
   return {
-    home: account ? 'member' : mode === 'off' ? 'local' : 'guest',
+    home: account ? 'member' : mode === 'off' ? 'local' : 'visitor',
     guest,
     join: member || (!account && mode === 'off'),
     friends: member,

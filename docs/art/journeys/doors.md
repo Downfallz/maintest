@@ -108,7 +108,7 @@ keeps its English name in French, as the French rulebook writes it (Incinerate).
 No text is laid on either: each is a plate, its section's words above and below it.
 
 UX15 adds one quiet link under the hero's Play now and How to play: Try a tutorial first → (Essayer d’abord un
-tutoriel →), to `/?try=lesson`, [the lesson door](#the-lesson-door-from-the-showcase-new). Four words more in each
+tutoriel →), to `/lobby?try=lesson`, [the lesson door](#the-lesson-door-from-the-showcase-new). Four words more in each
 language, 745 in English and 834 in French, under both budgets. It is a link, not a button: Play now stays the
 hero's one filled action and keeps its place, the link coming after it in the reading order and in the focus
 order. Its target is 44 px tall, so the measure keeps none of the controls under 44.
@@ -1170,7 +1170,7 @@ None. The friend has just seen the sign-in panel's pictures; the battle view com
 
 ### Job
 
-A visitor who pressed Try a tutorial first under the showcase hero lands on the game's panel at `/?try=lesson`:
+A visitor who pressed Try a tutorial first under the showcase hero lands on the game's panel at `/lobby?try=lesson`:
 the plain door, with the lesson first. Nothing is made on the page's load. The guest is made on the press, so a
 crawler that follows the link spends none of the three hundred guests an hour the host allows (ADR 0207). Anyone
 the host already knows, a guest included, gets their home, as on any address. The walk gains it as
@@ -1264,7 +1264,7 @@ No ambience, as the plain door. The step ends where tutorial 1's brief begins, a
 
 ### Left
 
-- The address `/?try=lesson`, and the guest made on the press alone, are the session's proposal, which this brief
+- The address `/lobby?try=lesson`, and the guest made on the press alone, are the session's proposal, which this brief
   keeps. The tutorial does not open by itself from it: `opensByItself` waits for a plain visit, and this one has
   a query.
 - The door keeps the Revenant, not the base creature tutorial 1 starts from: that one is declared for the home,

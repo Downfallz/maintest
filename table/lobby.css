@@ -316,6 +316,20 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
 .sign-in-actions .code-flow-button:hover:not(:disabled) { background: #303134; }
 .sign-in-actions .code-flow-button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .way-logo { box-sizing: border-box; display: block; width: 36px; height: 36px; padding: 8px; border-radius: 3px; background: #fff; }
+/* The lesson's way (UX15): an outline and its line under the ways in on the plain door, the filled action on the lesson
+   door, with the line that offers the sign-in under it. Its button is as wide as the ways in. */
+.lesson-way { display: grid; gap: 6px; justify-items: start; margin-top: 8px; }
+.lesson-way[hidden], .sign-in-or[hidden] { display: none; }
+.lesson-way > button { width: min(100%, 280px); min-height: 44px; }
+.sign-in-panel[data-door="lesson"] .lesson-way { margin-top: 0; }
+.sign-in-actions .sign-in-or { margin-top: 10px; font-size: 14px; }
+/* A guest's keep panel (UX15): under the featured lesson, no painting, the words alone on the soot. */
+.sign-in-panel[data-door="guest"] { min-height: 0; margin-block: 0 clamp(24px, 4vw, 48px); }
+.sign-in-panel[data-door="guest"]::before { content: none; }
+.sign-in-panel[data-door="guest"] .sign-in-content h2 { max-width: 100%; font-size: clamp(30px, 4vw, 52px); }
+/* A guest's home asks the host nothing it refuses a guest (ADR 0207): its games, the open seats, its opponents, the
+   practices and a new battle are not drawn. */
+body[data-guest="true"] :is(#new-table, .featured-shortcuts, #lobby-status, #invitations, #my-games-section, #opponents, #practice-scenarios, #tables-section) { display: none; }
 .sign-in-policy { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--muted); font-size: 13px; }
 .sign-in-policy:hover { color: var(--gold); }
 .name-check-room { min-height: 30px; }

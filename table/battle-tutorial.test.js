@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { conceptsOf } from './concepts.js';
-import { CONTROLS, assistedQuestion, coachCard, coachHint, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, finishedSeries, lessonStep, nextLesson, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted } from './battle-tutorial.js';
+import { CONTROLS, assistedQuestion, coachCard, coachHint, holdsTheNextRound, leavePath, lessonOverText, leavingSkips, finishedSeries, lessonStep, nextLesson, pastTheLesson, progressPath, tutorialBand, tutorialBrief, tutorialOf, withoutAssisted, guestEnd } from './battle-tutorial.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const concepts = conceptsOf(JSON.parse(readFileSync(join(root, 'table/rules.json'), 'utf8')));
@@ -234,4 +234,23 @@ test('the account\'s progress is said for the view\'s tutorial, skipped or done,
   assert.equal(progressPath(view(), 'done'), '/api/tutorials/sc-repo-tutorial-your-first-combat/done');
   assert.equal(progressPath(view(), 'forget'), null);
   assert.equal(progressPath({ practice: { scenario: 'sc-1' } }, 'skip'), null);
+});
+
+// UX15 (docs/art/journeys/doors.md, the lesson's end for a guest): the end asks a guest to sign in to keep its tutorials.
+test('a guest\'s lesson end says where its progress is kept and what an account opens, and offers to sign in to keep it', () => {
+  const lesson = { order: 1, of: 4, title: 'Your first combat', done: true, steps: [{}], next: { title: 'Who acts first', link: '/battle?scenario=two' } };
+
+  assert.deepEqual(guestEnd(lesson, { guest: true }), {
+    line: 'Your progress is kept in this browser only. An account keeps your tutorials and settings, and opens battles against bots and players, friends and the ladder.',
+    label: 'Sign in to keep them', link: '/#keep-tutorials', filled: false,
+  });
+});
+
+test('at a guest\'s last lesson, nothing left to learn, signing in is the filled action', () => {
+  assert.equal(guestEnd({ order: 4, of: 4, done: true, steps: [{}] }, { guest: true }).filled, true);
+});
+
+test('a member, and a lesson not done, get no ask to sign in', () => {
+  assert.equal(guestEnd({ order: 1, of: 4, done: true, steps: [{}] }, { guest: false }), null);
+  assert.equal(guestEnd({ order: 1, of: 4, done: false, steps: [{}] }, { guest: true }), null);
 });

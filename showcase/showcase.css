@@ -49,6 +49,8 @@ h1 em { color: var(--gold); font-style: normal; }
 .gold-button:hover { color: var(--accent-ink); background: var(--accent-strong); }
 .gold-button:focus-visible { outline-color: var(--accent-ink); outline-offset: -5px; }
 .discover { gap: 12px; color: var(--ink); }
+/* The lesson before an account (UX15): a quiet link under Play now, which stays the hero's one filled action. */
+.try-lesson { margin-top: 4px; color: var(--muted); }
 .hero-beast { position: absolute; z-index: -1; right: max(3%, calc((100vw - 1440px) / 2)); bottom: 10%; width: min(54%, 850px); max-width: none; height: 80%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 18px 9px rgb(0 0 0 / .75)); }
 .specimen { position: absolute; right: 0; bottom: 21px; display: grid; gap: 2px; text-align: right; padding-right: 12px; border-right: 2px solid var(--brand-ember); text-shadow: 0 1px 6px var(--soot); }
 .specimen strong { font-size: 22px; line-height: 1.1; }

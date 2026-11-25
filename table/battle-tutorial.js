@@ -66,6 +66,19 @@ export function nextLesson(lesson) {
 }
 
 /**
+ * What a lesson's end adds for a guest (ADR 0207, UX15): where its progress is kept, what an account keeps and opens,
+ * and the way to sign in, to the guest's home at its keep panel. Filled only where no lesson follows: the series is the
+ * point. None for a member, or before the host says the lesson is done.
+ */
+export function guestEnd(lesson, { guest = false } = {}) {
+  if (!guest || !lesson?.done) return null;
+  return {
+    line: 'Your progress is kept in this browser only. An account keeps your tutorials and settings, and opens battles against bots and players, friends and the ladder.',
+    label: 'Sign in to keep them', link: '/#keep-tutorials', filled: !nextLesson(lesson),
+  };
+}
+
+/**
  * The hint a step shows once the person turned away from its question (UX8): the words on the control that asks
  * it, read from the page. The page names a button; it decides no move.
  */
