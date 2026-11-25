@@ -129,8 +129,10 @@ test('each refusal reads as a sentence the player can act on', () => {
   assert.equal(refusalSentence(500, null), 'The host did not answer. Your words are kept here: try again.');
 });
 
-test('only the mute hides the entry', () => {
+test('only the mute, and a guest the host keeps out, hide the entry', () => {
   assert.equal(mutedBy(403, { error: 'Feedback.Muted' }), true);
+  // A guest sends no feedback, even from its lesson (ADR 0207): the host says so, and the entry goes.
+  assert.equal(mutedBy(403, { error: 'Account.GuestNotAllowed' }), true);
   assert.equal(mutedBy(403, { error: 'Feedback.NotYourSeat' }), false);
   assert.equal(mutedBy(429, { error: 'Feedback.TooMany' }), false);
 });
