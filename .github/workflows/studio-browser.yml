@@ -192,8 +192,9 @@ jobs:
       ENGINE: chromium
     # The checks of accessibility (table.access.js, UX13) walk every journey at two widths, doubling every element's
     # text on each screen: about fifteen minutes a project on top of the twelve the job took before them, and room
-    # for a retry of a failed journey.
-    timeout-minutes: 50
+    # for a retry of a failed journey. The walk under less motion (table.motion.js, UX14) walks them again, without the
+    # checks: about eight minutes more a project.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

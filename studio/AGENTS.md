@@ -39,6 +39,10 @@ npm --prefix studio/browser ci --ignore-scripts && npm --prefix studio/browser t
   `scripts/ux/access-known.json` fails it, and so does a line there the walk no longer finds: a change that fixes
   one cuts its line. A line marked `~ ` is unsteady (some walks find it, some do not): it never fails the walk, new
   or gone. axe is never in the list.
+- `browser/table.motion.js` (UX14) walks every journey with the system's less motion: a screen reached after a
+  `transform`, `translate`, `scale` or `rotate` that lasts a millisecond, or still animating at rest, fails it
+  (`scripts/ux/motion.mjs`). Its watch listens on the window and hands what it sees to the walk at once: a fixture
+  built with `setContent` loses the listeners, so load the page with `goto`. A screen whose page lacks it stops the walk. `ux-acceptance.test.js` holds `scripts/ux/acceptance.mjs` and the record.
 - `journey-briefs.test.js` holds each brief of `docs/art/journeys/` to its nine parts, to the screens its journey's
   walk names (`scripts/ux/journeys.mjs`), to the craft book's headings and to the declared tokens: a screen or a
   heading renamed there renames it in the brief, in the same change.

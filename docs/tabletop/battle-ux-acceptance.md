@@ -161,5 +161,9 @@ bytes is documented in `battle/README.md`; this pass does not claim to have solv
 - [ ] **Device performance:** physical frame/memory/thermal measurements over a complete match, including
   dense history. Revisit server-side history pagination separately while preserving seat privacy.
 
+The pages' craft has two of the same gates for the pages, from the doors to a match's result: a newcomer watched
+and a physical phone. The pages' record, [`docs/art/ux-acceptance.md`](../art/ux-acceptance.md), holds the steps
+for the owner.
+
 No physical devices or human first-time participants were available in this workspace. These gates are
 left open explicitly; AU14's automated evidence does not authorize making the battle view the default.
