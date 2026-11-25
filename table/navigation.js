@@ -289,7 +289,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   const showAgain = mountShowAgain(doc);
   // Report or suggest (ADR 0189), in the account menu: a signed-in player's, sent as the account. The battle view's own
   // sheet answers the entry there.
-  if (page !== 'battle') mountFeedback(doc, { errors: pageErrors, fallbackFocus: () => el('account-menu').querySelector('summary') });
+  const feedback = page !== 'battle' ? mountFeedback(doc, { errors: pageErrors, fallbackFocus: () => el('account-menu').querySelector('summary') }) : null;
   // The bell's actions are the Friends panel's and the lobby's: a friend accepted there is read again here, and
   // the page that mounted the navigation is told what changed.
   let friends = null;
@@ -319,7 +319,7 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
   });
   el('code').addEventListener('input', () => { el('join-problem').hidden = true; });
   ways = mountWays(doc, { openSettings: navigation.openSettings });
-  let previous = null;
+  let previous = null, told = false;
   let lastMe = null;
   void mountAccount(doc, {
     signOutPage: HEADER_SCENE_PAGES[page] ?? null,
@@ -337,6 +337,10 @@ export function mountNavigation(doc, storage, { onInvite, onChange = () => {}, o
     },
     onChange(account, mode) {
       if (previous && !account && page !== 'lobby') { location.replace('/lobby'); return; }
+      // Another account may send feedback where the last could not: a guest upgraded on the page (ADR 0207) is asked again.
+      // The first answer is the one the sheet asked about when it mounted.
+      if (told && ((previous?.id ?? null) !== (account?.id ?? null) || Boolean(previous?.guest) !== Boolean(account?.guest))) void feedback?.ask();
+      told = true;
       previous = account;
       header.hidden = game && !account;
       navigation.setAccount(account, mode);

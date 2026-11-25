@@ -49,6 +49,8 @@ async function home(page, { account = player, mode = 'dev', delayMine = false, o
     if (ways && path.startsWith('/api/account/identities')) return ways.answer(route, path);
     if (path === '/api/account/signout') { state.signouts ??= []; state.signouts.push(route.request().postDataJSON()); state.account = null; return json({}); }
     if (path === '/api/account/dev') { state.account = player; return json({}); }
+    // Whether the player may send feedback (#717): a guest may not (ADR 0207), as TableServerGuestTests reads it.
+    if (path === '/api/feedback' && route.request().method() === 'GET') return state.account?.guest ? route.fulfill({ status: 403, json: { error: 'Account.GuestNotAllowed', message: 'A guest plays the tutorials only.' } }) : route.fulfill({ status: 204, body: '' });
     // A guest made on the press (ADR 0207, UX15): the host's answer, as `AccountGuestApiTests` reads it.
     if (path === '/api/account/guest') { state.guestsMade = (state.guestsMade ?? 0) + 1; if (state.refuseGuests) return route.fulfill({ status: 429, json: { error: 'Account.TooManyGuests', message: 'Too many guests from your network just now. Try again later, or sign in.' } }); state.account = guest; return json({ account: guest }); }
     if (path === '/api/lobby') {
@@ -2291,4 +2293,16 @@ test('a guest signing out is asked first, the safe answer focused, and lands on 
   await expect(page.locator('#action-confirm')).toHaveClass(/danger/);
   await page.locator('#action-confirm').click();
   await expect(page.locator('#sign-in-panel')).toHaveAttribute('data-door', 'plain');
+});
+
+test('a guest who signs in on the page is offered Report or suggest again once it is an account', async ({ page }) => {
+  await home(page, { account: guest, tutorials: guestSeries(true) });
+  await expect(page.locator('html')).toHaveAttribute('data-feedback-muted', 'true');
+
+  await page.locator('#dev-username').fill('MarcF');
+  await page.locator('#dev-sign-in button[type="submit"]').click();
+  await expect(page.locator('body')).not.toHaveAttribute('data-guest', 'true');
+  await page.locator('#account-menu summary').click();
+
+  await expect(page.locator('#feedback-open-nav')).toBeVisible();
 });
