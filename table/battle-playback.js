@@ -177,7 +177,10 @@ export function createAnnouncer(region, later) {
     if (pending && key === told.key && value === told.value) return;
     const again = value !== '' && key !== told.key && value === region.textContent;
     told = { key, value }; pending = false;
-    if (!again) { if (region.textContent !== value) region.textContent = value; return; }
+    if (!again) {
+      if (region.textContent !== value) { region.textContent = value; }
+      return;
+    }
     region.textContent = ''; pending = true;
     later(() => { if (pending && told.key === key && told.value === value) { pending = false; region.textContent = value; } });
   };
