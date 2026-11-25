@@ -784,6 +784,36 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_seats_test_whose_keys_cannot_be_used_names_the_seat_pages_own_button()
+    {
+        var sender = new Refusing { Failure = new System.Security.Cryptography.CryptographicException("The point is not on the curve.") };
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var token = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!.Seats[0].Token;
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+
+        var test = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+
+        JsonDocument.Parse(test.Body).RootElement.GetProperty("message").GetString()
+            .ShouldBe("This device's subscription could not be used. Tap \"Stop notifying me\", then \"Notify me when it's my turn\".");
+    }
+
+    [Fact]
+    public async Task A_seat_on_a_host_without_push_keys_is_told_this_table_sends_no_notifications()
+    {
+        var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;
+        var token = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!.Seats[0].Token;
+
+        var subscribed = await Lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token);
+        var tested = await Lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+
+        subscribed.Status.ShouldBe(404);
+        JsonDocument.Parse(subscribed.Body).RootElement.GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+        tested.Status.ShouldBe(404);
+        JsonDocument.Parse(tested.Body).RootElement.GetProperty("message").GetString().ShouldBe("This table sends no notifications.");
+    }
+
+    [Fact]
     public async Task A_subscription_needs_a_seat_token_and_a_host_with_keys()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;

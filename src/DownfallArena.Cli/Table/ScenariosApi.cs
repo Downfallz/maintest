@@ -146,7 +146,7 @@ internal sealed class ScenariosApi(ScenarioStore store, ScenarioPractices practi
 
         return await accounts.NoteTutorialAsync(account, id, state) is { } kept
             ? StudioResponse.OfJson(new { id, state = Named(kept.StateOf(id)) }, ArtifactJson.LineOptions)
-            : Error("Account.NoPreferences", "This host keeps no game settings.", 404);
+            : Error("Account.NoPreferences", "This table keeps no game settings.", 404);
     }
 
     private static string Named(TutorialState state) => state switch

@@ -61,6 +61,27 @@ export function noticeButton({ supported, keyed, permission, subscribed, busy, p
   return { hidden: false, disabled: Boolean(busy), offered: true, label: 'Notify me when it\'s my turn', hint: 'Even with the screen off or the browser closed.' };
 }
 
+// What the notification pages say when this table cannot be reached, or refuses without a sentence of its own
+// (player-terminology.md, ## Notifications, #1266): Settings, the seat page and the battle view say it alike.
+export const UNREACHABLE = 'Could not reach this table. Try again.';
+export const answeredWith = status => `This table answered ${status}.`;
+
+// What a notification page says when the browser itself refuses to subscribe (a DOMException from `pushManager`):
+// its own words name the "push service", the engineers' word.
+export const BROWSER_REFUSED = 'This browser could not turn notifications on. Try again.';
+
+/**
+ * What a failed request of a notification page says: the host's own sentence (`own`, set by `accountRequest` for a
+ * refusal that carries its code), `answeredWith` its status when it carried none (a proxy's empty 502), UNREACHABLE
+ * when the request never reached it (`fetch` fails with a TypeError whose words are the browser's, "Failed to fetch"),
+ * and BROWSER_REFUSED when the browser would not subscribe.
+ */
+export function reachProblem(error) {
+  if (error?.status) return error.own ? error.message : answeredWith(error.status);
+  if (typeof DOMException === 'function' && error instanceof DOMException) return BROWSER_REFUSED;
+  return !error?.message || error instanceof TypeError ? UNREACHABLE : error.message;
+}
+
 // What the two test notices say together, for the phone to read against what appeared. The page shows one
 // itself, through the worker and no push service: whether this browser shows any for this site at all. The
 // host sends the other through the push service: whether a push reaches this browser. Both, only the page's,
@@ -74,7 +95,7 @@ export function testReading({ page, host, hostOk }) {
 }
 
 // Whether the host's answer to a test notice means it forgot this subscription, so the page lets go of it too: gone
-// from its push service (502), or kept on a push service the host does not send to (400, #1209). The next tap then
+// from its notification service (502), or kept on one the host does not send to (400, #1209). The next tap then
 // makes a new subscription, and the host says whether it takes it.
 export function testForgot({ status, error, message } = {}) {
   return (status === 502 && /gone/.test(message ?? '')) || (status === 400 && /\.UnknownPushService$/.test(error ?? ''));
@@ -90,7 +111,7 @@ export async function showOwnNotice(registration, scope = globalThis) {
   const permission = scope.Notification?.permission;
   if (permission && permission !== 'granted') return `the browser says notifications are ${permission} for this site`;
   try {
-    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. One from the host should follow.', tag: 'test:page', icon: '/icon-192.png', badge: '/notification-badge.png' });
+    await registration.showNotification('Notifications work on this phone', { body: 'Shown by the page itself. A notification from this table should follow.', tag: 'test:page', icon: '/icon-192.png', badge: '/notification-badge.png' });
   } catch (error) {
     return error?.message || String(error);
   }

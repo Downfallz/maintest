@@ -21,14 +21,15 @@ export function wayName(provider) {
 
 /**
  * The rows Settings draws: each way the account uses, removable where the host says so, then each way the host
- * offers that the account does not use yet, to add. `held` is the host's `identities`, `me` its `/api/me`.
+ * offers that the account does not use yet, to add. `held` is the host's `identities`, `me` its `/api/me`. A way
+ * the host says is `pending` is one whose removal stopped before it finished (#1262): drawn to finish removing.
  */
 export function wayRows(held, me) {
   const kept = (Array.isArray(held) ? held : []).filter(way => typeof way?.provider === 'string');
   const used = new Set(kept.map(way => way.provider));
   const offered = signInWays(me);
   return [
-    ...kept.map(way => ({ provider: way.provider, name: wayName(way.provider), held: true, removable: way.removable === true })),
+    ...kept.map(way => ({ provider: way.provider, name: wayName(way.provider), held: true, removable: way.removable === true, pending: way.pending === true })),
     ...offered.filter(way => !used.has(way.provider)).map(way => ({ provider: way.provider, name: wayName(way.provider), held: false, clientId: way.clientId })),
   ];
 }
@@ -36,6 +37,7 @@ export function wayRows(held, me) {
 /** The line under a way's name: whether the account signs in with it, and whether it can go. */
 export function wayHint(row) {
   if (!row.held) return 'You do not sign in with it yet.';
+  if (row.pending) return 'Its removal did not finish. You no longer sign in with it.';
   return row.removable ? 'You sign in with it.' : 'Your only way to sign in. Add another before you can remove it.';
 }
 
@@ -46,6 +48,16 @@ export function removeWords(provider) {
     title: `Remove ${name}?`,
     detail: `You will not be able to sign in with ${name} any more. You stay signed in here. Every other device is signed out, and pop-ups stop on all of them, this one too.`,
     action: `Remove ${name}`,
+  };
+}
+
+/** What finishing a removal that stopped asks first: the way is already out, and pop-ups stop. */
+export function finishWords(provider) {
+  const name = wayName(provider);
+  return {
+    title: `Finish removing ${name}?`,
+    detail: `You no longer sign in with ${name}. This finishes its removal. You stay signed in here. Pop-ups stop on every device, this one too.`,
+    action: 'Finish removing',
   };
 }
 
@@ -133,24 +145,24 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
       hint.textContent = wayHint(row);
       words.append(name, hint);
       item.append(words);
-      if (row.held && row.removable) item.append(removeButton(row.provider));
+      if (row.held && row.removable) item.append(removeButton(row.provider, row.pending));
       if (!row.held && Object.hasOwn(CODE_FLOWS, row.provider)) item.append(codeFlowButton(row));
       if (!row.held && row.provider === 'google') item.append(googleSlot(row));
       return item;
     }));
   }
 
-  function removeButton(provider) {
+  function removeButton(provider, pending) {
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'secondary';
-    button.textContent = 'Remove';
-    button.setAttribute('aria-label', `Remove ${wayName(provider)}`);
+    button.textContent = pending ? 'Finish removing' : 'Remove';
+    button.setAttribute('aria-label', `${pending ? 'Finish removing' : 'Remove'} ${wayName(provider)}`);
     button.addEventListener('click', async () => {
       quiet();
       const recent = recentOrAsk();
       if (!recent) return;
-      const words = removeWords(provider);
+      const words = pending ? finishWords(provider) : removeWords(provider);
       if (!await confirmAction(doc, words.title, words.detail, words.action)) return;
       button.disabled = true;
       const asking = account?.id;
@@ -159,7 +171,7 @@ export function mountWays(doc, { request = accountRequest, google = () => loadGo
         if (asking !== account?.id) return;
         draw(answer.identities);
         // The row and its button are gone: the line saying what happened takes the focus.
-        say('ways-note', `${wayName(provider)} removed. Other devices are signed out.`);
+        say('ways-note', pending ? `${wayName(provider)} removed.` : `${wayName(provider)} removed. Other devices are signed out.`);
         el('ways-note').focus?.();
       } catch (error) {
         button.disabled = false;
