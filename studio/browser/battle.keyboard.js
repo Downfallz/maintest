@@ -25,14 +25,17 @@ function listen() {
   const read = () => {
     for (const region of regions()) {
       const text = region.textContent.replace(/\s+/g, ' ').trim();
+      // The action a region tells is the one it names (#1267), else the one being played: a result settled without
+      // being played (the player's own cast arriving under a sheet) is told while no action plays.
+      const sequence = region.dataset.sequence ?? document.getElementById('battle')?.dataset.sequence ?? '';
       // A region says the same words again for another action: the action is what is new, not the words.
-      const said = `${text}\u0000${document.getElementById('battle')?.dataset.sequence ?? ''}`;
+      const said = `${text}\u0000${sequence}`;
       if (!text || last.get(region) === said) continue;
       last.set(region, said);
-      window.liveSaid.push({ region: region.id || region.className || region.tagName, text, sequence: Number(document.getElementById('battle')?.dataset.sequence ?? Number.NaN) });
+      window.liveSaid.push({ region: region.id || region.className || region.tagName, text, sequence: sequence === '' ? Number.NaN : Number(sequence) });
     }
   };
-  new MutationObserver(read).observe(document.body, { subtree: true, childList: true, characterData: true });
+  new MutationObserver(read).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['data-sequence'] });
 }
 
 const visible = (page, selector) => page.locator(selector).isVisible();

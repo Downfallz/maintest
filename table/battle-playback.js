@@ -165,6 +165,21 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
     struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes, roll };
 }
 
+// The one live region tells each result once (#1267). A new result that reads word for word as the one before is
+// cleared and written again a frame later: an unchanged text is not said again by a screen reader. The same result
+// drawn again says nothing. The region carries the sequence it tells.
+export function createAnnouncer(region, nextFrame) {
+  let told = { key: null, value: '' };
+  return (key, value) => {
+    region.dataset.sequence = key == null ? '' : String(key);
+    const again = value !== '' && key !== told.key && value === region.textContent;
+    told = { key, value };
+    if (!again) { if (region.textContent !== value) region.textContent = value; return; }
+    region.textContent = '';
+    nextFrame(() => { if (told.key === key && told.value === value) region.textContent = value; });
+  };
+}
+
 // One bounded queue per selected seat. Latest remains authoritative while historical frames are displayed.
 // The first read is a baseline (also after hidden-tab return); a sequence is consumed when queued, not when
 // its animation ends, so duplicate polls, skip and a cancelled callback can never repeat it.
@@ -315,7 +330,8 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // The last sequence the player has been shown in full: what a page closed now would resume after.
     const unread = [current?.first ?? current?.sequence, queue[0]?.first ?? queue[0]?.sequence].filter(Number.isInteger);
     const watermark = seen === null ? null : unread.length ? Math.min(...unread) - 1 : seen;
-    return { board, frame, summary, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null, watermark,
+    // `told` names the result `summary` says, played or settled, so the live region says which action it tells.
+    return { board, frame, summary, told: shown?.sequence ?? null, active: Boolean(current) || queue.length > 0, sequence: current?.sequence ?? null, watermark,
       stage, rate, mode, presented, read, receipt: current?.receipt ?? null, upkeep: current?.upkeep ?? null,
       paced: current?.upkeep ?? current?.aftermath ?? null,
       canNext: Boolean(current && stage === 'resolved'),

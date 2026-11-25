@@ -997,7 +997,7 @@ plays them through the kit, `src/fx/`:
 | `motif` | The spell's own motif, starting and lasting as the staging says. Drawn by `spell-effects.ts`. | each target |
 | `burst` | Particles at once from one point, in a fan: each leaves fast, slows, falls a little and fades. Aimed `down`, they drop off the figure and fall. | a figure |
 | `flow` | A steady stream from all over a figure, for as long as the beat lasts. | a figure |
-| `trail` | Particles left behind a head that travels from the caster to a target. Behind a projectile, on its arc. At the feet, a crack along the ground. | caster to target |
+| `trail` | Particles left behind a head that travels from the caster to a target. Behind a projectile, on its arc. At the feet, a crack along the ground. | caster to target; none to the caster itself (#949) |
 | `gather` | Particles that start on a ring around a figure and close on its outline. | a figure |
 | `glow` | One soft dot, blended as light, that swells and goes: a glow that costs one image. With `shape: ring`, a shock ring: a thin ring lying on the ground at the figure's feet, which opens to its `reach` over the whole beat and fades; aimed `along` or `back`, an arc on that side only, 120° unless its `spread` says. | a figure |
 | `flash` | The figure filled flat in one colour for a frame or two. One a staging. | a figure |

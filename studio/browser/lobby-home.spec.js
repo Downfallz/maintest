@@ -1563,9 +1563,20 @@ test('a lesson\'s creature breathes on the home, and is still behind the Friends
 // The featured space waits for the lessons and the games; the lessons were asked last, behind a dozen reads, and
 // a new player's home painted over its budget on the slow phone (#1207).
 test('a signed-in player\'s lessons are asked for before the lobby reads that player\'s games', async ({ page }) => {
+  // The order the page asks in, read in the page as each fetch is called (#1207). The route's own list is the order
+  // the requests reached the test process, which a loaded runner can swap for two asked in the same task (#1257).
+  await page.addInitScript(() => {
+    window.asked = [];
+    const fetched = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      window.asked.push(new URL(input instanceof Request ? input.url : String(input), location.href).pathname);
+      return fetched(input, init);
+    };
+  });
   const state = await home(page, { games: [], tutorials: series('skipped') });
   await expect(page.locator('#featured')).toHaveAttribute('data-featured', 'lesson');
-  const asked = state.requested.slice(state.requested.indexOf('/api/me'));
+  const calls = await page.evaluate(() => window.asked);
+  const asked = calls.slice(calls.indexOf('/api/me'));
   expect(asked).toEqual(expect.arrayContaining(['/api/tutorials', '/api/lobby/adopt']));
   expect(asked.indexOf('/api/tutorials')).toBeLessThan(asked.indexOf('/api/lobby/adopt'));
   expect(state.errors).toEqual([]);

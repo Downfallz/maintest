@@ -319,8 +319,9 @@ The sheets cannot show the feel at full speed, nor the sound.
   ring, dots and light over its wound from 960 ms. Nothing is left for the scene.
 - The guard ring opens over its whole beat; a ring that opens fast and then stands is a pattern the owner chose not
   to build (#950).
-- The trail on a1, its own ward, has no length: a1 is fed where it stands, and its drops stay at its own feet
-  for the trail's time. The owner may want a1's ward told apart, which the kit cannot do by target.
+- A trail from a1 to its own ward would have no length, its drops standing at a1's feet: the scene draws none
+  there (#949), and a1 is fed where it stands by the price at home. The owner may want a1's ward told apart, which
+  the kit cannot do by target.
 - The price is carried to the wards by a trail, the only blood that crosses the field in this family; the others
   bleed at home. A person could read the red line as a1 hurting its allies; the film says whether it does.
 - The permanent +3 and the +5 for 2 rounds are one ward on the field: the split is the status chips'.
