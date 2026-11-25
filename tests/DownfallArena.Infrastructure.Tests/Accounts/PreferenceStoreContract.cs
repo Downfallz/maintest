@@ -143,7 +143,7 @@ public abstract class PreferenceStoreContract
     {
         var store = await StoreAsync();
         var (settings, tutorials, both, gone) = (AccountId.New(), AccountId.New(), AccountId.New(), AccountId.New());
-        await store.SaveNoticesAsync(settings, new NoticePreferences(Turns: false, Invitations: true, Results: true), Cancel);
+        await store.SaveAsync(settings, GamePreferences.Default, Cancel);
         await store.SaveTutorialsAsync(tutorials, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
         await store.SaveTutorialsAsync(both, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
         await store.SaveNoticesAsync(both, NoticePreferences.Default, Cancel);

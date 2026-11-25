@@ -86,6 +86,49 @@ public sealed class TerminatedTests : IDisposable
         }
     }
 
+    /// <summary>The host puts its turns on the queue the variable names, the one table-worker takes from (#1259).</summary>
+    [Fact]
+    public async Task A_host_whose_turns_go_to_the_worker_puts_them_on_the_queue_the_variable_names()
+    {
+        Assert.SkipWhen(OperatingSystem.IsWindows(), "SIGTERM is a POSIX signal.");
+        if (!await EmulatorAsync())
+        {
+            Assert.Skip($"No storage emulator at {Emulator}: run `npx azurite` or set AZURITE_BLOB_ENDPOINT.");
+        }
+
+        var credential = new StorageSharedKeyCredential(EmulatorAccount, EmulatorKey);
+        var container = new BlobContainerClient(new Uri($"{Emulator.ToString().TrimEnd('/')}/terminated-{Guid.NewGuid():N}"), credential);
+        var queue = $"{AgentTurnWorker.Queue}-{Guid.NewGuid():N}"[..32];
+        var queues = new QueueServiceClient(new UriBuilder(Emulator) { Port = Emulator.Port + 1 }.Uri, credential);
+        try
+        {
+            await using var host = ChildCli.Start(new Dictionary<string, string> { [TableHost.TurnsQueueEnvironment] = queue }, "table", "--lobby", "--turns", "worker", "--port", $"{FreePort()}", "--schema", _content.SchemaPath, "--record", container.Uri.ToString());
+            var said = await host.LineAsync(line => line.StartsWith("  Turns: through the queue ", StringComparison.Ordinal), Cancel);
+
+            await host.TerminateAsync(Cancel);
+
+            said.ShouldStartWith($"  Turns: through the queue {queue},", customMessage: "the host puts its turns where the worker takes them");
+        }
+        finally
+        {
+            await container.DeleteIfExistsAsync(cancellationToken: CancellationToken.None);
+            await queues.GetQueueClient(queue).DeleteIfExistsAsync(CancellationToken.None);
+        }
+    }
+
+    [Theory]
+    [InlineData("table-worker")]
+    [InlineData("table")]
+    public async Task A_turns_queue_variable_that_names_no_queue_stops_the_command_with_1_and_says_why(string command)
+    {
+        await using var started = ChildCli.Start(new Dictionary<string, string> { [TableHost.TurnsQueueEnvironment] = "Agent_Turns" }, command, "--schema", _content.SchemaPath, "--record", "http://127.0.0.1:1/devstoreaccount1/none");
+
+        var exit = await started.ExitedAsync(Cancel);
+
+        exit.ShouldBe(1, string.Join(Environment.NewLine, started.Lines));
+        started.Lines.ShouldContain(line => line.StartsWith($"{TableHost.TurnsQueueEnvironment} names no queue", StringComparison.Ordinal));
+    }
+
     private const string EmulatorAccount = "devstoreaccount1";
 
     private const string EmulatorKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";

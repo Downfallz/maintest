@@ -104,6 +104,14 @@ internal sealed class ChildCli : IAsyncDisposable
             : throw new InvalidOperationException($"The process exited ({_process.ExitCode}) before the line was written:{Environment.NewLine}{string.Join(Environment.NewLine, Lines)}");
     }
 
+    /// <summary>The exit code of a process that stops by itself, within <see cref="Waits.Within" />.</summary>
+    public async Task<int> ExitedAsync(CancellationToken cancellationToken)
+    {
+        await _process.WaitForExitAsync(cancellationToken).WaitAsync(Waits.Within, cancellationToken);
+        _process.WaitForExit();
+        return _process.ExitCode;
+    }
+
     /// <summary>Sends SIGTERM, as the platform stops a replica it scales in, and returns the exit code once the process has stopped.</summary>
     public async Task<int> TerminateAsync(CancellationToken cancellationToken)
     {

@@ -29,14 +29,12 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
         List<Account> guests;
         HashSet<SharedKernel.Identifiers.AccountId> listed;
         Dictionary<SharedKernel.Identifiers.AccountId, AccountActivity> used;
-        IReadOnlyList<SharedKernel.Identifiers.AccountId> chose;
         try
         {
             var all = await accounts.ListAsync();
             guests = [.. all.Where(account => account.IsGuest)];
             listed = [.. all.Select(account => account.Id)];
             used = (await activity.ListAsync()).ToDictionary(one => one.Account);
-            chose = preferences is null ? [] : await preferences.ListAccountsAsync();
         }
         catch (Exception failure) when (Unreadable(failure))
         {
@@ -84,8 +82,20 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
             }
         }
 
-        // What a removed account left behind, by a pass that stopped between the account and the rest. Read again: an
-        // account made since the listing is not gone.
+        // What a removed account left behind, by a pass that stopped between the account and the rest. Listed after the
+        // removals, so a listing that fails costs only this sweep, never them. Read again: an account made since the
+        // listing is not gone.
+        IReadOnlyList<SharedKernel.Identifiers.AccountId> chose;
+        try
+        {
+            chose = preferences is null ? [] : await preferences.ListAccountsAsync();
+        }
+        catch (Exception failure) when (Unreadable(failure))
+        {
+            Said($"  Guests: the settings could not be listed, so only the activity left by removed accounts is forgotten: {HttpHost.OneLine(failure)}");
+            chose = [];
+        }
+
         foreach (var left in chose.Concat(used.Keys).Where(id => !listed.Contains(id)).Distinct())
         {
             try

@@ -1,0 +1,4 @@
+# host-reviewer lessons, host follow-ups #1226 #1249 #1253 #1259
+- An orphan sweep keyed on "listed in a side store, not in the account listing" (IdleGuests, #1253) erases a live player's tutorials and activity if the account listing ever misses one; its only guard is the FindAsync re-read, and deleting it stayed green across IdleGuests/TableTendComposition/Scenarios/Jobs tests (measured, fe995f6): ask for a test where the listing misses a live account.
+- A variable read by two processes (DOWNFALL_TURNS_QUEUE, host and table-worker) tested on one side only: the host's `TurnsQueue() ??` deleted left all 2085 Cli tests green (fe995f6). Probe each process's read.
+- `if (false)` as a mutation probe is CS0162 under warnings-as-errors, and `--no-build` then runs the old binary: check the build said 0 errors before trusting a green probe (fe995f6).

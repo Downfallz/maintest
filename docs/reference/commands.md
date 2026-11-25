@@ -347,7 +347,8 @@ Its Jobs tab lists the tending runs twenty a page with the last day's and week's
 (`GET /api/admin/jobs/tend?page`, `GET /api/admin/jobs/tend/<id>` a run's sheet) and runs a pass now in this
 process (`POST /api/admin/jobs/tend`, kept as manual with the operator's name; the `table-tend` pass, the
 notice logs' sweep and the idle guests' removal included on a host that signs players in; a run says how many
-guests, notice logs and closed feedback it let go of, `guestsRemoved`, `noticesErased` and `feedbackLetGo`, #1249),
+guests it removed, notice logs it erased and closed feedback items it let go of: `guestsRemoved`, `noticesErased`,
+`feedbackLetGo`, #1249),
 and, on a host whose bots' turns
 go through queues, shows each queue's length and oldest item and the dead letters, first 32 first
 (`GET /api/admin/jobs/turns`), and puts a letter's turn back on the queue or drops it
@@ -809,9 +810,9 @@ mark and the host's (ADR 0194).
 - `--turns worker` (or `DOWNFALL_TURNS=worker`) puts them on the queue and runs no worker, for table-worker to
   take in a process of its own (ADR 0162; a container's queues only).
 - `DOWNFALL_TURNS_QUEUE` names the bots' turns queue, read by the host and by table-worker alike, with its
-  `-poison` and `-dlq` queues beside it; `agent-turns` when it is not set. It is 3 to 50 lowercase letters, digits
-  and single hyphens, or the command says so and exits 1. A test's worker takes from a queue of its own, not
-  another run's on the same storage emulator (#1259).
+  `-poison` and `-dlq` queues beside it; `agent-turns` when it is not set. The name is 3 to 50 lowercase letters,
+  digits and single hyphens; any other value makes the command say so and exit 1. A test's worker takes from its
+  own queue, never from another run's on the same storage emulator (#1259).
 - With `--turns queue` or `--turns worker`, and push keys, the notices go through the `notices` queue too (ADR
   0203): the bell's entry is written in the request, the push is one item a device, and a signed-in seat's "your
   turn" waits on the queue for its grace and is taken back when the seat's page draws the question. The host and

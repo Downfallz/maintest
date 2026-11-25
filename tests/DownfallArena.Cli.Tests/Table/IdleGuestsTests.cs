@@ -172,6 +172,36 @@ public sealed class IdleGuestsTests : IDisposable
         (await _preferences.GetTutorialsAsync(mark.Id, Cancel)).Done.ShouldBe(["sc-repo-tutorial-your-first-combat"]);
     }
 
+    [Fact]
+    public async Task An_account_made_after_the_pass_listed_the_accounts_keeps_its_tutorials_and_activity()
+    {
+        var made = await GuestAsync();
+        await _preferences.SaveTutorialsAsync(made.Id, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        await new AccountActivityLog(_activity, _clock).SignedInAsync(made.Id, Cancel);
+        var listedBefore = new ListedBeforeStore(_accounts, made.Id);
+
+        await new IdleGuests(listedBefore, _activity, _preferences, _clock).RemoveAsync(_clock.GetUtcNow());
+
+        (await _preferences.GetTutorialsAsync(made.Id, Cancel)).Done.ShouldBe(["sc-repo-tutorial-your-first-combat"]);
+        (await _activity.FindAsync(made.Id, Cancel)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task Settings_that_cannot_be_listed_still_let_the_idle_guests_go_and_say_so()
+    {
+        var guest = await GuestAsync();
+        _clock.Advance(IdleGuests.KeptFor);
+        var failing = Substitute.For<IPreferenceStore>();
+        failing.ListAccountsAsync(Arg.Any<CancellationToken>()).Returns<Task<IReadOnlyList<AccountId>>>(_ => throw new IOException("out of service (a test)"));
+        var said = new List<string>();
+
+        var removed = await new IdleGuests(_accounts, _activity, failing, _clock) { Said = said.Add }.RemoveAsync(_clock.GetUtcNow());
+
+        removed.ShouldBe(1);
+        (await _accounts.FindAsync(guest.Id, Cancel)).ShouldBeNull();
+        said.ShouldHaveSingleItem().ShouldStartWith("  Guests: the settings could not be listed");
+    }
+
     /// <summary>
     /// The accounts on disk, upgraded by the API the first time the registry reads one to delete it, or, with
     /// <paramref name="afterReRead" />, just after the pass reads the guest again and finds it idle (#1253).
@@ -202,6 +232,41 @@ public sealed class IdleGuestsTests : IDisposable
         }
 
         public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
+
+        public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
+
+        public Task<bool> SaveIfUnchangedAsync(Account account, string version, CancellationToken cancellationToken = default) =>
+            inner.SaveIfUnchangedAsync(account, version, cancellationToken);
+
+        public Task<bool> DeleteAsync(AccountId id, CancellationToken cancellationToken = default) => inner.DeleteAsync(id, cancellationToken);
+
+        public Task<bool> DeleteIfUnchangedAsync(AccountId id, string version, CancellationToken cancellationToken = default) =>
+            inner.DeleteIfUnchangedAsync(id, version, cancellationToken);
+
+        public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.FindBySubjectAsync(identity, cancellationToken);
+
+        public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.TryBindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.UnbindSubjectAsync(identity, account, cancellationToken);
+
+        public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) => inner.FindUsernameAsync(username, cancellationToken);
+
+        public Task<bool> TryReserveUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.TryReserveUsernameAsync(reservation, cancellationToken);
+
+        public Task<bool> ReleaseUsernameAsync(UsernameReservation reservation, CancellationToken cancellationToken = default) => inner.ReleaseUsernameAsync(reservation, cancellationToken);
+
+        public Task<byte[]> SessionKeyAsync(CancellationToken cancellationToken = default) => inner.SessionKeyAsync(cancellationToken);
+    }
+
+    /// <summary>The accounts on disk, listed as they were before <paramref name="later" /> was made: an account made since the listing.</summary>
+    private sealed class ListedBeforeStore(IAccountStore inner, AccountId later) : IAccountStore
+    {
+        public async Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) =>
+            [.. (await inner.ListAsync(cancellationToken)).Where(account => account.Id != later)];
+
+        public Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default) => inner.ReadAsync(id, cancellationToken);
+
+        public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
 
         public Task SaveAsync(Account account, CancellationToken cancellationToken = default) => inner.SaveAsync(account, cancellationToken);
 
