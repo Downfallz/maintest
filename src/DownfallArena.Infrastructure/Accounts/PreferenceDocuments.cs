@@ -21,11 +21,16 @@ internal static class PreferenceDocuments
     /// <summary>The account a document's name, without its folder, is kept for; null for any other name (a staged write).</summary>
     public static AccountId? AccountOf(string name)
     {
-        var stem = name.EndsWith(".tutorials.json", StringComparison.Ordinal) ? name[..^".tutorials.json".Length]
-            : name.EndsWith(".notices.json", StringComparison.Ordinal) ? name[..^".notices.json".Length]
-            : name.EndsWith(".json", StringComparison.Ordinal) ? name[..^".json".Length]
-            : null;
-        return AccountId.TryParse(stem, out var account) ? account : null;
+        // The longest ending first: a Tutorials document's name also ends in ".json".
+        foreach (var ending in (string[])[".tutorials.json", ".notices.json", ".json"])
+        {
+            if (name.EndsWith(ending, StringComparison.Ordinal))
+            {
+                return AccountId.TryParse(name[..^ending.Length], out var account) ? account : null;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>The account's Tutorials done and skipped (ADR 0187), beside its settings.</summary>

@@ -851,12 +851,18 @@ internal static class TableHost
     /// account refuses: 3 to 50 lowercase letters, digits and single hyphens, leaving room for the poison and dead-letter
     /// queues' suffixes.
     /// </summary>
-    internal static string? TurnsQueueOf(string? named) =>
-        string.IsNullOrEmpty(named) ? AgentTurnWorker.Queue
-            : named.Length is >= 3 and <= 50
-                && named.All(one => char.IsAsciiLetterLower(one) || char.IsAsciiDigit(one) || one == '-')
-                && named[0] != '-' && named[^1] != '-' && !named.Contains("--", StringComparison.Ordinal) ? named
-            : null;
+    internal static string? TurnsQueueOf(string? named)
+    {
+        if (string.IsNullOrEmpty(named))
+        {
+            return AgentTurnWorker.Queue;
+        }
+
+        var taken = named.Length is >= 3 and <= 50
+            && named.All(one => char.IsAsciiLetterLower(one) || char.IsAsciiDigit(one) || one == '-')
+            && named[0] != '-' && named[^1] != '-' && !named.Contains("--", StringComparison.Ordinal);
+        return taken ? named : null;
+    }
 
     /// <summary>Where the bots' turns are taken: as the command line says, or the variable, or in this process.</summary>
     internal static TurnsMode TurnsOf(CliOptions options) =>

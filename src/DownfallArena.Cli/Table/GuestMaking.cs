@@ -39,7 +39,8 @@ internal sealed class GuestMaking
     public TimeSpan? Take(string? address, DateTimeOffset now)
     {
         var key = address is null ? null : Key(address);
-        var wider = address is null ? null : RequestAddress.Network(address) is { } network ? Key("/48 " + network) : null;
+        var network = address is null ? null : RequestAddress.Network(address);
+        var wider = network is null ? null : Key("/48 " + network);
         lock (_gate)
         {
             Forget(_all, now);

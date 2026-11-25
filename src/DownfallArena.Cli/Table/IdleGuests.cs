@@ -43,48 +43,62 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
             return 0;
         }
 
-        var registry = new AccountRegistry(accounts, clock);
         var removed = 0;
-        foreach (var idle in guests.Where(guest => Idle(guest, used.GetValueOrDefault(guest.Id), now)))
+        foreach (var id in guests.Where(guest => Idle(guest, used.GetValueOrDefault(guest.Id), now)).Select(guest => guest.Id))
         {
-            try
+            if (await RemoveOneAsync(id, now))
             {
-                // Read again just before it goes: a guest used since is kept.
-                var kept = await activity.FindAsync(idle.Id);
-                if (await accounts.FindAsync(idle.Id) is not { IsGuest: true } guest || !Idle(guest, kept, now))
-                {
-                    continue;
-                }
-
-                // The account goes first, and only while it is still a guest: the API may upgrade it meanwhile, under no
-                // lock this process holds, and an upgraded guest keeps its tutorials and activity (#1253). What is kept for
-                // it goes after; a pass that stops between them leaves it to the next pass, which finds it below.
-                if (!await registry.DeleteAsync(guest.Id, account => account.IsGuest))
-                {
-                    continue;
-                }
-
                 removed++;
-            }
-            catch (Exception failure) when (Unreadable(failure))
-            {
-                Said($"  Account {idle.Id}: a guest unused for {KeptFor.TotalDays:0} days could not be removed: {HttpHost.OneLine(failure)}");
-                continue;
-            }
-
-            try
-            {
-                await ForgetAsync(idle.Id);
-            }
-            catch (Exception failure) when (Unreadable(failure))
-            {
-                Said($"  Account {idle.Id}: a removed guest's settings or activity could not be forgotten, the next pass will: {HttpHost.OneLine(failure)}");
             }
         }
 
-        // What a removed account left behind, by a pass that stopped between the account and the rest. Listed after the
-        // removals, so a listing that fails costs only this sweep, never them. Read again: an account made since the
-        // listing is not gone.
+        await ForgetLeftAsync(listed, used.Keys);
+        return removed;
+    }
+
+    // One idle guest removed, and what was kept for it forgotten after; whether its account went.
+    private async Task<bool> RemoveOneAsync(SharedKernel.Identifiers.AccountId id, DateTimeOffset now)
+    {
+        try
+        {
+            // Read again just before it goes: a guest used since is kept.
+            var kept = await activity.FindAsync(id);
+            if (await accounts.FindAsync(id) is not { IsGuest: true } guest || !Idle(guest, kept, now))
+            {
+                return false;
+            }
+
+            // The account goes first, and only while it is still a guest: the API may upgrade it meanwhile, under no
+            // lock this process holds, and an upgraded guest keeps its tutorials and activity (#1253). What is kept for
+            // it goes after; a pass that stops between them leaves it to the next pass, which finds it in ForgetLeftAsync.
+            if (!await new AccountRegistry(accounts, clock).DeleteAsync(guest.Id, account => account.IsGuest))
+            {
+                return false;
+            }
+        }
+        catch (Exception failure) when (Unreadable(failure))
+        {
+            Said($"  Account {id}: a guest unused for {KeptFor.TotalDays:0} days could not be removed: {HttpHost.OneLine(failure)}");
+            return false;
+        }
+
+        try
+        {
+            await ForgetAsync(id);
+        }
+        catch (Exception failure) when (Unreadable(failure))
+        {
+            Said($"  Account {id}: a removed guest's settings or activity could not be forgotten, the next pass will: {HttpHost.OneLine(failure)}");
+        }
+
+        return true;
+    }
+
+    // What a removed account left behind, by a pass that stopped between the account and the rest. Listed after the
+    // removals, so a listing that fails costs only this sweep, never them. Read again: an account made since the
+    // listing is not gone.
+    private async Task ForgetLeftAsync(HashSet<SharedKernel.Identifiers.AccountId> listed, IEnumerable<SharedKernel.Identifiers.AccountId> withActivity)
+    {
         IReadOnlyList<SharedKernel.Identifiers.AccountId> chose;
         try
         {
@@ -96,7 +110,7 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
             chose = [];
         }
 
-        foreach (var left in chose.Concat(used.Keys).Where(id => !listed.Contains(id)).Distinct())
+        foreach (var left in chose.Concat(withActivity).Where(id => !listed.Contains(id)).Distinct())
         {
             try
             {
@@ -110,8 +124,6 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
                 Said($"  Account {left}: what a removed account left behind could not be forgotten: {HttpHost.OneLine(failure)}");
             }
         }
-
-        return removed;
     }
 
     // Its settings and Tutorials first and its activity last, so a forget that stops partway leaves the activity the
