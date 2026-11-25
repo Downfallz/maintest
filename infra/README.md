@@ -9,7 +9,7 @@ studio is not here: it is on GitHub Pages (ADR 0023).
 
 | Resource | What it is for | What it costs |
 | --- | --- | --- |
-| Container app `downfall-table` | The API: the CLI's `table --lobby --platform-auth --turns worker --tended`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing at zero. After the last request it stays up two hours at the idle rate, about 3 cents each time, inside the monthly free grant for a few evenings of play |
+| Container app `downfall-table` | The API: the CLI's `table --lobby --platform-auth --turns worker --tended`, 0.5 vCPU, 1 GiB, **0 to 1 replica** | Nothing at zero. After the last request it stays up two hours, billed at the active rate (the idle rate needs a minimum above zero): 3 600 vCPU-seconds each time, so about 50 a month fit the free grant, then about 11 cents each |
 | Container app `downfall-worker` | The CLI's `table-worker`: the bots' turns the API puts on the `agent-turns` queue, the notices on `notices` (ADR 0203), and the dead letters; no ingress, 0.5 vCPU, 1 GiB, **0 to 1 replica**, scaled on the length of `agent-turns`, `agent-turns-poison`, `notices` and `notices-poison` | Nothing idle. Seconds per bot turn, and per notice while the API is down |
 | Container Apps job `downfall-tend` | The CLI's `table-tend`, at 17 minutes past every hour: closes the tables that never began, lets go of the invitations nobody answered; 0.25 vCPU, 0.5 GiB | A few seconds an hour |
 | Container Apps environment | Where the app runs, consumption plan, on the platform's own network (ADR 0160) | Nothing on its own |
