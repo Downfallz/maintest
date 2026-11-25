@@ -311,7 +311,7 @@ public sealed class AccountWriteOrderTests
     }
 
     [Fact]
-    public async Task A_way_added_while_every_write_of_the_account_loses_to_another_process_throws_and_leaves_a_binding_that_reaches_nothing()
+    public async Task A_way_added_while_every_write_of_the_account_loses_to_another_process_throws_and_frees_the_binding_it_made()
     {
         var mark = await RegisteredAsync(Google, "MarkF");
         _store.BeforeEveryAccountWrite = () => _store.Accounts[mark.Id] = _store.Accounts[mark.Id] with { };
@@ -320,13 +320,12 @@ public sealed class AccountWriteOrderTests
 
         _store.RefusedWrites.ShouldBe(5);
         _store.BeforeEveryAccountWrite = null;
-        _store.Subjects[Discord].ShouldBe(mark.Id);
+        _store.Subjects.ShouldNotContainKey(Discord);
         _store.Accounts[mark.Id].Identities.Contains(Discord).ShouldBeFalse();
-        (await Registry().FindAsync(Discord, Cancel)).ShouldBeNull();
     }
 
     [Fact]
-    public async Task An_upgrade_while_every_write_of_the_account_loses_to_another_process_throws_and_leaves_its_binding_and_name_held()
+    public async Task An_upgrade_while_every_write_of_the_account_loses_to_another_process_throws_and_frees_the_binding_and_name_it_held()
     {
         var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
         _store.BeforeEveryAccountWrite = () => _store.Accounts[guest.Id] = _store.Accounts[guest.Id] with { };
@@ -335,10 +334,9 @@ public sealed class AccountWriteOrderTests
 
         _store.RefusedWrites.ShouldBe(5);
         _store.BeforeEveryAccountWrite = null;
-        _store.Subjects[Google].ShouldBe(guest.Id);
-        _store.Names["markf"].Account.ShouldBe(guest.Id);
+        _store.Subjects.ShouldNotContainKey(Google);
+        _store.Names.ShouldNotContainKey("markf");
         _store.Accounts[guest.Id].IsGuest.ShouldBeTrue();
-        (await Registry().FindAsync(Google, Cancel)).ShouldBeNull();
     }
 
     [Fact]
@@ -352,6 +350,74 @@ public sealed class AccountWriteOrderTests
         _store.RefusedWrites.ShouldBe(5);
         _store.Accounts.ShouldContainKey(mark.Id);
         _store.Names["markf"].Account.ShouldBe(mark.Id);
+    }
+
+    /// <summary>The other half of #1261: taking a binding up writes it, so the cleanup of the link that made it leaves it.</summary>
+    [Fact]
+    public async Task A_way_added_over_a_binding_another_link_of_the_account_made_takes_it_up_with_a_version_of_its_own()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.Subjects[Discord] = mark.Id;
+        var madeElsewhere = (await _store.ReadSubjectAsync(Discord, Cancel))!.Version;
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, cancellationToken: Cancel);
+
+        linked.IsSuccess.ShouldBeTrue();
+        (await _store.UnbindSubjectIfUnchangedAsync(Discord, madeElsewhere, Cancel)).ShouldBeFalse();
+        (await Registry().FindAsync(Discord, Cancel))!.Id.ShouldBe(mark.Id);
+    }
+
+    [Fact]
+    public async Task A_way_added_whose_binding_survives_a_lost_write_still_frees_it_when_a_later_try_is_refused()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        var writes = 0;
+        _store.BeforeEveryAccountWrite = () =>
+        {
+            var current = _store.Accounts[mark.Id];
+            _store.Accounts[mark.Id] = ++writes == 1 ? current with { } : current with { Generation = current.Generation + 1 };
+            if (writes == 2)
+            {
+                _store.BeforeEveryAccountWrite = null;
+            }
+        };
+
+        var linked = await Registry().LinkAsync(mark.Id, Discord, mark.Generation, Cancel);
+
+        linked.Error.ShouldBe(AccountErrors.SessionEnded);
+        _store.Subjects.ShouldNotContainKey(Discord);
+    }
+
+    [Fact]
+    public async Task A_binding_that_loses_every_try_throws_and_binds_nothing()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.LoseEveryBinding = true;
+
+        await Should.ThrowAsync<IOException>(() => Registry().LinkAsync(mark.Id, Discord, cancellationToken: Cancel));
+
+        _store.LoseEveryBinding = false;
+        _store.Subjects.ShouldNotContainKey(Discord);
+        _store.Accounts[mark.Id].Identities.Contains(Discord).ShouldBeFalse();
+    }
+
+    /// <summary>The same race as #1261 at registration: a binding judged to hold nobody, taken up before its removal, stays.</summary>
+    [Fact]
+    public async Task A_registration_leaves_a_binding_another_link_took_up_after_it_was_judged_to_hold_nobody()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.Subjects[Discord] = mark.Id;
+        _store.BeforeNextUnbinding = () =>
+        {
+            _store.AdoptedElsewhere(Discord);
+            _store.Accounts[mark.Id] = mark with { Identities = mark.Identities.With(Discord) };
+        };
+
+        var registered = await Registry().RegisterAsync(Discord, "Marcus", Cancel);
+
+        registered.Error.ShouldBe(AccountErrors.AlreadyRegistered);
+        _store.Subjects[Discord].ShouldBe(mark.Id);
+        (await Registry().FindAsync(Discord, Cancel))!.Id.ShouldBe(mark.Id);
     }
 
     [Fact]

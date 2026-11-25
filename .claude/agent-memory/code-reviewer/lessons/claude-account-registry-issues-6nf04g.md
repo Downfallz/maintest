@@ -1,0 +1,6 @@
+# code-reviewer lessons (branch claude/account-registry-issues-6nf04g)
+- A test that plays "another process" with a store helper (`AdoptedElsewhere`) proves the cleanup's condition, not that the registry's own code path writes what the other process's cleanup relies on: replace the registry's take-up write with `return (true, null)` and the suite stays green; ask for two registries over one store (#1261, e8c49d5).
+- Second time a judged-then-removed binding is fixed in one caller and left by-account in its sibling (`ReleaseIfHoldsNobodyAsync` after BindAsync went version-guarded; #1227 ReserveAsync before): grep every `UnbindSubjectAsync` after a `HoldsNobody` judgement (#1261, e8c49d5).
+- A new retry loop with its own "lost N tries" throw lands untested in the PR that adds tests for the other loops' throws: mutate the throw to a refusal and run the suite (#1263, e8c49d5).
+- `TimeProvider.System.CreateTimer` flows the ExecutionContext of whoever created it; a lazily-created per-store timer captures the first request's AsyncLocals (`HeldNotices.Current`) for as long as the store keeps a text (#1260, e8c49d5).
+- `TableWorkerNoticesTests.Without_push_keys_a_match_the_worker_ends_is_kept_in_each_player_s_bell` failed once and passed on rerun, untouched by the diff: flaky, rerun before blaming a diff (e8c49d5).

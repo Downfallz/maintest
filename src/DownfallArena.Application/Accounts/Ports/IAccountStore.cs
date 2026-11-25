@@ -50,14 +50,17 @@ public interface IAccountStore
     /// <summary>
     /// Writes the binding and answers its version: with <paramref name="over" /> null, only if nothing holds the sign-in
     /// yet; otherwise only over that version, which is how a link takes up a binding another link made (#1261). Every write
-    /// gives the binding a new version, even naming the same account. Null, writing nothing, when it was refused.
+    /// gives the binding a new version, even naming the same account. Answers null, and writes nothing, when the write is refused.
     /// </summary>
     Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default);
 
     /// <summary>Removes the binding if it still names that account; false otherwise.</summary>
     Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default);
 
-    /// <summary>Removes the binding only if it is still the version read or written; false, removing nothing, when it changed or went.</summary>
+    /// <summary>
+    /// Removes the binding only if it is still the version read or written. Answers false, and removes nothing, when the
+    /// binding changed or went.
+    /// </summary>
     Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default);
 
     /// <summary>Who holds the name, compared by <see cref="Username.Key" />, or null.</summary>

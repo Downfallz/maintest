@@ -12,9 +12,9 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// <remarks>
 /// A write follows its read within the same request, so a text is kept for <see cref="LifetimeSeconds" /> seconds only. That bounds
 /// what an account erased by another process leaves here, its push keys among it (ADR 0203): such a text is never
-/// given to a write once old, and is let go within two lifetimes, by a sweep that runs every lifetime while a text is
-/// kept, whether or not the store is used again (#1260). A store that keeps nothing holds no sweep; the reads that save
-/// nothing (a push's devices) keep no text.
+/// given to a write once old, and is let go within two lifetimes by a sweep that runs every lifetime while a text is
+/// kept. That holds whether or not the store is used again (#1260). A store that keeps nothing holds no sweep; the
+/// reads that save nothing (a push's devices) keep no text.
 /// </remarks>
 /// <typeparam name="TKey">What names a document in its store: an account, a day.</typeparam>
 internal sealed class TextsRead<TKey>
@@ -61,7 +61,14 @@ internal sealed class TextsRead<TKey>
         _texts[key] = (version, text, now);
         lock (_sweeping)
         {
-            _sweep ??= _time.CreateTimer(_ => SweepUnasked(), state: null, Lifetime, Lifetime);
+            if (_sweep is null)
+            {
+                // The sweep runs in no request's context: one captured would be held while anything is kept.
+                using (ExecutionContext.SuppressFlow())
+                {
+                    _sweep = _time.CreateTimer(_ => SweepUnasked(), state: null, Lifetime, Lifetime);
+                }
+            }
         }
     }
 
@@ -162,7 +169,10 @@ internal sealed class TextsRead<TKey>
         return string.Equals(current, version, StringComparison.Ordinal) ? (true, text) : (false, null);
     }
 
-    /// <summary>Deletes the documents <paramref name="which" /> names, forgetting what was kept of them before and after.</summary>
+    /// <summary>
+    /// Deletes the documents <paramref name="which" /> names, and lets go of what was kept of them both before the
+    /// deletion and after it, so a read kept while it runs keeps nothing either.
+    /// </summary>
     public async Task ForgetAsync(Func<TKey, bool> which, Func<Task> delete)
     {
         ArgumentNullException.ThrowIfNull(delete);

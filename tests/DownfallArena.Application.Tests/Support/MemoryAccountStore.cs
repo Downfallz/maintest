@@ -31,6 +31,9 @@ internal sealed class MemoryAccountStore : IAccountStore
     /// <summary>Runs before every write or removal of an account: another host that writes the account first, every time.</summary>
     public Action? BeforeEveryAccountWrite { get; set; }
 
+    /// <summary>Refuses every binding and reads none: a binding that another process takes and lets go before every look at it.</summary>
+    public bool LoseEveryBinding { get; set; }
+
     /// <summary>Runs once just before the next removal of a binding, conditional or not.</summary>
     public Action? BeforeNextUnbinding { get; set; }
 
@@ -186,7 +189,7 @@ internal sealed class MemoryAccountStore : IAccountStore
         Task.FromResult(Subjects.TryGetValue(identity, out var id) ? id : (AccountId?)null);
 
     public Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Subjects.TryGetValue(identity, out var id) ? new SubjectRead(id, SubjectVersion(identity)) : null);
+        Task.FromResult(!LoseEveryBinding && Subjects.TryGetValue(identity, out var id) ? new SubjectRead(id, SubjectVersion(identity)) : null);
 
     private string SubjectVersion(ExternalIdentity identity)
     {
@@ -215,6 +218,11 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default)
     {
+        if (LoseEveryBinding)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
         if (over is not null)
         {
             return Task.FromResult(Subjects.ContainsKey(identity) && SubjectVersion(identity) == over ? Rewritten(identity, account) : null);

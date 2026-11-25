@@ -122,7 +122,7 @@ internal static class AccountDocuments
     private sealed record NameRecord(string Username, string Account, DateTimeOffset ReservedAt);
 
     // Mark is new with every write, so a file's hash, its version, changes even when the account it names does not
-    // (#1261). It is missing from an entry written before it, and an image before it reads an entry without it.
+    // (#1261). Entries written before this field have no mark, and an older image reads an entry that has one.
     private sealed record SubjectRecord(string Account)
     {
         public string? Mark { get; init; }
