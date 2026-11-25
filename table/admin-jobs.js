@@ -21,6 +21,9 @@ export function didLine(run) {
   if (run?.timedOut?.length) parts.push(`${counted(run.timedOut.length, 'game')} timed out`);
   if (run?.abandoned?.length) parts.push(`${counted(run.abandoned.length, 'left game')} ended`);
   if (run?.warned?.length) parts.push(`${counted(run.warned.length, 'player')} warned`);
+  if (run?.guestsRemoved) parts.push(`${counted(run.guestsRemoved, 'guest')} removed`);
+  if (run?.noticesErased) parts.push(`${counted(run.noticesErased, 'notice log')} erased`);
+  if (run?.feedbackLetGo) parts.push(`${counted(run.feedbackLetGo, 'feedback item')} let go of`);
   return parts.length ? parts.join(' · ') : 'Nothing was due';
 }
 

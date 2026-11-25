@@ -27,6 +27,12 @@ public interface IPreferenceStore
     /// <summary>Replaces what pops up on the account's devices with these.</summary>
     Task SaveNoticesAsync(AccountId account, NoticePreferences notices, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The accounts that have settings, Tutorials or notice choices kept, in no particular order: what the hourly job
+    /// reads to forget what a removed guest left behind (#1253).
+    /// </summary>
+    Task<IReadOnlyList<AccountId>> ListAccountsAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Removes the account's settings, its Tutorials done and skipped, and what pops up: the account going.</summary>
     Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default);
 }

@@ -45,6 +45,15 @@ public sealed class FilePreferenceStore : IPreferenceStore
         await WriteAsync(FullPath(account), PreferenceDocuments.Write(preferences), cancellationToken);
     }
 
+    public Task<IReadOnlyList<AccountId>> ListAccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var folder = Path.Combine(RootDirectory, PreferenceDocuments.Prefix);
+        IReadOnlyList<AccountId> accounts = Directory.Exists(folder)
+            ? [.. Directory.EnumerateFiles(folder).Select(path => PreferenceDocuments.AccountOf(Path.GetFileName(path))).OfType<AccountId>().Distinct()]
+            : [];
+        return Task.FromResult(accounts);
+    }
+
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         // An account on a host where nobody saved anything yet has no directory to delete from.

@@ -24,6 +24,19 @@ public sealed class FilePreferenceStoreTests : PreferenceStoreContract, IDisposa
         read.ShouldBe(new GamePreferences(ReadingPace.Auto, 1m, Help: false, ReducedMotion: false, Reactions: true));
     }
 
+    /// <summary>A write staged beside its place, not yet moved onto it, names no account (#1253).</summary>
+    [Fact]
+    public async Task A_staged_write_is_not_listed_as_an_account()
+    {
+        var account = AccountId.New();
+        Directory.CreateDirectory(Path.Combine(_root, "preferences"));
+        await File.WriteAllTextAsync(Path.Combine(_root, "preferences", $"{account.Value}.json.{Guid.NewGuid():N}.tmp"), "{}", TestContext.Current.CancellationToken);
+
+        var listed = await new FilePreferenceStore(_root).ListAccountsAsync(TestContext.Current.CancellationToken);
+
+        listed.ShouldBeEmpty();
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

@@ -290,7 +290,12 @@ internal static class TableTend
     }
 
     private static TendRun Run(string id, DateTimeOffset started, DateTimeOffset finished, TendTrigger trigger, string? by, Tended done, string? error) =>
-        new(id, started, finished, trigger, by, error is null ? TendOutcome.Completed : TendOutcome.Failed, error, done.Swept, done.Expired, done.TimedOut, done.Abandoned, done.Warned);
+        new(id, started, finished, trigger, by, error is null ? TendOutcome.Completed : TendOutcome.Failed, error, done.Swept, done.Expired, done.TimedOut, done.Abandoned, done.Warned)
+        {
+            GuestsRemoved = done.GuestsRemoved,
+            NoticesErased = done.NoticesErased,
+            FeedbackLetGo = done.FeedbackLetGo,
+        };
 
     /// <summary>The tend log, or none when it cannot be opened: said on the console, and the pass goes on without it.</summary>
     internal static async Task<ITendLog?> OpenLogAsync(Func<Task<ITendLog>> open)

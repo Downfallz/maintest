@@ -1,8 +1,10 @@
 using System.Text;
 using System.Text.Json;
+using DownfallArena.Application.Admin;
 using DownfallArena.Application.Tables.Tending;
 using DownfallArena.Cli.Studio;
 using DownfallArena.Cli.Table;
+using DownfallArena.Infrastructure.Admin;
 using DownfallArena.Infrastructure.Tables;
 
 namespace DownfallArena.Cli.Tests.Table;
@@ -65,6 +67,40 @@ public sealed class JobsApiTests : IDisposable
         run.GetProperty("outcome").GetString().ShouldBe("completed");
         run.GetProperty("neverBegan").EnumerateArray().Select(id => id.GetString()).ShouldBe(["never-began"]);
         (await _log.IdsAsync(Cancel)).ShouldHaveSingleItem().ShouldBe(run.GetProperty("id").GetString());
+    }
+
+    /// <summary>Run now removes the idle guests too (#1225): the answer, the kept run and the operator log say how many (#1249).</summary>
+    [Fact]
+    public async Task A_pass_run_now_says_how_many_guests_notices_and_feedback_it_let_go_of()
+    {
+        var operatorLog = new FileOperatorLog(Path.Combine(_root, "operator"));
+        var jobs = Jobs((_, _) => Task.FromResult(new TableTend.Tended([], 0) { GuestsRemoved = 3, NoticesErased = 2, FeedbackLetGo = 1 }));
+        jobs.Notes = new OperatorNotes(new OperatorActions(operatorLog, new FixedClock(Now)));
+
+        var run = Json(await jobs.HandleAsync("POST", JobsApi.TendRoute, null, "mk")).GetProperty("run");
+
+        (run.GetProperty("guestsRemoved").GetInt32(), run.GetProperty("noticesErased").GetInt32(), run.GetProperty("feedbackLetGo").GetInt32()).ShouldBe((3, 2, 1));
+        var kept = (await _log.FindAsync(run.GetProperty("id").GetString()!, Cancel)).ShouldNotBeNull();
+        (kept.GuestsRemoved, kept.NoticesErased, kept.FeedbackLetGo).ShouldBe((3, 2, 1));
+        var noted = (await operatorLog.FindAsync((await operatorLog.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
+        noted.Detail.ShouldNotBeNull().ShouldContain("3 guests removed");
+        noted.Detail.ShouldContain("2 notice logs erased");
+        noted.Detail.ShouldContain("1 feedback item let go of");
+    }
+
+    [Fact]
+    public async Task A_run_kept_before_the_guests_were_counted_reads_as_none_removed()
+    {
+        var started = Now.AddHours(-1);
+        var id = TendRun.NewId(started);
+        var old = $$"""{"id":"{{id}}","started":"{{started:O}}","finished":"{{started.AddSeconds(1):O}}","trigger":"schedule","by":null,"outcome":"completed","error":null,"neverBegan":[],"invitationsExpired":0,"timedOut":[],"abandoned":[],"warned":[]}""";
+
+        Directory.CreateDirectory(_root);
+        await File.WriteAllTextAsync(Path.Combine(_root, $"{id}.json"), old, Cancel);
+
+        var sheet = Json(await Jobs().HandleAsync("GET", $"{JobsApi.TendRoute}/{id}", null, "op")).GetProperty("run");
+
+        sheet.GetProperty("guestsRemoved").GetInt32().ShouldBe(0);
     }
 
     [Fact]

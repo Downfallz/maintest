@@ -29,6 +29,12 @@ paths:
 - A route catches its store's failures (`TableRegistry.StoreFails`) and answers a namespaced code
   (`Feedback.Unavailable`, `Jobs.Failed`) with a fixed message; the exception goes to the console. What escapes
   is answered 500 `Host.Unexpected` by `HttpHost`, which never puts the exception's text in the answer (#692).
+- A guard the host runs on every request before any route (`TableServer.GuestRefusalAsync`) catches its store's
+  failures and answers a namespaced code (`503 Account.Unavailable`). Otherwise every route answers 500 while the
+  store is out of service (#1223, #1228).
+- A stage of `TableTend.TendAsync` catches its own failures, the store's and a document that cannot be read, and
+  runs after the stages that end games, so one bad account stops neither the hourly pass nor that hour's game
+  timeouts (`IdleGuests`, #1223, #1228).
 - A guard that reads and then writes (a count, a limit, a claim) runs under one gate in the API process, or two
   requests both read the old value and both write (#692).
 - No store-wide read (`AllAsync`, one blob read a record) under a gate the players' requests wait on: the guard

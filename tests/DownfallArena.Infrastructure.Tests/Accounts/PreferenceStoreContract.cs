@@ -137,4 +137,24 @@ public abstract class PreferenceStoreContract
 
         (await store.GetNoticesAsync(account, Cancel)).ShouldBe(NoticePreferences.Default);
     }
+
+    [Fact]
+    public async Task Every_account_with_something_kept_is_listed_once_and_a_forgotten_one_is_not()
+    {
+        var store = await StoreAsync();
+        var (settings, tutorials, both, gone) = (AccountId.New(), AccountId.New(), AccountId.New(), AccountId.New());
+        await store.SaveAsync(settings, GamePreferences.Default, Cancel);
+        await store.SaveTutorialsAsync(tutorials, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        await store.SaveTutorialsAsync(both, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        await store.SaveNoticesAsync(both, NoticePreferences.Default, Cancel);
+        await store.SaveTutorialsAsync(gone, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        await store.ForgetAsync(gone, Cancel);
+
+        var listed = await store.ListAccountsAsync(Cancel);
+
+        listed.ShouldContain(settings);
+        listed.ShouldContain(tutorials);
+        listed.Count(account => account == both).ShouldBe(1);
+        listed.ShouldNotContain(gone);
+    }
 }

@@ -19,6 +19,12 @@ test('a run says only what it did, or that nothing was due', () => {
     '2 tables closed · 1 invitation let go of · 1 game timed out · 1 left game ended · 2 players warned');
 });
 
+test('a run says how many guests, notice logs and closed feedback it let go of (#1249)', () => {
+  assert.equal(didLine(run({ guestsRemoved: 3, noticesErased: 1, feedbackLetGo: 2 })),
+    '3 guests removed · 1 notice log erased · 2 feedback items let go of');
+  assert.equal(didLine(run({ guestsRemoved: 1 })), '1 guest removed');
+});
+
 test('a run names what started it, and the operator who did', () => {
   assert.equal(triggerText(run()), 'Hourly job');
   assert.equal(triggerText(run({ trigger: 'manual', by: 'mk' })), 'By hand, mk');

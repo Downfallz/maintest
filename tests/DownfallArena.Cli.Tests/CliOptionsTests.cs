@@ -380,6 +380,26 @@ public sealed class CliOptionsTests
         TableHost.TurnsOf(CliOptions.Parse(["table", "--turns", "worker"])).ShouldBe(TurnsMode.Worker);
     }
 
+    [Theory]
+    [InlineData(null, "agent-turns")]
+    [InlineData("", "agent-turns")]
+    [InlineData("agent-turns-0f3a", "agent-turns-0f3a")]
+    [InlineData("abc", "abc")]
+    [InlineData("Agent-turns", null)]
+    [InlineData("agent_turns", null)]
+    [InlineData("agent--turns", null)]
+    [InlineData("-agent-turns", null)]
+    [InlineData("agent-turns-", null)]
+    [InlineData("ab", null)]
+    [InlineData(" agent-turns", null)]
+    [InlineData("agent-turns-0123456789012345678901234567890123456789", null)]
+    public void The_turns_queue_variable_names_a_queue_the_storage_account_takes_or_none(string? named, string? queue)
+    {
+        var taken = TableHost.TurnsQueueOf(named);
+
+        taken.ShouldBe(queue);
+    }
+
     [Fact]
     public void The_worker_takes_a_store_and_may_tell_the_players_accounts_how_a_match_ended()
     {

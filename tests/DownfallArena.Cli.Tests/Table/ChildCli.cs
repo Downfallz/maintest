@@ -30,8 +30,12 @@ internal sealed class ChildCli : IAsyncDisposable
     /// Starts the command line built beside the tests, from the folder where <c>table/</c> is copied. It inherits none of
     /// this run's <c>DOWNFALL_*</c> settings, the relay's among them.
     /// </summary>
-    public static ChildCli Start(params string[] arguments)
+    public static ChildCli Start(params string[] arguments) => Start(new Dictionary<string, string>(), arguments);
+
+    /// <summary>The same, with these variables set for it alone: a test's own queue name (#1259).</summary>
+    public static ChildCli Start(IReadOnlyDictionary<string, string> environment, params string[] arguments)
     {
+        ArgumentNullException.ThrowIfNull(environment);
         var start = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = AppContext.BaseDirectory,
@@ -48,6 +52,11 @@ internal sealed class ChildCli : IAsyncDisposable
         foreach (var name in start.Environment.Keys.Where(name => name.StartsWith("DOWNFALL_", StringComparison.Ordinal)).ToList())
         {
             start.Environment.Remove(name);
+        }
+
+        foreach (var (name, value) in environment)
+        {
+            start.Environment[name] = value;
         }
 
         var process = new Process { StartInfo = start };
@@ -93,6 +102,14 @@ internal sealed class ChildCli : IAsyncDisposable
         return first == seen.Task
             ? await seen.Task
             : throw new InvalidOperationException($"The process exited ({_process.ExitCode}) before the line was written:{Environment.NewLine}{string.Join(Environment.NewLine, Lines)}");
+    }
+
+    /// <summary>The exit code of a process that stops by itself, within <see cref="Waits.Within" />.</summary>
+    public async Task<int> ExitedAsync(CancellationToken cancellationToken)
+    {
+        await _process.WaitForExitAsync(cancellationToken).WaitAsync(Waits.Within, cancellationToken);
+        _process.WaitForExit();
+        return _process.ExitCode;
     }
 
     /// <summary>Sends SIGTERM, as the platform stops a replica it scales in, and returns the exit code once the process has stopped.</summary>

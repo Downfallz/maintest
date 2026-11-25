@@ -54,7 +54,12 @@ public sealed class FileActivityStore : IAccountActivityStore
 
     public Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
-        File.Delete(FullPath(account));
+        // A host where no activity was kept yet has no directory to delete from.
+        if (Directory.Exists(Path.GetDirectoryName(FullPath(account))))
+        {
+            File.Delete(FullPath(account));
+        }
+
         return Task.CompletedTask;
     }
 
