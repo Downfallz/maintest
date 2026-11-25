@@ -186,11 +186,13 @@ public sealed class AccountRegistry
 
     // A try refused after an earlier one held the name and bound the identity: another process changed the account
     // meanwhile (deleted, suspended or upgraded it), or wrote it first on every try. What was written for this upgrade
-    // goes, but for a name the account now carries.
+    // goes, but for a name the account now carries. The account is read again for that: when every try was lost, the
+    // last one read it before the write that beat it, which may be another upgrade to the same name.
     private async Task UndoRefusedUpgradeAsync(
         UsernameReservation? reservation, string? made, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
-        if (reservation is not null && last!.Username.Key != reservation.Username.Key)
+        if (reservation is not null && last!.Username.Key != reservation.Username.Key
+            && (await _store.FindAsync(id, cancellationToken))?.Username.Key != reservation.Username.Key)
         {
             await _store.ReleaseUsernameAsync(reservation, cancellationToken);
         }

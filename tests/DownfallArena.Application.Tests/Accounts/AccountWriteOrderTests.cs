@@ -420,6 +420,45 @@ public sealed class AccountWriteOrderTests
         (await Registry().FindAsync(Discord, Cancel))!.Id.ShouldBe(mark.Id);
     }
 
+    /// <summary>The write that beat the last try is another upgrade to the same name: the name it now carries stays held.</summary>
+    [Fact]
+    public async Task An_upgrade_whose_last_lost_try_lost_to_an_upgrade_to_the_same_name_leaves_that_name_held()
+    {
+        var guest = (await Registry().MakeGuestAsync(Cancel)).Value;
+        var writes = 0;
+        _store.BeforeEveryAccountWrite = () =>
+        {
+            var current = _store.Accounts[guest.Id];
+            if (++writes < 5)
+            {
+                _store.Accounts[guest.Id] = current with { };
+                return;
+            }
+
+            _store.BeforeEveryAccountWrite = null;
+            _store.AdoptedElsewhere(Google);
+            _store.Accounts[guest.Id] = current with { Identities = AccountIdentities.Of(Google), Username = Username.Create("MarkF").Value, Generation = current.Generation + 1 };
+        };
+
+        await Should.ThrowAsync<IOException>(() => Registry().UpgradeAsync(guest.Id, Google, "MarkF", Cancel));
+
+        _store.Names["markf"].Account.ShouldBe(guest.Id);
+        _store.Subjects[Google].ShouldBe(guest.Id);
+    }
+
+    [Fact]
+    public async Task A_registration_whose_binding_judged_to_hold_nobody_went_before_its_removal_registers()
+    {
+        var mark = await RegisteredAsync(Google, "MarkF");
+        _store.Subjects[Discord] = mark.Id;
+        _store.BeforeNextUnbinding = () => _store.Subjects.Remove(Discord);
+
+        var registered = await Registry().RegisterAsync(Discord, "Marcus", Cancel);
+
+        registered.IsSuccess.ShouldBeTrue();
+        _store.Subjects[Discord].ShouldBe(registered.Value.Id);
+    }
+
     [Fact]
     public async Task A_way_added_that_found_its_binding_made_by_another_link_leaves_it_when_refused()
     {

@@ -198,4 +198,27 @@ public sealed class TextsReadTests
 
         texts.Count.ShouldBe(1);
     }
+
+    /// <summary>The sweep is started from a request, and must hold none of that request's context while it runs (#1260).</summary>
+    [Fact]
+    public void The_sweep_is_started_without_the_context_of_the_read_that_kept_the_first_text()
+    {
+        var time = new FlowWatchingTime();
+        var texts = new TextsRead<string>(time);
+
+        texts.Remember("a", "kept", "v1");
+
+        time.FlowSuppressed.ShouldBe(true);
+    }
+
+    private sealed class FlowWatchingTime : TimeProvider
+    {
+        public bool? FlowSuppressed { get; private set; }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            FlowSuppressed = ExecutionContext.IsFlowSuppressed();
+            return base.CreateTimer(callback, state, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        }
+    }
 }
