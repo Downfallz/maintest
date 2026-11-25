@@ -32,7 +32,9 @@ Without `ffmpeg` and `ffprobe` nothing is filmed: install them (`apt-get install
 owner and stop.
 
 1. **Read the request.** Name each post it asks for: what it shows (a creature, a spell, a moment), its ratio
-   (`9:16` for the vertical feeds, `16:9`, `1:1`), how long, its channels (among the launch's seven), its day.
+   (`9:16` for the vertical feeds, `16:9`, `1:1`), how long, its channels (among the launch's seven), its day and its hour.
+   Each channel takes only some ratios, uncropped (`CHANNELS` in `scripts/promo/calendar.mjs`): the vertical feeds
+   take `9:16`, and Shorts also takes a square. An hour the owner did not give is `18:00`, Montreal time.
    A day the owner did not give is the first day with no file under `promo/calendar/`, never one before today, Montreal's day. A
    request that needs gameplay made from a prompt alone, or a channel off the launch's list, is refused and said
    why (ADR 0205, the plan's question 5). Ask the owner (AskUserQuestion) only what changes what is filmed.
@@ -109,9 +111,18 @@ owner and stop.
    page too: no workflow writes a cut or a still to the `promo` container, so the page is where the owner takes them. The films stay in
    `$F` and `artifacts/promo/`: they are not committed.
 
-9. **`/ship`.** The pull request names each post, the page's link, and what waits for the owner: a brief's pack to
-   generate, a choice the batch could not make. Merging it approves the posts; the next batch's pull request sets
-   the merged batch's posts to `approved` (P7's checklist will do it).
+9. **The checklist** (`promo/README.md#the-checklist`): the steps the owner posts from, in the order they are
+   posted, one a channel, with the hour, where each file is and the words to paste. Before it, set the posts of the
+   batches already merged to `approved`:
+
+   ```bash
+   node scripts/promo/checklist.mjs --approve <post>...                  # each draft of a merged batch
+   node scripts/promo/checklist.mjs --page <the page's link> <post>...   # this batch's posts, in Markdown
+   ```
+
+10. **`/ship`.** The pull request names each post, the page's link, and what waits for the owner: a brief's pack to
+    generate, a choice the batch could not make. The pull request's body holds the whole checklist, under the
+    template's headings. Merging it approves the posts.
 
 ## After the merge
 
@@ -120,6 +131,16 @@ sheet, never a cut or a still. A post whose media is `cut <cut>` or `still <shot
 sheet page (step 8). For each new shot and each ratio a post shows as `film`, give the owner one numbered step, the way through GitHub on a phone:
 *Actions*, *Film a promotion shot*, *Run workflow*, the branch `main`, the shot's file and the ratio. Its summary gives the lines of `promo/media.json`
 that a session adds in a pull request of its own (`node scripts/promo/media.mjs` checks them).
+
+The owner posts from the checklist, then answers with each post's links, one line a channel
+(`<post> <channel> <link>`). A session marks each post published, in a pull request of its own:
+
+```bash
+node scripts/promo/checklist.mjs --publish <post> --link <channel> <link> --link <channel> <link>
+```
+
+An approved post is published once every one of its channels has its link: a link missing, or off its channel's site, is
+refused, and the file is kept as it was.
 
 ## Rules
 

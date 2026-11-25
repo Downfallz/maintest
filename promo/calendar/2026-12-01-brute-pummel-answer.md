@@ -1,4 +1,5 @@
 ---
+hour: 18:00
 channels: youtube-shorts, tiktok, instagram-reels, x, bluesky
 media: cut brute-pummel-answer
 status: draft

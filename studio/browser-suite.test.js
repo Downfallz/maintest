@@ -77,7 +77,7 @@ test('the journey film plays its real-engine journey', () => {
 
 test('the promotion\'s still plays its real-engine journey, from the script and from the shots it reads', () => {
   assert.deepEqual(plan(['scripts/promo/shoot.mjs'], specs), { ...nothing, realEngine: true });
-  assert.deepEqual(plan(['scripts/promo/calendar.mjs', 'promo/calendar/2026-12-01-a.md'], specs), nothing);
+  assert.deepEqual(plan(['scripts/promo/calendar.mjs', 'scripts/promo/checklist.mjs', 'promo/calendar/2026-12-01-a.md'], specs), nothing);
   assert.deepEqual(plan(['promo/shots/brute-mirror-round-3.json'], specs), { ...nothing, realEngine: true });
   assert.deepEqual(plan(['promo/cuts/brute-pummel-answer.json'], specs), { ...nothing, realEngine: true });
   // The palette the cards of a cut are drawn from: the journey measures their words in its face.
