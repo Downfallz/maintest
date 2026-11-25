@@ -179,7 +179,7 @@ export const SIGN_OUT_HEAD = { name: 'eye-still-open', form: 'head', side: 'star
 export function signOutWords(everywhere, { guest = false } = {}) {
   // A guest's cookie is all it has: signing out loses its tutorials, so nothing is filled and the way back comes first (UX15).
   if (guest && !everywhere) {
-    return { title: 'Sign out and lose your tutorials?', detail: 'A guest\'s progress is kept in this browser only. Sign in first to keep it.', action: 'Sign out and lose them', keep: 'Stay signed in', danger: true };
+    return { title: 'Lose your tutorials?', detail: 'A guest\'s progress is kept in this browser only. Sign in first to keep it.', action: 'Sign out and lose them', keep: 'Stay signed in', danger: true };
   }
   return everywhere
     ? { title: 'Sign out everywhere?', detail: 'You will need to sign in again on every device.', action: 'Sign out everywhere', keep: 'Stay signed in' }

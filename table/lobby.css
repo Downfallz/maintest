@@ -388,6 +388,11 @@ html #friends-dialog { width: min(720px, calc(100vw - 24px)); }
   .home-menu-toggle { padding: 8px; min-width: 44px; justify-content: center; }
   .home-menu-toggle > span:last-child, .home-header #account-name { display: none; }
   .home-header .account-chip { padding: 4px; min-width: 44px; min-height: 44px; justify-content: center; }
+  /* A guest's chip reads the word Guest, not an initial that reads as a name's (UX15); the battle's header, which has no
+     room for it at 320 px, keeps the G. */
+  body[data-guest="true"]:not(.battle-page) .home-header #account-name { display: inline; max-width: none; overflow: visible; font-size: 14px; }
+  body[data-guest="true"]:not(.battle-page) .home-header .account-initial { display: none; }
+  body[data-guest="true"]:not(.battle-page) .home-header .account-chip { padding-inline: 10px; }
   .home-header .account-menu { position: fixed; top: 78px; right: 18px; max-width: calc(100vw - 36px); }
   .sign-in-panel { min-height: 0; margin-block: 20px; }
   .sign-in-content { width: 100%; padding: 26px 16px 28px; }

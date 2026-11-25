@@ -2271,6 +2271,7 @@ test('a guest\'s home features its next lesson, asks it to keep its tutorials, a
   for (const hidden of ['#my-games-section', '#tables-section', '#new-table', '#inbox-open', '#friends-open', '#leaderboard-link', '#stats-link', '#feedback-open-nav']) await expect(page.locator(hidden)).toBeHidden();
   await expect(page.locator('#account-menu summary')).toHaveAttribute('aria-label', 'Account: playing as a guest');
   await expect(page.locator('#account-name')).toHaveText('Guest');
+  await expect(page.locator('#account-name')).toBeVisible();
   expect(state.privateReads).toEqual([]);
   expect(state.requested.filter(path => /^\/api\/(friends|account\/notices|lobby\/mine|lobby\/push)/.test(path))).toEqual([]);
 });
@@ -2280,7 +2281,7 @@ test('a guest signing out is asked first, the safe answer focused, and lands on 
 
   await page.locator('#account-menu summary').click();
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sign out and lose your tutorials?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lose your tutorials?' })).toBeVisible();
   await expect(page.locator('#action-cancel')).toBeFocused();
   await expect(page.locator('#action-confirm')).toHaveClass(/danger/);
   await page.locator('#action-confirm').click();

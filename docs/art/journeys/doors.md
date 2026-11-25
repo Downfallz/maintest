@@ -1184,8 +1184,8 @@ the host already knows, a guest included, gets their home, as on any address. Th
 
 - **Order**: the eyebrow, the title, the line on the game, the line on the lesson, Play the first tutorial; then
   the line that offers the sign-in and the ways in. Privacy policy last.
-- **Budget**: 55 words, as the plain door's. Not filmed today; the words below count 44 with Google's button and
-  48 on the developer's sheet. The line on the game is the plain door's; "against a bot" is the brief window's own
+- **Budget**: 60 words. UX15's film counts 56 at both widths on the developer's sheet: the 48 of the words below
+  and the header's and footer's 8, which the plain door's count holds too (55). The line on the game is the plain door's; "against a bot" is the brief window's own
   (`tutorialBrief`), true of all four tutorials.
 
 ```text
@@ -1284,7 +1284,7 @@ The window of [tutorial 1's brief](lessons.md#the-brief-window-lesson-1-brief-le
 opened right after the guest is made, from either door. The probe shot shows it opening already. Nothing in the
 window changes: a guest needs nothing more to press Start, and the ask to sign in waits for the lesson's end
 ([A guest, then the same account](../ux-craft.md#a-guest-then-the-same-account)). What changes is behind it, in
-the battle page's header: the account chip reads Guest, and its menu loses Report or suggest, which the host
+the battle page's header: the account chip reads G, the band having no room for the word, and its menu loses Report or suggest, which the host
 refuses a guest (403 `Account.GuestNotAllowed`). The walk gains it as `guest-lesson-brief`.
 
 - **Filled action**: Start, as for a member. Skip the tutorial stays an outline.
@@ -1455,8 +1455,7 @@ battle, no lobby status line, no "Connection interrupted". The walk gains it as 
 - **Order**: the header (the brand, the menu, the chip Guest); the featured space (its picture, the place, the
   title, the goal, Continue →); the keep panel (its eyebrow, title, line, the ways in, the privacy policy); Learn
   to play (1 of 4 done, the four cards); the footer.
-- **Budget**: 150 words. Not measured: the walk films no guest yet, and today's page is the probe's, every list
-  refused. The words below and the four cards count about 140.
+- **Budget**: 150 words; UX15's film counts 147 at both widths.
 
 ```text
 [the eclipse ground, the Brute standing on it]
@@ -1571,11 +1570,14 @@ with its own words. The walk gains it as `guest-sign-out`.
 
 ### Words
 
-- **Order**: the title on the band, the line, then Sign out and lose them, then Stay signed in.
-- **Budget**: 30 words, a member's window 19.
+- **Order**: the title on the band, the line, then Stay signed in, then Sign out and lose them, as the film
+  shows: the safe answer first, as the focus.
+- **Budget**: 27 words, a member's window 19. UX15's film counted 29 with the title "Sign out and lose your
+  tutorials?", which wraps to four lines at 320 px and three at 390, grows the band and draws the head past its
+  size (one picture undersized at both widths). The title is cut to fit the band at the member's height.
 
 ```text
-Sign out and lose your tutorials?
+Lose your tutorials?
 A guest's progress is kept in this browser only. Sign in first to keep it.
 [Sign out and lose them]  [Stay signed in]
 ```
@@ -1649,7 +1651,7 @@ guest before the press. The walk gains it as `guest-name-window`, staged as `nam
 
 - **Order**: as the name window: the eyebrow, the title, why the name matters, the field and its check, the rule,
   the line on what stays, the buttons.
-- **Budget**: 50 words, as the name window; `name-window` counts 47 today on the invited path.
+- **Budget**: 50 words, as the name window; `name-window` counts 47 on the invited path, and UX15's film 46 here.
 
 ```text
 Welcome to Downfall Instinct
@@ -1730,7 +1732,8 @@ and draws a member's home in place as the window leaves. The walk gains it as `g
 
 - **Order**: as a member's home with nothing: the featured lesson, Your games, Learn to play (1 of 4 done), Find
   an opponent, the footer. The status line, once, before Your games.
-- **Budget**: 170 words; a member's home with nothing counts 158, and the status line adds 8.
+- **Budget**: 170 words; a member's home with nothing counts 158, and the status line adds 8. UX15's film counts
+  167 at both widths.
 
 ```text
 Signed in as bastien. Your tutorials are kept.

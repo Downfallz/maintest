@@ -114,7 +114,7 @@ test('a sign out is asked with its own words, the action filled and the way back
 test('a guest is asked before it signs out and loses its tutorials, the safe answer first and nothing filled (UX15)', async () => {
   const { signOutWords } = await import('./account.js');
   assert.deepEqual(signOutWords(false, { guest: true }), {
-    title: 'Sign out and lose your tutorials?', detail: 'A guest\'s progress is kept in this browser only. Sign in first to keep it.',
+    title: 'Lose your tutorials?', detail: 'A guest\'s progress is kept in this browser only. Sign in first to keep it.',
     action: 'Sign out and lose them', keep: 'Stay signed in', danger: true,
   });
 });
