@@ -39,8 +39,17 @@ names its provider, and the `by-subject` index is keyed by provider and subject.
   in a process of its own; the registry's lock reaches neither. A refused write reads the account again and decides
   again. If the account is gone, it is not written back. When a later try refuses what an earlier one began, the
   binding and the name that try wrote are freed. Five tries lost in a row throw, as a store out of service does, and
-  leave what a stop between two writes leaves. The sweep of idle guests deletes an account only while it is still
-  a guest (#1217).
+  free what the tries wrote, as a refusal does (#1263). A host that stops between two writes leaves what it wrote.
+  The sweep of idle guests deletes an account only while it is still a guest (#1217).
+- **Every write of a `by-subject` entry gives it a new version.** This includes a link that takes up an entry
+  another link of the same account made: it rewrites that entry over the version it read. So a refused link removes
+  its entry only if the entry is still the version that link wrote. It leaves an entry another link has taken up
+  since (#1261). A registration takes back an entry that holds nobody the same way, only as the version it judged.
+  A file's entry carries a mark of its own, so its hash changes even when the account it names does not.
+- **What versions do not cover.** An older release takes an entry up by writing only the account, so a refused
+  link reads the account once more before it removes its entry. An older release's refused link still removes by
+  account. When both links of one account are refused, the entry the second took up stays: it reaches nothing,
+  since the account does not list it, and the next link or registration of that identity takes it back.
 - **Never by email.** The host keeps no email (ADR 0122 holds), so it never joins two identities because a provider
   says they share an address. So someone who opens a provider account with your address cannot reach yours.
 - **A record written before this reads as one identity.** A new record lists `identities` and keeps the first one

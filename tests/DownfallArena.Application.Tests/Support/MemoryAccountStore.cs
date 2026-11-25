@@ -8,7 +8,8 @@ namespace DownfallArena.Application.Tests.Support;
 /// The account store's contract in memory; <see cref="RefuseNextBinding" /> plays a registration that lost a race,
 /// <see cref="FailNextBinding" /> one whose host stopped before it bound its sign-in, <see cref="BeforeNextBinding" /> another
 /// writer getting there first, <see cref="BeforeNextAccountWrite" /> another host writing the account between a read and a
-/// write, <see cref="FailNextAccountWrite" /> a host that stopped before it wrote the account.
+/// write, <see cref="FailNextAccountWrite" /> a host that stopped before it wrote the account, <see cref="BeforeEveryAccountWrite" />
+/// another host that always gets there first, <see cref="BeforeNextUnbinding" /> another host landing just before a binding goes.
 /// </summary>
 internal sealed class MemoryAccountStore : IAccountStore
 {
@@ -18,11 +19,23 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     public Dictionary<string, UsernameReservation> Names { get; } = [];
 
+    // A binding's version, changed by every write of it; one a test set in Subjects directly gets one when first read.
+    private readonly Dictionary<ExternalIdentity, string> _subjectVersions = [];
+
     // A version names the very record read: any write after it, even of an equal record, is another one.
     private readonly Dictionary<string, Account> _versions = [];
 
     /// <summary>Runs once just before the next write or removal of an account: another host landing between a read and it.</summary>
     public Action? BeforeNextAccountWrite { get; set; }
+
+    /// <summary>Runs before every write or removal of an account: another host that writes the account first, every time.</summary>
+    public Action? BeforeEveryAccountWrite { get; set; }
+
+    /// <summary>Refuses every binding and reads none: a binding that another process takes and lets go before every look at it.</summary>
+    public bool LoseEveryBinding { get; set; }
+
+    /// <summary>Runs once just before the next removal of a binding, conditional or not.</summary>
+    public Action? BeforeNextUnbinding { get; set; }
 
     /// <summary>Makes the next write of an account throw: a host that stopped before it.</summary>
     public bool FailNextAccountWrite { get; set; }
@@ -138,6 +151,7 @@ internal sealed class MemoryAccountStore : IAccountStore
 
     private void RunBeforeNextAccountWrite()
     {
+        BeforeEveryAccountWrite?.Invoke();
         if (BeforeNextAccountWrite is { } before)
         {
             BeforeNextAccountWrite = null;
@@ -174,8 +188,46 @@ internal sealed class MemoryAccountStore : IAccountStore
     public Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
         Task.FromResult(Subjects.TryGetValue(identity, out var id) ? id : (AccountId?)null);
 
-    public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
+    public Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
+        Task.FromResult(!LoseEveryBinding && Subjects.TryGetValue(identity, out var id) ? new SubjectRead(id, SubjectVersion(identity)) : null);
+
+    private string SubjectVersion(ExternalIdentity identity)
     {
+        if (!_subjectVersions.TryGetValue(identity, out var version))
+        {
+            version = Guid.NewGuid().ToString("N");
+            _subjectVersions[identity] = version;
+        }
+
+        return version;
+    }
+
+    private string Rewritten(ExternalIdentity identity, AccountId account)
+    {
+        Subjects[identity] = account;
+        var version = Guid.NewGuid().ToString("N");
+        _subjectVersions[identity] = version;
+        return version;
+    }
+
+    /// <summary>What another host's link of the same identity to the same account does to its binding: takes it up by writing it.</summary>
+    public void AdoptedElsewhere(ExternalIdentity identity) => Rewritten(identity, Subjects[identity]);
+
+    public async Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) =>
+        await BindSubjectAsync(identity, account, over: null, cancellationToken) is not null;
+
+    public Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default)
+    {
+        if (LoseEveryBinding)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        if (over is not null)
+        {
+            return Task.FromResult(Subjects.ContainsKey(identity) && SubjectVersion(identity) == over ? Rewritten(identity, account) : null);
+        }
+
         if (FailNextBinding)
         {
             FailNextBinding = false;
@@ -191,13 +243,31 @@ internal sealed class MemoryAccountStore : IAccountStore
         if (RefuseNextBinding)
         {
             RefuseNextBinding = false;
-            return Task.FromResult(false);
+            return Task.FromResult<string?>(null);
         }
 
-        return Task.FromResult(Subjects.TryAdd(identity, account));
+        return Task.FromResult(Subjects.ContainsKey(identity) ? null : Rewritten(identity, account));
     }
 
     public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default)
+    {
+        RunBeforeNextUnbinding();
+        return Task.FromResult(Subjects.TryGetValue(identity, out var held) && held == account && Removed(identity));
+    }
+
+    public Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default)
+    {
+        RunBeforeNextUnbinding();
+        return Task.FromResult(Subjects.ContainsKey(identity) && SubjectVersion(identity) == version && Removed(identity));
+    }
+
+    private bool Removed(ExternalIdentity identity)
+    {
+        _subjectVersions.Remove(identity);
+        return Subjects.Remove(identity);
+    }
+
+    private void RunBeforeNextUnbinding()
     {
         if (FailNextUnbinding)
         {
@@ -205,7 +275,11 @@ internal sealed class MemoryAccountStore : IAccountStore
             throw new IOException("The store went away.");
         }
 
-        return Task.FromResult(Subjects.TryGetValue(identity, out var held) && held == account && Subjects.Remove(identity));
+        if (BeforeNextUnbinding is { } before)
+        {
+            BeforeNextUnbinding = null;
+            before();
+        }
     }
 
     public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) =>

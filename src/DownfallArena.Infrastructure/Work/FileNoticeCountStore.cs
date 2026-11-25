@@ -10,15 +10,25 @@ namespace DownfallArena.Infrastructure.Work;
 /// </summary>
 public sealed class FileNoticeCountStore : INoticeCountStore
 {
-    private readonly TextsRead<DateOnly> _read = new();
+    private readonly TextsRead<DateOnly> _read;
 
     public FileNoticeCountStore(string directory)
+        : this(directory, TimeProvider.System)
     {
+    }
+
+    /// <param name="time">What lets go of a text kept past its lifetime; a test's own clock.</param>
+    internal FileNoticeCountStore(string directory, TimeProvider time)
+    {
+        _read = new TextsRead<DateOnly>(time);
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         Directory = Path.GetFullPath(directory);
     }
 
     public string Directory { get; }
+
+    /// <summary>How many texts this store keeps now (#1260).</summary>
+    internal int Kept => _read.Count;
 
     public async Task<NoticeCountRead> ReadAsync(DateOnly day, CancellationToken cancellationToken = default)
     {
@@ -44,19 +54,19 @@ public sealed class FileNoticeCountStore : INoticeCountStore
             cancellationToken);
     }
 
-    public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
-    {
-        _read.Forget(kept => kept < day);
-        if (!System.IO.Directory.Exists(Directory))
+    public Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default) =>
+        _read.ForgetAsync(kept => kept < day, async () =>
         {
-            return;
-        }
+            if (!System.IO.Directory.Exists(Directory))
+            {
+                return;
+            }
 
-        foreach (var file in System.IO.Directory.EnumerateFiles(Directory).Where(file => NoticeCountDocuments.DayOf(file) < day).ToArray())
-        {
-            await ConditionalFile.DeleteAsync(file, cancellationToken);
-        }
-    }
+            foreach (var file in System.IO.Directory.EnumerateFiles(Directory).Where(file => NoticeCountDocuments.DayOf(file) < day).ToArray())
+            {
+                await ConditionalFile.DeleteAsync(file, cancellationToken);
+            }
+        });
 
     private string FullPath(DateOnly day) => Path.Combine(Directory, NoticeCountDocuments.NameOf(day));
 }

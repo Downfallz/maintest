@@ -39,6 +39,128 @@ public sealed class AccountRegistry
     /// <summary>How many times a write of an account is read and tried again while another process writes it first.</summary>
     private const int Tries = 5;
 
+    private const string TriesLostMark = "Account.TriesLost";
+
+    // Every try lost, a write throws as a store out of service does; marked, so what the tries wrote can still go,
+    // which a store that failed would refuse anyway, and a host that stopped would never ask.
+    private static IOException TriesLost(string message) => new(message) { Data = { [TriesLostMark] = true } };
+
+    private static bool IsTriesLost(IOException exception) => exception.Data.Contains(TriesLostMark);
+
+    // A write whose refusal undoes what its tries wrote: on a refusal, and when every try was lost to another process
+    // (#1263). A store that failed, or a host that stopped, undoes nothing.
+    private static async Task<Result<Account>> UndoneIfRefusedAsync(Func<Task<Result<Account>>> write, Func<Task> undo)
+    {
+        Result<Account> written;
+        try
+        {
+            written = await write();
+        }
+        catch (IOException lost) when (IsTriesLost(lost))
+        {
+            await undo();
+            throw;
+        }
+
+        if (written.IsFailure)
+        {
+            await undo();
+        }
+
+        return written;
+    }
+
+    // One try of a link, on the account as read now; what it bound and read are kept in tried for the undo.
+    private async Task<Result<Account>> LinkTryAsync(Account account, ExternalIdentity identity, int? generation, Tried tried, CancellationToken cancellationToken)
+    {
+        tried.Last = account;
+        if (account.Suspension is { } suspension)
+        {
+            return Result.Failure<Account>(AccountErrors.Suspended(suspension));
+        }
+
+        // A guest gains a way in by its upgrade alone (ADR 0207), which also gives it a name of its own.
+        if (account.IsGuest || identity.Provider == ExternalIdentity.Guest)
+        {
+            return Result.Failure<Account>(AccountErrors.GuestNotAllowed);
+        }
+
+        if (generation is { } asked && asked != account.Generation)
+        {
+            return Result.Failure<Account>(AccountErrors.SessionEnded);
+        }
+
+        var finished = await FinishUnbindingAsync(account, cancellationToken);
+        if (finished.Identities.Contains(identity))
+        {
+            return Result.Success(finished);
+        }
+
+        if (finished.Identities.ByProvider(identity.Provider) is not null)
+        {
+            return Result.Failure<Account>(AccountErrors.ProviderLinked);
+        }
+
+        var binding = await BindAsync(identity, account.Id, tried.Made, cancellationToken);
+        tried.Made = binding.Made;
+        if (!binding.Bound)
+        {
+            return Result.Failure<Account>(AccountErrors.IdentityTaken);
+        }
+
+        return Result.Success(finished with { Identities = finished.Identities.With(identity) });
+    }
+
+    // One try of an upgrade, on the account as read now; the name held, what it bound and read are kept in tried.
+    private async Task<Result<Account>> UpgradeTryAsync(Account account, ExternalIdentity identity, Username name, Tried tried, CancellationToken cancellationToken)
+    {
+        tried.Last = account;
+        if (account.Identities.ByProvider(ExternalIdentity.Guest) is not { } guest)
+        {
+            return Result.Failure<Account>(AccountErrors.NotAGuest);
+        }
+
+        if (account.Suspension is { } suspension)
+        {
+            return Result.Failure<Account>(AccountErrors.Suspended(suspension));
+        }
+
+        tried.Before = account;
+        tried.Reservation ??= new UsernameReservation(name, account.Id, _clock.GetUtcNow());
+        if (await ReserveAsync(tried.Reservation, guest, cancellationToken) is not { } held || held.Account != account.Id)
+        {
+            return Result.Failure<Account>(AccountErrors.UsernameTaken);
+        }
+
+        var binding = await BindAsync(identity, account.Id, tried.Made, cancellationToken);
+        tried.Made = binding.Made;
+        if (!binding.Bound)
+        {
+            await ReleaseUnlessNamedAsync(tried.Reservation, account, cancellationToken);
+            return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
+        }
+
+        return Result.Success(account with
+        {
+            Identities = AccountIdentities.Of(identity),
+            Username = name,
+            Generation = account.Generation + 1,
+            Unbinding = guest,
+        });
+    }
+
+    /// <summary>What the tries of one link or upgrade wrote and last read, for what a refusal undoes.</summary>
+    private sealed class Tried
+    {
+        public Account? Last { get; set; }
+
+        public Account? Before { get; set; }
+
+        public string? Made { get; set; }
+
+        public UsernameReservation? Reservation { get; set; }
+    }
+
     /// <param name="guestCode">Draws a guest's code (ADR 0207); a random one of <see cref="Username.GuestAlphabet" /> unless a test draws its own.</param>
     public AccountRegistry(IAccountStore store, TimeProvider clock, Func<AccountId>? newId = null, Func<string>? guestCode = null)
     {
@@ -101,60 +223,20 @@ public sealed class AccountRegistry
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            UsernameReservation? reservation = null;
-            Account? before = null;
-            Account? last = null;
-            var bound = false;
-            var upgraded = await WriteAsync(
-                id,
-                async account =>
-                {
-                    last = account;
-                    if (account.Identities.ByProvider(ExternalIdentity.Guest) is not { } guest)
-                    {
-                        return Result.Failure<Account>(AccountErrors.NotAGuest);
-                    }
-
-                    if (account.Suspension is { } suspension)
-                    {
-                        return Result.Failure<Account>(AccountErrors.Suspended(suspension));
-                    }
-
-                    before = account;
-                    reservation ??= new UsernameReservation(name.Value, id, _clock.GetUtcNow());
-                    if (await ReserveAsync(reservation, guest, cancellationToken) is not { } held || held.Account != id)
-                    {
-                        return Result.Failure<Account>(AccountErrors.UsernameTaken);
-                    }
-
-                    var binding = await BindAsync(identity, id, cancellationToken);
-                    bound |= binding.Made;
-                    if (!binding.Bound)
-                    {
-                        await ReleaseUnlessNamedAsync(reservation, account, cancellationToken);
-                        return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
-                    }
-
-                    return Result.Success(account with
-                    {
-                        Identities = AccountIdentities.Of(identity),
-                        Username = name.Value,
-                        Generation = account.Generation + 1,
-                        Unbinding = guest,
-                    });
-                },
-                cancellationToken);
+            var tried = new Tried();
+            var upgraded = await UndoneIfRefusedAsync(
+                () => WriteAsync(id, account => UpgradeTryAsync(account, identity, name.Value, tried, cancellationToken), cancellationToken),
+                () => UndoRefusedUpgradeAsync(tried.Reservation, tried.Made, tried.Last, identity, id, cancellationToken));
             if (upgraded.IsFailure)
             {
-                await UndoRefusedUpgradeAsync(reservation, bound, upgraded, last, identity, id, cancellationToken);
                 return upgraded;
             }
 
             var guestIdentity = upgraded.Value.Unbinding!.Value;
             await _store.UnbindSubjectAsync(guestIdentity, id, cancellationToken);
-            if (before!.Username.Key != name.Value.Key)
+            if (tried.Before!.Username.Key != name.Value.Key)
             {
-                await ReleaseHeldAsync(before.Username, id, cancellationToken);
+                await ReleaseHeldAsync(tried.Before.Username, id, cancellationToken);
             }
 
             return await UnboundAsync(upgraded.Value, guestIdentity, cancellationToken);
@@ -166,30 +248,32 @@ public sealed class AccountRegistry
     }
 
     // A try refused after an earlier one held the name and bound the identity: another process changed the account
-    // meanwhile (deleted, suspended or upgraded it). What was written for this upgrade goes, but for a name the account
-    // now carries.
+    // meanwhile (deleted, suspended or upgraded it), or wrote it first on every try. What was written for this upgrade
+    // goes, but for a name the account now carries. The account is read again for that: when every try was lost, the
+    // last one read it before the write that beat it, which may be another upgrade to the same name.
     private async Task UndoRefusedUpgradeAsync(
-        UsernameReservation? reservation, bool bound, Result<Account> upgraded, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+        UsernameReservation? reservation, string? made, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
-        if (reservation is not null && last!.Username.Key != reservation.Username.Key)
+        if (reservation is not null && last!.Username.Key != reservation.Username.Key
+            && (await _store.FindAsync(id, cancellationToken))?.Username.Key != reservation.Username.Key)
         {
             await _store.ReleaseUsernameAsync(reservation, cancellationToken);
         }
 
-        await UnbindRefusedAsync(bound, upgraded, last, identity, id, cancellationToken);
+        await UnbindRefusedAsync(made, last, identity, id, cancellationToken);
     }
 
-    // An identity a try bound itself, then a later try refused (#1217): the account does not list it, so its binding
-    // holds nobody, and the account does not keep it as Unbinding either; it goes now, or nothing would find it. The
-    // account is read once more just before: another process's link may have taken the binding up since the refusal,
-    // writing only the account. What is left is the moment between that read and the removal, which no condition of
-    // the store can close, since taking a binding up writes nothing to it.
-    private async Task UnbindRefusedAsync(bool bound, Result<Account> written, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    // An identity a try bound itself, then a later try refused, or every try lost (#1217): the account does not list
+    // it and does not keep it as Unbinding, so nothing would find its binding later. It goes now.
+    // It goes only if it is still the version this call wrote. If another process's link took it up since, the version
+    // moved and the binding is left to that link (#1261). The account is also read once more first, for the release
+    // before this one during a deploy, whose link takes a binding up by writing only the account.
+    private async Task UnbindRefusedAsync(string? made, Account? last, ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
     {
-        if (bound && written.IsFailure && last?.Identities.Contains(identity) != true
+        if (made is not null && last?.Identities.Contains(identity) != true
             && (await _store.FindAsync(id, cancellationToken))?.Identities.Contains(identity) != true)
         {
-            await _store.UnbindSubjectAsync(identity, id, cancellationToken);
+            await _store.UnbindSubjectIfUnchangedAsync(identity, made, cancellationToken);
         }
     }
 
@@ -307,7 +391,7 @@ public sealed class AccountRegistry
             }
         }
 
-        throw new IOException($"Account {id} lost {Tries} writes in a row to another process.");
+        throw TriesLost($"Account {id} lost {Tries} writes in a row to another process.");
     }
 
     /// <summary>
@@ -354,51 +438,11 @@ public sealed class AccountRegistry
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            var bound = false;
-            Account? last = null;
-            var linked = await WriteAsync(
-                id,
-                async account =>
-                {
-                    last = account;
-                    if (account.Suspension is { } suspension)
-                    {
-                        return Result.Failure<Account>(AccountErrors.Suspended(suspension));
-                    }
+            var tried = new Tried();
+            var linked = await UndoneIfRefusedAsync(
+                () => WriteAsync(id, account => LinkTryAsync(account, identity, generation, tried, cancellationToken), cancellationToken),
+                () => UnbindRefusedAsync(tried.Made, tried.Last, identity, id, cancellationToken));
 
-                    // A guest gains a way in by its upgrade alone (ADR 0207), which also gives it a name of its own.
-                    if (account.IsGuest || identity.Provider == ExternalIdentity.Guest)
-                    {
-                        return Result.Failure<Account>(AccountErrors.GuestNotAllowed);
-                    }
-
-                    if (generation is { } asked && asked != account.Generation)
-                    {
-                        return Result.Failure<Account>(AccountErrors.SessionEnded);
-                    }
-
-                    var finished = await FinishUnbindingAsync(account, cancellationToken);
-                    if (finished.Identities.Contains(identity))
-                    {
-                        return Result.Success(finished);
-                    }
-
-                    if (finished.Identities.ByProvider(identity.Provider) is not null)
-                    {
-                        return Result.Failure<Account>(AccountErrors.ProviderLinked);
-                    }
-
-                    var binding = await BindAsync(identity, id, cancellationToken);
-                    bound |= binding.Made;
-                    if (!binding.Bound)
-                    {
-                        return Result.Failure<Account>(AccountErrors.IdentityTaken);
-                    }
-
-                    return Result.Success(finished with { Identities = finished.Identities.With(identity) });
-                },
-                cancellationToken);
-            await UnbindRefusedAsync(bound, linked, last, identity, id, cancellationToken);
             return linked;
         }
         finally
@@ -464,34 +508,49 @@ public sealed class AccountRegistry
     }
 
     // Binds the identity to the account: Bound when it now names it, already or once a binding that holds nobody is
-    // taken back, false when another account holds it; Made when this call wrote the binding, so a refusal later undoes
-    // only what it wrote, never a binding another link in flight made (#1217).
-    private async Task<(bool Bound, bool Made)> BindAsync(ExternalIdentity identity, AccountId id, CancellationToken cancellationToken)
+    // taken back, false when another account holds it. Made is the version of a binding this call made, so a refusal
+    // later undoes only what it wrote, never a binding another link in flight made (#1217).
+    // A binding made by an earlier try of this same call (ours) is still its own while its version has not changed.
+    // A binding another link of this account made is taken up by writing it over its version, so that link's cleanup,
+    // over the version it made, leaves it (#1261).
+    private async Task<(bool Bound, string? Made)> BindAsync(ExternalIdentity identity, AccountId id, string? ours, CancellationToken cancellationToken)
     {
-        if (await _store.TryBindSubjectAsync(identity, id, cancellationToken))
+        for (var tried = 0; tried < Tries; tried++)
         {
-            return (true, true);
-        }
-
-        var holder = await _store.FindBySubjectAsync(identity, cancellationToken);
-        if (holder == id)
-        {
-            return (true, false);
-        }
-
-        if (holder is { } other)
-        {
-            if (!await HoldsNobodyAsync(identity, other, cancellationToken))
+            if (await _store.BindSubjectAsync(identity, id, over: null, cancellationToken) is { } made)
             {
-                return (false, false);
+                return (true, made);
             }
 
-            await _store.UnbindSubjectAsync(identity, other, cancellationToken);
+            if (await _store.ReadSubjectAsync(identity, cancellationToken) is not { } held)
+            {
+                continue;
+            }
+
+            if (held.Account == id)
+            {
+                if (held.Version == ours)
+                {
+                    return (true, ours);
+                }
+
+                if (await _store.BindSubjectAsync(identity, id, held.Version, cancellationToken) is not null)
+                {
+                    return (true, null);
+                }
+
+                continue;
+            }
+
+            if (!await HoldsNobodyAsync(identity, held.Account, cancellationToken))
+            {
+                return (false, null);
+            }
+
+            await _store.UnbindSubjectIfUnchangedAsync(identity, held.Version, cancellationToken);
         }
 
-        return await _store.TryBindSubjectAsync(identity, id, cancellationToken)
-            ? (true, true)
-            : (await _store.FindBySubjectAsync(identity, cancellationToken) == id, false);
+        throw TriesLost($"The binding of {identity.Provider} to account {id} lost {Tries} writes in a row to another process.");
     }
 
     /// <summary>
@@ -528,7 +587,7 @@ public sealed class AccountRegistry
                 }
             }
 
-            throw new IOException($"Account {id} lost {Tries} removals in a row to another process.");
+            throw TriesLost($"Account {id} lost {Tries} removals in a row to another process.");
         }
         finally
         {
@@ -615,7 +674,7 @@ public sealed class AccountRegistry
 
     private async Task<Result<Account>> RegisterAsync(ExternalIdentity identity, Username name, CancellationToken cancellationToken)
     {
-        if (await _store.FindBySubjectAsync(identity, cancellationToken) is { } bound && !await ReleaseIfHoldsNobodyAsync(identity, bound, cancellationToken))
+        if (await _store.ReadSubjectAsync(identity, cancellationToken) is { } bound && !await ReleaseIfHoldsNobodyAsync(identity, bound, cancellationToken))
         {
             return Result.Failure<Account>(AccountErrors.AlreadyRegistered);
         }
@@ -667,18 +726,16 @@ public sealed class AccountRegistry
     /// its writes, ADR 0204). Under the lock links and removals take, so a link in progress is never taken for one
     /// that stopped.
     /// </summary>
-    private async Task<bool> ReleaseIfHoldsNobodyAsync(ExternalIdentity identity, AccountId bound, CancellationToken cancellationToken)
+    private async Task<bool> ReleaseIfHoldsNobodyAsync(ExternalIdentity identity, SubjectRead bound, CancellationToken cancellationToken)
     {
         await Writes.WaitAsync(cancellationToken);
         try
         {
-            if (!await HoldsNobodyAsync(identity, bound, cancellationToken))
-            {
-                return false;
-            }
-
-            await _store.UnbindSubjectAsync(identity, bound, cancellationToken);
-            return true;
+            // Removed only as the version judged: a link of that account in another process that took the binding up
+            // since keeps it (#1261).
+            return await HoldsNobodyAsync(identity, bound.Account, cancellationToken)
+                && (await _store.UnbindSubjectIfUnchangedAsync(identity, bound.Version, cancellationToken)
+                    || await _store.ReadSubjectAsync(identity, cancellationToken) is null);
         }
         finally
         {

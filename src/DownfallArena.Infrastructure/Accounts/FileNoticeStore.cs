@@ -10,15 +10,25 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// </summary>
 public sealed class FileNoticeStore : INoticeStore
 {
-    private readonly TextsRead<AccountId> _read = new();
+    private readonly TextsRead<AccountId> _read;
 
     public FileNoticeStore(string rootDirectory)
+        : this(rootDirectory, TimeProvider.System)
     {
+    }
+
+    /// <param name="time">What lets go of a text kept past its lifetime; a test's own clock.</param>
+    internal FileNoticeStore(string rootDirectory, TimeProvider time)
+    {
+        _read = new TextsRead<AccountId>(time);
         ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
         RootDirectory = Path.GetFullPath(rootDirectory);
     }
 
     public string RootDirectory { get; }
+
+    /// <summary>How many texts this store keeps now (#1260).</summary>
+    internal int Kept => _read.Count;
 
     public async Task<NoticeLogRead> ReadAsync(AccountId account, CancellationToken cancellationToken = default)
     {

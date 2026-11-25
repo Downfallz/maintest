@@ -267,6 +267,14 @@ public sealed class TableServerGuestTests : IAsyncDisposable
 
         public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.TryBindSubjectAsync(identity, account, cancellationToken);
 
+        public Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) => inner.ReadSubjectAsync(identity, cancellationToken);
+
+        public Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default) =>
+            inner.BindSubjectAsync(identity, account, over, cancellationToken);
+
+        public Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default) =>
+            inner.UnbindSubjectIfUnchangedAsync(identity, version, cancellationToken);
+
         public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) => inner.UnbindSubjectAsync(identity, account, cancellationToken);
 
         public Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) => inner.FindUsernameAsync(username, cancellationToken);

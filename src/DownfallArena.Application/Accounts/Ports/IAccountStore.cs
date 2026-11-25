@@ -41,11 +41,27 @@ public interface IAccountStore
 
     Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default);
 
+    /// <summary>The account the sign-in is bound to and the version of the binding read, or null when it has none.</summary>
+    Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default);
+
     /// <summary>Binds the sign-in to the account if nothing holds it yet; false when something already does.</summary>
     Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Writes the binding and answers its version: with <paramref name="over" /> null, only if nothing holds the sign-in
+    /// yet; otherwise only over that version, which is how a link takes up a binding another link made (#1261). Every write
+    /// gives the binding a new version, even naming the same account. Answers null, and writes nothing, when the write is refused.
+    /// </summary>
+    Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default);
+
     /// <summary>Removes the binding if it still names that account; false otherwise.</summary>
     Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Removes the binding only if it is still the version read or written. Answers false, and removes nothing, when the
+    /// binding changed or went.
+    /// </summary>
+    Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default);
 
     /// <summary>Who holds the name, compared by <see cref="Username.Key" />, or null.</summary>
     Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default);

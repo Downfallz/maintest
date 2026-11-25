@@ -93,7 +93,7 @@ internal static class AccountDocuments
         return new UsernameReservation(Username.Restore(record.Username), AccountId.Parse(record.Account), record.ReservedAt);
     }
 
-    public static string WriteSubject(AccountId account) => JsonSerializer.Serialize(new SubjectRecord(account.Value), Web);
+    public static string WriteSubject(AccountId account) => JsonSerializer.Serialize(new SubjectRecord(account.Value) { Mark = Guid.NewGuid().ToString("N") }, Web);
 
     public static AccountId ReadSubject(string json)
     {
@@ -121,5 +121,10 @@ internal static class AccountDocuments
 
     private sealed record NameRecord(string Username, string Account, DateTimeOffset ReservedAt);
 
-    private sealed record SubjectRecord(string Account);
+    // Mark is new with every write, so a file's hash, its version, changes even when the account it names does not
+    // (#1261). Entries written before this field have no mark, and an older image reads an entry that has one.
+    private sealed record SubjectRecord(string Account)
+    {
+        public string? Mark { get; init; }
+    }
 }

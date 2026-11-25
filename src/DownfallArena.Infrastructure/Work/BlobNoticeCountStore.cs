@@ -48,20 +48,20 @@ public sealed class BlobNoticeCountStore : INoticeCountStore
             cancellationToken);
     }
 
-    public async Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default)
-    {
-        _read.Forget(kept => kept < day);
-        var old = new List<string>();
-        await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: null, cancellationToken).Where(item => NoticeCountDocuments.DayOf(item.Name) < day))
+    public Task ForgetBeforeAsync(DateOnly day, CancellationToken cancellationToken = default) =>
+        _read.ForgetAsync(kept => kept < day, async () =>
         {
-            old.Add(item.Name);
-        }
+            var old = new List<string>();
+            await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: null, cancellationToken).Where(item => NoticeCountDocuments.DayOf(item.Name) < day))
+            {
+                old.Add(item.Name);
+            }
 
-        foreach (var name in old)
-        {
-            await _container.DeleteBlobIfExistsAsync(name, cancellationToken: cancellationToken);
-        }
-    }
+            foreach (var name in old)
+            {
+                await _container.DeleteBlobIfExistsAsync(name, cancellationToken: cancellationToken);
+            }
+        });
 
     private BlobClient Blob(DateOnly day) => _container.GetBlobClient(NoticeCountDocuments.NameOf(day));
 }

@@ -12,8 +12,9 @@ namespace DownfallArena.Infrastructure.Accounts;
 /// <remarks>
 /// A write follows its read within the same request, so a text is kept for <see cref="LifetimeSeconds" /> seconds only. That bounds
 /// what an account erased by another process leaves here, its push keys among it (ADR 0203): such a text is never
-/// given to a write once old, and is let go at a later read or write of the store, within two lifetimes. A store
-/// that is not used again keeps it until its process ends: the reads that save nothing (a push's devices) keep no text.
+/// given to a write once old, and is let go within two lifetimes by a sweep that runs every lifetime while a text is
+/// kept. That holds whether or not the store is used again (#1260). A store that keeps nothing holds no sweep; the
+/// reads that save nothing (a push's devices) keep no text.
 /// </remarks>
 /// <typeparam name="TKey">What names a document in its store: an account, a day.</typeparam>
 internal sealed class TextsRead<TKey>
@@ -29,12 +30,14 @@ internal sealed class TextsRead<TKey>
 
     private readonly ConcurrentDictionary<TKey, (string Version, string Text, DateTimeOffset Kept)> _texts = new();
     private readonly TimeProvider _time;
-    private long _swept;
+    private readonly Lock _sweeping = new();
+
+    // Let go once nothing is kept, so a store that keeps nothing holds no timer.
+    private ITimer? _sweep;
 
     public TextsRead(TimeProvider? time = null)
     {
         _time = time ?? TimeProvider.System;
-        _swept = _time.GetUtcNow().UtcTicks;
     }
 
     /// <summary>How many texts are kept now, what an erasure in another process may leave here.</summary>
@@ -43,7 +46,7 @@ internal sealed class TextsRead<TKey>
     /// <summary>Keeps the text read at that version; a document that is not there forgets what was kept of it.</summary>
     public void Remember(TKey key, string? text, string? version)
     {
-        var now = Sweep();
+        var now = _time.GetUtcNow();
         if (text is null || version is null)
         {
             _texts.TryRemove(key, out _);
@@ -56,6 +59,17 @@ internal sealed class TextsRead<TKey>
         }
 
         _texts[key] = (version, text, now);
+        lock (_sweeping)
+        {
+            if (_sweep is null)
+            {
+                // The sweep runs in no request's context: one captured would be held while anything is kept.
+                using (ExecutionContext.SuppressFlow())
+                {
+                    _sweep = _time.CreateTimer(_ => SweepUnasked(), state: null, Lifetime, Lifetime);
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -71,6 +85,18 @@ internal sealed class TextsRead<TKey>
         foreach (var key in _texts.Keys.Where(which))
         {
             _texts.TryRemove(key, out _);
+        }
+    }
+
+    /// <summary>Whether a sweep is due: held only while a text is kept.</summary>
+    public bool Sweeping
+    {
+        get
+        {
+            lock (_sweeping)
+            {
+                return _sweep is not null;
+            }
         }
     }
 
@@ -118,6 +144,18 @@ internal sealed class TextsRead<TKey>
     }
 
     /// <summary>
+    /// Deletes the documents <paramref name="which" /> names, and lets go of what was kept of them both before the
+    /// deletion and after it, so a read kept while it runs keeps nothing either.
+    /// </summary>
+    public async Task ForgetAsync(Func<TKey, bool> which, Func<Task> delete)
+    {
+        ArgumentNullException.ThrowIfNull(delete);
+        Forget(which);
+        await delete();
+        Forget(which);
+    }
+
+    /// <summary>
     /// The text the document holds at that version, taken from what was kept or read again. When it was read again and
     /// the document has moved past that version, none, with false, so the write is refused without being tried; a kept
     /// text cannot tell, and the conditional write is refused instead. What was kept is given to one write only: the
@@ -130,7 +168,7 @@ internal sealed class TextsRead<TKey>
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(read);
-        var now = Sweep();
+        var now = _time.GetUtcNow();
         if (_texts.TryGetValue(key, out var kept)
             && _texts.TryRemove(KeyValuePair.Create(key, kept))
             && string.Equals(kept.Version, version, StringComparison.Ordinal)
@@ -151,22 +189,31 @@ internal sealed class TextsRead<TKey>
         return done;
     }
 
-    /// <summary>Lets go of the texts kept past their lifetime, at most once a lifetime; the time now.</summary>
-    private DateTimeOffset Sweep()
+    /// <summary>
+    /// The sweep a timer runs every lifetime while a text is kept: the texts past their lifetime let go, then the timer
+    /// itself once nothing is kept. A text kept meanwhile finds the timer still there, or starts another.
+    /// </summary>
+    private void SweepUnasked()
     {
-        var now = _time.GetUtcNow();
-        var swept = Interlocked.Read(ref _swept);
-        if (now.UtcTicks - swept >= Lifetime.Ticks && Interlocked.CompareExchange(ref _swept, now.UtcTicks, swept) == swept)
+        lock (_sweeping)
         {
-            foreach (var (key, kept) in _texts)
+            LetGoOld(_time.GetUtcNow());
+            if (_texts.IsEmpty && _sweep is { } sweep)
             {
-                if (now - kept.Kept >= Lifetime)
-                {
-                    _texts.TryRemove(KeyValuePair.Create(key, kept));
-                }
+                sweep.Dispose();
+                _sweep = null;
             }
         }
+    }
 
-        return now;
+    private void LetGoOld(DateTimeOffset now)
+    {
+        foreach (var (key, kept) in _texts)
+        {
+            if (now - kept.Kept >= Lifetime)
+            {
+                _texts.TryRemove(KeyValuePair.Create(key, kept));
+            }
+        }
     }
 }

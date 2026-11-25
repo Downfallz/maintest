@@ -88,11 +88,34 @@ public sealed class FileAccountStore : IAccountStore
     public async Task<AccountId?> FindBySubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.SubjectPath(identity), cancellationToken) is { } json ? AccountDocuments.ReadSubject(json) : null;
 
-    public Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) =>
-        ExclusivelyAsync(() => WriteAsync(AccountDocuments.SubjectPath(identity), AccountDocuments.WriteSubject(account), overwrite: false, cancellationToken), cancellationToken);
+    public async Task<SubjectRead?> ReadSubjectAsync(ExternalIdentity identity, CancellationToken cancellationToken = default) =>
+        await ReadAsync(AccountDocuments.SubjectPath(identity), cancellationToken) is { } json ? new SubjectRead(AccountDocuments.ReadSubject(json), VersionOf(json)) : null;
+
+    public async Task<bool> TryBindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) =>
+        await BindSubjectAsync(identity, account, over: null, cancellationToken) is not null;
+
+    /// <summary>The binding written carries a mark of its own, so even one naming the same account hashes to a new version (#1261).</summary>
+    public async Task<string?> BindSubjectAsync(ExternalIdentity identity, AccountId account, string? over, CancellationToken cancellationToken = default)
+    {
+        var path = AccountDocuments.SubjectPath(identity);
+        var json = AccountDocuments.WriteSubject(account);
+        var written = await ExclusivelyAsync(
+            async () => over is null
+                ? await WriteAsync(path, json, overwrite: false, cancellationToken)
+                : await IsVersionAsync(path, over, cancellationToken) && await WriteAsync(path, json, overwrite: true, cancellationToken),
+            cancellationToken);
+        return written ? VersionOf(json) : null;
+    }
 
     public Task<bool> UnbindSubjectAsync(ExternalIdentity identity, AccountId account, CancellationToken cancellationToken = default) =>
         ExclusivelyAsync(async () => await FindBySubjectAsync(identity, cancellationToken) == account && Delete(AccountDocuments.SubjectPath(identity)), cancellationToken);
+
+    public Task<bool> UnbindSubjectIfUnchangedAsync(ExternalIdentity identity, string version, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        var path = AccountDocuments.SubjectPath(identity);
+        return ExclusivelyAsync(async () => await IsVersionAsync(path, version, cancellationToken) && Delete(path), cancellationToken);
+    }
 
     public async Task<UsernameReservation?> FindUsernameAsync(Username username, CancellationToken cancellationToken = default) =>
         await ReadAsync(AccountDocuments.NamePath(username), cancellationToken) is { } json ? AccountDocuments.ReadName(json) : null;

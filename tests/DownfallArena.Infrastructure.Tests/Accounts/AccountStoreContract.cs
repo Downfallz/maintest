@@ -293,6 +293,41 @@ public abstract class AccountStoreContract
     }
 
     [Fact]
+    public async Task A_binding_made_answers_the_version_it_is_read_at_and_a_second_is_refused()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+
+        var made = await store.BindSubjectAsync(Mark, account, over: null, Cancel);
+
+        made.ShouldNotBeNull();
+        (await store.ReadSubjectAsync(Mark, Cancel)).ShouldBe(new SubjectRead(account, made));
+        (await store.BindSubjectAsync(Mark, AccountId.New(), over: null, Cancel)).ShouldBeNull();
+        (await store.ReadSubjectAsync(new ExternalIdentity(ExternalIdentity.Discord, "80351110224678912"), Cancel)).ShouldBeNull();
+    }
+
+    /// <summary>A link taking up a binding another made writes it, so the other's cleanup over its own version leaves it (#1261).</summary>
+    [Fact]
+    public async Task A_binding_taken_up_over_its_version_gets_a_new_one_and_a_removal_over_the_old_leaves_it()
+    {
+        var store = await StoreAsync();
+        var account = AccountId.New();
+        var made = (await store.BindSubjectAsync(Mark, account, over: null, Cancel))!;
+
+        var adopted = await store.BindSubjectAsync(Mark, account, made, Cancel);
+
+        adopted.ShouldNotBeNull();
+        adopted.ShouldNotBe(made);
+        (await store.BindSubjectAsync(Mark, account, made, Cancel)).ShouldBeNull();
+        (await store.UnbindSubjectIfUnchangedAsync(Mark, made, Cancel)).ShouldBeFalse();
+        (await store.FindBySubjectAsync(Mark, Cancel)).ShouldBe(account);
+        (await store.UnbindSubjectIfUnchangedAsync(Mark, adopted, Cancel)).ShouldBeTrue();
+        (await store.FindBySubjectAsync(Mark, Cancel)).ShouldBeNull();
+        (await store.BindSubjectAsync(Mark, account, adopted, Cancel)).ShouldBeNull();
+        (await store.UnbindSubjectIfUnchangedAsync(Mark, adopted, Cancel)).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task A_subject_with_characters_a_path_would_read_is_kept_apart_from_its_neighbours()
     {
         var store = await StoreAsync();

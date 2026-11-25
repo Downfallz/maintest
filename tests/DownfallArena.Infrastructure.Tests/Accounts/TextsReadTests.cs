@@ -112,9 +112,9 @@ public sealed class TextsReadTests
         _reads.ShouldBe(1);
     }
 
-    /// <summary>What another process erased leaves here goes at the next use past its lifetime (ADR 0203).</summary>
+    /// <summary>What another process erased leaves here goes once past its lifetime (ADR 0203).</summary>
     [Fact]
-    public void Texts_past_their_lifetime_are_let_go_at_the_next_use_though_never_asked_for()
+    public void Texts_past_their_lifetime_are_let_go_though_never_asked_for()
     {
         var time = new FakeTimeProvider();
         var texts = new TextsRead<string>(time);
@@ -124,5 +124,101 @@ public sealed class TextsReadTests
         texts.Remember("other", "kept", "v1");
 
         texts.Count.ShouldBe(1);
+    }
+
+    /// <summary>What another process erased leaves here goes within two lifetimes, though the store is never used again (#1260).</summary>
+    [Fact]
+    public void Texts_past_their_lifetime_are_let_go_though_the_store_is_never_used_again()
+    {
+        var time = new FakeTimeProvider();
+        var texts = new TextsRead<string>(time);
+        texts.Remember("erased", "keys", "v1");
+
+        time.Advance(TimeSpan.FromSeconds(2 * TextsRead<string>.LifetimeSeconds));
+
+        texts.Count.ShouldBe(0);
+        texts.Sweeping.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void A_store_that_keeps_nothing_holds_no_sweep_and_one_that_keeps_a_text_holds_one()
+    {
+        var texts = new TextsRead<string>(new FakeTimeProvider());
+        texts.Sweeping.ShouldBeFalse();
+
+        texts.Remember("a", "kept", "v1");
+
+        texts.Sweeping.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void A_text_kept_just_now_outlives_the_sweep_that_lets_an_older_one_go()
+    {
+        var time = new FakeTimeProvider();
+        var texts = new TextsRead<string>(time);
+        texts.Remember("old", "kept", "v1");
+        time.Advance(TimeSpan.FromSeconds(TextsRead<string>.LifetimeSeconds - 1));
+        texts.Remember("new", "kept", "v1");
+
+        time.Advance(TimeSpan.FromSeconds(1));
+
+        texts.Count.ShouldBe(1);
+        texts.Sweeping.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_text_read_while_its_document_is_deleted_is_forgotten_once_it_is_gone()
+    {
+        var texts = new TextsRead<string>();
+        texts.Remember("a", "kept", "v1");
+
+        await texts.ForgetAsync("a", () =>
+        {
+            texts.Count.ShouldBe(0);
+            texts.Remember("a", "read meanwhile", "v1");
+            return Task.CompletedTask;
+        });
+
+        texts.Count.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Texts_read_while_the_documents_they_name_are_deleted_are_forgotten_once_they_are_gone()
+    {
+        var texts = new TextsRead<int>();
+        texts.Remember(1, "kept", "v1");
+        texts.Remember(3, "kept", "v1");
+
+        await texts.ForgetAsync(day => day < 2, () =>
+        {
+            texts.Count.ShouldBe(1);
+            texts.Remember(1, "read meanwhile", "v1");
+            return Task.CompletedTask;
+        });
+
+        texts.Count.ShouldBe(1);
+    }
+
+    /// <summary>The sweep is started from a request, and must hold none of that request's context while it runs (#1260).</summary>
+    [Fact]
+    public void The_sweep_is_started_without_the_context_of_the_read_that_kept_the_first_text()
+    {
+        var time = new FlowWatchingTime();
+        var texts = new TextsRead<string>(time);
+
+        texts.Remember("a", "kept", "v1");
+
+        time.FlowSuppressed.ShouldBe(true);
+    }
+
+    private sealed class FlowWatchingTime : TimeProvider
+    {
+        public bool? FlowSuppressed { get; private set; }
+
+        public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+        {
+            FlowSuppressed = ExecutionContext.IsFlowSuppressed();
+            return base.CreateTimer(callback, state, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+        }
     }
 }
