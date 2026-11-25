@@ -365,9 +365,9 @@ resource appEnvironment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
-// The API (ADR 0162): one replica at most, zero when nobody has a page open. Its bots' turns go on the queue for
+// The API (ADR 0162): one replica at most, zero two hours after the last request. Its bots' turns go on the queue for
 // the worker, and the hourly job tends its tables, so it answers requests and streams, and nothing else.
-resource app 'Microsoft.App/containerApps@2024-03-01' = {
+resource app 'Microsoft.App/containerApps@2025-01-01' = {
   name: '${namePrefix}-table'
   location: location
   identity: {
@@ -438,6 +438,9 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       scale: {
         minReplicas: 0
         maxReplicas: 1
+        // Two hours without a request before it scales to zero, where the platform's default is five minutes: a
+        // player who comes back to the game within the evening finds it awake, with no cold start.
+        cooldownPeriod: 7200
         rules: [
           {
             name: 'http'

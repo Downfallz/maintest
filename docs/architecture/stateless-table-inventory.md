@@ -234,7 +234,7 @@ Each phase ships on the one container app there is today and leaves the game pla
      it read, and never over one with the match's outcome on it, so a checkpoint on its way when another
      process closes the match cannot cut its trace short. The worker tells no seat "your turn": it serves no page,
      so it cannot know who is looking. The API that serves the seat reads the turn within a second and tells
-     it, as long as it is awake, which it is for five minutes after the last request.
+     it, as long as it is awake, which it is for two hours after the last request.
    - **6d, done.** `infra/main.bicep` deploys the three from one image:
      - The API runs `table --turns worker --tended`. With `--tended`, a request no longer sweeps the index nor
        lets invitations go (`TableServer.Tended`, `LobbyApi.Tended`). It still lets go of the tables it holds
