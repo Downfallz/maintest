@@ -10,7 +10,7 @@ import { MOST_A_SECOND, flashesASecond, luminanceInPage } from '../../scripts/ux
 import { buildShowcase, walkWidths } from '../../scripts/ux/set.mjs';
 
 // The checks of accessibility the gate runs (docs/art/ux-craft-plan.md, UX13; ADR 0197), on the real engine: every
-// screen and state of the journeys, at 320 by 568 and 390 by 844, with nothing found by axe on the rules of WCAG 2.2
+// screen and state of the journeys, at 320 by 568 and 390 by 844 (320 alone on a pull request), with nothing found by axe on the rules of WCAG 2.2
 // AA, nothing under 7:1 when the system asks for more contrast, no ring, icon or state lost to forced colours, and
 // nothing lost with the text spaced (WCAG 1.4.12) or doubled (1.4.4). The walk sets its own size, so the journeys
 // are shared between the two projects, each walking its half at both widths.

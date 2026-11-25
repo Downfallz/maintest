@@ -100,3 +100,9 @@ test('the real-engine job walks one width on a pull request and both elsewhere',
     assert.match(source, /walkWidths\(\)/, `${spec} takes the widths the job names`);
   }
 });
+
+test('where the browser has no DevTools protocol the ring is left to the sheets\' reading (#1268)', async () => {
+  const { ringsLostInPage } = await import('../scripts/ux/access.mjs');
+  const page = { context: () => ({ newCDPSession: async () => { throw new Error('CDP session is only available in Chromium'); } }) };
+  assert.equal(await ringsLostInPage(page), null);
+});

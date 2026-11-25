@@ -8,7 +8,7 @@ import { lessMotionFaults, travelWatchedInPage, watchTravel } from '../../script
 import { VIEWPORTS, buildShowcase, walkWidths } from '../../scripts/ux/set.mjs';
 
 // Less motion across every screen (docs/art/ux-craft-plan.md, UX14; ADR 0197), on the real engine: every journey
-// walked at 320 by 568 and 390 by 844 with the system's wish for less motion. On the way to each screen nothing
+// walked at 320 by 568 and 390 by 844 (320 alone on a pull request) with the system's wish for less motion. On the way to each screen nothing
 // moves across the screen (a transform, a translate, a scale or a rotate that lasts), and at rest nothing animates:
 // travel becomes a fade, and ambience stops. The walk sets its own size, so the journeys are shared between the two
 // projects as the checks of accessibility share them (table.access.js).

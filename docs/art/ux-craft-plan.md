@@ -765,7 +765,9 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     held to none. Under more contrast, axe runs its rule of 7:1. Under forced colours, the check flags an icon or a
     state lost, and a page with no rule that keeps a ring for the focus. It reads the sheets and never moves the
     focus, since a walk's page reacts to the focus; so it sees a page with no such rule, not a ring one control loses
-    to a rule of its own. With the text spaced as WCAG 1.4.12 asks, then at 200%, it flags a word cut, a page that
+    to a rule of its own. (Since #1268, each control's ring is read from the cascade under a forced `:focus-visible`,
+    through Chromium's DevTools protocol, and the focus still never moves. Since #1269, a pull request walks 320 px
+    alone; `main` and the nightly walk both widths.) With the text spaced as WCAG 1.4.12 asks, then at 200%, it flags a word cut, a page that
     scrolls sideways, and two controls on top of each other. At 200% every element's computed size is doubled
     (`doubleTextInPage`): many sizes of the pages are in pixels, which the root's size never reaches. The walk's measures are unchanged; the checks ride
     beside them. A fixture page holds that each check finds its fault. The tag `wcag22aa` turns axe's target-size

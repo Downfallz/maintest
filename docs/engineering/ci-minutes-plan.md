@@ -64,23 +64,27 @@ less motion (`table.motion.js`, UX14) walks the journeys again at both widths, w
 | table-desktop | about 12 min | about 28 min |
 
 UX14 adds about 8 minutes a project, by its own estimate. The job's limit went from 25 minutes to 60. A pull
-request that calls for the real engine paid all of it twice, once a project. In the share of minutes above,
-"real engine" was 17% of CI's minutes, before either walk.
+request that calls for the real engine paid all of it, in both projects (phone and desktop). In the week's share
+of minutes above, the real engine was 17% of CI's minutes, before either walk.
 
 The cheaper shape, two options weighed:
 
 1. *The walks on `main` and in the nightly only.* The cheapest, but a pull request that drops a focus ring or adds
-   motion is green and `main` goes red after the merge, which ADR 0182 moved away from.
+   motion is green and `main` goes red after the merge, which ADR 0182 set out to avoid.
 2. *One width on a pull request, both on `main` and in the nightly.* Chosen. A pull request walks both specs at
    320 by 568 alone. That is the narrowest phone, where reflow, clipped words and overlaps show first. `main` and
    the nightly walk 320 and 390 before the deployment. The real-engine job sets `UX_WALK_WIDTHS` from the event,
    and `walkWidths` in `scripts/ux/set.mjs` reads it. The list of what is known is read at the widths walked
-   (`knownAt`), so a pull request does not call a 390 px line fixed. What a pull request no longer sees: a
-   finding at 390 px alone, such as the menu's button over Settings (#1276). `main` finds it, before the
-   deployment.
+   (`knownAt`), so a pull request does not call a 390 px line fixed. A pull request no longer sees a finding at
+   390 px alone, such as the menu's button over Settings (#1276). `main` finds it before the deployment.
+   A pull request that cuts or adds a 390 px line of `scripts/ux/access-known.json`, or changes the walks
+   themselves, is checked at both widths before it merges: a run of `studio-browser.yml` started by hand on its
+   branch (`workflow_dispatch`, the real engine alone), linked in the pull request.
 
-By the arithmetic, a pull request's two walks take half their minutes: about 10 minutes less on table-phone and
-14 on table-desktop. That is an estimate, not a measurement. `/retro` reads the next week with M1's meter.
+By the arithmetic, a pull request's two walks take half their minutes. The walks add about 17 minutes on
+table-phone (9 for UX13, 8 for UX14) and 24 on table-desktop (16 and 8), so a pull request saves about 9 and 12.
+Reading each control's ring under forced colours (#1268) adds a few DevTools calls a control on each screen, not
+counted here. These are estimates, not measurements. `/retro` reads the next week with M1's meter.
 
 ## The shape
 

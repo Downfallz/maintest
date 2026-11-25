@@ -131,7 +131,7 @@ test('the match frame is written at 11 px at least and no two of its controls sh
 test('the round\'s bar keeps Settings clear of the site menu on every phone width, whatever the phase', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'The widths are set here: one project reads them.');
   await signedInSeat(page);
-  for (const width of [360, 375, 390, 393, 412, 430]) {
+  for (const width of [360, 375, 390, 393, 412, 419, 420, 430]) {
     await page.setViewportSize({ width, height: 844 });
     for (const phase of ['Upkeep', 'Command', 'Combat', 'Aftermath']) {
       const gap = await page.evaluate(phase => {

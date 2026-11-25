@@ -118,6 +118,20 @@ test('the measure counts two controls that overlap on the screen, not one scroll
     };
     expect(await overlaps(false)).toBe(0);
     expect(await overlaps(true)).toBe(1);
+    // A box that escapes the one that clips it still overlaps: placed fixed, placed absolute against a positioned
+    // ancestor outside the clip, or inside a modal window, which sits in the top layer whatever its parent cuts.
+    const pair = '<button style="position:absolute;left:0;top:0;width:60px;height:44px">A</button>';
+    const escaping = [
+      `${pair}<div style="overflow:hidden;width:10px;height:10px"><button style="position:fixed;left:20px;top:10px;width:60px;height:44px">B</button></div>`,
+      `<div style="position:relative">${pair}<div style="overflow:hidden;width:10px;height:10px"><button style="position:absolute;left:20px;top:10px;width:60px;height:44px">B</button></div></div>`,
+      `<div style="overflow:hidden;width:10px;height:10px"><dialog id="modal" style="margin:0;padding:0;border:0"><button style="display:block;width:60px;height:44px">A</button><button style="display:block;margin:-30px 0 0 20px;width:60px;height:44px">B</button></dialog></div>`,
+    ];
+    for (const body of escaping) {
+      await page.setContent(`<!doctype html><html lang="en"><body style="margin:0">${body}</body></html>`);
+      await page.evaluate(() => document.getElementById('modal')?.showModal());
+      const { overlaps: found } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
+      expect(found, body).toBe(1);
+    }
   } finally {
     await page.close();
   }

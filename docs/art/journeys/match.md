@@ -41,13 +41,13 @@ What holds for every screen of the journey:
 - **The round's bar, under 360 px.** Signed in at 320 the bar held the round, the opponent, History, Help,
   Settings, then the site menu, the bell and the account that `table/navigation.js` folds into its right end:
   seven controls of 44 px and the round, more than 320; the menu covered Help and the bell Settings. The owner
-  chose, on 2026-11-20, and it is built: **under 360 px the bell joins the site menu**, as its Notifications entry,
+  chose, on 2026-11-20, and it is built: **the bell joins the site menu** (under 360 px then, 420 since #1276), as its Notifications entry,
   its count drawn on the menu's button (`docs/tabletop/home-navigation.md`, "The bell"), and **History leaves the
   bar**: Help's window gained a History button, and the upkeep and the sheets still open it. Under
   420 px the word ROUND is hidden from sight and kept in the button's name (`01` over `COMBAT`). The bar at 320
   holds the round, the opponent, Help, Settings, the menu and the account, nothing covered (overlaps 0, and the
   walk now presses Settings). The menu and the account menu, open, stand above a docked sheet. Once the round's
-  phase reached 11 px, the bar with the bell needed about 410 px: from 360 to 409 the menu covered Settings (15 px
+  phase word reached 11 px, the bar with the bell needed about 410 px: from 360 to 409 the menu covered Settings (15 px
   at 390 while the round read COMMAND). So the bell joins the menu under 420 px; History leaves the bar under 360
   only (#1276).
 - **Captions.** A creature's caption is its name, then its badges, each a drawing of `table/icons.js` and a number

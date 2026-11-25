@@ -65,16 +65,26 @@ export function measureInPage({ floor, target, minimum }) {
   }
 
   // Two controls that share more than a hair of the screen, neither holding the other. What of a control is on the
-  // screen is its box cut by every ancestor that scrolls or clips it: a name of the order row scrolled under its Order
-  // button is cut by the row, not on top of the button (#1276).
+  // screen is its box cut by every ancestor on its containing-block chain that scrolls or clips it: a name of the order
+  // row scrolled under its Order button is cut by the row, not on top of the button (#1276). A box placed `fixed`
+  // escapes every ancestor but one that transforms, filters or contains it; one placed `absolute`, every ancestor up
+  // to its positioned one; a modal window or an open popover sits in the top layer, cut by none.
+  const establishes = style => style.transform !== 'none' || style.filter !== 'none' || /paint|layout|strict|content/.test(style.contain);
   const seen = node => {
     const box = boxes.get(node), cut = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
-    for (let parent = node.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+    let escaping = ['absolute', 'fixed'].includes(getComputedStyle(node).position) ? getComputedStyle(node).position : null;
+    for (let child = node, parent = node.parentElement; parent && parent !== document.documentElement; child = parent, parent = parent.parentElement) {
+      if (child.matches(':modal, :popover-open')) break;
       const style = getComputedStyle(parent);
-      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
-      const clip = parent.getBoundingClientRect();
-      if (style.overflowX !== 'visible') { cut.left = Math.max(cut.left, clip.left); cut.right = Math.min(cut.right, clip.right); }
-      if (style.overflowY !== 'visible') { cut.top = Math.max(cut.top, clip.top); cut.bottom = Math.min(cut.bottom, clip.bottom); }
+      if (escaping === 'absolute' && (style.position !== 'static' || establishes(style))) escaping = null;
+      if (escaping === 'fixed' && establishes(style)) escaping = null;
+      if (!escaping && !(style.overflowX === 'visible' && style.overflowY === 'visible')) {
+        const clip = parent.getBoundingClientRect();
+        if (style.overflowX !== 'visible') { cut.left = Math.max(cut.left, clip.left); cut.right = Math.min(cut.right, clip.right); }
+        if (style.overflowY !== 'visible') { cut.top = Math.max(cut.top, clip.top); cut.bottom = Math.min(cut.bottom, clip.bottom); }
+      }
+      if (style.position === 'fixed') escaping = 'fixed';
+      else if (style.position === 'absolute' && escaping !== 'fixed') escaping = 'absolute';
     }
     return cut;
   };
