@@ -420,8 +420,10 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
   let adopted = false;
   // A guest's home reads no list: the host refuses them all to a guest (ADR 0207), and its page shows the lessons.
   let closed = false;
-  // A line said once in place of the lobby's status: a guest who just became this account (UX15).
+  // A line in place of the lobby's status, for a guest who just became this account (UX15). It stays while the status
+  // has nothing more to say (its text unchanged, it is announced once); a host that saves no games says so instead.
   let greeting = null;
+  const greetingOr = summary => (greeting && summary?.recording !== false ? greeting : statusText(summary));
   const signInFirst = () => mode !== 'off' && account === null;
   const problem = (text = '') => { el('lobby-problem').textContent = text; el('lobby-problem').hidden = !text; };
   function node(tag, text, className) {
@@ -819,7 +821,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     el('open-tables').replaceChildren(rows, ...(tablePages ? [tablePages] : []));
     el('new-table').disabled = !listing.recording;
     featured?.setDisabled(!listing.recording);
-    el('lobby-status').textContent = greeting ?? statusText(listing);
+    el('lobby-status').textContent = greetingOr(listing);
     const options = listing.formats;
     if (el('format').options.length === 0) {
       el('format').replaceChildren(...options.map(format => { const option = node('option', format); option.value = format; return option; }));
@@ -859,13 +861,13 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       maybeLoadFinished();
       // A request waiting either way is answered elsewhere: read the opponents again until it is.
       if (account && opponents.some(one => one.relation === 'asked' || one.relation === 'asking')) void loadOpponents();
-      el('lobby-status').textContent = greeting ?? statusText(listing);
-      // Said once: the next read says the lobby's own status, whatever it is.
-      greeting = null;
+      el('lobby-status').textContent = greetingOr(listing);
       maybeRematch();
       failures = 0;
     } catch (error) {
       if (reading === revision && !closed) {
+        // A lost connection ends the greeting: the read that comes back says the lobby's own status.
+        greeting = null;
         el('lobby-status').textContent = 'Connection interrupted. Reconnecting automatically…';
         // A first read that failed still draws the featured space, from nothing, so the home is not a blank panel.
         if (!listing) featured?.setGames(mine);
