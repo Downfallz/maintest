@@ -112,7 +112,10 @@ public sealed class TerminatedTests : IDisposable
         finally
         {
             await container.DeleteIfExistsAsync(cancellationToken: CancellationToken.None);
-            await queues.GetQueueClient(queue).DeleteIfExistsAsync(CancellationToken.None);
+            foreach (var name in new[] { queue, PoisonedWork.QueueOf(queue), DeadLetter.QueueOf(queue) })
+            {
+                await queues.GetQueueClient(name).DeleteIfExistsAsync(CancellationToken.None);
+            }
         }
     }
 

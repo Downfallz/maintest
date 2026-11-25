@@ -85,7 +85,7 @@ public sealed class JobsApiTests : IDisposable
         var noted = (await operatorLog.FindAsync((await operatorLog.IdsAsync(Cancel)).ShouldHaveSingleItem(), Cancel)).ShouldNotBeNull();
         noted.Detail.ShouldNotBeNull().ShouldContain("3 guests removed");
         noted.Detail.ShouldContain("2 notice logs erased");
-        noted.Detail.ShouldContain("1 feedback items let go of");
+        noted.Detail.ShouldContain("1 feedback item let go of");
     }
 
     [Fact]
