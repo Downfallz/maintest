@@ -100,3 +100,25 @@ test('the measure counts a picture sent over twice its size or under it, by the 
     await context.close();
   }
 });
+
+// Two controls overlap where both are on the screen: a button scrolled under its row's edge is cut by the row that
+// scrolls it, as the order row's names scroll under its Order button (#1276), and is not on top of that button.
+test('the measure counts two controls that overlap on the screen, not one scrolled out of its row', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'table-phone', 'A fixture page: one project reads it.');
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  try {
+    const row = shifted => `<div style="display:flex;width:300px"><button style="flex:none;width:60px;height:44px">Order</button>
+      <ol id="row" style="flex:1;min-width:0;display:flex;overflow-x:auto;margin:0;padding:0;list-style:none">
+      ${[1, 2, 3, 4].map(one => `<li><button style="width:120px;height:44px">Creature ${one}</button></li>`).join('')}</ol></div>
+      ${shifted ? '<button style="position:relative;top:-30px;left:10px;width:44px;height:44px">Over</button>' : ''}`;
+    const overlaps = async shifted => {
+      await page.setContent(`<!doctype html><html lang="en"><body style="margin:0">${row(shifted)}</body></html>`);
+      await page.locator('#row').evaluate(node => { node.scrollLeft = 150; });
+      return (await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM })).overlaps;
+    };
+    expect(await overlaps(false)).toBe(0);
+    expect(await overlaps(true)).toBe(1);
+  } finally {
+    await page.close();
+  }
+});

@@ -64,13 +64,26 @@ export function measureInPage({ floor, target, minimum }) {
     if (box.width < minimum || box.height < minimum) tiny++;
   }
 
-  // Two controls that share more than a hair of the screen, neither holding the other.
+  // Two controls that share more than a hair of the screen, neither holding the other. What of a control is on the
+  // screen is its box cut by every ancestor that scrolls or clips it: a name of the order row scrolled under its Order
+  // button is cut by the row, not on top of the button (#1276).
+  const seen = node => {
+    const box = boxes.get(node), cut = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
+    for (let parent = node.parentElement; parent && parent !== document.documentElement; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+      const clip = parent.getBoundingClientRect();
+      if (style.overflowX !== 'visible') { cut.left = Math.max(cut.left, clip.left); cut.right = Math.min(cut.right, clip.right); }
+      if (style.overflowY !== 'visible') { cut.top = Math.max(cut.top, clip.top); cut.bottom = Math.min(cut.bottom, clip.bottom); }
+    }
+    return cut;
+  };
   let overlaps = 0;
   for (let one = 0; one < controls.length; one++) {
     for (let other = one + 1; other < controls.length; other++) {
       const a = controls[one], b = controls[other];
       if (a.contains(b) || b.contains(a)) continue;
-      const first = boxes.get(a), second = boxes.get(b);
+      const first = seen(a), second = seen(b);
       const wide = Math.min(first.right, second.right) - Math.max(first.left, second.left);
       const tall = Math.min(first.bottom, second.bottom) - Math.max(first.top, second.top);
       if (wide > 2 && tall > 2) overlaps++;

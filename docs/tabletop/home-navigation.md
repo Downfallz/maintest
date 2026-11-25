@@ -95,7 +95,7 @@ newest first, each with its line, how long ago, and **Open →** where the notic
 whatever the push does: a player who never turned pop-ups on reads it here.
 
 The bell sits outside the menu, so a phone sees its count without opening anything. One place has no room for it:
-the battle view's bar under 360 px, signed in (UX11, `docs/art/journeys/match.md`). There the bell joins the menu,
+the battle view's bar under 420 px, signed in (UX11, #1276, `docs/art/journeys/match.md`). There the bell joins the menu,
 as its Notifications entry, and its count is drawn on the menu's button, still seen without opening anything.
 Either badge counts what waits plus the unread news, up to nine, then says 9+. Where the platform offers one, an
 installed app shows the same count on its icon (`navigator.setAppBadge`). The bell's name, and the menu button's

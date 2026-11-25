@@ -2186,10 +2186,11 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
   #battle:has(.creature-effect:not([hidden])) .team-label.enemy { visibility: hidden; }
 }
 
-/* The round's bar under 360 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
-   drawn on the menu's button, and History leaves it, so the round, the opponent, Help and Settings keep their own
-   place and nothing covers them. */
-@media (max-width: 359px) and (orientation: portrait) {
+/* The round's bar under 420 px, signed in: the bell joins the site menu (home-navigation.md, "The bell"), its count
+   drawn on the menu's button, so the round, the opponent, History, Help and Settings keep their own place and
+   nothing covers them. With the bell in the bar the round, its phase at 11 px and the five controls need about
+   410 px: from 360 to 409 the menu covered Settings (#1276). */
+@media (max-width: 419px) and (orientation: portrait) {
   .battle-page[data-home="member"] .home-header .inbox-button { display: none; }
   .battle-page[data-home="member"] .home-header .home-navigation .menu-inbox:not([hidden]) { display: flex; align-items: center; gap: 8px; }
   .battle-page[data-home="member"] .home-menu-toggle { position: relative; }
@@ -2197,7 +2198,9 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
     display: inline-grid; position: absolute; top: 2px; right: 0; min-width: 19px; height: 19px; font-weight: 700; box-shadow: 0 0 0 2px var(--paper);
   }
   .battle-page[data-home="member"] #battle .hud-top { padding-right: 96px; }
-  /* History leaves the bar too (the owner's choice): Help's window, the upkeep and the sheets still open it. */
+}
+/* Under 360 px History leaves the bar too (the owner's choice): Help's window, the upkeep and the sheets still open it. */
+@media (max-width: 359px) and (orientation: portrait) {
   .battle-page[data-home="member"] #battle #history-open { display: none; }
   /* Its unread mark goes to Help, whose window opens History (#1000). */
   .battle-page[data-home="member"] #battle #help-open { position: relative; }

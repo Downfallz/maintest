@@ -188,7 +188,7 @@ export function mountInbox(doc, { storage = null, request = accountRequest, win 
     badge.textContent = badgeText(count);
     badge.hidden = count === 0;
     bell.setAttribute('aria-label', bellName(waiting, unread));
-    // Where the bar has no room for the bell (the battle view under 360 px, battle.css), the menu holds it: the
+    // Where the bar has no room for the bell (the battle view under 420 px, battle.css), the menu holds it: the
     // same count on the menu's button, and an entry that opens the same window (home-navigation.md, "The bell").
     // The menu's button says the count too, as its description: its drawn badge is silent.
     const entry = doc.getElementById('inbox-open-menu');

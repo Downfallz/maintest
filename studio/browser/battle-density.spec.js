@@ -117,10 +117,35 @@ test('the match frame is written at 11 px at least and no two of its controls sh
   await expect.poll(() => unread('2')).toBe(narrowBar ? '""' : 'none');
   // The dot is drawn; the words are spoken: Help is described by History's unread count (table/battle-frame.test.js).
   await expect.poll(() => unread('')).toBe('none');
-  // Under 360 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell").
-  const narrow = page.viewportSize().width < 360;
+  // Under 420 px the bell is in the menu, its count on the menu's button (home-navigation.md, "The bell"; #1276).
+  const narrow = page.viewportSize().width < 420;
   await expect(page.locator('#inbox-open')).toBeVisible({ visible: !narrow });
   await page.locator('#home-menu-toggle').click();
   await expect(page.locator('#inbox-open-menu')).toBeVisible({ visible: narrow });
   if (narrow) { await page.locator('#inbox-open-menu').click(); await expect(page.locator('#inbox-dialog')).toBeVisible(); }
+});
+
+// The round's bar holds its longest phase, the recap's mark and the opponent beside History, Help and Settings, with
+// the site menu and the account at its right end, on every phone from 360 to 419 px (#1276): at 390 the menu covered
+// 15 px of Settings while the round read COMMAND.
+test('the round\'s bar keeps Settings clear of the site menu on every phone width, whatever the phase', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone', 'The widths are set here: one project reads them.');
+  await signedInSeat(page);
+  for (const width of [360, 375, 390, 393, 412, 430]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const phase of ['Upkeep', 'Command', 'Combat', 'Aftermath']) {
+      const gap = await page.evaluate(phase => {
+        document.getElementById('round-phase').textContent = phase;
+        document.getElementById('round-number').textContent = '12';
+        document.getElementById('recap-open').disabled = false;
+        const right = ['#recap-open', '#opponent-open', '#history-open', '#help-open', '#settings']
+          .map(one => document.querySelector(one)).filter(one => one.checkVisibility())
+          .reduce((most, one) => Math.max(most, one.getBoundingClientRect().right), 0);
+        const header = [...document.querySelectorAll('.home-header > :is(button, a, details, .account-chip), .home-header #home-menu-toggle')]
+          .filter(one => one.checkVisibility()).reduce((least, one) => Math.min(least, one.getBoundingClientRect().left), Infinity);
+        return header - right;
+      }, phase);
+      expect(gap, `${width} px, ${phase}`).toBeGreaterThanOrEqual(0);
+    }
+  }
 });

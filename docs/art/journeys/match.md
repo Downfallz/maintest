@@ -46,7 +46,10 @@ What holds for every screen of the journey:
   bar**: Help's window gained a History button, and the upkeep and the sheets still open it. Under
   420 px the word ROUND is hidden from sight and kept in the button's name (`01` over `COMBAT`). The bar at 320
   holds the round, the opponent, Help, Settings, the menu and the account, nothing covered (overlaps 0, and the
-  walk now presses Settings). The menu and the account menu, open, stand above a docked sheet.
+  walk now presses Settings). The menu and the account menu, open, stand above a docked sheet. Once the round's
+  phase reached 11 px, the bar with the bell needed about 410 px: from 360 to 409 the menu covered Settings (15 px
+  at 390 while the round read COMMAND). So the bell joins the menu under 420 px; History leaves the bar under 360
+  only (#1276).
 - **Captions.** A creature's caption is its name, then its badges, each a drawing of `table/icons.js` and a number
   at 11 px: `initiative` in place of the word INIT (`⌃ 6`, today `6 INIT`), `health` (`30/30`), `energy` (`2`),
   `defense` with its number when above zero. Conditions keep the battle's own marks. Undocked at 320, each caption
