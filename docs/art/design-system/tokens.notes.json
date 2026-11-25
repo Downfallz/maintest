@@ -21,7 +21,7 @@
     "brand-soot": "Soot. The foot of a page, the head of a bar or a window, field fills mixed with slate.",
     "brand-bone": "Bone. Titles, the name, creature names, the hairline under a title, the rune. Read first; gold is what can be done.",
     "ink": "Role alias: body text.",
-    "muted": "Role alias: supporting text, eyebrows on the page, counters.",
+    "muted": "Role alias: supporting text, eyebrows on the page, counters. Under prefers-contrast: more it takes the ink (identity.css).",
     "paper": "Role alias: the page ground.",
     "paper-glass": "Deep slate at 94%: a bar or sheet over the board.",
     "panel": "Role alias: panels.",

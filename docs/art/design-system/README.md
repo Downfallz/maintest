@@ -53,6 +53,16 @@ Downfall Instinct is a two-player tactical board game played online at a shared 
 - In the site header the current page is underlined 2px in `gold` and its label turns `bone`. In the folded menu (at 1306px and below) the mark moves to a 2px left border on `accent-wash`.
 - In a match the round's bar is the only bar: the site's menu, bell and account sit at its right end.
 
+## Forced colours and more contrast
+
+Two wishes of the system are answered once, at the foot of `table/identity.css` ([ADR 0197](../../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md), UX13). A page does not write its own.
+
+- **Under `forced-colors: active`** the system repaints text, borders and backgrounds in its own colours and drops every `box-shadow`. A ring drawn with a shadow alone, or a state carried by a background or a tint of gold, is then lost. So every focus draws a 2px outline in the system's `Highlight`, offset 2px, and a control that is pressed, selected, checked or current turns `Highlight` and is underlined 2px. Both rules are `!important`: a ring or a state drawn by a weightier rule still gives way to them here.
+- A control's own rule never removes that outline (`outline: none` placed after `identity.css`). The checks of accessibility read each control's ring under forced colours and name the one that lost it.
+- An icon is drawn in `currentColor`, so the system repaints it with the control's text.
+- **Under `prefers-contrast: more`** words reach 7:1 (WCAG 1.4.6). `muted` takes the colour of `ink`. A page's own shade that stays under 7:1 is raised in that page's sheet (the battle's and the statistics').
+- The showcase (`showcase/showcase.css`) and the offline page (`table/offline.html`) load no sheet of the table. They copy the same ring rule, and a test holds the three copies together.
+
 ## Motion
 
 - The pages move by a small vocabulary ([ADR 0197](../../adr/0197-hold-the-pages-to-wcag-aa-a-vocabulary-of-motion-and-a-budget.md)): four durations, three curves, a breath. A rule names a `motion-*` token, never a number, and moves only `transform` (`translate`, `scale`, `rotate`) and `opacity`.

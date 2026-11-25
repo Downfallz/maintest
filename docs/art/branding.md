@@ -113,6 +113,9 @@ are in [the pages' pictures](page-pictures.md).
 - Keep focus visible and state labels explicit. The automated contrast check covers primary text, muted
   text and brand accents on all four dark surfaces (at least 4.5:1), and dark labels on accent fills
   (at least 7:1). This is a token-level guarantee, not a claim that every existing component is audited.
+- Forced colours and more contrast are answered once, at the foot of `table/identity.css`: a `Highlight` ring and
+  underline under `forced-colors: active`, and `--muted` raised to the ink under `prefers-contrast: more`. A page
+  does not write its own (`design-system/README.md#forced-colours-and-more-contrast`).
 - The identity is dark under both light and dark OS preferences. Responsive layouts use the same palette.
 
 ## Source and delivery
