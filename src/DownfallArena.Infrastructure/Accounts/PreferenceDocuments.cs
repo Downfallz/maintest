@@ -13,6 +13,8 @@ internal static class PreferenceDocuments
 {
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
+    private static readonly string[] Endings = [".tutorials.json", ".notices.json", ".json"];
+
     /// <summary>The folder every account's documents are kept under.</summary>
     public const string Prefix = "preferences/";
 
@@ -22,15 +24,8 @@ internal static class PreferenceDocuments
     public static AccountId? AccountOf(string name)
     {
         // The longest ending first: a Tutorials document's name also ends in ".json".
-        foreach (var ending in (string[])[".tutorials.json", ".notices.json", ".json"])
-        {
-            if (name.EndsWith(ending, StringComparison.Ordinal))
-            {
-                return AccountId.TryParse(name[..^ending.Length], out var account) ? account : null;
-            }
-        }
-
-        return null;
+        var ending = Endings.FirstOrDefault(one => name.EndsWith(one, StringComparison.Ordinal));
+        return ending is not null && AccountId.TryParse(name[..^ending.Length], out var account) ? account : null;
     }
 
     /// <summary>The account's Tutorials done and skipped (ADR 0187), beside its settings.</summary>
