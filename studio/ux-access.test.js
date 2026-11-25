@@ -74,3 +74,29 @@ test('the list of what is known names journeys and screens that exist, at the tw
     }
   }
 });
+
+test('a pull request walks the narrowest phone alone, main and the nightly both, and an unknown width is refused (#1269)', async () => {
+  const { walkWidths } = await import('../scripts/ux/set.mjs');
+  assert.deepEqual(walkWidths({}).map(one => one.width), [320, 390]);
+  assert.deepEqual(walkWidths({ UX_WALK_WIDTHS: '320 390' }).map(one => one.width), [320, 390]);
+  assert.deepEqual(walkWidths({ UX_WALK_WIDTHS: '320' }), [{ width: 320, height: 568 }]);
+  assert.throws(() => walkWidths({ UX_WALK_WIDTHS: '360' }), /360 is not a width the walk takes/);
+  assert.throws(() => walkWidths({ UX_WALK_WIDTHS: ' ' }), /names no width/);
+});
+
+test('the list of what is known is read at the widths walked, so a width left out is not called fixed (#1269)', async () => {
+  const { knownAt } = await import('../scripts/ux/access.mjs');
+  const known = ['320 a: spacing wide', '~ 390 a: spacing overlaps #x | #y', '390 a: doubled clipped #z'];
+  assert.deepEqual(knownAt(known, [{ width: 320 }]), ['320 a: spacing wide']);
+  assert.deepEqual(knownAt(known, [{ width: 320 }, { width: 390 }]), known);
+  assert.deepEqual(goneFindings([], knownAt(known, [{ width: 320 }])), ['320 a: spacing wide']);
+});
+
+test('the real-engine job walks one width on a pull request and both elsewhere', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/studio-browser.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /UX_WALK_WIDTHS: \$\{\{ github\.event_name == 'pull_request' && '320' \|\| '320 390' \}\}/);
+  for (const spec of ['browser/table.access.js', 'browser/table.motion.js']) {
+    const source = readFileSync(new URL(spec, import.meta.url), 'utf8');
+    assert.match(source, /walkWidths\(\)/, `${spec} takes the widths the job names`);
+  }
+});

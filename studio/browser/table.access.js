@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { JOURNEYS } from '../../scripts/ux/journeys.mjs';
 import { axeSource, walkJourney } from '../../scripts/ux/journey.mjs';
 import { readFileSync } from 'node:fs';
-import { findingLines, goneFindings, unknownFindings } from '../../scripts/ux/access.mjs';
+import { findingLines, goneFindings, knownAt, unknownFindings } from '../../scripts/ux/access.mjs';
 import { MOST_A_SECOND, flashesASecond, luminanceInPage } from '../../scripts/ux/flash.mjs';
-import { buildShowcase } from '../../scripts/ux/set.mjs';
+import { buildShowcase, walkWidths } from '../../scripts/ux/set.mjs';
 
 // The checks of accessibility the gate runs (docs/art/ux-craft-plan.md, UX13; ADR 0197), on the real engine: every
 // screen and state of the journeys, at 320 by 568 and 390 by 844, with nothing found by axe on the rules of WCAG 2.2
@@ -18,7 +18,8 @@ test.describe.configure({ mode: 'default' });
 // About eight minutes each in a session: the lessons alone take five, so the phone also films the flash guard and
 // plays the keyboard's round.
 const HALVES = { 'table-phone': ['doors', 'lessons'], 'table-desktop': ['lobby', 'pages', 'match', 'windows'] };
-const WIDTHS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
+// Both phones on main and in the nightly; the narrowest alone on a pull request (UX_WALK_WIDTHS, #1269).
+const WIDTHS = walkWidths();
 // What UX13 found and left to a later stage, a journey's list each (docs/art/ux-craft-plan.md, UX13's note). A finding
 // not in it fails, and so does one the list holds and the walk no longer finds: the list is cut in the change that
 // fixed it, so a finding that comes back is new again. A line marked `~ ` is one some walks make and others do not:
@@ -47,7 +48,7 @@ for (const journey of JOURNEYS) {
       expect(screens.map(screen => screen.name).sort(byName)).toEqual([...journey.screens].sort(byName));
       for (const screen of screens) found.push(...findingLines(`${viewport.width} ${screen.name}`, screen.checks));
     }
-    const known = KNOWN[journey.id] ?? [];
+    const known = knownAt(KNOWN[journey.id] ?? [], WIDTHS);
     expect(known.filter(line => / axe /.test(line)), 'axe is held to none').toEqual([]);
     // Both at once, so a failed run says every line to add and every line to cut.
     expect({ found: unknownFindings(found, known), fixed: goneFindings(found, known) },
@@ -88,7 +89,7 @@ test('the checks find a ring, an icon, a state, a contrast and a clipped word th
   const { AXE_TAGS } = await import('../../scripts/ux/measures.mjs');
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   try {
-    const fixture = fixed => `<!doctype html><html lang="en"><head><title>Fixture</title><style>
+    const fixture = (fixed, lostOne = false) => `<!doctype html><html lang="en"><head><title>Fixture</title><style>
       body { background: #111; color: #eee; font: 16px sans-serif; }
       button { border: 0; background: #333; color: #eee; min-width: 44px; min-height: 44px; }
       button:focus-visible { outline: none; box-shadow: 0 0 0 3px gold; }
@@ -100,12 +101,13 @@ test('the checks find a ring, an icon, a state, a contrast and a clipped word th
         [aria-pressed="true"] { text-decoration-line: underline !important; } }
       @media (prefers-contrast: more) { .muted { color: #e0e0e0; } } .cut { height: auto; }
       svg path { fill: currentColor; }` : 'svg path { fill: #c90; }'}
+      ${lostOne ? '#lost:focus-visible { outline: none !important; }' : ''}
       </style></head><body><main><h1>Fixture</h1>
       <button type="button" aria-pressed="true">One</button><button type="button" aria-pressed="false">Two</button>
-      <button type="button" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/></svg></button>
+      <button type="button" id="lost">Three</button><button type="button" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z"/></svg></button>
       <p class="muted">Some quiet words.</p><p class="small">Small <span>smaller</span></p><p class="cut">Words that are cut when they are spaced</p></main></body></html>`;
-    const found = async fixed => {
-      await page.setContent(fixture(fixed));
+    const found = async (fixed, lostOne) => {
+      await page.setContent(fixture(fixed, lostOne));
       await page.evaluate(await axeSource());
       return findingLines('fixture', await checkScreen(page, AXE_TAGS));
     };
@@ -114,6 +116,10 @@ test('the checks find a ring, an icon, a state, a contrast and a clipped word th
       expect(faults, kind).toContain(kind);
     }
     expect(await found(true)).toEqual([]);
+    // The page keeps its ring rule, and one control's own rule takes it away: the control is named (#1268).
+    expect(await found(true, true)).toEqual(['fixture: forced focus #lost']);
+    // The probe never moved the focus: a walk's page answers it.
+    expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
     // Text at 200% doubles a size in pixels as it does one in rem, and gives each back.
     const sizes = () => page.evaluate(() => [...document.querySelectorAll('.small, .small span, h1')].map(node => getComputedStyle(node).fontSize));
     const { doubleTextInPage } = await import('../../scripts/ux/access.mjs');

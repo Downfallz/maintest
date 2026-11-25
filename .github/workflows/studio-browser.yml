@@ -193,7 +193,8 @@ jobs:
     # The checks of accessibility (table.access.js, UX13) walk every journey at two widths, doubling every element's
     # text on each screen: about fifteen minutes a project on top of the twelve the job took before them, and room
     # for a retry of a failed journey. The walk under less motion (table.motion.js, UX14) walks them again, without the
-    # checks: about eight minutes more a project.
+    # checks: about eight minutes more a project. A pull request walks both at 320 px alone, main and the nightly at
+    # 320 and 390 (UX_WALK_WIDTHS, scripts/ux/set.mjs; docs/engineering/ci-minutes-plan.md, #1269).
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -288,6 +289,7 @@ jobs:
         working-directory: studio/browser
         env:
           PROJECT: ${{ matrix.project }}
+          UX_WALK_WIDTHS: ${{ github.event_name == 'pull_request' && '320' || '320 390' }}
           PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/playwright-report.json
         run: node node_modules/playwright/cli.js test --config table.config.js --project="$PROJECT" --retries=1 --reporter=dot,json
       - name: Say what flaked

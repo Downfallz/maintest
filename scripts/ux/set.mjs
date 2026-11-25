@@ -15,6 +15,19 @@ import { dotnetBinary } from '../../studio/browser/dotnet.js';
 
 /** The walk's two phones. */
 export const VIEWPORTS = [{ width: 320, height: 568 }, { width: 390, height: 844 }];
+
+/**
+ * The phones a gate's walk takes (the checks of accessibility, the walk under less motion), from `UX_WALK_WIDTHS`:
+ * both when it is unset. The real-engine job names the narrowest alone on a pull request and both on `main` and in
+ * the nightly, so each walk costs a pull request half its minutes (#1269; docs/engineering/ci-minutes-plan.md).
+ */
+export function walkWidths(env = process.env) {
+  const named = env.UX_WALK_WIDTHS;
+  if (named === undefined) return VIEWPORTS;
+  const widths = named.split(/\s+/).filter(Boolean).map(Number);
+  if (!widths.length) throw new Error('UX_WALK_WIDTHS names no width.');
+  return widths.map(width => VIEWPORTS.find(one => one.width === width) ?? (() => { throw new Error(`${width} is not a width the walk takes.`); })());
+}
 /** A desktop, for a strip that names it: what plays only on a wide screen (the coach's fade on the field, #1140). */
 export const DESKTOP = { width: 1280, height: 800 };
 
