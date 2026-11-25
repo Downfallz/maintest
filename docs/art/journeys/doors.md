@@ -34,16 +34,16 @@ confirmation's Sign out then shows the panel (`signed-out-panel`). They follow S
 doors, not `lobby.md` as the plan's table said. Both were read on S9's walk at 320 and 390 px, with their measures.
 
 UX15, a lesson before an account ([the plan](../ux-craft-plan.md#stages), stage 15), was briefed on `2729356`, on
-the host side of [ADR 0207](../../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md): a guest is an account the
-host makes on a press (`POST /api/account/guest`), which reaches the tutorials, its settings and its account, and
-nothing else. Read on the walk `node scripts/ux/journey.mjs doors --out <folder>` at 320 and 390 px with its
-measures, which film no guest yet, and on two shots of a guest made by hand: tutorial 1's brief opening by itself
-for a new guest (it already does), and the home a guest sees before UX15, where every list it reads answers 403
-and the page says "Connection interrupted. Reconnecting automatically…" and "Finding your games…", offers ＋ New
-battle, the bell and the account's initial. The seven screens UX15 adds are named by their screen; each Job names the screen
-the walk gains for it. A guest's state is the host's: the page reads `guest` on `/api/me`'s account and decides
-nothing from its name. Where a guest's words name what they keep, they say "tutorials" and "settings", which the
-host keeps (ADR 0207), and nothing else.
+the host side of [ADR 0207](../../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md). A guest is an account the
+host makes on a press (`POST /api/account/guest`); it reaches the tutorials, its settings and its account, and nothing
+else. The brief was read on the walk `node scripts/ux/journey.mjs doors --out <folder>` at 320 and 390 px with its
+measures, a walk that then filmed no guest. It was also read on two shots of a guest made by hand: tutorial 1's brief
+opening by itself for a new guest (it already did), and the home a guest saw before UX15. There every list it read
+answered 403, and the page said "Connection interrupted. Reconnecting automatically…" and "Finding your games…",
+and offered ＋ New battle, the bell and the account's initial. Each of the seven screens UX15 adds is headed by its
+name in the walk. A guest's state is the host's: the page reads `guest` on `/api/me`'s account and decides nothing
+from its name. Where a guest's words name what they keep, they say "tutorials" and "settings", which the host keeps
+(ADR 0207), and nothing else.
 
 What holds for every screen of the journey:
 
@@ -593,7 +593,7 @@ two the same, word for word: the invited friend is not told they are invited. To
 
 ```text
 [Play the first tutorial]
-No account needed. Sign in after to keep your progress.
+No account needed. Sign in afterwards to keep your progress.
 ```
 
 The words before UX15, plain and invited:
@@ -1426,6 +1426,8 @@ None, as a member's end: the field behind the card is the lesson's result.
 
 ### Left
 
+- "Sign in to keep them": "them" is the tutorials, which the card's line names last but one. "Sign in to keep your
+  tutorials" would say it outright, at the cost of a wrap beside Play again at 320 px.
 - Next filled over the sign-in is my choice. The owner may prefer Sign in to keep them filled at every end: an
   account asked for harder, against a lesson not started.
 - The sign-in happens on the home's keep panel, not in the card: the ways in (Google's script, Discord's and
@@ -1579,7 +1581,7 @@ with its own words. The walk gains it as `guest-sign-out`.
 ```text
 Lose your tutorials?
 A guest's progress is kept in this browser only. Sign in first to keep it.
-[Sign out and lose them]  [Stay signed in]
+[Stay signed in]  [Sign out and lose them]
 ```
 
 After the sign out the home shows the plain door, not the goodbye: "Your games wait for you" would not be true. The
@@ -1795,3 +1797,6 @@ The featured picture does not arrive again: the ground and the creature are the 
 - The status line is mine; the owner may prefer nothing said.
 - A guest who signs in to an account they already have lands on that account's home: its tutorials, not the
   guest's (ADR 0207). The page then says "Signed in as bastien." alone, since the account it reads is another.
+- The line is said after Google's sign-in and the developer's form, which sign in on this page. Discord's and
+  Microsoft's return pages bring the player back to a home loaded afresh, which no longer knows a guest was signed in:
+  there the home says nothing.

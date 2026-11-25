@@ -860,6 +860,8 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
       // A request waiting either way is answered elsewhere: read the opponents again until it is.
       if (account && opponents.some(one => one.relation === 'asked' || one.relation === 'asking')) void loadOpponents();
       el('lobby-status').textContent = greeting ?? statusText(listing);
+      // Said once: the next read says the lobby's own status, whatever it is.
+      greeting = null;
       maybeRematch();
       failures = 0;
     } catch (error) {

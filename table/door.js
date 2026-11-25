@@ -224,9 +224,9 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
 
   // Play the first tutorial (ADR 0207, UX15): the host makes the guest on the press, never on the page's load, so a
   // crawler that follows the showcase's link spends none of the guests an hour; then the page goes to tutorial 1.
-  const start = el('guest-start');
+  const start = el('guest-start'), startWords = start?.textContent ?? '';
   start?.addEventListener('click', async () => {
-    const words = start.textContent, problem = el('sign-in-problem');
+    const words = startWords, problem = el('sign-in-problem');
     problem.hidden = true; problem.textContent = '';
     start.disabled = true; start.textContent = 'Opening the tutorial…'; start.setAttribute('aria-busy', 'true');
     let leaving = false;
@@ -245,7 +245,7 @@ export function mountDoor(doc, { search = globalThis.location?.search ?? '', ask
     }
   });
   // A page brought back from the back-forward cache gives the button back.
-  globalThis.addEventListener?.('pageshow', event => { if (event.persisted && start) { start.disabled = false; start.textContent = 'Play the first tutorial'; start.removeAttribute('aria-busy'); } });
+  globalThis.addEventListener?.('pageshow', event => { if (event.persisted && start) { start.disabled = false; start.textContent = startWords; start.removeAttribute('aria-busy'); } });
 
   return {
     signedOut() {

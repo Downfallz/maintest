@@ -2260,7 +2260,7 @@ test('the plain door offers the lesson as an outline under the sign-in, and says
   await expect(start).toBeEnabled();
 });
 
-test('a guest\'s home features its next lesson, asks it to keep its tutorials, and reads nothing the host refuses a guest', async ({ page }) => {
+test('a guest\'s home features its next lesson, asks it to keep its tutorials, and reads none of a member\'s lists', async ({ page }) => {
   const state = await home(page, { account: guest, search: '#keep-tutorials', tutorials: guestSeries(true) });
 
   await expect(page.locator('body')).toHaveAttribute('data-guest', 'true');
@@ -2273,7 +2273,12 @@ test('a guest\'s home features its next lesson, asks it to keep its tutorials, a
   await expect(page.locator('#account-name')).toHaveText('Guest');
   await expect(page.locator('#account-name')).toBeVisible();
   expect(state.privateReads).toEqual([]);
-  expect(state.requested.filter(path => /^\/api\/(friends|account\/notices|lobby\/mine|lobby\/push)/.test(path))).toEqual([]);
+  // What a guest's page may ask: what GuestRoutes lets a guest call (ADR 0207), and the reads the page makes on load,
+  // before /api/me has said who is signed in, which the host refuses a guest once and are not asked again.
+  const allowed = path => /^\/api\/(me|account(\/(preferences|guest|signout|names\/.+|[a-z]+))?|tutorials(\/.*)?|scenarios\/[^/]+(\/practice)?)$/.test(path);
+  const onLoad = ['/api/lobby', '/api/lobby/page/open/1', '/api/lobby/negotiate', '/api/lobby/events', '/api/feedback'];
+  expect(state.requested.filter(path => path.startsWith('/api/') && !allowed(path) && !onLoad.includes(path))).toEqual([]);
+  for (const path of onLoad) expect(state.requested.filter(one => one === path).length, path).toBeLessThanOrEqual(1);
 });
 
 test('a guest signing out is asked first, the safe answer focused, and lands on the plain door with no goodbye', async ({ page }) => {
