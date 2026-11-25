@@ -30,8 +30,12 @@ internal sealed class ChildCli : IAsyncDisposable
     /// Starts the command line built beside the tests, from the folder where <c>table/</c> is copied. It inherits none of
     /// this run's <c>DOWNFALL_*</c> settings, the relay's among them.
     /// </summary>
-    public static ChildCli Start(params string[] arguments)
+    public static ChildCli Start(params string[] arguments) => Start(new Dictionary<string, string>(), arguments);
+
+    /// <summary>The same, with these variables set for it alone: a test's own queue name (#1259).</summary>
+    public static ChildCli Start(IReadOnlyDictionary<string, string> environment, params string[] arguments)
     {
+        ArgumentNullException.ThrowIfNull(environment);
         var start = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = AppContext.BaseDirectory,
@@ -48,6 +52,11 @@ internal sealed class ChildCli : IAsyncDisposable
         foreach (var name in start.Environment.Keys.Where(name => name.StartsWith("DOWNFALL_", StringComparison.Ordinal)).ToList())
         {
             start.Environment.Remove(name);
+        }
+
+        foreach (var (name, value) in environment)
+        {
+            start.Environment[name] = value;
         }
 
         var process = new Process { StartInfo = start };

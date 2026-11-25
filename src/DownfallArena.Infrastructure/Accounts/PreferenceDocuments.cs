@@ -13,7 +13,20 @@ internal static class PreferenceDocuments
 {
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
+    /// <summary>The folder every account's documents are kept under.</summary>
+    public const string Prefix = "preferences/";
+
     public static string PathOf(AccountId account) => $"preferences/{account.Value}.json";
+
+    /// <summary>The account a document's name, without its folder, is kept for; null for any other name (a staged write).</summary>
+    public static AccountId? AccountOf(string name)
+    {
+        var stem = name.EndsWith(".tutorials.json", StringComparison.Ordinal) ? name[..^".tutorials.json".Length]
+            : name.EndsWith(".notices.json", StringComparison.Ordinal) ? name[..^".notices.json".Length]
+            : name.EndsWith(".json", StringComparison.Ordinal) ? name[..^".json".Length]
+            : null;
+        return AccountId.TryParse(stem, out var account) ? account : null;
+    }
 
     /// <summary>The account's Tutorials done and skipped (ADR 0187), beside its settings.</summary>
     public static string TutorialsPathOf(AccountId account) => $"preferences/{account.Value}.tutorials.json";

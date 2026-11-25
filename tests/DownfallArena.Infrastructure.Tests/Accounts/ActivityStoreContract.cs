@@ -70,4 +70,14 @@ public abstract class ActivityStoreContract
 
         (await store.ListAsync(Cancel)).ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task Forgetting_an_account_on_a_store_with_nothing_kept_is_nothing_to_do()
+    {
+        var store = await StoreAsync();
+
+        await store.ForgetAsync(AccountId.New(), Cancel);
+
+        (await store.ListAsync(Cancel)).ShouldBeEmpty();
+    }
 }

@@ -98,6 +98,9 @@ internal sealed class JobsApi
             run.TimedOut,
             run.Abandoned,
             run.Warned,
+            run.GuestsRemoved,
+            run.NoticesErased,
+            run.FeedbackLetGo,
         };
     }
 
@@ -129,7 +132,7 @@ internal sealed class JobsApi
         try
         {
             var (_, run) = await TableTend.RecordedAsync(_log, TendTrigger.Manual, operatorName, _clock, _pass);
-            var did = $"{run.NeverBegan.Count} closed, {run.InvitationsExpired} invitations let go of, {run.TimedOut.Count} timed out, {run.Abandoned.Count} left ended, {run.Warned.Count} warned";
+            var did = $"{run.NeverBegan.Count} closed, {run.InvitationsExpired} invitations let go of, {run.TimedOut.Count} timed out, {run.Abandoned.Count} left ended, {run.Warned.Count} warned, {run.GuestsRemoved} guests removed, {run.NoticesErased} notice logs erased, {run.FeedbackLetGo} feedback let go of";
             Said($"  Tending pass {run.Id} run by {operatorName}: {did}.");
             await Notes.NoteAsync(operatorName, OperatorActions.RunPass, run.Id, did);
             return StudioResponse.OfJson(new { run = Describe(run) }, Web);

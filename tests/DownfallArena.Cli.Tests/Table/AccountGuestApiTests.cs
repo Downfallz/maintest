@@ -123,6 +123,22 @@ public sealed class AccountGuestApiTests : IDisposable
     }
 
     [Fact]
+    public void The_64s_of_one_IPv6_48_make_their_count_of_guests_an_hour_together_and_leave_the_rest_to_others()
+    {
+        var making = new GuestMaking();
+        var now = _clock.GetUtcNow();
+        for (var made = 0; made < GuestMaking.PerNetwork; made++)
+        {
+            making.Take($"2001:db8:7:{made / GuestMaking.PerAddress:x}::/64", now).ShouldBeNull();
+        }
+
+        making.Take("2001:db8:7:ff::/64", now).ShouldNotBeNull();
+        making.Take("2001:db8:8::/64", now).ShouldBeNull();
+        making.Take("203.0.113.7", now).ShouldBeNull();
+        making.Take("2001:db8:7:ff::/64", now + GuestMaking.Window).ShouldBeNull();
+    }
+
+    [Fact]
     public async Task No_guest_is_made_while_registration_is_closed()
     {
         var api = await ApiAsync();

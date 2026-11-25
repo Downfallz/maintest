@@ -65,6 +65,12 @@ internal static class TableWorker
             return 1;
         }
 
+        if (TableHost.TurnsQueue() is null)
+        {
+            await Console.Error.WriteLineAsync($"{TableHost.TurnsQueueEnvironment} names no queue: 3 to 50 lowercase letters, digits and single hyphens.");
+            return 1;
+        }
+
         PushKeys? keys;
         try
         {
@@ -151,7 +157,7 @@ internal static class TableWorker
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(over);
         var clock = services.GetRequiredService<TimeProvider>();
-        var turns = await over.Channels.OpenAsync(AgentTurnWorker.Queue, stopping);
+        var turns = await over.Channels.OpenAsync(TableHost.TurnsQueue() ?? AgentTurnWorker.Queue, stopping);
         var agents = SeatableAgents.Read(TableHost.WeightsDirectory);
         var composer = new TableComposer(services, rules, over.Store)
         {

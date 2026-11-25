@@ -51,6 +51,20 @@ public sealed class BlobPreferenceStore : IPreferenceStore
         return WriteAsync(PreferenceDocuments.NoticesPathOf(account), PreferenceDocuments.WriteNotices(notices), cancellationToken);
     }
 
+    public async Task<IReadOnlyList<AccountId>> ListAccountsAsync(CancellationToken cancellationToken = default)
+    {
+        var accounts = new HashSet<AccountId>();
+        await foreach (var item in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, PreferenceDocuments.Prefix, cancellationToken))
+        {
+            if (PreferenceDocuments.AccountOf(item.Name[PreferenceDocuments.Prefix.Length..]) is { } account)
+            {
+                accounts.Add(account);
+            }
+        }
+
+        return [.. accounts];
+    }
+
     public async Task ForgetAsync(AccountId account, CancellationToken cancellationToken = default)
     {
         await _container.DeleteBlobIfExistsAsync(PreferenceDocuments.PathOf(account), cancellationToken: cancellationToken);

@@ -20,20 +20,23 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
     /// <summary>Where a guest that could not be removed is said: the console unless a test reads it.</summary>
     public Action<string> Said { get; init; } = Console.WriteLine;
 
-    /// <summary>Removes every guest last used <see cref="KeptFor" /> or more before <paramref name="now" />, and says how many went.</summary>
+    /// <summary>
+    /// Removes every guest last used <see cref="KeptFor" /> or more before <paramref name="now" />, and says how many went;
+    /// then forgets the settings, Tutorials and activity left by an account that is gone.
+    /// </summary>
     public async Task<int> RemoveAsync(DateTimeOffset now)
     {
         List<Account> guests;
+        HashSet<SharedKernel.Identifiers.AccountId> listed;
         Dictionary<SharedKernel.Identifiers.AccountId, AccountActivity> used;
+        IReadOnlyList<SharedKernel.Identifiers.AccountId> chose;
         try
         {
-            guests = [.. (await accounts.ListAsync()).Where(account => account.IsGuest)];
-            if (guests.Count == 0)
-            {
-                return 0;
-            }
-
+            var all = await accounts.ListAsync();
+            guests = [.. all.Where(account => account.IsGuest)];
+            listed = [.. all.Select(account => account.Id)];
             used = (await activity.ListAsync()).ToDictionary(one => one.Account);
+            chose = preferences is null ? [] : await preferences.ListAccountsAsync();
         }
         catch (Exception failure) when (Unreadable(failure))
         {
@@ -44,44 +47,73 @@ internal sealed class IdleGuests(IAccountStore accounts, IAccountActivityStore a
 
         var registry = new AccountRegistry(accounts, clock);
         var removed = 0;
-        foreach (var listed in guests.Where(guest => Idle(guest, used.GetValueOrDefault(guest.Id), now)))
+        foreach (var idle in guests.Where(guest => Idle(guest, used.GetValueOrDefault(guest.Id), now)))
         {
             try
             {
-                // Read again just before it goes: a guest upgraded since the listing is a player's account, and one used
-                // since is kept.
-                var kept = await activity.FindAsync(listed.Id);
-                if (await accounts.FindAsync(listed.Id) is not { IsGuest: true } guest || !Idle(guest, kept, now))
+                // Read again just before it goes: a guest used since is kept.
+                var kept = await activity.FindAsync(idle.Id);
+                if (await accounts.FindAsync(idle.Id) is not { IsGuest: true } guest || !Idle(guest, kept, now))
                 {
                     continue;
                 }
 
-                // What is kept for it goes first and the account last: a pass that stops between them finds the guest
-                // again, its activity gone, and its making time still says it is idle.
-                if (preferences is not null)
+                // The account goes first, and only while it is still a guest: the API may upgrade it meanwhile, under no
+                // lock this process holds, and an upgraded guest keeps its tutorials and activity (#1253). What is kept for
+                // it goes after; a pass that stops between them leaves it to the next pass, which finds it below.
+                if (!await registry.DeleteAsync(guest.Id, account => account.IsGuest))
                 {
-                    await preferences.ForgetAsync(guest.Id);
+                    continue;
                 }
 
-                if (kept is not null)
-                {
-                    await activity.ForgetAsync(guest.Id);
-                }
+                removed++;
+            }
+            catch (Exception failure) when (Unreadable(failure))
+            {
+                Said($"  Account {idle.Id}: a guest unused for {KeptFor.TotalDays:0} days could not be removed: {HttpHost.OneLine(failure)}");
+                continue;
+            }
 
-                // Deleted only while it is still a guest: the API may upgrade it meanwhile, under no lock this process holds.
-                // Only the account is guarded: its tutorials and activity above went on the read before (#1253).
-                if (await registry.DeleteAsync(guest.Id, account => account.IsGuest))
+            try
+            {
+                await ForgetAsync(idle.Id);
+            }
+            catch (Exception failure) when (Unreadable(failure))
+            {
+                Said($"  Account {idle.Id}: a removed guest's settings or activity could not be forgotten, the next pass will: {HttpHost.OneLine(failure)}");
+            }
+        }
+
+        // What a removed account left behind, by a pass that stopped between the account and the rest. Read again: an
+        // account made since the listing is not gone.
+        foreach (var left in chose.Concat(used.Keys).Where(id => !listed.Contains(id)).Distinct())
+        {
+            try
+            {
+                if (await accounts.FindAsync(left) is null)
                 {
-                    removed++;
+                    await ForgetAsync(left);
                 }
             }
             catch (Exception failure) when (Unreadable(failure))
             {
-                Said($"  Account {listed.Id}: a guest unused for {KeptFor.TotalDays:0} days could not be removed: {HttpHost.OneLine(failure)}");
+                Said($"  Account {left}: what a removed account left behind could not be forgotten: {HttpHost.OneLine(failure)}");
             }
         }
 
         return removed;
+    }
+
+    // Its settings and Tutorials first and its activity last, so a forget that stops partway leaves the activity the
+    // next pass finds it by, when the listing of the settings cannot.
+    private async Task ForgetAsync(SharedKernel.Identifiers.AccountId account)
+    {
+        if (preferences is not null)
+        {
+            await preferences.ForgetAsync(account);
+        }
+
+        await activity.ForgetAsync(account);
     }
 
     // A store out of service, or a document that does not read: what stops this stage and never the pass.

@@ -57,24 +57,25 @@ public sealed class IdleGuestsTests : IDisposable
     }
 
     [Fact]
-    public async Task A_pass_that_could_not_forget_a_guests_settings_keeps_the_guest_for_the_next_pass_to_finish()
+    public async Task A_pass_that_could_not_forget_a_removed_guests_settings_leaves_them_for_the_next_pass_to_forget()
     {
         var guest = await GuestAsync();
         await _preferences.SaveTutorialsAsync(guest.Id, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
         _clock.Advance(IdleGuests.KeptFor);
-        var failing = NSubstitute.Substitute.For<Application.Accounts.Ports.IPreferenceStore>();
+        var failing = Substitute.For<IPreferenceStore>();
         failing.ForgetAsync(guest.Id, Arg.Any<CancellationToken>()).Returns<Task>(_ => throw new IOException("out of service (a test)"));
+        failing.ListAccountsAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<AccountId>>([]));
         var said = new List<string>();
 
         var first = await new IdleGuests(_accounts, _activity, failing, _clock) { Said = said.Add }.RemoveAsync(_clock.GetUtcNow());
-        var left = await _accounts.FindAsync(guest.Id, Cancel);
+        var left = await _preferences.GetTutorialsAsync(guest.Id, Cancel);
         var second = await new IdleGuests(_accounts, _activity, _preferences, _clock) { Said = said.Add }.RemoveAsync(_clock.GetUtcNow());
 
-        left.ShouldNotBeNull();
-        (first, second).ShouldBe((0, 1), string.Join(" | ", said));
-        said.ShouldHaveSingleItem().ShouldContain($"Account {guest.Id}");
-        (await _preferences.GetTutorialsAsync(guest.Id, Cancel)).ShouldBe(TutorialProgress.None);
+        (first, second).ShouldBe((1, 0), string.Join(" | ", said));
+        left.Done.ShouldNotBeEmpty();
+        said.ShouldHaveSingleItem().ShouldContain($"Account {guest.Id}: a removed guest's settings");
         (await _accounts.FindAsync(guest.Id, Cancel)).ShouldBeNull();
+        (await _preferences.GetTutorialsAsync(guest.Id, Cancel)).Done.ShouldBeEmpty();
     }
 
     [Fact]
@@ -133,14 +134,55 @@ public sealed class IdleGuestsTests : IDisposable
         (await _accounts.FindBySubjectAsync(google, Cancel)).ShouldBe(guest.Id);
     }
 
-    /// <summary>The accounts on disk, upgraded by the API the first time the registry reads one to delete it.</summary>
-    private sealed class UpgradingStore(IAccountStore inner, Func<Task> upgrade) : IAccountStore
+    [Fact]
+    public async Task A_guest_upgraded_between_the_passs_last_read_and_its_removal_keeps_its_tutorials_and_activity()
+    {
+        var guest = await GuestAsync();
+        await _preferences.SaveTutorialsAsync(guest.Id, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        await new AccountActivityLog(_activity, _clock).SignedInAsync(guest.Id, Cancel);
+        _clock.Advance(IdleGuests.KeptFor);
+        var google = new ExternalIdentity(ExternalIdentity.Google, "109876543210987654321");
+        var upgrading = new UpgradingStore(_accounts, async () =>
+        {
+            await _accounts.TryBindSubjectAsync(google, guest.Id, Cancel);
+            await _accounts.SaveAsync(guest with { Identities = AccountIdentities.Of(google), Username = Username.Create("MarkF").Value }, Cancel);
+        }, afterReRead: true);
+
+        var removed = await new IdleGuests(upgrading, _activity, _preferences, _clock).RemoveAsync(_clock.GetUtcNow());
+
+        removed.ShouldBe(0);
+        (await _accounts.FindAsync(guest.Id, Cancel)).ShouldNotBeNull().IsGuest.ShouldBeFalse();
+        (await _preferences.GetTutorialsAsync(guest.Id, Cancel)).Done.ShouldBe(["sc-repo-tutorial-your-first-combat"]);
+        (await _activity.FindAsync(guest.Id, Cancel)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task What_a_removed_guest_left_behind_is_forgotten_by_the_next_pass_and_a_players_is_kept()
+    {
+        var gone = AccountId.New();
+        await _preferences.SaveTutorialsAsync(gone, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+        await _activity.SaveAsync(new AccountActivity(gone, _clock.GetUtcNow(), null), Cancel);
+        var mark = (await new AccountRegistry(_accounts, _clock).RegisterAsync(new ExternalIdentity(ExternalIdentity.Google, "1098"), "MarkF", Cancel)).Value;
+        await _preferences.SaveTutorialsAsync(mark.Id, TutorialProgress.None.WithDone("sc-repo-tutorial-your-first-combat"), Cancel);
+
+        await Guests().RemoveAsync(_clock.GetUtcNow());
+
+        (await _preferences.GetTutorialsAsync(gone, Cancel)).Done.ShouldBeEmpty();
+        (await _activity.FindAsync(gone, Cancel)).ShouldBeNull();
+        (await _preferences.GetTutorialsAsync(mark.Id, Cancel)).Done.ShouldBe(["sc-repo-tutorial-your-first-combat"]);
+    }
+
+    /// <summary>
+    /// The accounts on disk, upgraded by the API the first time the registry reads one to delete it, or, with
+    /// <paramref name="afterReRead" />, just after the pass reads the guest again and finds it idle (#1253).
+    /// </summary>
+    private sealed class UpgradingStore(IAccountStore inner, Func<Task> upgrade, bool afterReRead = false) : IAccountStore
     {
         private Func<Task>? _upgrade = upgrade;
 
         public async Task<AccountRead?> ReadAsync(AccountId id, CancellationToken cancellationToken = default)
         {
-            if (Interlocked.Exchange(ref _upgrade, null) is { } now)
+            if (!afterReRead && Interlocked.Exchange(ref _upgrade, null) is { } now)
             {
                 await now();
             }
@@ -148,7 +190,16 @@ public sealed class IdleGuestsTests : IDisposable
             return await inner.ReadAsync(id, cancellationToken);
         }
 
-        public Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default) => inner.FindAsync(id, cancellationToken);
+        public async Task<Account?> FindAsync(AccountId id, CancellationToken cancellationToken = default)
+        {
+            var found = await inner.FindAsync(id, cancellationToken);
+            if (afterReRead && Interlocked.Exchange(ref _upgrade, null) is { } now)
+            {
+                await now();
+            }
+
+            return found;
+        }
 
         public Task<IReadOnlyList<Account>> ListAsync(CancellationToken cancellationToken = default) => inner.ListAsync(cancellationToken);
 

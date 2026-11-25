@@ -74,4 +74,32 @@ internal static class RequestAddress
         Array.Clear(bytes, 8, 8);
         return new IPAddress(bytes);
     }
+
+    /// <summary>The /48 an IPv6 address or network is in; null for any other address.</summary>
+    public static string? Network(string address)
+    {
+        IPAddress first;
+        int prefix;
+        if (IPNetwork.TryParse(address, out var network))
+        {
+            (first, prefix) = (network.BaseAddress, network.PrefixLength);
+        }
+        else if (IPAddress.TryParse(address, out var one))
+        {
+            (first, prefix) = (one, 128);
+        }
+        else
+        {
+            return null;
+        }
+
+        if (first.AddressFamily != AddressFamily.InterNetworkV6 || prefix < 48)
+        {
+            return null;
+        }
+
+        var bytes = first.GetAddressBytes();
+        Array.Clear(bytes, 6, 10);
+        return $"{new IPNetwork(new IPAddress(bytes), 48)}";
+    }
 }

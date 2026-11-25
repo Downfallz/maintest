@@ -1458,6 +1458,8 @@ public sealed class ScenariosApiTests : IDisposable
 
         public Task SaveNoticesAsync(SharedKernel.Identifiers.AccountId account, NoticePreferences notices, CancellationToken cancellationToken = default) => inner.SaveNoticesAsync(account, notices, cancellationToken);
 
+        public Task<IReadOnlyList<SharedKernel.Identifiers.AccountId>> ListAccountsAsync(CancellationToken cancellationToken = default) => inner.ListAccountsAsync(cancellationToken);
+
         public Task ForgetAsync(SharedKernel.Identifiers.AccountId account, CancellationToken cancellationToken = default) => inner.ForgetAsync(account, cancellationToken);
     }
 

@@ -51,6 +51,12 @@ internal static class TableHost
             return 1;
         }
 
+        if (TurnsQueue() is null)
+        {
+            await Console.Error.WriteLineAsync($"{TurnsQueueEnvironment} names no queue: 3 to 50 lowercase letters, digits and single hyphens.");
+            return 1;
+        }
+
         using var stopping = new CancellationTokenSource();
         var clock = services.GetRequiredService<TimeProvider>();
 
@@ -442,7 +448,7 @@ internal static class TableHost
         }
 
         var channels = ArtifactStores.OpenChannels(target, clock);
-        var turns = await OpenChannelAsync(channels, AgentTurnWorker.Queue, cancellationToken);
+        var turns = await OpenChannelAsync(channels, TurnsQueue() ?? AgentTurnWorker.Queue, cancellationToken);
         var notices = pushing is null ? null : await OpenChannelAsync(channels, QueuedNotice.Queue, cancellationToken, "the notices are sent in the request that gives them");
         return new Queues(mode, channels, turns, notices);
     }
@@ -830,6 +836,27 @@ internal static class TableHost
 
     /// <summary>The variable that says where the bots' turns are taken when <c>--turns</c> does not: <c>process</c>, <c>queue</c> or <c>worker</c>.</summary>
     public const string TurnsEnvironment = "DOWNFALL_TURNS";
+
+    /// <summary>
+    /// The variable that names the bots' turns queue, read by the host and by table-worker alike; <c>agent-turns</c> when
+    /// it is not set. A test's worker takes from a queue of its own, not another run's on the same emulator (#1259).
+    /// </summary>
+    public const string TurnsQueueEnvironment = "DOWNFALL_TURNS_QUEUE";
+
+    /// <summary>The bots' turns queue <see cref="TurnsQueueEnvironment" /> names, or <c>agent-turns</c>; null for a name that is not a queue's.</summary>
+    internal static string? TurnsQueue() => TurnsQueueOf(Environment.GetEnvironmentVariable(TurnsQueueEnvironment));
+
+    /// <summary>
+    /// The queue <paramref name="named" /> names, or <c>agent-turns</c> when it names none; null for a name the storage
+    /// account refuses: 3 to 50 lowercase letters, digits and single hyphens, leaving room for the poison and dead-letter
+    /// queues' suffixes.
+    /// </summary>
+    internal static string? TurnsQueueOf(string? named) =>
+        string.IsNullOrEmpty(named) ? AgentTurnWorker.Queue
+            : named.Length is >= 3 and <= 50
+                && named.All(one => char.IsAsciiLetterLower(one) || char.IsAsciiDigit(one) || one == '-')
+                && named[0] != '-' && named[^1] != '-' && !named.Contains("--", StringComparison.Ordinal) ? named
+            : null;
 
     /// <summary>Where the bots' turns are taken: as the command line says, or the variable, or in this process.</summary>
     internal static TurnsMode TurnsOf(CliOptions options) =>

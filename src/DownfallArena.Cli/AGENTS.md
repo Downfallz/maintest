@@ -35,7 +35,8 @@ dotnet run --project src/DownfallArena.Cli -- studio
   A second registry over one host's services picks the table up into the same `InMemoryMatchRepository`, and the
   API's match is replaced by the rebuilt one under its running session: the likely cause of #1187.
 - A host composed over the emulator opens its queues by their one name for the whole account (`agent-turns`,
-  `notices`): its test never relies on a queue starting empty, and cleans up in `finally` (#1181).
+  `notices`): its test never relies on a queue starting empty, and cleans up in `finally` (#1181). A child
+  table-worker takes from a queue of its own (`DOWNFALL_TURNS_QUEUE`, #1259).
 - A table host test waits on an event (`RecordedPush.FirstSent`, `Session.Outcome`) or on `Waits.UntilAsync`, which
   gives up after a deadline. It never waits on a fixed number of polls (#1214). A signal goes to a child process (`ChildCli`), never to the test run (#1205).
 - A flag or a route is described in docs/reference/commands.md and table/README.md, not in `AGENTS.md`.

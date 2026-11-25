@@ -38,7 +38,9 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
   then no browser holds a session of it. It takes the last use from the account's activity (ADR 0174), which lags by
   up to an hour. When no activity was kept, it takes the time the guest was made. With the account go its binding, its name, its
   game settings and tutorials, and its activity. A guest holds no seat, friend, device, notice or feedback, so
-  nothing else is kept for it. The job runs in its own process (ADR 0162). Removing a guest is safe there because
+  nothing else is kept for it. The account goes first, and only while it is still a guest, so a guest the API
+  upgrades meanwhile keeps its tutorials; what was kept for it goes after, and what a pass that stopped between
+  them left is forgotten by the next, which lists what is kept for accounts that are gone (#1253). The job runs in its own process (ADR 0162). Removing a guest is safe there because
   no session of a guest that old exists for the API process to act on.
 - **Signing in with a provider upgrades it.** A guest who signs in with an identity no account holds is asked a name
   as any new player is. Choosing it (`POST /api/account` with the ticket) upgrades the guest
@@ -48,7 +50,8 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
   with an identity an account already holds is signed in to that account. The guest is removed at once: its cookie
   is replaced, so nothing can reach it. Its tutorials do not join that account.
 - **Making a guest is counted.** Ten guests an hour from one network address, an IPv6 address by its /64
-  (`RequestAddress`), and three hundred an hour from every address together. Past either, the answer is
+  (`RequestAddress`), thirty an hour from all the /64s of one IPv6 /48 together, as the sign-ins are counted
+  (`SignInAttempts`, amended by #1226), and three hundred an hour from every address together. Past either, the answer is
   `429 Account.TooManyGuests` with `Retry-After`. As the guests' feedback is counted (ADR 0189), the count is held
   in the process's memory only, each address hashed with a salt the process draws. Closed registration (ADR 0177)
   makes no guest. A suspended guest is refused as any account is (ADR 0178).
@@ -62,8 +65,9 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Bad: anyone can now make an account of one more kind. The counts bound it to three hundred an hour, about
   seven thousand a day at worst, each a few small documents. The operator's list of players shows them, by their
   `Guest-` names.
-- Bad: the host-wide count can be spent by one actor with thirty addresses, or thirty IPv6 /64s, for an hour: no
-  visitor becomes a guest until it passes, and they are told to sign in. That is the price of a bound on what the
+- Bad: the host-wide count can be spent by one actor with thirty IPv4 addresses, or ten IPv6 /48s, for an hour:
+  no visitor becomes a guest until it passes, and they are told to sign in. One /48 alone takes at most thirty of
+  the three hundred (#1226). That is the price of a bound on what the
   store is asked to keep; the provider sign-ins are not affected.
 - Neutral: an upgrade that stops between binding the identity and writing the account, then is asked again with
   another name, holds the first name for an hour. After that hour anyone may take it (#1227). A rename that stops
@@ -80,7 +84,8 @@ in the process's memory (ADR 0179, ADR 0187), and their progress is kept by acco
 - Neutral: no page changes here. UX15 builds the journey on these routes; `/api/account` and every sign-in answer
   say `guest` on the account so the page can tell. A guest's lobby page reads `403 Account.GuestNotAllowed` until
   UX15 decides what it shows.
-- Neutral: the panel's *Run now* pass does not remove guests; the hourly job does.
+- Neutral: the panel's *Run now* pass removes the idle guests as the hourly job does (#1225), and its run says how
+  many (#1249).
 
 ## Alternatives considered
 

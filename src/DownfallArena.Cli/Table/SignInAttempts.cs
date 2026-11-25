@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -195,35 +193,7 @@ internal sealed class SignInAttempts
 
     // The address's own key, and its IPv6 /48's when it has one.
     private (string Own, string? Network) Keys(string address) =>
-        (Hash(address), Network(address) is { } network ? Hash("/48 " + network) : null);
+        (Hash(address), RequestAddress.Network(address) is { } network ? Hash("/48 " + network) : null);
 
     private string Hash(string text) => Convert.ToHexStringLower(HMACSHA256.HashData(_salt, Encoding.UTF8.GetBytes(text)));
-
-    /// <summary>The /48 an IPv6 address or network is in; null for any other address.</summary>
-    private static string? Network(string address)
-    {
-        IPAddress first;
-        int prefix;
-        if (IPNetwork.TryParse(address, out var network))
-        {
-            (first, prefix) = (network.BaseAddress, network.PrefixLength);
-        }
-        else if (IPAddress.TryParse(address, out var one))
-        {
-            (first, prefix) = (one, 128);
-        }
-        else
-        {
-            return null;
-        }
-
-        if (first.AddressFamily != AddressFamily.InterNetworkV6 || prefix < 48)
-        {
-            return null;
-        }
-
-        var bytes = first.GetAddressBytes();
-        Array.Clear(bytes, 6, 10);
-        return $"{new IPNetwork(new IPAddress(bytes), 48)}";
-    }
 }

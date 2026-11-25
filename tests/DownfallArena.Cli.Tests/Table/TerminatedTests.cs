@@ -3,6 +3,10 @@ using System.Net.Sockets;
 using System.Text;
 using Azure.Storage;
 using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
+using DownfallArena.Application.Matches.Journaling;
+using DownfallArena.Application.Work;
+using DownfallArena.Cli.Table;
 
 namespace DownfallArena.Cli.Tests.Table;
 
@@ -12,9 +16,9 @@ namespace DownfallArena.Cli.Tests.Table;
 /// exits 0. A process that did not register for the signal is killed mid-work, and exits 143.
 /// </summary>
 /// <remarks>
-/// Not run beside the others: table-worker takes from the emulator account's one <c>agent-turns</c> queue, whose items
-/// are the other tests' (#1181). Another run's tests on the same emulator, another session's on the same machine,
-/// are not kept from it: their queue items can be taken while it runs.
+/// Not run beside the others, which start processes of their own. Its table-worker takes from a turns queue of its own
+/// (<see cref="TableHost.TurnsQueueEnvironment" />), deleted after it, never the emulator account's <c>agent-turns</c>,
+/// whose items are the other tests' and another run's on the same emulator (#1181, #1259).
 /// </remarks>
 [Collection(Terminated.Alone)]
 public sealed class TerminatedTests : IDisposable
@@ -58,19 +62,27 @@ public sealed class TerminatedTests : IDisposable
             Assert.Skip($"No storage emulator at {Emulator}: run `npx azurite` or set AZURITE_BLOB_ENDPOINT.");
         }
 
-        var container = new BlobContainerClient(new Uri($"{Emulator.ToString().TrimEnd('/')}/terminated-{Guid.NewGuid():N}"), new StorageSharedKeyCredential(EmulatorAccount, EmulatorKey));
+        var credential = new StorageSharedKeyCredential(EmulatorAccount, EmulatorKey);
+        var container = new BlobContainerClient(new Uri($"{Emulator.ToString().TrimEnd('/')}/terminated-{Guid.NewGuid():N}"), credential);
+        var queue = $"{AgentTurnWorker.Queue}-{Guid.NewGuid():N}"[..32];
+        var queues = new QueueServiceClient(new UriBuilder(Emulator) { Port = Emulator.Port + 1 }.Uri, credential);
         try
         {
-            await using var worker = ChildCli.Start("table-worker", "--schema", _content.SchemaPath, "--record", container.Uri.ToString());
-            await worker.LineAsync(line => line.StartsWith("  Turns: through the queue ", StringComparison.Ordinal), Cancel);
+            await using var worker = ChildCli.Start(new Dictionary<string, string> { [TableHost.TurnsQueueEnvironment] = queue }, "table-worker", "--schema", _content.SchemaPath, "--record", container.Uri.ToString());
+            var said = await worker.LineAsync(line => line.StartsWith("  Turns: through the queue ", StringComparison.Ordinal), Cancel);
 
             var exit = await worker.TerminateAsync(Cancel);
 
+            said.ShouldStartWith($"  Turns: through the queue {queue},", customMessage: "the worker takes from its own queue, not the emulator's agent-turns");
             exit.ShouldBe(0, string.Join(Environment.NewLine, worker.Lines));
         }
         finally
         {
             await container.DeleteIfExistsAsync(cancellationToken: CancellationToken.None);
+            foreach (var name in new[] { queue, PoisonedWork.QueueOf(queue), DeadLetter.QueueOf(queue) })
+            {
+                await queues.GetQueueClient(name).DeleteIfExistsAsync(CancellationToken.None);
+            }
         }
     }
 
