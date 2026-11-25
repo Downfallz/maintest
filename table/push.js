@@ -66,11 +66,19 @@ export function noticeButton({ supported, keyed, permission, subscribed, busy, p
 export const UNREACHABLE = 'Could not reach this table. Try again.';
 export const answeredWith = status => `This table answered ${status}.`;
 
+// What a notification page says when the browser itself refuses to subscribe (a DOMException from `pushManager`):
+// its own words name the "push service", the engineers' word.
+export const BROWSER_REFUSED = 'This browser could not turn notifications on. Try again.';
+
 /**
- * What a failed request of a notification page says: the host's own sentence, or UNREACHABLE when the request never
- * reached it. `fetch` fails with a TypeError whose words are the browser's ("Failed to fetch"), never the player's.
+ * What a failed request of a notification page says: the host's own sentence (`own`, set by `accountRequest` for a
+ * refusal that carries its code), `answeredWith` its status when it carried none (a proxy's empty 502), UNREACHABLE
+ * when the request never reached it (`fetch` fails with a TypeError whose words are the browser's, "Failed to fetch"),
+ * and BROWSER_REFUSED when the browser would not subscribe.
  */
 export function reachProblem(error) {
+  if (error?.status) return error.own ? error.message : answeredWith(error.status);
+  if (typeof DOMException === 'function' && error instanceof DOMException) return BROWSER_REFUSED;
   return !error?.message || error instanceof TypeError ? UNREACHABLE : error.message;
 }
 

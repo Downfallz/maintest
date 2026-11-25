@@ -161,12 +161,12 @@ internal sealed class AccountNotices(IPushSender sender, AccountDevices devices)
             // refused on that service too, so answer with that refusal, not "gone" (#1176, #1209).
             return sent is PushSent.UnknownService
                 ? PushTest.OnUnknownService
-                : new PushTest(false, "This subscription is gone. Turn \"Pop-ups on this device\" on again.");
+                : new PushTest(false, PushTest.DeviceTestGoneMessage);
         }
         catch (Exception failure) when (failure is HttpRequestException or IOException or TaskCanceledException or UnauthorizedAccessException or Azure.RequestFailedException or System.Security.Cryptography.CryptographicException)
         {
             Console.WriteLine($"  Account {account}: could not be sent a test notice: {HttpHost.OneLine(failure)}");
-            return new PushTest(false, PushTest.Refused(failure));
+            return new PushTest(false, PushTest.Refused(failure, PushTest.DeviceAgain));
         }
     }
 

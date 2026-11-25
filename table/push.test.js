@@ -83,7 +83,8 @@ test('a request that never reached the table says so, and a refusal says the tab
   assert.equal(reachProblem(new TypeError('NetworkError when attempting to fetch resource.')), UNREACHABLE);
   assert.equal(reachProblem(new Error('')), UNREACHABLE);
   assert.equal(reachProblem(undefined), UNREACHABLE);
-  assert.equal(reachProblem(Object.assign(new Error('This table sends no notifications.'), { status: 404 })), 'This table sends no notifications.');
+  assert.equal(reachProblem(Object.assign(new Error('This table sends no notifications.'), { status: 404, own: true })), 'This table sends no notifications.');
+  assert.equal(reachProblem(Object.assign(new Error('The host answered 503. Try again.'), { status: 503, own: false })), 'This table answered 503.');
   assert.equal(UNREACHABLE, 'Could not reach this table. Try again.');
   assert.equal(answeredWith(503), 'This table answered 503.');
 });

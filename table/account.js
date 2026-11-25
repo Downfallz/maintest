@@ -113,12 +113,14 @@ export async function accountRequest(path, body, fetchImpl = globalThis.fetch.bi
   if (body !== undefined) { options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(body); }
   const response = await fetchImpl(path, options);
   const text = await response.text();
-  let result;
-  try { result = text ? JSON.parse(text) : {}; } catch { result = { message: text }; }
+  let result, json = true;
+  try { result = text ? JSON.parse(text) : {}; } catch { result = { message: text }; json = false; }
   if (!response.ok) {
     const error = new Error(result.message || `The host answered ${response.status}. Try again.`);
     error.code = result.error;
     error.status = response.status;
+    // Whether the words are the host's own sentence, not this page's stand-in: a notification page says its own (push.js).
+    error.own = json && typeof result.message === 'string' && result.message !== '';
     // How long the host asks the page to wait before posting again, in seconds (`Retry-After`), or null.
     const after = response.headers?.get?.('Retry-After');
     error.retryAfter = after && /^\d+$/.test(after.trim()) ? Number(after) : null;

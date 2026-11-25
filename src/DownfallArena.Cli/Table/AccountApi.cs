@@ -1243,7 +1243,7 @@ internal sealed class AccountApi
     {
         if (Preferences is not { } store)
         {
-            return Problem(404, "Account.NoPreferences", "This host keeps no game settings.");
+            return Problem(404, "Account.NoPreferences", "This table keeps no game settings.");
         }
 
         if (await WhoAsync(request) is not { } who)
@@ -1265,7 +1265,7 @@ internal sealed class AccountApi
     {
         if (Preferences is not { } store)
         {
-            return Problem(404, "Account.NoPreferences", "This host keeps no game settings.");
+            return Problem(404, "Account.NoPreferences", "This table keeps no game settings.");
         }
 
         if (await WhoAsync(request) is not { } who)
@@ -1310,7 +1310,7 @@ internal sealed class AccountApi
     {
         if (Preferences is not { } store)
         {
-            return Problem(404, "Account.NoPreferences", "This host keeps no game settings.");
+            return Problem(404, "Account.NoPreferences", "This table keeps no game settings.");
         }
 
         if (await WhoAsync(request) is not { } who)

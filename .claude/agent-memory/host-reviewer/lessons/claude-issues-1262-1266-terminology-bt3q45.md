@@ -1,3 +1,5 @@
 - `LobbyApiTests.Read` asserts a 2xx before parsing; a new test reading a refusal's `message` through it fails at once. Run the new test, do not trust the shape (#1262/#1266, 778fd3a).
 - Under the full Table namespace run, `TableIndexingTests.A_seat_offered_again...` and `TableApiTests.The_targeting_payload...` can fail and then pass alone: rerun them alone before blaming the diff (#1262/#1266).
 - `table/terminology.test.js` reads only JS string literals: a host sentence the page shows through `error.message` (devices.js -> `Account.NoPreferences` "This host keeps no game settings.") gets past it (#1266).
+- `accountRequest`'s own fallback (account.js:119, "The host answered N. Try again.", and a non-JSON body taken whole as `message`) reaches every page that shows `error.message`: a wording fix that scans only the module's literals misses it; try a 5xx with an empty body (#1266, 6911a08).
+- A route that "finishes" a stopped write (#1216 removal) answers 404 to its own retry: check the page redraws on that refusal instead of keeping the stale row (#1262, 6911a08).

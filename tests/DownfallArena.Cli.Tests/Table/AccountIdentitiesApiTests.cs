@@ -395,6 +395,29 @@ public sealed class AccountIdentitiesApiTests : IDisposable
     }
 
     [Fact]
+    public async Task Finishing_a_stopped_removal_forgets_the_devices_and_signs_no_other_session_out()
+    {
+        var api = await ApiAsync();
+        var devices = new AccountDevices(new FileDeviceStore(_root), _clock);
+        api.Devices = devices;
+        var session = await MarkSignedInAsync(api);
+        var id = (await Registry().FindAsync(Mark, Cancel))!.Id;
+        await api.HandleAsync("POST", Route + "/discord", Proof(MarkOnDiscord.Subject), Signed(session));
+        _store.FailNextUnbinding = true;
+        await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(session));
+        var laptop = await MarkSignedInAsync(api);
+        var phone = await MarkSignedInAsync(api);
+        await devices.AddAsync(id, new PushDevice("https://fcm.googleapis.com/fcm/send/phone", "key", "auth", _clock.GetUtcNow()), Cancel);
+
+        var finished = await api.HandleAsync("DELETE", Route + "/discord", Recent(), Signed(phone));
+
+        finished.Status.ShouldBe(200);
+        (await devices.ListAsync(id, Cancel)).ShouldBeEmpty();
+        (await api.HandleAsync("GET", Route, "", Signed(laptop))).Status.ShouldBe(200);
+        (await api.HandleAsync("GET", Route, "", Signed(Session(finished)))).Status.ShouldBe(200);
+    }
+
+    [Fact]
     public async Task A_guest_left_behind_by_an_upgrade_that_stopped_is_not_listed_as_a_way_to_sign_in()
     {
         var api = await ApiAsync();

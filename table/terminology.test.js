@@ -416,10 +416,34 @@ test('a name of several words written as a phrase is found, its capitals and an 
 const NOTIFICATION_MODULES = ['table/push.js', 'table/devices.js', 'table/battle-services.js'];
 const ENGINEERS_WORDS = /\bhosts?\b|\bpush[\s-]*services?\b/i;
 
-const engineersWords = path => literals(read(path)).map(({ text }) => text).filter(text => ENGINEERS_WORDS.test(text));
+// The seat page's own test of its notifications, in table.js: that function alone, as the page's other sentences
+// about the host are not yet settled (player-terminology.md).
+const NOTIFICATION_FUNCTIONS = [{ path: 'table/table.js', name: 'testNotices' }];
+
+/** The source of a top-level function, from its declaration to the closing brace at the start of a line. */
+function functionSource(source, name) {
+  const start = source.search(new RegExp(`^(?:async )?function ${name}\\(`, 'm'));
+  assert.ok(start >= 0, `no function ${name}`);
+  return source.slice(start, source.indexOf('\n}\n', start) + 3);
+}
+
+const engineersWords = source => literals(source).map(({ text }) => text).filter(text => ENGINEERS_WORDS.test(text));
 
 test('no sentence of the notification modules tells a player "host" or "push service"', () => {
-  assert.deepEqual(NOTIFICATION_MODULES.flatMap(path => engineersWords(path).map(text => `${path}: "${text}"`)), []);
+  const found = [
+    ...NOTIFICATION_MODULES.flatMap(path => engineersWords(read(path)).map(text => `${path}: "${text}"`)),
+    ...NOTIFICATION_FUNCTIONS.flatMap(({ path, name }) => engineersWords(functionSource(read(path), name)).map(text => `${path} ${name}: "${text}"`)),
+  ];
+  assert.deepEqual(found, []);
+});
+
+test('the seat page\'s test is read whole, and a "host" put back in it is found', () => {
+  const body = functionSource(read('table/table.js'), 'testNotices');
+
+  assert.match(body, /^async function testNotices\(state\) \{/);
+  assert.match(body, /UNREACHABLE/);
+  assert.match(body, /\n\}\n$/);
+  assert.deepEqual(engineersWords(body.replace('UNREACHABLE;', "'Could not reach the host. Try again.';")), ['Could not reach the host. Try again.']);
 });
 
 test('the notification modules\' scanner finds "host" and "push service" in every spelling, and not in "hosted"', () => {

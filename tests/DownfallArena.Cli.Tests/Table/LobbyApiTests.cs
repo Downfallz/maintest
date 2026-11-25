@@ -784,6 +784,21 @@ public sealed class LobbyApiTests : IDisposable
     }
 
     [Fact]
+    public async Task A_seats_test_whose_keys_cannot_be_used_names_the_seat_pages_own_button()
+    {
+        var sender = new Refusing { Failure = new System.Security.Cryptography.CryptographicException("The point is not on the curve.") };
+        var lobby = new LobbyApi(_registry, _hosted.Composer, TimeProvider.System, new PushNotices(sender, "BP8", TimeProvider.System));
+        var id = Read(await lobby.HandleAsync("POST", "/api/lobby/tables", "{}")).GetProperty("table").GetProperty("id").GetString()!;
+        var token = (await _registry.ByIdAsync(id, TestContext.Current.CancellationToken))!.Seats[0].Token;
+        Read(await lobby.HandleAsync("PUT", "/api/lobby/push", Browser, token));
+
+        var test = await lobby.HandleAsync("POST", "/api/lobby/push/test", "{}", token);
+
+        JsonDocument.Parse(test.Body).RootElement.GetProperty("message").GetString()
+            .ShouldBe("This device's subscription could not be used. Tap \"Stop notifying me\", then \"Notify me when it's my turn\".");
+    }
+
+    [Fact]
     public async Task A_seat_on_a_host_without_push_keys_is_told_this_table_sends_no_notifications()
     {
         var id = (await Open()).GetProperty("table").GetProperty("id").GetString()!;

@@ -70,7 +70,7 @@ test('finishing a removal that stopped is a DELETE of that way, and says it is r
   assert.equal(doc.getElementById('action-detail').textContent, finishWords('discord').detail);
 });
 
-test('finishing a removal says this device stays signed in and that pop-ups stop, and signs no device out', () => {
+test('finishing a removal asks first in words that say this device stays signed in and pop-ups stop, and no sign-out', () => {
   const words = finishWords('discord');
 
   assert.equal(words.title, 'Finish removing Discord?');
