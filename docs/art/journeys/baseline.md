@@ -23,6 +23,8 @@ the screens. The confirmation's words on its head read 11.34:1 at 320, the lowes
 `showcase-home-story` and `showcase-home-modes` (the home's two scenes, scrolled to), `showcase-mutations-family`
 (the field guide at `#family-predator`) and `showcase-mutations-entry` (the Parasite's entry opened) were added by
 #1044: their lines are that change's walk of 2026-11-23, the first that has the screens.
+The seven screens of a lesson before an account, from `sign-in-panel-lesson` to `guest-upgraded-home`, were added by
+UX15: their lines are UX15's walk of 2026-11-25, the first that has them.
 
 At 320 by 568:
 
@@ -46,6 +48,13 @@ At 320 by 568:
 | first-lesson-brief | 387 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
 | sign-out | 293 px, a window | 19 | 1 | 1 img, 1 background | 12 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.00 | nothing |
 | signed-out-panel | 705 px | 34 | 1 | 1 img, 2 background | 10 px | 2 | 0 of 7 | 0 | 0 | 0 | 0.00 | nothing |
+| sign-in-panel-lesson | 821 px | 56 | 1 | 2 img, 2 background | 11 px | 0 | 0 of 8 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-lesson-brief | 335 px, a window | 41 | 1 | 1 background | 11 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.04 | nothing |
+| guest-lesson-complete | 568 px | 107 | 1 | 4 background, the canvas | 11 px | 0 | 0 of 14 | 0 | 0 | 0 | 0.04 | nothing |
+| guest-home | 2217 px | 147 | 1 | 6 img, 7 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-sign-out | 364 px, a window | 29 | 0 | 1 img, 1 background; 1 sent under their size | 12 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-name-window (staged) | 531 px, a window | 46 | 1 | 1 background | 11 px | 0 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-upgraded-home | 2396 px | 167 | 1 | 6 img, 10 background | 11 px | 0 | 0 of 20 | 0 | 0 | 0 | 0.00 | nothing |
 
 At 390 by 844:
 
@@ -69,6 +78,13 @@ At 390 by 844:
 | first-lesson-brief | 348 px, a window | 66 | 1 | 1 background | 10 px | 4 | 0 of 2 | 0 | 0 | 0 | 0.03 | nothing |
 | sign-out | 256 px, a window | 19 | 1 | 1 img, 1 background | 12 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.00 | nothing |
 | signed-out-panel | 844 px | 34 | 1 | 1 img, 3 background | 10 px | 2 | 0 of 7 | 0 | 0 | 0 | 0.00 | nothing |
+| sign-in-panel-lesson | 844 px | 56 | 1 | 2 img, 2 background | 11 px | 0 | 0 of 8 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-lesson-brief | 314 px, a window | 41 | 1 | 1 background | 11 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.01 | nothing |
+| guest-lesson-complete | 844 px | 109 | 1 | 4 background, the canvas | 11 px | 0 | 0 of 15 | 0 | 0 | 0 | 0.01 | nothing |
+| guest-home | 2274 px | 147 | 1 | 6 img, 7 background | 11 px | 0 | 0 of 13 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-sign-out | 341 px, a window | 29 | 0 | 1 img, 1 background; 1 sent under their size | 12 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-name-window (staged) | 463 px, a window | 46 | 1 | 1 background | 11 px | 0 | 0 of 3 | 0 | 0 | 0 | 0.00 | nothing |
+| guest-upgraded-home | 2453 px | 167 | 1 | 6 img, 10 background | 11 px | 0 | 0 of 20 | 0 | 0 | 1 | 0.00 | nothing |
 
 ## The lessons
 

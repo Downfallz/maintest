@@ -1210,10 +1210,11 @@ if (typeof document !== 'undefined') {
       document.getElementById('home-games').hidden = !playable && !guest;
       if (!guest) document.getElementById('featured').hidden = false;
       if (playable || guest) featured.playable();
-      if (guest) featured.setGames([]);
       const said = member && lastGuest ? (member.id === lastGuest ? `Signed in as ${member.username}. Your tutorials are kept.` : `Signed in as ${member.username}.`) : null;
       lastGuest = guest ? account.id : null;
       lobby.setAccount(member, mode, { guest, said });
+      // A guest has no games to read: told none after the lobby, whose change of account empties the featured space.
+      if (guest) featured.setGames([]);
       practiceList.setAccount(member);
       // A tutorial is a signed-in account's (ADR 0187); the first opens by itself for an account it is new to.
       const opened = Boolean(await (lessons ?? tutorials.setAccount(account)));

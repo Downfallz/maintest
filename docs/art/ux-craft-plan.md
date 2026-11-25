@@ -1,6 +1,6 @@
 # Plan: the pages' craft, the two doors, the lessons, the lobby, a player's pages and the match's frame staged by a designer who can see
 
-Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX14 are built; UX15 is next.
+Status: accepted, 2026-11-19 (the owner settled the questions at the end). UX1 to UX15 are built.
 Each stage below is one pull request.
 
 ## What the owner asked for
@@ -856,6 +856,36 @@ Proposed here; the ADR of UX4 sets them, and UX14 reads them again.
     `accounts-plan.md`: what a guest is on the host, what it may reach, how long it lives, and how its lesson
     joins the account. Tests: the host's routes for a guest and their limits; a guest reaches nothing but
     tutorial 1; the journey's measures. `security-reviewer` and `host-reviewer` read it.
+
+    *Built (2026-11-25)*: on ADR 0207, which the sign-in methods plan's P5 wrote and built on the host: a guest
+    reaches the four tutorials, not tutorial 1 alone, as the owner settled there (its question 3). The brief is
+    [the doors'](journeys/doors.md), seven screens. The plain door offers Play the first tutorial, an outline under
+    the ways in; the showcase's hero adds Try a tutorial first → (Essayer d'abord un tutoriel →), to the game's lesson
+    door, `/lobby?try=lesson`, where it is the filled action. The guest is made on the press, never on a page's load,
+    so a crawler that follows the link spends none of the host's guests an hour; the page then opens tutorial 1. A
+    guest's header and home ask the host nothing it refuses a guest (`memberOf`, `headerShows` in
+    `table/navigation.js`): no lists, bell, friends, ladder, statistics or report; the chip reads Guest. Its home
+    features its next lesson, then the keep panel (Keep your tutorials, the ways in), then Learn to play. A lesson's
+    end adds where a guest's progress is kept and what an account opens, and Sign in to keep them in Leave's place
+    (`guestEnd`), filled at the last lesson. Signing out asks first, the safe answer focused. A provider's sign-in and
+    its name upgrade the guest, and the home then says "Signed in as X. Your tutorials are kept." once. On a
+    developer's host the typed name upgrades a guest the same way (`AccountApi`), so the walk films it. The signed-out
+    mode is now `data-home="visitor"`; Guest joins `player-terminology.md`. The walk gains the seven screens, from
+    `sign-in-panel-lesson` to `guest-upgraded-home`.
+
+    Tests: `AccountGuestApiTests` (the developer's upgrade, and a name an account holds), `door.test.js`,
+    `account.test.js`, `battle-tutorial.test.js`, `navigation-guest.test.js`, four specs in `lobby-home.spec.js` (the
+    lesson door, the plain door and a refusal, the guest's home and what it never reads, a guest's sign out), and the
+    walk's measures. The host's routes for a guest and their limits are P5's (`TableServerGuestTests`, `AccountGuestApiTests`, `AccountGuestTests`).
+
+    Left:
+    - The choices the brief leaves to the owner (doors.md, each screen's **Left**): Next filled over the sign-in at a
+      lesson's end, Google's outline button on the lesson door, Delete hidden for a guest, no warning that signing in
+      to an existing account drops the guest's tutorials, signing out leaving the guest to the hourly job.
+    - Tutorial 4's result for a guest keeps a member's doors (`lessons.md`, the tutorial's result): the walk plays
+      tutorial 1 alone.
+    - The battle page still asks the ladder and the friends of a practice's opponent, which a guest is refused (403,
+      read as nothing).
 
 UX6 to UX12b and UX15 each end with the owner approving the journey's sheets before the pull request is reported
 ready.

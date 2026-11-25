@@ -296,7 +296,7 @@ html #action-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; }
    room is let go of there, where the sign-in is centred in a tall panel (#973). */
 @media (min-width: 1280px) { #sign-in-heading > .title-room { display: none; } }
 /* The goodbye's title takes the focus once, by script, since the menu that held it is gone: no ring on a heading. */
-.sign-in-panel[data-door="left"] #sign-in-heading:focus { outline: none; }
+.sign-in-panel:is([data-door="left"], [data-door="guest"]) #sign-in-heading:focus { outline: none; }
 .sign-in-content .sign-in-game { margin: 0 0 6px; color: var(--bone); font-size: 15px; line-height: 1.6; }
 .sign-in-content .muted { margin: 0; font-size: 15px; line-height: 1.6; }
 .sign-in-actions { display: grid; gap: 8px; margin-top: 26px; min-width: 0; }

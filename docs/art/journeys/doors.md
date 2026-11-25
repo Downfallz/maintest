@@ -40,7 +40,7 @@ nothing else. Read on the walk `node scripts/ux/journey.mjs doors --out <folder>
 measures, which film no guest yet, and on two shots of a guest made by hand: tutorial 1's brief opening by itself
 for a new guest (it already does), and the home a guest sees before UX15, where every list it reads answers 403
 and the page says "Connection interrupted. Reconnecting automatically…" and "Finding your games…", offers ＋ New
-battle, the bell and the account's initial. The seven screens UX15 adds end with (new); each Job names the screen
+battle, the bell and the account's initial. The seven screens UX15 adds are named by their screen; each Job names the screen
 the walk gains for it. A guest's state is the host's: the page reads `guest` on `/api/me`'s account and decides
 nothing from its name. Where a guest's words name what they keep, they say "tutorials" and "settings", which the
 host keeps (ADR 0207), and nothing else.
@@ -108,7 +108,7 @@ keeps its English name in French, as the French rulebook writes it (Incinerate).
 No text is laid on either: each is a plate, its section's words above and below it.
 
 UX15 adds one quiet link under the hero's Play now and How to play: Try a tutorial first → (Essayer d’abord un
-tutoriel →), to `/lobby?try=lesson`, [the lesson door](#the-lesson-door-from-the-showcase-new). Four words more in each
+tutoriel →), to `/lobby?try=lesson`, [the lesson door](#the-lesson-door-from-the-showcase-sign-in-panel-lesson). Four words more in each
 language, 745 in English and 834 in French, under both budgets. It is a link, not a button: Play now stays the
 hero's one filled action and keeps its place, the link coming after it in the reading order and in the focus
 order. Its target is 44 px tall, so the measure keeps none of the controls under 44.
@@ -667,7 +667,7 @@ It is [a page's picture](../page-pictures.md#a-picture-asked-of-the-owner): the 
 - **Waiting**: after a press on the developer's Sign in, until the host answers: the button is disabled and says
   Signing in…. Google's button answers in its own popup. While the host describes an invitation the panel says
   "You are invited to a battle." and gains the name when it comes; the button does not move
-  (`lobby-home.spec.js`). After a press on Play the first tutorial: as [the lesson door](#the-lesson-door-from-the-showcase-new)'s.
+  (`lobby-home.spec.js`). After a press on Play the first tutorial: as [the lesson door](#the-lesson-door-from-the-showcase-sign-in-panel-lesson)'s.
 - **Error**: `#sign-in-problem`, an alert under the button: Google's script that did not load, a refused
   sign-in. When the host cannot be reached the panel offers no sign-in and says "Could not reach the host to
   check your account. Reload the page to try again." Read in `table/account.js`, not seen. A guest the host
@@ -742,7 +742,7 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
   words.
 - UX15: the plain door offers the lesson as an outline and keeps the sign-in filled, as the session proposed: the
   visitor pressed Play now, a promise of the game, and most will sign in. The owner may prefer the lesson filled
-  here too, as on [the lesson door](#the-lesson-door-from-the-showcase-new). The plain door then counts 55 words on
+  here too, as on [the lesson door](#the-lesson-door-from-the-showcase-sign-in-panel-lesson). The plain door then counts 55 words on
   the developer's sheet, over the 45 it held; the line under the button is what makes the press safe to make.
 
 ## Sign out, the confirmation (`sign-out`)
@@ -1166,7 +1166,7 @@ None. The friend has just seen the sign-in panel's pictures; the battle view com
   line saying which invitation it reads are this page's to add when the invitation moves to the lobby, or before.
 - The classic table's switches beside ♪ stay at 13 px, and the notifications' button at 40 px at 320.
 
-## The lesson door, from the showcase (new)
+## The lesson door, from the showcase (`sign-in-panel-lesson`)
 
 ### Job
 
@@ -1276,7 +1276,7 @@ No ambience, as the plain door. The step ends where tutorial 1's brief begins, a
 - The walk makes a real guest on a developer's host to film this and the screens after it: one guest a run,
   inside the host's count.
 
-## Tutorial 1's brief, for a guest (new)
+## Tutorial 1's brief, for a guest (`guest-lesson-brief`)
 
 ### Job
 
@@ -1347,7 +1347,7 @@ None, as tutorial 1's brief: the board behind the window is the lesson's own.
 - The window says nothing of the guest. The owner may want a line ("Played as a guest: sign in after to keep
   it."), nine words over its budget; the door the visitor just left said it.
 
-## Tutorial 1's end, for a guest (new)
+## Tutorial 1's end, for a guest (`guest-lesson-complete`)
 
 ### Job
 
@@ -1434,7 +1434,7 @@ None, as a member's end: the field behind the card is the lesson's result.
   them filled, Leave the tutorial gone) amends [the tutorial's result](lessons.md#the-tutorials-result-lesson-result)
   in `lessons.md`, whose filled action leads a member to New battle, which a guest cannot open.
 
-## The guest's home (new)
+## The guest's home (`guest-home`)
 
 ### Job
 
@@ -1479,7 +1479,7 @@ it may open: the menu keeps Rules and Learn to play, and hides Friends, Leaderbo
 Notifications and Admin. The chip reads Guest, not the drawn name's initial; its menu says "Playing as a guest" in
 place of "Signed in as" and the name, then Settings, Game website and Sign out. Report or suggest goes: the host
 refuses a guest's feedback. Settings shows Game and Privacy, not Notifications nor Account. Sign out opens
-[its own window](#sign-out-for-a-guest-new).
+[its own window](#sign-out-for-a-guest-guest-sign-out).
 
 ### Pictures
 
@@ -1501,7 +1501,7 @@ others): no new one. The keep panel draws none: the featured painting above it s
   each card Done or Skipped.
 - **Loaded**: as under **Words**.
 - **Waiting**: after a way in, as the plain door: Signing in… on the developer's form, Google's own popup; then the
-  [name window for a guest](#the-name-window-for-a-guest-new), or another account's home (see **Left**).
+  [name window for a guest](#the-name-window-for-a-guest-guest-name-window), or another account's home (see **Left**).
 - **Error**: `/api/tutorials` not read: no featured space, Learn to play hidden, and `#lobby-problem` says "Could
   not read your tutorials. Reload the page to try again." A 403 the page did not expect is drawn as nothing,
   never as a connection lost. A refused sign-in: `#sign-in-problem`, as the plain door. Read, not seen.
@@ -1557,7 +1557,7 @@ The breath is the one ambience, as on a member's home: it stops under less motio
 - A guest who signs in to an account they already have loses the guest's tutorials (ADR 0207). The panel does not
   warn: the page cannot know which account the provider will name. The owner may want a line.
 
-## Sign out, for a guest (new)
+## Sign out, for a guest (`guest-sign-out`)
 
 ### Job
 
@@ -1634,7 +1634,7 @@ page leaves no goodbye mark for a guest.
 - "Lose" is what the player sees; the host keeps the guest until 31 days unused, though no browser can reach it
   (ADR 0207). The page could delete the guest on this press instead, which the ADR allows: the session's choice.
 
-## The name window, for a guest (new)
+## The name window, for a guest (`guest-name-window`)
 
 ### Job
 
@@ -1715,7 +1715,7 @@ None, as the name window: one field and one decision.
   account as theirs. The owner may prefer the other.
 - The eyebrow still says Welcome to a guest who has played: kept, the account is new.
 
-## The home after the upgrade (new)
+## The home after the upgrade (`guest-upgraded-home`)
 
 ### Job
 
