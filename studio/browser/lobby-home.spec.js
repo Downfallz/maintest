@@ -1142,6 +1142,35 @@ test('your games are grouped against players and against bots, at most five of e
   expect(state.errors).toEqual([]);
 });
 
+// Turning a page of finished games brings the list back to its head: smoothly, unless less motion is asked, by the
+// system or by the account's setting (ADR 0197, table/motion.js; #1275). The classic sheet's `scroll-behavior` does
+// not reach a script's explicit `behavior`, so the script asks.
+test('turning a page of finished games scrolls at once under less motion, and smoothly otherwise', async ({ page }) => {
+  await page.addInitScript(() => {
+    globalThis.__scrolls = [];
+    const own = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function scrollIntoView(options) { globalThis.__scrolls.push(options?.behavior ?? 'auto'); return own.call(this, options); };
+  });
+  const result = index => ({ match: `m${index}`, table: `t${index}`, finishedAt: '2026-11-03T20:00:00Z', format: '3v3', rounds: 9,
+    outcome: 'won', you: ['player1'], opponent: { kind: 'bot', name: 'Lookahead' }, seats: null, replay: `/battle?replay=t${index}&seat=player1`,
+    createdAt: '2026-10-30T18:00:00Z', ranked: false });
+  await home(page, { finished: { bots: Array.from({ length: 8 }, (_, index) => result(index)), players: [] } });
+  const bots = page.locator('.mine-group.bots');
+  const turn = async name => {
+    await page.evaluate(() => { globalThis.__scrolls = []; });
+    await bots.getByRole('button', { name }).click();
+    await expect(bots.locator('.lobby-pages span')).toHaveText(name === 'Next →' ? 'Page 2 of 2' : 'Page 1 of 2');
+    return page.evaluate(() => globalThis.__scrolls);
+  };
+  await page.locator('#mine-finished').click();
+  expect(await turn('Next →')).toEqual(['smooth']);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await turn('← Previous')).toEqual(['auto']);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.evaluate(() => { document.documentElement.dataset.motion = 'less'; });
+  expect(await turn('Next →')).toEqual(['auto']);
+});
+
 test('a finished page that failed is read again on the next poll, and the three polls after a game ends read again', async ({ page }) => {
   const bot = { seat: 'player2', kind: 'bot', name: 'Lookahead', turn: false };
   const games = [{ table: { ...battle, id: 'live', seats: [battle.seats[0], bot] }, seats: [{ seat: 'player1', token: 'live-token' }] }];
@@ -1671,6 +1700,8 @@ test('the game\'s door shows its paintings as pictures of the kit, the ground as
   const state = await home(page, { account: null, mode: 'google' });
 
   await expect(page.locator('#sign-in-eyebrow')).toHaveText('Beta');
+  // The pages' floor of text is 11 px, the door's eyebrow too (docs/art/ux-craft-plan.md, UX14; #1279).
+  expect(Number.parseFloat(await page.locator('#sign-in-eyebrow').evaluate(one => getComputedStyle(one).fontSize))).toBeGreaterThanOrEqual(11);
   await expect(page.locator('#sign-in-game')).toHaveText('A turn-based duel: your three creatures mutate against another player\'s three.');
   const ground = page.locator('#sign-in-art img.sign-in-ground');
   await expect(ground).toHaveAttribute('fetchpriority', 'high');

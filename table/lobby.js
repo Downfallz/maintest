@@ -14,7 +14,7 @@ import { mountPracticeList } from './lobby-practice.js';
 import { mountTutorials } from './lobby-tutorials.js';
 import { mountFeatured } from './lobby-featured.js';
 import { initialOf } from './friends.js';
-import { motion } from './motion.js';
+import { motion, wantsLessMotion } from './motion.js';
 import { undressScene, wearScene } from './picture.js';
 
 export function visibleTables(tables, mine, all = false) {
@@ -748,7 +748,7 @@ export function mountLobby(doc, location, storage, { changes = onLobbyChange, fe
     else rows.append(...(shown.items.length ? shown.items.map(finishedCard) : [node('p', `No finished games ${label.toLowerCase()} yet.`, 'empty-state')]));
     root.append(rows);
     const pages = pager(`Pages of your finished games ${label.toLowerCase()}`, shown, page => {
-      finished[kind].page = page; void loadFinished(kind); root.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+      finished[kind].page = page; void loadFinished(kind); root.scrollIntoView?.({ block: 'start', behavior: wantsLessMotion() ? 'auto' : 'smooth' });
     });
     if (pages) root.append(pages);
     return root;
