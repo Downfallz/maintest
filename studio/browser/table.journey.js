@@ -127,9 +127,9 @@ test('the measure counts two controls that overlap on the screen, not one scroll
       `<div style="overflow:hidden;width:10px;height:10px"><dialog id="modal" style="margin:0;padding:0;border:0"><button style="display:block;width:60px;height:44px">A</button><button style="display:block;margin:-30px 0 0 20px;width:60px;height:44px">B</button></dialog></div>`,
     ];
     for (const body of escaping) {
-      await page.setContent(`<!doctype html><html lang="en"><body style="margin:0">${body}</body></html>`);
-      await page.evaluate(() => document.getElementById('modal')?.showModal());
-      const { overlaps: found } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM });
+      await page.setContent(`<!doctype html><html lang="en"><body style="margin:0">${body}</body></html>`); // NOSONAR S9382: one page, one fixture after another.
+      await page.evaluate(() => document.getElementById('modal')?.showModal()); // NOSONAR S9382: one page, one fixture after another.
+      const { overlaps: found } = await page.evaluate(measureInPage, { floor: TEXT_FLOOR, target: TARGET, minimum: TARGET_MINIMUM }); // NOSONAR S9382: one page, one fixture after another.
       expect(found, body).toBe(1);
     }
   } finally {

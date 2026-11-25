@@ -70,21 +70,29 @@ export function measureInPage({ floor, target, minimum }) {
   // escapes every ancestor but one that transforms, filters or contains it; one placed `absolute`, every ancestor up
   // to its positioned one; a modal window or an open popover sits in the top layer, cut by none.
   const establishes = style => style.transform !== 'none' || style.filter !== 'none' || /paint|layout|strict|content/.test(style.contain);
+  // What a box escapes after it meets an ancestor: `fixed` ends at one that establishes, `absolute` at one that is
+  // positioned too; the ancestor's own placement then starts its own escape.
+  const escapeAfter = (escaping, style) => {
+    const contained = escaping === 'fixed' ? establishes(style) : style.position !== 'static' || establishes(style);
+    const left = escaping && !contained ? escaping : null;
+    if (style.position === 'fixed') return { clips: !left, escaping: 'fixed' };
+    if (style.position === 'absolute' && left !== 'fixed') return { clips: !left, escaping: 'absolute' };
+    return { clips: !left, escaping: left };
+  };
+  const clipBy = (cut, parent, style) => {
+    const clip = parent.getBoundingClientRect();
+    if (style.overflowX !== 'visible') { cut.left = Math.max(cut.left, clip.left); cut.right = Math.min(cut.right, clip.right); }
+    if (style.overflowY !== 'visible') { cut.top = Math.max(cut.top, clip.top); cut.bottom = Math.min(cut.bottom, clip.bottom); }
+  };
   const seen = node => {
     const box = boxes.get(node), cut = { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
-    let escaping = ['absolute', 'fixed'].includes(getComputedStyle(node).position) ? getComputedStyle(node).position : null;
-    for (let child = node, parent = node.parentElement; parent && parent !== document.documentElement; child = parent, parent = parent.parentElement) {
-      if (child.matches(':modal, :popover-open')) break;
+    const own = getComputedStyle(node).position;
+    let escaping = own === 'absolute' || own === 'fixed' ? own : null;
+    for (let child = node, parent = node.parentElement; parent && parent !== document.documentElement && !child.matches(':modal, :popover-open'); child = parent, parent = parent.parentElement) {
       const style = getComputedStyle(parent);
-      if (escaping === 'absolute' && (style.position !== 'static' || establishes(style))) escaping = null;
-      if (escaping === 'fixed' && establishes(style)) escaping = null;
-      if (!escaping && !(style.overflowX === 'visible' && style.overflowY === 'visible')) {
-        const clip = parent.getBoundingClientRect();
-        if (style.overflowX !== 'visible') { cut.left = Math.max(cut.left, clip.left); cut.right = Math.min(cut.right, clip.right); }
-        if (style.overflowY !== 'visible') { cut.top = Math.max(cut.top, clip.top); cut.bottom = Math.min(cut.bottom, clip.bottom); }
-      }
-      if (style.position === 'fixed') escaping = 'fixed';
-      else if (style.position === 'absolute' && escaping !== 'fixed') escaping = 'absolute';
+      const met = escapeAfter(escaping, style);
+      if (met.clips) clipBy(cut, parent, style);
+      escaping = met.escaping;
     }
     return cut;
   };

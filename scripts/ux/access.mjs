@@ -152,13 +152,13 @@ export async function ringsLostInPage(page) {
     const lost = [];
     for (const entry of entries.filter(one => /^\d+$/.test(one.name))) {
       const { objectId } = entry.value;
-      const { nodeId } = await cdp.send('DOM.requestNode', { objectId });
-      await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['focus', 'focus-visible'] });
+      const { nodeId } = await cdp.send('DOM.requestNode', { objectId }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
+      await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['focus', 'focus-visible'] }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
       try {
-        const { result } = await cdp.send('Runtime.callFunctionOn', { objectId, functionDeclaration: RING_LOST, returnByValue: true });
+        const { result } = await cdp.send('Runtime.callFunctionOn', { objectId, functionDeclaration: RING_LOST, returnByValue: true }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
         if (result.value) lost.push(result.value);
       } finally {
-        await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
+        await cdp.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] }); // NOSONAR S9382: one control forced at a time, its state taken off before the next.
       }
     }
     await cdp.send('Runtime.releaseObjectGroup', { objectGroup: RINGS });
