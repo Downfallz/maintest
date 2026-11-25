@@ -33,6 +33,18 @@ lesson's brief, opens the account menu and presses Sign out, which shows the con
 confirmation's Sign out then shows the panel (`signed-out-panel`). They follow S7's precedent: a screen is briefed in the journey whose walk reaches it, here the
 doors, not `lobby.md` as the plan's table said. Both were read on S9's walk at 320 and 390 px, with their measures.
 
+UX15, a lesson before an account ([the plan](../ux-craft-plan.md#stages), stage 15), was briefed on `2729356`, on
+the host side of [ADR 0207](../../adr/0207-let-a-visitor-play-the-tutorials-as-a-guest.md): a guest is an account the
+host makes on a press (`POST /api/account/guest`), which reaches the tutorials, its settings and its account, and
+nothing else. Read on the walk `node scripts/ux/journey.mjs doors --out <folder>` at 320 and 390 px with its
+measures, which film no guest yet, and on two shots of a guest made by hand: tutorial 1's brief opening by itself
+for a new guest (it already does), and the home a guest sees before UX15, where every list it reads answers 403
+and the page says "Connection interrupted. Reconnecting automatically…" and "Finding your games…", offers ＋ New
+battle, the bell and the account's initial. The seven screens UX15 adds end with (new); each Job names the screen
+the walk gains for it. A guest's state is the host's: the page reads `guest` on `/api/me`'s account and decides
+nothing from its name. Where a guest's words name what they keep, they say "tutorials" and "settings", which the
+host keeps (ADR 0207), and nothing else.
+
 What holds for every screen of the journey:
 
 - The identity is settled: slate, bone and soot, gold for the one action, the cut corner on the filled action and
@@ -94,6 +106,12 @@ keeps its English name in French, as the French rulebook writes it (Incinerate).
 | The Predator at rest | A Predator lies at rest in a dark hall, embers still glowing in its shoulder. | Un Prédateur se repose dans une salle sombre, des braises encore luisantes dans l’épaule. |
 
 No text is laid on either: each is a plate, its section's words above and below it.
+
+UX15 adds one quiet link under the hero's Play now and How to play: Try a tutorial first → (Essayer d’abord un
+tutoriel →), to `/?try=lesson`, [the lesson door](#the-lesson-door-from-the-showcase-new). Four words more in each
+language, 745 in English and 834 in French, under both budgets. It is a link, not a button: Play now stays the
+hero's one filled action and keeps its place, the link coming after it in the reading order and in the focus
+order. Its target is 44 px tall, so the measure keeps none of the controls under 44.
 
 ### Pictures
 
@@ -562,12 +580,23 @@ two the same, word for word: the invited friend is not told they are invited. To
 
 - **Filled action**: the sign-in itself. On the public host it is Google's button, which Google draws and which
   cannot be gold; on a developer's host, Sign in, filled gold. Every other action is quiet: the privacy policy,
-  the footer's links.
+  the footer's links. On the plain door (UX15) Play the first tutorial is an outline under the ways in: the
+  visitor pressed Play now, and signing in stays the door's one filled action. The invited door does not offer
+  it (a seat needs an account), nor does the panel after a sign out (the player has an account).
 
 ### Words
 
-- **Order**: the eyebrow, the title, the line on the game, the line on the account, the button. Privacy policy last.
-- **Budget**: 45 words, today 35. The words, plain and invited:
+- **Order**: the eyebrow, the title, the line on the game, the line on the account, the button; on the plain door
+  then Play the first tutorial and its line. Privacy policy last.
+- **Budget**: 55 words on the plain door from UX15, the developer's sheet counting 41 today (37 on the public
+  host); 45 on the invited door, today 35. UX15 adds 14 words to the plain door, under the ways in:
+
+```text
+[Play the first tutorial]
+No account needed. Sign in after to keep your progress.
+```
+
+The words before UX15, plain and invited:
 
 Plain:
 
@@ -638,10 +667,11 @@ It is [a page's picture](../page-pictures.md#a-picture-asked-of-the-owner): the 
 - **Waiting**: after a press on the developer's Sign in, until the host answers: the button is disabled and says
   Signing in…. Google's button answers in its own popup. While the host describes an invitation the panel says
   "You are invited to a battle." and gains the name when it comes; the button does not move
-  (`lobby-home.spec.js`).
+  (`lobby-home.spec.js`). After a press on Play the first tutorial: as [the lesson door](#the-lesson-door-from-the-showcase-new)'s.
 - **Error**: `#sign-in-problem`, an alert under the button: Google's script that did not load, a refused
   sign-in. When the host cannot be reached the panel offers no sign-in and says "Could not reach the host to
-  check your account. Reload the page to try again." Read in `table/account.js`, not seen.
+  check your account. Reload the page to try again." Read in `table/account.js`, not seen. A guest the host
+  refuses (too many, registration closed, the store out of service): as the lesson door's, in the same line.
 - **Offline**: the table's service worker shows `table/offline.html`, which goes back to the page when the
   network returns. Read, not seen.
 
@@ -652,7 +682,8 @@ Right after a sign out on this browser, once, the panel has a state of its own, 
 
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
-| The press | A pointer down on Sign in (the developer's form; Google's button answers in its own way). | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms), [A button that says what it does](../ux-craft.md#a-button-that-says-what-it-does) | `--motion-fast`, `--motion-standard` |
+| The press | A pointer down on Sign in (the developer's form; Google's button answers in its own way) or Play the first tutorial. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms), [A button that says what it does](../ux-craft.md#a-button-that-says-what-it-does) | `--motion-fast`, `--motion-standard` |
+| The step into tutorial 1 | The host has made the guest and named tutorial 1's link, and the page goes to the battle's page, one origin. | `opacity` | [A page that changes](../ux-craft.md#a-page-that-changes) | `--motion-normal`, `--motion-standard` |
 
 No ambience: the panel's job is one press, and the showcase's breath was the visitor's last screen.
 
@@ -661,10 +692,12 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 | Beat | Form |
 | --- | --- |
 | The press | A change of colour, no scale. |
+| The step into tutorial 1 | The page changes at once. |
 
 ### Accessibility
 
-- **Focus**: the header's menu, then the sign-in button, then the privacy policy, then the footer.
+- **Focus**: the header's menu, then the sign-in button, then Play the first tutorial on the plain door, then the
+  privacy policy, then the footer.
 - **Names**: the pictures are decoration, `alt=""`; the title and the line on the game carry what they show. The
   panel is a `section` named by its title; the invited title names the inviter, so a screen reader hears it first.
 - **Announced**: the error through `#sign-in-problem`, `role="alert"`, already in the HTML.
@@ -707,6 +740,10 @@ No ambience: the panel's job is one press, and the showcase's breath was the vis
 - Settled by the owner on 2026-11-20: the line on the game stays as written, not the showcase's kicker.
 - The account line reads "on every device" plain and "everywhere" invited, to keep the invited panel under its 45
   words.
+- UX15: the plain door offers the lesson as an outline and keeps the sign-in filled, as the session proposed: the
+  visitor pressed Play now, a promise of the game, and most will sign in. The owner may prefer the lesson filled
+  here too, as on [the lesson door](#the-lesson-door-from-the-showcase-new). The plain door then counts 55 words on
+  the developer's sheet, over the 45 it held; the line under the button is what makes the press safe to make.
 
 ## Sign out, the confirmation (`sign-out`)
 
@@ -1128,3 +1165,630 @@ None. The friend has just seen the sign-in panel's pictures; the battle view com
 - On a slow network the classic table's page says Connecting… for seconds before its question. Its room and a
   line saying which invitation it reads are this page's to add when the invitation moves to the lobby, or before.
 - The classic table's switches beside ♪ stay at 13 px, and the notifications' button at 40 px at 320.
+
+## The lesson door, from the showcase (new)
+
+### Job
+
+A visitor who pressed Try a tutorial first under the showcase hero lands on the game's panel at `/?try=lesson`:
+the plain door, with the lesson first. Nothing is made on the page's load. The guest is made on the press, so a
+crawler that follows the link spends none of the three hundred guests an hour the host allows (ADR 0207). Anyone
+the host already knows, a guest included, gets their home, as on any address. The walk gains it as
+`sign-in-panel-lesson`.
+
+- **Filled action**: Play the first tutorial, gold. The ways in become outlines: Google's button is asked with
+  its `outline` theme on this door alone, in place of `filled_black`, and the developer's Sign in is an outline.
+  The privacy policy and the footer's links stay quiet.
+
+### Words
+
+- **Order**: the eyebrow, the title, the line on the game, the line on the lesson, Play the first tutorial; then
+  the line that offers the sign-in and the ways in. Privacy policy last.
+- **Budget**: 55 words, as the plain door's. Not filmed today; the words below count 44 with Google's button and
+  48 on the developer's sheet. The line on the game is the plain door's; "against a bot" is the brief window's own
+  (`tutorialBrief`), true of all four tutorials.
+
+```text
+Beta
+Learn the game first.
+A turn-based duel: your three creatures mutate against another player's three.
+Tutorial 1, against a bot. No account needed.
+[Play the first tutorial]
+Or sign in: your games follow you on every device.
+[Continue with Google]
+Privacy policy
+```
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The eclipse ground behind the panel, as on the plain door, asked for first. | 358 by 300 px | Is this the game the showcase showed? The same ground says yes. | `table/battle-art/eclipse-battle.webp` |
+| The Revenant beside the title, as on the plain door. | 107 by 86 px | What do I play? | `table/battle-art/evolutions/warped-stage3-revenant.webp` |
+
+At 320 px the ground is 288 by 300. Both are the plain door's declarations for table/sign-in: no new one.
+
+### States
+
+- **First paint**: as the plain door: the panel stays `hidden` until `/api/me` answers; then the words of this
+  door, which the address chose, and the paintings.
+- **Empty**: cannot be: the words are the page's; the tutorial's link is asked of the host only on the press.
+- **Loaded**: as under **Words**, Play the first tutorial in gold, the ways in as outlines under their line.
+- **Waiting**: after the press, until the host has made the guest (`POST /api/account/guest`) and named tutorial
+  1's link (`/api/tutorials`, the order 1, as Settings' Show the first tutorial again reads it): the button is
+  disabled and says "Opening the tutorial…"; the ways in stay. Then the step into tutorial 1. Read in the code it
+  extends, not seen.
+- **Error**: the host's own sentence in `#sign-in-problem`, an alert, and the button gives its words back; no
+  guest is made, and the ways in stay, since signing in still works. The sentences are the host's
+  (`AccountApi.cs`), shown as sent: 429 `Account.TooManyGuests`, "Too many guests from your network just now. Try
+  again later, or sign in."; registration closed, "New accounts are closed for now. Try again later."; the store
+  out of service (503 `Account.Unavailable`), "Accounts cannot be written right now. Try again in a minute." A
+  host that lists no tutorial once the guest is made: "No tutorial is available here right now.", Settings' own
+  line, and the page draws the guest's home. Read, not seen.
+- **Offline**: a page loaded offline is `table/offline.html`, from the service worker. A press that reaches no
+  host says "Could not reach the host. Check the connection and try again." in the same line. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The press | A pointer down on Play the first tutorial or a way in. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms), [A button that says what it does](../ux-craft.md#a-button-that-says-what-it-does) | `--motion-fast`, `--motion-standard` |
+| The step into tutorial 1 | The host has made the guest and named tutorial 1's link, and the page goes to the battle's page, one origin. | `opacity` | [A page that changes](../ux-craft.md#a-page-that-changes) | `--motion-normal`, `--motion-standard` |
+
+No ambience, as the plain door. The step ends where tutorial 1's brief begins, as the name window's does.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The press | A change of colour, no scale. |
+| The step into tutorial 1 | The page changes at once. |
+
+### Accessibility
+
+- **Focus**: not moved on load: the header's menu, then Play the first tutorial, then the ways in, the privacy
+  policy, the footer. After an error it stays on the button.
+- **Names**: the panel is a `section` named by its title, "Learn the game first."; the pictures are decoration,
+  `alt=""`. The button's name is its words; while it waits it is `aria-busy`, its words saying why.
+- **Announced**: an error through `#sign-in-problem`, `role="alert"`, already in the HTML.
+- **Targets**: every control 44 px, as on the plain door (none of 7 under 44 today). Google's outline button is
+  held at 44 px as its black one is.
+
+### Cost
+
+- **Bytes**: the plain door's: the ground and the Revenant, inside table/sign-in's 200 KiB
+  (`docs/art/page-budget.json`).
+- **Largest paint**: the ground, as on the plain door, asked for first; aimed at 2.5 s.
+- **Shift**: none: the lesson's button and its lines are in the HTML, shown or hidden by the door before the
+  panel shows. "Opening the tutorial…" holds on one line in the button's 288 px at 320, so the press moves nothing.
+
+### Left
+
+- The address `/?try=lesson`, and the guest made on the press alone, are the session's proposal, which this brief
+  keeps. The tutorial does not open by itself from it: `opensByItself` waits for a plain visit, and this one has
+  a query.
+- The door keeps the Revenant, not the base creature tutorial 1 starts from: that one is declared for the home,
+  and a declaration for table/sign-in would add bytes to a door that has its own. The owner may prefer it.
+- Google's button as an outline is a choice: Google offers `outline`, and it keeps one gold control on the
+  screen. The owner may keep it black; the measure, which counts gold, would read 1 either way.
+- The showcase's link sits under Play now, not beside How to play: three controls in the row would wrap at 320 px.
+  Its French words lead to an English page, as Play now does (ADR 0193).
+- The walk makes a real guest on a developer's host to film this and the screens after it: one guest a run,
+  inside the host's count.
+
+## Tutorial 1's brief, for a guest (new)
+
+### Job
+
+The window of [tutorial 1's brief](lessons.md#the-brief-window-lesson-1-brief-lesson-2-brief-lesson-3-brief-lesson-4-brief),
+opened right after the guest is made, from either door. The probe shot shows it opening already. Nothing in the
+window changes: a guest needs nothing more to press Start, and the ask to sign in waits for the lesson's end
+([A guest, then the same account](../ux-craft.md#a-guest-then-the-same-account)). What changes is behind it, in
+the battle page's header: the account chip reads Guest, and its menu loses Report or suggest, which the host
+refuses a guest (403 `Account.GuestNotAllowed`). The walk gains it as `guest-lesson-brief`.
+
+- **Filled action**: Start, as for a member. Skip the tutorial stays an outline.
+
+### Words
+
+- **Order**: as tutorial 1's brief: the place in the series, the title, the goal, the round, the note, Start,
+  Skip the tutorial.
+- **Budget**: 42 words, as tutorial 1's brief; `first-lesson-brief` counts 41 at both widths today. The words
+  stay the same: "Nothing played here counts. Play it again any time from Learn to play." holds for a guest, whose
+  home has Learn to play.
+
+### Pictures
+
+None, as tutorial 1's brief: the board behind the window is the lesson's own.
+
+### States
+
+- **First paint**: the band and the loading card, as for a member; the window waits for the host's practice.
+- **Empty**: cannot be: a tutorial always has a title, a goal and a round.
+- **Loaded**: the window, Start focused.
+- **Waiting**: after Skip the tutorial, until the host has been told, as for a member; the guest then reaches its
+  home, tutorial 1 skipped.
+- **Error**: the practice not opened: the loading card says "Practice unavailable" with the host's words and Try
+  again, as for a member. Read, not seen.
+- **Offline**: as tutorial 1's brief. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The window enters | The host's practice is open and fresh, and the page calls `showModal()`. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-normal`, `--motion-enter` |
+| The press | A pointer down on Start or Skip the tutorial. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+| The window leaves | Start: the window closes onto the board and its first question. | `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-fast`, `--motion-exit` |
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The window enters | A fade, no rise. |
+| The press | A change of colour, no scale. |
+| The window leaves | The same fade. |
+
+### Accessibility
+
+- **Focus**: Start, on opening; then Skip the tutorial, as for a member.
+- **Names**: the window is a `<dialog>` named by its title and described by the goal. The chip behind it is named
+  "Account: playing as a guest".
+- **Announced**: nothing: the window takes the focus and its name is read.
+- **Targets**: none of 2 under 44 px, at both widths, as `first-lesson-brief` today.
+
+### Cost
+
+- **Bytes**: no picture; the battle page's.
+- **Largest paint**: not measured: `--paint` does not load the battle page.
+- **Shift**: 0.03 at 320 and 0.01 at 390 on `first-lesson-brief` today; the same window, aimed under 0.1.
+
+### Left
+
+- The window says nothing of the guest. The owner may want a line ("Played as a guest: sign in after to keep
+  it."), nine words over its budget; the door the visitor just left said it.
+
+## Tutorial 1's end, for a guest (new)
+
+### Job
+
+[The lesson's end](lessons.md#the-lessons-end-lesson-1-complete-lesson-2-complete-lesson-3-complete) when the
+account is a guest: where the plan asks a visitor to sign in, with what the account keeps. The same card, with a
+line more; its Leave the tutorial becomes the way to sign in, since Leave stands in the band on every step. The
+walk gains it as `guest-lesson-complete`.
+
+- **Filled action**: Next: Who acts first, as for a member. Sign in to keep them is an outline beside Play again,
+  an outline. I keep Next filled: the guest came to learn, three lessons remain, and the ask is on every lesson's
+  end; [one dominant action](../ux-craft.md#one-dominant-action) stays the one the owner settled for this card.
+  At tutorial 4's result, where nothing is left to learn, Sign in to keep them is the filled action, in place of
+  Leave the tutorial (see **Left**).
+
+### Words
+
+- **Order**: the place and the end, the title, how the teams stand, the guest's line, Next, Play again, Sign in to
+  keep them.
+- **Budget**: 60 words on the card, a member's 29 since UX8; 120 on the screen, a member's 83 to 90.
+
+```text
+TUTORIAL 1 OF 4 · COMPLETE
+You finished Your first combat.
+Your team: 3 of 3 standing. Opponent: 3 of 3.
+Your progress is kept in this browser only. An account keeps your tutorials and settings, and opens battles against bots and players, friends and the ladder.
+[Next: Who acts first]
+[Play again]  [Sign in to keep them]
+```
+
+The card counts 57. What the account opens is what ADR 0207 refuses a guest: the lobby, friends, the ladder. Sign
+in to keep them leaves the tutorial as Leave does, then opens the guest's home at its keep panel
+(`/#keep-tutorials`), which takes the focus.
+
+### Pictures
+
+None, as a member's end: the field behind the card is the lesson's result.
+
+### States
+
+- **First paint**: the field after the last blow; the card waits for the view to say done, as for a member.
+- **Empty**: cannot be different from a member's: the line is the page's, the account's kind the host's.
+- **Loaded**: the card in the dock on a phone, over the field wider, as for a member. Its three actions stay on the
+  first screen at 320 by 568, the guest's line included: the critique reads it on the sheet.
+- **Waiting**: after Next or Sign in to keep them, until the host has let go of the practice (at most 1.5 s): the
+  pressed control is disabled. Read, not seen.
+- **Error**: as a member's: a done the host could not be told is said again at the next change.
+- **Offline**: as a member's: Next and Sign in to keep them are links, and the offline page answers them.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The end arrives | The view says done and the playback of the last blow has settled. | `transform`, `opacity` | [Little victories](../ux-craft.md#little-victories) | `--motion-normal`, `--motion-enter` |
+| The press | A pointer down on Next, Play again or Sign in to keep them. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The end arrives | A fade, no rise. |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: Next, when the end arrives; then Play again, then Sign in to keep them.
+- **Names**: the card is the coach's `aside`, its title a heading; each action's name is its words.
+- **Announced**: the card's lines once, through `#coach-lines`, the guest's line with them.
+- **Targets**: every action 44 px; none under 44 of a member's 14 or 15.
+
+### Cost
+
+- **Bytes**: none added.
+- **Largest paint**: not measured on the battle page.
+- **Shift**: the dock holds the card's tallest form, the guest's, so its two more lines resize nothing on the
+  field. Aimed under 0.1; a member's end reads 0.05 at 320 on lesson 1.
+
+### Left
+
+- Next filled over the sign-in is my choice. The owner may prefer Sign in to keep them filled at every end: an
+  account asked for harder, against a lesson not started.
+- The sign-in happens on the home's keep panel, not in the card: the ways in (Google's script, Discord's and
+  Microsoft's pages) live on the home, and a second sign-in in the dock is a second door to keep.
+- The ends of tutorials 2 and 3 read the same with their names. Tutorial 4's result for a guest (Sign in to keep
+  them filled, Leave the tutorial gone) amends [the tutorial's result](lessons.md#the-tutorials-result-lesson-result)
+  in `lessons.md`, whose filled action leads a member to New battle, which a guest cannot open.
+
+## The guest's home (new)
+
+### Job
+
+`/` for a guest: between two lessons, or back another day in the same browser. The host gives a guest the
+tutorials and its settings and refuses it everything else (ADR 0207), so the home shows those and asks the host
+nothing it refuses: no Your games, Find an opponent, invitations, recent opponents or Practice, no bell, no ＋ New
+battle, no lobby status line, no "Connection interrupted". The walk gains it as `guest-home`, reached from
+`guest-lesson-complete` by Sign in to keep them.
+
+- **Filled action**: the featured lesson's Continue → (tutorial 2 once tutorial 1 is done), as on a member's
+  home with nothing. The keep panel's ways in are the plain door's: Google's black button, which is not gold, or
+  the developer's Sign in as an outline. When no lesson is left, all four done or skipped, there is no featured
+  space; the keep panel leads the page and its sign-in is the filled action: the developer's Sign in gold, Google's
+  button as on the plain door.
+
+### Words
+
+- **Order**: the header (the brand, the menu, the chip Guest); the featured space (its picture, the place, the
+  title, the goal, Continue →); the keep panel (its eyebrow, title, line, the ways in, the privacy policy); Learn
+  to play (1 of 4 done, the four cards); the footer.
+- **Budget**: 150 words. Not measured: the walk films no guest yet, and today's page is the probe's, every list
+  refused. The words below and the four cards count about 140.
+
+```text
+[the eclipse ground, the Brute standing on it]
+TUTORIAL 2 OF 4
+Who acts first
+Choose when each of your creatures acts, and in what order, then cast.
+[Continue →]
+
+Playing as a guest
+Keep your tutorials.
+Your progress is kept in this browser only. An account keeps it on every device, and opens battles against bots and players, friends and the ladder.
+[Continue with Google]
+Privacy policy
+
+Learn to play                                  1 of 4 done
+```
+
+The featured words and Learn to play's are the host's, as on a member's home. The header shows a guest only what
+it may open: the menu keeps Rules and Learn to play, and hides Friends, Leaderboard, Your stats, Join with a code,
+Notifications and Admin. The chip reads Guest, not the drawn name's initial; its menu says "Playing as a guest" in
+place of "Signed in as" and the name, then Settings, Game website and Sign out. Report or suggest goes: the host
+refuses a guest's feedback. Settings shows Game and Privacy, not Notifications nor Account. Sign out opens
+[its own window](#sign-out-for-a-guest-new).
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The eclipse ground, the field a lesson stands on, the featured space on a phone. | 390 by 844 px | Where will I play? | `docs/art/sources/pages/eclipse-portrait.png` |
+| The Brute, tutorial 2's creature, standing on the ground. | 120 by 80 px | Which lesson is next, before reading? | `table/battle-art/evolutions/brute-base.webp` |
+| Learn to play's four creatures, one a card, lazy. | 96 by 64 px | Which lesson is which? | `table/battle-art/evolutions/base-creature.webp` |
+
+The member's home's declarations for table/home (`home-ground-eclipse`, `lesson-brute`, `lesson-base` and the
+others): no new one. The keep panel draws none: the featured painting above it says where.
+
+### States
+
+- **First paint**: the header, before `/api/me` answers; the panel and the home stay hidden, as for anyone. Once
+  the host says the account is a guest, the keep panel at once (its words are the page's), the featured space and
+  Learn to play once `/api/tutorials` answers.
+- **Empty**: no lesson left: no featured space, the keep panel first with its sign-in filled, Learn to play with
+  each card Done or Skipped.
+- **Loaded**: as under **Words**.
+- **Waiting**: after a way in, as the plain door: Signing in… on the developer's form, Google's own popup; then the
+  [name window for a guest](#the-name-window-for-a-guest-new), or another account's home (see **Left**).
+- **Error**: `/api/tutorials` not read: no featured space, Learn to play hidden, and `#lobby-problem` says "Could
+  not read your tutorials. Reload the page to try again." A 403 the page did not expect is drawn as nothing,
+  never as a connection lost. A refused sign-in: `#sign-in-problem`, as the plain door. Read, not seen.
+- **Offline**: `table/offline.html`, from the service worker. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The picture arrives | The featured picture has loaded, after the first read placed it. | `opacity` | [Room held while it loads](../ux-craft.md#room-held-while-it-loads) | `--motion-normal`, `--motion-enter` |
+| The breath | The featured creature is in view, in a visible tab (`.motion-breath`, ambience). | `transform` | [Ambience](../ux-craft.md#ambience) | `--motion-breath` |
+| The press | A pointer down on Continue →, a way in or a card's Play. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+The breath is the one ambience, as on a member's home: it stops under less motion, out of view and in a hidden tab.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The picture arrives | The same fade. |
+| The breath | Nothing: the creature is still. |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: not moved on load, but from Sign in to keep them, where the keep panel's title takes it, once. The
+  order: the header (brand, menu, Guest), Continue →, the ways in, the privacy policy, Learn to play's cards, the
+  footer.
+- **Names**: the chip is named "Account: playing as a guest". The keep panel is a `section` named by its title.
+  The featured space as on a member's home: a `section` named by the lesson's title, its pictures `alt=""`.
+- **Announced**: nothing on arrival; an error through `#lobby-problem` or `#sign-in-problem`, as today.
+- **Targets**: every control 44 px; the chip at least 44 by 44 with its word.
+
+### Cost
+
+- **Bytes**: the ground and one creature before any scroll, as a member's home with nothing: 44 KB on the slow
+  profile (the lobby's brief); the keep panel adds none, and no game's ground is drawn.
+- **Largest paint**: the ground, aimed at 2.5 s; a member's home with nothing reads 2.28 s.
+- **Shift**: the featured space's room held as a member's, the keep panel's in the HTML, the footer held until the
+  first read. Aimed under 0.1.
+
+### Left
+
+- Which sections a guest's home has is `docs/tabletop/home-navigation.md`'s: this brief amends it (the next lesson,
+  the keep panel, Learn to play). It names a clash too: that plan and `table/navigation.js` call the signed-out
+  visitor a guest (`data-home="guest"`), and a guest is now an account. UX15 renames the signed-out mode.
+- The keep panel between the featured lesson and Learn to play is my choice; under Learn to play it would fall
+  below the first screens.
+- The drawn name (`Guest-7KQ2`) is not shown: nobody else sees it, and it would read as a name the player chose.
+- Settings' Account tab stays hidden, so a guest cannot delete itself from the page; signing out loses it and the
+  host removes it after 31 days unused (ADR 0207). The owner may want Delete shown.
+- Guest is a word a player now reads: `docs/domain/player-terminology.md` gains it (Guest, Invité) in the build.
+- A guest who signs in to an account they already have loses the guest's tutorials (ADR 0207). The panel does not
+  warn: the page cannot know which account the provider will name. The owner may want a line.
+
+## Sign out, for a guest (new)
+
+### Job
+
+The guest pressed Sign out in the account menu. For a guest it cannot be undone: the cookie is all the proof it
+has, so its tutorials are lost to this browser. The same window as [a member's sign out](#sign-out-the-confirmation-sign-out),
+with its own words. The walk gains it as `guest-sign-out`.
+
+- **Filled action**: none. Sign out and lose them takes the `danger` form, as Delete my account does; Stay signed
+  in is an outline, focused first. [Undo, then one confirmation](../ux-craft.md#undo-then-one-confirmation) keeps a
+  window for what cannot be undone, and its safe answer is the focused one.
+
+### Words
+
+- **Order**: the title on the band, the line, then Sign out and lose them, then Stay signed in.
+- **Budget**: 30 words, a member's window 19.
+
+```text
+Sign out and lose your tutorials?
+A guest's progress is kept in this browser only. Sign in first to keep it.
+[Sign out and lose them]  [Stay signed in]
+```
+
+After the sign out the home shows the plain door, not the goodbye: "Your games wait for you" would not be true. The
+page leaves no goodbye mark for a guest.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| One open amber eye beneath the Predator's armoured lid, the window's head, as a member's sign out. | 358 by 119 px | I am leaving; does anything wait for me? | `docs/art/sources/pages/replacements/eye-still-open.webp` |
+
+### States
+
+- **First paint**: cannot be: the window opens on a press, on a page already drawn.
+- **Empty**: cannot be: the window always has its title, its line and its two buttons.
+- **Loaded**: the band and its title, the line, the two buttons, a row each at 320 px when they do not fit.
+- **Waiting**: the window closes on the press; Sign out is disabled in the menu until the host answers
+  `/api/account/signout`; then the plain door.
+- **Error**: a failed sign out reopens the account menu with the problem in `#account-problem`; the guest is still
+  signed in. Read, not seen.
+- **Offline**: the same error. Read, not seen.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The window | A press on Sign out opens it; a press on either button or Escape closes it. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-normal`, `--motion-enter` in; `--motion-fast` out |
+| The press | A pointer down on either button. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The window | A fade, no travel. |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: Stay signed in, when the window opens; Escape does what it does. On the way out, the account chip.
+- **Names**: the window is named by its title and described by its line; the head has no `alt`.
+- **Announced**: nothing beyond the window's name and description; an error through `#account-problem`.
+- **Targets**: both buttons 44 px tall.
+
+### Cost
+
+- **Bytes**: the head's file, about 20 KB, loaded when the window opens, inside table/home's `all`, as a member's.
+- **Largest paint**: not a page's load: the window opens over a page already painted.
+- **Shift**: none: the band's room is held before the painting comes, as a member's.
+
+### Left
+
+- No gold here, and the focus on Stay signed in, is my choice: a member's sign out is filled because it can be
+  undone, and this one cannot.
+- "Lose" is what the player sees; the host keeps the guest until 31 days unused, though no browser can reach it
+  (ADR 0207). The page could delete the guest on this press instead, which the ADR allows: the session's choice.
+
+## The name window, for a guest (new)
+
+### Job
+
+A guest pressed a way in with an identity no account holds; the host asks a name, and choosing it upgrades the
+guest: the same account, its tutorials kept (ADR 0207). The page knows it is an upgrade from `/api/me`, which said
+guest before the press. The walk gains it as `guest-name-window`, staged as `name-window` is.
+
+- **Filled action**: Take this name, as for any new account. Cancel stays an outline; cancelling leaves the guest a
+  guest.
+
+### Words
+
+- **Order**: as the name window: the eyebrow, the title, why the name matters, the field and its check, the rule,
+  the line on what stays, the buttons.
+- **Budget**: 50 words, as the name window; `name-window` counts 47 today on the invited path.
+
+```text
+Welcome to Downfall Instinct
+Choose your player name
+Other players see it on every table. It can't be changed for now.
+Player name [            ]
+✓ bastien is available
+3 to 20 characters: letters, digits, _ and -. Starts with a letter.
+Your tutorials and settings stay with this name.
+[Cancel]  [Take this name →]
+```
+
+The line is `name-next`'s, there from the start. After the press, when the host names a lesson to open, its "Next:"
+line replaces it, as today.
+
+### Pictures
+
+None, as the name window: one field and one decision.
+
+### States
+
+- **First paint**: the window opens over the guest's home when the host answers that the account needs a name.
+- **Empty**: the field empty, the check line hidden, the line on what stays shown.
+- **Loaded**: a name typed; the host's check in `#name-check`.
+- **Waiting**: after Take this name, the button disabled until the host answers.
+- **Error**: `#name-problem`, the host's words: a name refused, a sign-in run out, registration closed. Read, not
+  seen.
+- **Offline**: the press fails and says so in `#name-problem`; the window stays open, the guest a guest.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The window enters | The host answers that the account needs a name, and `showModal()` opens it. | `transform`, `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-normal`, `--motion-enter` |
+| The press | A pointer down on Take this name or Cancel. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+| The window leaves | The host has taken the name and the home is drawn again, or Cancel. | `opacity` | [A window that enters and leaves](../ux-craft.md#a-window-that-enters-and-leaves) | `--motion-fast`, `--motion-exit` |
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The window enters | A fade, no rise. |
+| The press | A change of colour, no scale. |
+| The window leaves | The same fade. |
+
+### Accessibility
+
+- **Focus**: the field on opening, then Cancel, then Take this name; Escape closes like Cancel, and the focus goes
+  back to the way in.
+- **Names**: a `<dialog>` named by its title; the field by its label, Player name.
+- **Announced**: the check through `#name-check`, `role="status"`; a refusal through `#name-problem`.
+- **Targets**: none of 3 under 44 px today. Kept.
+
+### Cost
+
+- **Bytes**: none of its own.
+- **Largest paint**: the home's, behind the window.
+- **Shift**: none: the check line's room is held, as today.
+
+### Left
+
+- "Stay with this name" over "with this account": the window is about a name, and a guest has never read the word
+  account as theirs. The owner may prefer the other.
+- The eyebrow still says Welcome to a guest who has played: kept, the account is new.
+
+## The home after the upgrade (new)
+
+### Job
+
+The guest has named itself: the same account, a member's now, its tutorials kept. The page reads `/api/me` again
+and draws a member's home in place as the window leaves. The walk gains it as `guest-upgraded-home`.
+
+- **Filled action**: Continue → on the featured lesson (tutorial 2), as on [a member's home with
+  nothing](lobby.md#the-home-of-a-player-with-nothing-home-new); ＋ New battle is the quiet action under it, and
+  Learn to play's and the empty lists' actions are outlines.
+
+### Words
+
+- **Order**: as a member's home with nothing: the featured lesson, Your games, Learn to play (1 of 4 done), Find
+  an opponent, the footer. The status line, once, before Your games.
+- **Budget**: 170 words; a member's home with nothing counts 158, and the status line adds 8.
+
+```text
+Signed in as bastien. Your tutorials are kept.
+```
+
+The page says it once: it knows from its own press that the host took the name and that `/api/me` no longer says
+guest. A reload never says it.
+
+### Pictures
+
+| Picture | Drawn at | Answers | From |
+| --- | --- | --- | --- |
+| The eclipse ground, already drawn for the guest. | 390 by 844 px | Where will I play? | `docs/art/sources/pages/eclipse-portrait.png` |
+| The Brute, tutorial 2's creature, already drawn. | 120 by 80 px | Which lesson is next? | `table/battle-art/evolutions/brute-base.webp` |
+
+### States
+
+- **First paint**: the guest's home is on the page; the window stays until the home is drawn again.
+- **Empty**: a member's with nothing: Your games' empty line and Play a bot →, as a member's home.
+- **Loaded**: a member's home, Learn to play saying 1 of 4 done, tutorial 1 Done.
+- **Waiting**: the lists as a member's home reads them: "Finding your games…" until the host answers, which it
+  now does.
+- **Error**: as a member's home.
+- **Offline**: as a member's home.
+
+### Motion
+
+| Beat | When | Moves | Pattern | Token |
+| --- | --- | --- | --- | --- |
+| The lists arrive | Your games and Find an opponent are drawn once the host's lists answer. | `transform`, `opacity` | [A part that arrives by itself](../ux-craft.md#a-part-that-arrives-by-itself) | `--motion-normal`, `--motion-enter` |
+| The breath | The featured creature is in view, in a visible tab. | `transform` | [Ambience](../ux-craft.md#ambience) | `--motion-breath` |
+| The press | A pointer down on Continue → or any other action. | `transform` | [Answer within 100 ms](../ux-craft.md#answer-within-100-ms) | `--motion-fast`, `--motion-standard` |
+
+The featured picture does not arrive again: the ground and the creature are the guest's, kept.
+
+### Less motion
+
+| Beat | Form |
+| --- | --- |
+| The lists arrive | A fade, no rise. |
+| The breath | Nothing: the creature is still. |
+| The press | A change of colour, no scale. |
+
+### Accessibility
+
+- **Focus**: Continue →, as the window leaves: the way in that opened the window is gone with the keep panel.
+- **Names**: as a member's home; the chip named by the player's name.
+- **Announced**: the status line once, through `#lobby-status`, polite.
+- **Targets**: as a member's home: every control 44 px.
+
+### Cost
+
+- **Bytes**: nothing new before a scroll: the ground and the creature are already drawn.
+- **Largest paint**: not a page's load: the home is drawn again in place.
+- **Shift**: the lists take the room the keep panel leaves; the featured space does not move. Aimed under 0.1.
+
+### Left
+
+- The status line is mine; the owner may prefer nothing said.
+- A guest who signs in to an account they already have lands on that account's home: its tutorials, not the
+  guest's (ADR 0207). The page then says "Signed in as bastien." alone, since the account it reads is another.
