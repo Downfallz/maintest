@@ -157,6 +157,10 @@ test('a creature of the report shows its illustration large, as the inspection d
   // On a phone the row hides its portrait: its name is the way in.
   const fallen = page.locator('.match-report-table[data-side="ally"] tr[data-report-creature="3"] .match-zoom-open');
   await expect(fallen).toHaveAccessibleName('Creature 3 fallen show large');
+  // Each creature's button is a target of 44 px, whatever its row would give it: on a phone it is the name alone (#1271).
+  const heights = await page.locator('#match-report-sides .match-zoom-open').evaluateAll(all => all.map(one => one.getBoundingClientRect().height));
+  expect(heights.length).toBeGreaterThan(0);
+  expect(Math.min(...heights)).toBeGreaterThanOrEqual(44);
   await fallen.click();
   await expect(zoom).toBeVisible(); await expect(picture).toBeFocused();
   await expect(picture).toHaveAccessibleName('Back to the battle report from Creature 3');

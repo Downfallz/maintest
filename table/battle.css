@@ -1749,7 +1749,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* A creature of the report is a button that zooms its illustration: it keeps the look of the row it sits in. */
 #match-dialog .match-zoom-open { min-height: 0; margin: 0; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; letter-spacing: inherit; cursor: zoom-in; box-shadow: none; }
 #match-dialog .match-zoom-open:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 6px; }
-#match-dialog .match-report-table .match-zoom-open { width: 100%; min-height: 32px; }
+/* Its row's whole height is the target, at the touch floor of 44 px (#1271): on a phone the name alone is the way in. */
+#match-dialog .match-report-table .match-zoom-open { width: 100%; min-height: 44px; }
 .match-mvp-portrait { flex: none; border-radius: 50%; }
 #match-dialog .match-zoom { z-index: 6; }
 #match-zoom .inspect-zoom-picture { background-color: transparent; box-shadow: none; }
