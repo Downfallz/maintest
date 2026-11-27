@@ -56,12 +56,16 @@ export function battleTieGroups(view, tapped = []) {
       fixed: rows.filter(row => !group.some(id => String(id) === row.id) && positions.some(one =>
         one.speed === row.speed && one.initiative === row.initiative) && row.team === 'Opponent') };
   }).map(group => ({ ...group,
-    // Which team the random draw gave the tie's earlier place (ADR 0208); null when nothing was drawn or a side
-    // of the tie has no place in this snapshot.
-    earlier: group.random && group.places.length && group.fixed.length
-      ? (Math.min(...group.places) < Math.min(...group.fixed.map(row => row.position)) ? 'Your team' : 'Opponent') : null,
+    earlier: earlierTeam(group),
     // An opponent holding two or more of these places orders its own creatures too: only the places are known.
     opponentOrderOpen: group.fixed.length > 1 }));
+}
+
+// Which team the random draw gave a tie's earlier place (ADR 0208), read off the places the host served; null when
+// nothing was drawn or a side of the tie has no place in this snapshot.
+function earlierTeam(group) {
+  if (!group.random || !group.places.length || !group.fixed.length) return null;
+  return Math.min(...group.places) < Math.min(...group.fixed.map(row => row.position)) ? 'Your team' : 'Opponent';
 }
 
 // A first read/reconnect is a baseline, not a fresh reveal. Keep one pending public reveal, discard it on

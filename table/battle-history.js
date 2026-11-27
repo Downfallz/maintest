@@ -58,11 +58,12 @@ function combatRow(entry, board, catalogue) {
   // A record from before the roll was kept says the outcome alone.
   const card = cards.get(resolution.action?.spell);
   const chance = Number.isInteger(action.criticalRoll) && hasCritical(card) ? card.critical : '';
-  const said = chance ? `${action.status === 'Critical' ? 'Crit' : 'No crit'} · ${chance}` : status;
+  const outcome = action.status === 'Critical' ? 'Crit' : 'No crit';
+  const said = chance ? `${outcome} · ${chance}` : status;
   const targets = action.targets.map(target => who(target.id, board)).join(', ');
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
   return { actor: String(action.actor.id), spell: action.spell, portrait: card?.visual?.portrait, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
-    summary: `${action.spell} · ${said}${targets ? ` → ${targets}` : ''}`,
+    summary: [`${action.spell} · ${said}`, targets].filter(Boolean).join(' → '),
     sections: [
       { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
       { title: 'Targets and result', items: [line(targets || 'No targets'), line(said), ...(action.reason ? [line(`Fizzled: ${action.reason}`, 'harm')] : [])] },

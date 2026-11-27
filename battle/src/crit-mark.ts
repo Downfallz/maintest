@@ -20,7 +20,7 @@ export class CritMark {
   // The time of the last frame drawn.
   private time = 0;
 
-  constructor(private scene: Phaser.Scene) {}
+  constructor(private readonly scene: Phaser.Scene) {}
 
   /** The critical the frame asks for, on the figure that stands for its caster; any other leaves. */
   show(crit: Crit | null, spot: Spot | null) {

@@ -111,8 +111,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   const assignmentText = (one: Assignment) => `${one.position == null ? 'Position unknown' : '#' + one.position} → ${name(one.id)}`;
   const fixedText = (one: Fixed) => `#${one.position} ${one.label}`;
   // A tie between the teams is settled at random (ADR 0208): the window says which team got the earlier place.
-  const earlierText = (earlier: string | null) => earlier === 'Your team' ? 'Settled at random: your team got the earlier place.'
-    : earlier === 'Opponent' ? 'Settled at random: the opponent got the earlier place.' : 'The tie between the teams was settled at random.';
+  const EARLIER: Record<string, string> = { 'Your team': 'Settled at random: your team got the earlier place.', Opponent: 'Settled at random: the opponent got the earlier place.' };
+  const earlierText = (earlier: string | null) => EARLIER[earlier ?? ''] ?? 'The tie between the teams was settled at random.';
   // The opponent orders its own creatures within its places too: with two or more, only the places are certain.
   function opponentPlacesText(detail: { fixed: Fixed[]; opponentOrderOpen: boolean }) {
     if (detail.opponentOrderOpen) return `Opponent places stay fixed: ${detail.fixed.map(one => '#' + one.position).join(', ')} · their order is revealed with yours`;
