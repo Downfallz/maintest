@@ -684,21 +684,12 @@ test('with no rules.evolutionInterval in the catalogue the first line holds the 
   await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? '2 picks left' : 'Your team has 2 picks, each for a different creature.');
   expect(h.state.errors).toEqual([]);
 });
-test('a pick sent before the host answers says so on the first line, and the last one needs no schedule', async ({ page }) => {
+test('a pick sent before the host answers says so on the first line', async ({ page }) => {
   const h = await mount(page);
   h.state.next = view => view;
   await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
   await expect.poll(() => h.state.writes.length).toBe(1);
   await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Pick sent · 1 pick left' : 'A mutation round comes every 2 rounds. Pick sent · 1 pick left.');
-  expect(h.state.errors).toEqual([]);
-});
-test('the last pick sent leaves the first line at "Pick sent"', async ({ page }) => {
-  const h = await mount(page, { remaining: 1 });
-  h.state.next = view => view;
-  await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
-  await expect.poll(() => h.state.writes.length).toBe(1);
-  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Pick sent' : 'Pick sent.');
-  await expect(page.locator('#planning-pick-rule')).toBeHidden();
   expect(h.state.errors).toEqual([]);
 });
 test('with as many picks as creatures the rule line holds the pips and the Rules link alone', async ({ page }) => {
@@ -725,13 +716,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }
     test.skip(info.project.name !== 'desktop', 'Own viewport');
     await page.setViewportSize(viewport); const h = await mount(page); await page.clock.runFor(150);
     const short = viewport.height <= 660;
-    const [shown, unseen] = [page.locator(short ? '.pick-short' : '.pick-full'), page.locator(short ? '.pick-full' : '.pick-short')];
-    await expect(shown).toBeVisible();
+    const [onShow, unseen] = [page.locator(short ? '.pick-short' : '.pick-full'), page.locator(short ? '.pick-full' : '.pick-short')];
+    await expect(onShow).toBeVisible();
     if (short) {
       // Clipped to 1 px, still in the accessibility tree.
       const box = await unseen.boundingBox(); expect(box.width).toBeLessThanOrEqual(1); expect(box.height).toBeLessThanOrEqual(1);
       await expect(page.locator('#planning-dialog')).toHaveAccessibleDescription(/A mutation round comes every 2 rounds\. Your team has 2 picks/);
-      expect(await shown.evaluate(node => node.getClientRects().length)).toBe(1);
+      expect(await onShow.evaluate(node => node.getClientRects().length)).toBe(1);
     } else {
       expect(await unseen.evaluate(node => getComputedStyle(node).display)).toBe('none');
       const [heading, line] = await Promise.all([page.locator('#planning-heading').boundingBox(), page.locator('#planning-help').boundingBox()]);

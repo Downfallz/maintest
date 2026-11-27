@@ -259,17 +259,18 @@ for (const [name, options, line] of [
   expect(h.state.errors).toEqual([]);
 });
 
-test('the receipt of an earlier round than the board never shows the board\'s mutation line', async ({ page }) => {
+test('each round\'s receipt carries its own mutation line, never the previous one\'s', async ({ page }) => {
   const h = await mount(page, { next: 2 });
-  await expect(page.locator('#upkeep-mutation')).toHaveText('Next round is a mutation round.');
-  await close(page);
-  // Round 2 is a mutation round: its own receipt says so, and the previous line is gone.
+  await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Start'); await expect(page.locator('#upkeep-mutation')).toHaveText('Next round is a mutation round.');
+  // Round 2 is a mutation round: while round 1's receipt is read, a newer round waits behind it (as under History).
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2, nextEvolutionRound: 2 } });
-  await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Start');
-  await expect(page.locator('#upkeep-mutation')).toHaveText('This is a mutation round.');
+  await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Start'); await expect(page.locator('#upkeep-mutation')).toHaveText('Next round is a mutation round.');
   await close(page);
-  await h.publish([energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3, nextEvolutionRound: 4 } });
-  await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Start');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Start');
+  await expect(page.locator('#upkeep-mutation')).toBeVisible(); await expect(page.locator('#upkeep-mutation')).toHaveText('This is a mutation round.');
+  await h.publish([energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3, nextEvolutionRound: 5 } });
+  await close(page);
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Start');
   await expect(page.locator('#upkeep-mutation')).toBeHidden(); await expect(page.locator('#upkeep-mutation')).toHaveText('');
   expect(h.state.errors).toEqual([]);
 });

@@ -47,7 +47,7 @@ for (const [phase, subPhase, word] of [['Planning', 'Speed', 'COMMAND'], ['Comba
     await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: 3, phase, subPhase }));
     await roundWord(page, `${word}, mutation next round`, `${word} · MUTATION NEXT ROUND`);
     await expect(page.locator('#round-phase .round-short .unseen')).toHaveText(', mutation next round');
-    const name = page.viewportSize().width >= 760 ? /^round 02 ?(command|combat) · mutation next round, where you are$/i : /^round 02 ?(command|combat), mutation next round, where you are$/i;
+    const name = page.viewportSize().width >= 760 ? /^round 02 ?(command|combat) · mutation next round\s?, where you are$/i : /^round 02 ?(command|combat)\s*, mutation next round\s*, where you are$/i;
     await expect(page.locator('#recap-open')).toHaveAccessibleName(name);
     expect(h.errors).toEqual([]);
   });

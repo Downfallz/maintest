@@ -233,7 +233,8 @@ for (const [name, board, line] of [
 ]) test(`Help's next line reads ${line ? `"${line}"` : 'nothing'} on ${name}`, async ({ page }) => {
   const h = await mount(page, { kind: null }); await expect(page.locator('#help-dialog')).toBeHidden();
   await h.publish([], { board: { ...h.state.view.board, phase: 'Planning', ...board }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
-  await page.locator('#help-open').click(); await expect(page.locator('#help-dialog')).toBeVisible();
+  // The tip of the new asking opens by itself, and carries the same next line.
+  await expect(page.locator('#help-dialog')).toBeVisible();
   if (line) { await expect(page.locator('#help-next')).toBeVisible(); await expect(page.locator('#help-next')).toHaveText(line); }
   else { await expect(page.locator('#help-next')).toBeHidden(); await expect(page.locator('#help-next')).toHaveText(''); }
   expect(h.state.errors).toEqual([]);

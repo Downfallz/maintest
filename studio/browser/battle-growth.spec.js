@@ -172,7 +172,9 @@ const roundLabels = [
 ];
 for (const [name, shape, top, label] of roundLabels) test(`the public tree's progress line names when the next mutation round comes on ${name}`, async ({ page }) => {
   const input = initial(); shape(input.board); Object.assign(input, top);
-  const h = await mount(page, input); await h.reference();
+  const h = await mount(page, input);
+  if (top.over) { await expect(page.locator('#match-dialog')).toBeVisible(); await page.locator('#match-dialog .match-close').click(); await expect(page.locator('#match-dialog')).toBeHidden(); }
+  await h.reference();
   await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(page.locator('#atlas-progress')).toContainText(label);
   expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
