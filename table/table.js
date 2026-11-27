@@ -3114,9 +3114,10 @@ function renderPhaseGuide(state, view, seat) {
   const newRound = previous?.round !== view.board.roundNumber;
   const begins = Boolean(previous) && newRound && !view.over;
   const label = view.over ? 'Match complete' : stepName(phases[current]) ?? 'Waiting';
-  const title = unlocked.length ? `Round ${view.board.roundNumber} · Mutations acquired`
-    : begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} started → ${label}`
-      : `Round ${view.board.roundNumber} · ${label}`;
+  let title = `Round ${view.board.roundNumber} · ${label}`;
+  if (unlocked.length) title = `Round ${view.board.roundNumber} · Mutations acquired`;
+  else if (begins) title = `Round ${view.board.roundNumber} begins`;
+  else if (newRound && upkeep && !view.over) title = `Round ${upkeep.round} started → ${label}`;
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
   const changes = unlocked.length ? unlocked.map(one => ({ who: `Creature ${one.creature} · ${one.side}`, text: state.packages.get(one.tier)?.name ?? one.tier, tone: one.side }))
     : [];
@@ -3263,7 +3264,9 @@ function renderUpkeep(state, view, upkeep, seat) {
   if (state.upkeepShown !== key) panel.open = false;
   state.upkeepShown = key;
   if (!upkeep) return;
-  element('upkeep-label').textContent = `${ROUND_START}${upkeep.rows.length ? ` · ${upkeep.rows.length} ${upkeep.rows.length === 1 ? 'effect' : 'effects'}` : ''} ↗`;
+  const effects = upkeep.rows.length === 1 ? 'effect' : 'effects';
+  const counted = upkeep.rows.length ? ` · ${upkeep.rows.length} ${effects}` : '';
+  element('upkeep-label').textContent = `${ROUND_START}${counted} ↗`;
   element('upkeep-title').textContent = inRound(upkeep.round, ROUND_START);
   element('upkeep-energy').textContent = upkeepEnergy(state);
   const applied = upkeepRows(state, view.board, upkeep.rows.filter(row => row.amount > 0), false);

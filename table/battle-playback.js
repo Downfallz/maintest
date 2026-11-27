@@ -130,6 +130,14 @@ const framed = action => Array.isArray(action.frame?.before) && Array.isArray(ac
   && action.frame.before.every(one => action.frame.after.some(next => next.id === one.id));
 
 const NEUTRAL = Object.freeze({ family: 'neutral', motif: 'focus', delivery: 'cast' });
+// Where the board stands while a receipt is read: the engine's phase and step of a round's start, of its end, and of
+// the match's result.
+const RECEIPT_STEPS = Object.freeze({
+  start: { phase: 'StartOfRound', subPhase: 'OngoingEffects' },
+  end: { phase: 'EndOfRound', subPhase: 'Cleanup' },
+  result: { phase: 'Match complete', subPhase: 'Finalization' },
+});
+
 // The sub-phases of a round once its combat has begun, as battle-upkeep.js reads them.
 const COMBAT_BEGUN = Object.freeze(['IntentSelection', 'Activation', 'Cleanup', 'Finalization']);
 const FIZZLE = Object.freeze({ family: 'neutral', motif: 'fizzle', delivery: 'cast' });
@@ -322,11 +330,12 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     // A turnover reads on a recorded board under its plaques: an upkeep on the board it arrived with, an aftermath
     // on its round's last action frame. Any other receipt, or one without such a board, draws none.
     const own = current?.receipt ? current.snapshot : null;
-    const step = current?.receipt?.category === ROUND_END ? { phase: 'EndOfRound', subPhase: 'Cleanup' } : { phase: 'StartOfRound', subPhase: 'OngoingEffects' };
-    const display = own ? { ...own, board: { ...own.board, ...step, timeline: current.receipt.category === ROUND_END ? own.board.timeline : [] } }
-      : current?.receipt ? { board: { roundNumber: current.round,
-      phase: current.receipt.category === 'Result' ? 'Match complete' : current.receipt.category === ROUND_END ? 'EndOfRound' : 'StartOfRound',
-      subPhase: current.receipt.category === 'Result' ? 'Finalization' : current.receipt.category === ROUND_END ? 'Cleanup' : 'OngoingEffects', allies: [], enemies: [], timeline: [] } }
+    const ended = current?.receipt?.category === ROUND_END;
+    const step = ended ? RECEIPT_STEPS.end : RECEIPT_STEPS.start;
+    // A receipt with no board of its own: the match's result names its own step, a turnover its moment's.
+    const bare = current?.receipt?.category === 'Result' ? RECEIPT_STEPS.result : step;
+    const display = own ? { ...own, board: { ...own.board, ...step, timeline: ended ? own.board.timeline : [] } }
+      : current?.receipt ? { board: { roundNumber: current.round, ...bare, allies: [], enemies: [], timeline: [] } }
       : action ? presentedView(latest, replay) : waiting ? presentedView(latest, waiting) : latest;
     // Every frame, live or recorded, shows the purchases it owns, ordered by when they were made (ADR 0151).
     const board = livePresentation(display, bought, { log: purchases });

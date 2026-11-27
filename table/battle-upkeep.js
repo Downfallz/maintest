@@ -76,7 +76,8 @@ export function upkeepDisplay(energy, ongoing, energyNote = '') {
   const subjects = count === 1 ? '1 creature' : `${count} creatures`;
   let energySummary = energyNote;
   const each = count && energy.every(row => row.amount === energy[0].amount) ? energy[0].amount : null;
-  if (count) energySummary = `${each === null ? 'Round energy' : `+${each} energy each`} · ${subjects}`;
+  const grant = each === null ? 'Round energy' : `+${each} energy each`;
+  if (count) energySummary = `${grant} · ${subjects}`;
   const summary = [energySummary];
   const markers = new Map();
   for (const row of [...energy, ...ongoing]) {
