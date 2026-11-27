@@ -2643,10 +2643,10 @@ test("the round turns over in steps after the seat's closing action: its cleanup
   assert.match(p.nodes['phase-current'].textContent, /Cleanup/);
   assert.match(p.nodes['combat-step-action'].textContent, /Creature 2.*Stun ends/);
   assert.equal(p.nodes['combat-line'].textContent, 'Cleanup · Stun ends → Creature 2');
-  assert.equal(p.nodes['combat-step-controls'].children[0].textContent, 'OK · start →');
+  assert.equal(p.nodes['combat-step-controls'].children[0].textContent, 'OK · Round start →');
 
   stepOk(p);
-  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · start/);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · Start/);
   assert.equal(p.nodes['decision-phase'].textContent, 'Round 4 begins');
   assert.match(p.nodes['phase-round'].textContent, /^Round 4 \//);
   assert.match(p.nodes['phase-current'].textContent, /Round start/);
@@ -2663,7 +2663,7 @@ test('Auto reads the turnover with the round it follows, and stops at the next r
   p.nodes['combat-step-controls'].children[1].click();
   assert.match(p.nodes['combat-step-count'].textContent, /^Round 3 · cleanup.* · auto$/);
   p.timers.get(p.state.stepTimer)();
-  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · start · auto$/);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · Start · auto$/);
   p.timers.get(p.state.stepTimer)();
   assert.equal(p.nodes['combat-step'].hidden, true);
 });
@@ -2696,7 +2696,7 @@ test('an upkeep read after the next round has begun stands on the board that rou
   p.view.board.allies[0] = { ...p.view.board.allies[0], health: 14 };
   p.view.board.enemies[0] = { ...p.view.board.enemies[0], health: 8 };
   p.draw(); stepOk(p); stepOk(p);
-  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · start/);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · Start/);
   assert.match(p.nodes.allies.textContent, /20\/20 HP/, 'not the 14 the next action left');
   stepOk(p);
   assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · opponent action/);

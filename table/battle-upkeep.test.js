@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createBattleUpkeep, roundBar, upkeepReceipt, upkeepDisplay, missingRoundEnergy } from './battle-upkeep.js';
 import { roundNotes, replayText } from './battle-match.js';
 import { matchReplay } from './feed.js';
@@ -156,4 +157,19 @@ test('at a round\'s end the bar says what ended, or else who became immune, or t
       assert.doesNotMatch(`${bar.short} ${bar.full} ${bar.said}`, /upkeep|aftermath/i);
     }
   }
+});
+
+test('from 760 px the bar\'s cell reserves a width no word it can say is longer than', () => {
+  const css = readFileSync(new URL('./battle.css', import.meta.url), 'utf8');
+  const reserved = /#round-phase::after \{ content: '([^']+)'/.exec(css)?.[1];
+  assert.ok(reserved, 'battle.css reserves the cell with a hidden word');
+  const moments = [null, { moment: 'start', each: 99, given: true }, { moment: 'start', each: null, given: true },
+    ...[1, 9, 12, 99].flatMap(count => [{ moment: 'end', ended: count, immune: 0 }, { moment: 'end', ended: 0, immune: count }])];
+  for (const phase of ['StartOfRound', 'Planning', 'Combat', 'EndOfRound']) {
+    for (const moment of moments) {
+      const { full } = roundBar({ phase, moment });
+      assert.ok(full.length <= reserved.length, `"${full}" is longer than the reserved "${reserved}"`);
+    }
+  }
+  assert.ok(roundBar({ waiting: true }).full.length <= reserved.length);
 });

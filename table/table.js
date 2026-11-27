@@ -24,7 +24,7 @@ import { activeTurn, boardPresentation, decisionView, presentedView } from './pr
 import { practice, storage } from './startup.js';
 import { preferredPresentation } from './battle-preferences.js';
 import { wantsLessMotion } from './motion.js';
-import { ROUND_START, SPEEDS, TEMPO_RULE, inRound, phaseLabel, stageClimb, stageLabel, stepLabel, tempoLabel } from './terms.js';
+import { ROUND_START, SPEEDS, TEMPO_RULE, besideRound, inRound, phaseLabel, stageClimb, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -2381,6 +2381,7 @@ function stepLine(action) {
 
 // The OK names what it leads to: the turnover step after it, the next action, or the seat's own move.
 function stepOkLabel(step, asked) {
+  if (step.next?.interlude === 'upkeep') return `OK · ${ROUND_START} →`;
   if (step.next?.interlude) return `OK · ${stepKind(step.next)} →`;
   if (step.left > 1) return 'OK · next action →';
   return asked ? 'OK · your move →' : 'OK';
@@ -2389,7 +2390,7 @@ function stepOkLabel(step, asked) {
 // What a step is, as its card's eyebrow names it.
 function stepKind(action) {
   if (action.interlude === 'aftermath') return 'cleanup';
-  if (action.interlude === 'upkeep') return 'start';
+  if (action.interlude === 'upkeep') return besideRound(ROUND_START);
   return action.actor.side === 'ally' ? 'your action closed the round' : 'opponent action';
 }
 

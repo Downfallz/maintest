@@ -142,7 +142,7 @@
                   "strong": true
                 },
                 {
-                  "text": ": two phases, between two moments nobody decides. The app plays the start and the end of the round for you, and walks you through the rest:"
+                  "text": ": two phases, between two moments where nobody decides anything. The app plays the start and the end of the round for you, and walks you through the rest:"
                 }
               ]
             },
@@ -698,7 +698,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Round start.",
+                  "text": "Round start · Energy.",
                   "emphasis": true
                 },
                 {
@@ -760,7 +760,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Round start.",
+                  "text": "Round start · Ongoing effects.",
                   "emphasis": true
                 },
                 {
@@ -2682,7 +2682,7 @@
             "title": "Conditions",
             "lines": [
               "A condition is a lasting effect: an amount, for a number of rounds.",
-              "It counts down each round, ending at zero.",
+              "It counts down at each round's end, to zero.",
               "A stunned creature sits out the Stun, then cannot be stunned for one round."
             ],
             "example": "Latch's Bleed deals 2 in each of the next 3 rounds, ignoring Defense."

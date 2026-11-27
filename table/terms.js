@@ -26,8 +26,11 @@ export const ROUND_END = PHASE.EndOfRound;
 
 // A label beside its round's number. A moment drops its "Round" there: `Round 3 · Start`, never `Round 3 · Round start`.
 const BESIDE_A_ROUND = { [ROUND_START]: 'Start', [ROUND_END]: 'End' };
+export function besideRound(label) {
+  return BESIDE_A_ROUND[label] ?? label;
+}
 export function inRound(round, label) {
-  return `Round ${round ?? '—'} · ${BESIDE_A_ROUND[label] ?? label}`;
+  return `Round ${round ?? '—'} · ${besideRound(label)}`;
 }
 
 // A served decision kind (`waitingFor`) as a player reads it: only the speed question is renamed.

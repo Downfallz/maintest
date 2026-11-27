@@ -142,7 +142,7 @@
                   "strong": true
                 },
                 {
-                  "text": " : deux phases, entre deux moments que personne ne décide. L’application joue pour vous le début et la fin du round, et vous guide dans le reste :"
+                  "text": " : deux phases, entre deux moments où personne ne décide rien. L’application joue pour vous le début et la fin du round, et vous guide dans le reste :"
                 }
               ]
             },
@@ -698,7 +698,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Début du round.",
+                  "text": "Début du round · Énergie.",
                   "emphasis": true
                 },
                 {
@@ -760,7 +760,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Début du round.",
+                  "text": "Début du round · Effets en cours.",
                   "emphasis": true
                 },
                 {
@@ -2700,7 +2700,7 @@
             "title": "États",
             "lines": [
               "Un état, effet durable, a une valeur et un nombre de rounds.",
-              "Il décompte à chaque round et finit à zéro.",
+              "Il décompte en fin de round, jusqu’à zéro.",
               "Une créature étourdie passe le Stun, puis ne peut pas l’être pendant un round."
             ],
             "example": "Le Bleed de Latch inflige 2 par round pendant 3 rounds, malgré toute Défense."

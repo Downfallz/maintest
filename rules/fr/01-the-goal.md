@@ -29,7 +29,7 @@ Un soin s’arrête à la Santé de départ.
 ## Un round {#a-round}
 
 Une partie est une suite de rounds. Chaque round se lit **Commandement → Combat** : deux phases, entre deux
-moments que personne ne décide. L’application joue pour vous le début et la fin du round, et vous guide dans le
+moments où personne ne décide rien. L’application joue pour vous le début et la fin du round, et vous guide dans le
 reste :
 
 - **Début du round.** L’Énergie de chaque créature vivante augmente de {rules.energyPerRound}. La Regeneration

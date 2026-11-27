@@ -28,7 +28,7 @@ Healing never takes a creature above the Health it started the match with.
 ## A round {#a-round}
 
 A match is a sequence of rounds. Each round reads **Command → Combat**: two phases, between two
-moments nobody decides. The app plays the start and the end of the round for you, and walks you through the rest:
+moments where nobody decides anything. The app plays the start and the end of the round for you, and walks you through the rest:
 
 - **Round start.** Every living creature gains {rules.energyPerRound} Energy. Regeneration heals. Damage over time
   hurts.

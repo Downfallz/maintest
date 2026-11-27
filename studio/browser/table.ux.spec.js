@@ -1063,7 +1063,7 @@ test('the round turns over in steps after its last action, and the upkeep floats
   await expect(page.locator('#combat-step-action')).toContainText('Stun ends');
   expect(await page.evaluate(() => globalThis.floats)).toEqual([]);
   await page.locator('[data-focus="step-next"]').click();
-  await expect(step).toContainText('Round 4 · start');
+  await expect(step).toContainText('Round 4 · Start');
   await expect.poll(() => page.evaluate(() => globalThis.floats.length)).toBeGreaterThan(0);
   const floats = await page.evaluate(() => globalThis.floats);
   expect(floats.every(float => float.text === '-2' && float.id === '2' && float.struck)).toBe(true);

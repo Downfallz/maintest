@@ -56,10 +56,10 @@ The four phases of the domain's `RoundPhase` keep their internal names; the play
 | `EndOfRound` | Aftermath | **Round end** | **Fin du round** |
 
 A round a player reads has two phases, **Command → Combat**, between two automatic moments: it opens with the
-**Round start** and closes with the **Round end**. Nobody decides anything in either, so neither is taught as a
-phase: the round's bar names a phase only while a player decides or watches a cast, and at a round's start and end
-it says, under the round's number, what the moment gave or ended (`+2 energy each`, `2 conditions ended`; on a phone
-the short forms `+2` after the energy drawing and `2 ended`, `roundBar` in `table/battle-upkeep.js`).
+**Round start** and closes with the **Round end**. Nobody decides anything in either, so neither is a phase to the
+player: the round's bar names a phase only while a player decides or watches a cast. At a round's start and end it
+names none. Under the round's number it says what the moment gave or ended: `+2 energy each`, `2 conditions ended`.
+On a phone it shows the plaques' energy mark and `+2`, or `2 ended` (`roundBar` in `table/battle-upkeep.js`).
 The words *Upkeep* and *Aftermath* named these two moments until 2026-11-27 (the first outside playtest,
 [first-playtest-plan.md](../tabletop/first-playtest-plan.md)); the pages, the rulebook and the tutorials no longer
 say them. The French edition said *Entretien* and *Retombées*, and no longer does.

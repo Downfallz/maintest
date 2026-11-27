@@ -1626,14 +1626,14 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 /* The round reads with its phase under it (Command, Combat) on every screen. At a round's start and end the word
    says what the moment gave or ended (docs/art/journeys/match.md, second-round): a short form no wider than
    COMMAND under 760 px, so nothing beside the round moves; from 760 px the plan's words, in a cell that keeps the
-   width of its longest all match long. */
+   width of its longest all match long (battle-upkeep.test.js holds the sizer to roundBar's words). */
 #battle #round-phase .round-full { display: none; }
 #battle #round-phase .round-short { display: inline-flex; align-items: center; gap: 2px; }
 #battle #round-phase .cue-icon { width: 11px; height: 11px; }
 @media (min-width: 760px) {
   #battle #round-phase .round-short { display: none; }
   #battle #round-phase .round-full { display: inline; }
-  #battle #round-phase::after { content: '2 CONDITIONS ENDED'; display: block; height: 0; overflow: hidden; visibility: hidden; }
+  #battle #round-phase::after { content: '00 CONDITIONS ENDED'; display: block; height: 0; overflow: hidden; visibility: hidden; }
 }
 #battle .round { flex-direction: column; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
 #battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small { display: block; margin: 0; color: #c9b88f; font-size: 9px; letter-spacing: 1.5px; }

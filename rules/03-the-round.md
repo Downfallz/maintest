@@ -8,7 +8,7 @@ table's numbers and the real spells.
 
 ## Energy gain {#energy-gain}
 
-*Round start.* The round begins, and every **living** creature gains {rules.energyPerRound} Energy, and the Energy
+*Round start · Energy.* The round begins, and every **living** creature gains {rules.energyPerRound} Energy, and the Energy
 its Archmage passives give. Nobody decides anything. A defeated creature gains nothing, now or ever.
 
 Archmage is shared with the whole team: each copy a team owns gives every living creature of that team
@@ -32,7 +32,7 @@ A spell costs Energy. It is spent when the spell resolves, never before.
 
 ## Ongoing effects {#ongoing-effects}
 
-*Round start.* Right after the Energy gain, the conditions that work at the start of the round apply, in three passes. The order
+*Round start · Ongoing effects.* Right after the Energy gain, the conditions that work at the start of the round apply, in three passes. The order
 matters:
 
 1. **Energy regeneration** gives its Energy.

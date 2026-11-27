@@ -6,8 +6,9 @@ import { calloutSpot } from '../../table/battle-layout.js';
 // the app says a chance as a percent and its outcome in a word. The word settles in; under reduced motion it is
 // simply there.
 export interface Crit { id: string; key: string }
-// The caster's figure: its image, its place, and its scale at rest (never the breathed or the stretched one).
-type Spot = { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number }; scale: number };
+// The caster's figure: its image, its place, its scale at rest (never the breathed or the stretched one), and where
+// its art stands in its texture: the visible top (`bounds[1]`) and the feet (`ground[1]`).
+type Spot = { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number }; scale: number; art: { bounds: readonly number[]; ground: readonly number[] } };
 
 // The word's storyboard is docs/art/storyboards/movement.md, "A critical's word": it enters with the camera's punch
 // and lands softly, without travelling.
@@ -57,8 +58,9 @@ export class CritMark {
     if (type !== one.size) { one.size = type; one.label.setFontSize(type); }
     // Beside the head and clear of the acting rim's top, inside the field whole (calloutSpot). The rim is measured
     // on the figure at rest: a caster that lunged or breathes does not carry the word with it.
-    const { image, scale } = one.spot;
-    const rise = image.height * scale * image.originY * RIM_GROWTH;
+    // The rim is a grown copy of the figure about its feet: its top is the art's visible top, not the texture's.
+    const { art, scale } = one.spot;
+    const rise = (art.ground[1] - art.bounds[1]) * scale * RIM_GROWTH;
     const { x, y } = calloutSpot(one.spot.home, one.label.width, this.scene.scale.width, { rise, wordsHeight: one.label.height });
     const landed = reduced ? 1 : easeOut(Math.min(1, Math.max(0, (time - one.born) / SETTLE_MS)));
     one.label.setPosition(x, y).setScale(.8 + .2 * landed).setAlpha(.4 + .6 * landed);

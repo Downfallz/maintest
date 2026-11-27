@@ -39,7 +39,7 @@ sources: ADR 0019, ADR 0020, ADR 0035, ADR 0036, ADR 0041, ADR 0072, ADR 0076, A
 id: conditions
 title: États
 Un état, effet durable, a une valeur et un nombre de rounds.
-Il décompte à chaque round et finit à zéro.
+Il décompte en fin de round, jusqu’à zéro.
 Une créature étourdie passe le Stun, puis ne peut pas l’être pendant un round.
 > Le Bleed de Latch inflige {spell:latch:v1.bleed} par round pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, malgré toute Défense.
 ```

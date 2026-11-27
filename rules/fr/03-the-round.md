@@ -8,7 +8,7 @@ Chaque exemple utilise les nombres de cette table et les vrais sorts.
 
 ## Gain d’Énergie {#energy-gain}
 
-*Début du round.* Le round commence, et l’Énergie de chaque créature **vivante** augmente de {rules.energyPerRound},
+*Début du round · Énergie.* Le round commence, et l’Énergie de chaque créature **vivante** augmente de {rules.energyPerRound},
 plus l’Énergie que lui donnent les passifs d’Archmage. Personne ne décide rien. Une créature vaincue ne gagne rien,
 ni maintenant ni jamais.
 
@@ -34,7 +34,7 @@ Un sort coûte de l’Énergie, dépensée quand il se résout, jamais avant.
 
 ## Effets en cours {#ongoing-effects}
 
-*Début du round.* Juste après le gain d’Énergie, les états qui agissent au début du round s’appliquent, en trois passes.
+*Début du round · Effets en cours.* Juste après le gain d’Énergie, les états qui agissent au début du round s’appliquent, en trois passes.
 L’ordre compte :
 
 1. La **régénération d’Énergie** donne son Énergie.

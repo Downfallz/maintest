@@ -38,7 +38,7 @@ sources: ADR 0019, ADR 0020, ADR 0035, ADR 0036, ADR 0041, ADR 0072, ADR 0076, A
 id: conditions
 title: Conditions
 A condition is a lasting effect: an amount, for a number of rounds.
-It counts down each round, ending at zero.
+It counts down at each round's end, to zero.
 A stunned creature sits out the Stun, then cannot be stunned for one round.
 > Latch's Bleed deals {spell:latch:v1.bleed} in each of the next {spell:latch:v1.bleed.durationRounds|round|rounds}, ignoring Defense.
 ```

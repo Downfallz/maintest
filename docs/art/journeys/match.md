@@ -458,7 +458,7 @@ the start's grant is `upkeepDisplay`'s `bar` (`table/battle-upkeep.js`), the end
 
 | The moment | Under 760 px (320, 390) | From 760 px |
 | --- | --- | --- |
-| Round start, every creature the same grant | the `energy` drawing of `table/icons.js`, then `+2` | `+2 ENERGY EACH` |
+| Round start, every creature the same grant | the plaques' energy mark (the `energy-gain` cue), then `+2` | `+2 ENERGY EACH` |
 | Round start, grants that differ | `ENERGY` | `ROUND ENERGY` |
 | Round start, no grant recorded | `START` | `ROUND START` |
 | Round end, conditions ended | `2 ENDED` (`1 ENDED`) | `2 CONDITIONS ENDED` (`1 CONDITION ENDED`) |
@@ -470,8 +470,8 @@ the start's grant is `upkeepDisplay`'s `bar` (`table/battle-upkeep.js`), the end
   so the opponent and the tools do not move (#999) and the bar keeps its 44 px. `1 IMMUNE` is the widest, a few
   pixels narrower than `COMMAND` by my reckoning (its `I`s are narrow), and a count of ten or more (`12 ENDED`) is
   too; the film's overlaps (0) and the bar's shift say whether it holds. From 760 px the bar has room: the cell
-  holds the width of `2 CONDITIONS ENDED` at every moment, so the round's start and end move nothing beside it.
-- **The drawing**: not `EN`. On the start the field's plaques draw the same `energy` drawing and `+2` over every
+  holds the width of `00 CONDITIONS ENDED` at every moment (a count of ten or more does not widen it), so the round's start and end move nothing beside it.
+- **The drawing**: not `EN`. On the start the field's plaques draw the same mark, their blue `energy-gain` cue, and `+2` over every
   creature, so the bar reads as they do; `EN` is an abbreviation the player is never taught. It is 11 px, the
   caption's size, in the word's colour.
 - **Both at the end**: when conditions ended and a creature became immune, the bar says what ended, as the end's `bar` already picks; the immunity is in the
@@ -513,9 +513,9 @@ where the moment moves.
 
 - **Focus**: the sheet's, UX12's.
 - **Names**: the round button speaks "Round 2, Command". It speaks its visible words first, then in unseen text
-  the moment and, where the visible words are short, the plan's words: under 760 px "Round 01 +2, round start: +2
-  energy each, where you are", "Round 01 Energy, round start: round energy, where you are", "Round 01 2 ended,
-  round end: 2 conditions ended, where you are", "Round 01 1 immune, round end: 1 immune to stun, where you are";
+  the moment and, where the visible words are short, the plan's words: under 760 px "Round 01 +2, Round start: +2
+  energy each, where you are", "Round 01 Energy, Round start: round energy, where you are", "Round 01 2 ended,
+  Round end: 2 conditions ended, where you are", "Round 01 1 immune, Round end: 1 immune to stun, where you are";
   from 760 px "Round 01 +2 energy each, round start, where you are". `START` and `END` add nothing ("Round 01 Start,
   where you are"). The `energy` drawing is hidden from it (`aria-hidden`).
 - **Announced**: "Round 2", once, in `#round-toast`'s status.
@@ -539,5 +539,5 @@ where the moment moves.
   "2 conditions ended") and to the button's name.
 - The end is filmed by no screen of the walk: the walk gains a screen at a round's end, or a strip of the end's
   reading (`--strip`), in the pass that builds this. Until then the end's words are read in the code, not seen.
-- From 760 px the cell holds `2 CONDITIONS ENDED`'s width all match long, a gap beside `COMMAND`: chosen over a
+- From 760 px the cell holds `00 CONDITIONS ENDED`'s width all match long, a gap beside `COMMAND`: chosen over a
   bar that moves twice a round. The owner may prefer the short forms at every width.
