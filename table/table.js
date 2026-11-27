@@ -3089,7 +3089,7 @@ function renderPhaseGuide(state, view, seat) {
     if (index === current) step.setAttribute('aria-current', 'step');
     return step;
   }));
-  const evolution = board.nextEvolutionRound > board.roundNumber ? ` Next evolution: round ${board.nextEvolutionRound}.` : '';
+  const evolution = board.nextEvolutionRound > board.roundNumber ? ` Next mutation round: ${board.nextEvolutionRound}.` : '';
   element('phase-reminder').textContent = view.over ? 'Match finished. Open the recap to review the final round.'
     : `${phases[current]?.[2] ?? 'Waiting for the next phase.'}${evolution}`;
   // An Upkeep read as a step is not announced again once the steps are done.

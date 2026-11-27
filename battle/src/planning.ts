@@ -9,7 +9,7 @@ import type { SpellCatalogue } from './combat';
 
 export interface Package { id: string; name: string; level: number; initiativeBonus: number; spells: string[];
   prerequisites?: string[]; anyOf?: string[]; passiveLines?: string[]; tags?: string[]; visual?: { family: string; motif?: string | null; artwork?: string | null; portrait?: string | null } | null }
-export interface Catalogue extends SpellCatalogue { packages?: Package[]; effects?: { kind: string; glyph?: string; harmful: boolean }[] }
+export interface Catalogue extends SpellCatalogue { packages?: Package[]; effects?: { kind: string; glyph?: string; harmful: boolean }[]; rules?: { evolutionInterval?: number } }
 type Controller = ReturnType<typeof createBattlePlanning>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function button(label: string, action: () => void) {
@@ -67,6 +67,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     }
   });
   const pickNote = document.createElement('p'); pickNote.id = 'planning-pick-rule'; pickNote.hidden = true;
+  const pickFull = document.createElement('span'); pickFull.id = 'planning-pick-schedule'; pickFull.className = 'pick-full';
+  const pickShort = document.createElement('span'); pickShort.className = 'pick-short'; pickShort.setAttribute('aria-hidden', 'true');
   function mutations(model: ReturnType<Controller['model']>, catalogue: Catalogue | null) {
     const choices = mutationChoices(model.latest, catalogue, creature);
     creature = choices.selected;
@@ -90,7 +92,8 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       if (!now.opened || now.latest?.waitingFor !== 'Evolution') return null;
       const shown = mutationChoices(now.latest, catalogue, id);
       const subject = shown.roster.find((one: { id: number }) => one.id === shown.selected);
-      return { title: `${subject?.name ?? 'Creature'} · Mutation Tree`, eyebrow: 'MUTATION TREE · YOUR PICK', packages: shown.packages,
+      // Over the pick the tree says the pick's short form: the schedule and the count, in the pick's own words.
+      return { title: `${subject?.name ?? 'Creature'} · Mutation Tree`, eyebrow: 'MUTATION TREE · YOUR PICK', progress: planOf(now)?.short ?? '', packages: shown.packages,
         roster: shown.roster.map((one: { id: number; name: string; context: string }) => ({ id: String(one.id), name: `${one.name} · ${one.context}` })),
         creature: String(shown.selected), focus: now.choice?.creature === shown.selected ? now.choice?.tier ?? null : null,
         choose: now.available && !now.sending ? tier => { selectCreature(shown.selected); controller.choose({ creature: shown.selected, tier }); } : undefined };
@@ -220,12 +223,16 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
   // top of the tree spells the budget out: a token per pick of the phase, filled while unspent, and, when there
   // are fewer picks than creatures that could take one, that the player chooses which mutate now, with a link to the
   // rulebook's section for what later phases bring. It scrolls with the tree, so it costs a short sheet none of the tree's fixed room.
+  const planOf = (model: ReturnType<Controller['model']>) =>
+    pickPlan(model.latest, model.accepted && !model.available ? model.choice ?? {} : null, lastCatalogue?.rules?.evolutionInterval ?? null);
   function pickBudget(model: ReturnType<Controller['model']>) {
-    const sent = model.accepted && !model.available ? model.choice ?? {} : null;
-    const plan = pickPlan(model.latest, sent);
-    el('planning-help').textContent = plan?.budget ?? 'Team pick count unavailable';
+    const plan = planOf(model);
     pickNote.hidden = !plan?.left;
-    if (!plan) { pickNote.replaceChildren(); return; }
+    if (!plan) { el('planning-help').textContent = 'Team pick count unavailable'; pickNote.replaceChildren(); return; }
+    // The first line in two forms the sheet's height picks (battle.css, the 660 px of #1031): the sentence, which
+    // stays the sheet's description where a short screen shows the label instead.
+    pickFull.textContent = plan.full; pickShort.textContent = plan.short;
+    if (pickFull.parentElement !== el('planning-help')) el('planning-help').replaceChildren(pickFull, pickShort);
     const pips = document.createElement('span'); pips.className = 'pick-pips'; pips.setAttribute('aria-hidden', 'true');
     for (let index = 0; index < plan.spent + plan.left; index++) {
       const pip = document.createElement('span'); pip.className = 'pick-pip'; pip.dataset.spent = String(index < plan.spent); pips.append(pip);
@@ -233,7 +240,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (!plan.rules) { pickNote.replaceChildren(pips, document.createTextNode(plan.rule)); return; }
     const rules = document.createElement('a'); rules.href = plan.rules; rules.target = '_blank'; rules.rel = 'noopener';
     rules.textContent = 'Rules'; rules.setAttribute('aria-label', 'Rules, Mutations, opens in a new tab');
-    pickNote.replaceChildren(pips, document.createTextNode(`${plan.rule} `), rules);
+    pickNote.replaceChildren(pips, document.createTextNode(plan.rule ? `${plan.rule} ` : ''), rules);
   }
   // Where a keyboard starts in the mutation sheet: the recipient tab, or the tree when a short sheet hides them.
   function focusStart() {
@@ -261,7 +268,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     if (!model.opened) { closeChoices(); return; }
     dialog.dataset.kind = model.latest.waitingFor;
     // The pick's rule sentence describes its sheet, so it is still said where a short screen hides it (#1031).
-    if (model.latest.waitingFor === 'Evolution') dialog.setAttribute('aria-describedby', pickNote.id); else dialog.removeAttribute('aria-describedby');
+    if (model.latest.waitingFor === 'Evolution') dialog.setAttribute('aria-describedby', `${pickFull.id} ${pickNote.id}`); else dialog.removeAttribute('aria-describedby');
     if (model.latest.waitingFor !== 'Evolution') el('planning-tools').replaceChildren();
     el('planning-heading').textContent = model.latest.waitingFor === 'Evolution' ? 'Mutation Tree' : label;
     // The seat's next asking after a pick arrives in the open sheet: the creature that took the pick has nothing

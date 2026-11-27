@@ -40,7 +40,14 @@ const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // chooses which ones do now. What later Mutation phases bring is the rulebook's to say: `rules` links its section
 // (#1022). `sent` is the pick the
 // seat sent that the host has not restated yet: its creature counts as picked and the budget as one less.
-export function pickPlan(view, sent = null) {
+// The first line says how often a mutation round comes (`interval`, the rule set's `evolutionInterval`) and the
+// picks, as a sentence (`full`) and as a label for a short screen (`short`): docs/art/journeys/windows.md.
+/**
+ * @param {any} view
+ * @param {any} [sent]
+ * @param {number | null} [interval]
+ */
+export function pickPlan(view, sent = null, interval = null) {
   const offer = view?.options?.evolution, offered = offer?.remainingPicks;
   if (!Number.isInteger(offered)) return null;
   const allies = view?.board?.allies ?? [], picked = new Set((view?.board?.evolutionChoices ?? []).map(pick => pick.creature));
@@ -51,11 +58,18 @@ export function pickPlan(view, sent = null) {
   const spent = allies.filter(one => picked.has(one.id)).length;
   const open = allies.filter(one => one.isAlive !== false && !picked.has(one.id) &&
     (offer?.creatures?.find(option => option.creature === one.id)?.availableTiers?.length ?? 0) > 0).length;
-  const budget = `${sent ? 'Pick sent · ' : ''}${count(left, 'team pick')} remaining`;
+  // The gap between two mutation rounds is the rule set's and the count the offer's, which the host caps at the
+  // creatures that can take a pick. With no gap served the schedule is left out and the count stands alone.
+  const gap = Number.isInteger(interval) && interval > 0 ? (interval === 1 ? 'every round' : `every ${interval} rounds`) : '';
+  const picks = `${count(left, 'pick')} left`;
+  let full = `${picks}.`, short = picks;
+  if (sent) { full = left ? `Pick sent · ${picks}.` : 'Pick sent.'; short = left ? `Pick sent · ${picks}` : 'Pick sent'; }
+  else if (!spent && left) full = `Your team has ${count(left, 'pick')}${left > 1 ? ', each for a different creature' : ''}.`;
+  // Once every pick is sent there is no schedule left to plan with; a pick sent with more to give keeps the short
+  // form to what changed.
+  if (gap && (!sent || left)) full = `A mutation round comes ${gap}. ${full}`;
+  if (gap && !sent) short = `Mutation round ${gap} · ${short}`;
   let rule = '';
-  if (left > 0 && open > left) {
-    const which = left === 1 ? 'one mutates' : `${left} mutate`;
-    rule = `${open} creatures can mutate, ${count(left, 'pick')} left: choose which ${which} now, one pick each.`;
-  } else if (left > 1 && open > 1) rule = 'One pick per creature.';
-  return { spent, left, open, budget, rule, rules: rule ? '/rules#evolution' : null };
+  if (left > 0 && open > left) rule = `${open} creatures can mutate: choose which ${left === 1 ? 'one mutates' : `${left} mutate`} now.`;
+  return { spent, left, open, full, short, rule, rules: left > 0 ? '/rules#evolution' : null };
 }

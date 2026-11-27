@@ -1,5 +1,5 @@
 import { stageLabel, stageSpoken } from '../../table/terms.js';
-import { mutationReference, createBattleGrowth } from '../../table/battle-growth.js';
+import { mutationReference, createBattleGrowth, mutationSchedule, mutationRoundLabel, afterRevealLabel } from '../../table/battle-growth.js';
 import type { Catalogue } from './planning';
 import type { atlasControls, AtlasView } from './mutation-atlas';
 
@@ -66,8 +66,9 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
     if (!model.available) return null;
     selected = model.selected;
     const subject = model.roster.find(one => one.id === model.selected);
-    const next = model.over ? 'Match complete · no further mutation opportunities'
-      : model.next == null ? '' : model.next === model.current ? `Mutation opportunity this round · Round ${model.next}` : `Next mutation opportunity · Round ${model.next}`;
+    // When the next mutation round comes, in the words Help uses (table/battle-growth.js): the host's rounds, never a
+    // schedule worked out here.
+    const next = model.over ? 'Match complete · no more mutation rounds' : mutationRoundLabel(mutationSchedule(view, catalogue));
     const held = heldLine(model.families);
     return { title: subject ? `${subject.name}${subject.enemy ? ' · Opponent' : ''}` : 'Mutation Tree', eyebrow: 'MUTATION TREE · PUBLIC GROWTH',
       progress: [held, next].filter(Boolean).join(' · '), packages: model.packages, creature: String(model.selected), focus,
@@ -109,13 +110,17 @@ export function growthControls(growth: Growth, beforeOpen: () => void, onVisibil
     const receipt = growth.receipt() as Receipt | null;
     el('growth-receipt').hidden = !showReceipt || !receipt;
     if (dialog.open && !receipt) dialog.close();
-    const nextReceiptKey = JSON.stringify(receipt);
+    // When the next mutation round comes (F3): the round after the reveal's own, as the host names it.
+    const upcoming = receipt ? afterRevealLabel(mutationSchedule(view, catalogue), receipt.round) : '';
+    const nextReceiptKey = JSON.stringify([receipt, upcoming]);
     if (nextReceiptKey !== receiptKey) {
-      // Counts first: a narrow receipt cuts the round, which the reveal sheet restates, not who mutated.
+      // Who mutated, then when the next mutation round comes; the round of the reveal is the one being played, and
+      // the reveal's sheet restates it. A narrow receipt keeps the next round and leaves the counts to the crests.
       const counts = receipt ? [receipt.counts.ours ? `You ${receipt.counts.ours}` : '', receipt.counts.theirs ? `Opponent ${receipt.counts.theirs}` : ''].filter(Boolean) : [];
-      el('growth-receipt-summary').textContent = receipt ? [...counts, `Round ${receipt.round}`].join(' · ') : '';
-      // The status line speaks every reveal in full; the visible receipt stays one readable line.
-      el('growth-announcement').textContent = receipt ? `Round ${receipt.round} mutations revealed. ${receipt.rows.map(spokenReveal).join('. ')}.` : '';
+      el('growth-receipt-summary').textContent = counts.join(' · ');
+      for (const id of ['growth-receipt-next', 'growth-next']) { el(id).textContent = upcoming; el(id).hidden = !upcoming; }
+      // The status line speaks every reveal in full; the visible receipt stays two readable lines.
+      el('growth-announcement').textContent = receipt ? `Round ${receipt.round} mutations revealed. ${receipt.rows.map(spokenReveal).join('. ')}.${upcoming ? ` ${upcoming}.` : ''}` : '';
       const groups = receipt ? [['Your team', receipt.rows.filter(row => !row.enemy)], ['Opponent', receipt.rows.filter(row => row.enemy)]] as const : [];
       el('growth-reveals').replaceChildren(...groups.filter(([, rows]) => rows.length).map(([label, rows]) => {
         const group = document.createElement('section'); group.className = 'reveal-group';

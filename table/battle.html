@@ -28,11 +28,11 @@
       <aside id="order-why" class="order-why" aria-label="Why this place in the turn order" aria-live="polite" hidden><div class="order-why-head"><span id="order-why-rank" class="order-why-rank" aria-hidden="true"></span><p class="order-why-who"><strong id="order-why-name"></strong><small id="order-why-meta"></small></p><button id="order-why-inspect" type="button" class="order-why-inspect">Inspect <svg class="icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M9 6h9v9M18 6L6 18"/></svg></button><button id="order-why-close" type="button" aria-label="Clear the highlight"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><ul id="order-why-lines" class="order-why-lines"></ul></aside>
       <aside id="practice-band" class="practice-band" aria-label="Practice" hidden><p class="eyebrow" id="practice-eyebrow">PRACTICE</p><strong id="practice-title"></strong><small id="practice-detail"></small><small id="practice-goal" hidden></small><div class="practice-actions"><button id="practice-brief-open" type="button">Briefing</button><button id="practice-restart" type="button">Restart the round</button><a id="practice-leave" href="/">Leave</a></div></aside>
       <aside id="coach" class="coach" aria-label="Tutorial coach" hidden><p class="eyebrow" id="coach-step"></p><div id="coach-lines" class="coach-lines" aria-live="polite"></div><p id="coach-hint" class="coach-hint" aria-live="polite" hidden></p><button id="coach-restart" type="button" aria-label="Restart the round"><span class="coach-restart-words">Restart the round</span></button><div id="coach-cards" class="coach-cards" hidden></div><div id="coach-end" class="coach-end" hidden><a id="coach-next" class="primary" href="/#learn-to-play" hidden>Next</a><button id="coach-again" type="button">Play again</button><a id="coach-leave" href="/">Leave the tutorial</a></div></aside>
-      <div id="round-toast" role="status" aria-live="polite" hidden><span class="eyebrow">NEW ROUND</span><strong id="round-toast-number"></strong></div>
+      <div id="round-toast" role="status" aria-live="polite" hidden><span class="eyebrow" id="round-toast-eyebrow" aria-hidden="true">NEW ROUND</span><strong id="round-toast-number"></strong><span id="round-toast-said" class="unseen"></span></div>
       <div id="phaser-mount" aria-hidden="true"></div><div class="vignette"></div>
       <p id="reaction-theirs" class="reaction-bubble theirs" role="status" hidden></p><p id="reaction-mine" class="reaction-bubble mine" hidden></p>
       <span id="ally-label" class="team-label ally"></span><span id="enemy-label" class="team-label enemy"></span>
-      <aside id="growth-receipt" class="motion-arrive" hidden aria-label="Mutations revealed"><span class="growth-receipt-mark" aria-hidden="true"></span><p class="growth-receipt-text"><strong>Mutations revealed</strong><span id="growth-receipt-summary"></span></p><button type="button" data-growth-open data-growth-mode="reveal" aria-describedby="growth-announcement">See</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button">Continue</button></aside>
+      <aside id="growth-receipt" class="motion-arrive" hidden aria-label="Mutations revealed"><span class="growth-receipt-mark" aria-hidden="true"></span><p class="growth-receipt-text"><strong>Mutations revealed</strong><span id="growth-receipt-summary"></span><span id="growth-receipt-next" hidden></span></p><button type="button" data-growth-open data-growth-mode="reveal" aria-describedby="growth-announcement">See</button><span id="growth-announcement" role="status"></span><button id="growth-dismiss" type="button">Continue</button></aside>
       <div id="actor-layer" aria-label="Inspect creatures"></div>
       
       <div id="loading" hidden><span class="loading-mark" aria-hidden="true">◈</span><strong id="load-title">Opening your battle</strong><p id="load-detail">Verifying the seats saved in this browser…</p><div id="seat-choices"></div><button id="retry" type="button" hidden>Try again</button><a id="access-link" href="/">Open tables</a></div>
@@ -63,8 +63,8 @@
     <div id="order-body"><p id="order-context"></p><details id="order-rules"><summary>How the order is decided</summary><p id="order-explanation"></p><p id="order-tie-note"></p></details><ol id="order-list"></ol></div>
     <footer class="order-footer"><button id="order-close" class="primary" type="button">Continue</button></footer>
   </dialog>
-  <dialog id="upkeep-dialog" class="docked-sheet" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro">
-    <header class="upkeep-header"><div><h2 id="upkeep-title"></h2><p id="upkeep-intro"></p></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
+  <dialog id="upkeep-dialog" class="docked-sheet" aria-labelledby="upkeep-title" aria-describedby="upkeep-intro upkeep-mutation">
+    <header class="upkeep-header"><div><h2 id="upkeep-title"></h2><p id="upkeep-intro"></p><p id="upkeep-mutation" hidden></p></div><button id="upkeep-close" type="button" autofocus>Continue</button></header>
     <div class="upkeep-tools"><button id="upkeep-details" type="button" aria-controls="upkeep-body" aria-expanded="false">Details</button><button type="button" data-history-open>History</button></div>
     <div id="upkeep-body" class="upkeep-scroll" hidden></div>
   </dialog>
@@ -122,7 +122,7 @@
     <aside id="atlas-detail" aria-label="Mutation details" hidden><button id="atlas-detail-close" type="button" aria-label="Back to the tree">×</button><div id="atlas-detail-body"></div></aside></div>
   </dialog>
   <dialog id="growth-dialog" aria-labelledby="growth-title">
-    <header class="growth-header"><div><p class="eyebrow" id="growth-eyebrow">PUBLIC REVEAL</p><h2 id="growth-title">Mutations revealed</h2></div><button id="growth-close" type="button" autofocus>Close</button></header>
+    <header class="growth-header"><div><p class="eyebrow" id="growth-eyebrow">PUBLIC REVEAL</p><h2 id="growth-title">Mutations revealed</h2><p id="growth-next" hidden></p></div><button id="growth-close" type="button" autofocus>Close</button></header>
     <section id="growth-reveal" aria-label="Revealed mutations"><div id="growth-reveals"></div><button id="growth-explore" type="button">Explore the Mutation Tree</button></section>
   </dialog>
   <dialog id="history-dialog" aria-labelledby="history-title">

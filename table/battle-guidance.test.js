@@ -9,7 +9,7 @@ const text = model => JSON.stringify(model);
 test('mutation guidance uses the team offer and explains the actual pass semantics', () => {
   const g = battleGuidance(view(), catalogue);
   assert.equal(g.topic, 'mutation'); assert.match(g.objective, /2 team picks left/);
-  assert.equal(g.round, 'Round 1 of 17'); assert.equal(g.next, 'Mutation opportunity this round.');
+  assert.equal(g.round, 'Round 1 of 17'); assert.equal(g.next, 'This is a mutation round.');
   for (const word of ['new spells and initiative', 'a capstone gives a passive instead', 'go to different creatures', 'all your unused picks']) assert.ok(text(g).includes(word));
 });
 test('depleted picks and empty offers never tell the player to buy an unavailable mutation', () => {
@@ -19,7 +19,12 @@ test('depleted picks and empty offers never tell the player to buy an unavailabl
 });
 test('the next mutation comes from the board on an even round, not a client schedule', () => {
   const input = view(null); input.board.roundNumber = 2; input.board.nextEvolutionRound = 6;
-  assert.equal(battleGuidance(input, catalogue).next, 'Next mutation opportunity: round 6.');
+  assert.equal(battleGuidance(input, catalogue).next, 'Next mutation round: 6.');
+  // Past its picks, a mutation round names the one that follows; the last one says none is left.
+  const revealed = view(null); revealed.board.subPhase = 'Speed'; revealed.board.followingEvolutionRound = 3;
+  assert.equal(battleGuidance(revealed, catalogue).next, 'Next mutation round: 3.');
+  revealed.board.followingEvolutionRound = null; assert.equal(battleGuidance(revealed, catalogue).next, 'No more mutation rounds.');
+  assert.equal(battleGuidance(input, catalogue, { historical: true }).next, '');
   delete input.board.nextEvolutionRound; assert.equal(battleGuidance(input, catalogue).next, '');
 });
 test('waiting guards include an empty waiting.seats and suppress prepared first-round facts', () => {

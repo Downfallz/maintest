@@ -50,6 +50,13 @@ not press `#settings`. `match-won` was filmed after it, at both widths. "UX12b's
 films a match ended by a blow, nor the two results with their pictures hidden: they are read in the code, and held by
 `studio/browser/battle-live.spec.js` (the result's screen, below).
 
+F3 of `docs/tabletop/first-playtest-plan.md` ("A mutation round is announced") adds words to `mutation-pick`,
+`mutation-tree` and `mutation-followed`, written from `node scripts/ux/journey.mjs windows --out <folder>` on `main` at
+`5608255`, both sheets read at 320 by 568 and 390 by 844 with their measures; the frame's part (the bar, the
+announcement, the round's start receipt, Help) is in [the match's brief](match.md). One name for it everywhere a
+player reads: **mutation round**. The page reads the host's `nextEvolutionRound`, `followingEvolutionRound`,
+`rules.evolutionInterval` and the offer's `remainingPicks`, and adds nothing to any of them.
+
 The pictures counted on each screen (the same walk, read in the page, alike at both widths): the spellbook holds 4
 spells (Strike, Pummel, Focus, Brace) and 4 portraits, 2 in view at its top at 390 and 4 at its foot; the pick 3
 mutations (Brute, Warped, Predator) and no spell portrait on its compact cards; the Mutation Tree 24 mutations on
@@ -164,7 +171,9 @@ below names only what differs. Two kinds:
 
 The Mutation phase of a round: the Evolution sheet is docked under the field, on the first creature that can
 mutate. The player reads what each mutation offered makes of the creature, picks one, or passes. The new picture
-answers "what will my creature become?" before the mutation's words.
+answers "what will my creature become?" before the mutation's words. Since F3 its first line also answers the
+friend's question, "did it happen by itself from a certain round?": how often a mutation round comes, and how many
+picks the team has, where the player picks.
 
 - **Filled action**: none until a mutation is chosen, then Confirm choice, at the sheet's foot (filled 0 at both
   widths today: Confirm choice is drawn dim and disabled before a choice). Full mutation tree (today's label), Pass remaining
@@ -174,10 +183,37 @@ answers "what will my creature become?" before the mutation's words.
 
 - **Order**: the sheet's title and the picks remaining; each mutation, its form, then its name and tags; the foot.
   The rule sentence comes last, under the mutations at 390 (it is above them today).
-- **Budget**: 86 words at 390 px (86 today), 53 at 320 by 568 (78 today).
-- **On a short screen**: under 660 px tall the sentence "3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each." (16 words)
-  and its link to the rulebook are hidden from sight and kept as the graph's description; "2 team picks remaining" says
-  the count.
+- **Budget**: 86 words at 390 px (75 in the film of `5608255`, 82 with F3), 58 at 320 by 568 (53 in that film, 57
+  with F3).
+- **On a short screen**: under 660 px tall the rule line (since F3 "3 creatures can mutate: choose which 2 mutate
+  now.") and its link to the rulebook are hidden from sight and kept as the graph's description; the first line's
+  short form says the schedule and the count (below).
+
+**The first line (F3).** `#planning-help`, under the heading, holds the schedule and the team's picks, in two forms
+the sheet's height picks (the 660 px of #1031, not a width): the full one from 660 px tall (390 by 844), the short
+one under (320 by 568). The interval is the catalogue's `rules.evolutionInterval`; the count is the offer's
+`remainingPicks`, which the host caps at the creatures that can take a pick, so a team of one reads `1 pick`, never
+the rule set's 2. With no interval served, the schedule's part is left out and the count stands alone; with no offer,
+`Team pick count unavailable`, as today.
+
+| The moment | From 660 px tall | Under 660 px tall | Accessible |
+| --- | --- | --- | --- |
+| The sheet opens, nothing picked (2 left) | `A mutation round comes every 2 rounds. Your team has 2 picks, each for a different creature.` (was "2 team picks remaining") | `Mutation round every 2 rounds · 2 picks left` | The full form is the sheet's description, with the rule line, at both heights |
+| The sheet opens, one pick to give (a team of one, or one creature with an offer) | `A mutation round comes every 2 rounds. Your team has 1 pick.` | `Mutation round every 2 rounds · 1 pick left` | The same |
+| The next asking, a pick accepted (1 left) | `A mutation round comes every 2 rounds. 1 pick left.` (was "1 team pick remaining") | `Mutation round every 2 rounds · 1 pick left` | The same |
+| A pick sent, before the host answers | `A mutation round comes every 2 rounds. Pick sent · 1 pick left.` (was "Pick sent · 1 team pick remaining") | `Pick sent · 1 pick left` | "Pick sent" is said in the picks line, as today |
+| The last pick sent | `Pick sent.` (was "Pick sent · 0 team picks remaining") | `Pick sent` | The same |
+| A rule set of one round between two | `A mutation round comes every round.` | `Mutation round every round · 2 picks left` | The same |
+
+**The rule line** (`#planning-pick-rule`, from 660 px tall), so the pick says each thing once: the pips stay, drawn
+and hidden from a screen reader; "3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each."
+becomes `3 creatures can mutate: choose which 2 mutate now.` (`1 creature`: `which one mutates now`), since the count
+and "each for a different creature" are the first line's; "One pick per creature." goes, said by the first line. The
+Rules link (`/rules#evolution`) follows the line whenever a pick is left, with or without its sentence.
+
+- **The heading**: at 390 by 844 the film shows "Mutation Tree" wrapped onto two lines, its second line drawn over
+  "2 team picks remaining" (`mutation-pick`, and the match's `mutation-tree`): the first line stands under the
+  heading's last line, never under its glyphs. The measure's overlaps count controls only and read 0.
 - **A person could disagree**: the sentence is the only place the screen says one pick goes to one creature; on a
   short screen the forms and the names come first.
 - **The labels**: "Mutation tree" (today's label) becomes **Mutation Tree** in the sheet's title, and "Full mutation tree" (today's
@@ -202,9 +238,11 @@ their text only, as today.
 - **First paint**: not reached: the sheet opens after the page, on the host's question.
 - **Empty**: "No mutation offered. Choose another creature or pass all remaining picks." (read in the code, not
   seen), and no form.
-- **Loaded**: the three mutations with their forms, as filmed today without them.
-- **Waiting**: after Confirm choice, "Pick sent" in the picks line, the forms unchanged (read in the code, not
-  seen).
+- **Loaded**: the three mutations with their forms, as filmed today without them; the first line in its full form at
+  390 by 844 and its short form at 320 by 568 (F3).
+- **Waiting**: after Confirm choice, "Pick sent" in the picks line (F3: `... Pick sent · 1 pick left.`, short
+  `Pick sent · 1 pick left`), the forms unchanged (read in the code, not seen; the strip `pick-confirmed` films the
+  next asking).
 - **Error**: the sheet's alert, the forms unchanged (read in the code, not seen).
 - **Offline**: `#connection` and the field dimmed, as today; a form not yet loaded stays an empty room the size of
   the form, the name below it.
@@ -229,7 +267,10 @@ None.
   begin with what they show ("Brute Pressure · Defense"). The name becomes the visible words, the stage after them.
   Done (#1087): the button has no `aria-label`; it speaks its name, then its family and Stage
   (written for the ear only), then the line it shows.
-- **Announced**: nothing new: a picture that arrives says nothing.
+- **Announced**: nothing new: a picture that arrives says nothing. F3: the sheet's description (`aria-describedby`)
+  names the first line's full form and the rule line, at both heights, so a short screen's reader hears "A mutation
+  round comes every 2 rounds. Your team has 2 picks, each for a different creature." where the eye reads the short
+  form; the short form is hidden from it while the full one is unseen.
 - **Targets**: 24 controls at 390 and 19 at 320. A face with its form stays 44 px tall at the least. The walk
   counted one control under 44 px at 390: the rule sentence's Rules link, 28 px wide. A guest's header mark, the way
   back to the lobby, measured 36 by 38 px at both widths. Done (#1113): the rulebook's links and the header's mark
@@ -241,7 +282,9 @@ None.
   files.
 - **Largest paint**: not this screen's: the window opens after the page's first paint, and its pictures are lazy.
 - **Shift**: 0 at 390 and 0.03 at 320 today. Each form's room is held by its `width` and `height` before it
-  loads, so the faces do not grow when it arrives.
+  loads, so the faces do not grow when it arrives. F3: the first line is written as the sheet opens, before it
+  docks; at 320 by 568 its short form is one line, as "2 team picks remaining" was, so the mutations' names do not
+  move down.
 
 ### Left
 
@@ -253,6 +296,14 @@ None.
   (`battle-mutations.spec.js`). Its Rules link goes with it there; Help reaches the rulebook.
 - Done (#1022): the rule sentence's second half ("Later Mutation phases bring new picks for any of them") was a
   rule; the sentence now ends on a link to the rulebook's Mutations section (`table/battle-mutations.js`).
+- **F3, the first line. Recommended**: the schedule and the count in one line under the heading, full from 660 px
+  tall and short under it, the rule line keeping only which creatures mutate. The owner may prefer the plan's
+  sentence word for word ("Your team has 2 picks, one a creature."): I took the rulebook's "each for a different
+  creature", since "one a creature" reads as one pick for the whole team. Refused: the full sentence on a 568 px
+  tall phone, two lines more that put the mutations' names under the foot again (#1031); and the count from the
+  rule set's `evolutionPicksPerOpportunity`, which says 2 to a team of one.
+- **F3, the short form**: a label, not a sentence (`Mutation round every 2 rounds · 2 picks left`, 8 words, about
+  250 px at 11 px by my reckoning in the sheet's 290): the critique reads that it holds one line at 320.
 
 ## The Mutation Tree (`mutation-tree`)
 
@@ -269,8 +320,25 @@ the mutation in hand from its detail. The detail's form answers "what will this 
 
 - **Order**: the window's title; the creature; the board's family and its stages; the detail: the family and
   stage, the form beside the name, Choose, the spells, Opens.
-- **Budget**: 119 words at both widths (119 today). "Creature 1 · Mutation tree" (today's label) becomes "Creature 1 · Mutation
-  Tree". The pictures add no word.
+- **Budget**: 127 words at both widths (117 in the film of `5608255`, 125 with F3; 119 asked before). "Creature 1 ·
+  Mutation tree" (today's label) becomes "Creature 1 · Mutation Tree". The pictures add no word.
+
+**The progress line (F3).** `#atlas-progress`, in the band under the title, says when mutation rounds come. Opened
+from the pick (this screen, eyebrow `MUTATION TREE · YOUR PICK`) it shows no line today; opened from Help, the
+reveal's sheet or the inspection (eyebrow `MUTATION TREE · PUBLIC GROWTH`, not filmed) it says the creature's family
+and Stage, then the schedule. The words are the same at every width and height.
+
+| Opened from, and when | Today | F3 |
+| --- | --- | --- |
+| The pick, nothing picked | No line | `Mutation round every 2 rounds · 2 picks left`, the pick's short form, its count the offer's `remainingPicks` |
+| The pick, a pick accepted | No line | `Mutation round every 2 rounds · 1 pick left` |
+| Public, a mutation round before its picks are revealed | `Brute · Stage I · Mutation opportunity this round · Round 3` | `Brute · Stage I · This is a mutation round` |
+| Public, after this round's reveal, and every other round | `Brute · Stage I · Next mutation opportunity · Round 5` | `Brute · Stage I · Next mutation round: 5` (after the reveal, the board's `followingEvolutionRound`) |
+| Public, no mutation round left before the last round | The family and Stage alone | `Brute · Stage I · No more mutation rounds` |
+| Public, the match over | `… · Match complete · no further mutation opportunities` | `… · Match complete · no more mutation rounds` |
+
+The full sentence stays the pick's: over the pick, the tree says the short form only, so the pick and the tree
+together say the schedule twice and the count twice, never in two wordings.
 
 ### Pictures
 
@@ -304,7 +372,8 @@ scene of its own, and the plated eye says what the family becomes.
 
 - **First paint**: not reached: the window opens over the pick.
 - **Empty**: "Mutation catalogue unavailable." on the board, and no detail (read in the code, not seen).
-- **Loaded**: the board and Brute's detail, as filmed, the form beside Brute's name.
+- **Loaded**: the board and Brute's detail, as filmed, the form beside Brute's name; F3, the progress line in the band
+  (`Mutation round every 2 rounds · 2 picks left`).
 - **Waiting**: after Choose Brute the window closes and the pick answers: the pick's own Waiting.
 - **Error**: a view the host no longer gives (the question gone) closes the window (read in the code, not seen).
 - **Offline**: the window stays open on what it holds; a form not yet loaded keeps its room empty.
@@ -327,7 +396,7 @@ None.
   `label-content-name-mismatch` at both widths: the board's mutations speak "Brute · Stage 1 · Offered now" over
   "I Brute OFFER". The name starts with the visible words. Done (#1087): the numeral and the flag are not read; the
   Stage and the status are written beside the name for the ear only. The button has no `aria-label`.
-- **Announced**: nothing new.
+- **Announced**: nothing new. The progress line is text in the window's header, read in order after the title.
 - **Targets**: 31 controls, 3 under 44 px at both widths, none under 24: the detail's chips of what the mutation
   leads to (`.atlas-next`, 36 px tall). Done (#1113): they are 44 px tall, and `battle-mutations.spec.js` holds
   every control of the tree and of the pick to 44 px at both widths.
@@ -343,6 +412,8 @@ None.
   too: none loads with the pick (`battle-mutations.spec.js`), and a column's band loads as the column scrolls near.
 - **Largest paint**: not this screen's: the window opens after the page's first paint.
 - **Shift**: 0 at 390 and 0.03 at 320 today. The form's room is held: Choose Brute does not move when it arrives.
+  F3's line is written before the window opens; the band grows by its line ("taller when its words wrap"), so
+  nothing moves once open.
 
 ### Left
 
@@ -356,6 +427,15 @@ None.
 - The board's forms, built by P5 (2026-11-21): each mutation of the board shows its form above its stage numeral and
   name, in columns of `min(94vw, 400px)`; three mutations of a stage still share one line at 320. P5's test shows
   that no form of the board loads before the window opens. The critique (P6) reads it at 320.
+- **F3, the line over the pick. Recommended**: the pick's short form in the band, so a player choosing from the
+  tree still reads the schedule and the count. The owner may prefer no line over the pick (the pick, one Close away,
+  says it): then this screen keeps its 117 words.
+- **F3, the line over a painting**: the band is the three trails in ash, and the measure at 320 reads 2 texts under
+  the contrast floor on this screen today (lowest 1:1; none at 390). Which texts was not found from the measure: the
+  critique reads the band's eyebrow, title and the new line at 320 on the sheet, and the line takes the scrim the
+  title has.
+- **F3, at 320 by 568** the band is 64 px under 600 px tall and grows with its line: Choose Brute must stay in the
+  detail's first screen (the rule above). The critique reads it at 320.
 
 ## A mutation followed back onto the field (`mutation-followed`)
 
@@ -365,7 +445,8 @@ The team's last pick of the Mutation phase is confirmed: the Evolution sheet has
 field. Against the bot the host records both teams' picks at once (`PurchasesRevealed`), so the walk films the public
 reveal: the receipt "Mutations revealed" over the field's top, a crest over each creature that mutated, the dock asking
 the team's tempos. The screen answers, in order: which of my creatures took the pick, what it became, where its new
-spell is. The strip `pick-confirmed` films the step before it: a pick confirmed with picks left.
+spell is. The strip `pick-confirmed` films the step before it: a pick confirmed with picks left. Since F3 the receipt
+also answers "when is the next one?".
 
 - **Filled action**: Team tempos, in the dock, the host's next asking. The receipt's See and Continue are quiet: the
   reveal is read, not answered. The measure reads filled 0 at both widths, as for Confirm choice on the pick: the
@@ -404,12 +485,30 @@ What the build does, each read from what the host confirmed, never from a draft:
 
 - **Order**: the receipt (Mutations revealed, "You 2 · Opponent 2 · Round 1", See, Continue); the field, each crest
   and each creature's caption; the dock: Command · Tempo, its line, Team tempos.
-- **Budget**: 70 words at 390 px (70 today), 66 at 320 (66 today). PICKED replaces a tag ("◇ MUTATE") between the
+- **Budget**: 72 words at 390 px (70 in the film of `5608255`, 72 with F3), 66 at 320 (68 in that film, 66 with
+  F3). PICKED replaces a tag ("◇ MUTATE") between the
   confirm and the reveal and is gone here. "New ·" adds one word to an inspected spell while the mark stands; the
   walk's `inspect` comes after Creature 1 acted, so its 155 do not move.
 - **The words**: **PICKED**, in capitals as its neighbours MUTATE and MUTATION TREE; spoken "picked Brute, hidden
   until reveal", the tab's own words. **New** is the spellbook's and the recap's word
   (`docs/domain/player-terminology.md`).
+
+**The next mutation round (F3).** The round the receipt names is the board's `followingEvolutionRound` while the
+reveal is of the board's round (its `nextEvolutionRound` is still this round), else its `nextEvolutionRound`. The
+receipt's own round goes: the reveal is of the round being played, and the sheet's eyebrow restates it.
+
+| Where | Today | From 360 px (390) | Under 360 px (320) | Accessible |
+| --- | --- | --- | --- | --- |
+| The receipt's summary (`#growth-receipt-summary`), a line under `Mutations revealed` | `You 2 · Opponent 2 · Round 1` | `You 2 · Opponent 2` | Not drawn: the crests on the field and See's sheet say who mutated | Unchanged: the status (`#growth-announcement`) speaks every reveal in full |
+| A new line under it in the receipt (`#growth-receipt-next`) | None | `Next mutation round: 3` | `Next mutation round: 3` | Read in order; the status gains it at its end: "Round 1 mutations revealed. … Next mutation round: 3." |
+| The same, after the last mutation round | None | `No more mutation rounds` | `No more mutation rounds` | "… No more mutation rounds." |
+| The reveal's sheet (`#growth-dialog`), a line under its title (`#growth-next`), not filmed | None | `Next mutation round: 3`, or `No more mutation rounds` | The same | Read after the title; the eyebrow `PUBLIC REVEAL · ROUND 1` is unchanged |
+
+- **What gives way at 320**: the counts, not the next round. The film at 320 shows the receipt on four lines
+  ("Mutations / revealed / You 2 · Opponent / 2 · Round 1") beside See and Continue: with the counts gone and the next
+  round in their place it stays four lines, so the crests below it do not move further down. At 390 it grows one
+  line (title, counts, next round), each line whole: from 420 px a summary that is too long is cut at its end
+  (`text-overflow`), so the next round is a line of its own, never the end of the counts' line.
 
 ### Pictures
 
@@ -425,7 +524,7 @@ after the reveal. The crest is the canvas's text.
 - **First paint**: not reached: the screen follows a confirm.
 - **Empty**: the team passed every pick: nothing is PICKED, the focus goes to its first living creature, and the
   receipt reads "Opponent 2 · Round 1" (read in the code, not seen).
-- **Loaded**: as filmed; built, the focus on the receipt's See (no ring after a click, which is not
+- **Loaded**: as filmed, with `Next mutation round: 3` (F3); built, the focus on the receipt's See (no ring after a click, which is not
   `:focus-visible`; held by `battle-mutations.spec.js`).
 - **Waiting**: a friend still picking, between the last confirm and the reveal: the sheet closed, the picked
   creatures in their new form, tagged PICKED, no receipt (read in the code, not seen: the bot answers at once).
@@ -456,8 +555,8 @@ The crests appear settled under less motion already.
   (`#planning-open`); a sheet the phase opened by itself goes to `#planning-open`, which reaches it again.
 - **Names**: the field's button speaks its creature, then "picked Brute, hidden until reveal" while PICKED shows
   (`speakCreature`); the tag is hidden from a screen reader, as every tag. axe finds nothing at either width.
-- **Announced**: the reveal, once, through `#growth-announcement` (`role="status"`, today's sentence), the focus
-  unmoved; a confirm says "Pick sent" in the picks line, as today.
+- **Announced**: the reveal, once, through `#growth-announcement` (`role="status"`, today's sentence, with F3's
+  "Next mutation round: 3." or "No more mutation rounds." at its end), the focus unmoved; a confirm says "Pick sent" in the picks line, as today.
 - **Targets**: 18 controls at 390 and 16 at 320, none under 44 px. Overlaps 1 at 390, 2 at 320 (**Left**).
 
 ### Cost
@@ -465,7 +564,8 @@ The crests appear settled under less motion already.
 - **Bytes**: 0 before any scroll; the kept form is a file already taken.
 - **Largest paint**: not this screen's.
 - **Shift**: 0 at 390 and 0.03 at 320, summed over the walk; the field's buttons follow their figures by a
-  `transform`, the receipt stands over the field.
+  `transform`, the receipt stands over the field. F3's line is in the receipt when it arrives; the crests are placed
+  under the receipt's settled bottom (`crestInset`), one line lower at 390 and as today at 320.
 
 ### Left
 
@@ -479,6 +579,14 @@ The crests appear settled under less motion already.
 - At 320 the receipt's line wrapped instead of cut ("You 2 · Oppone…" before, #1077): built, read on the next film.
 - The measure counts no filled action where the gold is a gradient (`scripts/ux/measures.mjs`): Team tempos here,
   Confirm choice on the pick. The measure's fix, not the page's.
+- **F3, the receipt under 360 px. Recommended**: the counts give way to `Next mutation round: 3`, the receipt keeping
+  its four lines at 320. The owner may prefer the counts kept: then the receipt is six lines at 320 and its crests
+  sit a line lower over the field. Refused: `Next: round 3`, shorter, which a newcomer can read as the next round of
+  play.
+- **F3, the receipt's round goes** at every width (`Round 1`): the reveal is of the round being played, and the
+  sheet's eyebrow says it. The owner may want it kept from 360 px, as a third item on the counts' line.
+- **F3, not filmed**: the reveal's sheet (See is not pressed by the walk), the last mutation round, and the status's
+  words: read in the code, held by `battle-growth.spec.js`.
 
 ## The Tempo sheet's spell reference (`tempo-reference`)
 

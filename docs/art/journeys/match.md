@@ -13,6 +13,13 @@ were read screen by screen, at 320 by 568 and 390 by 844, with their measures. N
 for this brief. At 320 the walk could not press `#settings` after `second-round`: the notifications bell covers it.
 At 390 the walk films `result-read` before `order-of-play`; at 320 after it.
 
+F3's additions (the mutation round announced) were written from the same walk on `main` at `5608255`,
+`node scripts/ux/journey.mjs match --out <folder>` and `node scripts/ux/journey.mjs windows --out <folder>`, both
+sheets read at 320 by 568 and 390 by 844 with their measures. No strip, no `--paint`, and no wide film: the walk films
+320 and 390 only, so every word this brief gives from 620 or 760 px is read in the code and in my reckoning of the
+room, not seen (stage F5 walks the match at 1280 px). Round 1 is a mutation round and round 2 the round before
+one, so `upkeep` films the mutation round's start receipt and `second-round` the round before.
+
 Critiqued on the build of UX11 (`00e5951`): the same walk, both sheets, and the strip
 `node scripts/ux/journey.mjs match --strip exchange` (24 frames, 120 ms apart, from Next on `result-read`). Both
 widths were compared with the film before it, on the same machine. "Today" below means `main` before UX11, and
@@ -55,6 +62,16 @@ What holds for every screen of the journey:
   cast (`COMMAND`, `COMBAT`, and `WAITING` before both are seated). At a round's start it says what the start gave,
   at its end what ended, never `UPKEEP` or `AFTERMATH`: a short form under 760 px, the plan's words from 760. The
   words, the room and the name are under `second-round` below.
+- **The mutation round, announced** (F3 of `docs/tabletop/first-playtest-plan.md`, "A mutation round is announced").
+  It answers the friend's "Did it happen by itself from a certain round?" where the round is read, at the moment it
+  matters ([A hint at the moment of need](../ux-craft.md#a-hint-at-the-moment-of-need)), and teaches nothing before
+  play. One name everywhere a player reads: **mutation round**, the rulebook's; "mutation opportunity" and "evolution"
+  leave the pages. The page reads the board's `nextEvolutionRound` and `followingEvolutionRound` and the catalogue's
+  `rules.evolutionInterval`; it compares a served round with the board's round (this round, the next) and adds the
+  interval to nothing (`mutationSchedule` in `table/battle-growth.js`). Under 760 px the bar does not hold the
+  countdown: a phone reads it in the round's start receipt and in Help, and hears it in the round button's name. The
+  strings are under `second-round` below; the pick, the tree and the reveal's receipt are in
+  [the windows' brief](windows.md).
 - **Captions.** A creature's caption is its name, then its badges, each a drawing of `table/icons.js` and a number
   at 11 px: `initiative` in place of the word INIT (`⌃ 6`, today `6 INIT`), `health` (`30/30`), `energy` (`2`),
   `defense` with its number when above zero. Conditions keep the battle's own marks. Undocked at 320, each caption
@@ -439,6 +456,9 @@ Round 1 ends, Round 2 begins and the tempo sheet docks. The bar says what the ro
 round's number, what its start gave while its receipt is read, then the phase; the field stays readable over the
 sheet. The round's start is filmed on `upkeep` (round 1, the receipt's window over the frame); the round's end is
 filmed by no screen of the walk yet, and its words are read in `battle/src/live.ts` and `table/battle-playback.js`.
+Since F3 the frame also says when the next mutation round comes: round 2 is the round before one, so the bar
+counts down to it from 760 px and the round button's name says it at every width; the round's start receipt says it
+on a phone (filmed on `upkeep` for round 1, a mutation round); a new mutation round is announced.
 
 - **Filled action**: none in the frame: Confirm tempos is the sheet's, UX12's, and its foot stays in view.
 
@@ -477,6 +497,45 @@ the start's grant is `upkeepDisplay`'s `bar` (`table/battle-upkeep.js`), the end
 - **Both at the end**: when conditions ended and a creature became immune, the bar says what ended, as the end's `bar` already picks; the immunity is in the
   dock's card and the plaques.
 
+**The mutation round, announced (F3).** The page's two facts, read from the host: `now`, the board's
+`nextEvolutionRound` is the board's round; `soon`, it is the board's round plus one. "Revealed" is the board's step past
+Evolution on a mutation round (`board.subPhase` is neither `Evolution` nor a step of the round's start): from then on
+"the next one" is `followingEvolutionRound`. None of these is shown while the table waits for players, in a replay,
+or once the match is over. The numbers below are round 2 and 3 of the walk's rule set (an interval of 2); every number
+is a served one.
+
+| Where, and when | Under 760 px (320, 390) | From 760 px | Accessible name or status |
+| --- | --- | --- | --- |
+| The bar's small word (`#round-phase`), the round before a mutation round (`soon`), while it names a phase | `COMMAND`, `COMBAT`: unchanged, the countdown not drawn | `COMMAND · MUTATION NEXT ROUND`, `COMBAT · MUTATION NEXT ROUND` | The round button (`#recap-open`), at every width: "Round 02 Command, mutation next round, where you are"; from 760 px its visible words, "Round 02 Command · Mutation next round, where you are" |
+| The bar's small word, the round before, at its start and its end | The start's and the end's words above, unchanged | The same | Unchanged: the receipt and the reading card say the moment |
+| The bar's small word, a mutation round and every other round | The phase word, unchanged | The same | Unchanged |
+| The new round's announcement (`#round-toast`), a mutation round (`now`, when the board reaches it) | Not drawn (#1000) | Eyebrow `MUTATION ROUND` in place of `NEW ROUND`, over `Round 3` | Its status: "Round 3, mutation round" (the eyebrow hidden from it, the rest in unseen text after the number) |
+| The new round's announcement, any other round | Not drawn | `NEW ROUND` over `Round 2`, unchanged | "Round 2", unchanged |
+| The round's start receipt (`#upkeep-dialog`), a line under `#upkeep-intro`, on a mutation round | `This is a mutation round.` | The same | Part of the sheet's description (`aria-describedby` names both lines) |
+| The round's start receipt, the round before one | `Next round is a mutation round.` | The same | The same |
+| The round's start receipt, any other round | No line | No line | Nothing |
+| Help's next line (`#help-next`), a mutation round before its picks are revealed | `This is a mutation round.` (was "Mutation opportunity this round.") | The same | Read in the window |
+| Help's next line, a mutation round after its picks are revealed, and every other round | `Next mutation round: 5.` (was "Next mutation opportunity: round 5.") | The same | Read in the window |
+| Help's next line, no mutation round left before the match's last round | `No more mutation rounds.` (was nothing) | The same | Read in the window |
+
+- **Room**: under 760 px the cell holds `COMMAND` and nothing more (#999); `MUTATION NEXT ROUND` at 11 px is about
+  three times its width, and the bar at 390 still holds History. From 760 px the cell's held width becomes that of
+  `COMMAND · MUTATION NEXT ROUND`, the widest it says, in place of `00 CONDITIONS ENDED`, so the countdown moves
+  nothing as it comes and goes. My reckoning: about 240 px at 11 px with the bar's letter spacing, and a bar of 760
+  px holds the round, the opponent and five tools of 44 px beside it. No film says it: F5's walk at 1280 px reads it.
+- **On a phone**: the countdown is read at the round's start, in the receipt every live round opens with before its
+  first choice (filmed on `upkeep`; it opens before the Mutation Tree, `canAuto` in `battle/src/live.ts`), and in
+  Help's next line, one tap away all round; it is heard in the round button's name. A receipt shows its line only
+  when its round is the board's round.
+- **The receipt's words**: a sentence, since the receipt speaks in sentences (`+2 energy each · 6 creatures` is
+  its summary, not a label); the bar's `MUTATION NEXT ROUND` keeps the plan's words, in capitals as `COMMAND` is.
+  `Next round is a mutation round.` rather than `Round 3 is a mutation round.`: the receipt's title already names
+  round 2, and two round numbers in two lines ask the player to subtract.
+- **The words budget**: this screen does not move under 760 px: the countdown is in the name, not in sight (104
+  and 114 words in the film). `upkeep` grows by one line: 16 words on a mutation round and 17 on the round before
+  (11 in the film). `phase-tip` (Help) says `This is a mutation round.` in place of "Mutation opportunity this
+  round." at 390, one word more (80 in the film).
+
 ### Pictures
 
 None: the field is the canvas.
@@ -487,7 +546,10 @@ None: the field is the canvas.
 - **Empty**: the order row's `Set once both teams have picked their tempos`. A round's start or end with nothing
   recorded says `START` or `END` (from 760 px `ROUND START`, `ROUND END`), never an empty cell.
 - **Loaded**: docked captions, the tag on the creature in hand; the bar at `COMMAND`. Before it, while the end's
-  reading plays, the bar's word is the end's (`2 ENDED`); while the start's receipt is read, the start's (`+2`).
+  reading plays, the bar's word is the end's (`2 ENDED`); while the start's receipt is read, the start's (`+2`), and
+  the receipt says `Next round is a mutation round.` (F3). From 760 px the bar reads `COMMAND · MUTATION NEXT ROUND`
+  (read in the code, not seen). Past the last mutation round the bar says no countdown and Help `No more mutation
+  rounds.`
 - **Waiting**: after Confirm tempos, the wait for the opponent's tempos, said in the dock. Before both players are
   seated the bar says `WAITING`, as today.
 - **Error**: the sheet's alert, UX12's.
@@ -503,6 +565,10 @@ The small word's change at a round's start and end is no beat: it is set at once
 end's reading begins and when the board reaches the next phase. The plaques on the field and the dock's card are
 where the moment moves.
 
+F3 adds no beat. The countdown is set at once with the phase word, the receipt's line stands in the sheet as it
+docks, and the toast keeps its own keyframes from 620 px (as [A part that arrives by itself](../ux-craft.md#a-part-that-arrives-by-itself)
+records), only its eyebrow's word changing.
+
 ### Less motion
 
 | Beat | Form |
@@ -517,8 +583,10 @@ where the moment moves.
   energy each, where you are", "Round 01 Energy, Round start: round energy, where you are", "Round 01 2 ended,
   Round end: 2 conditions ended, where you are", "Round 01 1 immune, Round end: 1 immune to stun, where you are";
   from 760 px "Round 01 +2 energy each, round start, where you are". `START` and `END` add nothing ("Round 01 Start,
-  where you are"). The `energy` drawing is hidden from it (`aria-hidden`).
-- **Announced**: "Round 2", once, in `#round-toast`'s status.
+  where you are"). The `energy` drawing is hidden from it (`aria-hidden`). On the round before a mutation round
+  (F3) it adds ", mutation next round" after the phase: "Round 02 Command, mutation next round, where you are".
+- **Announced**: "Round 2", once, in `#round-toast`'s status; on a mutation round "Round 3, mutation round" (F3),
+  at every width, since the status is spoken where the toast is not drawn.
 - **Targets**: 44 px; Settings pressable at 320 (built: the walk presses it).
 
 ### Cost
@@ -526,7 +594,9 @@ where the moment moves.
 - **Bytes**: none.
 - **Largest paint**: not this screen's.
 - **Shift**: 0.07 summed at 320 by this screen (0 before the round's end), 0.06 at 390 (0.01); 0.25 and 0.30 after
-  UX11, 0.47 and 0.44 before (#999, under the journey's **Left**).
+  UX11, 0.47 and 0.44 before (#999, under the journey's **Left**). The film of `5608255` reads 0.05 at 320 and 0.03
+  at 390. F3 moves nothing: under 760 px the cell is unchanged, from 760 px it holds the countdown's width all match
+  long, and the receipt's line is in the sheet when it docks.
 
 ### Left
 
@@ -541,3 +611,24 @@ where the moment moves.
   reading (`--strip`), in the pass that builds this. Until then the end's words are read in the code, not seen.
 - From 760 px the cell holds `00 CONDITIONS ENDED`'s width all match long, a gap beside `COMMAND`: chosen over a
   bar that moves twice a round. The owner may prefer the short forms at every width.
+- **F3, the countdown on a phone. Recommended**: not in the bar under 760 px; read in the round's start receipt
+  (`Next round is a mutation round.`) and Help's next line, heard in the round button's name. Refused: a short form
+  in the cell (`MUT. NEXT`, an abbreviation nobody is taught, as `EN` was refused); the countdown in place of
+  `COMMAND` (the phase lost while the player decides); a mark on the round button (the set has no mutation drawing,
+  and the gold pin already means "open the recap"); a second line under the phase (the bar's 44 px do not hold it at
+  11 px). The cost: on a phone the countdown is seen once, at the round's start, and not while the tempo sheet is
+  read (`second-round` shows no word of it).
+- **F3, the countdown from 760 px. Recommended**: beside the phase, `COMMAND · MUTATION NEXT ROUND`, its width held
+  all match long. The owner may prefer no countdown in the bar at any width, the receipt and Help alone: one form for
+  every screen.
+- **F3, the announcement. Recommended**: the toast's eyebrow says `MUTATION ROUND` over `Round 3` from 620 px, and
+  the round's start receipt says `This is a mutation round.` at every width; the toast stays undrawn on a phone
+  (#1000). Refused: drawing the toast on a phone for a mutation round only (it covered the upper captions).
+- **F3, not filmed**: the round's start receipt of round 2 (`Next round is a mutation round.`), the toast, every
+  form from 760 px, and the round past the last mutation round are read in the code; `battle-mutations.spec.js` and
+  `battle-growth.spec.js` hold the strings. The `lessons` walk films lesson 3, where the same lines show if its rule
+  set makes the round a mutation round.
+- **F3, a word to add**: `docs/domain/player-terminology.md` gains the row **Mutation round** (French **Round de
+  mutation**), the round whose Command opens with the Evolution step (`NextEvolutionRound`), replacing "mutation
+  opportunity" and "evolution round"; `table/terminology.test.js` may refuse "mutation opportunity" (my
+  recommendation). The session adds both.

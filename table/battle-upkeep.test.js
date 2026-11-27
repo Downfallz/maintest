@@ -127,6 +127,20 @@ test('the round\'s bar names a phase only while a player decides or watches a ca
   assert.equal(roundBar({ waiting: true, phase: 'StartOfRound', moment: { moment: 'start', each: 2, given: true } }).full, 'WAITING');
   assert.equal(roundBar({ phase: 'Match complete' }).full, 'MATCH COMPLETE');
 });
+// F3: the round before a mutation round, the bar counts down to it while it names a phase. A phone has no room for
+// it under the number: there it is in the button's name alone (docs/art/journeys/match.md, `second-round`).
+test('the bar counts down to a mutation round beside the phase, from 760 px in sight and under it in the name', () => {
+  assert.deepEqual(roundBar({ phase: 'Planning', soon: true }),
+    { short: 'COMMAND', full: 'COMMAND · MUTATION NEXT ROUND', icon: null, said: 'mutation next round', saidFull: '' });
+  assert.equal(roundBar({ phase: 'Combat', soon: true }).full, 'COMBAT · MUTATION NEXT ROUND');
+  assert.equal(roundBar({ phase: 'Combat', soon: false }).full, 'COMBAT');
+  // The round's start and end keep their own words, and a table still waiting says only that.
+  assert.equal(roundBar({ phase: 'StartOfRound', soon: true, moment: { moment: 'start', each: 2, given: true } }).full, '+2 ENERGY EACH');
+  assert.equal(roundBar({ phase: 'StartOfRound', soon: true }).full, 'ROUND START');
+  assert.equal(roundBar({ phase: 'EndOfRound', soon: true, moment: { moment: 'end', ended: 1 } }).full, '1 CONDITION ENDED');
+  assert.equal(roundBar({ waiting: true, phase: 'Planning', soon: true }).full, 'WAITING');
+  assert.equal(roundBar({ phase: 'Match complete', soon: true }).full, 'MATCH COMPLETE');
+});
 
 test('at a round\'s start the bar says what the start gave: short under the number on a phone, the plan\'s words on a wide screen', () => {
   const display = upkeepDisplay([{ creature: 1, amount: 2, sign: '+', unit: 'energy', tone: 'energy', label: 'Warden', side: 'Your team' },
@@ -167,8 +181,10 @@ test('from 760 px the bar\'s cell reserves a width no word it can say is longer 
     ...[1, 9, 12, 99].flatMap(count => [{ moment: 'end', ended: count, immune: 0 }, { moment: 'end', ended: 0, immune: count }])];
   for (const phase of ['StartOfRound', 'Planning', 'Combat', 'EndOfRound']) {
     for (const moment of moments) {
-      const { full } = roundBar({ phase, moment });
-      assert.ok(full.length <= reserved.length, `"${full}" is longer than the reserved "${reserved}"`);
+      for (const soon of [false, true]) {
+        const { full } = roundBar({ phase, moment, soon });
+        assert.ok(full.length <= reserved.length, `"${full}" is longer than the reserved "${reserved}"`);
+      }
     }
   }
   assert.ok(roundBar({ waiting: true }).full.length <= reserved.length);

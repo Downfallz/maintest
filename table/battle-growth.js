@@ -36,19 +36,63 @@ export function mutationReference(view, catalogue, selectedId) {
 }
 
 const whole = value => (Number.isInteger(value) && value > 0 ? value : null);
+// The steps of a mutation round before its picks are public: the round's start, then the pick itself.
+const BEFORE_THE_REVEAL = ['EnergyGain', 'OngoingEffects', 'Evolution'];
 
 /**
  * When the mutation rounds come, read from what the host serves and never worked out here (ADR 0056): the board's
  * next mutation round, this one included, and the one after it; the rule set's gap between two and its picks.
- * `now` is a mutation round, `soon` the round before one. Nothing is named before the match begins or once it is over.
+ * `now` is a mutation round, `soon` the round before one, `revealed` a mutation round past its picks. `upcoming` is
+ * the round a line names as the next one: after the reveal, the one that follows. `none` says the host named no
+ * further mutation round, and `last` that it named none after this one, which a board that carries no such field
+ * never says. Nothing is named before the match begins or once it is over.
  */
 export function mutationSchedule(view, catalogue) {
   const board = view?.board, live = Boolean(board) && !view.over && !view.waiting && Number.isInteger(board.roundNumber);
   const round = live ? board.roundNumber : null;
   const next = live && whole(board.nextEvolutionRound) >= round ? board.nextEvolutionRound : null;
   const following = next !== null && whole(board.followingEvolutionRound) > next ? board.followingEvolutionRound : null;
-  return { round, now: next !== null && next === round, soon: next !== null && next === round + 1, next, following,
+  const now = next !== null && next === round;
+  const revealed = now && typeof board.subPhase === 'string' && !BEFORE_THE_REVEAL.includes(board.subPhase);
+  // The host says "none after this one" with a null: a board that carries no such field says nothing.
+  const last = now && board.followingEvolutionRound === null;
+  let upcoming = next, none = live && board.nextEvolutionRound === null;
+  if (revealed) { upcoming = following; none = last; }
+  else if (now) upcoming = null;
+  return { round, now, soon: next !== null && next === round + 1, revealed, last, next, following, upcoming, none,
     interval: whole(catalogue?.rules?.evolutionInterval), picks: whole(catalogue?.rules?.evolutionPicksPerOpportunity) };
+}
+
+const NO_MORE = 'No more mutation rounds';
+const nextIs = round => `Next mutation round: ${round}`;
+
+// When the next mutation round comes, as a label: the Mutation Tree's progress line (docs/art/journeys/windows.md).
+export function mutationRoundLabel(schedule) {
+  if (schedule.now && !schedule.revealed) return 'This is a mutation round';
+  if (schedule.upcoming !== null) return nextIs(schedule.upcoming);
+  return schedule.none ? NO_MORE : '';
+}
+
+// The same as one sentence: Help's line (docs/art/journeys/match.md, `second-round`).
+export function mutationRoundLine(schedule) {
+  const label = mutationRoundLabel(schedule);
+  return label ? `${label}.` : '';
+}
+
+/**
+ * The mutation round a reveal's receipt names as the next one. A reveal of the board's round is proof that its
+ * picks are public, whatever step the board says: the board and the feed do not wait for each other.
+ */
+export function afterRevealLabel(schedule, round) {
+  if (!schedule.now || schedule.round !== round) return mutationRoundLabel(schedule);
+  if (schedule.following !== null) return nextIs(schedule.following);
+  return schedule.last ? NO_MORE : '';
+}
+
+// What a round's start receipt adds on a mutation round and on the round before one; nothing on any other round.
+export function roundStartLine(schedule) {
+  if (schedule.now) return 'This is a mutation round.';
+  return schedule.soon ? 'Next round is a mutation round.' : '';
 }
 
 const PAST_TEMPOS = ['TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'];

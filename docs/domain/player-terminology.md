@@ -42,6 +42,8 @@ Use the words naturally in a sentence rather than as literal substitutions:
 | Choose speed | Choose tempo |
 | Speeds revealed | Tempos revealed |
 | Talent atlas | Mutation Tree |
+| Mutation opportunity | Mutation round |
+| Evolution round | Mutation round |
 | Your spellbook | Your spellbook |
 
 ## Round phases
@@ -76,9 +78,13 @@ Tie order, Spells, Activation, Cleanup): the table shows a step under its phase,
 | Moment or phase | What a player sees |
 | --- | --- |
 | Round start | Energy, regeneration and damage over time are applied automatically. |
-| Command | Evolution (on an evolution round), Tempo, Tie order. |
+| Command | Evolution (on a mutation round), Tempo, Tie order. |
 | Combat | Spells (Intent selection), then Activation: the timeline is walked slot by slot. |
 | Round end | Cleanup: conditions count down, then the next round begins. |
+
+A round whose Command phase offers mutations is a **mutation round** (French: **round de mutation**), the
+rulebook's word: `This is a mutation round.`, `Next mutation round: 5`. The host names it (`NextEvolutionRound`, and
+`FollowingEvolutionRound` once this round's mutations are revealed); a page never works the schedule out.
 
 ## Tempo
 

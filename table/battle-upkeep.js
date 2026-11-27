@@ -91,6 +91,7 @@ export function upkeepDisplay(energy, ongoing, energyNote = '') {
   return { summary: summary.filter(Boolean).join(' · '), bar: { moment: 'start', each, given: count > 0 }, markers: [...markers.values()] };
 }
 
+const MUTATION_SOON = 'MUTATION NEXT ROUND';
 const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 const barWord = (short, full = short, said = '', saidFull = '', icon = null) => ({ short, full, icon, said, saidFull });
 
@@ -99,9 +100,10 @@ const barWord = (short, full = short, said = '', saidFull = '', icon = null) => 
  * while a player decides or watches a cast. At a round's start it says what the start gave and at its end what
  * ended: `short` under the number on a phone, `full` on a wide screen, `said` and `saidFull` what a screen reader
  * hears after each. `moment` is the `bar` of the start's display above or of the end's reading (battle-playback.js).
- * @param {{ waiting?: boolean, phase?: string, moment?: { moment: string, each?: number | null, given?: boolean, ended?: number, immune?: number } | null }} [state]
+ * The round before a mutation round (`soon`, the schedule's, table/battle-growth.js) a phase's word counts down to it.
+ * @param {{ waiting?: boolean, phase?: string, soon?: boolean, moment?: { moment: string, each?: number | null, given?: boolean, ended?: number, immune?: number } | null }} [state]
  */
-export function roundBar({ waiting = false, phase = '', moment = null } = {}) {
+export function roundBar({ waiting = false, phase = '', moment = null, soon = false } = {}) {
   if (waiting) return barWord('WAITING');
   const at = { StartOfRound: 'start', EndOfRound: 'end' }[phase];
   if (at === 'start') {
@@ -116,5 +118,8 @@ export function roundBar({ waiting = false, phase = '', moment = null } = {}) {
     if (over?.immune) return barWord(`${over.immune} IMMUNE`, `${over.immune} IMMUNE TO STUN`, `Round end: ${over.immune} immune to stun`, 'Round end');
     return barWord('END', phaseLabel(phase).toUpperCase());
   }
-  return barWord(phaseLabel(phase).toUpperCase());
+  const word = phaseLabel(phase).toUpperCase();
+  // The round before a mutation round, beside a phase: in sight where the bar has the room, in the name elsewhere.
+  if (soon && ['Planning', 'Combat'].includes(phase)) return barWord(word, `${word} · ${MUTATION_SOON}`, MUTATION_SOON.toLowerCase());
+  return barWord(word);
 }

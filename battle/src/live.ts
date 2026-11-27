@@ -8,7 +8,7 @@ import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
 import { battleOrder, createBattleOrderReveal, tieMarks } from '../../table/battle-order.js';
 import { orderControls } from './order';
-import { createBattleGrowth, crestInset } from '../../table/battle-growth.js';
+import { createBattleGrowth, crestInset, mutationSchedule } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
 import { atlasControls } from './mutation-atlas';
 import { createBattleUpkeep, roundBar } from '../../table/battle-upkeep.js';
@@ -416,12 +416,15 @@ type GrowthRow = { creature: number; mutation: string; stage: number | null; col
 // A new round gets a short announcement at the top of the field when the shown board reaches it live; a page
 // opening on a round, a replay or a seat change is a baseline, never a new round.
 let announcedRound: number | null = null, roundToastTimer = 0;
-function announceRound(round: number | null, quiet = false) {
+function announceRound(round: number | null, quiet = false, mutation = false) {
   if (round == null) { announcedRound = null; return; }
   // A tutorial done announces no round it will not play (UX8): the lesson ends on its own card.
   if (!quiet && announcedRound !== null && round > announcedRound) {
     const toast = $('round-toast');
     text('round-toast-number', `Round ${round}`);
+    // A mutation round says so (F3): in the eyebrow where the toast is drawn, after the number for a screen reader.
+    text('round-toast-eyebrow', mutation ? 'MUTATION ROUND' : 'NEW ROUND');
+    text('round-toast-said', mutation ? ', mutation round' : '');
     toast.hidden = false; toast.classList.remove('showing'); void toast.offsetWidth; toast.classList.add('showing');
     window.clearTimeout(roundToastTimer);
     roundToastTimer = window.setTimeout(() => { toast.hidden = true; toast.classList.remove('showing'); }, 2600);
@@ -611,11 +614,14 @@ function render() {
     speakCreature(node, creatureSpoken(one, { cues: creatureCues(one), tag: mutation.spoken(one.id) ?? targetTag?.spoken ?? condition, offered, targeting }));
   }
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
-  announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));
+  // When the mutation rounds come is the live board's to say (table/battle-growth.js): a recorded replay names none.
+  const schedule = mutationSchedule(replay.active ? null : view, catalogue);
+  announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view), schedule.now && schedule.round === board.round);
   // Before both players are seated there is no phase yet: the header says the table is waiting.
   // A phase while a player decides or watches a cast; at a round's start or end, what the reading being played says
   // the moment gave or ended. A recorded replay has no reading of its own: the moment's word alone.
-  roundWord(roundBar({ waiting: Boolean(view?.waiting && !view.over), phase: board.phase, moment: replay.active ? null : playbackState.paced?.bar ?? null }));
+  roundWord(roundBar({ waiting: Boolean(view?.waiting && !view.over), phase: board.phase, moment: replay.active ? null : playbackState.paced?.bar ?? null,
+    soon: schedule.soon && schedule.round === board.round }));
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board, catalogue);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false, view?.waiting && !view.over ? null : board);
@@ -691,7 +697,7 @@ function render() {
   if (roundHeld && upkeep.model().pending) upkeep.presented();
   // Closed at once, so this render shows no upkeep marker either; its close event comes as a task, after this render.
   if (roundHeld && $<HTMLDialogElement>('upkeep-dialog').open) $<HTMLDialogElement>('upkeep-dialog').close();
-  upkeepUI.render(canAuto() && !roundHeld);
+  upkeepUI.render(canAuto() && !roundHeld, schedule);
   const liveMarkers = upkeepUI.markers(board.round);
   // The start's receipt is read over the board that already asks for the round's first choice: the bar says the start.
   if (liveMarkers) roundWord(roundBar({ phase: 'StartOfRound', moment: upkeepUI.bar(board.round) }));

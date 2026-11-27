@@ -1,9 +1,11 @@
 import { createBattleUpkeep, upkeepDisplay } from '../../table/battle-upkeep.js';
+import { roundStartLine, mutationSchedule } from '../../table/battle-growth.js';
 import { ROUND_START, inRound } from '../../table/terms.js';
 import { receiptDetails } from './receipt-details';
 import { onNextFrame } from './next-frame';
 
 type Controller = ReturnType<typeof createBattleUpkeep>;
+type Schedule = ReturnType<typeof mutationSchedule>;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const node = (tag: string, text: string, className = '') => {
   const result = document.createElement(tag); result.textContent = text; result.className = className; return result;
@@ -30,16 +32,25 @@ export function upkeepControls(controller: Controller, inspect: (id: string) => 
     else if (controller.model().available) el('help-open').focus({ preventScroll: true });
     opener = null; onVisibility();
   });
-  function render(canAuto: boolean) {
+  // A mutation round, or the round before one, said under what the start gave (F3): only on the receipt of the
+  // round the board is at, since the schedule is the live board's and says nothing of a round already past.
+  function mutationLine(round: number, schedule: Schedule | null) {
+    const line = schedule && schedule.round === round ? roundStartLine(schedule) : '';
+    const node = el('upkeep-mutation');
+    if (node.textContent !== line) node.textContent = line;
+    node.hidden = !line;
+  }
+  function render(canAuto: boolean, schedule: Schedule | null = null) {
     const model = controller.model();
     if (!model.available || !model.receipt) {
       opener = null;
       if (dialog.open) dialog.close();
-      display = null; expand(false); el('upkeep-intro').textContent = ''; body.replaceChildren(); el('upkeep-title').textContent = ''; key = ''; renderedRound = 0; return;
+      display = null; expand(false); el('upkeep-intro').textContent = ''; mutationLine(0, null); body.replaceChildren(); el('upkeep-title').textContent = ''; key = ''; renderedRound = 0; return;
     }
     const receipt = model.receipt;
     // Do not replace the round being read under History/inspection. A newer pending receipt follows on close.
     if (dialog.open && renderedRound !== receipt.round) return;
+    mutationLine(receipt.round, schedule);
     const nextKey = JSON.stringify(receipt);
     if (nextKey !== key) {
       display = upkeepDisplay(receipt.energy, receipt.ongoing, receipt.energyNote);

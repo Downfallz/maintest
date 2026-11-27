@@ -3,6 +3,7 @@ import { activeTurn } from './presentation.js';
 import { creatureLabel } from './battle-live.js';
 import { timeLeft } from './players.js';
 import { tutorialOf } from './battle-tutorial.js';
+import { mutationSchedule, mutationRoundLine } from './battle-growth.js';
 
 export const HELP_PREFERENCE_KEY = 'downfall.arena.help.v1';
 const TOPICS = ['mutation', 'tempo', 'ties', 'action', 'intent', 'target'];
@@ -153,9 +154,8 @@ export function battleGuidance(view, catalogue, { accepted = false, targeting = 
   const silent = Boolean(tutorialOf(view));
   const tip = topic && !silent ? tips[topic] : null;
   const actor = topic && topic !== 'mutation' && topic !== 'ties' ? creatureLabel(board, view.waitingCreature) : '';
-  const next = !waiting && !view.over && !historical && Number.isInteger(board.nextEvolutionRound)
-    ? board.nextEvolutionRound > board.roundNumber ? `Next mutation opportunity: round ${board.nextEvolutionRound}.`
-      : board.nextEvolutionRound === board.roundNumber ? 'Mutation opportunity this round.' : '' : '';
+  // When the next mutation round comes, from the board alone; a recorded board is not where the match is.
+  const next = historical ? '' : mutationRoundLine(mutationSchedule(view, catalogue));
   return { available: true, topic: silent ? null : topic, objective: current, title: tip?.title ?? 'Round guide', lines: tip?.lines ?? [],
     rules: tip ? tip.rules : ROUND_RULES,
     round: waiting ? 'Match not started' : historical ? 'Recorded results' : round,

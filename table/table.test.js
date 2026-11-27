@@ -1825,7 +1825,7 @@ test('a capped opportunity and the next evolution round use the host projections
   assert.match(p.nodes['evolution-budget'].textContent, /1 \/ 1 team picks remaining/);
   p.view.waitingFor = 'Speed'; p.view.board.subPhase = 'Speed'; p.view.board.roundNumber = 2;
   p.view.board.nextEvolutionRound = 3; p.draw();
-  assert.match(p.nodes['phase-reminder'].textContent, /Next evolution: round 3/);
+  assert.match(p.nodes['phase-reminder'].textContent, /Next mutation round: 3\./);
 });
 
 test('tie order shows rolls, supports arrow focus and number choices, then submits the order exactly once', async () => {

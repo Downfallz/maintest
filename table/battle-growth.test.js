@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crestInset, mutationReference, mutationSchedule, createBattleGrowth } from './battle-growth.js';
+import { crestInset, mutationReference, mutationSchedule, mutationRoundLine, mutationRoundLabel, afterRevealLabel, roundStartLine, createBattleGrowth } from './battle-growth.js';
 const catalogue = { cards: [{ id: 'new', name: 'Devour' }], packages: [
   { id: 'root', name: 'Predator', level: 1, spells: ['old', 'new'] },
   { id: 'other', name: 'Brute', level: 1, spells: [] },
@@ -154,24 +154,70 @@ test('no crest inset without a receipt in view or a stage to stand on', () => {
 
 // F3 of docs/tabletop/first-playtest-plan.md: when the mutation rounds come is the host's to say. The board names the
 // next one (this round included) and the one after it; the rule set names the gap and the picks.
-const scheduled = (roundNumber, nextEvolutionRound, followingEvolutionRound, extras = {}) => ({ board: { roundNumber, nextEvolutionRound, followingEvolutionRound, allies: [], enemies: [] }, ...extras });
+const scheduled = (roundNumber, nextEvolutionRound, followingEvolutionRound, extras = {}, subPhase = 'Evolution') => ({ board: { roundNumber, subPhase, nextEvolutionRound, followingEvolutionRound, allies: [], enemies: [] }, ...extras });
 const rules = { rules: { evolutionInterval: 2, evolutionPicksPerOpportunity: 2 } };
+const facts = model => [model.now, model.soon, model.revealed, model.next, model.following, model.upcoming, model.none];
+const bare = ({ last, ...rest }) => rest;
 test('the schedule says a mutation round, the round before one, and the round the next one comes', () => {
-  assert.deepEqual(mutationSchedule(scheduled(3, 3, 5), rules), { round: 3, now: true, soon: false, next: 3, following: 5, interval: 2, picks: 2 });
-  assert.deepEqual(mutationSchedule(scheduled(4, 5, 7), rules), { round: 4, now: false, soon: true, next: 5, following: 7, interval: 2, picks: 2 });
-  const far = mutationSchedule(scheduled(2, 6, 10), rules);
-  assert.equal(far.now, false); assert.equal(far.soon, false); assert.equal(far.next, 6);
+  assert.deepEqual(bare(mutationSchedule(scheduled(3, 3, 5), rules)), { round: 3, now: true, soon: false, revealed: false, next: 3, following: 5, upcoming: null, none: false, interval: 2, picks: 2 });
+  assert.deepEqual(facts(mutationSchedule(scheduled(4, 5, 7, {}, 'Speed'), rules)), [false, true, false, 5, 7, 5, false]);
+  assert.deepEqual(facts(mutationSchedule(scheduled(2, 6, 10, {}, 'Activation'), rules)), [false, false, false, 6, 10, 6, false]);
+});
+test('a mutation round past its picks names the one that follows as the next', () => {
+  for (const step of ['EnergyGain', 'OngoingEffects', 'Evolution']) assert.equal(mutationSchedule(scheduled(3, 3, 5, {}, step), rules).revealed, false, step);
+  for (const step of ['Speed', 'TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization']) {
+    assert.deepEqual(facts(mutationSchedule(scheduled(3, 3, 5, {}, step), rules)), [true, false, true, 3, 5, 5, false], step);
+  }
+  // The last mutation round: the host names none after it, and says so with a null.
+  assert.deepEqual(facts(mutationSchedule(scheduled(11, 11, null, {}, 'Speed'), rules)), [true, false, true, 11, null, null, true]);
+  assert.equal(mutationSchedule(scheduled(11, 11, null), rules).none, false, 'before its reveal this round is the one to name');
+  // A board with no step is not read as revealed.
+  assert.equal(mutationSchedule(scheduled(3, 3, 5, {}, undefined), rules).revealed, false);
 });
 test('the schedule names nothing the host did not serve, and nothing once the match is over or not begun', () => {
-  const bare = mutationSchedule(scheduled(11, 11, null), {});
-  assert.deepEqual(bare, { round: 11, now: true, soon: false, next: 11, following: null, interval: null, picks: null });
-  const last = mutationSchedule(scheduled(12, null, null), rules);
-  assert.equal(last.now, false); assert.equal(last.soon, false); assert.equal(last.next, null);
+  assert.deepEqual(facts(mutationSchedule(scheduled(12, null, null), rules)), [false, false, false, null, null, null, true]);
+  // A host from before the field sends none: nothing is said, not "no more".
+  assert.deepEqual(facts(mutationSchedule(scheduled(12, undefined, undefined), rules)), [false, false, false, null, null, null, false]);
+  assert.deepEqual(facts(mutationSchedule(scheduled(3, 3, undefined, {}, 'Speed'), rules)), [true, false, true, 3, null, null, false]);
   for (const quiet of [null, {}, scheduled(3, 3, 5, { over: true }), scheduled(3, 3, 5, { waiting: { seats: [] } }), scheduled(undefined, 3, 5)]) {
-    assert.deepEqual(mutationSchedule(quiet, rules), { round: null, now: false, soon: false, next: null, following: null, interval: 2, picks: 2 });
+    assert.deepEqual(bare(mutationSchedule(quiet, rules)), { round: null, now: false, soon: false, revealed: false, next: null, following: null, upcoming: null, none: false, interval: 2, picks: 2 });
   }
-  // A board older than its field (a deploy in between) never reads as a schedule: a past round is not "next".
+  // A round already past is never "next", and the one after is after it.
   assert.equal(mutationSchedule(scheduled(4, 3, 5), rules).next, null);
   assert.equal(mutationSchedule(scheduled(4, 5, 5), rules).following, null);
-  assert.equal(mutationSchedule(scheduled(4, 5, 7), { rules: { evolutionInterval: 0, evolutionPicksPerOpportunity: 1.5 } }).interval, null);
+  const odd = mutationSchedule(scheduled(4, 5, 7), { rules: { evolutionInterval: 0, evolutionPicksPerOpportunity: 1.5 } });
+  assert.equal(odd.interval, null); assert.equal(odd.picks, null);
+  assert.equal(mutationSchedule(scheduled(4, 5, 7), {}).interval, null);
+});
+test('Help says this round, the next mutation round, or that none is left; a round start says this round or the next', () => {
+  const line = (...args) => mutationRoundLine(mutationSchedule(scheduled(...args), rules));
+  const start = (...args) => roundStartLine(mutationSchedule(scheduled(...args), rules));
+  assert.equal(line(3, 3, 5), 'This is a mutation round.');
+  assert.equal(line(3, 3, 5, {}, 'Speed'), 'Next mutation round: 5.');
+  assert.equal(line(4, 5, 7, {}, 'Activation'), 'Next mutation round: 5.');
+  assert.equal(line(11, 11, null, {}, 'Activation'), 'No more mutation rounds.');
+  assert.equal(line(12, null, null), 'No more mutation rounds.');
+  assert.equal(line(12, undefined, undefined), '');
+  assert.equal(line(3, 3, 5, { over: true }), '');
+  assert.equal(start(3, 3, 5, {}, 'EnergyGain'), 'This is a mutation round.');
+  assert.equal(start(4, 5, 7, {}, 'EnergyGain'), 'Next round is a mutation round.');
+  assert.equal(start(2, 6, 10), ''); assert.equal(start(12, null, null), ''); assert.equal(start(3, 3, 5, { over: true }), '');
+});
+test('the Mutation Tree says the same as a label, and a reveal\'s receipt names the round after its own', () => {
+  const of = (...args) => mutationSchedule(scheduled(...args), rules);
+  assert.equal(mutationRoundLabel(of(3, 3, 5)), 'This is a mutation round');
+  assert.equal(mutationRoundLabel(of(4, 5, 7)), 'Next mutation round: 5');
+  assert.equal(mutationRoundLabel(of(12, null, null)), 'No more mutation rounds');
+  assert.equal(mutationRoundLabel(of(12, undefined, undefined)), '');
+  // The reveal of the board's round: the one that follows, even while the board still says the pick's step.
+  assert.equal(afterRevealLabel(of(3, 3, 5, {}, 'Evolution'), 3), 'Next mutation round: 5');
+  assert.equal(afterRevealLabel(of(3, 3, 5, {}, 'Speed'), 3), 'Next mutation round: 5');
+  assert.equal(afterRevealLabel(of(11, 11, null, {}, 'Speed'), 11), 'No more mutation rounds');
+  assert.equal(afterRevealLabel(of(11, 11, undefined, {}, 'Speed'), 11), '', 'a host from before the field says nothing');
+  // A reveal of a round the board has left: the board's own next one.
+  assert.equal(afterRevealLabel(of(4, 5, 7, {}, 'Speed'), 3), 'Next mutation round: 5');
+  assert.equal(afterRevealLabel(of(3, 3, 5, { over: true }), 3), '');
+  assert.equal(mutationSchedule(scheduled(3, 3, null), rules).last, true);
+  assert.equal(mutationSchedule(scheduled(3, 3, 5), rules).last, false);
+  assert.equal(mutationSchedule(scheduled(4, 5, null), rules).last, false);
 });
