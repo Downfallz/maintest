@@ -166,13 +166,14 @@ test('upkeep and cleanup frames do not expose an active combat turn', () => {
   }
 });
 
-test('the timeline is the host\'s order with each slot\'s position, side, roll and whether it is now', () => {
+test('the timeline is the host\'s order with each slot\'s position, side, random tie and whether it is now', () => {
   const display = boardPresentation(board);
   assert.deepEqual(display.timeline.map(slot => slot.creature), [2, 1]);
   assert.deepEqual(display.timeline.map(slot => slot.position), [1, 2]);
   assert.deepEqual(display.timeline.map(slot => slot.side), ['enemy', 'ally']);
   assert.deepEqual(display.timeline.map(slot => slot.isNow), [false, true]);
-  assert.deepEqual(display.timeline.map(slot => slot.roll), ['', 'd20 3 → 17']);
+  assert.deepEqual(display.timeline.map(slot => slot.tie), ['', 'Tie settled at random']);
+  assert.ok(display.timeline.every(slot => !('rolls' in slot) && !('roll' in slot)), 'no face reaches a renderer');
 });
 
 test('the active turn is the cursor\'s slot, and the round is read as the host names it', () => {

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { ActingHalo, FOCUS } from './acting-halo';
 import { BattleHorizon } from './battle-horizon';
 import { BattleGround } from './ground';
-import { DiceLayer } from './dice';
+import { CritMark } from './crit-mark';
 import { placements, strikeApproach } from '../../table/battle-layout.js';
 import { CREATURE_ART, figureArt, figureGeometry } from '../../table/battle-art.js';
 import { MOTION_SCALE, playbackRate } from '../../table/battle-timing.js';
@@ -115,10 +115,10 @@ export class BattleScene extends Phaser.Scene implements Restful {
   // What the lasting conditions draw on the figures now (`#battle[data-auras]` for tests and tools).
   onAuras: (shown: string) => void = () => {};
   private aurasShown = '';
-  private dice: DiceLayer | null = null;
-  // The dice on the field now, `id:value:tone` each (`#battle[data-dice]` for tests and tools).
-  onDice: (shown: string) => void = () => {};
-  private diceShown = '';
+  private critMark: CritMark | null = null;
+  // The caster the field says `Crit!` beside now (`#battle[data-crit]` for tests and tools).
+  onCrit: (id: string) => void = () => {};
+  private critShown = '';
   private haloId: string | null = null;
   // The clock of the ambience (the halos, the ground's air, the capstone effects and the auras): the steps the game takes,
   // added up, so a page held up for a while resumes the ambience where it stood instead of jumping ahead.
@@ -155,7 +155,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     fallback.generateTexture('missing-figure', 80, 100);
     fallback.destroy();
     this.halo = new ActingHalo(this);
-    this.dice = new DiceLayer(this);
+    this.critMark = new CritMark(this);
     this.fitCamera();
     this.scale.on('resize', () => {
       this.fitCamera();
@@ -248,12 +248,11 @@ export class BattleScene extends Phaser.Scene implements Restful {
     this.halo?.show(lit);
     if ((lit?.id ?? null) !== this.haloId) { this.haloId = lit?.id ?? null; this.onHalo(this.haloId); }
     this.lightFocus(state.creatures.filter(one => focus.has(one.id) && one.isAlive).map(one => one.id));
-    const standing = (state.dice ?? []).filter(die => this.figures.get(die.id)?.alive);
-    this.dice?.show(standing, id => this.figures.get(id) ?? null);
-    // `id:value:tone`, then the tie a roll-off broke and its place in it (`tie1:2`) or the face a crit needed (`14+`).
-    const diceShown = standing.map(die => [`${die.id}:${die.value}:${die.tone}`, die.group ? `tie${die.group}:${die.place}` : '', die.needed ? `${die.needed}+` : '']
-      .filter(Boolean).join(':')).join(' ');
-    if (diceShown !== this.diceShown) { this.diceShown = diceShown; this.onDice(diceShown); }
+    const caster = state.crit ? this.figures.get(state.crit.id) ?? null : null;
+    const crit = caster?.alive ? state.crit ?? null : null;
+    this.critMark?.show(crit, crit ? caster : null);
+    const critShown = crit?.id ?? '';
+    if (critShown !== this.critShown) { this.critShown = critShown; this.onCrit(critShown); }
     if (changed && !reduced && state.stage === 'windup') this.windup();
     if (changed && state.stage === 'impact') {
       this.onImpact();
@@ -583,7 +582,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     const camera = this.cameras.main;
     return this.tweens.getTweens().length > 0 || this.load.isLoading()
       || this.viewShake.moving || camera.flashEffect.isRunning || camera.fadeEffect.isRunning
-      || this.spellEffects.playing.particles > 0 || this.spellEffects.playing.objects.length > 0 || Boolean(this.dice?.tumbling(this.reduced))
+      || this.spellEffects.playing.particles > 0 || this.spellEffects.playing.objects.length > 0 || Boolean(this.critMark?.settling(this.reduced))
       || Boolean(this.horizon?.moving);
   }
 
@@ -599,7 +598,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
     this.horizon?.update(delta * this.rate);
     this.halo?.follow(breathClock, this.reduced);
     for (const halo of this.focusHalos.values()) halo.follow(breathClock, this.reduced);
-    this.dice?.follow(time, this.reduced);
+    this.critMark?.follow(time, this.reduced);
     this.viewShake.update(delta * this.rate);
     let place = 0;
     for (const figure of this.figures.values()) {

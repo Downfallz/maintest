@@ -128,10 +128,10 @@ sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
 *Command · Tempo.* For each of your living creatures that is not stunned, choose a tempo: **Instinct** or
 **Precision**. Both players choose in secret, and the tempos are revealed together.
 
-- **Instinct** acts before every Precision creature, and **cannot roll a critical this round**, whatever its spell prints.
-- **Precision** acts after every Instinct creature, and keeps its critical roll.
+- **Instinct** acts before every Precision creature, and **cannot crit this round**, whatever its spell prints.
+- **Precision** acts after every Instinct creature, and keeps its critical chance.
 
-Choose Instinct to land a blow that does not need the dice, or to act before something that would defeat you.
+Choose Instinct to land a blow that does not need a critical, or to act before something that would defeat you.
 Choose Precision when the critical is what you hope for, or when you want the board to change before you act.
 A tempo chooses no spell: the spell is chosen when the creature's turn comes.
 
@@ -141,14 +141,14 @@ defeated creature is not in the round either.
 *Example.* Creature 4 was stunned last round. The second player chooses tempos for Creatures 5 and 6 only; the
 first player for Creatures 1, 2 and 3. Five tempos are revealed, and the round will have five turns, not six.
 
-sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
+sources: ADR 0010, ADR 0072, ADR 0112, ADR 0208, game-rules#round-sequence-adr-0010
 
 ```card
 id: tempo
 title: Tempo
 Each round, every creature that is not stunned takes a tempo: Instinct or Precision.
-Instinct acts before every Precision creature, but cannot roll a critical this round.
-Precision acts after Instinct and keeps the critical roll.
+Instinct acts before every Precision creature, but cannot crit this round.
+Precision acts after Instinct and keeps its critical chance.
 > An Instinct creature at {creature.initiative} initiative acts before a Precision creature at {creature.initiative + 4}.
 ```
 
@@ -166,10 +166,9 @@ changes the next round's order, not this one's.
 
 Instinct always comes first. An Instinct creature at 0 initiative acts before a Precision creature at 20.
 
-**A tie between the teams** is settled by a **roll-off**: each tied creature rolls a d20, and the highest takes
-the first place. Creatures on a number both teams rolled roll again; a number only one team rolled stands. The
-roll-off decides which places each team holds. How a team orders its own creatures in its places is
-[the next step](#tie-order).
+**A tie between the teams** is settled at random: the app draws which team takes each place in the tie. The
+timeline shows the tie as settled at random, and which team got the earlier place. How a team orders its own
+creatures in its places is [the next step](#tie-order).
 
 *Example.* Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1
 and 4 read {creature.initiative + tier:occultist:v1.initiativeBonus + tier:elementalist:v1.initiativeBonus}
@@ -177,18 +176,18 @@ initiative, Creatures 2 and 5 read {creature.initiative + tier:occultist:v1.init
 and 6 read {creature.initiative}. Last round, an Ice Grip lowered Creature 2's initiative by
 {spell:frostbite:v1.initiativeDebuff}: it reads
 {max(0, creature.initiative + tier:occultist:v1.initiativeBonus - spell:frostbite:v1.initiativeDebuff)} this round.
-Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts
-first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5, then Creatures 3 and 6,
-which tie between the teams and roll off as well, and Creature 2 last.
+Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and the tie is settled at
+random: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5,
+then Creatures 3 and 6, which tie between the teams and are settled at random as well, and Creature 2 last.
 
-sources: ADR 0036, ADR 0059, ADR 0063, game-rules#round-sequence-adr-0010
+sources: ADR 0036, ADR 0059, ADR 0063, ADR 0208, game-rules#round-sequence-adr-0010
 
 ```card
 id: initiative
 title: Initiative
 Initiative orders the creatures inside their tempo: the highest acts first.
 Each mutation adds its bonus to the base initiative, for good.
-A tie between the two teams is settled by a d20 roll-off.
+A tie between the two teams is settled at random.
 > In Precision, the creature at {creature.initiative + 2} initiative acts before the one at {creature.initiative}.
 ```
 
@@ -196,15 +195,15 @@ A tie between the two teams is settled by a d20 roll-off.
 
 *Command · Tie order.* Where your team holds two places or more in one tie, you choose which of your tied
 creatures takes which place. The other team's places do not move. A tie your team holds alone is yours to order
-too, with no roll. Both players order in secret, and the orders are revealed together. A round with no such tie
-asks nobody.
+too, and nothing is drawn for it. Both players order in secret, and the orders are revealed together. A round
+with no such tie asks nobody.
 
-*Example.* Creatures 3, 5 and 6 tie in the Precision band and roll 11, 11 and 2. Both teams rolled 11, so
-Creatures 3 and 5 roll again: 4 and 17. The places go to the second player, then the first, then the second.
+*Example.* Creatures 3, 5 and 6 tie in the Precision band. The tie is settled at random, and the places go to the
+second player, then the first, then the second.
 The second player holds two of them and wants Creature 6 to act first: Creature 6 takes the first place,
 Creature 3 the second, Creature 5 the third.
 
-sources: ADR 0063, game-rules#round-sequence-adr-0010
+sources: ADR 0063, ADR 0208, game-rules#round-sequence-adr-0010
 
 ## Your creature's turn {#your-turn}
 
@@ -253,8 +252,8 @@ sources: ADR 0083, game-rules#round-sequence-adr-0010
 A spell resolves completely before the next turn comes, in this order:
 
 1. **Pay.** The caster's Energy goes down by the spell's cost.
-2. **Roll for a critical**, once for the whole cast, if the caster is Precision and the spell prints a chance.
-   See [the critical roll](#the-critical-roll).
+2. **The critical**, settled once for the whole cast, if the caster is Precision and the spell prints a chance.
+   See [the critical chance](#the-critical-roll).
 3. **Each effect, on each target.** A **hit** is the spell's damage, plus the caster's **damage bonus**,
    multiplied on a critical, less the target's **Defense**, never below zero. A heal never goes above the
    Health a creature started with. An Energy drain takes at most what the target has. A lasting effect becomes a
@@ -269,12 +268,12 @@ A hit never goes past the Health left: a creature at 3 Health hit for 10 loses 3
 a target, 0 damage through a Defense or a heal at full Health, did nothing to it.
 
 *Example.* Creature 2 is Precision, at 4 Energy, and casts Incinerate{?spell:engulfing_flames:v1.origin = 'Enemy'} on Creature 5: cost
-{spell:engulfing_flames:v1.energyCost}, damage {spell:engulfing_flames:v1.damage}, d20:
-{21 - (creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 20}+. Creature 5 cast Carapace last round: its Defense is
+{spell:engulfing_flames:v1.energyCost}, damage {spell:engulfing_flames:v1.damage}, Crit
+{(creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 100}%. Creature 5 cast Carapace last round: its Defense is
 {creature.defense + spell:full_plate:v1.defenseBuff}.
 
 - Pay: Creature 2 goes to {4 - spell:engulfing_flames:v1.energyCost} Energy.
-- The d20 is a critical: {spell:engulfing_flames:v1.damage} × {rules.criticalMultiplier} =
+- The cast crits: {spell:engulfing_flames:v1.damage} × {rules.criticalMultiplier} =
   {floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier)}.
 - Less the Defense: Creature 5 loses
   {max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - (creature.defense + spell:full_plate:v1.defenseBuff))},
@@ -282,11 +281,11 @@ a target, 0 damage through a Defense or a heal at full Health, did nothing to it
   {max(0, creature.health - max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - (creature.defense + spell:full_plate:v1.defenseBuff)))}
   Health.
 
-Had the roll missed, it would have lost
+Without a critical, it would have lost
 {max(0, spell:engulfing_flames:v1.damage - (creature.defense + spell:full_plate:v1.defenseBuff))}. **Multiply first, subtract
 second**: the other order gives a number the game never deals.
 
-sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequence-adr-0010
+sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, ADR 0208, game-rules#round-sequence-adr-0010
 
 ```card
 id: defense
@@ -304,7 +303,7 @@ A creature's **damage bonus** is added to every hit it deals: Apex gives
 multiplies and before Defense is subtracted. It never touches a Bleed, a heal, or the caster's own line.
 
 *Example.* Creature 4 owns Apex, is Precision, and casts Blood Price{?spell:hateful_sacrifice:v1.origin = 'Enemy'} on Creature 1, whose Defense is 3: damage
-{spell:hateful_sacrifice:v1.damage}, d20: {21 - (creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 20}+. Add the bonus:
+{spell:hateful_sacrifice:v1.damage}, Crit {(creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 100}%. Add the bonus:
 {spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus}. On a critical,
 {floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier)}, less 3:
 Creature 1 loses
@@ -320,7 +319,7 @@ deals
 {spell:heavy_strike:v1.damage + spell:thundering_seal:v1.damageBuff + spell:adrenaline_tonic:v1.damageBuff} to a
 creature with no Defense. Damage buffs stack: add every one.
 
-sources: ADR 0101, game-rules#round-sequence-adr-0010
+sources: ADR 0101, ADR 0208, game-rules#round-sequence-adr-0010
 
 ## Sunder {#sunder}
 

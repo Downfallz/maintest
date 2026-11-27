@@ -1,6 +1,6 @@
 # Ce que montre l’écran {#the-screen}
 
-L’application est la table. Elle tient le compte de chaque nombre, lance chaque dé et joue chaque étape que personne
+L’application est la table. Elle tient le compte de chaque nombre, tranche chaque chance et joue chaque étape que personne
 ne décide. Vous prenez les décisions ; ce chapitre dit ce que vous voyez pendant que vous les prenez.
 
 ## Vos créatures et les leurs {#the-creatures}
@@ -32,9 +32,11 @@ sources: ADR 0011, ADR 0042, ADR 0089, game-rules#match-lifecycle
 Les étapes que personne ne décide sont jouées pour vous, et l’historique enregistre chacune d’elles :
 
 - **L’Entretien.** Le gain d’Énergie de chaque créature, sa Regeneration et son Bleed (saignement).
-- **La frise.** L’ordre des tours, construit à partir des tempos et des initiatives, avec les départages au d20
-  qui tranchent une égalité entre les équipes.
-- **Les dés.** Chaque jet de critique, sur un d20 que l’écran montre.
+- **La frise.** L’ordre des tours, construit à partir des tempos et des initiatives. Une égalité entre les équipes
+  est tranchée au hasard, et la frise dit quelle équipe a obtenu la place la plus tôt.
+- **Les critiques.** Chaque chance de critique, quand son sort se résout. Un lancer qui obtient un critique montre
+  **Crit!** à côté de son lanceur ; un lancer qui n’en obtient pas n’y montre rien. L’historique dit la chance
+  qu’avait le lancer.
 - **Le décompte.** Chaque état décompte pendant les Retombées, et se termine à zéro.
 - **La fin.** La partie se termine à l’instant où une équipe est vaincue, ou quand le dernier round se termine.
 
@@ -44,7 +46,7 @@ choix qu’elle ne propose pas n’est pas un choix légal.
 
 La fenêtre **Help** parcourt le round où vous êtes. L’historique explique chaque résultat après sa résolution.
 
-sources: ADR 0010, ADR 0063, ADR 0083, ADR 0112, ADR 0154, game-rules#round-sequence-adr-0010
+sources: ADR 0010, ADR 0063, ADR 0083, ADR 0112, ADR 0154, ADR 0208, game-rules#round-sequence-adr-0010
 
 ## Les nombres de cette table {#the-numbers}
 
@@ -62,8 +64,7 @@ et bouge donc avec eux.
 | Dernier round | Le round après lequel la partie se termine sur la Santé | {rules.roundCap} |
 | Multiplicateur de critique | Ce par quoi un critique multiplie les dégâts et les soins | {rules.criticalMultiplier} |
 
-Le dé ne change jamais : c’est un **d20**, pour le jet de critique comme pour le départage. Chaque chance de
-critique qu’un sort indique est un nombre entier de vingtièmes, si bien que chaque sort qui lance le dé indique la
-face qu’il lui faut.
+Un sort indique sa chance de critique en pourcentage : Incinerate indique Crit
+{(creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 100} %. Chaque chance de critique du jeu est un multiple de 5 %.
 
-sources: ADR 0011, ADR 0056, ADR 0100, ADR 0105, game-rules#implemented
+sources: ADR 0011, ADR 0056, ADR 0100, ADR 0105, ADR 0208, game-rules#implemented

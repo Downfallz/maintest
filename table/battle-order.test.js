@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { battleOrder, battleTieGroups, createBattleOrderReveal, orderReason, rollOffDice, tieMarks } from './battle-order.js';
+import { battleOrder, battleTieGroups, createBattleOrderReveal, orderReason, tieMarks } from './battle-order.js';
 import { livePresentation } from './battle-live.js';
 
 const slot = (creature, owner = 'Player1', speed = 'Quick', initiative = 5) => ({ creature, owner, speed, initiative });
-// One Instinct tie across teams settled by d20 rolls (2 and 1 for us, 4 for them), then a Precision pair of our own.
+// One Instinct tie across teams settled at random (2 and 1 for us, 4 for them), then a Precision pair of our own.
 const timeline = [slot(2), slot(4, 'Player2'), slot(1), slot(5, 'Player2', 'Standard', 3), slot(3, 'Player1', 'Standard', 3)];
 const rolls = [{ creature: 2, rolls: [11, 18] }, { creature: 4, rolls: [11, 8] }, { creature: 1, rolls: [2] }];
 const board = { slot: 'Player1', roundNumber: 2, subPhase: 'Activation', phase: 'Combat', activationCursor: 2, timeline, rollOffs: rolls,
@@ -26,8 +26,10 @@ test('every slot is upcoming while intents are declared', () => {
 for (const subPhase of ['Cleanup', 'Finalization']) test(`every slot is completed in ${subPhase}`, () => {
   assert.ok(order({ board: { ...board, subPhase } }).rows.every(row => row.state === 'Completed'));
 });
-test('a slot shows the recorded d20 rolls, rerolls included', () => {
-  assert.equal(order().rows[0].roll, 'd20 11 → 18');
+test('a slot a tie between the teams placed says it was settled at random, and never the faces the record keeps', () => {
+  assert.deepEqual(order().rows.map(row => row.tie), ['Tie settled at random', 'Tie settled at random', 'Tie settled at random', '', '']);
+  assert.equal(order().randomTie, true);
+  assert.doesNotMatch(JSON.stringify(order()), /d20|\b(11|18)\b/);
 });
 test('a defeated or stunned creature keeps its slot and says so', () => {
   const rows = order().rows;
@@ -50,7 +52,7 @@ const ties = { tieOrder: { ties: [[2, 1], [3, 6]] } };
 const tieBoard = { ...board, subPhase: 'TieOrder', allies: [...board.allies, { id: 6, name: 'Ally 6', isAlive: true }],
   timeline: [...timeline.slice(0, 4), slot(3, 'Player1', 'Standard', 3), slot(6, 'Player1', 'Standard', 3)] };
 const tieGroups = (tapped = []) => battleTieGroups(view({ board: tieBoard, options: ties }), tapped);
-test('a tie group keeps the places the dice gave it, around the opponent\'s', () => {
+test('a tie group keeps the places the host gave it, around the opponent\'s', () => {
   assert.deepEqual(tieGroups()[0].places, [1, 3]);
 });
 test('the chosen occupants fill their group\'s places in order', () => {
@@ -59,8 +61,11 @@ test('the chosen occupants fill their group\'s places in order', () => {
 test('an opponent place inside the tie is named as fixed', () => {
   assert.deepEqual(tieGroups()[0].fixed.map(row => row.position), [2]);
 });
-test('a group settled by d20 rolls says so, and a same-team group does not', () => {
-  assert.equal(tieGroups()[0].rolled, true); assert.equal(tieGroups()[1].rolled, false);
+test('a group settled at random says so and which team got the earlier place, and a same-team group does not', () => {
+  assert.equal(tieGroups()[0].random, true); assert.equal(tieGroups()[0].earlier, 'Your team');
+  assert.equal(tieGroups()[1].random, false); assert.equal(tieGroups()[1].earlier, null);
+  const theirs = { ...tieBoard, timeline: [slot(4, 'Player2'), slot(2), slot(1), ...tieBoard.timeline.slice(3)] };
+  assert.equal(battleTieGroups(view({ board: theirs, options: ties }))[0].earlier, 'Opponent');
 });
 test('a group without positions in the snapshot leaves them unknown', () => {
   const groups = battleTieGroups(view({ board: { ...tieBoard, timeline: [] }, options: ties }));
@@ -125,15 +130,6 @@ test('an order being read stays unread until Continue', () => {
   controller.read(); assert.equal(controller.model().unread, null);
 });
 
-test('roll-off dice say which tie each broke and where its creature finished in it', () => {
-  const slot = (creature, speed, initiative) => ({ creature, speed, initiative, owner: creature < 4 ? 'Player1' : 'Player2' });
-  const board = { timeline: [slot(5, 'Instinct', 8), slot(1, 'Instinct', 8), slot(2, 'Instinct', 7), slot(4, 'Instinct', 7), slot(3, 'Precision', 5)],
-    rollOffs: [{ creature: 1, rolls: [2] }, { creature: 5, rolls: [13] }, { creature: 2, rolls: [9, 9, 17] }, { creature: 4, rolls: [9, 9, 4] }] };
-  assert.deepEqual(rollOffDice(board).map(die => [die.id, die.value, die.group, die.place, die.rivals]),
-    [['5', 13, 1, 1, 1], ['1', 2, 1, 2, 1], ['2', 17, 2, 1, 1], ['4', 4, 2, 2, 1]]);
-  assert.deepEqual(rollOffDice({ timeline: [slot(1, 'Instinct', 8)], rollOffs: [{ creature: 9, rolls: [3] }] }), []);
-});
-
 test('a creature alone in its tempo and initiative is placed by its band and its neighbours\' initiative', () => {
   const ranked = { ...board, timeline: [slot(1, 'Player1', 'Quick', 9), slot(4, 'Player2', 'Quick', 7), slot(2, 'Player1', 'Quick', 5), slot(5, 'Player2', 'Standard', 8)], rollOffs: [] };
   const reason = orderReason(livePresentation(view({ board: ranked })), '4');
@@ -143,26 +139,29 @@ test('a creature alone in its tempo and initiative is placed by its band and its
   assert.deepEqual(reason.lines, ['Instinct: acts before every Precision creature.', 'Initiative 7: after Ally 1 (9), before Ally 2 (5).']);
 });
 
-test('a tie across the teams is explained by the roll-off, with every rolled die and its rerolls', () => {
+test('a tie across the teams is settled at random: the reason names the team that got the earlier place, no face and no reroll', () => {
   const reason = orderReason(livePresentation(view()), '4');
 
-  assert.equal(reason.tie, 'rolled');
-  assert.deepEqual(reason.dice.map(die => [die.id, die.rolls, die.self]), [['2', [11, 18], false], ['4', [11, 8], true], ['1', [2], false]]);
+  assert.equal(reason.tie, 'random');
+  assert.equal(reason.dice, undefined);
   assert.equal(reason.lines[1], 'Initiative 5, tied with Ally 2 and Ally 1.');
+  assert.equal(reason.lines[2], 'Settled at random: your team got the earlier place.');
+  assert.doesNotMatch(reason.lines.join(' '), /d20|roll|dice|\b(11|18|8)\b/i);
+  const theirs = { ...board, timeline: [slot(4, 'Player2'), slot(2), slot(1), ...timeline.slice(3)] };
+  assert.equal(orderReason(livePresentation(view({ board: theirs })), '2').lines[2], 'Settled at random: the opponent got the earlier place.');
 });
 
-test('a creature that shared a rolled tie with its own team says its owner ordered those places', () => {
+test('a creature that shared a random tie with its own team says its owner ordered those places', () => {
   assert.match(orderReason(livePresentation(view()), '2').lines.at(-1), /^Within its team's places, you chose the order\.$/);
 });
 
-test('a tie within one team rolls nothing: its owner chose the order', () => {
+test('a tie within one team is not settled at random: its owner chose the order', () => {
   const own = { ...board, timeline: [slot(1, 'Player1', 'Quick', 6), slot(3, 'Player1', 'Quick', 6), slot(4, 'Player2', 'Quick', 2)], rollOffs: [] };
 
   const reason = orderReason(livePresentation(view({ board: own })), '3');
 
   assert.equal(reason.tie, 'own');
-  assert.deepEqual(reason.dice, []);
-  assert.equal(reason.lines.at(-1), 'Same team: you chose the order, no dice.');
+  assert.equal(reason.lines.at(-1), 'Same team: you chose the order.');
 });
 
 test('a creature with no place in the order has no reason', () => {

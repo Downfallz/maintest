@@ -1,6 +1,6 @@
 # What the screen shows {#the-screen}
 
-The app is the table. It keeps the count of every number, rolls every die and walks every step nobody decides.
+The app is the table. It keeps the count of every number, settles every chance and walks every step nobody decides.
 You make the decisions; this Part says what you see while you make them.
 
 ## Your creatures and theirs {#the-creatures}
@@ -32,9 +32,10 @@ sources: ADR 0011, ADR 0042, ADR 0089, game-rules#match-lifecycle
 The steps nobody decides are played for you, and the history records each of them:
 
 - **Upkeep.** Each creature's Energy gain, its Regeneration and its Bleed.
-- **The timeline.** The order of the turns, built from the tempos and the initiatives, with the d20 roll-offs
-  that break a tie between the teams.
-- **The dice.** Every critical roll, on a d20 the screen shows.
+- **The timeline.** The order of the turns, built from the tempos and the initiatives. A tie between the teams
+  is settled at random, and the timeline says which team got the earlier place.
+- **The criticals.** Every critical chance, when its spell resolves. A cast that crits shows **Crit!** beside its
+  caster; a cast that does not shows nothing there. The history says the chance the cast had.
 - **The countdown.** Every condition counts down in the Aftermath, and ends at zero.
 - **The end.** The match ends the moment a team is defeated, or when the last round ends.
 
@@ -43,7 +44,7 @@ spells it can pay for now, the targets a spell may take. A choice it does not of
 
 The **Help** dialog walks through the round you are in. The history explains each result after it resolves.
 
-sources: ADR 0010, ADR 0063, ADR 0083, ADR 0112, ADR 0154, game-rules#round-sequence-adr-0010
+sources: ADR 0010, ADR 0063, ADR 0083, ADR 0112, ADR 0154, ADR 0208, game-rules#round-sequence-adr-0010
 
 ## The numbers of this table {#the-numbers}
 
@@ -60,7 +61,7 @@ the same when they do. This book draws every number from the rule set and the co
 | Last round | The round after which the match ends on Health | {rules.roundCap} |
 | Critical multiplier | What a critical multiplies the damage and the healing by | {rules.criticalMultiplier} |
 
-The die never changes: it is a **d20**, for the critical roll and the roll-off alike. Every critical chance a
-spell prints is a whole number of twentieths, so every spell that rolls prints the face it needs.
+A spell prints its critical chance as a percent: Incinerate prints Crit
+{(creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 100}%. Every critical chance in the game is a multiple of 5%.
 
-sources: ADR 0011, ADR 0056, ADR 0100, ADR 0105, game-rules#implemented
+sources: ADR 0011, ADR 0056, ADR 0100, ADR 0105, ADR 0208, game-rules#implemented

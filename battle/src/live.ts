@@ -6,7 +6,7 @@ import { creatureInspection, creatureCues, creatureSpoken } from '../../table/ba
 import { chipElement, conditionIcons, iconElement, type EffectChip } from './condition-icons';
 import { inspectionControls } from './inspection';
 import { battleTargetState, battleTargetTag } from '../../table/battle-targets.js';
-import { battleOrder, createBattleOrderReveal, rollOffDice, tieMarks } from '../../table/battle-order.js';
+import { battleOrder, createBattleOrderReveal, tieMarks } from '../../table/battle-order.js';
 import { orderControls } from './order';
 import { createBattleGrowth, crestInset } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
@@ -607,7 +607,7 @@ function render() {
     $('playback-pacing').hidden = false; $('playback-pacing').dataset.kind = 'order';
     $('playback-next').hidden = true; $('playback-skip').hidden = true;
     text('reading-kind', 'Turn order'); text('reading-title', `Round ${order.round ?? '—'}`);
-    readingDetail({ detail: [...order.summary, order.hasRolls ? 'Ties broken by d20' : ''].filter(Boolean).join(' · ') });
+    readingDetail({ detail: [...order.summary, order.randomTie ? 'Tie settled at random' : ''].filter(Boolean).join(' · ') });
     $('reading-detail').hidden = false; text('reading-what', ', turn order details');
     if (!orderShown && !document.querySelector('dialog:modal')) $('order-continue').focus({ preventScroll: true });
   }
@@ -678,12 +678,12 @@ function render() {
   // Every effect on a creature is a chip above it: a spell's outcomes at impact, an upkeep tick, a condition
   // ending. Only a turnover with no recorded board to stand on keeps its plaques in the scene, by name.
   const impact = Boolean(playbackState.cue) && (playbackState.stage === 'impact' || playbackState.stage === 'resolved');
-  type OrderRow = { id: string; position: number; tempo: string; speed: string; roll: string };
+  type OrderRow = { id: string; position: number; tempo: string; speed: string; tie: string };
   const orderRows = new Map<string, OrderRow>(orderUI.isReading() && !replay.active ? (order.rows as OrderRow[]).map(row => [row.id, row]) : []);
   for (const one of creatures) {
     const node = nodes.get(one.id); if (!node) continue;
     const place = orderRows.get(one.id);
-    const chips: EffectChip[] = place ? [{ kind: 'order', value: String(place.position), label: place.tempo, tempo: place.speed, text: `Turn ${place.position} · ${place.tempo}${place.roll ? ` · ${place.roll}` : ''}` }] : impact
+    const chips: EffectChip[] = place ? [{ kind: 'order', value: String(place.position), label: place.tempo, tempo: place.speed, text: `Turn ${place.position} · ${place.tempo}${place.tie ? ` · ${place.tie}` : ''}` }] : impact
       ? (playbackState.cue?.effects ?? []).filter((item: { creature: string }) => item.creature === one.id).map((item: { chip: EffectChip }) => item.chip)
       : (markers ?? []).filter((marker: { id: string }) => marker.id === one.id).flatMap((marker: { lines: { chip?: EffectChip; text: string }[] }) => marker.lines.map(line => line.chip ?? { kind: 'other', value: line.text, text: line.text }));
     effectChips(node, chips);
@@ -699,18 +699,12 @@ function render() {
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
-  // The d20s beside the creatures that rolled them (ADR 0154): each roll-off's last throw while the revealed order is
-  // read, and a caster's critical roll as its action lands.
-  type Die = NonNullable<SceneFrame['dice']>[number];
-  const dice: Die[] = [];
-  // A roll-off's dice say which tie they broke (its group) and where each creature finished in it.
-  if (orderReading) for (const die of rollOffDice(view?.board)) {
-    dice.push({ id: die.id, value: die.value, tone: 'roll', key: `order:${board.round}:${die.id}:${die.rolls.join('-')}`, group: die.group, place: die.place, rivals: die.rivals });
-  }
-  const critical = impact ? (playbackState.cue as { roll?: { value: number; critical: boolean; needed?: number | null } | null } | null)?.roll : null;
-  if (critical && frame.actor) dice.push({ id: frame.actor, value: critical.value, tone: critical.critical ? 'crit' : 'miss', key: `crit:${playbackState.sequence}`, needed: critical.needed ?? null });
+  // A caster's critical as its action lands (ADR 0208): the word `Crit!` beside it, never a die. A cast that could
+  // crit and did not shows nothing, and a tie's draw is said in the order's words alone.
+  const landed = impact ? (playbackState.cue as { roll?: { critical: boolean } | null } | null)?.roll : null;
+  const crit = landed?.critical && frame.actor ? { id: frame.actor, key: `crit:${playbackState.sequence}` } : null;
   // Each creature's lasting conditions as its badges name them, which the scene draws on its figure (battle-auras.js).
-  frame = { ...frame, dice, creatures: frame.creatures.map(one => ({ ...one,
+  frame = { ...frame, crit, creatures: frame.creatures.map(one => ({ ...one,
     statuses: conditionIcons(one as Parameters<typeof conditionIcons>[0], catalogue?.effects ?? []).map(icon => icon.key) })) };
   scene.present(frame, reduced(), playbackState.rate, replay.active);
   const reveal = growth.receipt();
@@ -987,7 +981,7 @@ async function discover(autoResume = true) {
 
 // The creatures are placed here, so what the pop-ups offer covers is read here too (#1206).
 scene.onLayout = positions => { placeHitTargets(creatures.map(one => nodes.get(one.id)!), positions); orderUI.place(); laidOut = true; pushOffer?.cover(); };
-scene.onDice = shown => { if (shown) $('battle').dataset.dice = shown; else delete $('battle').dataset.dice; };
+scene.onCrit = id => { if (id) $('battle').dataset.crit = id; else delete $('battle').dataset.crit; };
 scene.onHalo = id => { if (id) $('battle').dataset.halo = id; else delete $('battle').dataset.halo; };
 scene.onAuras = shown => { if (shown) $('battle').dataset.auras = shown; else delete $('battle').dataset.auras; };
 scene.onFocus = ids => { if (ids) $('battle').dataset.focusLit = ids; else delete $('battle').dataset.focusLit; };

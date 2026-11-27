@@ -411,6 +411,29 @@ test('a name of several words written as a phrase is found, its capitals and an 
   assert.deepEqual(miscased([{ path: 'script', texts }]), ['script: "Full mutation tree" writes mutation tree']);
 });
 
+// The app says a chance as a percent and a tie between the teams as settled at random; the die belongs to the print
+// edition (player-terminology.md, ## Chance and ties, ADR 0208). The record keeps the faces: no page prints one.
+const DIE_WORDS = /\bd20\b|\bdic?e\b|\broll[\s-]?offs?\b|\b(re)?roll(s|ed)?\b/i;
+const dieWords = files => files.flatMap(({ path, texts }) =>
+  texts.filter(text => DIE_WORDS.test(text)).map(text => `${path}: "${text.trim().slice(0, 100)}"`));
+const tablePages = () => sources().filter(({ path }) => path.startsWith('table/') || path.startsWith('battle/src/'));
+
+test('no page of the table and no label of the battle speaks of a die, a roll or a roll-off', () => {
+  assert.ok(/^## Chance and ties$/m.test(terminology), 'the page says how a chance and a tie are worded');
+  assert.deepEqual(dieWords(tablePages()), []);
+});
+
+test('a die is found in a label, a sentence and a tooltip, and a scroll or a role is not one', () => {
+  const texts = scriptText(
+    "a.textContent = `d20 ${face}+`; b.title = 'Ties broken by D20'; c.textContent = 'The dice gave your side its places'; d.textContent = 'A roll-off broke it'; " +
+    "e.textContent = 'Recorded rolls'; f.textContent = 'Rerolled once'; g.textContent = 'Scroll to the top'; h.title = 'A role of its own'; i.textContent = 'Enrolled players';",
+  );
+  assert.deepEqual(dieWords([{ path: 'script', texts }]), [
+    'script: "d20  +"', 'script: "Ties broken by D20"', 'script: "The dice gave your side its places"', 'script: "A roll-off broke it"',
+    'script: "Recorded rolls"', 'script: "Rerolled once"',
+  ]);
+});
+
 // The notification modules speak of "this table" and of a "notification service" (player-terminology.md,
 // ## Notifications, #1233, #1266): the host and the push service are the engineers' words.
 const NOTIFICATION_MODULES = ['table/push.js', 'table/devices.js', 'table/battle-services.js'];

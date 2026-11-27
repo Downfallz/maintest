@@ -86,12 +86,13 @@ n’inflige rien au round 5. Chaque cible subit ensuite {spell:summon_minions:v1
 
 sources: ADR 0041, game-rules#implemented, game-rules#round-sequence-adr-0010
 
-## Le jet de critique {#the-critical-roll}
+## La chance de critique {#the-critical-roll}
 
-Quand le sort d’une créature en **Précision** se résout et que le sort indique une chance de critique, un d20 est
-lancé **une fois pour tout le lancer**. Le sort indique la face qu’il lui faut : d20 : 11+ signifie 11 ou plus. Une
-créature en **Instinct** ne lance jamais le dé, et un sort qui n’indique aucune chance ne lance jamais le dé. La
-chance propre à la créature, {creature.criticalChance * 100} %, s’ajoute à celle du sort.
+Quand le sort d’une créature en **Précision** se résout et que le sort indique une chance de critique, l’application
+tranche cette chance **une fois pour tout le lancer** : chaque cible reçoit le critique, ou aucune. Une créature en
+**Instinct** n’obtient jamais de critique, et un sort qui n’indique aucune chance non plus. La chance propre à la
+créature, {creature.criticalChance * 100} %, s’ajoute à celle du sort. Un lancer qui obtient un critique montre
+**Crit!** à côté de son lanceur, et l’historique dit la chance qu’il avait.
 
 Un critique multiplie par {rules.criticalMultiplier}, en laissant tomber toute fraction, **ce que le lancer met
 maintenant sur la Santé d’une cible**, et rien d’autre :
@@ -106,19 +107,19 @@ L’ordre est celui de [la résolution d’un sort](#resolving-a-spell) : ajoute
 soustrayez la Défense.
 
 *Exemple.* La Créature 2 est en Précision et lance Vital Surge{?spell:restorative_gush:v1.origin = 'Ally'} sur la Créature 3, dont la Santé est de
-{creature.health - 12} sur {creature.health} : soin {spell:restorative_gush:v1.heal}, d20 :
-{21 - (creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 20}+. Le d20 donne un critique : le
+{creature.health - 12} sur {creature.health} : soin {spell:restorative_gush:v1.heal}, Crit
+{(creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 100} %. Le lancer obtient un critique : le
 soin devient {floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier)}, et la Créature 3 passe à
 {min(creature.health, creature.health - 12 + floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier))}.
 Un soin ne dépasse jamais la Santé avec laquelle une créature a commencé.
 
-sources: ADR 0033, ADR 0042, ADR 0100, ADR 0154, game-rules#implemented, game-rules#round-sequence-adr-0010
+sources: ADR 0033, ADR 0042, ADR 0100, ADR 0154, ADR 0208, game-rules#implemented, game-rules#round-sequence-adr-0010
 
 ```card
 id: critical
 title: Critique
-Quand son sort se résout, une créature en Précision lance un d20 contre le nombre indiqué.
+Le sort d’une créature en Précision obtient un critique selon la chance qu’il indique, tranchée une fois.
 Un critique multiplie dégâts et soins du sort sur ses cibles.
-Instinct ne lance jamais le dé.
-> Un sort indique d20 : 11+. Un 14 est critique : ses 7 dégâts deviennent {floor(7 * rules.criticalMultiplier)}.
+Instinct n’obtient jamais de critique.
+> Un sort indique Crit 50 %. Sur un critique, ses 7 dégâts deviennent {floor(7 * rules.criticalMultiplier)}.
 ```

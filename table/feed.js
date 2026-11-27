@@ -28,9 +28,9 @@ export function resolutionText(event, cards) {
   const parts = [`${action.actor ?? ''}: ${spell}`];
 
   // Said both ways, and not only when it landed. Stage 4 owes the line "whether it landed" (app-roadmap.md),
-  // and silence does not say that: a player who sees nothing cannot tell a roll that missed from a line that
-  // forgot to mention it, and the card they cast advertised a threshold they were watching for. A fizzle is
-  // the one resolution that never rolled, so it is the one that says nothing about the die.
+  // and silence does not say that: a player who sees nothing cannot tell a chance that missed from a line that
+  // forgot to mention it, and the card they cast advertised a chance they were watching for. A fizzle is
+  // the one resolution that never had its chance, so it is the one that says nothing of a critical.
   if (resolution.fizzled === true) {
     parts.push(`fizzled: ${errorText(resolution.fizzleReason)}`);
   } else {
@@ -333,8 +333,8 @@ function recapAction(entry, board, cards) {
     spell: cards?.get?.(action.spell)?.name ?? action.spell ?? 'Unknown spell',
     targets: (action.targets ?? []).map(id => recapCreature(id, board)),
     status: resolution.fizzled ? 'Fizzled' : resolution.isCritical ? 'Critical' : 'Resolved',
-    // The d20 face the critical roll showed (ADR 0154); null with no chance to crit, on a fizzle, or from a record
-    // older than the field.
+    // The face the critical roll showed, as the record keeps it (ADR 0154); the pages print none (ADR 0208).
+    // Null with no chance to crit, on a fizzle, or from a record older than the field.
     criticalRoll: !resolution.fizzled && Number.isInteger(resolution.criticalRoll) ? resolution.criticalRoll : null,
     reason: resolution.fizzled ? errorText(resolution.fizzleReason) : '',
     effects: (event.appliedOutcomes ?? []).map(outcome => ({

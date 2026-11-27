@@ -137,9 +137,9 @@ sources: ADR 0101, ADR 0106, ADR 0114, game-rules#implemented
 
 - **Instinct** agit avant chaque créature en Précision, et **ne peut pas obtenir de critique ce round**, quoi que
   son sort indique.
-- **Précision** agit après chaque créature en Instinct, et garde son jet de critique.
+- **Précision** agit après chaque créature en Instinct, et garde sa chance de critique.
 
-Choisissez Instinct pour porter un coup qui n’a pas besoin des dés, ou pour agir avant quelque chose qui vous
+Choisissez Instinct pour porter un coup qui n’a pas besoin d’un critique, ou pour agir avant quelque chose qui vous
 vaincrait. Choisissez Précision quand le critique est ce que vous espérez, ou quand vous voulez que le plateau
 change avant d’agir. Un tempo ne choisit aucun sort : le sort se choisit quand vient le tour de la créature.
 
@@ -150,14 +150,14 @@ qu’elle puisse lancer. Une créature vaincue n’est pas dans le round non plu
 Créatures 5 et 6 seulement ; le premier joueur pour les Créatures 1, 2 et 3. Cinq tempos sont révélés, et le round
 aura cinq tours, pas six.
 
-sources: ADR 0010, ADR 0072, ADR 0112, game-rules#round-sequence-adr-0010
+sources: ADR 0010, ADR 0072, ADR 0112, ADR 0208, game-rules#round-sequence-adr-0010
 
 ```card
 id: tempo
 title: Tempo
 À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.
 Instinct agit avant toute créature en Précision, sans critique ce round.
-Précision agit après Instinct et garde le jet de critique.
+Précision agit après Instinct et garde sa chance de critique.
 > Une créature en Instinct à {creature.initiative} d’initiative agit avant une créature en Précision à {creature.initiative + 4}.
 ```
 
@@ -176,10 +176,9 @@ arrive pendant le combat change l’ordre du round suivant, pas celui-ci.
 Instinct vient toujours en premier. Une créature en Instinct à une initiative de 0 agit avant une créature en
 Précision à 20.
 
-**Une égalité entre les équipes** se tranche par un **départage** : chaque créature à égalité lance un d20, et le
-plus haut jet prend la première place. Les créatures sur un nombre que les deux équipes ont obtenu relancent ; un
-nombre qu’une seule équipe a obtenu tient. Le départage décide quelles places chaque équipe occupe. Comment une
-équipe ordonne ses propres créatures dans ses places, c’est [l’étape suivante](#tie-order).
+**Une égalité entre les équipes** est tranchée au hasard : l’application tire quelle équipe prend chaque place de
+l’égalité. La frise montre l’égalité comme tranchée au hasard, et quelle équipe a obtenu la place la plus tôt.
+Comment une équipe ordonne ses propres créatures dans ses places, c’est [l’étape suivante](#tie-order).
 
 *Exemple.* Les Créatures 1, 2, 4 et 5 ont acquis Warped, et les Créatures 1 et 4 ont depuis acquis Stormborn. Les
 Créatures 1 et 4 ont une initiative de
@@ -188,19 +187,19 @@ et 5 de {creature.initiative + tier:occultist:v1.initiativeBonus}, et les Créat
 {creature.initiative}. Au round précédent, un Ice Grip a diminué l’initiative de la Créature 2 de
 {spell:frostbite:v1.initiativeDebuff} : elle est de
 {max(0, creature.initiative + tier:occultist:v1.initiativeBonus - spell:frostbite:v1.initiativeDebuff)} ce round.
-Les Créatures 1 et 4 ont choisi Instinct, les autres Précision. Les Créatures 1 et 4 sont à égalité, et obtiennent
-8 et 15 : la Créature 4 agit en premier, puis la Créature 1. Puis les créatures en Précision, par leur initiative :
-la Créature 5, puis les Créatures 3 et 6, à égalité entre les équipes, qui se départagent aussi, et la Créature 2
-en dernier.
+Les Créatures 1 et 4 ont choisi Instinct, les autres Précision. Les Créatures 1 et 4 sont à égalité, et l’égalité
+est tranchée au hasard : la Créature 4 agit en premier, puis la Créature 1. Puis les créatures en Précision, par
+leur initiative : la Créature 5, puis les Créatures 3 et 6, à égalité entre les équipes, tranchée au hasard elle
+aussi, et la Créature 2 en dernier.
 
-sources: ADR 0036, ADR 0059, ADR 0063, game-rules#round-sequence-adr-0010
+sources: ADR 0036, ADR 0059, ADR 0063, ADR 0208, game-rules#round-sequence-adr-0010
 
 ```card
 id: initiative
 title: Initiative
 L’initiative ordonne les créatures dans leur tempo, la plus haute en premier.
 Chaque mutation ajoute son bonus à l’initiative de base, pour de bon.
-Une égalité entre les deux équipes se tranche par un départage au d20.
+Une égalité entre les deux équipes est tranchée au hasard.
 > En Précision, la créature à {creature.initiative + 2} d’initiative agit avant celle à {creature.initiative}.
 ```
 
@@ -208,15 +207,14 @@ Une égalité entre les deux équipes se tranche par un départage au d20.
 
 *Commandement · Ordre des égalités.* Là où votre équipe occupe deux places ou plus dans une même égalité, vous
 choisissez laquelle de vos créatures à égalité prend quelle place. Les places de l’autre équipe ne bougent pas. Une
-égalité que votre équipe occupe seule est aussi à vous d’ordonner, sans jet. Les deux joueurs ordonnent en secret,
-et les ordres sont révélés ensemble. Un round sans une telle égalité ne demande rien à personne.
+égalité que votre équipe occupe seule est aussi à vous d’ordonner, et rien n’est tiré pour elle. Les deux joueurs
+ordonnent en secret, et les ordres sont révélés ensemble. Un round sans une telle égalité ne demande rien à personne.
 
-*Exemple.* Les Créatures 3, 5 et 6 sont à égalité dans le groupe Précision et obtiennent 11, 11 et 2. Les deux
-équipes ont obtenu 11, donc les Créatures 3 et 5 relancent : 4 et 17. Les places vont au second joueur, puis au
-premier, puis au second. Le second joueur en occupe deux et veut que la Créature 6 agisse en premier : la Créature
+*Exemple.* Les Créatures 3, 5 et 6 sont à égalité dans le groupe Précision. L’égalité est tranchée au hasard, et
+les places vont au second joueur, puis au premier, puis au second. Le second joueur en occupe deux et veut que la Créature 6 agisse en premier : la Créature
 6 prend la première place, la Créature 3 la deuxième, la Créature 5 la troisième.
 
-sources: ADR 0063, game-rules#round-sequence-adr-0010
+sources: ADR 0063, ADR 0208, game-rules#round-sequence-adr-0010
 
 ## Le tour de votre créature {#your-turn}
 
@@ -268,8 +266,8 @@ sources: ADR 0083, game-rules#round-sequence-adr-0010
 Un sort se résout entièrement avant que vienne le tour suivant, dans cet ordre :
 
 1. **Payer.** L’Énergie du lanceur baisse du coût du sort.
-2. **Lancer le dé de critique**, une fois pour tout le lancer, si le lanceur est en Précision et que le sort indique
-   une chance. Voir [le jet de critique](#the-critical-roll).
+2. **Le critique**, tranché une fois pour tout le lancer, si le lanceur est en Précision et que le sort indique
+   une chance. Voir [la chance de critique](#the-critical-roll).
 3. **Chaque effet, sur chaque cible.** Un **coup**, ce sont les dégâts du sort, plus le **bonus de dégâts** du lanceur,
    multipliés sur un critique, moins la **Défense** de la cible, jamais en dessous de zéro. Un soin ne dépasse
    jamais la Santé avec laquelle une créature a commencé. Un drain d’Énergie prend au plus ce que la cible a. Un
@@ -284,23 +282,23 @@ Un coup ne va jamais au-delà de la Santé qui reste : une créature à 3 points
 sort qui ne change rien sur une cible, 0 dégât à travers une Défense ou un soin à Santé pleine, ne lui a rien fait.
 
 *Exemple.* La Créature 2 est en Précision, à 4 points d’Énergie, et lance Incinerate{?spell:engulfing_flames:v1.origin = 'Enemy'} sur la Créature 5 : coût
-{spell:engulfing_flames:v1.energyCost}, dégâts {spell:engulfing_flames:v1.damage}, d20 :
-{21 - (creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 20}+. La Créature 5 a lancé Carapace
+{spell:engulfing_flames:v1.energyCost}, dégâts {spell:engulfing_flames:v1.damage}, Crit
+{(creature.criticalChance + spell:engulfing_flames:v1.criticalChance) * 100} %. La Créature 5 a lancé Carapace
 au round précédent : sa Défense est de {creature.defense + spell:full_plate:v1.defenseBuff}.
 
 - Payer : l’Énergie de la Créature 2 passe à {4 - spell:engulfing_flames:v1.energyCost}.
-- Le d20 donne un critique : {spell:engulfing_flames:v1.damage} × {rules.criticalMultiplier} =
+- Le lancer obtient un critique : {spell:engulfing_flames:v1.damage} × {rules.criticalMultiplier} =
   {floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier)}.
 - Moins la Défense : la Créature 5 perd
   {max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - (creature.defense + spell:full_plate:v1.defenseBuff))},
   et sa Santé passe de {creature.health} à
   {max(0, creature.health - max(0, floor(spell:engulfing_flames:v1.damage * rules.criticalMultiplier) - (creature.defense + spell:full_plate:v1.defenseBuff)))}.
 
-Si le jet avait échoué, elle aurait perdu
+Sans critique, elle aurait perdu
 {max(0, spell:engulfing_flames:v1.damage - (creature.defense + spell:full_plate:v1.defenseBuff))}. **Multipliez
 d’abord, soustrayez ensuite** : l’autre ordre donne un nombre que le jeu n’inflige jamais.
 
-sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, game-rules#round-sequence-adr-0010
+sources: ADR 0033, ADR 0035, ADR 0076, ADR 0083, ADR 0101, ADR 0208, game-rules#round-sequence-adr-0010
 
 ```card
 id: defense
@@ -319,8 +317,8 @@ que le critique multiplie et avant que la Défense soit soustraite. Il ne touche
 ligne du lanceur.
 
 *Exemple.* La Créature 4 possède Apex, est en Précision, et lance Blood Price{?spell:hateful_sacrifice:v1.origin = 'Enemy'} sur la Créature 1, dont la Défense est
-de 3 : dégâts {spell:hateful_sacrifice:v1.damage}, d20 :
-{21 - (creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 20}+. Ajoutez le bonus :
+de 3 : dégâts {spell:hateful_sacrifice:v1.damage}, Crit
+{(creature.criticalChance + spell:hateful_sacrifice:v1.criticalChance) * 100} %. Ajoutez le bonus :
 {spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus}. Sur un critique,
 {floor((spell:hateful_sacrifice:v1.damage + tier:apex:v1.damageBonus) * rules.criticalMultiplier)}, moins 3 : la
 Créature 1 perd
@@ -336,7 +334,7 @@ Strike, à {spell:heavy_strike:v1.damage}, inflige
 {spell:heavy_strike:v1.damage + spell:thundering_seal:v1.damageBuff + spell:adrenaline_tonic:v1.damageBuff} à une
 créature sans Défense. Les renforts de dégâts se cumulent : ajoutez-les tous.
 
-sources: ADR 0101, game-rules#round-sequence-adr-0010
+sources: ADR 0101, ADR 0208, game-rules#round-sequence-adr-0010
 
 ## La brèche {#sunder}
 

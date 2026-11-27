@@ -341,7 +341,7 @@ labelled initiative slots, coloured stats/speeds and an ordered colour gradient 
 without decoding pairs of numbers. The atlas displays spells side by side and keeps the shared team-pick
 budget visible; picks are shared per evolution opportunity and capped by eligible creatures, with at most
 one package bought per creature (ADR 0066). The guide shows the host-projected next evolution round.
-TieOrder has its own phase label and keyboard controls, and timeline slots show the d20 roll-off. `CardCue` metadata supplies
+TieOrder has its own phase label and keyboard controls, and timeline slots say a tie settled at random (ADR 0208; the d20 roll-off before it). `CardCue` metadata supplies
 short semantic badges for spell faces, with a critical reminder from the host. The maintainer confirmed that
 Quick cannot crit and Standard can; main now enforces this rule in the engine.
 These presentation changes do not alter combat resolution or the team's evolution allowance.

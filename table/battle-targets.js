@@ -63,7 +63,7 @@ export function battleTargetPreview(model) {
   const note = targetNote(model);
   const base = { spell, cost: 'Cost preview unavailable', reason: '', critical: '', note, rows: [], caster: '',
     costValue: null, energyAfter: null, critChance: null, casterEffects: [],
-    caveat: 'Estimate before caps and stacking. Rolls can change outcomes; History records the actual result.' };
+    caveat: 'Estimate before caps and stacking. A critical can change the outcome; History records the actual result.' };
   if (!guide) return { ...base, reason: 'Preview unavailable for this question.' };
   const cost = Number.isFinite(guide.cost) && Number.isFinite(guide.energyAfterCost)
     ? `${guide.cost} energy → ${guide.energyAfterCost} after cost` : base.cost;

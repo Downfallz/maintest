@@ -1,5 +1,6 @@
 import { chipText, laneOf } from './board.js';
-import { rollText } from './timeline.js';
+import { hasCritical } from './card.js';
+import { tieText } from './timeline.js';
 import { missingRoundEnergy } from './battle-upkeep.js';
 import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnoverSteps, upkeepText } from './feed.js';
 import { combatSnapshot, combatChanges } from './combat-fx.js';
@@ -24,7 +25,7 @@ const spellName = (id, catalogue) => catalogue?.cards?.find(card => card.id === 
 const initiativeText = value => Number.isFinite(value) ? `Initiative ${value}` : 'Initiative not recorded';
 const orderRows = (timeline, board) => (Array.isArray(timeline?.slots) ? timeline.slots : [])
   .map((slot, index) => line([`${index + 1}`, who(slot.creature, board), tempoLabel(slot.speed), initiativeText(slot.initiative),
-    rollText(timeline.rollOffs, slot.creature) || 'No d20 roll recorded'].join(' · ')));
+    tieText(timeline.rollOffs, slot.creature)].filter(Boolean).join(' · ')));
 
 // Named the way the scene names it (creatureLabel), so a line in the journal reads the same as the figure.
 function person(id, board) {
@@ -53,13 +54,18 @@ function combatRow(entry, board, catalogue) {
   const action = resolvedSince([entry], undefined, board, cards)[0];
   const resolution = entry.event.resolution ?? {};
   const status = action.status === 'Resolved' && resolution.isCritical === false ? 'No critical' : action.status;
+  // The chance the cast had (ADR 0208): the card's own, said only when the record shows the cast could crit.
+  // A record from before the roll was kept says the outcome alone.
+  const card = cards.get(resolution.action?.spell);
+  const chance = Number.isInteger(action.criticalRoll) && hasCritical(card) ? card.critical : '';
+  const said = chance ? `${action.status === 'Critical' ? 'Crit' : 'No crit'} · ${chance}` : status;
   const targets = action.targets.map(target => who(target.id, board)).join(', ');
   const effects = action.effects.map(effect => line(`${who(effect.target.id, board)} · ${effect.text}`, effect.tone));
-  return { actor: String(action.actor.id), spell: action.spell, portrait: cards.get(resolution.action?.spell)?.visual?.portrait, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
-    summary: `${action.spell} · ${status}${targets ? ` → ${targets}` : ''}`,
+  return { actor: String(action.actor.id), spell: action.spell, portrait: card?.visual?.portrait, title: `${who(action.actor.id, board)} · ${action.spell}`, category: 'Combat', status,
+    summary: `${action.spell} · ${said}${targets ? ` → ${targets}` : ''}`,
     sections: [
       { title: 'Caster and spell', items: [line(`${who(action.actor.id, board)} · ${action.spell}`)] },
-      { title: 'Targets and result', items: [line(targets || 'No targets'), line(status), ...(action.reason ? [line(`Fizzled: ${action.reason}`, 'harm')] : [])] },
+      { title: 'Targets and result', items: [line(targets || 'No targets'), line(said), ...(action.reason ? [line(`Fizzled: ${action.reason}`, 'harm')] : [])] },
       { title: 'Applied effects', items: effects.length ? effects : [line('No applied effects recorded.')] },
       { title: 'Dropped targets', items: (resolution.droppedTargets ?? []).map(failure => line(`${who(failure.target, board)} · ${reason(failure.error)}`)) },
       { title: 'Recorded changes', items: frameDetails(action.frame, board) },

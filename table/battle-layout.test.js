@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isPortrait, placements, strikeApproach, dieSpot } from './battle-layout.js';
+import { isPortrait, placements, strikeApproach, calloutSpot } from './battle-layout.js';
 
 const sizes = { phone: [390, 760], phoneLandscape: [844, 300], narrow: [320, 480], desktop: [1440, 850], short: [720, 420] };
 
@@ -100,15 +100,14 @@ test('every figure stands above its caption by as much as the stage has room for
   assert.ok(placements(...sizes.phone).every(one => one.lift > 20));
 });
 
-test('a die and the words under it stay inside the field, whichever edge its figure stands at', () => {
+test('a caster\'s Crit! stays inside the field, whichever edge its figure stands at', () => {
   const field = 400, home = { x: 340, y: 300, size: 120 };
-  const spot = dieSpot(home, 110, field);
-  assert.ok(spot.x + 110 / 2 <= field, 'the words end inside the right edge');
-  assert.ok(spot.x + spot.size / 2 <= field);
-  const left = dieSpot({ x: 10, y: 300, size: 120 }, 110, field);
-  assert.ok(left.x - 110 / 2 >= 0, 'and start inside the left one');
-  // A figure in the open keeps its die beside its head.
-  const middle = dieSpot({ x: 200, y: 300, size: 120 }, 40, field);
+  const spot = calloutSpot(home, 110, field);
+  assert.ok(spot.x + 110 / 2 <= field, 'the word ends inside the right edge');
+  const left = calloutSpot({ x: 10, y: 300, size: 120 }, 110, field);
+  assert.ok(left.x - 110 / 2 >= 0, 'and starts inside the left one');
+  // A figure in the open keeps the word beside its head.
+  const middle = calloutSpot({ x: 200, y: 300, size: 120 }, 40, field);
   assert.equal(middle.x, 200 + 120 * .42);
-  assert.ok(dieSpot({ x: 200, y: 20, size: 120 }, 0, field).y > 0, 'never off the top');
+  assert.ok(calloutSpot({ x: 200, y: 20, size: 120 }, 0, field).y > 0, 'never off the top');
 });

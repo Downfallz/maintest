@@ -78,7 +78,7 @@ The existing `/play` uses it; a future live Phaser adapter can import it without
 | --- | --- |
 | `decisionView(seat, latest, { asked, chosen, answered })` | Adapt an Action into spell/target screens only for the matching seat and asking; hide an already accepted Action until the next poll. Other question kinds pass through. |
 | `presentedView(latest, replay, entries)` | Select the recorded before/after board and the public events up to that point. Clear the question and its options, but keep who is being asked: the spellbook and the Mutation Tree follow that creature while the frame is read. Keep the current view separate. Without a frame, retain current totals, as the replay's existing note explains. |
-| `boardPresentation(board)` | Expose teams, round/phase and ordered timeline slots with position, side, rolls and cursor. Preserve the host's creature stats, conditions and order. |
+| `boardPresentation(board)` | Expose teams, round/phase and ordered timeline slots with position, side, whether a tie settled at random placed it (`tie`, ADR 0208) and cursor. Preserve the host's creature stats, conditions and order. |
 | `activeTurn(board)` | Read the current slot only during Activation; never infer one during planning or cleanup. |
 
 These functions perform no I/O and borrow their inputs as immutable snapshots; they do not clone or freeze
@@ -184,7 +184,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   decision panel show effective remaining and spent picks; switching creature never resets them. The host
   supplies the next evolution round, displayed in the phase guide between opportunities.
 - Once speeds are revealed the round bar gains **Turn order**: each side's speeds (the opponent's first) and
-  every slot in play order with its initiative and any d20 roll, read off the host's timeline. Below laptop
+  every slot in play order with its initiative and `Tie settled at random` where one placed it, read off the host's timeline. Below laptop
   width it opens by itself once a round, when the timeline first exists (after a tie order question rather than
   over its buttons), and closes itself after nine seconds or on a tap anywhere on it; a laptop shows the same
   order beside the battlefield, so there it opens on request. Muting the phase pop-ups does not silence it.
@@ -230,7 +230,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   specializations. These accents follow every card into the spellbook and unlock picker.
 - Acquire legal mutations directly from the Mutation Tree. A creature that acquired one this opportunity remains
   inspectable but cannot acquire again. New Speed, TieOrder, Intent and Target questions close the atlas to expose the board.
-- The initiative strip retains d20 rolls and rerolls. TieOrder has its own phase reminder and guarded
+- The initiative strip marks a slot a tie settled at random placed, without faces or rerolls (ADR 0208). TieOrder has its own phase reminder and guarded
   keyboard/pointer controls to order your creatures within your side's assigned places before declarations.
 - Every battlefield creature receives a circular turn number once the host has built the timeline. The
   number follows the full server order, including ties; the slot being activated is highlighted.
@@ -242,7 +242,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   badge and reminder state the maintainer-confirmed rule: Instinct cannot crit; Precision can, multiplying only
   direct damage/healing on targets. This rule is now enforced by the engine on main; the UI does not alter combat resolution.
 - The energy cost has an icon and a visible label. Spell stats show critical chance, its Precision-only
-  reminder and host-provided d20 threshold. Initiative and acquisition requirements appear once per mutation,
+  reminder, as a percent and never as a die's face (ADR 0208). Initiative and acquisition requirements appear once per mutation,
   never as obsolete spell stats. Targeting and effect cues retain their visual markers.
 - Phase changes show a non-blocking announcement below the top bar for 6 seconds. It does
   not move focus, delay a decision or replay on selection/poll redraws. Less motion, asked of the system or
@@ -372,8 +372,8 @@ once, separately from target effects.
 
 Candidates a spell would treat alike share one preview line (`Creatures 1, 2, 3 · Heal 4`).
 
-The preview is explicitly conditional: earlier actions can change the board, rolls
-are unknown, and computed effects still go through execution caps and condition
+The preview is explicitly conditional: earlier actions can change the board, a critical
+is unknown, and computed effects still go through execution caps and condition
 stacking. It never reads hidden enemy choices or consumes the match's random stream.
 The Before/After replay remains the record of what actually happened (ADR 0079).
 

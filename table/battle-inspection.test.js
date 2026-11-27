@@ -22,9 +22,9 @@ test('ownership is explicit, separate from the known spellbook and private choic
 });
 test('full spell faces retain zero costs, targeting, caster effects, crit and catalogue qualifiers', () => {
   const spell = creatureInspection(one, [one], catalogue).spells[0];
-  assert.equal(spell.cost, '0'); assert.match(spell.critical, /20%.*Precision only.*d20 17\+.*catalogue/);
+  assert.equal(spell.cost, '0'); assert.equal(spell.critical, '20% crit · Precision only · catalogue');
   assert.deepEqual(spell.details, [{ role: 'target', text: 'One enemy' }, { role: 'effect', text: 'Damage 4' }, { role: 'caster', text: 'Gain 1 energy' }]);
-  assert.equal(spell.criticalNote, 'Double damage'); assert.match(spell.crit.hint, /Precision only.*d20 17\+/); assert.equal(spell.crit.value, '20%');
+  assert.equal(spell.criticalNote, 'Double damage'); assert.equal(spell.crit.hint, 'Precision only'); assert.equal(spell.crit.value, '20%');
 });
 test('defeated opponents and new, permanent, expiring conditions keep named sources and immunity', () => {
   const creature = { ...one, enemy: true, isAlive: false, isStunImmune: true, conditions: [

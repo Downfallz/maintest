@@ -2,7 +2,8 @@
 
 Date: 2026-09-23
 
-Status: Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md)
+Status: Accepted, amended by [0067](0067-the-lookahead-orders-its-own-ties.md) and by
+[0208](0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md) (the app prints no roll)
 
 ## Context
 

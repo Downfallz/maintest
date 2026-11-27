@@ -86,7 +86,7 @@ const tips = {
     'All tempos reveal together. Choosing a tempo does not choose a spell.',
   ] },
   ties: { title: 'Order your tied creatures', rules: '/rules#tie-order', lines: [
-    'The dice settle places between teams. You decide the order within your own tied groups.',
+    'A tie between the teams is settled at random. You decide the order within your own tied groups.',
     'Open Order ties, choose an order or keep it, then Confirm choice. Both orders reveal together.',
   ] },
   action: { title: 'Choose a spell on your turn', rules: '/rules#your-turn', lines: [

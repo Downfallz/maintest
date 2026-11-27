@@ -3,7 +3,9 @@
 Date: 2026-11-08
 
 Status: Accepted. Builds on [ADR 0100](0100-every-critical-chance-is-a-twentieth.md), which prices every critical
-chance in twentieths of a d20, and [ADR 0063](0063-an-initiative-tie-is-rolled-on-a-d20.md)'s roll-offs.
+chance in twentieths of a d20, and [ADR 0063](0063-an-initiative-tie-is-rolled-on-a-d20.md)'s roll-offs. Amended by
+[0208](0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md): the record stands, the field shows
+no die.
 
 ## Context
 

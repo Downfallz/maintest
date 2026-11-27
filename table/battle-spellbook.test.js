@@ -21,8 +21,8 @@ test('a free spell shows a zero cost rather than none', () => {
 test('a spell that never crits shows no critical badge', () => {
   assert.equal(row('free').crit, null);
 });
-test('the catalogue critical names its tempo and the face of the d20, which the face in a column keeps', () => {
-  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · d20 17+ · catalogue', face: 'd20 17+' });
+test('the catalogue critical is a percent that names its tempo, and never the face a die would need', () => {
+  assert.deepEqual(row('costly').crit, { value: '20%', hint: 'Precision only · catalogue' });
 });
 test('the chosen spell is its card and the crit chance it holds now, for the card in full above the foot', () => {
   const m = model({ reference: { guidance: [{ spell: 'costly', chosenSpeed: 'Standard', standardCriticalChance: .5 }] } });

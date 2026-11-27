@@ -56,6 +56,17 @@ test('actual multi-target and caster effects retain durations, criticals, droppe
   assert.equal(row.status, 'Critical');
   for (const expected of ['Opponent', 'Damage 20!', 'Energy 2 · caster', 'Bleed 2 / round · 3 rounds', 'Dropped target: Other · 3 (Opponent): No longer alive', 'HP 20 → 0', 'Defeated']) assert.ok(text(row).includes(expected), expected);
 });
+test('a cast that could crit says the chance it had, as a percent, with its outcome', () => {
+  const chanced = { cards: [{ id: 'hit', name: 'Strike', critical: '75%', criticalThreshold: 6 }] };
+  const crit = historyEntry(cast(1, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, isCritical: true, criticalRoll: 19 } }), board, chanced);
+  assert.equal(crit.status, 'Critical'); assert.match(crit.summary, /^Strike · Crit · 75% → /);
+  const missed = historyEntry(cast(1, { resolution: { action: { actor: 1, spell: 'hit', targets: [2] }, isCritical: false, criticalRoll: 3 } }), board, chanced);
+  assert.equal(missed.status, 'No critical'); assert.match(missed.summary, /^Strike · No crit · 75% → /);
+  assert.doesNotMatch(text(crit) + text(missed), /d20|6\+|\b19\b/);
+  // At Instinct, or on a record older than the roll, the cast had no chance the record shows: the outcome alone.
+  const instinct = historyEntry(cast(1), board, chanced);
+  assert.match(instinct.summary, /^Strike · No critical → /); assert.doesNotMatch(text(instinct), /75%/);
+});
 test('a fizzle reports its refusal without claiming a critical roll', () => {
   const row = historyEntry(cast(1, { resolution: { action: { actor: 1, spell: 'hit', targets: [] }, fizzled: true,
     fizzleReason: { code: 'Energy.TooLow' } }, appliedOutcomes: [], frame: undefined }), board, catalogue);
@@ -137,7 +148,7 @@ test('a reveal names the caster, the spell and the targets it was declared on', 
 test('a built or reordered timeline lists every slot in order with its tempo', () => {
   const timeline = { slots: [{ owner: 'Player2', creature: 2, speed: 'Quick' }, { owner: 'Player1', creature: 1, speed: 'Standard' }], rollOffs: [] };
   const built = historyEntry(entry(1, 'TimelineBuilt', { timeline }), board, catalogue);
-  assert.deepEqual(built.details.map(one => one.text), ['1 · Other · 2 (Opponent) · Instinct · Initiative not recorded · No d20 roll recorded', '2 · First (Your team) · Precision · Initiative not recorded · No d20 roll recorded']);
+  assert.deepEqual(built.details.map(one => one.text), ['1 · Other · 2 (Opponent) · Instinct · Initiative not recorded', '2 · First (Your team) · Precision · Initiative not recorded']);
   assert.deepEqual(historyEntry(entry(2, 'TiesOrdered', { timeline }), board, catalogue).details.length, 2);
   assert.deepEqual(historyEntry(entry(3, 'TimelineBuilt', {}), board, catalogue).details, []);
 });
@@ -273,17 +284,17 @@ test('recorded boundaries keep only public stats and condition durations, never 
   assert.doesNotMatch(JSON.stringify(row), /secret|hidden|criticalChance|caster/);
 });
 
-// AU11: the journal keeps each recorded order with the initiatives and rolls of its own event.
+// AU11: the journal keeps each recorded order with the initiatives and random ties of its own event (ADR 0208).
 const orderSlot = (creature, owner = 'Player1') => ({ creature, owner, speed: 'Quick', initiative: 5 });
 const orderBoard = { slot: 'Player1', roundNumber: 2, allies: [{ id: 2, name: 'Ally 2' }], enemies: [], rollOffs: [{ creature: 2, rolls: [20] }] };
 for (const kind of ['TimelineBuilt', 'TiesOrdered']) {
-  test(`a ${kind} entry shows the event's initiatives and rolls, not the board's current ones`, () => {
+  test(`a ${kind} entry shows the event's initiatives and its random tie, not the board's, and no face`, () => {
     const row = historyEntry({ sequence: 4, event: { kind, roundId: 2, timeline: { slots: [orderSlot(2)], rollOffs: [{ creature: 2, rolls: [11, 18] }] } } }, orderBoard);
-    assert.match(row.details[0].text, /Initiative 5 · d20 11 → 18/); assert.doesNotMatch(row.details[0].text, /d20 20/);
+    assert.match(row.details[0].text, /Initiative 5 · Tie settled at random$/); assert.doesNotMatch(row.details[0].text, /d20|11|18|20/);
   });
-  test(`a ${kind} entry recorded without rolls says none was recorded`, () => {
+  test(`a ${kind} entry recorded without a random tie says nothing of one`, () => {
     const row = historyEntry({ sequence: 4, event: { kind, roundId: 2, timeline: { slots: [orderSlot(2)] } } }, orderBoard);
-    assert.match(row.details[0].text, /No d20 roll recorded/);
+    assert.match(row.details[0].text, /Initiative 5$/);
   });
 }
 

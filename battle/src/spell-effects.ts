@@ -17,7 +17,7 @@ const MOTIF_COLOR: Record<string, number> = { fire: EMBER, wound: BLOOD };
 // hide, bone in shadow. The target marker's gold is not among them.
 const TINTS: Record<string, number> = { bone: BONE, ember: EMBER, blood: BLOOD, hide: HIDE };
 // The motif is drawn under the kit's particles on its figure (#942): its strokes are opaque on a dark edge, and
-// beads or motes drawn under them showed only beside them. Over the dice's links (1999), under their boxes (2000).
+// beads or motes drawn under them showed only beside them. Under a caster's `Crit!` (2000).
 const MOTIF_DEPTH = 1999.5;
 // The beats that are the view's and not a figure's: played once a cast, on the caster's side.
 const VIEW_BEATS = new Set(['shake', 'push']);

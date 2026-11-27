@@ -62,15 +62,14 @@ export function referenceLines(card, guide) {
 
 export function cardStats(card) {
   const stats = [];
-  if (hasCritical(card)) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: [`${tempoLabel('Standard')} only`, card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : ''].filter(Boolean).join(' · ') });
+  if (hasCritical(card)) stats.push({ kind: 'critical', symbol: '✦', label: 'Crit chance', value: card.critical, hint: `${tempoLabel('Standard')} only` });
   return stats;
 }
 
-// The chance, and the face of the die when the chance is a twentieth. The threshold is the host's: whether a
-// chance can be rolled on a d20 is a property of the content, not of the screen.
+// The chance, as a percent (ADR 0208). The host still serves the face a print edition rolls it on
+// (`criticalThreshold`); the app's pages do not print it.
 export function criticalLine(card) {
-  if (!hasCritical(card)) return '';
-  return card.criticalThreshold ? `Crit ${card.critical} · d20 ${card.criticalThreshold}+` : `Crit ${card.critical}`;
+  return hasCritical(card) ? `Crit ${card.critical}` : '';
 }
 
 // The catalogue as a lookup, so a spell id on a decision finds its card. A spell the catalogue does not carry

@@ -107,16 +107,19 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     }
   }
   type Assignment = { id: number; position: number | null };
-  type Fixed = { position: number; label: string; roll: string };
+  type Fixed = { position: number; label: string };
   const assignmentText = (one: Assignment) => `${one.position == null ? 'Position unknown' : '#' + one.position} → ${name(one.id)}`;
-  const fixedText = (one: Fixed) => (one.roll ? `#${one.position} ${one.label} (${one.roll})` : `#${one.position} ${one.label}`);
+  const fixedText = (one: Fixed) => `#${one.position} ${one.label}`;
+  // A tie between the teams is settled at random (ADR 0208): the window says which team got the earlier place.
+  const earlierText = (earlier: string | null) => earlier === 'Your team' ? 'Settled at random: your team got the earlier place.'
+    : earlier === 'Opponent' ? 'Settled at random: the opponent got the earlier place.' : 'The tie between the teams was settled at random.';
   // The opponent orders its own creatures within its places too: with two or more, only the places are certain.
   function opponentPlacesText(detail: { fixed: Fixed[]; opponentOrderOpen: boolean }) {
     if (detail.opponentOrderOpen) return `Opponent places stay fixed: ${detail.fixed.map(one => '#' + one.position).join(', ')} · their order is revealed with yours`;
     return `Opponent places stay fixed: ${detail.fixed.map(fixedText).join(' · ')}`;
   }
   // Each tie a card: the places it shares as the order's badges with who takes each now, the creatures still to place
-  // as pills to tap in acting order, and what the dice and the opponent fixed, in small type under them.
+  // as pills to tap in acting order, and what a random tie and the opponent fixed, in small type under them.
   function ties(model: ReturnType<Controller['model']>) {
     el('planning-creatures').replaceChildren();
     el('planning-help').textContent = 'Tap your tied creatures in the order they act. Your team keeps its places; the opponent keeps theirs, and both reveal together.';
@@ -128,9 +131,9 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       const detail = context[index];
       const head = document.createElement('div'); head.className = 'tie-head';
       const title = document.createElement('h3'); title.textContent = `Tie ${index + 1}`;
-      const roll = document.createElement('span'); roll.className = 'tie-roll'; roll.dataset.rolled = String(Boolean(detail.rolled));
-      roll.textContent = detail.rolled ? 'd20 rolled' : 'Same team';
-      head.append(title, roll);
+      const kind = document.createElement('span'); kind.className = 'tie-kind'; kind.dataset.random = String(Boolean(detail.random));
+      kind.textContent = detail.random ? 'Settled at random' : 'Same team';
+      head.append(title, kind);
       const places = document.createElement('div'); places.className = 'tie-places';
       places.append(...detail.assignments.map((one: Assignment) => {
         const slot = document.createElement('span'); slot.className = 'tie-place';
@@ -140,7 +143,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
       // The same facts in words, for assistive technology and anyone reading closely.
       row.append(head, places, note(detail.assignments.map(assignmentText).join(' · '), 'tie-assignments unseen'),
         note(detail.places.length ? `Your fixed places: ${detail.places.join(', ')}` : 'Positions not available in this snapshot.', 'tie-note'),
-        note(detail.rolled ? 'Recorded d20 rolls allocated these team places. Your choice changes only their occupants.' : 'No d20 roll recorded for these creatures; a same-team-only tie needs none.', 'tie-note'));
+        note(detail.random ? `${earlierText(detail.earlier)} Your choice changes only who takes your places.` : 'Only your team is tied here: the order is yours.', 'tie-note'));
       if (detail.fixed.length) row.append(note(opponentPlacesText(detail), 'tie-note tie-opponent'));
       if (left.length > 1) {
         const pills = document.createElement('div'); pills.className = 'tie-pills';
@@ -165,7 +168,7 @@ export function planningControls(controller: Controller, name: (id: unknown) => 
     rendered = ''; creature = null; question = '';
     el('planning-choices').replaceChildren(); el('planning-creatures').replaceChildren();
   }
-  // The same selection is drawn pressed wherever it sits: a mutation button, a tempo, pass or the dice order.
+  // The same selection is drawn pressed wherever it sits: a mutation button, a tempo, pass or the kept order.
   function isPressed(node: HTMLButtonElement, chosen: ReturnType<Controller['model']>['choice']) {
     if (node.dataset.mutation) return chosen?.tier === node.dataset.mutation && chosen?.creature === creature;
     if (node.dataset.speed) return chosen?.speed === node.dataset.speed;

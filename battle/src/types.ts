@@ -32,15 +32,15 @@ export interface SceneFrame {
   mutationFocus?: string;
   // The creatures the field lights in blue: the one the turn-order strip points at, or the ties being ordered.
   focus?: readonly string[];
-  // The d20s the field shows beside the creatures that rolled them (ADR 0154).
-  dice?: { id: string; value: number; tone: 'crit' | 'miss' | 'roll'; key: string; group?: number; place?: number; rivals?: number; needed?: number | null }[];
+  // The caster whose critical lands now: the field says `Crit!` beside it, and draws no die (ADR 0208).
+  crit?: { id: string; key: string } | null;
   reveal?: { round: number; inset?: number; markers: MutationRevealMarker[] };
   upkeep?: { markers: UpkeepMarker[]; recorded: boolean; round: number };
   stage: Stage; target: string | null; actor: string | null; targets: readonly string[]; selected?: readonly string[];
   cue?: { kind: string; struck: string[]; effects: { creature: string; text: string; tone: string; wound: boolean }[];
     visual: SpellVisual; recipients: string[]; contact: string[];
     changes: { creature: number; health?: number; energy?: number; defeated?: boolean }[];
-    roll?: { value: number; critical: boolean } | null };
+    roll?: { critical: boolean } | null };
   // `evolution` is the illustration and capstone effects the creature's purchases resolve to (ADR 0151); a frame
   // without it (the lab's samples) draws the audited sprites as before.
   // `statuses` are the icon keys of its lasting conditions, as its badges show them (condition-icons.ts).

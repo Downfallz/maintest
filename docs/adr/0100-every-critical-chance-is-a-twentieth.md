@@ -1,7 +1,8 @@
 # 0100. Every critical chance is a twentieth
 
 Date: 2026-10-07
-Status: Proposed
+Status: Accepted. Built: the data builder and `check-knobs` enforce it. [0208](0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md)
+amends what the app prints: the percent, not the face.
 
 ## Context
 

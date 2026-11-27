@@ -1355,12 +1355,11 @@ function renderTimeline(board) {
       initiative.textContent = `Initiative ${slot.initiative}`;
       one.setAttribute('aria-label', `Turn ${order.textContent}, Creature ${slot.creature}, ${tempoLabel(band.speed)}, initiative ${slot.initiative}${progress.said}`);
       one.append(order, creature, initiative);
-      const rolled = slot.roll;
-      if (rolled) {
-        const dice = document.createElement('span');
-        dice.className = 'roll';
-        dice.textContent = rolled;
-        one.append(dice);
+      if (slot.tie) {
+        const tie = document.createElement('span');
+        tie.className = 'roll';
+        tie.textContent = slot.tie;
+        one.append(tie);
       }
       slots.append(one);
     }
@@ -2434,7 +2433,7 @@ function renderOrder(state, view, seat) {
     const who = document.createElement('strong');
     who.textContent = `Creature ${slot.creature}`;
     const detail = document.createElement('span');
-    detail.textContent = [slot.side === 'ally' ? 'yours' : 'opponent', tempoLabel(slot.speed), `initiative ${slot.initiative}`, slot.roll, slot.isNow && 'acting now']
+    detail.textContent = [slot.side === 'ally' ? 'yours' : 'opponent', tempoLabel(slot.speed), `initiative ${slot.initiative}`, slot.tie, slot.isNow && 'acting now']
       .filter(Boolean).join(' · ');
     item.append(position, who, detail);
     return item;
@@ -3048,7 +3047,7 @@ function renderPhaseGuide(state, view, seat) {
     [upkeepPhase, [], 'Round upkeep is automatic.', upkeepPhase],
     ['Evolve', ['Evolution'], 'Acquire whole mutations with shared team picks. At most one per creature this opportunity, or pass.', command],
     ['Tempo', ['Speed', 'TurnOrderResolution'], `Pick a tempo for each eligible creature. ${TEMPO_RULE} All tempos reveal together when everyone is done.`, command],
-    ['Tie order', ['TieOrder'], 'The d20 settled places between teams. Order your own tied creatures; both orders reveal together.', command],
+    ['Tie order', ['TieOrder'], 'A tie between the teams is settled at random. Order your own tied creatures; both orders reveal together.', command],
     ...(atTheSlot(state.catalogue) ? [
       ['Spells', ['IntentSelection'], 'Nothing is declared: each creature chooses its spell when its turn comes.', combat],
       ['Activation', ['Activation'], 'In turn order, each creature\'s owner chooses a spell and its targets, and it resolves at once. A creature that cannot act is skipped.', combat],
@@ -3699,10 +3698,10 @@ function packageCard(state, tier, onClick) {
   return choice;
 }
 
-// The seat's own tied creatures, ordered one tap at a time (ties.js, ADR 0063). The roll-off already gave
+// The seat's own tied creatures, ordered one tap at a time (ties.js, ADR 0063). The host already gave
 // each side its places; the first tap in a tie takes that tie's first place, and the last creature takes the
 // last place untapped. Nothing is sent until every tie is settled and the order is confirmed, and the order as
-// rolled can be kept in one tap: a tie nobody wants to reorder should cost nothing.
+// served can be kept in one tap: a tie nobody wants to reorder should cost nothing.
 function tieOrderButtons(state, current) {
   const groups = current.view.options.tieOrder?.ties ?? [];
   const tapped = state.ordered ?? [];
@@ -3712,7 +3711,7 @@ function tieOrderButtons(state, current) {
 
   const help = document.createElement('p');
   help.className = 'choice-help';
-  help.textContent = 'The dice gave your side its places. Tap your creatures in the order they act.';
+  help.textContent = 'Your side has its places. Tap your creatures in the order they act.';
 
   const ties = untapped(groups, tapped).map((left, index) => {
     const row = document.createElement('div');
@@ -3741,7 +3740,7 @@ function tieOrderButtons(state, current) {
   const confirm = button('Confirm this order', send(orderOf(groups, tapped)));
   confirm.disabled = !isSettled(groups, tapped);
   confirm.dataset.focus = 'tie-confirm';
-  const keep = button('Keep the order the dice gave', send(orderOf(groups, [])));
+  const keep = button('Keep this order', send(orderOf(groups, [])));
   keep.className = 'secondary';
   keep.dataset.focus = 'tie-keep';
   const again = button('Start again', () => {

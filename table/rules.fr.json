@@ -256,7 +256,7 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "L’application est la table. Elle tient le compte de chaque nombre, lance chaque dé et joue chaque étape que personne ne décide. Vous prenez les décisions ; ce chapitre dit ce que vous voyez pendant que vous les prenez."
+              "text": "L’application est la table. Elle tient le compte de chaque nombre, tranche chaque chance et joue chaque étape que personne ne décide. Vous prenez les décisions ; ce chapitre dit ce que vous voyez pendant que vous les prenez."
             }
           ]
         }
@@ -418,16 +418,23 @@
                     "strong": true
                   },
                   {
-                    "text": " L’ordre des tours, construit à partir des tempos et des initiatives, avec les départages au d20 qui tranchent une égalité entre les équipes."
+                    "text": " L’ordre des tours, construit à partir des tempos et des initiatives. Une égalité entre les équipes est tranchée au hasard, et la frise dit quelle équipe a obtenu la place la plus tôt."
                   }
                 ],
                 [
                   {
-                    "text": "Les dés.",
+                    "text": "Les critiques.",
                     "strong": true
                   },
                   {
-                    "text": " Chaque jet de critique, sur un d20 que l’écran montre."
+                    "text": " Chaque chance de critique, quand son sort se résout. Un lancer qui obtient un critique montre "
+                  },
+                  {
+                    "text": "Crit!",
+                    "strong": true
+                  },
+                  {
+                    "text": " à côté de son lanceur ; un lancer qui n’en obtient pas n’y montre rien. L’historique dit la chance qu’avait le lancer."
                   }
                 ],
                 [
@@ -480,6 +487,7 @@
             "ADR 0083",
             "ADR 0112",
             "ADR 0154",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": null
@@ -642,14 +650,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Le dé ne change jamais : c’est un "
-                },
-                {
-                  "text": "d20",
-                  "strong": true
-                },
-                {
-                  "text": ", pour le jet de critique comme pour le départage. Chaque chance de critique qu’un sort indique est un nombre entier de vingtièmes, si bien que chaque sort qui lance le dé indique la face qu’il lui faut."
+                  "text": "Un sort indique sa chance de critique en pourcentage : Incinerate indique Crit 35 %. Chaque chance de critique du jeu est un multiple de 5 %."
                 }
               ]
             }
@@ -659,6 +660,7 @@
             "ADR 0056",
             "ADR 0100",
             "ADR 0105",
+            "ADR 0208",
             "game-rules#implemented"
           ],
           "card": null
@@ -1213,7 +1215,7 @@
                     "strong": true
                   },
                   {
-                    "text": " agit après chaque créature en Instinct, et garde son jet de critique."
+                    "text": " agit après chaque créature en Instinct, et garde sa chance de critique."
                   }
                 ]
               ]
@@ -1222,7 +1224,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Choisissez Instinct pour porter un coup qui n’a pas besoin des dés, ou pour agir avant quelque chose qui vous vaincrait. Choisissez Précision quand le critique est ce que vous espérez, ou quand vous voulez que le plateau change avant d’agir. Un tempo ne choisit aucun sort : le sort se choisit quand vient le tour de la créature."
+                  "text": "Choisissez Instinct pour porter un coup qui n’a pas besoin d’un critique, ou pour agir avant quelque chose qui vous vaincrait. Choisissez Précision quand le critique est ce que vous espérez, ou quand vous voulez que le plateau change avant d’agir. Un tempo ne choisit aucun sort : le sort se choisit quand vient le tour de la créature."
                 }
               ]
             },
@@ -1255,6 +1257,7 @@
             "ADR 0010",
             "ADR 0072",
             "ADR 0112",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": {
@@ -1263,7 +1266,7 @@
             "lines": [
               "À chaque round, chaque créature non étourdie prend un tempo, Instinct ou Précision.",
               "Instinct agit avant toute créature en Précision, sans critique ce round.",
-              "Précision agit après Instinct et garde le jet de critique."
+              "Précision agit après Instinct et garde sa chance de critique."
             ],
             "example": "Une créature en Instinct à 5 d’initiative agit avant une créature en Précision à 9."
           }
@@ -1332,14 +1335,7 @@
                   "strong": true
                 },
                 {
-                  "text": " se tranche par un "
-                },
-                {
-                  "text": "départage",
-                  "strong": true
-                },
-                {
-                  "text": " : chaque créature à égalité lance un d20, et le plus haut jet prend la première place. Les créatures sur un nombre que les deux équipes ont obtenu relancent ; un nombre qu’une seule équipe a obtenu tient. Le départage décide quelles places chaque équipe occupe. Comment une équipe ordonne ses propres créatures dans ses places, c’est "
+                  "text": " est tranchée au hasard : l’application tire quelle équipe prend chaque place de l’égalité. La frise montre l’égalité comme tranchée au hasard, et quelle équipe a obtenu la place la plus tôt. Comment une équipe ordonne ses propres créatures dans ses places, c’est "
                 },
                 {
                   "text": "l’étape suivante",
@@ -1358,7 +1354,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Les Créatures 1, 2, 4 et 5 ont acquis Warped, et les Créatures 1 et 4 ont depuis acquis Stormborn. Les Créatures 1 et 4 ont une initiative de 10, les Créatures 2 et 5 de 7, et les Créatures 3 et 6 de 5. Au round précédent, un Ice Grip a diminué l’initiative de la Créature 2 de 3 : elle est de 4 ce round. Les Créatures 1 et 4 ont choisi Instinct, les autres Précision. Les Créatures 1 et 4 sont à égalité, et obtiennent 8 et 15 : la Créature 4 agit en premier, puis la Créature 1. Puis les créatures en Précision, par leur initiative : la Créature 5, puis les Créatures 3 et 6, à égalité entre les équipes, qui se départagent aussi, et la Créature 2 en dernier."
+                  "text": " Les Créatures 1, 2, 4 et 5 ont acquis Warped, et les Créatures 1 et 4 ont depuis acquis Stormborn. Les Créatures 1 et 4 ont une initiative de 10, les Créatures 2 et 5 de 7, et les Créatures 3 et 6 de 5. Au round précédent, un Ice Grip a diminué l’initiative de la Créature 2 de 3 : elle est de 4 ce round. Les Créatures 1 et 4 ont choisi Instinct, les autres Précision. Les Créatures 1 et 4 sont à égalité, et l’égalité est tranchée au hasard : la Créature 4 agit en premier, puis la Créature 1. Puis les créatures en Précision, par leur initiative : la Créature 5, puis les Créatures 3 et 6, à égalité entre les équipes, tranchée au hasard elle aussi, et la Créature 2 en dernier."
                 }
               ]
             }
@@ -1367,6 +1363,7 @@
             "ADR 0036",
             "ADR 0059",
             "ADR 0063",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": {
@@ -1375,7 +1372,7 @@
             "lines": [
               "L’initiative ordonne les créatures dans leur tempo, la plus haute en premier.",
               "Chaque mutation ajoute son bonus à l’initiative de base, pour de bon.",
-              "Une égalité entre les deux équipes se tranche par un départage au d20."
+              "Une égalité entre les deux équipes est tranchée au hasard."
             ],
             "example": "En Précision, la créature à 7 d’initiative agit avant celle à 5."
           }
@@ -1393,7 +1390,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Là où votre équipe occupe deux places ou plus dans une même égalité, vous choisissez laquelle de vos créatures à égalité prend quelle place. Les places de l’autre équipe ne bougent pas. Une égalité que votre équipe occupe seule est aussi à vous d’ordonner, sans jet. Les deux joueurs ordonnent en secret, et les ordres sont révélés ensemble. Un round sans une telle égalité ne demande rien à personne."
+                  "text": " Là où votre équipe occupe deux places ou plus dans une même égalité, vous choisissez laquelle de vos créatures à égalité prend quelle place. Les places de l’autre équipe ne bougent pas. Une égalité que votre équipe occupe seule est aussi à vous d’ordonner, et rien n’est tiré pour elle. Les deux joueurs ordonnent en secret, et les ordres sont révélés ensemble. Un round sans une telle égalité ne demande rien à personne."
                 }
               ]
             },
@@ -1405,13 +1402,14 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Les Créatures 3, 5 et 6 sont à égalité dans le groupe Précision et obtiennent 11, 11 et 2. Les deux équipes ont obtenu 11, donc les Créatures 3 et 5 relancent : 4 et 17. Les places vont au second joueur, puis au premier, puis au second. Le second joueur en occupe deux et veut que la Créature 6 agisse en premier : la Créature 6 prend la première place, la Créature 3 la deuxième, la Créature 5 la troisième."
+                  "text": " Les Créatures 3, 5 et 6 sont à égalité dans le groupe Précision. L’égalité est tranchée au hasard, et les places vont au second joueur, puis au premier, puis au second. Le second joueur en occupe deux et veut que la Créature 6 agisse en premier : la Créature 6 prend la première place, la Créature 3 la deuxième, la Créature 5 la troisième."
                 }
               ]
             }
           ],
           "sources": [
             "ADR 0063",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": null
@@ -1607,14 +1605,14 @@
                 ],
                 [
                   {
-                    "text": "Lancer le dé de critique",
+                    "text": "Le critique",
                     "strong": true
                   },
                   {
-                    "text": ", une fois pour tout le lancer, si le lanceur est en Précision et que le sort indique une chance. Voir "
+                    "text": ", tranché une fois pour tout le lancer, si le lanceur est en Précision et que le sort indique une chance. Voir "
                   },
                   {
-                    "text": "le jet de critique",
+                    "text": "la chance de critique",
                     "href": "#the-critical-roll"
                   },
                   {
@@ -1700,7 +1698,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " La Créature 2 est en Précision, à 4 points d’Énergie, et lance Incinerate sur la Créature 5 : coût 3, dégâts 10, d20 : 14+. La Créature 5 a lancé Carapace au round précédent : sa Défense est de 7."
+                  "text": " La Créature 2 est en Précision, à 4 points d’Énergie, et lance Incinerate sur la Créature 5 : coût 3, dégâts 10, Crit 35 %. La Créature 5 a lancé Carapace au round précédent : sa Défense est de 7."
                 }
               ]
             },
@@ -1715,7 +1713,7 @@
                 ],
                 [
                   {
-                    "text": "Le d20 donne un critique : 10 × 2 = 20."
+                    "text": "Le lancer obtient un critique : 10 × 2 = 20."
                   }
                 ],
                 [
@@ -1729,7 +1727,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Si le jet avait échoué, elle aurait perdu 3. "
+                  "text": "Sans critique, elle aurait perdu 3. "
                 },
                 {
                   "text": "Multipliez d’abord, soustrayez ensuite",
@@ -1747,6 +1745,7 @@
             "ADR 0076",
             "ADR 0083",
             "ADR 0101",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": {
@@ -1795,7 +1794,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " La Créature 4 possède Apex, est en Précision, et lance Blood Price sur la Créature 1, dont la Défense est de 3 : dégâts 11, d20 : 11+. Ajoutez le bonus : 16. Sur un critique, 32, moins 3 : la Créature 1 perd 29. Sans critique, 13. "
+                  "text": " La Créature 4 possède Apex, est en Précision, et lance Blood Price sur la Créature 1, dont la Défense est de 3 : dégâts 11, Crit 50 %. Ajoutez le bonus : 16. Sur un critique, 32, moins 3 : la Créature 1 perd 29. Sans critique, 13. "
                 },
                 {
                   "text": "Ajoutez, multipliez, soustrayez",
@@ -1821,6 +1820,7 @@
           ],
           "sources": [
             "ADR 0101",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": null
@@ -2247,7 +2247,7 @@
         {
           "id": "the-critical-roll",
           "number": "4.5",
-          "title": "Le jet de critique",
+          "title": "La chance de critique",
           "blocks": [
             {
               "type": "paragraph",
@@ -2260,21 +2260,28 @@
                   "strong": true
                 },
                 {
-                  "text": " se résout et que le sort indique une chance de critique, un d20 est lancé "
+                  "text": " se résout et que le sort indique une chance de critique, l’application tranche cette chance "
                 },
                 {
                   "text": "une fois pour tout le lancer",
                   "strong": true
                 },
                 {
-                  "text": ". Le sort indique la face qu’il lui faut : d20 : 11+ signifie 11 ou plus. Une créature en "
+                  "text": " : chaque cible reçoit le critique, ou aucune. Une créature en "
                 },
                 {
                   "text": "Instinct",
                   "strong": true
                 },
                 {
-                  "text": " ne lance jamais le dé, et un sort qui n’indique aucune chance ne lance jamais le dé. La chance propre à la créature, 0 %, s’ajoute à celle du sort."
+                  "text": " n’obtient jamais de critique, et un sort qui n’indique aucune chance non plus. La chance propre à la créature, 0 %, s’ajoute à celle du sort. Un lancer qui obtient un critique montre "
+                },
+                {
+                  "text": "Crit!",
+                  "strong": true
+                },
+                {
+                  "text": " à côté de son lanceur, et l’historique dit la chance qu’il avait."
                 }
               ]
             },
@@ -2340,7 +2347,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " La Créature 2 est en Précision et lance Vital Surge sur la Créature 3, dont la Santé est de 18 sur 30 : soin 10, d20 : 11+. Le d20 donne un critique : le soin devient 20, et la Créature 3 passe à 30. Un soin ne dépasse jamais la Santé avec laquelle une créature a commencé."
+                  "text": " La Créature 2 est en Précision et lance Vital Surge sur la Créature 3, dont la Santé est de 18 sur 30 : soin 10, Crit 50 %. Le lancer obtient un critique : le soin devient 20, et la Créature 3 passe à 30. Un soin ne dépasse jamais la Santé avec laquelle une créature a commencé."
                 }
               ]
             }
@@ -2350,6 +2357,7 @@
             "ADR 0042",
             "ADR 0100",
             "ADR 0154",
+            "ADR 0208",
             "game-rules#implemented",
             "game-rules#round-sequence-adr-0010"
           ],
@@ -2357,11 +2365,11 @@
             "id": "critical",
             "title": "Critique",
             "lines": [
-              "Quand son sort se résout, une créature en Précision lance un d20 contre le nombre indiqué.",
+              "Le sort d’une créature en Précision obtient un critique selon la chance qu’il indique, tranchée une fois.",
               "Un critique multiplie dégâts et soins du sort sur ses cibles.",
-              "Instinct ne lance jamais le dé."
+              "Instinct n’obtient jamais de critique."
             ],
-            "example": "Un sort indique d20 : 11+. Un 14 est critique : ses 7 dégâts deviennent 14."
+            "example": "Un sort indique Crit 50 %. Sur un critique, ses 7 dégâts deviennent 14."
           }
         }
       ]
@@ -2991,6 +2999,13 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-27",
+      "text": "Le livre dit une chance de critique en pourcentage, comme les cartes, et une égalité entre les équipes comme tranchée au hasard. Aucune règle ne change (ADR 0208).",
+      "adrs": [
+        "0208"
+      ]
+    },
     {
       "date": "2026-11-23",
       "text": "En français, l’exemple de la carte Critique nomme de nouveau le d20, comme en anglais, sans qu’aucune règle ne change.",

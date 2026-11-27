@@ -73,9 +73,9 @@ test('the spellbook groups the served types two a row, each face its portrait, n
   await expect(page.locator('#combat-help')).toHaveText('Declare a hidden intent. Its targets will be chosen when it resolves.');
   // Under the acting creature's name: its place in the order, its tempo and its energy.
   await expect(page.locator('#combat-actor .actor-chip')).toHaveText(['1 in turn order', '✦ Precision', '3 energy']);
-  // The chips keep the chance and the die's face; the hint and the crit note leave the face for the chosen card.
-  await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('20%');
-  await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toContainText('d20 17+');
+  // The chips keep the chance, a percent alone (ADR 0208); the hint and the crit note leave the face for the chosen card.
+  await expect(spell(page, 'spell-3').locator('.spell-chip-crit')).toHaveText('✦20% crit');
+  await expect(page.locator('#combat-dialog')).not.toContainText(/d20|17\+/);
   await expect(spell(page, 'spell-3').locator('.spell-critical, .spell-card-note')).toHaveCount(0);
   await expect(spell(page, 'spell-2').locator('.spell-chip-crit')).toContainText('35%');
   await expect(spell(page, 'spell-2')).not.toContainText('at this tempo');
@@ -121,7 +121,7 @@ test('the chosen card is read in full above the foot before it is declared', asy
   // The words the face left: each effect line, the crit note, and what the chance holds for.
   await expect(preview.locator('.spell-card-effect')).toHaveText(['A detailed effect that remains readable in the full reference.', 'A separate effect on the caster.']);
   await expect(preview.locator('.spell-card-note')).toHaveText('Critical note from the served catalogue.');
-  await expect(preview).toContainText('Precision only · d20 17+ · catalogue');
+  await expect(preview).toContainText('Crit 20% · Precision only · catalogue'); await expect(preview).not.toContainText(/d20|17\+/);
   await expect(page.locator('#combat-declare')).toBeVisible(); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
 });
 test('selection and same-question polls preserve card geometry, keyboard focus, scroll and confirmation position', async ({ page }) => {

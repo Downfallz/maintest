@@ -385,8 +385,8 @@ footer stays outside it. In at-activation mode, selecting still opens field targ
 confirmation. Double-tapping a card never submits a spell.
 
 Each card is the shared spell card (`src/spell-card.ts`, ADR 0146) built of spans inside its button, in its
-`brief` form: the crit chip holds the current tempo's chance when the host's guide gives one, the catalogue's with
-its d20 face otherwise.
+`brief` form: the crit chip holds the current tempo's chance when the host's guide gives one, the catalogue's
+otherwise, always as a percent and never as a die's face ([ADR 0208](../docs/adr/0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md)).
 
 `table/battle-spellbook.js` derives the reference; `src/spellbook.ts` owns keyed HTML rows. Availability polls
 update existing nodes, preserving focus, scroll and card positions. The same asking retains
@@ -541,15 +541,18 @@ it. Tests cover host costs, zero critical, self/ally/enemy/multiple/no targets, 
 resource/target changes, privacy cleanup, explicit writes and short portrait/landscape with enlarged text.
 Real-engine combat journeys verify the displayed cost against the seat response in both declaration modes.
 
-## AU11: turn order and recorded dice
+## AU11: turn order and its ties
+
+The app says a tie between the two teams as settled at random and shows no die ([ADR 0208](../docs/adr/0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md)): what follows speaks of the
+order's words, not of the faces the record keeps.
 
 **Order** opens a read-only reference from the compact activation strip; **Inspect turn order** is also
-available above a tie draft. It shows every host position, tempo band, initiative and recorded d20 chain,
+available above a tie draft. It shows every host position, tempo band and initiative, and `Tie settled at random` on a creature such a tie placed,
 with explicit team labels and Completed / Now / Upcoming states. Defeated and stunned creatures stay in
 their slots with their status. Creature links open the existing inspection. The strip and reference use
-the presented board, so recorded replay retains its own round, order, rolls and cursor. Opening the
+the presented board, so recorded replay retains its own round, order, ties and cursor. Opening the
 reference during live action playback explicitly settles that queue, like History. Missing initiatives
-or rolls remain unrecorded; no local sort, simulated die or current-stat fallback supplies them.
+remain unrecorded; no local sort or current-stat fallback supplies them.
 
 A newly observed public TimelineBuilt event queues one reveal. A seat that comes back to the page (a hidden tab
 shown again, a reload) counts as newly observed every order built after the last sequence it was shown
@@ -558,27 +561,27 @@ An order not yet read holds that mark below it until Continue, so leaving mid-re
 choice opens only once the order is read. It waits for both teams' tie
 ordering, action playback and open dialogs/drafts to finish, then reads on the field before the next first-use
 tip ([ADR 0144](../docs/adr/0144-read-the-turn-order-on-the-field.md)): a numbered badge on each creature, gold
-for Instinct and blue for Precision, and the dock's card with each team's tempos, whether a d20 broke a tie, and
+for Instinct and blue for Precision, and the dock's card with each team's tempos, whether a tie was settled at random, and
 **Continue**. The card opens the full order. Until Continue nothing else plays: an opponent's action that
 arrives meanwhile waits, unplayed, then plays and holds for its OK.
 Reading Order manually consumes that pending reveal. Initial load, reload/reconnect and recorded sessions
 are baselines, not a new announcement; duplicate events do not repeat it. Advancing beyond the round or
 losing the seat clears it. No reveal preference or private data is persisted. The History entries for
-TimelineBuilt and TiesOrdered retain their respective exact positions, initiatives and rolls, so the
+TimelineBuilt and TiesOrdered retain their respective exact positions, initiatives and random ties, so the
 initial order cannot be mistaken for the final same-team choices.
 
-Tie groups explain their fixed team positions, the chosen occupant of each, and intervening opponent
-positions. Only offered group members can move; the existing planning controller still owns confirmation,
-acknowledgement and write fencing. A same-team tie with no recorded dice does not claim to have rolled.
+Tie groups explain their fixed team positions, the chosen occupant of each, intervening opponent
+positions, and which team a random tie gave the earlier place. Only offered group members can move; the existing planning controller still owns confirmation,
+acknowledgement and write fencing. A same-team tie does not claim to have been settled at random.
 Open references retain the draft and focus and never acknowledge a covered question.
 
 `table/battle-order.js` holds the pure projections and reveal watermark; `src/order.ts` renders stable
 native controls. `battle-order.spec.js` covers private/unrevealed choices, interleaved and multiple ties,
 repeat reveals, cursor/condition updates, focus/scroll, lost access and small/landscape/enlarged text.
-Full real-host journeys check order/rolls against seat responses in both declarations and inspect a past
+Full real-host journeys check the order and its random ties against seat responses in both declarations and inspect a past
 round during match replay. Captures in `docs/tabletop/images/battle-order/` identify their data source.
 
-Captures from the recorded-roll browser fixture: [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
+Captures from the browser fixture, taken before ADR 0208 (they still show the rolls): [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
 
 
 ## The opponent on the round's line
@@ -687,7 +690,7 @@ screen on a phone: nothing is chosen from it.
 Acquired mutations come only from `acquiredTiers`, independently of `knownSpells`. Each mutation shows its
 Stage and initiative bonus as chips, authored tags as pills, and exact passive wording, including shared
 capstones. Known spells are dealt as the spell choice's own cards (`src/spell-card.ts`), in its order, attacks
-first: cost and crit chips (the crit naming its tempo and d20 face), targeting, effect lines with their icons,
+first: cost and crit chips (the crit a percent naming its tempo), targeting, effect lines with their icons,
 then the mutation that taught it where recorded. They answer `[data-inspect-spell]`, never the spell choice's
 `[data-spell]`. A known spell never marks a mutation acquired or reveals an intention. Missing catalogue
 entries keep their identifiers and explicitly unavailable detail. Aggregate passive badges reuse `board.js`.
@@ -812,29 +815,27 @@ its own silhouette (its image filled with gold just behind it) and a pool of lig
 slowly and still under reduced motion;
 `#battle[data-halo]` names it.
 
-The field shows the dice ([ADR 0154](../docs/adr/0154-record-the-critical-roll-as-a-d20-face.md), `src/dice.ts`): a small
-hexagonal d20 beside a creature's head, with each roll-off's last throw while the revealed order is read (ivory) and a
-caster's critical roll as its action lands (gold when it crit, slate when it fell short). It tumbles in and settles,
-still under reduced motion, and leaves with the reading or the result; `#battle[data-dice]` names what stands.
-Each die says what it was for. The dice of one tie (`rollOffDice`: the creatures tied on tempo and initiative) are
-ringed in that tie's colour and joined by a dashed line with "vs" on it, and each reads where its creature finished in
-the tie (1st, 2nd). A critical roll reads the face it needed under it, from the spell's card (`Crit on 14+`, then
-`Crit! 14+` or `Needed 14+`). `data-dice` adds `tie<group>:<place>` or `<face>+` to each die.
+The field draws no die ([ADR 0208](../docs/adr/0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md), `src/crit-mark.ts`). A cast that crit says `Crit!` beside its caster's head as the
+action lands, in gold on a dark plate (`calloutSpot` in `table/battle-layout.js` keeps it inside the field); the word
+settles in, is simply there under reduced motion, and leaves with the result. A cast that could crit and did not
+shows nothing there, and a tie's draw shows nothing on the field. `#battle[data-crit]` names the caster. The record
+still keeps the face of each roll ([ADR 0154](../docs/adr/0154-record-the-critical-roll-as-a-d20-face.md)); no page
+reads it.
 
 While an opponent's action waits unplayed (arrived under the turn order or another dialog), the field and the order
 strip show its round as it stood before that action, not the engine's latest board.
 
 The order strip shows each place as a badge in its tempo's colour (a tick once played), never a number run into the
 name, with a quiet chevron between places, read left to right. Each place also says its initiative (⚡) and carries a
-small d20 mark when a roll-off placed it. A tap on a place lights its creature on the field in ice blue (a rim around
+small `tie` mark when a tie settled at random placed it. A tap on a place lights its creature on the field in ice blue (a rim around
 its silhouette, a pool at its feet and a blue caption line, the rest of the field a little dimmed; never the acting
 gold) and opens a card at the top of the field saying why it holds its place (`orderReason` in
 `table/battle-order.js`): its rank, its tempo band, its initiative against its neighbours', and the tie that placed it,
-with the d20s a roll-off threw and their rerolls, or the owner's choice in a tie of one team. The card stands on the
+with the team a random tie gave the earlier place, or the owner's choice in a tie of one team. The card stands on the
 side of the field away from the creature it lights, offers **Inspect ↗** for the full sheet, and a second tap, its ×
 or Escape puts the light out. The order sheet's creature links still open the inspection. The order sheet reads like the other sheets: the round
 under a TURN ORDER eyebrow, each tempo band a chip, each creature a card with its place badge, its state and its facts
-as chips and its d20 roll in gold, and one Continue.
+as chips and a tie settled at random in gold, and one Continue.
 
 While the seat orders its ties the field shows them in the same blue (`tieMarks`): each tied creature of its own wears
 the place it takes now as a numbered badge, or a ? breathing while it is still to place, and a tap on it on the field
@@ -842,7 +843,7 @@ places it as its pill does; the opponent's places in those ties wear their numbe
 
 The order of tied creatures docks like the mutation pick and the team's tempos, the field above it: each tie is a card
 with its shared places as gold badges and who takes each now, the creatures still to place as pills tapped in acting
-order, and the dice and the opponent's fixed places in small type. Keep current order and Start again are pills;
+order, and what a random tie and the opponent fixed in small type. Keep current order and Start again are pills;
 **Inspect turn order** opens the order sheet. History and Help stay in the field's header.
 
 ## Lasting conditions on the figure
@@ -913,7 +914,7 @@ over a field where only the ambience breathes, a phone pays in battery, and a pa
 leaves no frame for the rest of the page, so a browser test waits for a click to become stable. The scene's `busy()`
 keeps the field at its full rate while any of these runs: a tween, a camera effect, the view's tremor, the effects
 kit's particles or
-objects, a die tumbling, the horizon giving way, a file loading. On the bench, a play in progress does too.
+objects, a `Crit!` settling in, the horizon giving way, a file loading. On the bench, a play in progress does too.
 
 Two seconds after the last movement (`SETTLE_MS`) the field rests: the game is stepped one animation frame in four
 (`REST_EVERY`), fifteen frames a second on a sixty-hertz screen. The halos' breath, the creatures' breath, the ground's
