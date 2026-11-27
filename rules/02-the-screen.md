@@ -33,7 +33,7 @@ The steps nobody decides are played for you, and the history records each of the
 
 - **Upkeep.** Each creature's Energy gain, its Regeneration and its Bleed.
 - **The timeline.** The order of the turns, built from the tempos and the initiatives. A tie between the teams
-  is settled at random, and the timeline says which team got the earlier place.
+  is settled at random: the timeline marks it, and a tap on a place says which team got the earlier place.
 - **The criticals.** Every critical chance, when its spell resolves. A cast that crits shows **Crit!** beside its
   caster; a cast that does not shows nothing there. The history says the chance the cast had.
 - **The countdown.** Every condition counts down in the Aftermath, and ends at zero.

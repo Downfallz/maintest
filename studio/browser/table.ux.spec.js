@@ -85,7 +85,7 @@ test('the table draws the timeline in the host\'s order, with its cursor and its
   await expect(page.locator('#timeline .slot > strong')).toHaveText(['Creature 2', 'Creature 1']);
   await expect(page.locator('#timeline .slot.now > strong')).toHaveText('Creature 1');
   await expect(page.locator('#timeline .slot.enemy > strong')).toHaveText('Creature 2');
-  await expect(page.locator('#timeline .roll')).toHaveText(['Tie settled at random']);
+  await expect(page.locator('#timeline .slot-tie')).toHaveText(['Tie settled at random']);
   await expect(page.locator('#allies .health .number')).toHaveText(board.allies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
   await expect(page.locator('#enemies .health .number')).toHaveText(board.enemies.map(creature => `${creature.health}/${creature.maxHealth} HP`));
 });

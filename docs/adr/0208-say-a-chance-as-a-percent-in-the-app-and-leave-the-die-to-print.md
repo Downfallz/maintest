@@ -5,7 +5,7 @@ Date: 2026-11-27
 Status: Accepted. Amends what [0154](0154-record-the-critical-roll-as-a-d20-face.md),
 [0063](0063-an-initiative-tie-is-rolled-on-a-d20.md) and [0144](0144-read-the-turn-order-on-the-field.md) show,
 not what they record; builds on [0100](0100-every-critical-chance-is-a-twentieth.md).
-Rulebook: `what-the-app-does`, `the-numbers`, `tempo`, `turn-order`, `tie-order`, `resolving-a-spell`, `damage-bonus`, `the-critical-roll`
+Rulebook: `the-screen`, `what-the-app-does`, `the-numbers`, `tempo`, `turn-order`, `tie-order`, `resolving-a-spell`, `damage-bonus`, `the-critical-roll`; the cards `tempo`, `initiative`, `critical`
 
 ## Context
 
@@ -26,8 +26,10 @@ print edition.
 - **A critical.** The field draws no die. A cast that crit says `Crit!` beside its caster as it lands; a cast that
   could crit and did not shows nothing there. The journal's line says the chance the cast had, from the card:
   `Crit · 75%` or `No crit · 75%`.
-- **A tie.** The order of play, the tie window, the dock's card and the journal say `Tie settled at random`, and
-  which team got the earlier place. No face and no reroll is shown.
+- **A tie.** The order of play, its window, the dock's card and the journal say `Tie settled at random`. The reason
+  card a place opens and the tie window add which team got the earlier place. That is a reading of the order the
+  host served (the tie's first place and whose it is), not a second ranking: the host serves no winner of its own.
+  No face and no reroll is shown.
 - **The rulebook.** The app's edition, English and French, says a chance as a percent and a tie as settled at
   random. The frozen print draft (`docs/tabletop/rulebook.md`) keeps its die.
 - **Nothing recorded changes.** Every chance stays a twentieth (ADR 0100). `CombatResolution.CriticalRoll` and
@@ -54,7 +56,7 @@ print edition.
 
 ## Follow-up
 
-- `table/terminology.test.js` refuses "d20", "dice", "die", "roll" and "roll-off" in the table's pages and the
-  battle view's labels; `docs/domain/player-terminology.md` ("Chance and ties") says the words.
+- `table/terminology.test.js` refuses "d20", "dice", "die", "roll" and "roll-off" in the table's pages, the battle
+  view's labels and the tutorials' lines; `docs/domain/player-terminology.md` ("Chance and ties") says the words.
 - `rules/` rewritten through `/rules`, both editions; `table/rules*.json` rebuilt.
 - `battle/README.md`, `table/README.md` and the journeys' briefs say the new words.

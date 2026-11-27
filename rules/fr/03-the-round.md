@@ -177,8 +177,9 @@ Instinct vient toujours en premier. Une créature en Instinct à une initiative 
 Précision à 20.
 
 **Une égalité entre les équipes** est tranchée au hasard : l’application tire quelle équipe prend chaque place de
-l’égalité. La frise montre l’égalité comme tranchée au hasard, et quelle équipe a obtenu la place la plus tôt.
-Comment une équipe ordonne ses propres créatures dans ses places, c’est [l’étape suivante](#tie-order).
+l’égalité. La frise marque l’égalité comme tranchée au hasard, et toucher une place dit quelle équipe a obtenu
+la place la plus tôt. Comment une équipe ordonne ses propres créatures dans ses places, c’est
+[l’étape suivante](#tie-order).
 
 *Exemple.* Les Créatures 1, 2, 4 et 5 ont acquis Warped, et les Créatures 1 et 4 ont depuis acquis Stormborn. Les
 Créatures 1 et 4 ont une initiative de

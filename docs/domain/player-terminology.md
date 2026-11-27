@@ -74,7 +74,7 @@ Every creature picks a tempo each round. The rules are the engine's, unchanged:
 - **Instinct** (internally `Quick`) acts before every Precision creature, and **cannot critically hit**.
 - **Precision** (internally `Standard`) acts after every Instinct creature, and **keeps its critical-hit
   chance**.
-- **Initiative** orders the creatures within each tempo group; a tie between the sides is settled at random,
+- **Initiative** orders the creatures within each tempo group; a tie between the two teams is settled at random,
   and a tie within one side by its owner's tie order.
 
 Labels, tooltips, the timeline's group headings, action summaries and the critical-chance indicator all say
@@ -91,10 +91,10 @@ keeps the face of each roll (ADR 0063, ADR 0154).
 | A Spell's Critical chance, a twentieth | **Crit 75%**, with its tempo (**at Precision**, **Precision only**) | `d20 6+`, a threshold, a face |
 | A Critical roll that crit | **Crit!** on the caster; **Crit · 75%** in the journal | The die and the face it showed |
 | A Critical roll that did not | Nothing on the caster; **No crit · 75%** in the journal | **Needed 6+** |
-| A Roll-off between the two sides | **Tie settled at random**, and which team got the earlier place | The faces, a reroll, "roll-off", "dice" |
+| A Roll-off between the two sides | **Tie settled at random**; the place's reason card and the tie window add which team got the earlier place | The faces, a reroll, "roll-off", "dice" |
 
 French: **Crit 75 %**, **Égalité tranchée au hasard**. `table/terminology.test.js` refuses "d20", "dice", "die",
-"roll" and "roll-off" in the table's pages and the battle view's labels. The studio is for authors and keeps the
+"roll" and "roll-off" in the table's pages, the battle view's labels and the tutorials' lines. The studio is for authors and keeps the
 threshold the host serves.
 
 ## Choosing spells

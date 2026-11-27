@@ -33,7 +33,7 @@ Les étapes que personne ne décide sont jouées pour vous, et l’historique en
 
 - **L’Entretien.** Le gain d’Énergie de chaque créature, sa Regeneration et son Bleed (saignement).
 - **La frise.** L’ordre des tours, construit à partir des tempos et des initiatives. Une égalité entre les équipes
-  est tranchée au hasard, et la frise dit quelle équipe a obtenu la place la plus tôt.
+  est tranchée au hasard : la frise la marque, et toucher une place dit quelle équipe a obtenu la place la plus tôt.
 - **Les critiques.** Chaque chance de critique, quand son sort se résout. Un lancer qui obtient un critique montre
   **Crit!** à côté de son lanceur ; un lancer qui n’en obtient pas n’y montre rien. L’historique dit la chance
   qu’avait le lancer.

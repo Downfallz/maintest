@@ -194,12 +194,12 @@ Each stage is one pull request that leaves the gate green.
    A chip, a card and the target estimate say the chance as a percent; `criticalThreshold` is still served and no
    page of the match prints it. `battle/src/dice.ts` is gone: the field says `Crit!` beside the caster of a cast
    that crit (`battle/src/crit-mark.ts`, `#battle[data-crit]`) and nothing on one that did not, and the journal's
-   line says the chance the cast had (`Crit · 75%`, `No crit · 75%`). The order of play, its window, the reason
-   card, the tie window, the dock's card and the journal say `Tie settled at random` and which team got the earlier
-   place, without faces or rerolls; the presented timeline carries `tie`, no longer `roll` and `rolls`. The archived
+   line says the chance the cast had (`Crit · 75%`, `No crit · 75%`). The order of play, its window, the dock's card
+   and the journal say `Tie settled at random`, and the reason card and the tie window add which team got the
+   earlier place, without faces or rerolls; the presented timeline carries `tie`, no longer `roll` and `rolls`. The archived
    classic table says the same words. `docs/domain/player-terminology.md` gained "Chance and ties", and
-   `table/terminology.test.js` refuses "d20", "dice", "die", "roll" and "roll-off" in the table's pages and the
-   battle view's labels. The rulebook's two editions were rewritten through `/rules`. ADR 0100 is marked Accepted.
+   `table/terminology.test.js` refuses "d20", "dice", "die", "roll" and "roll-off" in the table's pages, the
+   battle view's labels and the tutorials' lines; tutorial 2's step on the critical no longer says "rolls". The rulebook's two editions were rewritten through `/rules`. ADR 0100 is marked Accepted.
    Left: the captures of `docs/tabletop/images/battle-order/` still show the rolls, and the `Crit!` word was not
    staged by the `battle-designer` (it is the die's caption, kept where it stood).
 2. **F2, the round's start and end.** `player-terminology.md`, `terms.js`, `rules/words.json`, the rulebook's two

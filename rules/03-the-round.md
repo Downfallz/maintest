@@ -167,8 +167,8 @@ changes the next round's order, not this one's.
 Instinct always comes first. An Instinct creature at 0 initiative acts before a Precision creature at 20.
 
 **A tie between the teams** is settled at random: the app draws which team takes each place in the tie. The
-timeline shows the tie as settled at random, and which team got the earlier place. How a team orders its own
-creatures in its places is [the next step](#tie-order).
+timeline marks the tie as settled at random, and a tap on a place says which team got the earlier place. How a
+team orders its own creatures in its places is [the next step](#tie-order).
 
 *Example.* Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1
 and 4 read {creature.initiative + tier:occultist:v1.initiativeBonus + tier:elementalist:v1.initiativeBonus}

@@ -9,6 +9,8 @@ export interface Crit { id: string; key: string }
 type Spot = { image: Phaser.GameObjects.Image; home: { x: number; y: number; size: number } };
 
 const SETTLE_MS = 180;
+// The word's colours: the pale gold a critical's caption had on the field, on the field labels' dark plate.
+const CRIT_GOLD = '#ffe2a6', PLATE = '#0b1519d9';
 // Text is drawn into a texture and then sampled at a fractional position: drawn at twice its size it stays as
 // sharp as the page's own labels around it.
 const SHARP = 2;
@@ -26,7 +28,7 @@ export class CritMark {
     if (this.shown?.crit.key === crit.key) { this.shown.spot = spot; return; }
     this.clear();
     const label = this.scene.add.text(0, 0, 'Crit!', {
-      fontFamily: 'system-ui, sans-serif', fontStyle: 'bold', color: '#ffe2a6', backgroundColor: '#0b1519d9', padding: { x: 6, y: 2 },
+      fontFamily: 'system-ui, sans-serif', fontStyle: 'bold', color: CRIT_GOLD, backgroundColor: PLATE, padding: { x: 6, y: 2 },
     }).setOrigin(.5).setResolution(SHARP).setDepth(2000);
     // The word is born on the first frame that draws it. A board reaches a resting field between two of its steps,
     // so a word born at the last step's time would have less of its settling left when it is first drawn.

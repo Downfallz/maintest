@@ -418,7 +418,7 @@
                     "strong": true
                   },
                   {
-                    "text": " L’ordre des tours, construit à partir des tempos et des initiatives. Une égalité entre les équipes est tranchée au hasard, et la frise dit quelle équipe a obtenu la place la plus tôt."
+                    "text": " L’ordre des tours, construit à partir des tempos et des initiatives. Une égalité entre les équipes est tranchée au hasard : la frise la marque, et toucher une place dit quelle équipe a obtenu la place la plus tôt."
                   }
                 ],
                 [
@@ -1335,7 +1335,7 @@
                   "strong": true
                 },
                 {
-                  "text": " est tranchée au hasard : l’application tire quelle équipe prend chaque place de l’égalité. La frise montre l’égalité comme tranchée au hasard, et quelle équipe a obtenu la place la plus tôt. Comment une équipe ordonne ses propres créatures dans ses places, c’est "
+                  "text": " est tranchée au hasard : l’application tire quelle équipe prend chaque place de l’égalité. La frise marque l’égalité comme tranchée au hasard, et toucher une place dit quelle équipe a obtenu la place la plus tôt. Comment une équipe ordonne ses propres créatures dans ses places, c’est "
                 },
                 {
                   "text": "l’étape suivante",
@@ -3001,7 +3001,7 @@
   "changes": [
     {
       "date": "2026-11-27",
-      "text": "Le livre dit une chance de critique en pourcentage, comme les cartes, et une égalité entre les équipes comme tranchée au hasard. Aucune règle ne change (ADR 0208).",
+      "text": "L’écran ne montre plus de dé : un lancer qui obtient un critique montre **Crit!** à côté de son lanceur, l’historique dit la chance qu’avait le lancer, et une égalité entre les équipes se lit comme tranchée au hasard. Le livre dit une chance de critique en pourcentage, comme les cartes. Aucune règle ne change (ADR 0208).",
       "adrs": [
         "0208"
       ]

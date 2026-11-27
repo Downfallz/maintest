@@ -1,4 +1,5 @@
 import { battleOrder, createBattleOrderReveal, orderReason } from '../../table/battle-order.js';
+import { TIE_MARK } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { spellPortrait } from './spell-portrait';
 
@@ -81,7 +82,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       const side = text('span', row.team === 'Your team' ? 'You' : row.team, 'timeline-side');
       side.append(text('span', ` · ${row.tempo}`, 'timeline-tempo'));
       if (Number.isFinite(row.initiative)) { const init = text('span', String(row.initiative), 'timeline-init'); init.prepend(iconElement('initiative-gain')); side.append(init); }
-      if (row.tie) side.append(text('span', 'tie', 'timeline-tie'));
+      if (row.tie) side.append(text('span', TIE_MARK, 'timeline-tie'));
       side.setAttribute('aria-hidden', 'true');
       words.append(text('span', row.label, 'timeline-name'), text('span', spoken(row), 'unseen'), side);
       // A spell the host has turned face up, beside its creature, at 24 px (UX12 P7). Its name is in the entry's

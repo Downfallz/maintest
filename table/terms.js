@@ -60,5 +60,8 @@ export function stageClimb() {
   return [1, 2, 3, 4].map(stageLabel).join(' → ');
 }
 
+// The mark of a place a tie settled at random gave, in the order of play (ADR 0208).
+export const TIE_MARK = 'tie';
+
 // The one-line rule every tempo hint repeats.
 export const TEMPO_RULE = 'Instinct acts before Precision; only Precision can crit.';

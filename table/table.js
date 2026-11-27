@@ -1357,7 +1357,7 @@ function renderTimeline(board) {
       one.append(order, creature, initiative);
       if (slot.tie) {
         const tie = document.createElement('span');
-        tie.className = 'roll';
+        tie.className = 'slot-tie';
         tie.textContent = slot.tie;
         one.append(tie);
       }

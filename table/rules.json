@@ -418,7 +418,7 @@
                     "strong": true
                   },
                   {
-                    "text": " The order of the turns, built from the tempos and the initiatives. A tie between the teams is settled at random, and the timeline says which team got the earlier place."
+                    "text": " The order of the turns, built from the tempos and the initiatives. A tie between the teams is settled at random: the timeline marks it, and a tap on a place says which team got the earlier place."
                   }
                 ],
                 [
@@ -1326,7 +1326,7 @@
                   "strong": true
                 },
                 {
-                  "text": " is settled at random: the app draws which team takes each place in the tie. The timeline shows the tie as settled at random, and which team got the earlier place. How a team orders its own creatures in its places is "
+                  "text": " is settled at random: the app draws which team takes each place in the tie. The timeline marks the tie as settled at random, and a tap on a place says which team got the earlier place. How a team orders its own creatures in its places is "
                 },
                 {
                   "text": "the next step",
@@ -2983,7 +2983,7 @@
   "changes": [
     {
       "date": "2026-11-27",
-      "text": "The book says a critical chance as a percent, as the cards do, and a tie between the teams as settled at random. No rule changed (ADR 0208).",
+      "text": "The screen no longer shows a die: a cast that crits shows **Crit!** beside its caster, the history says the chance the cast had, and a tie between the teams reads as settled at random. The book says a critical chance as a percent, as the cards do. No rule changed (ADR 0208).",
       "adrs": [
         "0208"
       ]

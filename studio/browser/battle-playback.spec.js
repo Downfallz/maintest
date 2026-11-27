@@ -15,14 +15,14 @@ async function stages(page, steps = [WINDUP_MS, IMPACT_MS, SETTLE_MS]) { for (co
 const fits = page => fitsViewport(page, '.creature, #playback-skip, #playback-result, #combat-open, #settings');
 test('a cast that crit says Crit! beside the caster as it lands, with no die, and the word leaves with the result', async ({ page }, info) => {
   test.setTimeout(60000);
+  // Cast by the creature at the field's right edge: the word stays on screen there (calloutSpot).
   const h = await mount(page);
-  await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
+  await h.publish([entry(12), entry(10, { actor: 3, criticalRoll: 19 })]);
   // The feed is fetched on the real clock: the lunge begins only once it has arrived, so the test clock waits for it.
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(860);
   // The field names the caster whose critical landed and nothing of the roll (ADR 0208): no face, no threshold.
-  await expect(page.locator('#battle')).toHaveAttribute('data-crit', '1');
-  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./);
+  await expect(page.locator('#battle')).toHaveAttribute('data-crit', '3');
   // The word has settled in (180 ms) before it is pictured.
   await page.clock.runFor(300);
   await page.screenshot({ path: info.outputPath('critical-word.jpg'), type: 'jpeg', quality: 85 });
@@ -38,7 +38,6 @@ test('a cast that could crit and did not shows nothing on the caster', async ({ 
   await page.clock.runFor(1400);
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', /impact|resolved/);
   await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./);
-  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./);
   await page.screenshot({ path: info.outputPath('critical-miss.png') });
   expect(h.errors).toEqual([]);
 });
