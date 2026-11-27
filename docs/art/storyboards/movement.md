@@ -637,7 +637,8 @@ look of its own, so its caster stays home, as for a cast), on the projects `smal
   frame after the action, and gone with that frame.
 - The spec also pictures, at 1160 ms, an opponent's caster in the top row under the `OPPONENT` label, a caster in the
   middle of a row, and an opponent's caster on a short screen (568 px tall on a phone): the plate whole inside the
-  field, clear of the label and of its neighbours' captions.
+  field, clear of the label and of its neighbours' captions, never over the caster's head. On the short screen it may
+  stand on the rim's top (see **Left**); that is the one place it may touch the caster.
 
 A picture cannot show the ease or the feel at full speed; the critique compares sizes between frames only.
 
@@ -655,11 +656,17 @@ A picture cannot show the ease or the feel at full speed; the critique compares 
   choice the film could ask for later.
 - The craft book has no entry for a word on the field (its size against the figure, its plate, its place). The entry
   here leans on Easing families; if the word ever travels or other words join it, the book gains that entry first.
-- On a short stage the top limit does bring the word down onto the rim: the plate covers the rim's top beside an
-  opponent's caster at 390 by 568 on the live page, and on the bench's short field at 320 and 390; at 320 by 568 it
-  stands 2 or 3 px clear. No docked sheet shortens the field under a word: the spell choice steps aside while a result
-  is read, and under an open mutation or tempo sheet no action plays. The word's place there is not settled.
-- With less motion the word stays for the settle that holds the result after the frame's 650 ms, as the result does
-  (`live.ts` says it while the cue is on the field); "Reduced motion" above says 650 ms.
-- A melee caster in the middle of a row comes home through the word: the plate, drawn above the figures, covers part
-  of the returning figure near 1160 ms on the bench.
+- On a short stage the top limit (`calloutSpot`, `size × .7` of the callout's size from the field's top) brings the
+  word down onto the rim: at 390 by 568 on the live page the plate stands about 11 px under the field's top and covers
+  about 12 px of the rim's spikes and the top of the caster's back, never its head; at 320 by 568 it stands 2 or 3 px
+  clear; on the bench's short field it covers the rim at 320 and 390 for a top-row caster. Raising the limit to the
+  plate's half height plus 2 px gains about 9 px and still leaves about 3 px on the rim at 390 by 568, so a number does
+  not settle it: the word beside the head when it cannot stand over it is a restaging, for a later pass. No docked
+  sheet shortens the field under a word: the spell choice steps aside while a result is read, and under an open
+  mutation or tempo sheet no action plays.
+- A melee caster in the middle of a row comes home through the word: the plate, drawn above the figures (depth 2000),
+  covers the returning figure's head near 1160 ms on the bench, for part of the 720 ms return. A caster at a row's end
+  returns beside it, not under it. Drawing the word under a figure that is away from home would let the figure win; it
+  changes the beat at 1040 ms ("returns home under it"), so it waits for a pass on the return.
+- At 1440 the 20 px ceiling gives a plate about a quarter of a figure wide; at 320 the 14 px floor about half. Both
+  read on the film; the size rule stands until a person finds the desktop word too slight.
