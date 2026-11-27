@@ -4,7 +4,7 @@
 // interactions `--strip` films.
 
 import { GAME_ORIGIN } from '../../table/site-origins.js';
-import { END_WORD, answer, asked, choose, latest, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, roundEndRead, takeSeat } from './play.mjs';
+import { END_WORD, aNetworkAway, answer, asked, choose, latest, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, roundEndRead, takeSeat } from './play.mjs';
 import { DESKTOP, VIEWPORTS, neverAskedInPage } from './set.mjs';
 
 export const WALKER = 'Walker', FRIEND = 'Rook', LEARNER = 'Learner';
@@ -517,6 +517,8 @@ export function attack(offered, view) {
 // dock's card says the end and the round's bar says what ended. The walk then reads on to the next question.
 async function roundEnd(walk) {
   const { page } = walk;
+  // The end is read only if the page plays what the round's last cast brought: see `aNetworkAway`.
+  await aNetworkAway(page);
   const look = async () => {
     if (walk.seen('round-end')) return;
     const read = await roundEndRead(page);

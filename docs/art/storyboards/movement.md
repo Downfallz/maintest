@@ -552,7 +552,7 @@ throughout.
 | At | Lasts | Window | Layer | Beat | Pattern |
 | --- | --- | --- | --- | --- | --- |
 | 840 | 200 | impact | the word | `Crit!` enters on the contact frame, on the first frame the scene draws it, over the caster's home: scale .8 to 1 and alpha .4 to 1 over 200 ms (*house*; 180 today), eased `Cubic.Out`, so it arrives fast and lands softly. No travel: it grows where it stays. | [Easing families](../battle-craft.md#easing-families), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
-| 840 | 200 | impact | the camera | The punch zoom of "The camera" (3% in, back over 200 ms), not repeated here: the word is drawn in the world and rides it, and its entry ends with the punch, so the two land as one arrival. | [Punch zoom](../battle-craft.md#punch-zoom) |
+| 840 | 200 | impact | the camera | The punch zoom of "The camera" (3% in, back over 200 ms), not repeated here: the word is drawn in the world and rides it, and the shake with it (1 to 4 px on the film, gone by 1040 ms), and its entry ends with the punch, so the two land as one arrival. | [Punch zoom](../battle-craft.md#punch-zoom) |
 | 1040 | 1500 | impact | the word | Still, at scale 1 and alpha 1. It does not breathe, pulse, glow or follow the caster's image: on a melee blow the caster returns home under it (1020 to 1740 ms), so the return leads the eye from the target's number to the word. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
 | 2540 | 500 | settle | the word | Still. It leaves with the result in one frame, no fade, when the playback leaves the action: at 3040 ms when the next action starts, later when an opponent's action waits for its OK. | [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
 
@@ -579,7 +579,10 @@ word adds no light and no shake. The blow keeps its own one flash on the target.
 ### Reduced motion
 
 The word is simply there, at scale 1 and alpha 1, on the frame the reduced playback shows after the action, in the
-same place and size, for that frame's 650 ms, and gone with it. No entry, no punch.
+same place and size, and gone with the result: that frame's 650 ms (`REDUCED_MS`) and the settle that holds the result
+after it (`SETTLE_MS`, 500 ms), 1150 ms in all, since the page says the word while the action's cue is on the field
+(`live.ts`). No entry, no punch. (The film corrected this: an earlier draft said 650 ms, which would have taken the word
+away while the result it labels was still read.)
 
 ### Cost
 
@@ -616,13 +619,16 @@ look of its own, so its caster stays home, as for a cast), on the projects `smal
 844) and `desktop` (1440 by 1000). The times are in ms from the start of the action at 1×:
 
 - 860 ms (the spec's first wait): the word is there over creature 3's home, visibly smaller and fainter than at
-  1160 ms. Creature 3 is at or near creature 4, not under the word.
-- 900 ms: every figure and the word a little larger than at 1160 ms (the punch); the word still smaller than at
-  1160 ms.
+  1160 ms. On the bench a3 is at b1, not under the word; on the live page creature 3 stays home under it (the
+  fixture's Strike has no look).
+- 900 ms: the word nearly opaque and still smaller than at 1160 ms. The punch is about 1% there (`view.zoom` 1.011 in
+  the bench's `--motion` log, 1.024 at 840 ms): read it in the log, not on the picture.
 - 1040 ms and 1160 ms (the spec's picture today): the word at its full size and alpha, the same place on both.
   At 320 px its type is 14 px, at 390 px 15 px, at 1440 px 20 px. Ivory on the dark plate, never gold.
-- 1160 ms: the plate's bottom edge clear of the gold rim's top by a few pixels at 320 and 390; it covers no part of
-  creature 3, its `ACTING` tag, its name, nor the caption of the row above. Whole inside the field at the right edge.
+- 1160 ms: the plate's bottom edge clear of the gold rim's top by a few pixels at 320, 390 and 1440 (8 to 14 px on the
+  live page: the 6 px are from the rim's highest point, which is rarely under the plate); it covers no part of
+  creature 3 at home, its `ACTING` tag, its name, nor the caption of the row above. Whole inside the field at the
+  right edge.
 - 1800 ms: creature 3 home under the word; the word where it was at 1160 ms.
 - 2600 ms and 3000 ms: the same word, the same place.
 - 3100 ms, or the spec's last wait: no word on the field, and `#battle` has no `data-crit`.

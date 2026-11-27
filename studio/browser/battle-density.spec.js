@@ -125,30 +125,60 @@ test('the match frame is written at 11 px at least and no two of its controls sh
   if (narrow) { await page.locator('#inbox-open-menu').click(); await expect(page.locator('#inbox-dialog')).toBeVisible(); }
 });
 
+// Every word the round's bar can say under 760 px (docs/art/journeys/match.md, `second-round`): a phase, plain, or
+// the short form of a round's start or end with the plan's words a wide screen shows in its place.
+const BAR_WORDS = [['COMMAND'], ['COMBAT'], ['WAITING'], ['+12', '+12 ENERGY EACH'], ['ENERGY', 'ROUND ENERGY'], ['START', 'ROUND START'],
+  ['12 ENDED', '12 CONDITIONS ENDED'], ['6 IMMUNE', '6 IMMUNE TO STUN'], ['END', 'ROUND END']];
+
+// The word written as the page writes it (roundWord in battle/src/live.ts): a phase as plain text; a start or an end
+// as its two forms, each followed by what a screen reader hears, the start's grant behind its 11 px mark. Round 12:
+// the number at its widest. Returns the cell's width, and the room left between the bar's tools and the site menu.
+const sayInBar = (page, [short, full]) => page.evaluate(([short, full]) => {
+  const word = document.getElementById('round-phase');
+  if (full) {
+    const form = (name, text, mark) => `<span class="${name}">${mark}${text}<span class="unseen">, said after it</span></span>`;
+    word.innerHTML = form('round-short', short, short.startsWith('+') ? '<svg class="cue-icon" viewBox="0 0 16 16" aria-hidden="true"></svg>' : '') + form('round-full', full, '');
+  } else word.textContent = short;
+  document.getElementById('round-number').textContent = '12';
+  document.getElementById('recap-open').disabled = false;
+  const right = ['#recap-open', '#opponent-open', '#history-open', '#help-open', '#settings']
+    .map(one => document.querySelector(one)).filter(one => one.checkVisibility())
+    .reduce((most, one) => Math.max(most, one.getBoundingClientRect().right), 0);
+  const header = [...document.querySelectorAll('.home-header > :is(button, a, details, .account-chip), .home-header #home-menu-toggle')]
+    .filter(one => one.checkVisibility()).reduce((least, one) => Math.min(least, one.getBoundingClientRect().left), Infinity);
+  return { gap: header - right, cell: document.getElementById('recap-open').getBoundingClientRect().width };
+}, [short, full]);
+
 // The round's bar holds its longest phase, the recap's mark and the opponent beside History, Help and Settings, with
-// the site menu and the account at its right end, on every phone from 360 to 419 px (#1276): at 390 the menu covered
-// 15 px of Settings while the round read COMMAND.
+// the site menu and the account at its right end, on every phone from 320 to 430 px (#1276): at 390 the menu covered
+// 15 px of Settings while the round read COMMAND. Under 360 px History is off the bar and under 420 px the bell is in
+// the menu: the tools counted are the ones shown (#1308 adds 320 and 344, where the short forms were only reckoned).
 test('the round\'s bar keeps Settings clear of the site menu on every phone width, whatever the phase', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone', 'The widths are set here: one project reads them.');
   await signedInSeat(page);
-  for (const width of [360, 375, 390, 393, 412, 419, 420, 430]) {
+  for (const width of [320, 344, 360, 375, 390, 393, 412, 419, 420, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    // Every word the bar can say under 760 px: the phases, and the short forms of a round's start and end.
-    for (const phase of ['COMMAND', 'COMBAT', 'WAITING', '+12', 'ENERGY', 'START', '12 ENDED', '6 IMMUNE', 'END']) {
-      const gap = await page.evaluate(phase => {
-        // The start's short form as the page builds it (roundWord in battle/src/live.ts): its 11 px mark, then the grant.
-        if (phase.startsWith('+')) document.getElementById('round-phase').innerHTML = `<span class="round-short"><svg class="cue-icon" viewBox="0 0 16 16" aria-hidden="true"></svg>${phase}</span>`;
-        else document.getElementById('round-phase').textContent = phase;
-        document.getElementById('round-number').textContent = '12';
-        document.getElementById('recap-open').disabled = false;
-        const right = ['#recap-open', '#opponent-open', '#history-open', '#help-open', '#settings']
-          .map(one => document.querySelector(one)).filter(one => one.checkVisibility())
-          .reduce((most, one) => Math.max(most, one.getBoundingClientRect().right), 0);
-        const header = [...document.querySelectorAll('.home-header > :is(button, a, details, .account-chip), .home-header #home-menu-toggle')]
-          .filter(one => one.checkVisibility()).reduce((least, one) => Math.min(least, one.getBoundingClientRect().left), Infinity);
-        return header - right;
-      }, phase);
-      expect(gap, `${width} px, ${phase}`).toBeGreaterThanOrEqual(0);
+    for (const word of BAR_WORDS) {
+      const { gap } = await sayInBar(page, word);
+      expect(gap, `${width} px, ${word[0]}`).toBeGreaterThanOrEqual(0);
     }
+  }
+});
+
+// The brief's room rule (docs/art/journeys/match.md, `second-round`): under 760 px the round's cell neither widens
+// nor wraps at a round's start or end, so the opponent and the tools beside it do not move (#999). Every short form
+// is held to the width the cell has at COMMAND, the phase a round is read in most.
+test('under 760 px the round\'s cell is no wider at a round\'s start or end than at COMMAND', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone', 'The widths are set here: one project reads them.');
+  await signedInSeat(page);
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const { cell: command } = await sayInBar(page, ['COMMAND']);
+    const wider = [];
+    for (const word of BAR_WORDS.filter(([, full]) => full)) {
+      const { cell } = await sayInBar(page, word);
+      if (cell > command + 0.01) wider.push(`${word[0]} ${cell} px`);
+    }
+    expect(wider, `${width} px, COMMAND ${command} px`).toEqual([]);
   }
 });

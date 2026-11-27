@@ -90,6 +90,22 @@ export const roundEndRead = page => page.evaluate(title => {
   return { round: node('round-number').textContent.trim(), word: seen.textContent.trim(), detail: node('reading-detail').textContent.trim() };
 }, ROUND_END);
 
+/** How long a near network holds a request, in milliseconds: several frames of the page. */
+export const NETWORK_MS = 120;
+
+/**
+ * The page's requests held as a near network holds them, from here on. The walk's host is on the same machine and
+ * answers a cast within a frame or two, before the field has heard it was resized by the targets' dock leaving
+ * (`nextResize`, battle/src/boot.ts). The page takes a resize while results play for a rotation and passes over what
+ * was left to read (`onResizeDuringPlayback`, battle/src/live.ts): the cast, the round's end and the next start, one
+ * walk in three at 320 px. A player is a network away, and the resize always lands first; so is the walker.
+ */
+export async function aNetworkAway(page, latency = NETWORK_MS) {
+  const session = await page.context().newCDPSession(page);
+  await session.send('Network.enable');
+  await session.send('Network.emulateNetworkConditions', { offline: false, latency, downloadThroughput: -1, uploadThroughput: -1 });
+}
+
 /**
  * Read what the battle shows until the person is asked something, the lesson is done or the match is over: the
  * upkeep, each result's OK, the revealed order's Continue, the phase tips and the concept cards. `look` is
