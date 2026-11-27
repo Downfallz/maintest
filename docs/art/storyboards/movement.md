@@ -597,10 +597,23 @@ same place and size, for that frame's 650 ms, and gone with it. No entry, no pun
 
 ### On the film strip
 
-No bench sheet: the bench does not play a critical (see **Left**). The frames are pictured from
-`studio/browser/battle-playback.spec.js`, "a cast that crit says Crit! beside the caster as it lands…" (creature 3
-strikes creature 4 for 7 with a critical), on the projects `small-phone` (320 by 740), `phone` (390 by 844) and
-`desktop` (1440 by 1000), the times in ms from the start of the action at 1×:
+The bench plays a critical (#1309), and its sheet's twelve frames are the times below, with 0 and 600 ms (the
+windup, no word), 840 (the contact) and 3040 (the result leaves):
+
+```bash
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit --damage 7 --actor a3 --targets b1 --motion
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit --damage 7 --actor a3 --targets b1 --viewport 320x740
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit --damage 7 --actor a3 --targets b1 --viewport 1440x1000 --columns 3
+```
+
+a3 stands at the right edge of your row on a phone, and b1 across the field. `--actor b3 --targets a1` films an
+opponent's caster in the top row, and `--actor a2 --targets b2` one in the middle of its row. The bench's field is
+shorter than the live page's, the more so at 320 px: its sheets are the short stage.
+
+The live page is pictured at the same times by `studio/browser/battle-playback.spec.js`, "a cast that crit says Crit!
+beside the caster as it lands…" (creature 3 strikes creature 4 for 7 with a critical; the fixture's Strike has no
+look of its own, so its caster stays home, as for a cast), on the projects `small-phone` (320 by 740), `phone` (390 by
+844) and `desktop` (1440 by 1000). The times are in ms from the start of the action at 1×:
 
 - 860 ms (the spec's first wait): the word is there over creature 3's home, visibly smaller and fainter than at
   1160 ms. Creature 3 is at or near creature 4, not under the word.
@@ -613,28 +626,34 @@ strikes creature 4 for 7 with a critical), on the projects `small-phone` (320 by
 - 1800 ms: creature 3 home under the word; the word where it was at 1160 ms.
 - 2600 ms and 3000 ms: the same word, the same place.
 - 3100 ms, or the spec's last wait: no word on the field, and `#battle` has no `data-crit`.
-- With reduced motion (a run of the same test under the reduced setting): the word at full size and alpha on the
-  first frame after the action, and gone with that frame.
+- With reduced motion (the spec's "with less motion Crit! is there on the frame after the action…"; the film strip
+  has no flag for it, the bench's own Less motion setting plays it): the word at full size and alpha on the first
+  frame after the action, and gone with that frame.
+- The spec also pictures, at 1160 ms, an opponent's caster in the top row under the `OPPONENT` label, a caster in the
+  middle of a row, and an opponent's caster on a short screen (568 px tall on a phone): the plate whole inside the
+  field, clear of the label and of its neighbours' captions.
 
 A picture cannot show the ease or the feel at full speed; the critique compares sizes between frames only.
 
 ### Left
 
-- Three marks of one critical on one screen (the caster's word, the target's `−7 CRIT` chip, the dock card's `CRIT`
-  badge) is one too many on a phone. Recommended: the target's chip drops its `CRIT` while the action plays, and
-  says the number alone; the caster's word says the critical on the field (ADR 0208) and the card ties it to the
-  number in the dock, where it is kept. The chip and the card are the pages' and another brief's: the owner may
-  refuse, and the word is staged above as if all three stay.
-- Ivory, not gold, for the word. If the owner wants the three marks in one colour, the word goes back to
-  `#ffe2a6`; the rim beside it then makes the word read as part of the acting marker. The chip's and the card's gold
-  badges are the pages' question, under the same rule.
+- Settled by the owner on 2026-11-27, and built (#1309): three marks of one critical on one screen were one too many
+  on a phone, so the target's chip drops its `CRIT` while the action plays and says the number alone (`fieldChips`,
+  `table/battle-playback.js`). The caster's word says the critical on the field (ADR 0208), and the dock's card keeps
+  its `CRIT` beside the number. The chip keeps its mark where no word is drawn: a record that kept no roll, a caster
+  its own cast felled. History and the last result keep theirs.
+- Settled by the owner on 2026-11-27: ivory, not gold, for the word. Kept as built. The chip's and the card's gold
+  badges are the pages' question.
 - The word leaves in one frame, no fade: the scene cannot know when a held action's OK comes, and at 3040 ms the
   next action moves the halo on the same frame, so the field changes all at once there. A fade over the settle is a
   choice the film could ask for later.
-- The bench has no critical: `scripts/battle/filmstrip.mjs` would need a flag (a `--crit` that sets the frame's
-  `crit` at impact) for the word to have a film strip like every other beat. A tool's change, not a pattern.
 - The craft book has no entry for a word on the field (its size against the figure, its plate, its place). The entry
   here leans on Easing families; if the word ever travels or other words join it, the book gains that entry first.
-- The spec pictures an ally at the right edge only: an opponent's caster (the top row, under the `OPPONENT` label) and
-  a figure in the middle of a row are not pictured. On a short stage (a mutation sheet open) the top limit may bring the
-  word onto the rim.
+- On a short stage the top limit does bring the word down onto the rim: the plate covers the rim's top beside an
+  opponent's caster at 390 by 568 on the live page, and on the bench's short field at 320 and 390; at 320 by 568 it
+  stands 2 or 3 px clear. No docked sheet shortens the field under a word: the spell choice steps aside while a result
+  is read, and under an open mutation or tempo sheet no action plays. The word's place there is not settled.
+- With less motion the word stays for the settle that holds the result after the frame's 650 ms, as the result does
+  (`live.ts` says it while the cue is on the field); "Reduced motion" above says 650 ms.
+- A melee caster in the middle of a row comes home through the word: the plate, drawn above the figures, covers part
+  of the returning figure near 1160 ms on the bench.
