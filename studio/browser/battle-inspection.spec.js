@@ -315,3 +315,26 @@ test('a new round is announced at the top of the field, then fades; opening the 
   await expect(page.locator('#round-toast')).toHaveAttribute('role', 'status');
   await page.clock.runFor(2700); await expect(page.locator('#round-toast')).toBeHidden(); expect(h.errors).toEqual([]);
 });
+
+test('a mutation round is announced as one, and the next ordinary round goes back to the plain announcement', async ({ page }) => {
+  const h = await mount(page);
+  const toast = id => page.locator(`#round-toast-${id}`);
+  h.view.board.roundNumber = 4; h.view.board.nextEvolutionRound = 4; await h.publish();
+  await expect(toast('eyebrow')).toHaveText('MUTATION ROUND'); await expect(toast('number')).toHaveText('Round 4');
+  await expect(toast('said')).toHaveText(', mutation round'); await expect(toast('eyebrow')).toHaveAttribute('aria-hidden', 'true');
+  // A later ordinary round, the mutation round's toast still on screen or not, says nothing of mutation.
+  h.view.board.roundNumber = 5; h.view.board.nextEvolutionRound = 6; await h.publish();
+  await expect(toast('number')).toHaveText('Round 5'); await expect(toast('eyebrow')).toHaveText('NEW ROUND'); await expect(toast('said')).toHaveText('');
+  await page.clock.runFor(2700); await expect(page.locator('#round-toast')).toBeHidden();
+  // The round before one is an ordinary announcement too.
+  h.view.board.roundNumber = 6; h.view.board.nextEvolutionRound = 7; await h.publish();
+  await expect(toast('number')).toHaveText('Round 6'); await expect(toast('eyebrow')).toHaveText('NEW ROUND'); await expect(toast('said')).toHaveText('');
+  expect(h.errors).toEqual([]);
+});
+
+test('a new round with no mutation round named is announced as an ordinary one', async ({ page }) => {
+  const h = await mount(page);
+  h.view.board.roundNumber = 4; h.view.board.nextEvolutionRound = null; await h.publish();
+  await expect(page.locator('#round-toast-eyebrow')).toHaveText('NEW ROUND'); await expect(page.locator('#round-toast-said')).toHaveText('');
+  expect(h.errors).toEqual([]);
+});

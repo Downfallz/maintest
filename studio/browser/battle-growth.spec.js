@@ -77,7 +77,7 @@ function spellChoice(h, asked = 21) {
 test('Help reference opens the full mutation tree: read-only, keyboard navigable and without private pending picks', async ({ page }, info) => {
   const h = await mount(page); await h.reference();
   const board = page.locator('#atlas-board'), detail = page.locator('#atlas-detail-body'), progress = page.locator('#atlas-progress');
-  await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(progress).toContainText('Next mutation opportunity · Round 7');
+  await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(progress).toContainText('Next mutation round: 7');
   await expect(board.locator('[data-package="predator"]')).toHaveAttribute('data-status', 'available');
   await page.locator('#atlas-creature').selectOption('2');
   await expect(progress).toContainText('No revealed mutations yet');
@@ -90,7 +90,7 @@ test('Help reference opens the full mutation tree: read-only, keyboard navigable
   await fitsViewport(page, '#atlas-close, #atlas-creature');
   // A poll keeps the creature, the open card and the focused mutation.
   h.view.board.nextEvolutionRound = 8; await h.publish();
-  await expect(progress).toContainText('Next mutation opportunity · Round 8'); await expect(page.locator('#atlas-creature')).toHaveValue('2');
+  await expect(progress).toContainText('Next mutation round: 8'); await expect(page.locator('#atlas-creature')).toHaveValue('2');
   await expect(cap).toHaveAttribute('aria-pressed', 'true'); await expect(cap).toBeFocused(); await expect(detail).toContainText('Shared capstone');
   await expect.poll(() => h.shown).toEqual(['10']); expect(h.writes).toEqual([]);
   await page.screenshot({ path: info.outputPath('mutation-reference.png') });
@@ -125,7 +125,7 @@ test('inspection selects the opponent and reveals its progress only after public
 });
 test('a reveal reads as one line and crests on the field, opens on cards by side, and each card leads to its path', async ({ page }, info) => {
   const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); await h.publish();
-  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1 · Round 3');
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1');
   // A part that arrives by itself (#1077, docs/art/ux-craft.md): it enters by the kit's arrival, and its line is
   // read whole at 320 px, where it was cut to "You 1 · Oppone…".
   await expect(page.locator('#growth-receipt')).toHaveClass(/motion-arrive/);
@@ -160,6 +160,63 @@ test('a reveal reads as one line and crests on the field, opens on cards by side
   await page.keyboard.press('Escape'); if (await page.locator('#atlas-dialog').evaluate(dialog => dialog.open)) await page.keyboard.press('Escape');
   await page.locator('#growth-dismiss').click();
   await expect(page.locator('#battle')).toHaveAttribute('data-reveal', ''); expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+// When the next mutation round comes (F3, docs/art/journeys/windows.md, `mutation-tree`): the public tree's progress line.
+const roundLabels = [
+  ['a mutation round whose step is the pick', board => { board.nextEvolutionRound = 3; }, {}, 'This is a mutation round'],
+  ['another round', board => { board.nextEvolutionRound = 7; }, {}, 'Next mutation round: 7'],
+  ['a mutation round past its pick, with the one after it', board => { board.nextEvolutionRound = 3; board.followingEvolutionRound = 5; board.subPhase = 'Speed'; },
+    { waitingFor: null, waitingAsked: null, options: {} }, 'Next mutation round: 5'],
+  ['no mutation round left', board => { board.nextEvolutionRound = null; }, {}, 'No more mutation rounds'],
+  ['a match that is over', board => { board.nextEvolutionRound = null; }, { over: true, waitingFor: null, waitingAsked: null, options: {} }, 'Match complete · no more mutation rounds'],
+];
+for (const [name, shape, top, label] of roundLabels) test(`the public tree's progress line names when the next mutation round comes on ${name}`, async ({ page }) => {
+  const input = initial(); shape(input.board); Object.assign(input, top);
+  const h = await mount(page, input); await h.reference();
+  await expect(page.locator('#atlas-dialog')).toBeVisible(); await expect(page.locator('#atlas-progress')).toContainText(label);
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+test('the pick\'s Full Mutation Tree reads the pick\'s short form on its progress line', async ({ page }) => {
+  const input = initial(); const h = await mount(page, input);
+  await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  // The fixture's catalogue serves no rules.evolutionInterval: the label is the count alone.
+  await expect(page.locator('#atlas-progress')).toHaveText('1 pick left'); expect(h.errors).toEqual([]);
+});
+// The reveal's receipt names the next mutation round (F3, `mutation-followed`): the round after the reveal's own.
+const receiptCases = [
+  ['the host names the round after this one', { followingEvolutionRound: 5 }, 'Next mutation round: 5', 'Speed'],
+  ['the board still says Evolution', { followingEvolutionRound: 5 }, 'Next mutation round: 5', 'Evolution'],
+  ['the host names none after this one', { followingEvolutionRound: null }, 'No more mutation rounds', 'Speed'],
+  ['the board carries no such field', {}, '', 'Speed'],
+];
+for (const [name, fields, label, step] of receiptCases) test(`a reveal of the board's round says when the next mutation round comes when ${name}`, async ({ page }) => {
+  const input = initial(); Object.assign(input.board, { nextEvolutionRound: 3 }, fields);
+  const h = await mount(page, input); await page.locator('#planning-close').click(); unlock(h); h.view.board.subPhase = step; await h.publish();
+  const next = page.locator('#growth-receipt-next');
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-summary')).toHaveText('You 1 · Opponent 1');
+  if (label) {
+    await expect(next).toHaveText(label);
+    await expect(page.locator('#growth-announcement')).toHaveText(new RegExp(`${label}\\.$`));
+  } else {
+    await expect(next).toBeHidden(); await expect(page.locator('#growth-announcement')).not.toContainText(/Next mutation round|No more mutation rounds/);
+  }
+  await page.locator('#growth-receipt [data-growth-open]').click(); await expect(page.locator('#growth-dialog')).toBeVisible();
+  if (label) await expect(page.locator('#growth-next')).toHaveText(label); else await expect(page.locator('#growth-next')).toBeHidden();
+  expect(h.writes).toEqual([]); expect(h.errors).toEqual([]);
+});
+for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) test(`the reveal's receipt stays small and in view at ${viewport.width} by ${viewport.height}`, async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Own viewport');
+  await page.setViewportSize(viewport);
+  const input = initial(); Object.assign(input.board, { nextEvolutionRound: 3, followingEvolutionRound: 5 });
+  const h = await mount(page, input); await page.locator('#planning-close').click(); unlock(h); await h.publish();
+  await expect(page.locator('#growth-receipt')).toBeVisible(); await expect(page.locator('#growth-receipt-next')).toHaveText('Next mutation round: 5');
+  // Under 360 px the counts leave to the crests, and the next round stays.
+  if (viewport.width < 360) await expect(page.locator('#growth-receipt-summary')).toBeHidden(); else await expect(page.locator('#growth-receipt-summary')).toBeVisible();
+  await fitsViewport(page, '#growth-receipt [data-growth-open], #growth-dismiss');
+  const height = (await page.locator('#growth-receipt').boundingBox()).height;
+  info.annotations.push({ type: 'receipt-height', description: `${viewport.width}: ${height}` }); console.log(`receipt height at ${viewport.width}: ${height}`);
+  expect(height).toBeLessThan(100);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); expect(h.errors).toEqual([]);
 });
 test('crests stay beside the docked spell choice and leave the field to its targets or to history', async ({ page }) => {
   const h = await mount(page); await page.locator('#planning-close').click(); unlock(h); spellChoice(h); await h.publish();

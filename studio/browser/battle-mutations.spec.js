@@ -13,7 +13,10 @@ const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, vi
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: i === 1 ? '15%' : '0%',
   criticalThreshold: i === 1 ? 18 : null, criticalNote: i === 1 ? 'A critical doubles the damage.' : null,
   marks: [{ kind: 'DamageEffect', onCaster: false }, { kind: 'EnergyEffect', onCaster: true }] })),
-effects: [{ kind: 'DamageEffect', glyph: '♥', harmful: true }, { kind: 'EnergyEffect', glyph: 'ϟ', harmful: false }] };
+effects: [{ kind: 'DamageEffect', glyph: '♥', harmful: true }, { kind: 'EnergyEffect', glyph: 'ϟ', harmful: false }], rules: { evolutionInterval: 2 } };
+// The pick's first line comes in two forms the sheet's height picks (a portrait at most 660 px tall shows the short one): the one on show.
+const pickLine = page => { const { width, height } = page.viewportSize(); return page.locator(height <= 660 && height > width ? '#planning-help .pick-short' : '#planning-help .pick-full'); };
+const pickWords = page => { const { width, height } = page.viewportSize(); return height <= 660 && height > width ? 'short' : 'full'; };
 async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2, open = null } = {}) {
   const state = { errors: [], writes: [], shown: [], status: 200, view: {
     board: { slot: 'Player1', roundNumber: 1, phase: 'Planning', subPhase: 'Evolution', allies, enemies: [], evolutionChoices: picks, timeline: [] },
@@ -149,7 +152,7 @@ test('switching recipients clears the old pick and confirmation names the new cr
 test('dead and already-picked creatures explain their state and empty offers; pass uses whole-team semantics', async ({ page }) => {
   // As the host sends it: the picks left are already capped at the one creature it can still offer a pick to.
   const h = await mount(page, { allies: [roster[0], { ...roster[1], isAlive: false }, roster[2]], picks: [{ creature: 3, tier: 'root0' }], remaining: 1 });
-  await expect(page.locator('#planning-help')).toContainText('1 team pick remaining');
+  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Mutation round every 2 rounds · 1 pick left' : 'A mutation round comes every 2 rounds. 1 pick left.');
   await expect(page.locator('#planning-creatures [data-creature="2"]')).toHaveAccessibleName(/Defeated/); await expect(page.locator('#planning-creatures [data-creature="3"]')).toHaveAccessibleName(/Picked · hidden until reveal/);
   await page.locator('#planning-creatures [data-creature="3"]').click(); await expect(page.locator('[data-mutation]')).toHaveCount(0);
   await expect(page.locator('.mutation-empty')).toContainText('Choose another creature');
@@ -254,13 +257,14 @@ test('the mutation phase opens its tree by itself, once per asking', async ({ pa
 
 test('a pick that leaves team picks keeps the tree open on the next creature with its remaining picks', async ({ page }) => {
   const h = await mount(page);
-  await expect(page.locator('#planning-help')).toHaveText('2 team picks remaining');
+  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Mutation round every 2 rounds · 2 picks left'
+    : 'A mutation round comes every 2 rounds. Your team has 2 picks, each for a different creature.');
   // The budget is the team's: a token per pick, and a line saying two of the three creatures mutate now. The note
   // opens the tree and scrolls with it, so it takes none of a short sheet's fixed room.
   const pips = page.locator('#planning-pick-rule .pick-pip'), rule = page.locator('#planning-choices > #planning-pick-rule');
   await expect(pips).toHaveCount(2); await expect(page.locator('#planning-pick-rule .pick-pip[data-spent="true"]')).toHaveCount(0);
   await expect(rule).toBeVisible();
-  await expect(rule).toHaveText('3 creatures can mutate, 2 picks left: choose which 2 mutate now, one pick each. Rules');
+  await expect(rule).toHaveText('3 creatures can mutate: choose which 2 mutate now. Rules');
   await expect(rule.locator('a')).toHaveAttribute('href', '/rules#evolution');
   h.state.next = view => ({ ...view, waitingAsked: 12, board: { ...view.board, evolutionChoices: [{ creature: 1, tier: 'root0' }] },
     options: { evolution: { remainingPicks: 1, creatures: view.options.evolution.creatures.filter(one => one.creature !== 1) } } });
@@ -268,9 +272,9 @@ test('a pick that leaves team picks keeps the tree open on the next creature wit
   await expect.poll(() => h.state.writes.length).toBe(1);
   await expect(page.locator('#planning-dialog')).toBeVisible();
   await h.publish();
-  await expect(page.locator('#planning-help')).toHaveText('1 team pick remaining');
+  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Mutation round every 2 rounds · 1 pick left' : 'A mutation round comes every 2 rounds. 1 pick left.');
   await expect(pips).toHaveCount(2); await expect(page.locator('#planning-pick-rule .pick-pip[data-spent="true"]')).toHaveCount(1);
-  await expect(rule).toContainText('2 creatures can mutate, 1 pick left: choose which one mutates now');
+  await expect(rule).toContainText('2 creatures can mutate: choose which one mutates now.');
   await expect(page.locator('#planning-creatures [aria-pressed=true]')).toHaveText('Creature 2');
   await expect.poll(() => h.state.shown).toEqual(['11', '12']);
   await expect(page.locator('#planning-dialog :focus')).toHaveCount(1);
@@ -398,7 +402,7 @@ test('at 320 by 568 each offer\'s form and name are in view above the foot when 
     }
   }
   await expect(page.locator('#planning-pick-rule')).toBeHidden();
-  await expect(page.locator('#planning-dialog')).toHaveAccessibleDescription(/3 creatures can mutate, 2 picks left/);
+  await expect(page.locator('#planning-dialog')).toHaveAccessibleDescription(/Your team has 2 picks, each for a different creature\. 3 creatures can mutate: choose which 2 mutate now\./);
   await page.screenshot({ path: info.outputPath('mutation-pick-320.png') });
   expect(h.state.errors).toEqual([]);
 });
@@ -670,6 +674,70 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }
     // Measured once the window has finished arriving, as the walk measures a screen at rest.
     await page.locator('#atlas-dialog').evaluate(node => Promise.all(node.getAnimations({ subtree: true }).map(one => one.finished)));
     expect(await small(), 'the Mutation Tree').toEqual([]);
+    expect(h.state.errors).toEqual([]);
+  });
+}
+
+// The pick's first line and rule line (F3, docs/art/journeys/windows.md, `mutation-pick`).
+test('with no rules.evolutionInterval in the catalogue the first line holds the count alone', async ({ page }) => {
+  const h = await mount(page, { content: { ...catalogue, rules: undefined } });
+  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? '2 picks left' : 'Your team has 2 picks, each for a different creature.');
+  expect(h.state.errors).toEqual([]);
+});
+test('a pick sent before the host answers says so on the first line, and the last one needs no schedule', async ({ page }) => {
+  const h = await mount(page);
+  h.state.next = view => view;
+  await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Pick sent · 1 pick left' : 'A mutation round comes every 2 rounds. Pick sent · 1 pick left.');
+  expect(h.state.errors).toEqual([]);
+});
+test('the last pick sent leaves the first line at "Pick sent"', async ({ page }) => {
+  const h = await mount(page, { remaining: 1 });
+  h.state.next = view => view;
+  await page.locator('[data-mutation="root0"]').click(); await page.locator('#planning-confirm').click();
+  await expect.poll(() => h.state.writes.length).toBe(1);
+  await expect(pickLine(page)).toHaveText(pickWords(page) === 'short' ? 'Pick sent' : 'Pick sent.');
+  await expect(page.locator('#planning-pick-rule')).toBeHidden();
+  expect(h.state.errors).toEqual([]);
+});
+test('with as many picks as creatures the rule line holds the pips and the Rules link alone', async ({ page }) => {
+  const h = await mount(page, { allies: roster.slice(0, 2), remaining: 2 });
+  const rule = page.locator('#planning-pick-rule');
+  test.skip(await rule.isHidden(), 'A short portrait sheet hides the rule line; the wide ones are checked');
+  await expect(page.locator('#planning-pick-rule .pick-pip')).toHaveCount(2);
+  await expect(rule).toHaveText('Rules'); await expect(rule.locator('a')).toHaveAttribute('href', '/rules#evolution');
+  expect(h.state.errors).toEqual([]);
+});
+test('the pick\'s dialog is described by its first line and its rule line', async ({ page }) => {
+  const h = await mount(page);
+  await expect(page.locator('#planning-dialog')).toHaveAttribute('aria-describedby', 'planning-pick-schedule planning-pick-rule');
+  await expect(page.locator('#planning-pick-schedule')).toHaveClass(/pick-full/);
+  await expect(page.locator('#planning-help .pick-short')).toHaveAttribute('aria-hidden', 'true');
+  expect(h.state.errors).toEqual([]);
+});
+test('the Full Mutation Tree opened from the pick reads the pick\'s short form on its progress line', async ({ page }) => {
+  const h = await mount(page); await page.locator('#mutation-atlas-open').click(); await expect(page.locator('#atlas-dialog')).toBeVisible();
+  await expect(page.locator('#atlas-progress')).toHaveText('Mutation round every 2 rounds · 2 picks left'); expect(h.state.errors).toEqual([]);
+});
+for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+  test(`the pick's first line shows its ${viewport.height <= 660 ? 'short' : 'full'} form, clear of the heading and with Confirm in view at ${viewport.width} by ${viewport.height}`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'Own viewport');
+    await page.setViewportSize(viewport); const h = await mount(page); await page.clock.runFor(150);
+    const short = viewport.height <= 660;
+    const [shown, unseen] = [page.locator(short ? '.pick-short' : '.pick-full'), page.locator(short ? '.pick-full' : '.pick-short')];
+    await expect(shown).toBeVisible();
+    if (short) {
+      // Clipped to 1 px, still in the accessibility tree.
+      const box = await unseen.boundingBox(); expect(box.width).toBeLessThanOrEqual(1); expect(box.height).toBeLessThanOrEqual(1);
+      await expect(page.locator('#planning-dialog')).toHaveAccessibleDescription(/A mutation round comes every 2 rounds\. Your team has 2 picks/);
+      expect(await shown.evaluate(node => node.getClientRects().length)).toBe(1);
+    } else {
+      expect(await unseen.evaluate(node => getComputedStyle(node).display)).toBe('none');
+      const [heading, line] = await Promise.all([page.locator('#planning-heading').boundingBox(), page.locator('#planning-help').boundingBox()]);
+      expect(line.y).toBeGreaterThanOrEqual(heading.y + heading.height - 0.5);
+    }
+    await fitsViewport(page, '#planning-confirm');
     expect(h.state.errors).toEqual([]);
   });
 }

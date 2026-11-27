@@ -34,6 +34,69 @@ async function roundWord(page, short, full) {
   await expect(page.locator(`#round-phase .round-${wide ? 'short' : 'full'}`)).toBeHidden();
 }
 
+// F3, the mutation round announced (docs/art/journeys/match.md, "The mutation round, announced"): the round before a
+// mutation round counts down in the bar while it names a phase; every other bar is the plain word, as before.
+const ahead = (h, extra = {}) => ({ board: { ...h.state.view.board, ...extra } });
+const plainWord = async (page, word) => {
+  await expect(page.locator('#round-phase')).toHaveText(word);
+  await expect(page.locator('#round-phase .round-full')).toHaveCount(0);
+};
+for (const [phase, subPhase, word] of [['Planning', 'Speed', 'COMMAND'], ['Combat', 'Activation', 'COMBAT']]) {
+  test(`the round before a mutation round counts down beside ${word}, short under 760 px and in the plan's words from there`, async ({ page }) => {
+    const h = await mount(page);
+    await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: 3, phase, subPhase }));
+    await roundWord(page, `${word}, mutation next round`, `${word} · MUTATION NEXT ROUND`);
+    await expect(page.locator('#round-phase .round-short .unseen')).toHaveText(', mutation next round');
+    const name = page.viewportSize().width >= 760 ? /^round 02 ?(command|combat) · mutation next round, where you are$/i : /^round 02 ?(command|combat), mutation next round, where you are$/i;
+    await expect(page.locator('#recap-open')).toHaveAccessibleName(name);
+    expect(h.errors).toEqual([]);
+  });
+}
+
+test('the countdown switches form at 760 px exactly', async ({ page }) => {
+  const h = await mount(page);
+  await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: 3, phase: 'Planning', subPhase: 'Speed' }));
+  for (const width of [759, 760]) {
+    await page.setViewportSize({ width, height: 900 });
+    await roundWord(page, 'COMMAND, mutation next round', 'COMMAND · MUTATION NEXT ROUND');
+  }
+  expect(h.errors).toEqual([]);
+});
+
+test('the bar says the plain phase word on a mutation round, two rounds before one, with no next one named, and with the field absent', async ({ page }) => {
+  const h = await mount(page);
+  const planning = { phase: 'Planning', subPhase: 'Speed' };
+  await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: 2, ...planning })); await plainWord(page, 'COMMAND');
+  await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: 4, ...planning })); await plainWord(page, 'COMMAND');
+  await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: null, ...planning })); await plainWord(page, 'COMMAND');
+  const { nextEvolutionRound, ...absent } = { ...h.state.view.board };
+  await h.publish([], { board: absent }); await plainWord(page, 'COMMAND');
+  await h.publish([], ahead(h, { roundNumber: 2, nextEvolutionRound: 2, phase: 'Combat', subPhase: 'Activation' })); await plainWord(page, 'COMBAT');
+  await expect(page.locator('#recap-open')).not.toHaveAccessibleName(/mutation/i);
+  expect(h.errors).toEqual([]);
+});
+
+test('the bar says WAITING while the table waits for players, even on the round before a mutation round', async ({ page }) => {
+  const h = await mount(page);
+  await h.publish([], { ...ahead(h, { roundNumber: 2, nextEvolutionRound: 3 }), waiting: { seats: [] } });
+  await plainWord(page, 'WAITING');
+  expect(h.errors).toEqual([]);
+});
+
+test("a round's start keeps the start's words on the round before a mutation round", async ({ page }) => {
+  const h = await mount(page); await step(page);
+  await h.publish([theirs(10), cleanup, energy, ongoing], { board: { ...nextRound(h), nextEvolutionRound: 4 }, waitingFor: 'Evolution', waitingAsked: 6,
+    options: { evolution: { remaining: 2, choices: [] } } });
+  await finishCast(page);
+  await page.locator('#playback-next').click();
+  await roundWord(page, '1 ENDED, Round end: 1 condition ended', '1 CONDITION ENDED, Round end');
+  await page.locator('#playback-next').click();
+  await expect(page.locator('#round-number')).toHaveText('03');
+  await roundWord(page, '+2, Round start: +2 energy each', '+2 ENERGY EACH, Round start');
+  await expect(page.locator('#recap-open')).not.toHaveAccessibleName(/mutation/i);
+  expect(h.errors).toEqual([]);
+});
+
 test('Step reads the closing attack, aftermath and upkeep before showing the next live objective', async ({ page }, info) => {
   const h = await mount(page); await step(page);
   await h.publish([theirs(10), cleanup, energy, ongoing], { board: nextRound(h), waitingFor: 'Evolution', waitingAsked: 6,

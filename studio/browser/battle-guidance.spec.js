@@ -221,3 +221,20 @@ test('a hidden-intent table, whose catalogue names no declaration, teaches hidde
   await expect(page.locator('#help-dialog')).not.toContainText('does not supply');
   expect(h.state.errors).toEqual([]);
 });
+
+// F3: Help's next line names the mutation rounds (docs/art/journeys/match.md, "The mutation round, announced").
+for (const [name, board, line] of [
+  ['a mutation round before its picks are revealed', { roundNumber: 3, nextEvolutionRound: 3, subPhase: 'Evolution' }, 'This is a mutation round.'],
+  ['a mutation round past its picks, naming the one that follows', { roundNumber: 3, nextEvolutionRound: 3, followingEvolutionRound: 5, subPhase: 'Speed' }, 'Next mutation round: 5.'],
+  ['a round before the next mutation round', { roundNumber: 2, nextEvolutionRound: 6, subPhase: 'Speed' }, 'Next mutation round: 6.'],
+  ['a mutation round past its picks, none following', { roundNumber: 3, nextEvolutionRound: 3, followingEvolutionRound: null, subPhase: 'Speed' }, 'No more mutation rounds.'],
+  ['a round with no mutation round left', { roundNumber: 4, nextEvolutionRound: null, subPhase: 'Speed' }, 'No more mutation rounds.'],
+  ['a board that names no mutation round', { roundNumber: 2, nextEvolutionRound: undefined, subPhase: 'Speed' }, ''],
+]) test(`Help's next line reads ${line ? `"${line}"` : 'nothing'} on ${name}`, async ({ page }) => {
+  const h = await mount(page, { kind: null }); await expect(page.locator('#help-dialog')).toBeHidden();
+  await h.publish([], { board: { ...h.state.view.board, phase: 'Planning', ...board }, waitingFor: 'Speed', waitingAsked: 12, options: { speed: { missing: [1, 2, 3] } } });
+  await page.locator('#help-open').click(); await expect(page.locator('#help-dialog')).toBeVisible();
+  if (line) { await expect(page.locator('#help-next')).toBeVisible(); await expect(page.locator('#help-next')).toHaveText(line); }
+  else { await expect(page.locator('#help-next')).toBeHidden(); await expect(page.locator('#help-next')).toHaveText(''); }
+  expect(h.state.errors).toEqual([]);
+});

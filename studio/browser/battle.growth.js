@@ -34,7 +34,7 @@ test('the real catalogue tree follows public purchases without acknowledging the
     await mutationTree(page); await page.locator('#planning-close').click(); await expect.poll(() => shown.length).toBe(1); shown.length = 0;
     await page.locator('#help-open').click(); await page.locator('#help-dialog [data-growth-open]').click();
     const initial = await read();
-    await expect(page.locator('#atlas-progress')).toContainText(`Mutation opportunity this round · Round ${initial.board.nextEvolutionRound}`);
+    await expect(page.locator('#atlas-progress')).toContainText('This is a mutation round');
     await expect(page.locator('#atlas-board .atlas-family')).toHaveCount(3);
     expect(shown).toEqual([]); expect(writes).toEqual([]);
     await fitsViewport(page, '#atlas-close, #atlas-creature');

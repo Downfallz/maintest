@@ -10,9 +10,9 @@ const energy = round => ({ sequence: round * 10, round: round + 1, event: { kind
 })) } });
 const ongoing = (round, ticks = false) => ({ sequence: round * 10 + 1, round: round + 1, event: { kind: 'OngoingEffectsApplied', roundId: round,
   ...(ticks ? { energyRegenerationTicks: [{ creature: 1, gained: 2 }], regenerationTicks: [{ creature: 1, healed: 0 }], bleedTicks: [{ creature: 1, damage: 7 }] } : {}) } });
-async function mount(page, { waiting = null, round = 1, feed = [energy(round), ongoing(round)], tips = false } = {}) {
+async function mount(page, { waiting = null, round = 1, feed = [energy(round), ongoing(round)], tips = false, next = round } = {}) {
   const state = { errors: [], writes: [], shown: [], answered: null, status: 200, view: { board: { slot: 'Player1', roundNumber: round, phase: 'Planning', subPhase: 'Evolution',
-    nextEvolutionRound: round, allies: roster.slice(0, 3), enemies: roster.slice(3), timeline: [] }, waiting,
+    nextEvolutionRound: next, allies: roster.slice(0, 3), enemies: roster.slice(3), timeline: [] }, waiting,
     waitingFor: 'Evolution', waitingAsked: 11, waitingCreature: 1,
     options: { evolution: { remainingPicks: 2, creatures: [{ creature: 1, availableTiers: ['root'] }] } }, feed, feedNext: round * 10 + 2 } };
   page.on('pageerror', error => state.errors.push(error.message));
@@ -242,4 +242,50 @@ test('a newer round never replaces the receipt currently being read under Histor
   await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Start');
   await close(page); await h.publish([]); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
+});
+
+// F3: the receipt says when the mutation round is, in one line under its summary (docs/art/journeys/match.md).
+for (const [name, options, line] of [
+  ['on a mutation round', { next: 1 }, 'This is a mutation round.'],
+  ['on the round before one', { next: 2 }, 'Next round is a mutation round.'],
+  ['on a round two before one', { next: 3 }, ''],
+  ['when the host names no more mutation rounds', { next: null }, ''],
+]) test(`the round's start receipt ${line ? `says "${line}"` : 'has no mutation line'} ${name}`, async ({ page }) => {
+  const h = await mount(page, options);
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Start');
+  await expect(page.locator('#upkeep-dialog')).toHaveAttribute('aria-describedby', 'upkeep-intro upkeep-mutation');
+  if (line) { await expect(page.locator('#upkeep-mutation')).toBeVisible(); await expect(page.locator('#upkeep-mutation')).toHaveText(line); }
+  else { await expect(page.locator('#upkeep-mutation')).toBeHidden(); await expect(page.locator('#upkeep-mutation')).toHaveText(''); }
+  expect(h.state.errors).toEqual([]);
+});
+
+test('the receipt of an earlier round than the board never shows the board\'s mutation line', async ({ page }) => {
+  const h = await mount(page, { next: 2 });
+  await expect(page.locator('#upkeep-mutation')).toHaveText('Next round is a mutation round.');
+  await close(page);
+  // Round 2 is a mutation round: its own receipt says so, and the previous line is gone.
+  await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2, nextEvolutionRound: 2 } });
+  await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Start');
+  await expect(page.locator('#upkeep-mutation')).toHaveText('This is a mutation round.');
+  await close(page);
+  await h.publish([energy(3), ongoing(3)], { board: { ...h.state.view.board, roundNumber: 3, nextEvolutionRound: 4 } });
+  await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Start');
+  await expect(page.locator('#upkeep-mutation')).toBeHidden(); await expect(page.locator('#upkeep-mutation')).toHaveText('');
+  expect(h.state.errors).toEqual([]);
+});
+
+test('the receipt with its mutation line keeps Continue in sight and its header inside the sheet at 320 by 568', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Viewport sweep runs once.');
+  const h = await mount(page, { next: 2 });
+  await expect(page.locator('#upkeep-mutation')).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 568 }); await page.clock.runFor(150);
+  await fitsViewport(page, '#upkeep-close');
+  const fit = await page.evaluate(() => {
+    const header = document.querySelector('.upkeep-header').getBoundingClientRect(), sheet = document.getElementById('upkeep-dialog').getBoundingClientRect();
+    const header$ = document.querySelector('.upkeep-header');
+    return { across: header$.scrollWidth <= header$.clientWidth + 1, inside: header.left >= sheet.left - 1 && header.right <= sheet.right + 1 && header.top >= sheet.top - 1 && header.bottom <= sheet.bottom + 1,
+      page: document.documentElement.scrollWidth <= innerWidth };
+  });
+  expect(fit).toEqual({ across: true, inside: true, page: true });
+  await expect(page.locator('#upkeep-mutation')).toBeInViewport(); expect(h.state.errors).toEqual([]);
 });
