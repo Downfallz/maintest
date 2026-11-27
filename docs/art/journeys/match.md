@@ -50,6 +50,11 @@ What holds for every screen of the journey:
   phase word reached 11 px, the bar with the bell needed about 410 px: from 360 to 409 the menu covered Settings (15 px
   at 390 while the round read COMMAND). So the bell joins the menu under 420 px; History leaves the bar under 360
   only (#1276).
+- **The round's start and end in the bar** (F2 of `docs/tabletop/first-playtest-plan.md`, "A round a player reads
+  has two phases"). The small word under the round's number names a phase only while a player decides or watches a
+  cast (`COMMAND`, `COMBAT`, and `WAITING` before both are seated). At a round's start it says what the start gave,
+  at its end what ended, never `UPKEEP` or `AFTERMATH`: a short form under 760 px, the plan's words from 760. The
+  words, the room and the name are under `second-round` below.
 - **Captions.** A creature's caption is its name, then its badges, each a drawing of `table/icons.js` and a number
   at 11 px: `initiative` in place of the word INIT (`⌃ 6`, today `6 INIT`), `health` (`30/30`), `energy` (`2`),
   `defense` with its number when above zero. Conditions keep the battle's own marks. Undocked at 320, each caption
@@ -149,10 +154,29 @@ in the order row, before the first action plays.
 
 - **Order**: the round and its phase in the bar; the order row, first place first; the places on the field; the
   dock's card: `TURN ORDER`, `Round 1`, the two teams' tempos, Continue.
-- **Budget**: 95 words at 320 px (93 today, 112 before), 110 at 390 (109; 114 before). At 390 the side line keeps
-  its tempo and initiative, so 105 was short. The word INIT goes (6 words), and under 360 px the
-  order row's side line keeps the side alone. The dock's card keeps its lines; "Tie settled at random" stays ("Ties broken by d20" before ADR 0208), the
-  rule behind it is the rulebook's (`/rules`), which Order opens.
+- **Budget**: 100 words at 320 px (93 in the film of `97aea83`, its tie clamped away; 95 asked at UX11, 112
+  before), 110 at 390 (107; 109 at UX11, 114 before). At 390 the side line keeps its tempo and initiative, so 105
+  was short. The word INIT goes (6 words), and under 360 px the order row's side line keeps the side alone. The
+  dock's card keeps its words, and at 320 shows the four of the tie it lost: hence 100. "Tie settled at random"
+  stays ("Ties broken by d20" before ADR 0208), the rule behind it is the rulebook's (`/rules`), which Order opens.
+
+The dock's card's line (`#reading-detail`) says **the tie first** (#1305). Since ADR 0208 it is the only place on
+this screen that says a tie was drawn for, and the counts after it are on the field's plaques (`4 Precision`) and
+in the order row too, so the counts may clamp and the tie never does. The words are the same at every width; only
+the lines differ.
+
+| Width | With a tie | Without |
+| --- | --- | --- |
+| 320 | `Tie settled at random · Your team: 3 Precision · Opponent: 1 Instinct · 2 Precision`, on four lines | `Your team: 3 Precision · Opponent: 1 Instinct · 2 Precision`, on three |
+| 390 | The same words, on three lines | The same words, on two |
+
+- **Lines**: the turn order's card (`#playback-pacing[data-kind="order"]`) clamps its line at four lines on a phone
+  (under 620 px), the other cards keeping theirs (two at 568 tall, three on a tall phone). At 320 by 568 four lines
+  at 11 px fit the card beside Continue (its eyebrow, its title and four lines are about 105 px of its 118). The
+  longest order, one of each tempo on both teams with a tie, may still clamp its last count at 320: the tie, first,
+  stays whole.
+- **Not chosen**: shorter counts at 320 (`You: 3 Precision`) make the words depend on the width for a few letters; a
+  third line alone did not hold the tie at the end of the longest order.
 
 ### Pictures
 
@@ -200,6 +224,9 @@ None: the field is the canvas, the battle craft's. The frame draws icons of `tab
 ### Left
 
 - The side line under 360 px drops the tempo and the initiative: a choice for the owner.
+- The tie said first in the turn order's card, and the card taking four lines on a phone (#1305): my
+  recommendation. The owner may prefer it last, as before, with the shorter counts at 320; then the longest order
+  still loses its tie at 320 by 568.
 
 ## An action read (`result-read`)
 
@@ -408,16 +435,47 @@ None: the field is the canvas.
 
 ### Job
 
-Round 2 begins and the tempo sheet docks. The bar says the new round and phase; the field stays readable over
-the sheet.
+Round 1 ends, Round 2 begins and the tempo sheet docks. The bar says what the round's end ended, then the new
+round's number, what its start gave while its receipt is read, then the phase; the field stays readable over the
+sheet. The round's start is filmed on `upkeep` (round 1, the receipt's window over the frame); the round's end is
+filmed by no screen of the walk yet, and its words are read in `battle/src/live.ts` and `table/battle-playback.js`.
 
 - **Filled action**: none in the frame: Confirm tempos is the sheet's, UX12's, and its foot stays in view.
 
 ### Words
 
 - **Order**: the bar's `02` and `Command`; the order row's empty line; the docked captions; the sheet.
-- **Budget**: 110 words at 320 px (114 today, 133 before), 115 at 390 (116; 135 before): the `TEMPO ?` tags that
-  stay make the difference. The `NEW ROUND` toast is not drawn under 620 px (#1000): it covered the upper captions.
+- **Budget**: 110 words at 320 px (104 in the film of `97aea83`; 114 at UX11, 133 before), 115 at 390 (114; 116,
+  135 before): the `TEMPO ?` tags that stay make the difference. The `NEW ROUND` toast is not drawn under 620 px
+  (#1000): it covered the upper captions. The bar's small word stays at most two words under 760 px (`2 ENDED`), as
+  `COMMAND` and `UPKEEP` were one, and three from 760 (`2 CONDITIONS ENDED`); this screen, at `COMMAND`, does not
+  change. `upkeep`'s measure counts its window alone (11 words), so the bar's word there is read on the sheet.
+
+The small word under the round's number (`#round-phase`), in capitals as `COMMAND` is. The number above it is the
+round's (`01`), so the word never repeats "Round". The page writes what the host recorded and computes nothing:
+the start's grant is `upkeepDisplay`'s `bar` (`table/battle-upkeep.js`), the end's count the end's `bar`
+(`table/battle-playback.js`).
+
+| The moment | Under 760 px (320, 390) | From 760 px |
+| --- | --- | --- |
+| Round start, every creature the same grant | the plaques' energy mark (the `energy-gain` cue), then `+2` | `+2 ENERGY EACH` |
+| Round start, grants that differ | `ENERGY` | `ROUND ENERGY` |
+| Round start, no grant recorded | `START` | `ROUND START` |
+| Round end, conditions ended | `2 ENDED` (`1 ENDED`) | `2 CONDITIONS ENDED` (`1 CONDITION ENDED`) |
+| Round end, none ended, some immune to stun | `1 IMMUNE` | `1 IMMUNE TO STUN` |
+| Round end, nothing ended | `END` | `ROUND END` |
+| Then | the next round's number over `COMMAND`, when the host's board reaches it | the same |
+
+- **Room**: under 760 px the cell neither widens nor wraps: every short form is no wider than `COMMAND` at 11 px,
+  so the opponent and the tools do not move (#999) and the bar keeps its 44 px. `1 IMMUNE` is the widest, a few
+  pixels narrower than `COMMAND` by my reckoning (its `I`s are narrow), and a count of ten or more (`12 ENDED`) is
+  too; the film's overlaps (0) and the bar's shift say whether it holds. From 760 px the bar has room: the cell
+  holds the width of `00 CONDITIONS ENDED` at every moment (a count of ten or more does not widen it), so the round's start and end move nothing beside it.
+- **The drawing**: not `EN`. On the start the field's plaques draw the same mark, their blue `energy-gain` cue, and `+2` over every
+  creature, so the bar reads as they do; `EN` is an abbreviation the player is never taught. It is 11 px, the
+  caption's size, in the word's colour.
+- **Both at the end**: when conditions ended and a creature became immune, the bar says what ended, as the end's `bar` already picks; the immunity is in the
+  dock's card and the plaques.
 
 ### Pictures
 
@@ -426,9 +484,12 @@ None: the field is the canvas.
 ### States
 
 - **First paint**: not reached.
-- **Empty**: the order row's `Set once both teams have picked their tempos`.
-- **Loaded**: docked captions, the tag on the creature in hand.
-- **Waiting**: after Confirm tempos, the wait for the opponent's tempos, said in the dock.
+- **Empty**: the order row's `Set once both teams have picked their tempos`. A round's start or end with nothing
+  recorded says `START` or `END` (from 760 px `ROUND START`, `ROUND END`), never an empty cell.
+- **Loaded**: docked captions, the tag on the creature in hand; the bar at `COMMAND`. Before it, while the end's
+  reading plays, the bar's word is the end's (`2 ENDED`); while the start's receipt is read, the start's (`+2`).
+- **Waiting**: after Confirm tempos, the wait for the opponent's tempos, said in the dock. Before both players are
+  seated the bar says `WAITING`, as today.
 - **Error**: the sheet's alert, UX12's.
 - **Offline**: `#connection`; the field dims.
 
@@ -437,6 +498,10 @@ None: the field is the canvas.
 | Beat | When | Moves | Pattern | Token |
 | --- | --- | --- | --- | --- |
 | The round's number | The host's board reaches a new round | `transform`, `opacity` | [A purpose for each](../ux-craft.md#a-purpose-for-each) | `--motion-slow`, `--motion-enter` |
+
+The small word's change at a round's start and end is no beat: it is set at once, when the start's receipt or the
+end's reading begins and when the board reaches the next phase. The plaques on the field and the dock's card are
+where the moment moves.
 
 ### Less motion
 
@@ -447,7 +512,12 @@ None: the field is the canvas.
 ### Accessibility
 
 - **Focus**: the sheet's, UX12's.
-- **Names**: the round button speaks "Round 2, Command".
+- **Names**: the round button speaks "Round 2, Command". It speaks its visible words first, then in unseen text
+  the moment and, where the visible words are short, the plan's words: under 760 px "Round 01 +2, Round start: +2
+  energy each, where you are", "Round 01 Energy, Round start: round energy, where you are", "Round 01 2 ended,
+  Round end: 2 conditions ended, where you are", "Round 01 1 immune, Round end: 1 immune to stun, where you are";
+  from 760 px "Round 01 +2 energy each, round start, where you are". `START` and `END` add nothing ("Round 01 Start,
+  where you are"). The `energy` drawing is hidden from it (`aria-hidden`).
 - **Announced**: "Round 2", once, in `#round-toast`'s status.
 - **Targets**: 44 px; Settings pressable at 320 (built: the walk presses it).
 
@@ -461,3 +531,13 @@ None: the field is the canvas.
 ### Left
 
 - The toast drawn on a wide screen only: built (#1000).
+- The bar's word at a round's start and end, for the owner. Short forms under 760 px rather than a wider cell or a
+  second line: a wider cell moves the opponent and the tools twice a round (#999), and at 390 the bar still holds
+  History, so its slack is small; a second line does not fit the bar's 44 px under the number at 11 px. The start's `+2` drawn with the
+  `energy` drawing rather than `+2 EN`, which is my recommendation; `+2 EN` is the plaques' text form and fits too,
+  if the owner prefers a word to a drawing. `2 ENDED` leaves the noun to the dock's card beside it ("Round end",
+  "2 conditions ended") and to the button's name.
+- The end is filmed by no screen of the walk: the walk gains a screen at a round's end, or a strip of the end's
+  reading (`--strip`), in the pass that builds this. Until then the end's words are read in the code, not seen.
+- From 760 px the cell holds `00 CONDITIONS ENDED`'s width all match long, a gap beside `COMMAND`: chosen over a
+  bar that moves twice a round. The owner may prefer the short forms at every width.

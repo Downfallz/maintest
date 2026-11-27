@@ -305,7 +305,7 @@ test('an upkeep with no cast after it in its round has no battlefield to borrow'
   assert.equal(matchReplay(entries, { allies: [], enemies: [] }, cards)[0].frame, undefined);
 });
 
-// After a round's closing action the round turns over: its Cleanup ends conditions, the next Upkeep deals and heals.
+// After a round's closing action the round turns over: its Cleanup ends conditions, the next Round start deals and heals.
 // The host has done both by the time the page hears of the closing action, so they are read as steps after it,
 // and only when they changed something.
 const stun = { effect: { kind: 'Stun' }, remainingRounds: 0 };
@@ -331,7 +331,7 @@ test('a round turns over as its cleanup, then the next upkeep, each holding only
   assert.deepEqual([upkeep.sequence, upkeep.round, upkeep.follows, upkeep.interlude], [26, 3, 2, 'upkeep']);
   assert.deepEqual(upkeep.ticks.map(tick => [tick.creature, tick.amount, tick.tone]), [[2, 3, 'harm']], 'a heal of 0 is no tick');
   assert.equal(turnoverText(cleanup), 'Cleanup · Stun + Bleed ends → Creature 2, Creature 2 immune to stun');
-  assert.equal(turnoverText(upkeep), 'Upkeep · Ongoing damage −3 HP → Creature 2');
+  assert.equal(turnoverText(upkeep), 'Round start · Ongoing damage −3 HP → Creature 2');
 });
 
 test('a turnover that changed nothing is not a step', () => {

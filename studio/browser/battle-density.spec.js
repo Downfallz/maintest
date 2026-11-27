@@ -133,9 +133,12 @@ test('the round\'s bar keeps Settings clear of the site menu on every phone widt
   await signedInSeat(page);
   for (const width of [360, 375, 390, 393, 412, 419, 420, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    for (const phase of ['Upkeep', 'Command', 'Combat', 'Aftermath']) {
+    // Every word the bar can say under 760 px: the phases, and the short forms of a round's start and end.
+    for (const phase of ['COMMAND', 'COMBAT', 'WAITING', '+12', 'ENERGY', 'START', '12 ENDED', '6 IMMUNE', 'END']) {
       const gap = await page.evaluate(phase => {
-        document.getElementById('round-phase').textContent = phase;
+        // The start's short form as the page builds it (roundWord in battle/src/live.ts): its 11 px mark, then the grant.
+        if (phase.startsWith('+')) document.getElementById('round-phase').innerHTML = `<span class="round-short"><svg class="cue-icon" viewBox="0 0 16 16" aria-hidden="true"></svg>${phase}</span>`;
+        else document.getElementById('round-phase').textContent = phase;
         document.getElementById('round-number').textContent = '12';
         document.getElementById('recap-open').disabled = false;
         const right = ['#recap-open', '#opponent-open', '#history-open', '#help-open', '#settings']

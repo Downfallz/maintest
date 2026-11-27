@@ -13,8 +13,8 @@ test('an unknown speed keeps its own word rather than vanishing', () => {
   assert.equal(tempoLabel(undefined), '');
 });
 
-test('the four round phases read Upkeep, Command, Combat and Aftermath', () => {
-  assert.deepEqual(['StartOfRound', 'Planning', 'Combat', 'EndOfRound'].map(phaseLabel), ['Upkeep', 'Command', 'Combat', 'Aftermath']);
+test('the four round phases read Round start, Command, Combat and Round end', () => {
+  assert.deepEqual(['StartOfRound', 'Planning', 'Combat', 'EndOfRound'].map(phaseLabel), ['Round start', 'Command', 'Combat', 'Round end']);
 });
 
 test('the speed question reads as tempo, and every other decision keeps its name', () => {

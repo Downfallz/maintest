@@ -42,7 +42,7 @@ export function passiveLines(passive) {
   if (!passive || typeof passive !== 'object' || Array.isArray(passive)) return [];
   const lines = [];
   if (passive.stunImmunity === true) lines.push('Immune to stun');
-  if (Number(passive.upkeepEnergy) > 0) lines.push(`Energy +${Number(passive.upkeepEnergy)} at every upkeep`);
+  if (Number(passive.upkeepEnergy) > 0) lines.push(`Energy +${Number(passive.upkeepEnergy)} at the start of each round`);
   if (Number(passive.damageBonus) > 0) lines.push(`Damage +${Number(passive.damageBonus)} on every hit`);
   if (Number(passive.sunder) > 0) lines.push(`Every hit ignores ${Number(passive.sunder)} defense`);
   return lines;

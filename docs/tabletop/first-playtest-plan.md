@@ -1,6 +1,6 @@
 # Plan: the first outside playtest, answered
 
-Status: accepted, 2026-11-27 (the owner settled the questions at the end). F1 is built; F2 to F6 are not. Each
+Status: accepted, 2026-11-27 (the owner settled the questions at the end). F1 and F2 are built; F3 to F6 are not. Each
 stage below is one pull request.
 
 ## What the owner asked for
@@ -205,6 +205,28 @@ Each stage is one pull request that leaves the gate green.
 2. **F2, the round's start and end.** `player-terminology.md`, `terms.js`, `rules/words.json`, the rulebook's two
    editions through `/rules`, the tutorial line, the round's bar. Tests: `terminology.test.js` refuses the old words,
    `battle-upkeep.spec.js`, `battle-history.spec.js`, `battle-guidance.spec.js`, the journey walk's strings.
+
+   *Built (2026-11-27)*: `docs/domain/player-terminology.md` names the two moments **Round start** and **Round end**
+   (French **Début du round**, **Fin du round**), with `Upkeep` and `Aftermath` as the words they replaced, so
+   `table/terminology.test.js` and the rulebook's build refuse both, in a sentence, as a label of one word and in a
+   tutorial's line; `table/rules.test.js` reads both editions for `Entretien` and `Retombées` too. `table/terms.js`
+   spells the labels once (`ROUND_START`, `ROUND_END`, and `inRound`: `Round 3 · Start`). The journal, the receipts, the
+   reading card, the recorded replay and the archived classic table say them; a passive's line reads `Energy +1 at the
+   start of each round` (the host's card, the studio's preview and the showcase's field guide), and two lines of
+   tutorial 4 changed, not one. The round's bar (`roundBar` in `table/battle-upkeep.js`) names a phase only for
+   Command and Combat; at a round's start it says what the start gave and at its end what ended, in a short form
+   under 760 px (`+2` after the energy drawing, `2 ENDED`) and the plan's words from 760 (`+2 ENERGY EACH`,
+   `2 CONDITIONS ENDED`), as the `ux-designer` briefed it in `docs/art/journeys/match.md`. The rulebook's two
+   editions read a round as Command → Combat between its start and its end (`/rules`). No ADR: the plan's question 2
+   is the decision, and no contract, phase of the engine or recorded game changes.
+   In the same pull request, the three loose ends of F1: the turn order's card says a tie first and keeps four lines
+   on a phone (#1305); the field's `Crit!` word has its storyboard (`docs/art/storyboards/movement.md`, "A critical's
+   word") and is built from it: sized on its figure, clear of the acting rim, in the page's ink rather than gold,
+   entering over 200 ms with the camera's punch (#1304); the two captures of the order of play were taken again
+   (#1303).
+   Left: the walk of the match films no round's end, so the bar's words there are held by `battle-pacing.spec.js`
+   and not seen on a sheet; the choices under **Left** of the brief and of the storyboard wait for the owner (the
+   short forms, the word's colour, whether three marks of one critical is one too many).
 3. **F3, the mutation round announced.** The announcement, the bar's countdown, the tree's schedule line, the
    receipt's next round. Tests: `battle-mutations.spec.js`, `battle-growth.spec.js`, a host test if the board gains
    the interval.

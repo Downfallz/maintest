@@ -204,7 +204,7 @@ production audio owner and instrumented browser audio alongside the renderer.
 
 ## AU3a: recorded ordinary energy
 
-New matches include **Upkeep · round energy** in History, with each recipient's actual gain, before/after
+New matches include **Round start · energy** in History, with each recipient's actual gain, before/after
 energy and base/passive request amounts. Zero gains are visible. These facts are captured before ongoing
 energy, healing and bleed; a creature killed afterward retains its earlier receipt. Journal reads remain
 read-only and deduplicated. Old recordings and resumed legacy matches have no ordinary-energy receipt;
@@ -212,7 +212,7 @@ the UI does not invent one from the default allowance. See [ADR 0132](../docs/ad
 
 ## AU3b: automatic upkeep receipts
 
-Once human arrivals clear, the battle view presents one grouped **Round 1 · Upkeep** receipt. Each observed
+Once human arrivals clear, the battle view presents one grouped **Round 1 · Start** receipt. Each observed
 round transition gets the same receipt, after confirmed-action playback finishes and before a phase tip.
 An open reference or command draft delays it; Continue and Escape only dismiss presentation. Reading it
 never acknowledges an asking or submits a choice. A first visit to an advanced match does not replay old
@@ -581,7 +581,7 @@ repeat reveals, cursor/condition updates, focus/scroll, lost access and small/la
 Full real-host journeys check the order and its random ties against seat responses in both declarations and inspect a past
 round during match replay. Captures in `docs/tabletop/images/battle-order/` identify their data source.
 
-Captures from the browser fixture, taken before ADR 0208 (they still show the rolls): [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
+Captures from the browser fixture: [desktop](../docs/tabletop/images/battle-order/desktop-fixture.jpg) · [phone](../docs/tabletop/images/battle-order/phone-fixture.jpg).
 
 
 ## The opponent on the round's line
@@ -816,8 +816,10 @@ slowly and still under reduced motion;
 `#battle[data-halo]` names it.
 
 The field draws no die ([ADR 0208](../docs/adr/0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md), `src/crit-mark.ts`). A cast that crit says `Crit!` beside its caster's head as the
-action lands, in gold on a dark plate (`calloutSpot` in `table/battle-layout.js` keeps it inside the field); the word
-settles in, is simply there under reduced motion, and leaves with the result. A cast that could crit and did not
+action lands, in the page's ink on a dark plate, sized on the figure (14 to 20 px) and 6 px clear of the acting rim's
+top (`calloutSpot` in `table/battle-layout.js` places it and keeps it inside the field); the word enters over 200 ms
+with the camera's punch, is simply there under reduced motion, and leaves with the result. Its storyboard is
+[A critical's word](../docs/art/storyboards/movement.md). A cast that could crit and did not
 shows nothing there, and a tie's draw shows nothing on the field. `#battle[data-crit]` names the caster. The record
 still keeps the face of each roll ([ADR 0154](../docs/adr/0154-record-the-critical-roll-as-a-d20-face.md)); no page
 reads it.

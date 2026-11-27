@@ -284,13 +284,13 @@ test('ordinary energy history keeps actual gains, zero gains and the order befor
     energyRegenerationTicks: [], regenerationTicks: [], bleedTicks: [{ creature: 1, damage: 7 }] } }]);
   await page.locator('#history-open').click(); await expect(rows(page)).toHaveCount(2);
   await rows(page).first().locator('summary').click();
-  await expect(rows(page).first()).toContainText('Upkeep · round energy');
+  await expect(rows(page).first()).toContainText('Round start · energy');
   await expect(rows(page).first().locator('[data-tone="energy"]')).toHaveCount(2);
   await expect(rows(page).first()).toContainText('+3 energy · 7 → 10 (base 4, passive 1)');
   await expect(rows(page).first()).toContainText('+0 energy · 2 → 2 (base 0, passive 0)');
   await expect(rows(page).first()).toContainText('Creature 4 (Opponent)');
   await rows(page).nth(1).locator('summary').click();
-  await expect(rows(page).nth(1)).toContainText('Upkeep · ongoing effects');
+  await expect(rows(page).nth(1)).toContainText('Round start · ongoing effects');
   await expect(rows(page).nth(1).locator('[data-tone="harm"]')).toHaveText('Creature 1 (Your team) · Ongoing damage −7 HP');
   await h.publish([energy]); await expect(rows(page)).toHaveCount(2);
   expect(h.state.writes).toEqual([]); expect(h.state.errors).toEqual([]);

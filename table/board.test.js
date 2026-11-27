@@ -210,7 +210,7 @@ test('a row badges the damage bonus and upkeep energy its packages give', () => 
   assert.deepEqual(badges({ id: 1, isStunImmune: true, passive: { stunImmunity: true }, damageBonus: 0 }, []), ['immune to stun']);
   assert.deepEqual(badges({ id: 1, damageBonus: 2, passive: { damageBonus: 2 } }, [{ creature: 1, speed: 'Quick' }]),
     ['damage +2 on every hit', 'Quick']);
-  assert.deepEqual(badges({ id: 1, damageBonus: 0, passive: { upkeepEnergy: 1 } }, []), ['energy +1 at every upkeep']);
+  assert.deepEqual(badges({ id: 1, damageBonus: 0, passive: { upkeepEnergy: 1 } }, []), ['energy +1 at the start of each round']);
   assert.deepEqual(badges({ id: 1, damageBonus: '2', passive: 'none' }, []), []);
 });
 

@@ -6,6 +6,7 @@ import { purchaseLog } from './battle-chronology.js';
 import { outcomeText, matchResultSummary } from './outcome.js';
 import { matchScoreboard } from './scoreboard.js';
 import { readingCard } from './battle-playback.js';
+import { ROUND_END, ROUND_START, inRound } from './terms.js';
 
 export function roundNotes(entries, board) {
   const rounds = [...new Set(entries.map(entry => entry.event?.roundId ?? entry.round))].sort((a, b) => a - b);
@@ -13,10 +14,10 @@ export function roundNotes(entries, board) {
     const upkeep = upkeepReceipt(entries, round, board);
     const facts = upkeep ? [upkeep.energyNote, ...upkeep.energy.map(row => `${row.label}: ${row.text}`),
       ...upkeep.ongoing.map(row => `${row.label}: ${row.text}`), ...(upkeep.ongoing.length ? [] : [upkeep.ongoingNote])].filter(Boolean) : [];
-    const rows = upkeep ? [`Round ${round} · Upkeep · ${facts.join('; ')}`] : [];
+    const rows = upkeep ? [`${inRound(round, ROUND_START)} · ${facts.join('; ')}`] : [];
     const aftermath = turnoverSteps(entries, round, board).filter(step => step.interlude === 'aftermath');
     rows.push(...aftermath.map(step => `Round ${round} · ${turnoverText(step)}`));
-    if (entries.some(entry => entry.event?.kind === 'RoundEnded' && (entry.event.roundId ?? entry.round) === round)) rows.push(`Round ${round} · Aftermath complete`);
+    if (entries.some(entry => entry.event?.kind === 'RoundEnded' && (entry.event.roundId ?? entry.round) === round)) rows.push(`Round ${round} complete`);
     return rows;
   });
 }
@@ -25,10 +26,10 @@ export function replayText(action, catalogue) {
   if (action.final) return action.summary;
   if (action.ordinaryEnergy) return turnoverText(action);
   if (action.interlude === 'upkeep') {
-    const detail = action.ticks.length ? turnoverText(action) : 'Upkeep · No ongoing ticks applied';
+    const detail = action.ticks.length ? turnoverText(action) : `${ROUND_START} · No ongoing ticks applied`;
     return action.missingOrdinaryEnergy ? `${missingRoundEnergy} ${detail}` : detail;
   }
-  if (action.interlude === 'aftermath') return action.ended.length || action.immune.length ? turnoverText(action) : 'Aftermath · Round complete';
+  if (action.interlude === 'aftermath') return action.ended.length || action.immune.length ? turnoverText(action) : `${ROUND_END} · Nothing ended`;
   if (action.interlude === 'purchases') {
     const purchases = action.choices.map(choice => purchaseText(choice, catalogue)).join(' · ');
     return `Mutations revealed · ${purchases || 'No mutations acquired'}`;
@@ -38,7 +39,7 @@ export function replayText(action, catalogue) {
 
 // The replay step as a result card: a cast as the reading bar draws it (whose, which spell, what came of it), and
 // any other step under its own title with what `replayText` says of it.
-const INTERLUDES = { upkeep: 'Upkeep', aftermath: 'Aftermath', purchases: 'Mutations revealed', result: 'Match result' };
+const INTERLUDES = { upkeep: ROUND_START, aftermath: ROUND_END, purchases: 'Mutations revealed', result: 'Match result' };
 export function replayCard(action, catalogue, board) {
   if (!action) return null;
   if (!action.interlude && !action.final) {
@@ -61,7 +62,7 @@ function purchaseText(choice, catalogue) {
 function replayNote(action, stage) {
   if (action?.final) return 'Final public battlefield confirmed by the host.';
   if (!action?.frame) return 'No battlefield was recorded for this event.';
-  if (action.interlude) return 'Reference: the battlefield at the start of this round’s combat, after upkeep and mutations.';
+  if (action.interlude) return 'Reference: the battlefield as this round’s combat began, after the round’s start and its mutations.';
   return `${stage === 'before' ? 'Before' : 'After'} the recorded action`;
 }
 

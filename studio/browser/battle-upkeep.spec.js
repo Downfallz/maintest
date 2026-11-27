@@ -147,7 +147,7 @@ test('closing attack playback finishes before the next-round receipt and phase t
   await page.locator('#settings').click(); await page.selectOption('#playback-preference', 'step'); await page.getByRole('button', { name: 'Close settings' }).click();
   // From the windup's timer to the impact's, rather than every software frame between them (#749).
   await page.clock.fastForward(WINDUP_MS); await page.clock.fastForward(IMPACT_MS);
-  await page.locator('#playback-next').click(); await expect(page.locator('#reading-title')).toHaveText('Upkeep');
+  await page.locator('#playback-next').click(); await expect(page.locator('#reading-title')).toHaveText('Round start');
   await expect(page.locator('#result-text')).toContainText('+5 energy');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await page.locator('#playback-next').click();
@@ -168,7 +168,7 @@ test('polls, hidden-tab reconnection and reload do not repeat the same receipt',
   await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
   await expect(page.locator('#upkeep-dialog')).toBeHidden(); await page.locator('#planning-close').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
-  await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#round-number')).toHaveText('02');
+  await expect(page.locator('#reading-title')).toHaveText('Round start'); await expect(page.locator('#round-number')).toHaveText('02');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   // The tree opened once before the reload and once after; neither receipt acknowledged anything.
   await expect.poll(() => h.state.shown).toEqual(['11', '11']); expect(h.state.errors).toEqual([]);
@@ -229,17 +229,17 @@ test('connection loss settles an animation without opening the queued receipt of
   await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'stale');
   await expect(page.locator('#playback-next')).toBeHidden(); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   h.state.status = 200; await h.publish([]);
-  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Start');
   expect(h.state.writes).toEqual([]); await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });
 
 test('a newer round never replaces the receipt currently being read under History', async ({ page }) => {
-  const h = await mount(page); await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Upkeep');
+  const h = await mount(page); await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Start');
   await page.locator('#upkeep-dialog [data-history-open]').click();
   await h.publish([energy(2), ongoing(2)], { board: { ...h.state.view.board, roundNumber: 2 } });
-  await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Upkeep');
+  await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Start');
   await page.locator('#history-close').click(); await close(page);
-  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Upkeep');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 2 · Start');
   await close(page); await h.publish([]); await expect(page.locator('#upkeep-dialog')).toBeHidden();
   await expect.poll(() => h.state.shown).toEqual(['11']); expect(h.state.errors).toEqual([]);
 });

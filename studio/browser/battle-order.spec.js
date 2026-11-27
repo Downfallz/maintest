@@ -128,6 +128,18 @@ test('a fresh reveal waits until tie ordering ends, opens once and never acknowl
   // A tie between the teams is settled at random (ADR 0208): the card says so, each tied creature's badge too, and
   // the field draws no die.
   await expect(page.locator('#reading-detail')).toContainText('Tie settled at random'); await expect(page.locator('#reading-detail')).not.toContainText(/d20/i);
+  // The tie is said first and shown whole at every width (#1305): the counts after it may be clamped, the tie never.
+  await expect(page.locator('#reading-detail')).toHaveText(/^Tie settled at random · Your team: /);
+  expect(await page.locator('#reading-detail').evaluate(node => {
+    const words = 'Tie settled at random', walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+    let text = walker.nextNode();
+    while (text && !text.textContent.includes(words)) text = walker.nextNode();
+    if (!text) return 'no tie in the card';
+    const range = document.createRange(), start = text.textContent.indexOf(words);
+    range.setStart(text, start); range.setEnd(text, start + words.length);
+    const card = node.getBoundingClientRect();
+    return [...range.getClientRects()].every(box => box.top >= card.top - 1 && box.bottom <= card.bottom + 1 && box.left >= card.left - 1 && box.right <= card.right + 1) ? 'whole' : 'clamped';
+  })).toBe('whole');
   await expect(page.locator('#actor-layer [data-creature="4"] .effect-chip[data-kind="order"] .unseen')).toHaveText('Turn 2 · Instinct · Tie settled at random');
   await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./);
   await page.clock.runFor(800); await page.screenshot({ path: info.outputPath('random-tie-order.png') });

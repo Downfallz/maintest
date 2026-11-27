@@ -1,3 +1,5 @@
+import { ROUND_START } from './terms.js';
+
 // Historical presentation only: every stat comes from the engine's action boundary snapshots.
 export function playbackBoard(replay, board) {
   const action = replay?.actions[replay.index];
@@ -8,7 +10,7 @@ export function playbackBoard(replay, board) {
   const round = playbackRound(replay);
   const earlier = replay.actions.slice(0, replay.index + 1).filter(item => (item.round ?? round) === round && !item.interlude);
   // A round's upkeep or its purchases happen before its combat: nothing is on the timeline or turned over yet.
-  const before = { upkeep: 'Upkeep', purchases: 'Evolution' }[action.interlude];
+  const before = { upkeep: ROUND_START, purchases: 'Evolution' }[action.interlude];
   // Its Cleanup comes after every slot of the round: the cursor is past the last one.
   const cleanup = action.interlude === 'aftermath';
   const cursor = cleanup ? (action.frame.timeline ?? []).length : slotOf(action, earlier.length - 1);

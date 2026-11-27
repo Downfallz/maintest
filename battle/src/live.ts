@@ -11,7 +11,7 @@ import { orderControls } from './order';
 import { createBattleGrowth, crestInset } from '../../table/battle-growth.js';
 import { growthControls } from './growth';
 import { atlasControls } from './mutation-atlas';
-import { createBattleUpkeep } from '../../table/battle-upkeep.js';
+import { createBattleUpkeep, roundBar } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
 import { createAnnouncer, createBattlePlayback } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
@@ -67,6 +67,23 @@ interface View { board: object; over: boolean; waiting: unknown; waitingFor: str
   seen?: { sequence: number; at: string } | null; lastMoveAt?: string | null; feed?: unknown[] }
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const text = (id: string, value: string) => { if ($(id).textContent !== value) $(id).textContent = value; };
+// The small word under the round's number (docs/art/journeys/match.md, `second-round`): plain while it names a
+// phase. At a round's start or end it holds two forms, the short one a phone shows and the plan's words a wide
+// screen shows (battle.css picks), each followed by what a screen reader hears of the moment.
+function roundWord(bar: ReturnType<typeof roundBar>) {
+  const node = $('round-phase'), key = JSON.stringify(bar);
+  if (node.dataset.bar === key) return;
+  node.dataset.bar = key;
+  if (bar.short === bar.full && !bar.said) { node.textContent = bar.full; return; }
+  const form = (className: string, word: string, said: string, icon: string | null) => {
+    const span = Object.assign(document.createElement('span'), { className });
+    if (icon) span.append(iconElement(icon));
+    span.append(word);
+    if (said) span.append(Object.assign(document.createElement('span'), { className: 'unseen', textContent: `, ${said}` }));
+    return span;
+  };
+  node.replaceChildren(form('round-short', bar.short, bar.said, bar.icon), form('round-full', bar.full, bar.saidFull, null));
+}
 // Says what each resolved action did, once, in the one live region. A result that repeats the one before is said
 // again (#1267).
 const announce = createAnnouncer($('playback-announcement'), (again: () => void) => { window.setTimeout(again, 150); });
@@ -596,7 +613,9 @@ function render() {
   text('round-number', board.round == null ? '—' : String(board.round).padStart(2, '0'));
   announceRound(view && !replay.active ? board.round : null, holdsTheNextRound(view));
   // Before both players are seated there is no phase yet: the header says the table is waiting.
-  text('round-phase', view?.waiting && !view.over ? 'WAITING' : phaseLabel(board.phase).toUpperCase());
+  // A phase while a player decides or watches a cast; at a round's start or end, what the reading being played says
+  // the moment gave or ended. A recorded replay has no reading of its own: the moment's word alone.
+  roundWord(roundBar({ waiting: Boolean(view?.waiting && !view.over), phase: board.phase, moment: replay.active ? null : playbackState.paced?.bar ?? null }));
   text('ally-label', view ? 'YOUR TEAM' : ''); text('enemy-label', view ? opponentLabel() : '');
   const order = battleOrder(view?.waiting && !view.over ? null : board, catalogue);
   orderUI.render(order, Boolean(view) && !view?.waiting && !rendererFailed, false, view?.waiting && !view.over ? null : board);
@@ -607,7 +626,8 @@ function render() {
     $('playback-pacing').hidden = false; $('playback-pacing').dataset.kind = 'order';
     $('playback-next').hidden = true; $('playback-skip').hidden = true;
     text('reading-kind', 'Turn order'); text('reading-title', `Round ${order.round ?? '—'}`);
-    readingDetail({ detail: [...order.summary, order.randomTie ? 'Tie settled at random' : ''].filter(Boolean).join(' · ') });
+    // The tie first (#1305): the counts after it are on the field and in the order row too, so they may clamp at 320 px.
+    readingDetail({ detail: [order.randomTie ? 'Tie settled at random' : '', ...order.summary].filter(Boolean).join(' · ') });
     $('reading-detail').hidden = false; text('reading-what', ', turn order details');
     if (!orderShown && !document.querySelector('dialog:modal')) $('order-continue').focus({ preventScroll: true });
   }
@@ -673,7 +693,8 @@ function render() {
   if (roundHeld && $<HTMLDialogElement>('upkeep-dialog').open) $<HTMLDialogElement>('upkeep-dialog').close();
   upkeepUI.render(canAuto() && !roundHeld);
   const liveMarkers = upkeepUI.markers(board.round);
-  if (liveMarkers) text('round-phase', 'UPKEEP');
+  // The start's receipt is read over the board that already asks for the round's first choice: the bar says the start.
+  if (liveMarkers) roundWord(roundBar({ phase: 'StartOfRound', moment: upkeepUI.bar(board.round) }));
   const markers = replay.active ? undefined : playbackState.paced?.markers ?? liveMarkers;
   // Every effect on a creature is a chip above it: a spell's outcomes at impact, an upkeep tick, a condition
   // ending. Only a turnover with no recorded board to stand on keeps its plaques in the scene, by name.

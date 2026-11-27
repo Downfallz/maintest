@@ -72,6 +72,7 @@ function retired() {
 
 test('the retired words are the ones the page replaced', () => {
   assert.deepEqual([...retired().keys()].filter(word => !word.includes(' ') || word === 'Talent atlas').sort(), [
+    'Aftermath',
     'Package',
     'Planning',
     'PvP',
@@ -80,6 +81,7 @@ test('the retired words are the ones the page replaced', () => {
     'Standard',
     'Talent atlas',
     'Tier',
+    'Upkeep',
   ]);
   assert.ok(retired().has('Choose speed'));
   assert.ok(retired().has('Speeds revealed'));
@@ -453,6 +455,34 @@ test('a die is found in a label, a sentence, a tooltip, a word handed to a helpe
   ]);
   const lesson = tutorialLines({ title: 'Who acts first', steps: [{ at: { kind: 'Action' }, says: ['Pummel rolls for a critical.', 'It never crits at Instinct.'], concepts: ['critical'] }] });
   assert.deepEqual(dieWords([{ path: 'lesson', texts: lesson }]), ['lesson: "Pummel rolls for a critical."']);
+});
+
+// The round's two automatic moments read Round start and Round end (player-terminology.md, ## Round phases). The
+// sentences are held by the retired words above; a label of one word handed to a helper or kept in a constant
+// (`category: 'Upkeep'`, `title: 'Aftermath'`) is refused here, and so is a tutorial's line. The engine's own names
+// stay: the interlude `upkeep`, the field `upkeepEnergy`, an element's id.
+const MOMENT_LABEL = /^(Upkeep|Aftermath|UPKEEP|AFTERMATH)$/;
+// A sentence of a tutorial or of the public site, which writes French too: the French words the moments had as well.
+const MOMENT_WORDS = /(?<![\p{L}\d])(upkeeps?|aftermaths?|entretiens?|retombées?)(?![\p{L}\d])/iu;
+const momentWords = files => files.flatMap(({ path, texts }) => texts
+  .filter(text => /^(scenarios|showcase)\//.test(path) ? MOMENT_WORDS.test(text) : MOMENT_LABEL.test(text.trim()))
+  .map(text => `${path}: "${text.trim().slice(0, 100)}"`));
+
+test('no label of one word, no line of a tutorial and no sentence of the showcase says Upkeep or Aftermath', () => {
+  assert.deepEqual(momentWords([...dieSources(), ...showcaseSources()]), []);
+});
+
+test('a moment\'s old word is found as a label of one word and in a tutorial\'s line, and the engine\'s names are not', () => {
+  const texts = everyLiteral("const row = { title: 'Aftermath', category: 'Upkeep' }; small.textContent = 'UPKEEP'; step.interlude = 'upkeep'; el('upkeep-dialog'); passive['upkeepEnergy'];");
+  assert.deepEqual(momentWords([{ path: 'script', texts }]), ['script: "Aftermath"', 'script: "Upkeep"', 'script: "UPKEEP"']);
+  const lesson = tutorialLines({ steps: [{ says: ['Bleed takes Health each Upkeep.', 'It counts down at the end of each round.', "It ends in the round's aftermath."] }] });
+  assert.deepEqual(momentWords([{ path: 'scenarios/tutorials/lesson.json', texts: lesson }]), [
+    'scenarios/tutorials/lesson.json: "Bleed takes Health each Upkeep."', 'scenarios/tutorials/lesson.json: "It ends in the round\'s aftermath."',
+  ]);
+  const guide = scriptText("const en = `gains ${n} extra energy at each upkeep.`, fr = `gagne ${n} énergie de plus à chaque entretien.`, kept = 'au début de chaque round';");
+  assert.deepEqual(momentWords([{ path: 'showcase/guide.mjs', texts: guide }]), [
+    'showcase/guide.mjs: "gains   extra energy at each upkeep."', 'showcase/guide.mjs: "gagne   énergie de plus à chaque entretien."',
+  ]);
 });
 
 // The notification modules speak of "this table" and of a "notification service" (player-terminology.md,

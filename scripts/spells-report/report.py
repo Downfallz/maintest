@@ -88,7 +88,7 @@ def passive_text(passive: dict) -> str:
     if passive.get("stunImmunity"):
         parts.append("immunité à l'étourdissement")
     if passive.get("upkeepEnergy"):
-        parts.append(f"+{passive['upkeepEnergy']} énergie à chaque entretien")
+        parts.append(f"+{passive['upkeepEnergy']} énergie au début de chaque round")
     if passive.get("damageBonus"):
         parts.append(f"+{passive['damageBonus']} dégâts à chaque coup")
     if passive.get("sunder"):

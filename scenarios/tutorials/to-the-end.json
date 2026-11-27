@@ -22,7 +22,7 @@
         },
         "says": [
           "Some spells leave a condition, like Regeneration.",
-          "It counts down in each round's Aftermath."
+          "It counts down at the end of each round."
         ],
         "concepts": [
           "conditions"
@@ -35,7 +35,7 @@
           "creature": 2
         },
         "says": [
-          "Bleed takes Health each Upkeep, ignoring Defense.",
+          "Bleed takes Health each round, ignoring Defense.",
           "Watch for Stun: it costs a creature its turn."
         ],
         "concepts": [

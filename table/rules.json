@@ -138,11 +138,11 @@
                   "text": "A match is a sequence of rounds. Each round reads "
                 },
                 {
-                  "text": "Upkeep → Command → Combat → Aftermath",
+                  "text": "Command → Combat",
                   "strong": true
                 },
                 {
-                  "text": ", and the app walks you through it:"
+                  "text": ": two phases, between two moments where nobody decides anything. The app plays the start and the end of the round for you, and walks you through the rest:"
                 }
               ]
             },
@@ -152,7 +152,7 @@
               "items": [
                 [
                   {
-                    "text": "Upkeep.",
+                    "text": "Round start.",
                     "strong": true
                   },
                   {
@@ -179,7 +179,7 @@
                 ],
                 [
                   {
-                    "text": "Aftermath.",
+                    "text": "Round end.",
                     "strong": true
                   },
                   {
@@ -405,7 +405,7 @@
               "items": [
                 [
                   {
-                    "text": "Upkeep.",
+                    "text": "The start of each round.",
                     "strong": true
                   },
                   {
@@ -443,7 +443,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Every condition counts down in the Aftermath, and ends at zero."
+                    "text": " Every condition counts down at the end of the round, and ends at zero."
                   }
                 ],
                 [
@@ -550,7 +550,7 @@
                   ],
                   [
                     {
-                      "text": "The Energy every living creature gains at Upkeep"
+                      "text": "The Energy every living creature gains at the start of each round"
                     }
                   ],
                   [
@@ -676,14 +676,14 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "Every round walks the same steps, in this order, never backwards: "
+              "text": "Every round walks the same steps, in this order, never backwards. A round has two phases, "
             },
             {
-              "text": "Upkeep → Command → Combat → Aftermath",
+              "text": "Command → Combat",
               "strong": true
             },
             {
-              "text": ". Each section below is one step. It says when it comes, who decides, and what happens. Every example uses this table's numbers and the real spells."
+              "text": ". Before them, at the start of the round, the app gives the Energy and applies the ongoing effects; after them, at the end of the round, it counts the conditions down and ends the round. Nobody decides anything at either moment. Each section below is one step. It says when it comes, who decides, and what happens. Every example uses this table's numbers and the real spells."
             }
           ]
         }
@@ -698,7 +698,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Upkeep.",
+                  "text": "Round start · Energy.",
                   "emphasis": true
                 },
                 {
@@ -717,7 +717,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Archmage is shared with the whole team: each copy a team owns gives every living creature of that team 1 Energy more at every Upkeep, from the round after it was acquired."
+                  "text": "Archmage is shared with the whole team: each copy a team owns gives every living creature of that team 1 Energy more at the start of each round, from the round after it was acquired."
                 }
               ]
             },
@@ -745,10 +745,10 @@
             "id": "energy",
             "title": "Energy",
             "lines": [
-              "Every living creature gains Energy at Upkeep, when a round begins.",
+              "Every living creature gains Energy at the start of each round.",
               "A spell costs Energy. It is spent when the spell resolves, never before."
             ],
-            "example": "A creature at 1 Energy gains 2 at Upkeep and has 3: enough for a spell that costs 3."
+            "example": "A creature at 1 Energy gains 2 at the start of the round and has 3: enough for a spell that costs 3."
           }
         },
         {
@@ -760,11 +760,11 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Upkeep.",
+                  "text": "Round start · Ongoing effects.",
                   "emphasis": true
                 },
                 {
-                  "text": " Right after the Energy gain, the conditions that work at Upkeep apply, in three passes. The order matters:"
+                  "text": " Right after the Energy gain, the conditions that work at the start of the round apply, in three passes. The order matters:"
                 }
               ]
             },
@@ -1085,7 +1085,7 @@
                   ],
                   [
                     {
-                      "text": "Energy +1 at every Upkeep, for every creature of the team"
+                      "text": "Energy +1 at the start of each round, for every creature of the team"
                     }
                   ]
                 ],
@@ -1121,7 +1121,7 @@
                   "strong": true
                 },
                 {
-                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more. A copy keeps giving after the creature that acquired it is defeated: only the defeated creature's own Upkeep gains stop."
+                  "text": " The creature that acquires it owns it, and every creature of its team holds its passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its passive once more. A copy keeps giving after the creature that acquired it is defeated: only the defeated creature itself gains nothing more."
                 }
               ]
             },
@@ -1745,7 +1745,7 @@
             "lines": [
               "Defense lowers the damage of every hit taken, never below zero.",
               "Defense buffs add at most 10 to it, however many it holds.",
-              "Only damage over time, at Upkeep, ignores it."
+              "Only damage over time ignores it."
             ],
             "example": "A creature starts at 0 Defense. A hit of 7 deals 7, or 5 at 2 Defense."
           }
@@ -1864,7 +1864,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Aftermath · Cleanup.",
+                  "text": "Round end · Cleanup.",
                   "emphasis": true
                 },
                 {
@@ -1918,7 +1918,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Aftermath · Finalization.",
+                  "text": "Round end · Finalization.",
                   "emphasis": true
                 },
                 {
@@ -2122,7 +2122,7 @@
                   "strong": true
                 },
                 {
-                  "text": " takes no tempo, gets no turn, and casts nothing for every round the Stun lasts. It still gains its Energy at Upkeep and takes its Bleed and its Regeneration. It can still acquire a mutation, since mutations come before the tempos. It can still be targeted, healed and defeated."
+                  "text": " takes no tempo, gets no turn, and casts nothing for every round the Stun lasts. It still gains its Energy at the start of each round and takes its Bleed and its Regeneration. It can still acquire a mutation, since mutations come before the tempos. It can still be targeted, healed and defeated."
                 }
               ]
             },
@@ -2196,7 +2196,7 @@
                   "strong": true
                 },
                 {
-                  "text": ". A condition applied this round lasts to the end of this round, then for the rounds it prints: the first countdown after it lands does not count. A Bleed for 1 round deals its damage once, at the next Upkeep. A Stun for 2 rounds takes the next two rounds away."
+                  "text": ". A condition applied this round lasts to the end of this round, then for the rounds it prints: the first countdown after it lands does not count. A Bleed for 1 round deals its damage once, at the start of the next round. A Stun for 2 rounds takes the next two rounds away."
                 }
               ]
             },
@@ -2223,7 +2223,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " In round 5, Creature 3 casts Infestation on 3 enemies: a Bleed of 2 for 3 rounds on each. It deals nothing in round 5. Each target then takes 2 at the Upkeep of each of the next 3 rounds, whatever its Defense: 6 in all."
+                  "text": " In round 5, Creature 3 casts Infestation on 3 enemies: a Bleed of 2 for 3 rounds on each. It deals nothing in round 5. Each target then takes 2 at the start of each of the next 3 rounds, whatever its Defense: 6 in all."
                 }
               ]
             }
@@ -2445,7 +2445,7 @@
                   ],
                   [
                     {
-                      "text": "Upkeep, after Regeneration"
+                      "text": "Round start, after Regeneration"
                     }
                   ]
                 ],
@@ -2463,7 +2463,7 @@
                   ],
                   [
                     {
-                      "text": "Upkeep, before Bleed"
+                      "text": "Round start, before Bleed"
                     }
                   ]
                 ],
@@ -2481,7 +2481,7 @@
                   ],
                   [
                     {
-                      "text": "Upkeep, first"
+                      "text": "Round start, first"
                     }
                   ]
                 ],
@@ -2682,10 +2682,10 @@
             "title": "Conditions",
             "lines": [
               "A condition is a lasting effect: an amount, for a number of rounds.",
-              "It counts down each Aftermath, ending at zero.",
+              "It counts down at each round's end, to zero.",
               "A stunned creature sits out the Stun, then cannot be stunned for one round."
             ],
-            "example": "Latch's Bleed deals 2 each Upkeep for the next 3 rounds, ignoring Defense."
+            "example": "Latch's Bleed deals 2 in each of the next 3 rounds, ignoring Defense."
           }
         },
         {
@@ -2824,7 +2824,7 @@
                 ],
                 [
                   {
-                    "text": "Archmage, shared: Energy +1 at every Upkeep.",
+                    "text": "Archmage, shared: Energy +1 at the start of each round.",
                     "strong": true
                   },
                   {
@@ -2981,6 +2981,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-27",
+      "text": "A round reads **Command → Combat**: two phases, between the start of the round and its end, where nobody decides anything. Those two moments are named Round start and Round end. No rule changed.",
+      "adrs": []
+    },
     {
       "date": "2026-11-27",
       "text": "The screen no longer shows a die: a cast that crits shows **Crit!** beside its caster, the history says the chance the cast had, and a tie between the teams reads as settled at random. The book says a critical chance as a percent, as the cards do. No rule changed (ADR 0208).",

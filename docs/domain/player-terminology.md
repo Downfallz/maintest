@@ -50,22 +50,35 @@ The four phases of the domain's `RoundPhase` keep their internal names; the play
 
 | Internal (`RoundPhase`) | Legacy player-facing | Player-facing EN | Player-facing FR |
 | --- | --- | --- | --- |
-| `StartOfRound` | Start | **Upkeep** | **Entretien** |
+| `StartOfRound` | Upkeep | **Round start** | **Début du round** |
 | `Planning` | Planning | **Command** | **Commandement** |
 | `Combat` | Combat | **Combat** | **Combat** |
-| `EndOfRound` | End | **Aftermath** | **Retombées** |
+| `EndOfRound` | Aftermath | **Round end** | **Fin du round** |
 
-A round reads **Upkeep → Command → Combat → Aftermath**. Each step belongs to the phase the engine's
-`RoundFlow` puts it in, and keeps its current name (Evolution, Tempo, Tie order, Spells, Activation, Cleanup):
-the table shows a step under its phase, for example *Command · Tempo*, *Combat · Activation* or
-*Aftermath · Cleanup*. Only the step the engine calls `Speed` is shown as Tempo.
+A round a player reads has two phases, **Command → Combat**, between two automatic moments: it opens with the
+**Round start** and closes with the **Round end**. Nobody decides anything in either, so neither is a phase to the
+player: the round's bar names a phase only while a player decides or watches a cast. At a round's start and end it
+names none. Under the round's number it says what the moment gave or ended: `+2 energy each`, `2 conditions ended`.
+On a phone it shows the plaques' energy mark and `+2`, or `2 ended` (`roundBar` in `table/battle-upkeep.js`).
+The words *Upkeep* and *Aftermath* named these two moments until 2026-11-27 (the first outside playtest,
+[first-playtest-plan.md](../tabletop/first-playtest-plan.md)); the pages, the rulebook and the tutorials no longer
+say them. The French edition said *Entretien* and *Retombées*, and no longer does.
 
-| Phase | Steps a player sees |
+Round start and Round end are written as labels, with these capitals (`Round start · energy`). Beside the round's
+number a label drops its "Round": `Round 3 · Start`, `Round 3 · End` (`inRound` in `table/terms.js`), in French
+`Round 3 · Début`, `Round 3 · Fin`. A sentence says "at the start of the round" and "at the end of the round", in
+French "au début du round" and "à la fin du round".
+
+Each step belongs to the phase the engine's `RoundFlow` puts it in, and keeps its current name (Evolution, Tempo,
+Tie order, Spells, Activation, Cleanup): the table shows a step under its phase, for example *Command · Tempo* or
+*Combat · Activation*. Only the step the engine calls `Speed` is shown as Tempo.
+
+| Moment or phase | What a player sees |
 | --- | --- |
-| Upkeep | Energy, regeneration and damage over time are applied automatically. |
+| Round start | Energy, regeneration and damage over time are applied automatically. |
 | Command | Evolution (on an evolution round), Tempo, Tie order. |
 | Combat | Spells (Intent selection), then Activation: the timeline is walked slot by slot. |
-| Aftermath | Cleanup: conditions count down, then the next round begins. |
+| Round end | Cleanup: conditions count down, then the next round begins. |
 
 ## Tempo
 

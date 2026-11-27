@@ -1,5 +1,6 @@
 # What changed
 
+- 2026-11-27: A round reads **Command → Combat**: two phases, between the start of the round and its end, where nobody decides anything. Those two moments are named Round start and Round end. No rule changed.
 - 2026-11-27: The screen no longer shows a die: a cast that crits shows **Crit!** beside its caster, the history says the chance the cast had, and a tie between the teams reads as settled at random. The book says a critical chance as a percent, as the cards do. No rule changed (ADR 0208).
 - 2026-11-23: In French, the Critical card's example names the d20 again, as the English one does, with no rule changed.
 - 2026-11-23: The Health, Tempo, Initiative, Choosing a spell, Defense, A skipped turn and Critical cards are shorter, and in French the Energy card too, with no rule changed.

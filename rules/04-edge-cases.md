@@ -45,7 +45,7 @@ sources: ADR 0035, ADR 0083, ADR 0112, game-rules#round-sequence-adr-0010
 ## A stunned creature sits the round out {#stunned}
 
 A creature with a **Stun** takes no tempo, gets no turn, and casts nothing for every round the Stun lasts. It
-still gains its Energy at Upkeep and takes its Bleed and its Regeneration. It can still acquire a mutation, since
+still gains its Energy at the start of each round and takes its Bleed and its Regeneration. It can still acquire a mutation, since
 mutations come before the tempos. It can still be targeted, healed and defeated.
 
 A Stun that lands **during** the combat also costs that creature its turn this round, if its turn has not come
@@ -68,7 +68,7 @@ sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 
 Read a condition's rounds as **this many of the following rounds**. A condition applied this round lasts to the
 end of this round, then for the rounds it prints: the first countdown after it lands does not count. A Bleed for
-1 round deals its damage once, at the next Upkeep. A Stun for 2 rounds takes the next two rounds away.
+1 round deals its damage once, at the start of the next round. A Stun for 2 rounds takes the next two rounds away.
 
 A condition never restarts: a second one of the same kind sits beside the first, and each counts down on its own.
 Only a Stun is different: a second one is [ignored](#stunned).
@@ -76,7 +76,7 @@ Only a Stun is different: a second one is [ignored](#stunned).
 *Example.* In round 5, Creature 3 casts Infestation on
 {spell:summon_minions:v1.targets|enemy|enemies}{?spell:summon_minions:v1.origin = 'Enemy'}: a Bleed of
 {spell:summon_minions:v1.bleed} for {spell:summon_minions:v1.bleed.durationRounds|round|rounds} on each. It
-deals nothing in round 5. Each target then takes {spell:summon_minions:v1.bleed} at the Upkeep of each of the next
+deals nothing in round 5. Each target then takes {spell:summon_minions:v1.bleed} at the start of each of the next
 {spell:summon_minions:v1.bleed.durationRounds|round|rounds}, whatever its Defense:
 {spell:summon_minions:v1.bleed * spell:summon_minions:v1.bleed.durationRounds} in all.
 

@@ -4,7 +4,7 @@ import { collectSeatViews } from './seat-views.js';
 import { keyboardActivate } from './keys.js';
 
 // A whole turn by keyboard on the real engine, told in one live region (docs/art/ux-craft-plan.md, UX13). A
-// returning player, tips muted, plays round 1 from its Upkeep to the next round's: the mutation, the team's tempos,
+// returning player, tips muted, plays round 1 from its Round start to the next round's: the mutation, the team's tempos,
 // the order, each cast and its targets, and every result read, each by Tab and Enter alone. Past the invitation's door,
 // where the seat is taken, nothing is clicked and no control is focused by script. What each resolved action did is said in `#playback-announcement`, and no other
 // live region says it again.
@@ -41,7 +41,7 @@ function listen() {
 const visible = (page, selector) => page.locator(selector).isVisible();
 const open = (page, selector) => page.locator(selector).evaluate(dialog => dialog.open).catch(() => false);
 
-// The windows that stand between two presses of the round: Upkeep, a tip, the order of play, the next result.
+// The windows that stand between two presses of the round: Round start, a tip, the order of play, the next result.
 async function windowStep(page) {
   if (await open(page, '#upkeep-dialog')) { await keyboardActivate(page, '#upkeep-close'); return true; }
   if (await open(page, '#help-dialog')) { await keyboardActivate(page, '#help-close'); return true; }

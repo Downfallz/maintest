@@ -47,7 +47,7 @@ test('a round upkeep in a replay is shown before its combat, with nothing turned
   const board = playbackBoard({ actions, index: 1, stage: 'after', round: 1 }, { allies: [] });
 
   assert.equal(board.roundNumber, 2);
-  assert.equal(board.subPhase, 'Upkeep');
+  assert.equal(board.subPhase, 'Round start');
   assert.deepEqual(board.revealedActions, []);
 });
 

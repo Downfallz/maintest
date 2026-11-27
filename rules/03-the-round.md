@@ -1,16 +1,18 @@
 # The round, step by step {#the-round}
 
-Every round walks the same steps, in this order, never backwards: **Upkeep → Command → Combat → Aftermath**.
+Every round walks the same steps, in this order, never backwards. A round has two phases, **Command → Combat**.
+Before them, at the start of the round, the app gives the Energy and applies the ongoing effects; after them, at the
+end of the round, it counts the conditions down and ends the round. Nobody decides anything at either moment.
 Each section below is one step. It says when it comes, who decides, and what happens. Every example uses this
 table's numbers and the real spells.
 
 ## Energy gain {#energy-gain}
 
-*Upkeep.* The round begins, and every **living** creature gains {rules.energyPerRound} Energy, and the Energy
+*Round start · Energy.* The round begins, and every **living** creature gains {rules.energyPerRound} Energy, and the Energy
 its Archmage passives give. Nobody decides anything. A defeated creature gains nothing, now or ever.
 
 Archmage is shared with the whole team: each copy a team owns gives every living creature of that team
-{tier:archmage:v1.upkeepEnergy} Energy more at every Upkeep, from the round after it was acquired.
+{tier:archmage:v1.upkeepEnergy} Energy more at the start of each round, from the round after it was acquired.
 
 *Example.* Round 8 begins. Creature 1 has 1 Energy and Creature 2 has 4; Creature 3 is defeated. Creature 1 goes
 to {1 + rules.energyPerRound} and Creature 2 to {4 + rules.energyPerRound}. Creature 3 gains nothing. Had
@@ -23,14 +25,14 @@ sources: ADR 0010, ADR 0101, ADR 0114, ADR 0132, game-rules#round-sequence-adr-0
 ```card
 id: energy
 title: Energy
-Every living creature gains Energy at Upkeep, when a round begins.
+Every living creature gains Energy at the start of each round.
 A spell costs Energy. It is spent when the spell resolves, never before.
-> A creature at 1 Energy gains {rules.energyPerRound} at Upkeep and has {1 + rules.energyPerRound}: enough for a spell that costs {1 + rules.energyPerRound}.
+> A creature at 1 Energy gains {rules.energyPerRound} at the start of the round and has {1 + rules.energyPerRound}: enough for a spell that costs {1 + rules.energyPerRound}.
 ```
 
 ## Ongoing effects {#ongoing-effects}
 
-*Upkeep.* Right after the Energy gain, the conditions that work at Upkeep apply, in three passes. The order
+*Round start · Ongoing effects.* Right after the Energy gain, the conditions that work at the start of the round apply, in three passes. The order
 matters:
 
 1. **Energy regeneration** gives its Energy.
@@ -111,13 +113,13 @@ reveal that acquires it to the end of the match:
 | Capstone | Family | Needs one of | Its passive |
 | --- | --- | --- | --- |
 | Titan | Brute | Ravager, Colossus, Tyrant | Every hit ignores {tier:titan:v1.sunder} Defense |
-| Archmage | Warped | Cataclysm, Revenant, Transcendent | Energy +{tier:archmage:v1.upkeepEnergy} at every Upkeep, for every creature of the team |
+| Archmage | Warped | Cataclysm, Revenant, Transcendent | Energy +{tier:archmage:v1.upkeepEnergy} at the start of each round, for every creature of the team |
 | Apex | Predator | Blightweaver, Deathstalker, Soulreaver | Damage +{tier:apex:v1.damageBonus} on every hit |
 
 **Archmage is shared.** The creature that acquires it owns it, and every creature of its team holds its
 passive. It stacks: a teammate may acquire its own copy, and each copy gives every creature of the team its
 passive once more. A copy keeps giving after the creature that acquired it is defeated: only the defeated
-creature's own Upkeep gains stop.
+creature itself gains nothing more.
 
 How each passive plays is in [the passives](#passives).
 
@@ -292,7 +294,7 @@ id: defense
 title: Defense
 Defense lowers the damage of every hit taken, never below zero.
 Defense buffs add at most {engine.defenseBuffCeiling} to it, however many it holds.
-Only damage over time, at Upkeep, ignores it.
+Only damage over time ignores it.
 > A creature starts at {creature.defense} Defense. A hit of 7 deals {max(0, 7 - creature.defense)}, or {max(0, 5 - creature.defense)} at {creature.defense + 2} Defense.
 ```
 
@@ -339,7 +341,7 @@ sources: ADR 0106, game-rules#round-sequence-adr-0010
 
 ## Cleanup {#cleanup}
 
-*Aftermath · Cleanup.* Every turn has come, and both teams still stand. Every condition counts one round down,
+*Round end · Cleanup.* Every turn has come, and both teams still stand. Every condition counts one round down,
 and a condition at zero ends. A condition applied **this** round does not count down yet: it lasts for the rest
 of this round, then for every round it prints. See [durations](#durations).
 
@@ -350,7 +352,7 @@ sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 
 ## The end of the round {#finalization}
 
-*Aftermath · Finalization.* If this was round {rules.roundCap}, the match ends: the team with the **most
+*Round end · Finalization.* If this was round {rules.roundCap}, the match ends: the team with the **most
 Health left**, added over its creatures, wins, and equal totals are a draw. Otherwise the next round begins.
 
 *Example.* Round {rules.roundCap} ends with both teams standing. The first player's creatures have 4, 5 and 6

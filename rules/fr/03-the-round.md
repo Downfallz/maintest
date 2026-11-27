@@ -1,17 +1,19 @@
 # Le round, étape par étape {#the-round}
 
-Chaque round parcourt les mêmes étapes, dans cet ordre, jamais à rebours : **Entretien → Commandement → Combat →
-Retombées**. Chaque section ci-dessous est une étape. Elle dit quand elle vient, qui décide, et ce qui se passe.
+Chaque round parcourt les mêmes étapes, dans cet ordre, jamais à rebours. Un round a deux phases, **Commandement →
+Combat**. Avant elles, au début du round, l’application donne l’Énergie et applique les effets en cours ; après
+elles, à la fin du round, elle fait décompter les états et clôt le round. Personne ne décide rien à l’un ou l’autre
+de ces moments. Chaque section ci-dessous est une étape. Elle dit quand elle vient, qui décide, et ce qui se passe.
 Chaque exemple utilise les nombres de cette table et les vrais sorts.
 
 ## Gain d’Énergie {#energy-gain}
 
-*Entretien.* Le round commence, et l’Énergie de chaque créature **vivante** augmente de {rules.energyPerRound},
+*Début du round · Énergie.* Le round commence, et l’Énergie de chaque créature **vivante** augmente de {rules.energyPerRound},
 plus l’Énergie que lui donnent les passifs d’Archmage. Personne ne décide rien. Une créature vaincue ne gagne rien,
 ni maintenant ni jamais.
 
 Archmage est partagé avec toute l’équipe : chaque exemplaire que possède une équipe ajoute
-{tier:archmage:v1.upkeepEnergy} à l’Énergie que gagne chaque créature vivante de cette équipe à chaque Entretien, à partir du round qui
+{tier:archmage:v1.upkeepEnergy} à l’Énergie que gagne chaque créature vivante de cette équipe au début de chaque round, à partir du round qui
 suit son acquisition.
 
 *Exemple.* Le round 8 commence. La Créature 1 a 1 point d’Énergie et la Créature 2 en a 4 ; la Créature 3 est
@@ -25,14 +27,14 @@ sources: ADR 0010, ADR 0101, ADR 0114, ADR 0132, game-rules#round-sequence-adr-0
 ```card
 id: energy
 title: Énergie
-Chaque créature vivante gagne de l’Énergie à l’Entretien, quand un round commence.
+Chaque créature vivante gagne de l’Énergie au début de chaque round.
 Un sort coûte de l’Énergie, dépensée quand il se résout, jamais avant.
-> Une créature à 1 point d’Énergie en gagne {rules.energyPerRound} à l’Entretien et en a {1 + rules.energyPerRound}, assez pour un sort qui coûte {1 + rules.energyPerRound}.
+> Une créature à 1 point d’Énergie en gagne {rules.energyPerRound} au début du round et en a {1 + rules.energyPerRound}, assez pour un sort qui coûte {1 + rules.energyPerRound}.
 ```
 
 ## Effets en cours {#ongoing-effects}
 
-*Entretien.* Juste après le gain d’Énergie, les états qui agissent à l’Entretien s’appliquent, en trois passes.
+*Début du round · Effets en cours.* Juste après le gain d’Énergie, les états qui agissent au début du round s’appliquent, en trois passes.
 L’ordre compte :
 
 1. La **régénération d’Énergie** donne son Énergie.
@@ -118,13 +120,13 @@ donne un **passif** à la place, détenu de la révélation qui l’acquiert jus
 | Clé de voûte | Famille | Demande l’une de | Son passif |
 | --- | --- | --- | --- |
 | Titan | Brute | Ravager, Colossus, Tyrant | Chaque coup ignore {tier:titan:v1.sunder} de Défense |
-| Archmage | Warped | Cataclysm, Revenant, Transcendent | Énergie +{tier:archmage:v1.upkeepEnergy} à chaque Entretien, pour chaque créature de l’équipe |
+| Archmage | Warped | Cataclysm, Revenant, Transcendent | Énergie +{tier:archmage:v1.upkeepEnergy} au début de chaque round, pour chaque créature de l’équipe |
 | Apex | Predator | Blightweaver, Deathstalker, Soulreaver | Dégâts +{tier:apex:v1.damageBonus} à chaque coup |
 
 **Archmage est partagé.** La créature qui l’acquiert le possède, et chaque créature de son équipe détient son
 passif. Il se cumule : un coéquipier peut acquérir son propre exemplaire, et chaque exemplaire donne une fois de
 plus son passif à chaque créature de l’équipe. Un exemplaire continue de donner après que la créature qui l’a
-acquis est vaincue : seuls s’arrêtent les gains d’Entretien propres à la créature vaincue.
+acquis est vaincue : seule la créature vaincue ne gagne plus rien.
 
 Comment joue chaque passif : voir [les passifs](#passives).
 
@@ -306,7 +308,7 @@ id: defense
 title: Défense
 La Défense réduit les dégâts de chaque coup, jamais sous zéro.
 Ses renforts ajoutent au plus {engine.defenseBuffCeiling} en tout.
-Seuls les dégâts dans la durée, à l’Entretien, l’ignorent.
+Seuls les dégâts dans la durée l’ignorent.
 > Une créature commence à {creature.defense} de Défense. Un coup de 7 inflige {max(0, 7 - creature.defense)}, ou {max(0, 5 - creature.defense)} à {creature.defense + 2} de Défense.
 ```
 
@@ -355,7 +357,7 @@ sources: ADR 0106, game-rules#round-sequence-adr-0010
 
 ## Nettoyage {#cleanup}
 
-*Retombées · Nettoyage.* Chaque tour est venu, et les deux équipes sont encore debout. Chaque état décompte d’un
+*Fin du round · Nettoyage.* Chaque tour est venu, et les deux équipes sont encore debout. Chaque état décompte d’un
 round, et un état à zéro se termine. Un état appliqué **ce** round ne décompte pas encore : il dure pour le reste
 de ce round, puis pour chaque round qu’il indique. Voir [les durées](#durations).
 
@@ -366,7 +368,7 @@ sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 
 ## La fin du round {#finalization}
 
-*Retombées · Clôture.* Si c’était le round {rules.roundCap}, la partie se termine : l’équipe à qui il reste **le
+*Fin du round · Clôture.* Si c’était le round {rules.roundCap}, la partie se termine : l’équipe à qui il reste **le
 plus de Santé**, additionnée sur ses créatures, gagne, et à totaux égaux la partie est nulle. Sinon, le round
 suivant commence.
 

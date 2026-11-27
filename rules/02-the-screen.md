@@ -31,12 +31,12 @@ sources: ADR 0011, ADR 0042, ADR 0089, game-rules#match-lifecycle
 
 The steps nobody decides are played for you, and the history records each of them:
 
-- **Upkeep.** Each creature's Energy gain, its Regeneration and its Bleed.
+- **The start of each round.** Each creature's Energy gain, its Regeneration and its Bleed.
 - **The timeline.** The order of the turns, built from the tempos and the initiatives. A tie between the teams
   is settled at random: the timeline marks it, and a tap on a place says which team got the earlier place.
 - **The criticals.** Every critical chance, when its spell resolves. A cast that crits shows **Crit!** beside its
   caster; a cast that does not shows nothing there. The history says the chance the cast had.
-- **The countdown.** Every condition counts down in the Aftermath, and ends at zero.
+- **The countdown.** Every condition counts down at the end of the round, and ends at zero.
 - **The end.** The match ends the moment a team is defeated, or when the last round ends.
 
 When the app asks you something, it offers only what the rules allow: the mutations a creature may acquire, the
@@ -54,7 +54,7 @@ the same when they do. This book draws every number from the rule set and the co
 | Value | What it decides | This table |
 | --- | --- | --- |
 | Team size | The creatures each player commands | {rules.teamSize} |
-| Energy per round | The Energy every living creature gains at Upkeep | {rules.energyPerRound} |
+| Energy per round | The Energy every living creature gains at the start of each round | {rules.energyPerRound} |
 | Picks per mutation round | The mutations a team may acquire on a mutation round | {rules.evolutionPicksPerOpportunity} |
 | First mutation round | The first round that offers mutations | {rules.firstEvolutionRound} |
 | Rounds between mutation rounds | The gap from one mutation round to the next | {rules.evolutionInterval} |

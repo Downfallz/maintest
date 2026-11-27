@@ -1,12 +1,12 @@
 {
   "en": [
-    "Health", "Energy", "Defense", "Damage", "Bleed", "Regeneration", "Stun", "Cleanup", "Help", "Part", "Upkeep",
-    "Command", "Combat", "Aftermath", "Instinct", "Precision", "Creature", "Mutation", "Tree", "Stage", "Evolution",
+    "Health", "Energy", "Defense", "Damage", "Bleed", "Regeneration", "Stun", "Cleanup", "Help", "Part",
+    "Command", "Combat", "Instinct", "Precision", "Creature", "Mutation", "Tree", "Stage", "Evolution",
     "Activation", "Finalization", "Self", "Ongoing", "Crit"
   ],
   "fr": [
-    "Santé", "Énergie", "Défense", "Dégâts", "Bleed", "Regeneration", "Stun", "Nettoyage", "Help", "Entretien",
-    "Commandement", "Combat", "Retombées", "Instinct", "Précision", "Créature", "Arbre", "Stade", "Évolution",
+    "Santé", "Énergie", "Défense", "Dégâts", "Bleed", "Regeneration", "Stun", "Nettoyage", "Help",
+    "Commandement", "Combat", "Instinct", "Précision", "Créature", "Arbre", "Stade", "Évolution",
     "Activation", "Clôture", "Soi", "Crit"
   ],
   "firstWords": {
