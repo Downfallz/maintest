@@ -27,6 +27,7 @@ public static class PlayerBoardStateProjection
     private static PlayerBoardState WithRound(PlayerBoardState state, Round round, PlayerSlot slot, RuleSet rules)
     {
         var ownCreatures = state.Allies.Select(creature => creature.Id).ToHashSet();
+        var next = rules.NextEvolutionRound(round.Number);
         return state with
         {
             RoundNumber = round.Number,
@@ -34,7 +35,8 @@ public static class PlayerBoardStateProjection
             SubPhase = round.SubPhase,
             EvolutionChoices = [.. round.EvolutionChoicesOf(slot)],
             HasPassedEvolution = round.HasPassedEvolution(slot),
-            NextEvolutionRound = rules.NextEvolutionRound(round.Number),
+            NextEvolutionRound = Played(rules, next),
+            FollowingEvolutionRound = Played(rules, rules.NextEvolutionRound(next + 1)),
             SpeedChoices = [.. round.SpeedChoices.Where(choice => ownCreatures.Contains(choice.Creature))],
             Intents = [.. round.IntentsOf(slot)],
             Timeline = round.Timeline.Slots,
@@ -43,4 +45,7 @@ public static class PlayerBoardStateProjection
             ActivationCursor = round.ActivationCursor.Index,
         };
     }
+
+    /// <summary>A scheduled round, when the match still plays it: the schedule runs on past the round cap.</summary>
+    private static int? Played(RuleSet rules, int round) => round <= rules.RoundCap ? round : null;
 }

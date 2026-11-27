@@ -61,6 +61,40 @@ public sealed class PlayerBoardStateProjectionTests
         player2.Timeline.ShouldBe(player1.Timeline);
     }
 
+    [Fact]
+    public void A_mutation_round_names_itself_and_the_mutation_round_that_follows_it()
+    {
+        var match = new MatchStore().Started();
+
+        var board = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+
+        board.RoundNumber.ShouldBe(1);
+        board.NextEvolutionRound.ShouldBe(1, "round 1 offers mutations, and the next one counts this round");
+        board.FollowingEvolutionRound.ShouldBe(3, "what a page says once this round's mutations are revealed");
+    }
+
+    [Fact]
+    public void No_mutation_round_is_named_past_the_last_round()
+    {
+        var match = new MatchStore().Started(MatchStore.TwoOnTwo(roundCap: 2));
+
+        var board = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+
+        board.NextEvolutionRound.ShouldBe(1);
+        board.FollowingEvolutionRound.ShouldBeNull("round 3 is never played when the match ends after round 2");
+    }
+
+    [Fact]
+    public void A_match_that_ends_before_its_first_mutation_round_names_none()
+    {
+        var match = new MatchStore().Started(RuleSet.Create(2, 2, 2, roundCap: 1, 2.0, firstEvolutionRound: 2));
+
+        var board = PlayerBoardStateProjection.Build(match, PlayerSlot.Player1);
+
+        board.NextEvolutionRound.ShouldBeNull();
+        board.FollowingEvolutionRound.ShouldBeNull();
+    }
+
     /// <summary>The dice behind the order are public, like the order: both seats see the same rolls (ADR 0063).</summary>
     [Fact]
     public void The_rolls_behind_the_timeline_are_public()

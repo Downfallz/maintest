@@ -36,9 +36,17 @@ public sealed record PlayerBoardState
 
     /// <summary>
     /// The next round that offers an evolution opportunity, this one included. Served rather than worked out
-    /// by the client, which would be a second copy of the schedule (ADR 0056).
+    /// by the client, which would be a second copy of the schedule (ADR 0056). None once the match's last round
+    /// comes first.
     /// </summary>
     public int? NextEvolutionRound { get; init; }
+
+    /// <summary>
+    /// The round that offers an evolution opportunity after <see cref="NextEvolutionRound" />: what a page names
+    /// once this round's purchases are revealed, when "the next one" is no longer this round. None once the
+    /// match's last round comes first.
+    /// </summary>
+    public int? FollowingEvolutionRound { get; init; }
 
     /// <summary>The player's own speed choices this round.</summary>
     public IReadOnlyList<SpeedChoice> SpeedChoices { get; init; } = [];

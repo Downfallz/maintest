@@ -398,6 +398,21 @@ public sealed partial class TableApiTests : IDisposable
     }
 
     /// <summary>
+    /// The page says when the next mutation round comes and never works the schedule out (ADR 0056): after this
+    /// round's mutations are revealed, the round it names is the one that follows.
+    /// </summary>
+    [Fact]
+    public async Task A_seat_s_board_names_this_mutation_round_and_the_one_that_follows_it()
+    {
+        var table = await Seated();
+
+        var body = Text(await table.Api.HandleAsync("GET", "/api/seat/player1", string.Empty, table.Token));
+
+        body.ShouldContain("\"nextEvolutionRound\":1");
+        body.ShouldContain("\"followingEvolutionRound\":3");
+    }
+
+    /// <summary>
     /// The leak that would matter, played for rather than asserted at a moment when there is nothing to leak:
     /// the person passes, chooses, declares, and is then asked to bind targets — by which point the bot in the
     /// other seat has declared its own intents, which are the game's hidden information. Asserted on the bytes
