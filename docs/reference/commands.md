@@ -1178,6 +1178,8 @@ node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle
 node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat --motion
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit --damage 7
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --at 860,900,1040 --viewport 320x740
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --round 12
 node scripts/battle/filmstrip.mjs --still --interval 1000
 node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips
@@ -1190,12 +1192,18 @@ a laboratory page served elsewhere. `--actor` and `--targets` name creatures of 
 to `b3`), `--speed` sets the playback speed (0.5, 1 or 2). `--fizzle` films the spell fizzling, and `--wound` its
 caster paying in blood; the two are refused together, and their sheets are named `pummel-fizzled.png` and
 `pummel-wound.png`. `--damage` is the health each creature struck loses (the weight of the blow) and `--defeat`
-fells the first one struck; neither goes with `--fizzle`. `--motion` writes `<sheet>.motion.jsonl` beside the
+fells the first one struck; neither goes with `--fizzle`. `--crit` makes the cast a critical: the field says `Crit!`
+beside its caster from the impact until the result leaves, and the sheet's twelve frames are the times the word's
+storyboard reads (0, 600, 840, 860, 900, 1040, 1160, 1800, 2600, 3000, 3040 and 3100 ms at 1×) unless `--interval` or
+`--frames` spreads them evenly; its sheet is named `pummel-crit.png`, and it is refused with `--fizzle`. `--at` names
+the frames' times after the first, rising multiples of 20 ms, and goes with no `--interval` and no `--frames`.
+`--motion` writes `<sheet>.motion.jsonl` beside the
 sheet: at each frame, how each figure stands, what the view does and how the ground stands. `--round` is the round
 the field stands in, 1 to 30 (the ground breaks as the rounds pass); its sheet is named `pummel-round12.png`.
 `--still` films the field at rest, with no spell played, as `ground.png`: it names no effect, and is refused with
-`--all`, `--fizzle`, `--wound`, `--damage` and `--defeat`. `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
-set the sheet. `--scale` sets the device pixel ratio. `--out` is a `.png` for one effect, a folder otherwise
+`--all`, `--fizzle`, `--wound`, `--crit`, `--damage` and `--defeat`. `--frames`, `--interval` (a multiple of 20 ms) and `--columns`
+set the sheet. `--scale` sets the device pixel ratio, and `--viewport` the screen filmed on (`320x740`; 390 by 844
+unless told; from 1000 px wide, a desktop with no touch). `--out` is a `.png` for one effect, a folder otherwise
 (`artifacts/filmstrips/` by default). It exits 1 with no effect named and no `--still`, an option it cannot film, or an effect
 the bench does not list.
 

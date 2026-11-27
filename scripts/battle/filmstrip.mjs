@@ -9,10 +9,21 @@
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle              # the spell fizzles
 //   node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound    # its caster pays in blood
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat   # a heavy blow that defeats its target
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit --damage 7     # the cast is a critical: the field says Crit! beside its caster
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --at 860,900,1040     # frames at these times, after the first
+//   node scripts/battle/filmstrip.mjs spell:pummel:v1 --viewport 320x740    # on the small phone; 1440x1000 is the desktop
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion              # and, beside the sheet, how the figures and the view stand at each frame
 //   node scripts/battle/filmstrip.mjs spell:pummel:v1 --round 12            # on the ground as it stands at round 12
 //   node scripts/battle/filmstrip.mjs --still --interval 1000               # the field at rest: the ground alone
 //   node scripts/battle/filmstrip.mjs --all --out artifacts/filmstrips      # one sheet an entry
+//
+// `--crit` sets the frame's `crit` from the impact until the result leaves, as the live page does, and the cue's roll.
+// Its sheet is not spread evenly: its twelve frames are the times the word's storyboard reads (docs/art/storyboards/
+// movement.md, "A critical's word", On the film strip), which are 860, 900, 1040, 1160, 1800, 2600, 3000 and 3100 ms,
+// and with them 0 and 600 (the windup, no word), 840 (the contact) and 3040 (the result leaves). At another speed they
+// are the same moments, on whole ticks. `--interval` or `--frames` with it spreads the frames evenly instead, and `--at`
+// names other times. A critical punches the zoom only on a blow that took health: say `--damage` with it. Less motion
+// has no flag here: the bench's own setting plays it, and `studio/browser/battle-playback.spec.js` pictures it.
 //
 // It serves `table/` itself; the bundle must be built first (`npm --prefix battle run build`).
 
@@ -22,10 +33,27 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FILM_TICK_MS } from '../../table/battle-bench.js';
+import { playbackRate } from '../../table/battle-timing.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PHONE = { width: 390, height: 844 };
 const COLUMNS = 4;
+// Under this width the film is a phone's or a tablet's, with touch, as the browser suite's projects; from it on, a desktop's.
+const DESKTOP_FROM = 1000;
+
+// The frames of a critical's word, in ms of the play at 1× (the storyboard's On the film strip): the play's first
+// frame and the windup, with no word; the contact, where it enters; its entry with the view's punch; the word at rest
+// while a melee caster comes home; the settle; the frame the result leaves on, and one after.
+export const CRIT_FILM_MS = Object.freeze([0, 600, 840, 860, 900, 1040, 1160, 1800, 2600, 3000, 3040, 3100]);
+
+const onTicks = times => times.every(ms => Number.isInteger(ms) && ms >= 0 && ms % FILM_TICK_MS === 0);
+
+/** When each frame after the first is taken, in ms of the bench's clock: the times asked, or `frames` of them an interval apart. */
+export function filmTimes({ at, frames = 12, interval } = {}, spread) {
+  if (!at) return Array.from({ length: frames - 1 }, (_, index) => (index + 1) * (interval ?? spread));
+  if (!onTicks(at)) throw new Error(`The frames' times are multiples of ${FILM_TICK_MS} ms.`);
+  return at.filter(ms => ms > 0);
+}
 
 /** Open the bench on a page and wait for its scene. `base` is where the laboratory's page is served. */
 export async function openBench(page, base) {
@@ -42,16 +70,17 @@ export async function openBench(page, base) {
  * Film one effect on an open bench: `frames` pictures of the field, `interval` milliseconds of the bench's clock
  * apart, the first at 0. Returns [{ ms, stage, png }] with the film's `title`, and leaves the bench at rest with its loop running.
  */
-export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, damage = null, defeat = false, round = 1, still = false, frames = 12, interval } = {}) {
+export async function filmFrames(page, { spell, actor, targets, speed, outcome = 'played', wound = false, crit = false, damage = null, defeat = false, round = 1, still = false, frames = 12, interval, at } = {}) {
   // Refused before the film starts: a started film has stopped the bench's loop.
   if (interval !== undefined && interval % FILM_TICK_MS !== 0) throw new Error(`The interval must be a multiple of ${FILM_TICK_MS} ms.`);
+  filmTimes({ at }, 0);
   // The outcome and the wound are asked each time: a sheet never inherits the last one's.
   // The round's scenery is asked for before the film and waited for: a plate that arrived mid-film would change
   // the sheet from one run to the next.
   await page.evaluate(asked => window.battleBench.choose({ round: asked }), round);
   await page.waitForFunction(() => !window.battleBench.loading());
-  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, damage, defeat, round, still });
-  const step = interval ?? started.interval;
+  const started = await page.evaluate(options => window.battleBench.film.start(options), { spell, actor, targets, speed, outcome, wound, crit, damage, defeat, round, still });
+  const times = filmTimes({ at, frames, interval }, started.interval);
   const field = page.locator('#battle-zone');
   // What a sheet cannot show (a breath of a pixel, a tremor of the view) is read from the scene at each frame.
   const motion = () => page.evaluate(() => window.battleBench.motion());
@@ -59,8 +88,8 @@ export async function filmFrames(page, { spell, actor, targets, speed, outcome =
   let title = '';
   try {
     // One frame after the other, on purpose: each advances the bench's clock before its picture is taken.
-    while (shots.length < frames) {
-      const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), step);
+    for (const time of times) {
+      const { elapsed, stage } = await page.evaluate(ms => window.battleBench.film.advance(ms), time - shots.at(-1).ms);
       shots.push({ ms: elapsed, stage, png: await field.screenshot(), motion: await motion() });
     }
     // What the bench played, read while the film still runs: stopping it ends a film of the field at rest, and
@@ -142,6 +171,7 @@ const SWITCHES = {
   '--motion': options => { options.motion = true; },
   '--fizzle': (_, film) => { film.outcome = 'fizzled'; },
   '--wound': (_, film) => { film.wound = true; },
+  '--crit': (_, film) => { film.crit = true; },
   '--defeat': (_, film) => { film.defeat = true; },
   '--still': (_, film) => { film.still = true; },
 };
@@ -152,6 +182,16 @@ const VALUED = {
   '--url': (text, options) => { options.base = text; },
   '--actor': (text, _, film) => { film.actor = text; },
   '--targets': (text, _, film) => { film.targets = text.split(',').filter(Boolean); },
+  '--at': (text, _, film) => {
+    film.at = text.split(',').filter(Boolean).map(Number);
+    if (!film.at.length || !onTicks(film.at)) throw new Error(`--at names the frames' times, multiples of ${FILM_TICK_MS} ms: 860,900,1040.`);
+    if (film.at.some((ms, index) => index > 0 && ms <= film.at[index - 1])) throw new Error('--at names rising times.');
+  },
+  '--viewport': (text, options) => {
+    const [width, height] = /^(\d+)x(\d+)$/.exec(text)?.slice(1).map(Number) ?? [];
+    if (!width || !height) throw new Error('--viewport is a width and a height in pixels: 320x740.');
+    options.viewport = { width, height };
+  },
   '--damage': (text, _, film) => {
     film.damage = Number(text);
     if (!Number.isInteger(film.damage) || film.damage < 0) throw new Error('--damage is a whole number of health points.');
@@ -170,19 +210,21 @@ function refuseConflicts(options, film) {
   if (film.still) {
     // The field at rest plays no spell: nothing that tells a play goes with it.
     if (options.all || options.spells.length > 0) throw new Error('--still films the field at rest: it names no effect and takes no --all.');
-    if (film.outcome || film.wound || film.defeat || 'damage' in film) throw new Error('--still plays nothing: no --fizzle, --wound, --damage or --defeat.');
+    if (film.outcome || film.wound || film.crit || film.defeat || 'damage' in film) throw new Error('--still plays nothing: no --fizzle, --wound, --crit, --damage or --defeat.');
   } else if (options.all === options.spells.length > 0) throw new Error('Name one or more effects (spell:pummel:v1), --all, or --still.');
   if (film.round !== undefined && (!Number.isInteger(film.round) || film.round > 30)) throw new Error('--round is a whole round, 1 to 30.');
   // The live page draws no outcome with a fizzle (`actionCue`): a wound with one would film what never plays.
   if (film.outcome === 'fizzled' && film.wound) throw new Error('--fizzle and --wound do not go together: a fizzle is drawn with no outcome.');
   if (film.outcome === 'fizzled' && (film.defeat || 'damage' in film)) throw new Error('--fizzle goes with no --damage and no --defeat: a fizzle harms nobody.');
+  if (film.outcome === 'fizzled' && film.crit) throw new Error('--fizzle and --crit do not go together: a fizzle is no critical.');
+  if (film.at && (film.interval !== undefined || film.frames !== undefined)) throw new Error('--at names every frame: it goes with no --interval and no --frames.');
   if (film.speed !== undefined && ![0.5, 1, 2].includes(film.speed)) throw new Error('--speed is 0.5, 1 or 2, as the page offers.');
   if (film.interval !== undefined && film.interval % FILM_TICK_MS !== 0) throw new Error(`--interval is a multiple of ${FILM_TICK_MS} ms.`);
   if (options.out?.endsWith('.png') && (options.all || options.spells.length > 1)) throw new Error('--out names a folder when several effects are filmed.');
 }
 
 export function parseArguments(argv) {
-  const options = { spells: [], all: false, out: null, base: null, scale: 1, motion: false };
+  const options = { spells: [], all: false, out: null, base: null, scale: 1, motion: false, viewport: PHONE };
   const film = {};
   for (let index = 0; index < argv.length; index++) {
     const word = argv[index];
@@ -195,6 +237,12 @@ export function parseArguments(argv) {
     else options.spells.push(word);
   }
   refuseConflicts(options, film);
+  // A critical's sheet shows its word's moments unless the caller spreads or names the frames. A speed shortens the
+  // play, so the same moments come sooner: each on the first tick at or after it.
+  if (film.crit && !film.at && film.interval === undefined && film.frames === undefined) {
+    const rate = playbackRate(film.speed ?? 1);
+    film.at = [...new Set(CRIT_FILM_MS.map(ms => Math.ceil(ms / rate / FILM_TICK_MS) * FILM_TICK_MS))];
+  }
   return { ...options, film };
 }
 
@@ -204,8 +252,8 @@ export function motionLines({ title, frames }) {
 }
 
 // A fizzle's or a wound's sheet beside the spell's own, not over it.
-export function fileName(spell, { outcome, wound, damage = null, defeat, round, still } = {}) {
-  const asked = [outcome === 'fizzled' ? 'fizzled' : null, wound ? 'wound' : null, damage, defeat ? 'defeat' : null, round > 1 ? `round${round}` : null];
+export function fileName(spell, { outcome, wound, crit, damage = null, defeat, round, still } = {}) {
+  const asked = [outcome === 'fizzled' ? 'fizzled' : null, wound ? 'wound' : null, crit ? 'crit' : null, damage, defeat ? 'defeat' : null, round > 1 ? `round${round}` : null];
   return `${[still ? 'ground' : spell.split(':')[1] ?? spell, ...asked.filter(one => one !== null)].join('-')}.png`;
 }
 
@@ -218,7 +266,8 @@ async function main(argv) {
   let browser;
   try {
     browser = await chromium.launch({ executablePath: process.env.STUDIO_CHROMIUM || undefined });
-    const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: options.scale, isMobile: true, hasTouch: true });
+    const touch = options.viewport.width < DESKTOP_FROM;
+    const context = await browser.newContext({ viewport: options.viewport, deviceScaleFactor: options.scale, isMobile: touch, hasTouch: touch });
     const page = await context.newPage();
     await openBench(page, options.base ?? served.base);
     const all = options.all ? await page.evaluate(() => window.battleBench.entries.map(one => one.id)) : options.spells;

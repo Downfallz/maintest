@@ -4,14 +4,14 @@ import { bootScene } from './boot';
 import type { SceneFrame } from './types';
 import art from '../../data/presentation/spell-art.json';
 import spells from 'virtual:bench-spells';
-import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchSamples, benchStage, benchTitle, filmInterval,
+import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchSamples, benchStage, benchTitle, benchWordEnds, filmInterval,
   filmTitle, seededRandom, benchRound, BENCH_OUTCOMES, BENCH_ROUNDS, FILM_TICK_MS } from '../../table/battle-bench.js';
 
 // The effects bench: every authored spell look, played on chosen creatures of the laboratory's fixture, with no
 // host and no rule. Its film clock is what `scripts/battle/filmstrip.mjs` steps to draw a contact sheet.
 
 type Stage = 'decision' | 'windup' | 'impact' | 'resolved';
-interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean; damage?: number | null; defeat?: boolean; round?: number; still?: boolean; focus?: string[] }
+interface FilmOptions { spell?: string; actor?: string; targets?: string[]; speed?: number; outcome?: string; wound?: boolean; crit?: boolean; damage?: number | null; defeat?: boolean; round?: number; still?: boolean; focus?: string[] }
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 function make<T extends HTMLElement = HTMLElement>(tag: string, properties: Record<string, unknown> = {}, ...children: (Node | string)[]) {
@@ -45,6 +45,9 @@ let game: Phaser.Game | null = null;
 // While a film runs the game's loop is stopped: this clock is the only one, and it moves when it is told to.
 let film: { clock: number; played: number; drawn: number } | null = null;
 let stillFilm = false;
+// A critical's word outlasts the play by the settle that holds a result on the live page: while it is held the
+// bench's clock runs on, and the word leaves when it ends (`benchWordEnds`).
+let wordHeld = false;
 let shownRound = 1;
 
 const spellSelect = make<HTMLSelectElement>('select', { id: 'bench-spell' });
@@ -68,6 +71,8 @@ const woundBox = make<HTMLInputElement>('input', { id: 'bench-wound', type: 'che
 // said, as an action the host served no frames for), and whether the first one struck is defeated by it.
 const damageInput = make<HTMLInputElement>('input', { id: 'bench-damage', type: 'number', min: '0', max: '30', step: '1', inputMode: 'numeric', placeholder: 'not said' });
 const defeatBox = make<HTMLInputElement>('input', { id: 'bench-defeat', type: 'checkbox' });
+// A critical, the fixture's word as well: the field says `Crit!` beside the caster as the blow lands (ADR 0208).
+const critBox = make<HTMLInputElement>('input', { id: 'bench-crit', type: 'checkbox' });
 // The round the field stands in: the ground gives way as the rounds pass, and the fixture says which one is seen.
 const roundInput = make<HTMLInputElement>('input', { id: 'bench-round', type: 'number', min: String(BENCH_ROUNDS.first), max: String(BENCH_ROUNDS.last), step: '1', inputMode: 'numeric', value: '1' });
 const playButton = make<HTMLButtonElement>('button', { id: 'bench-play', type: 'button', className: 'primary', disabled: true }, 'Play effect');
@@ -85,8 +90,8 @@ const bench = make('section', { id: 'bench' },
     make('label', { className: 'bench-field' }, make('span', {}, 'Health lost'), damageInput),
     make('label', { className: 'bench-wound' }, defeatBox, make('span', {}, 'The blow defeats its target'))),
   make('div', { className: 'bench-outcome' },
-    make('label', { className: 'bench-field' }, make('span', {}, 'Round'), roundInput),
-    make('p', { className: 'bench-note' }, 'The ground as it stands at that round')),
+    make('label', { className: 'bench-field', title: 'The ground as it stands at that round' }, make('span', {}, 'Round of the ground'), roundInput),
+    make('label', { className: 'bench-wound' }, critBox, make('span', {}, 'The cast is a critical'))),
   make('div', { className: 'bench-run' }, playButton, status));
 bench.setAttribute('aria-label', 'Effects bench');
 lab.dataset.bench = 'true';
@@ -105,6 +110,7 @@ const chosen = () => ({
   targets: boxes().filter(box => box.checked).map(box => box.value),
   outcome: outcomeSelect.value,
   wound: woundBox.checked && !woundBox.disabled,
+  crit: critBox.checked && !critBox.disabled,
   damage: damageInput.value === '' || damageInput.disabled ? undefined : Math.max(0, Math.round(Number(damageInput.value)) || 0),
   defeat: defeatBox.checked && !defeatBox.disabled,
   round: benchRound(roundInput.value),
@@ -115,17 +121,18 @@ function pick(select: HTMLSelectElement, asked: string | undefined, known: reado
   if (!known.some(one => one.id === asked)) throw new Error(`The bench has no ${what} named ${asked}.`);
   select.value = asked;
 }
-function choose({ spell, actor, targets, outcome, wound, damage, defeat, round }: FilmOptions) {
+function choose({ spell, actor, targets, outcome, wound, crit, damage, defeat, round }: FilmOptions) {
   if (round !== undefined) roundInput.value = String(benchRound(round));
   if (outcome !== undefined) {
     if (!(BENCH_OUTCOMES as readonly string[]).includes(outcome)) throw new Error(`The bench has no outcome ${outcome}.`);
     outcomeSelect.value = outcome;
   }
   if (wound !== undefined) woundBox.checked = wound;
+  if (crit !== undefined) critBox.checked = crit;
   // A film says both each time (null: not said), so a sheet never inherits the last one's.
   if (damage !== undefined) damageInput.value = damage === null ? '' : String(damage);
   if (defeat !== undefined) defeatBox.checked = defeat;
-  woundBox.disabled = damageInput.disabled = defeatBox.disabled = outcomeSelect.value === 'fizzled';
+  woundBox.disabled = critBox.disabled = damageInput.disabled = defeatBox.disabled = outcomeSelect.value === 'fizzled';
   pick(spellSelect, spell, listed, 'effect');
   pick(actorSelect, actor, creatures, 'creature');
   const picked = targets ?? (actor === undefined ? undefined : benchDefaultTargets(actor));
@@ -134,7 +141,7 @@ function choose({ spell, actor, targets, outcome, wound, damage, defeat, round }
 
 function show(next: Stage) {
   stage = next;
-  const { entry, actor, targets, outcome, wound, damage, defeat, round } = chosen();
+  const { entry, actor, targets, outcome, wound, crit, damage, defeat, round } = chosen();
   lab.dataset.stage = stage;
   lab.dataset.spell = entry.id;
   lab.dataset.outcome = outcome;
@@ -146,7 +153,7 @@ function show(next: Stage) {
   // giving way, a film that started one round on would catch the fall wherever the wall clock had left it.
   const moved = round !== shownRound;
   shownRound = round;
-  const frame = benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round }) as SceneFrame;
+  const frame = benchFrame({ entry, actor, targets, stage, outcome, wound, damage, defeat, round, crit, settled: !wordHeld }) as SceneFrame;
   scene.present(filmFocus.length ? { ...frame, focus: filmFocus } : frame, reduced(), speed(), moved);
 }
 const playing = () => stage === 'windup' || stage === 'impact';
@@ -161,12 +168,14 @@ function describe(name: string) {
 function rest() {
   Math.random = realRandom;
   elapsed = 0;
+  wordHeld = false;
   show('decision');
 }
 function play() {
   if (!ready) return;
   rest();
-  if (reduced()) { show('impact'); show('resolved'); return; }
+  // With less motion the play is its settled frame: a critical's word is there at once, for as long as the live page says it.
+  if (reduced()) { show('impact'); wordHeld = chosen().crit; last = performance.now(); show('resolved'); return; }
   Math.random = seededRandom(SEED);
   last = performance.now();
   show('windup');
@@ -174,13 +183,17 @@ function play() {
 // A film moves the play by the steps it is given. On the page's own loop the play follows the wall clock, as
 // Phaser's tweens do: counting frames would play the stages in slow motion on a slow renderer.
 function advance(delta: number) {
-  if (!playing()) return;
+  if (!playing() && !wordHeld) return;
   const now = performance.now();
   elapsed += film ? delta : now - last;
   last = now;
+  if (wordHeld) {
+    if (elapsed >= benchWordEnds(speed(), reduced())) { wordHeld = false; show('resolved'); }
+    return;
+  }
   const next = benchStage(elapsed, speed());
   if (next === stage) return;
-  if (next === 'resolved') Math.random = realRandom;
+  if (next === 'resolved') { Math.random = realRandom; wordHeld = chosen().crit; }
   show(next);
 }
 
@@ -270,6 +283,7 @@ spellSelect.addEventListener('change', rest);
 actorSelect.addEventListener('change', () => { choose({ actor: actorSelect.value }); rest(); });
 outcomeSelect.addEventListener('change', () => { choose({}); rest(); });
 woundBox.addEventListener('change', rest);
+critBox.addEventListener('change', rest);
 damageInput.addEventListener('change', rest);
 defeatBox.addEventListener('change', rest);
 roundInput.addEventListener('change', rest);
@@ -281,11 +295,13 @@ $('settings').addEventListener('click', () => $<HTMLDialogElement>('settings-dia
 $('reduce-motion').addEventListener('change', rest);
 $('playback-speed').addEventListener('change', rest);
 motion.addEventListener('change', rest);
-document.addEventListener('visibilitychange', () => { if (document.hidden && playing() && !film) rest(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (playing() || wordHeld) && !film) rest(); });
 
 scene.onResizeDuringPlayback = rest;
 // `ready` once the kit's bundle has arrived, `missing` if it did not: a film waits for one or the other.
 scene.onKit = equipped => { lab.dataset.kit = equipped ? 'ready' : 'missing'; };
+// The caster the field says `Crit!` beside now, as the live page's `#battle[data-crit]`.
+scene.onCrit = id => { if (id) lab.dataset.crit = id; else delete lab.dataset.crit; };
 scene.onReady = () => {
   ready = true;
   lab.dataset.ready = 'true'; lab.dataset.renderer = 'phaser';
@@ -300,13 +316,13 @@ try {
     onContextLost: () => fail('The graphics context was interrupted. Reload to reopen the scene.'),
     onNeverReady: () => fail('The scene could not finish loading. Check the connection and reload.'),
     onRest: resting => { if (resting) lab.dataset.resting = 'true'; else delete lab.dataset.resting; },
-    moving: playing,
+    moving: () => playing() || wordHeld,
   });
 } catch { fail('The renderer could not start. Reload the scene or use another browser.'); }
 
 // What the film strip script and the browser specs drive: the bench's own choices, and its film clock.
 // `title` names what the bench plays now, as a film strip is titled.
-const title = () => { const { entry, outcome, wound, damage, defeat, round } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound, damage, defeat, round, still: stillFilm }); };
+const title = () => { const { entry, outcome, wound, crit, damage, defeat, round } = chosen(); return filmTitle(entry, { speed: speed(), outcome, wound, crit, damage, defeat, round, still: stillFilm }); };
 Object.assign(window, { battleBench: { entries, samples, creatures, kit: () => scene.effectsKit, stop: rest, title,
   loading: () => scene.load.isLoading(), shaking: () => scene.motion.view.trauma > 0, motion: () => scene.motion, groundObjects: () => scene.groundObjects, choose: (options: FilmOptions) => { choose(options); rest(); }, play, film: filmClock,
   places: () => scene.effectsPlaces, anchors: () => scene.anchors, halo: () => scene.actingHalo,

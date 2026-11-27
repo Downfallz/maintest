@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, benchTitle, filmInterval,
+import { benchCreatures, benchDefaultTargets, benchDuration, benchEntries, benchFrame, benchStage, benchTitle, benchWordEnds, filmInterval,
   filmTitle, seededRandom, benchRound, FILM_FRAMES, FILM_TICK_MS } from './battle-bench.js';
-import { IMPACT_MS, WINDUP_MS } from './battle-timing.js';
-import { fileName, motionLines, parseArguments } from '../scripts/battle/filmstrip.mjs';
+import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from './battle-timing.js';
+import { CRIT_FILM_MS, fileName, filmTimes, motionLines, parseArguments } from '../scripts/battle/filmstrip.mjs';
 import { laboratoryOnly } from '../battle/live-guard.mjs';
 import { benchSpells } from '../battle/bench-spells.mjs';
 
@@ -49,6 +49,8 @@ test('a film\'s title names the spell, its mutation, the outcome filmed and the 
   assert.equal(filmTitle(pummel, { wound: true }), 'Pummel · Brute, Stage I · physical · impact · melee · the caster pays in blood · 1×');
   assert.equal(filmTitle(pummel, { damage: 6, defeat: true }), 'Pummel · Brute, Stage I · physical · impact · melee · 6 health lost · the blow defeats · 1×');
   assert.equal(filmTitle(pummel, { damage: 6, defeat: true, outcome: 'fizzled' }), 'Pummel · Brute, Stage I · physical · impact · melee · fizzled · 1×');
+  assert.equal(filmTitle(pummel, { crit: true, damage: 7 }), 'Pummel · Brute, Stage I · physical · impact · melee · a critical · 7 health lost · 1×');
+  assert.equal(filmTitle(pummel, { crit: true, outcome: 'fizzled' }), 'Pummel · Brute, Stage I · physical · impact · melee · fizzled · 1×');
   // BC9: the round the ground stands in is said when it is not the first, and a film of the field at rest names no spell.
   assert.equal(filmTitle(pummel, { round: 12 }), 'Pummel · Brute, Stage I · physical · impact · melee · round 12 · 1×');
   assert.equal(filmTitle(pummel, { round: 12, still: true }), 'The field at rest · round 12 · 1×');
@@ -114,6 +116,33 @@ test('a blow that defeats fells the first creature it strikes, from the impact o
   // Nobody across the field is struck: nobody falls. A fizzle fells nobody.
   assert.deepEqual(benchFrame({ entry: pummel, actor: 'a1', targets: ['a2'], stage: 'impact', defeat: true }).creatures.every(one => one.isAlive), true);
   assert.deepEqual(frame('impact', { defeat: true, outcome: 'fizzled' }).creatures.every(one => one.isAlive), true);
+});
+
+// #1309: the bench plays a critical, so the caster's `Crit!` is filmed like every other beat.
+test('a critical names its caster from the impact until the result leaves, and tells the cue it crit', () => {
+  const pummel = entry('spell:pummel:v1');
+  const frame = (stage, options = {}) => benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage, crit: true, ...options });
+  // The word is the frame's, as on the live page (`live.ts`): none before the blow lands.
+  assert.deepEqual([frame('decision').crit, frame('windup').crit], [null, null]);
+  assert.deepEqual(frame('impact').crit, { id: 'a1', key: 'crit:bench' });
+  // The live page holds the result for the settle, the word with it; then both leave.
+  assert.deepEqual(frame('resolved').crit, { id: 'a1', key: 'crit:bench' });
+  assert.equal(frame('resolved', { settled: true }).crit, null);
+  // The cue says it crit, which is what punches the zoom on a blow that took health (`punches`).
+  assert.deepEqual([frame('windup').cue.roll, frame('impact').cue.roll], [{ critical: true }, { critical: true }]);
+  // A cast that did not crit, and a fizzle, say nothing.
+  assert.deepEqual([frame('impact', { crit: false }).crit, frame('impact', { crit: false }).cue.roll], [null, null]);
+  assert.deepEqual([frame('impact', { outcome: 'fizzled' }).crit, frame('impact', { outcome: 'fizzled' }).cue.roll], [null, null]);
+  assert.equal(benchFrame({ entry: pummel, actor: 'a1', targets: ['b1'], stage: 'impact' }).crit, null);
+});
+
+test('a critical\'s word stands on the bench as long as the live page says it', () => {
+  // From the impact to the end of the settle; with less motion, the frame after the action and its settle.
+  assert.equal(benchWordEnds(), WINDUP_MS + IMPACT_MS + SETTLE_MS);
+  assert.equal(benchWordEnds(2), (WINDUP_MS + IMPACT_MS + SETTLE_MS) / 2);
+  assert.equal(benchWordEnds(1, true), REDUCED_MS + SETTLE_MS);
+  // The reduced frame is reading time and keeps its length at any speed; the settle follows the speed.
+  assert.equal(benchWordEnds(2, true), REDUCED_MS + SETTLE_MS / 2);
 });
 
 test('the bench plays on the six creatures of the fixture, three a side', () => {
@@ -244,6 +273,53 @@ test('the film strip script reads its options, and refuses what it cannot film',
   assert.throws(() => parseArguments(['spell:pummel:v1', '--interval', '250']), /multiple of 20/);
   assert.throws(() => parseArguments(['--all', '--out', 'sheet.png']), /folder/);
   assert.throws(() => parseArguments(['spell:pummel:v1', 'spell:frostbite:v1', '--out', 'sheet.png']), /folder/);
+});
+
+// #1309: `--crit` films the caster's `Crit!`, on the frames its storyboard reads.
+test('the film strip script films a critical on the frames its storyboard names', () => {
+  const crit = parseArguments(['spell:pummel:v1', '--crit', '--damage', '7']);
+  assert.deepEqual(crit.film, { crit: true, damage: 7, at: [...CRIT_FILM_MS] });
+  // Every time the storyboard reads on the strip is one of the sheet's frames.
+  const storyboard = read('../docs/art/storyboards/movement.md');
+  const strip = storyboard.slice(storyboard.indexOf('## A critical\'s word')).split('### On the film strip')[1].split('### Left')[0];
+  const named = [...strip.matchAll(/^- (\d+) ms(?: and (\d+) ms)?/gm)].flatMap(found => found.slice(1).filter(Boolean).map(Number));
+  assert.ok(named.length >= 8, 'the storyboard names its frames as "- 860 ms"');
+  for (const ms of named) assert.ok(CRIT_FILM_MS.includes(ms), `${ms} ms`);
+  // One sheet of twelve, on whole ticks, from the play's first frame to after the word left.
+  assert.equal(CRIT_FILM_MS.length, FILM_FRAMES);
+  assert.ok(CRIT_FILM_MS.every(ms => ms % FILM_TICK_MS === 0));
+  assert.equal(CRIT_FILM_MS[0], 0);
+  assert.ok(CRIT_FILM_MS.at(-1) > WINDUP_MS + IMPACT_MS + SETTLE_MS);
+  // At another speed the same moments, on whole ticks.
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--crit', '--speed', '2']).film.at, [0, 300, 420, 440, 460, 520, 580, 900, 1300, 1500, 1520, 1560]);
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--speed', '0.5', '--crit']).film.at, CRIT_FILM_MS.map(ms => ms * 2));
+  // A sheet's own interval or count is the caller's choice: the frames are spread evenly, as for any effect.
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--crit', '--interval', '280']).film, { crit: true, interval: 280 });
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--crit', '--frames', '14']).film, { crit: true, frames: 14 });
+  // A fizzle has no critical, and the field at rest plays nothing.
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--crit', '--fizzle']), /fizzle/);
+  assert.throws(() => parseArguments(['--still', '--crit']), /plays nothing/);
+  assert.deepEqual([fileName('spell:pummel:v1', { crit: true }), fileName('spell:pummel:v1', { crit: true, damage: 7 })], ['pummel-crit.png', 'pummel-crit-7.png']);
+});
+
+test('the film strip script takes the frames\' times, and the size of the screen it films on', () => {
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--at', '860,900,1040']).film, { at: [860, 900, 1040] });
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--at', '900,860']), /rising/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--at', '850']), /multiples of 20/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--at', 'soon']), /multiples of 20/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--at', '860', '--interval', '200']), /--at/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--at', '860', '--frames', '4']), /--at/);
+  // The first frame is the play's first, whatever the times named; then one frame a time.
+  assert.deepEqual(filmTimes({ at: [0, 860, 900] }, 240), [860, 900]);
+  assert.deepEqual(filmTimes({ at: [860, 900] }, 240), [860, 900]);
+  assert.deepEqual(filmTimes({ frames: 4 }, 240), [240, 480, 720]);
+  assert.deepEqual(filmTimes({ frames: 3, interval: 100 }, 240), [100, 200]);
+  assert.throws(() => filmTimes({ at: [850] }, 240), /multiples of 20/);
+  // The phone of the browser suite unless told: 320 by 740 is its small phone, 1440 by 1000 its desktop.
+  assert.deepEqual(parseArguments(['spell:pummel:v1']).viewport, { width: 390, height: 844 });
+  assert.deepEqual(parseArguments(['spell:pummel:v1', '--viewport', '320x740']).viewport, { width: 320, height: 740 });
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--viewport', '320']), /--viewport/);
+  assert.throws(() => parseArguments(['spell:pummel:v1', '--viewport', '0x740']), /--viewport/);
 });
 
 test('the film strip script run with nothing to film says so and exits 1', () => {

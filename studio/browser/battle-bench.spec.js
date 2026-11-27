@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
-import { IMPACT_MS, WINDUP_MS } from '../../table/battle-timing.js';
+import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS } from '../../table/battle-timing.js';
 import { filmFrames, filmRecord, filmSheet, openBench } from '../../scripts/battle/filmstrip.mjs';
 import { fitsViewport } from './fit.js';
 
@@ -103,6 +103,62 @@ test('a caster who pays in blood takes a wound while its spell lands on the targ
   await film(page, 'start', { spell: 'spell:pummel:v1', actor: 'a1', targets: ['b1'], outcome: 'played', wound: false });
   await film(page, 'advance', WINDUP_MS + 40);
   expect((await effects(page)).map(one => one.motif)).toEqual(['impact']);
+  await film(page, 'stop');
+});
+
+// #1309: the bench plays a critical, so the caster's `Crit!` has a film strip like every other beat.
+test('a critical says Crit! beside its caster from the impact until the result leaves, and a film takes its frames\' times', async ({ page }) => {
+  test.slow();
+  const lab = page.locator('#lab');
+  await expect(page.locator('#bench-crit')).not.toBeChecked();
+  const started = await film(page, 'start', { spell: 'spell:pummel:v1', actor: 'a3', targets: ['b1'], crit: true, damage: 7 });
+  expect(started.stage).toBe('windup');
+  await expect(page.locator('#bench-crit')).toBeChecked();
+  expect(await page.evaluate(() => window.battleBench.title())).toContain(' · a critical · 7 health lost · ');
+  // Nothing before the blow lands: the word is the impact's.
+  expect((await film(page, 'advance', WINDUP_MS - 20)).stage).toBe('windup');
+  await expect(lab).not.toHaveAttribute('data-crit', /./);
+  expect((await film(page, 'advance', 20)).stage).toBe('impact');
+  await expect(lab).toHaveAttribute('data-crit', 'a3');
+  // A critical that took health punches the zoom (`punches`): the cue says it crit.
+  await film(page, 'advance', 60);
+  expect((await page.evaluate(() => window.battleBench.motion())).view.zoom).toBeGreaterThan(1);
+  // The result is held for the settle, the word with it, as on the live page; then it leaves.
+  expect((await film(page, 'advance', IMPACT_MS - 60)).stage).toBe('resolved');
+  await expect(lab).toHaveAttribute('data-crit', 'a3');
+  await film(page, 'advance', SETTLE_MS - 20);
+  await expect(lab).toHaveAttribute('data-crit', 'a3');
+  await film(page, 'advance', 20);
+  await expect(lab).not.toHaveAttribute('data-crit', /./);
+  await film(page, 'stop');
+  // A film is asked each time: the next one inherits no critical.
+  const plain = await filmFrames(page, { spell: 'spell:pummel:v1', at: [WINDUP_MS + 20, WINDUP_MS + IMPACT_MS + SETTLE_MS] });
+  expect(plain.map(frame => [frame.ms, frame.stage])).toEqual([[0, 'windup'], [WINDUP_MS + 20, 'impact'], [WINDUP_MS + IMPACT_MS + SETTLE_MS, 'resolved']]);
+  await expect(page.locator('#bench-crit')).not.toBeChecked();
+  expect(plain.title).not.toContain('critical');
+  // A fizzle is no critical: the choice is off under it, as the wound is.
+  await page.locator('#bench-crit').check();
+  await page.locator('#bench-outcome').selectOption('fizzled');
+  await expect(page.locator('#bench-crit')).toBeDisabled();
+  await film(page, 'start');
+  await film(page, 'advance', WINDUP_MS + 20);
+  await expect(lab).toHaveAttribute('data-stage', 'impact');
+  await expect(lab).not.toHaveAttribute('data-crit', /./);
+  await film(page, 'stop');
+});
+
+test('with less motion a critical\'s word is there on the settled frame, and leaves when the live page would drop it', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('#lab')).toHaveAttribute('data-motion', 'reduced');
+  const started = await film(page, 'start', { spell: 'spell:pummel:v1', actor: 'a3', targets: ['b1'], crit: true, damage: 7 });
+  expect(started.stage).toBe('resolved');
+  await expect(page.locator('#lab')).toHaveAttribute('data-crit', 'a3');
+  // The frame after the action, then the settle: the last tick before their end still says it.
+  const ends = REDUCED_MS + SETTLE_MS, before = Math.floor((ends - 1) / 20) * 20;
+  await film(page, 'advance', before);
+  await expect(page.locator('#lab')).toHaveAttribute('data-crit', 'a3');
+  await film(page, 'advance', 20);
+  await expect(page.locator('#lab')).not.toHaveAttribute('data-crit', /./);
   await film(page, 'stop');
 });
 

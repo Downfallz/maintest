@@ -2,7 +2,7 @@
 // chosen creatures of the laboratory's fixture. It holds no rule and reads no host: who is struck is where the
 // creature stands, not what a spell does. Never import this module from the live table.
 import { battleFixture } from './battle-lab-fixture.js';
-import { IMPACT_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
+import { IMPACT_MS, REDUCED_MS, SETTLE_MS, WINDUP_MS, playbackRate } from './battle-timing.js';
 import { spellVisual } from './battle-playback.js';
 import { stageLabel } from './terms.js';
 
@@ -28,11 +28,11 @@ export function benchEntries(art, spells = {}) {
 export function benchTitle(entry) {
   return [entry.name, entry.castBy, entry.family, entry.motif, entry.delivery].filter(Boolean).join(' · ');
 }
-export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, damage = 0, defeat = false, round = 1, still = false } = {}) {
+export function filmTitle(entry, { speed = 1, outcome = 'played', wound = false, crit = false, damage = 0, defeat = false, round = 1, still = false } = {}) {
   // A film of the field at rest plays no spell: it is titled by the ground it shows.
   if (still) return ['The field at rest', `round ${round}`, `${speed}×`].join(' · ');
   const played = outcome !== 'fizzled';
-  const asked = [played ? '' : 'fizzled', wound && played ? 'the caster pays in blood' : '',
+  const asked = [played ? '' : 'fizzled', wound && played ? 'the caster pays in blood' : '', crit && played ? 'a critical' : '',
     damage > 0 && played ? `${damage} health lost` : '', defeat && played ? 'the blow defeats' : '', round > 1 ? `round ${round}` : ''];
   return [benchTitle(entry), ...asked.filter(Boolean), `${speed}×`].join(' · ');
 }
@@ -105,6 +105,14 @@ export function benchStage(elapsed, speed = 1) {
   return elapsed < (WINDUP_MS + IMPACT_MS) / rate ? 'impact' : 'resolved';
 }
 
+// How long a critical's word stands, from the start of the play. The live page says it from the impact to the end of
+// the settle that holds the result (`battle/src/live.ts`). With less motion the play is the frame after the action,
+// which is reading time and keeps its length at any speed, then the same settle.
+export function benchWordEnds(speed = 1, reduced = false) {
+  const rate = playbackRate(speed);
+  return reduced ? REDUCED_MS + SETTLE_MS / rate : (WINDUP_MS + IMPACT_MS + SETTLE_MS) / rate;
+}
+
 // The frame the scene presents. The first round keeps the ground whole; `round` is the fixture's word for another
 // one (BC9), and a film waits for that round's scenery before it starts, so no plate loads mid-film.
 // A creature across the field from the caster is struck; one on the caster's side, or the caster, receives.
@@ -113,7 +121,10 @@ export function benchStage(elapsed, speed = 1) {
 // `damage` is the health each struck creature loses, which is the weight of the blow (`table/battle-motion.js`);
 // `defeat` fells the first one struck, from the impact on. Both are the fixture's word, as a cue's changes are
 // the host's on the live page.
-export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage = 0, defeat = false, round = 1 }) {
+// `crit` makes the cast a critical (#1309): the cue says it crit, and the frame names its caster from the impact on, so
+// the field says `Crit!` beside it as on the live page (ADR 0208). The live page holds a result for a settle, the word
+// with it: the bench's resolved frame keeps the word until it is `settled`.
+export function benchFrame({ entry, actor, targets, stage, outcome = 'played', wound = false, damage = 0, defeat = false, round = 1, crit = false, settled = false }) {
   const standing = benchCreatures();
   const caster = standing.find(one => one.id === actor);
   const known = targets.filter(id => standing.some(one => one.id === id));
@@ -123,7 +134,8 @@ export function benchFrame({ entry, actor, targets, stage, outcome = 'played', w
   const fallen = defeat && played ? struck[0] : undefined;
   const creatures = fallen && (stage === 'impact' || stage === 'resolved')
     ? standing.map(one => one.id === fallen ? { ...one, isAlive: false } : one) : standing;
-  const frame = { round: benchRound(round), stage, actor, target: contact[0] ?? null, targets: [], creatures };
+  const said = crit && played && Boolean(caster) && (stage === 'impact' || (stage === 'resolved' && !settled));
+  const frame = { round: benchRound(round), stage, actor, target: contact[0] ?? null, targets: [], creatures, crit: said ? { id: actor, key: 'crit:bench' } : null };
   if (stage !== 'windup' && stage !== 'impact') return frame;
   if (!played) {
     return { ...frame, cue: { kind: 'fizzle', visual: spellVisual({ status: 'Fizzled' }), recipients: [], contact: [], struck: [], effects: [], changes: [], roll: null } };
@@ -142,7 +154,7 @@ export function benchFrame({ entry, actor, targets, stage, outcome = 'played', w
   const effects = paid ? [{ creature: actor, text: 'Blood cost', tone: 'harm', wound: true }, ...own] : [];
   return { ...frame, cue: { kind: struck.length || paid ? 'strike' : 'pulse',
     visual: { family: entry.family, motif: entry.motif, delivery: entry.delivery, ...(entry.staging ? { staging: entry.staging } : {}) },
-    recipients, contact, struck, effects, changes, roll: null } };
+    recipients, contact, struck, effects, changes, roll: crit ? { critical: true } : null } };
 }
 
 // Phaser's particles and its camera shake draw from `Math.random`: the bench hands them this instead, seeded

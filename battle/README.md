@@ -1075,8 +1075,11 @@ under a fizzle. `?bench=spell:frostbite:v1` opens on that entry. It asks no host
 field from the caster is struck, and one on the caster's side receives. **Health lost** is what each creature struck
 loses; it sets the weight of the blow. **The blow defeats its target** fells the first creature struck. Both stand
 in for what the host would tell in a cue's changes. Left empty, no loss is told, as for an action the host served
-no frames for. **Round** is the round the field stands in (1 to 30): the ground gives way as the rounds pass, and
-the bench shows it as it stands at that one. Less motion and
+no frames for. **The cast is a critical** makes the play a critical (#1309): the cue says it crit and the frame names
+its caster from the impact on, so the field says `Crit!` beside it (ADR 0208) until the result leaves, one settle
+after the play (`benchWordEnds`), as on the live page; `#lab[data-crit]` names the caster meanwhile. It is off under a
+fizzle, and it punches the zoom only with health lost. **Round of the ground** is the round the field stands in (1 to
+30): the ground gives way as the rounds pass, and the bench shows it as it stands at that one. Less motion and
 the playback speed are in the settings, as in the laboratory. The bench ships in `game.js` only:
 `build.mjs` fails the build if `live.js` contains a bench module or the spell art (`live-guard.mjs`).
 
@@ -1089,6 +1092,9 @@ node scripts/battle/filmstrip.mjs spell:frostbite:v1 --actor a3 --targets b1,b3 
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --fizzle        # artifacts/filmstrips/pummel-fizzled.png
 node scripts/battle/filmstrip.mjs spell:hateful_sacrifice:v1 --wound   # its caster pays in blood
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --damage 8 --defeat  # a heavy blow that defeats its target
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit --damage 7    # pummel-crit-7.png: a critical, Crit! beside its caster
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --at 860,900,1040    # frames at these times, after the first
+node scripts/battle/filmstrip.mjs spell:pummel:v1 --viewport 320x740   # on the small phone; 1440x1000 is the desktop
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --motion        # and pummel.motion.jsonl beside the sheet
 node scripts/battle/filmstrip.mjs spell:pummel:v1 --round 12      # on the ground as it stands at round 12
 node scripts/battle/filmstrip.mjs --still --interval 1000         # ground.png: the field at rest, no spell played
@@ -1098,11 +1104,19 @@ node scripts/battle/filmstrip.mjs --all                           # one sheet an
 A film waits for its round's scenery before it starts, so no plate arrives mid-film. `--still` films the ground
 alone, on the film's clock: it names no effect, and nothing that tells a play goes with it.
 
+`--crit` films a critical. Its twelve frames are not spread evenly: they are the times the word's storyboard reads
+(docs/art/storyboards/movement.md, "A critical's word"): 0 and 600 ms (the windup, no word), 840 (the contact), 860,
+900, 1040, 1160, 1800, 2600, 3000, then 3040 (the result leaves) and 3100 (`CRIT_FILM_MS`; at another speed, the same
+moments on whole ticks). `--interval` or `--frames` with it spreads the frames evenly instead. `--at` names the times
+of any film's frames, rising multiples of 20 ms; the first frame is always the play's first. Less motion has no flag:
+the bench's own setting plays it, word included, and `studio/browser/battle-bench.spec.js` steps it.
+
 `--motion` writes what a sheet cannot show, one line a frame: where each figure stands from its home, its lean,
 its width and height over its own scale, its alpha and whether it is tinted, and the view's trauma, offset and zoom
 (`window.battleBench.motion()`).
 
-The script serves `table/` itself and opens the bench in Chromium at phone size (390 by 844). The bench's film
+The script serves `table/` itself and opens the bench in Chromium at phone size (390 by 844), or at `--viewport`'s
+(under 1000 px wide with touch, as the browser suite's phones; wider, as its desktop). The bench's film
 clock (`window.battleBench.film`) makes two runs agree. `start` stops the game's loop and hands `Date.now` to
 the film, because Phaser's tweens read it. It also seeds `Math.random`, which the camera shake and the
 particles read. It lets the scene rest and shows the play's first frame. `advance` steps the game in ticks of
