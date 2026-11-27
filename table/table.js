@@ -3740,7 +3740,7 @@ function tieOrderButtons(state, current) {
   const confirm = button('Confirm this order', send(orderOf(groups, tapped)));
   confirm.disabled = !isSettled(groups, tapped);
   confirm.dataset.focus = 'tie-confirm';
-  const keep = button('Keep this order', send(orderOf(groups, [])));
+  const keep = button('Keep the order as it is', send(orderOf(groups, [])));
   keep.className = 'secondary';
   keep.dataset.focus = 'tie-keep';
   const again = button('Start again', () => {
