@@ -4,7 +4,7 @@
 // interactions `--strip` films.
 
 import { GAME_ORIGIN } from '../../table/site-origins.js';
-import { answer, asked, choose, latest, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, takeSeat } from './play.mjs';
+import { END_WORD, answer, asked, choose, latest, chooseRecordedSpell, lessons, playLesson, playUntil, readUntilAsked, roundEndRead, takeSeat } from './play.mjs';
 import { DESKTOP, VIEWPORTS, neverAskedInPage } from './set.mjs';
 
 export const WALKER = 'Walker', FRIEND = 'Rook', LEARNER = 'Learner';
@@ -488,17 +488,51 @@ async function concede(walk) {
   await page.locator('#match-dialog').waitFor({ timeout: 30000 });
 }
 
-// The windows a first round opens, each pictured the first time the game opens it.
-const SIGHTS = [
+// The windows a first round opens, each pictured the first time the game opens it. An opponent's action shows Next
+// from its windup, quiet until the result is in (`resolved`, table/battle-playback.js): `result-read` is pictured
+// once Next is usable, the outcome and the health in. Pictured as soon as Next showed, the screen was the windup, the
+// impact or the result as the walk's reads fell, and its words and controls differed from one film to the next (#1308).
+export const SIGHTS = [
   ['phase-tip', '#help-dialog'], ['mutation-tree', '#planning-dialog[data-kind="Evolution"]'], ['tempo-sheet', '#planning-dialog[data-kind="Speed"]'],
   ['order-of-play', '#order-continue'], ['spell-choice', '#combat-dialog'], ['targets', '#battle[data-combat="targets"]'],
-  ['result-read', '#playback-next'], ['upkeep', '#upkeep-dialog'],
+  ['result-read', '#playback-next[aria-disabled="false"]'], ['upkeep', '#upkeep-dialog'],
 ];
+
+// The round whose end the walk reads, the first of the game that has something to say (#1308). A condition laid in a
+// round counts its rounds from the next one (`Condition.Tick`, src/DownfallArena.Domain), so nothing ends with round
+// 1 in any game, and the page reads no end that has nothing to say (`receipts`, table/battle-playback.js). The
+// walker's Braces of round 1 lay a Defense Buff of two rounds, which ends with round 3.
+const ROUND_WHOSE_END_IS_READ = 3;
+
+/**
+ * The walker's cast past the first round: the first spell offered that is aimed at the opponent alone. A Brace cast
+ * again would start its Defense Buff's rounds again, and no round's end would have anything to say.
+ */
+export function attack(offered, view) {
+  const opponents = new Set(view.board.enemies.map(one => one.id));
+  return offered.find(one => one.legalTargets.candidates.length > 0 && one.legalTargets.candidates.every(id => opponents.has(id))) ?? null;
+}
+
+// The game played on from round 2 until a round's end is read, pictured while its reading waits for its OK: the
+// dock's card says the end and the round's bar says what ended. The walk then reads on to the next question.
+async function roundEnd(walk) {
+  const { page } = walk;
+  const look = async () => {
+    if (walk.seen('round-end')) return;
+    const read = await roundEndRead(page);
+    if (!read) return;
+    // The dock and the bar are drawn together: an end read under a phase's word is the page's fault, said as one.
+    if (!END_WORD.test(read.word)) throw new Error(`The round's end is read (${read.detail}) while the round's bar says "${read.word}".`);
+    await walk.screen('round-end');
+  };
+  await playUntil(page, view => walk.seen('round-end') || view.board.roundNumber > ROUND_WHOSE_END_IS_READ, { look, blocked: walk.blocked, cast: attack });
+  if (!walk.seen('round-end')) throw new Error(`No round's end was read by round ${ROUND_WHOSE_END_IS_READ}'s: no condition ended there, so the walk's casts no longer lay one that does.`);
+}
 
 const match = {
   id: 'match',
   title: 'The match',
-  screens: [...SIGHTS.map(([name]) => name), 'second-round', 'settings', 'concede', 'match-result'],
+  screens: [...SIGHTS.map(([name]) => name), 'second-round', 'round-end', 'settings', 'concede', 'match-result'],
   strips: {
     // Pressed as the walk presses it (#1021): where something covers Settings, the strip is still filmed and says so.
     'settings-window': { at: 'second-round', act: ({ page, blocked }) => choose(page, '#settings', blocked) },
@@ -518,6 +552,7 @@ const match = {
     };
     await playUntil(page, view => view.board.roundNumber > 1, { look, blocked: walk.blocked });
     await walk.screen('second-round');
+    await roundEnd(walk);
     await choose(page, '#settings', walk.blocked);
     await page.locator('#settings-dialog[open]').waitFor();
     await walk.screen('settings');

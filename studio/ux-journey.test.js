@@ -8,11 +8,12 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { JOURNEYS, account } from '../scripts/ux/journeys.mjs';
+import { JOURNEYS, SIGHTS, account, attack } from '../scripts/ux/journeys.mjs';
 import { DESKTOP, VIEWPORTS, blockedLines, contextOptions, ended, listing, parseArguments, settle, walked } from '../scripts/ux/journey.mjs';
 import { differences, measuresLines, parseMeasures } from '../scripts/ux/measures.mjs';
 import { PAINTED, judgePaints, paintedPages, readPaintInPage, signIn, spread, summary } from '../scripts/ux/paint.mjs';
-import { confirm, waitAhead } from '../scripts/ux/play.mjs';
+import { END_WORD, confirm, waitAhead } from '../scripts/ux/play.mjs';
+import { roundBar } from '../table/battle-upkeep.js';
 import { hostArguments, neverAskedInPage, serveShowcase, startHost, stopProcess } from '../scripts/ux/set.mjs';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -55,6 +56,51 @@ test('the match\'s settings-window strip presses Settings as the walk does, so a
   await match.strips['settings-window'].act({ page, blocked: async selector => { blocked.push(selector); } });
   assert.deepEqual(blocked, ['#settings']);
   assert.deepEqual(pressed, ['click']);
+});
+
+// The match films a round's end (#1308): the first one a game reads, after round 2 at Command, where the walk meets it.
+test('the match films a round\'s end after the second round, and before the windows that end the game', () => {
+  const { screens } = JOURNEYS.find(journey => journey.id === 'match');
+  const at = screens.indexOf('round-end');
+  assert.deepEqual(screens.slice(at - 1, at + 2), ['second-round', 'round-end', 'settings']);
+});
+
+// The walk knows the end is read by the bar's own words (roundBar, table/battle-upkeep.js), in the short form of a
+// phone and in the plan's words of a wide screen: a word the page changes is changed here, or the walk misses its screen.
+test('the walk reads a round\'s end in every word the bar says of one, and in no other word of the bar', () => {
+  const ends = [{ ended: 1, immune: 0 }, { ended: 2, immune: 0 }, { ended: 12, immune: 3 }, { ended: 0, immune: 1 }, { ended: 0, immune: 6 }, { ended: 0, immune: 0 }, null];
+  for (const moment of ends) {
+    const bar = roundBar({ phase: 'EndOfRound', moment: moment && { moment: 'end', ...moment } });
+    for (const word of [bar.short, bar.full]) assert.match(word, END_WORD, JSON.stringify(moment));
+  }
+  assert.equal(roundBar({ phase: 'EndOfRound', moment: { moment: 'end', ended: 2, immune: 0 } }).short, '2 ENDED');
+  const others = [{ phase: 'Planning' }, { phase: 'Combat' }, { waiting: true }, { phase: 'Planning', soon: true }, { phase: 'StartOfRound' },
+    { phase: 'StartOfRound', moment: { moment: 'start', each: 2, given: true } }, { phase: 'StartOfRound', moment: { moment: 'start', each: null, given: true } }];
+  for (const state of others) {
+    const bar = roundBar(state);
+    for (const word of [bar.short, bar.full]) assert.doesNotMatch(word, END_WORD, JSON.stringify(state));
+  }
+});
+
+// An opponent's action shows Next from its windup, quiet until the result is in. Pictured as soon as Next showed, the
+// screen was the windup, the impact or the result as the walk's reads fell: 87 words on one film, 91 on another (#1308).
+test('the match films an action read once its Next is usable, not while it is quiet', () => {
+  const sights = Object.fromEntries(SIGHTS);
+  assert.equal(sights['result-read'], '#playback-next[aria-disabled="false"]');
+  assert.match(read('table/battle.html'), /id="playback-next"/);
+  // The page says whether Next is usable in that attribute, at every draw (battle/src/live.ts).
+  assert.match(read('battle/src/live.ts'), /\$\('playback-next'\)\.setAttribute\('aria-disabled', /);
+});
+
+// A spell cast on the walker's own team starts its condition's rounds again, and no round's end has anything to say:
+// past the first round the walker casts on the opponent.
+test('past the first round the walker casts the first spell offered that is aimed at the opponent alone', () => {
+  const view = { board: { allies: [{ id: 1 }, { id: 2 }], enemies: [{ id: 4 }, { id: 5 }] } };
+  const spell = (id, candidates) => ({ spell: id, legalTargets: { candidates, minTargets: 1 } });
+  const offered = [spell('spell:guard:v1', [1, 2]), spell('spell:wait:v1', []), spell('spell:mixed:v1', [2, 4]), spell('spell:pummel:v1', [4, 5]), spell('spell:heavy_strike:v1', [4])];
+  assert.equal(attack(offered, view).spell, 'spell:pummel:v1');
+  // Nothing aimed at the opponent: the choice is left to the walk's own (the first spell that is not a wait).
+  assert.equal(attack(offered.slice(0, 3), view), null);
 });
 
 // A strip, like a walk, says what it had to press by script: frames of a press no player could make are not taken

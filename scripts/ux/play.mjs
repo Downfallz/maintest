@@ -4,6 +4,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { waitAnswered } from '../../studio/browser/battle-step.js';
+import { ROUND_END } from '../../table/terms.js';
 
 const folder = new URL('../../scenarios/tutorials/', import.meta.url);
 // The tutorial that plays to the match's end: it ends on the match result, the others on the coach's card.
@@ -64,6 +65,30 @@ const shows = page => page.evaluate(() => {
     press: ['upkeep-close', 'order-continue', 'playback-next'].find(id => shown(id) && document.getElementById(id).getAttribute('aria-disabled') !== 'true') ?? null,
   };
 });
+
+/**
+ * The small word under the round's number while a round's end is read (`roundBar`, table/battle-upkeep.js): what
+ * ended, in the short form of a phone or in the plan's words of a wide screen. Never a phase's word, nor the start's.
+ */
+export const END_WORD = /^(?:(?:ROUND )?END|\d+ (?:CONDITIONS? )?ENDED|\d+ IMMUNE(?: TO STUN)?)$/;
+
+/**
+ * A round's end being read, as a player sees it: the dock's card under the page's own title for it, its OK usable,
+ * and the bar's small word in the form this width shows, without the words kept for a screen reader. Null while
+ * anything else is on screen. The reading waits for its OK at the pace a new game starts with (Step), so what is read
+ * here stays until the walk presses it.
+ */
+export const roundEndRead = page => page.evaluate(title => {
+  const node = id => document.getElementById(id);
+  const shown = one => { const box = one?.getBoundingClientRect(); return Boolean(box?.width && box.height); };
+  if (!shown(node('playback-pacing')) || node('reading-title').textContent.trim() !== title) return null;
+  if (!shown(node('playback-next')) || node('playback-next').getAttribute('aria-disabled') === 'true') return null;
+  const bar = node('round-phase');
+  const form = [...bar.querySelectorAll('.round-short, .round-full')].find(one => one.checkVisibility()) ?? bar;
+  const seen = form.cloneNode(true);
+  for (const spoken of seen.querySelectorAll('.unseen')) spoken.remove();
+  return { round: node('round-number').textContent.trim(), word: seen.textContent.trim(), detail: node('reading-detail').textContent.trim() };
+}, ROUND_END);
 
 /**
  * Read what the battle shows until the person is asked something, the lesson is done or the match is over: the
@@ -150,9 +175,10 @@ async function answerSpeed(page, next, blocked, tempo = () => null) {
   await confirm(page, '#planning-confirm', { until: '#planning-dialog' });
 }
 
-async function answerAction(page, view, next, look, blocked) {
+// `cast(offered, view)` is a walk's own choice among the spells offered, when no answer is recorded.
+async function answerAction(page, view, next, look, blocked, cast = () => null) {
   const offered = view.options.action.spells, recorded = next('Action', view.waitingCreature);
-  const spell = offered.find(one => one.spell === recorded?.spell) ?? offered.find(one => !one.spell.includes('wait')) ?? offered[0];
+  const spell = offered.find(one => one.spell === recorded?.spell) ?? cast(offered, view) ?? offered.find(one => !one.spell.includes('wait')) ?? offered[0];
   await choose(page, `[data-spell="${spell.spell}"]`, blocked);
   const legal = spell.legalTargets, kept = (recorded?.spell === spell.spell ? recorded.targets : []).filter(id => legal.candidates.includes(id));
   const targets = kept.length >= legal.minTargets ? kept : legal.candidates.slice(0, legal.minTargets);
@@ -193,13 +219,13 @@ export async function waitAhead(view, read, { timeout = 15000, interval = 100 } 
  * Answer what the seat is asked, its sheet open first. `look` is called once the sheet is open, and once targets are
  * asked. `ahead` says the other player has not answered yet: the step is read as behind the seat by `waitAhead`.
  */
-export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {}, tempo, ahead = false } = {}) {
+export async function answer(page, view, { next = nothingRecorded, look = async () => {}, blocked = async () => {}, tempo, cast, ahead = false } = {}) {
   if (view.waitingFor === 'Action') await openSpells(page); else await openPlanning(page);
   await look();
   if (view.waitingFor === 'Evolution') await answerEvolution(page, view, next, blocked);
   else if (view.waitingFor === 'Speed') await answerSpeed(page, next, blocked, tempo);
   else if (view.waitingFor === 'TieOrder') { await page.locator('#planning-keep').click(); await confirm(page, '#planning-confirm'); }
-  else await answerAction(page, view, next, look, blocked);
+  else await answerAction(page, view, next, look, blocked, cast);
   if (ahead) await waitAhead(view, () => latest(page));
   else await waitAnswered(view, () => latest(page), { timeout: 15000 });
 }
@@ -233,13 +259,13 @@ export async function playLesson(page, lesson, { look = async () => {}, step = a
 }
 
 /** Play a game's questions until `until(view)` holds for the seat's view at a question. */
-export async function playUntil(page, until, { look = async () => {}, blocked = async () => {}, tempo } = {}) {
+export async function playUntil(page, until, { look = async () => {}, blocked = async () => {}, tempo, cast } = {}) {
   for (let turn = 0; turn < 60; turn++) {
     const now = await readUntilAsked(page, { look });
     if (now.over) return;
     const view = await asked(page);
     if (view.over || until(view)) return;
-    await answer(page, view, { look, blocked, tempo });
+    await answer(page, view, { look, blocked, tempo, cast });
   }
   throw new Error('The game did not get there in sixty questions.');
 }
