@@ -167,7 +167,8 @@ The command bar names the current objective: shared mutation picks, the creature
 a tied group, an on-turn spell, a hidden intent, or targets for an already revealed spell. Waiting rooms,
 opponent turns, sent choices, lost connections and recorded playback have separate instructions.
 The **Help** button opens the current explanation and a four-phase round guide. The next mutation
-opportunity comes from `board.nextEvolutionRound`; the guide follows the catalogue's declaration mode, where
+round comes from `board.nextEvolutionRound`, and from `board.followingEvolutionRound` once this round's
+mutations are revealed (`mutationSchedule` in `table/battle-growth.js`); the guide follows the catalogue's declaration mode, where
 a stamp that names none plays hidden intents (ADR 0110), and names creatures the way the scene does.
 **Read the rules** opens the official rulebook in a new tab, at the section the tip shortens (`/rules#tempo`) or,
 with no tip, at the round (rulebook-plan.md R4); the build of the book refuses a link to a section it lacks.
@@ -475,9 +476,21 @@ Help and creature inspection open the full-screen **mutation tree** (`src/mutati
 selects its creature; the reference can switch between both rosters. It reuses AU4's authored
 prerequisite forest, including every all-of/any-of edge, spell details, initiative and exact shared
 passive wording. Acquired tiers determine family/stage progress and multiclass summaries. Only a
-current host Evolution offer marks a mutation Available; the next opportunity is the host's
-`nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "this round",
-not "next"; finished matches offer no further opportunity. Unknown content and schedule remain explicit. On a phone the
+current host Evolution offer marks a mutation Available; the next mutation round is the host's
+`nextEvolutionRound`, never a client schedule. Its inclusive current-round value says "This is a mutation
+round", not "next"; once that round's mutations are revealed the next one is the host's
+`followingEvolutionRound`, and a `null` says "No more mutation rounds". Finished matches offer none. Unknown
+content and schedule remain explicit.
+
+**The mutation round announced** (F3 of `docs/tabletop/first-playtest-plan.md`, briefed in
+`docs/art/journeys/match.md` and `windows.md`). One name everywhere: mutation round. The new round's toast says
+`MUTATION ROUND` over the round's number, and its status "Round 3, mutation round"; the round's start receipt adds
+`This is a mutation round.` or `Next round is a mutation round.`; from 760 px the round's bar counts down beside
+the phase (`COMMAND · MUTATION NEXT ROUND`), and the round button's name says it at every width. The pick's first
+line says how often a mutation round comes and the team's picks (`pickPlan` in `table/battle-mutations.js`: a
+sentence, and a label on a short portrait), the tree opened over the pick says the label, and the reveal's receipt
+names the next one (`afterRevealLabel`). The gap is the catalogue's `rules.evolutionInterval` and the count the
+offer's `remainingPicks`: the page adds nothing to either. On a phone the
 tree shows one family at a time: a slim tab with a triangle stands at each side that still has families, nudging the
 way a swipe goes, and a tap moves one family over; it steps aside while a mutation's card is open.
 
