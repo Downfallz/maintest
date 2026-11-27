@@ -61,7 +61,7 @@ What holds for every screen of the journey:
   has two phases"). The small word under the round's number names a phase only while a player decides or watches a
   cast (`COMMAND`, `COMBAT`, and `WAITING` before both are seated). At a round's start it says what the start gave,
   at its end what ended, never `UPKEEP` or `AFTERMATH`: a short form under 760 px, the plan's words from 760. The
-  words, the room and the name are under `second-round` below.
+  words, the room and the name are under `second-round` below; the end is filmed on `round-end`.
 - **The mutation round, announced** (F3 of `docs/tabletop/first-playtest-plan.md`, "A mutation round is announced").
   It answers the friend's "Did it happen by itself from a certain round?" where the round is read, at the moment it
   matters ([A hint at the moment of need](../ux-craft.md#a-hint-at-the-moment-of-need)), and teaches nothing before
@@ -455,7 +455,7 @@ None: the field is the canvas.
 Round 1 ends, Round 2 begins and the tempo sheet docks. The bar says what the round's end ended, then the new
 round's number, what its start gave while its receipt is read, then the phase; the field stays readable over the
 sheet. The round's start is filmed on `upkeep` (round 1, the receipt's window over the frame); the round's end is
-filmed by no screen of the walk yet, and its words are read in `battle/src/live.ts` and `table/battle-playback.js`.
+filmed on [`round-end`](#a-rounds-end-read-round-end) (#1308), at round 3's end, the first this walk reads.
 Since F3 the frame also says when the next mutation round comes: round 2 is the round before one, so the bar
 counts down to it from 760 px and the round button's name says it at every width; the round's start receipt says it
 on a phone (filmed on `upkeep` for round 1, a mutation round); a new mutation round is announced.
