@@ -334,9 +334,11 @@ export function createBattlePlayback({ onChange, schedule = setTimeout, cancel =
     const step = ended ? RECEIPT_STEPS.end : RECEIPT_STEPS.start;
     // A receipt with no board of its own: the match's result names its own step, a turnover its moment's.
     const bare = current?.receipt?.category === 'Result' ? RECEIPT_STEPS.result : step;
-    const display = own ? { ...own, board: { ...own.board, ...step, timeline: ended ? own.board.timeline : [] } }
-      : current?.receipt ? { board: { roundNumber: current.round, ...bare, allies: [], enemies: [], timeline: [] } }
-      : action ? presentedView(latest, replay) : waiting ? presentedView(latest, waiting) : latest;
+    let display = latest;
+    if (own) display = { ...own, board: { ...own.board, ...step, timeline: ended ? own.board.timeline : [] } };
+    else if (current?.receipt) display = { board: { roundNumber: current.round, ...bare, allies: [], enemies: [], timeline: [] } };
+    else if (action) display = presentedView(latest, replay);
+    else if (waiting) display = presentedView(latest, waiting);
     // Every frame, live or recorded, shows the purchases it owns, ordered by when they were made (ADR 0151).
     const board = livePresentation(display, bought, { log: purchases });
     const cue = action ? actionCue(action, catalogue, harmful) : null;
