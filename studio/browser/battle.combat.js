@@ -31,7 +31,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
       return true;
     };
     const sent = [], shown = [];
-    // A new tab, as in battle.growth.js (#776): the tab that took the seat may already have shown this round's Upkeep
+    // A new tab, as in battle.growth.js (#776): the tab that took the seat may already have shown this round's Round start
     // sheet, which a tab shows once (sessionStorage); a new tab shares the seat (localStorage) and not that mark.
     await page.close(); page = await context.newPage();
     // The host frames are collected where the page reads them, in the page, before the page itself gets the body:
@@ -59,7 +59,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
     await page.goto(`${origin}/battle`);
     await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
-    // The listeners hold the first load's reads too: the Upkeep sheet holds the field, so none of them says shown.
+    // The listeners hold the first load's reads too: the Round start sheet holds the field, so none of them says shown.
     expect(shown).toEqual([]); expect(sent).toEqual([]);
     await page.locator('#upkeep-close').click();
     await page.evaluate(() => {

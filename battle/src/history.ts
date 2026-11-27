@@ -1,4 +1,5 @@
 import { spellPortrait } from './spell-portrait';
+import { inRound } from '../../table/terms.js';
 import { createBattleHistory, historyEntry, historySummary, KIND_LABELS } from '../../table/battle-history.js';
 
 type Model = ReturnType<ReturnType<typeof createBattleHistory>['model']>;
@@ -80,7 +81,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     const title = textNode('strong', row.title);
     const portrait = spellPortrait(row.portrait, 24);
     if (portrait) title.prepend(portrait);
-    const heading = [textNode('span', `Round ${row.round || '—'} · ${row.category}`, 'history-meta'), title];
+    const heading = [textNode('span', inRound(row.round || null, row.category), 'history-meta'), title];
     const node = document.createElement(row.details.length ? 'details' : 'div');
     node.className = row.details.length ? 'history-entry' : 'history-entry history-marker';
     node.dataset.sequence = String(row.sequence);
@@ -127,7 +128,7 @@ export function historyControls(controller: ReturnType<typeof createBattleHistor
     const key = `${selected.row.sequence}/${selected.stage}`;
     if (key === reviewKey) return;
     reviewKey = key; const row = selected.row;
-    detail.replaceChildren(textNode('p', `Round ${row.round} · ${row.category} · event ${row.sequence} · ${selected.stage.toUpperCase()}`, 'history-meta'), textNode('h3', row.title));
+    detail.replaceChildren(textNode('p', `${inRound(row.round, row.category)} · event ${row.sequence} · ${selected.stage.toUpperCase()}`, 'history-meta'), textNode('h3', row.title));
     for (const section of row.sections) {
       if (!section.items.length) continue;
       const facts = document.createElement('ul'); facts.className = 'history-effects';

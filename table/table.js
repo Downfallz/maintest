@@ -24,7 +24,7 @@ import { activeTurn, boardPresentation, decisionView, presentedView } from './pr
 import { practice, storage } from './startup.js';
 import { preferredPresentation } from './battle-preferences.js';
 import { wantsLessMotion } from './motion.js';
-import { SPEEDS, TEMPO_RULE, phaseLabel, stageClimb, stageLabel, stepLabel, tempoLabel } from './terms.js';
+import { ROUND_START, SPEEDS, TEMPO_RULE, inRound, phaseLabel, stageClimb, stageLabel, stepLabel, tempoLabel } from './terms.js';
 
 // The page renders what the host serves and submits what a player taps. It holds no rule: which spells are
 // castable, which targets are legal and how many, whose turn it is -- all of that arrives in `options`, built
@@ -2389,7 +2389,7 @@ function stepOkLabel(step, asked) {
 // What a step is, as its card's eyebrow names it.
 function stepKind(action) {
   if (action.interlude === 'aftermath') return 'cleanup';
-  if (action.interlude === 'upkeep') return 'upkeep';
+  if (action.interlude === 'upkeep') return 'start';
   return action.actor.side === 'ally' ? 'your action closed the round' : 'opponent action';
 }
 
@@ -2657,13 +2657,13 @@ function roundJump(state, replay) {
 
 function interludeHeading(action, round) {
   if (action.ordinaryEnergy) return `Round ${round} · round energy`;
-  return { upkeep: `Round ${round} · upkeep`, purchases: `Round ${round} · mutations acquired` }[action.interlude] ?? null;
+  return { upkeep: inRound(round, ROUND_START), purchases: `Round ${round} · mutations acquired` }[action.interlude] ?? null;
 }
 
 function playbackNote(replay, action, stage) {
   if (!action.frame) return 'This recording has no action snapshots · battlefield totals show the current state.';
   if (action.interlude) return 'The battlefield as this round\'s combat began · recorded.';
-  return `${stage} action ${replay.index + 1} · recorded battlefield · ${replay.match ? 'cleanup between rounds is not replayed.' : 'cleanup and upkeep appear when you return to the match.'}`;
+  return `${stage} action ${replay.index + 1} · recorded battlefield · ${replay.match ? 'cleanup between rounds is not replayed.' : 'a round’s end and the next one’s start appear when you return to the match.'}`;
 }
 
 // A round's upkeep, or the packages its Evolution revealed, as rows like a cast's: who, and what happened to them.
@@ -2895,7 +2895,7 @@ function stepHeading(state, current) {
   if (step.action.interlude) {
     element('decision-phase').textContent = step.action.interlude === 'aftermath' ? `Round ${step.round} ends` : `Round ${step.round} begins`;
     element('decision-turn').hidden = true;
-    element('asking').textContent = step.action.interlude === 'aftermath' ? 'Cleanup · conditions run out' : 'Upkeep · ongoing effects';
+    element('asking').textContent = step.action.interlude === 'aftermath' ? 'Cleanup · conditions run out' : `${ROUND_START} · ongoing effects`;
     return;
   }
   const board = step.action.frame ? { timeline: step.action.frame.timeline } : view.board;
@@ -3044,7 +3044,7 @@ function renderPhaseGuide(state, view, seat) {
   const combat = phaseLabel('Combat');
   const aftermath = phaseLabel('EndOfRound');
   const phases = [
-    [upkeepPhase, [], 'Round upkeep is automatic.', upkeepPhase],
+    [upkeepPhase, [], 'The start of a round is automatic.', upkeepPhase],
     ['Evolve', ['Evolution'], 'Acquire whole mutations with shared team picks. At most one per creature this opportunity, or pass.', command],
     ['Tempo', ['Speed', 'TurnOrderResolution'], `Pick a tempo for each eligible creature. ${TEMPO_RULE} All tempos reveal together when everyone is done.`, command],
     ['Tie order', ['TieOrder'], 'A tie between the teams is settled at random. Order your own tied creatures; both orders reveal together.', command],
@@ -3114,7 +3114,7 @@ function renderPhaseGuide(state, view, seat) {
   const begins = Boolean(previous) && newRound && !view.over;
   const label = view.over ? 'Match complete' : stepName(phases[current]) ?? 'Waiting';
   const title = unlocked.length ? `Round ${view.board.roundNumber} · Mutations acquired`
-    : begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} · Upkeep complete → ${label}`
+    : begins ? `Round ${view.board.roundNumber} begins` : newRound && upkeep && !view.over ? `Round ${upkeep.round} started → ${label}`
       : `Round ${view.board.roundNumber} · ${label}`;
   const detail = `${begins ? `Now: ${label}. ` : ''}${element('phase-reminder').textContent}`;
   const changes = unlocked.length ? unlocked.map(one => ({ who: `Creature ${one.creature} · ${one.side}`, text: state.packages.get(one.tier)?.name ?? one.tier, tone: one.side }))
@@ -3131,7 +3131,7 @@ function renderPhaseGuide(state, view, seat) {
 // action of a round the host has left keeps the dock on that round's combat.
 function stepDock(step, board) {
   if (step?.action.interlude === 'aftermath') return { ...board, roundNumber: step.round, phase: 'Combat', subPhase: 'Cleanup' };
-  if (step?.action.interlude === 'upkeep') return { ...board, roundNumber: step.round, phase: 'StartOfRound', subPhase: 'Upkeep' };
+  if (step?.action.interlude === 'upkeep') return { ...board, roundNumber: step.round, phase: 'StartOfRound', subPhase: ROUND_START };
   if (step && step.round !== board.roundNumber) return { ...board, roundNumber: step.round, phase: 'Combat', subPhase: 'Activation' };
   return board;
 }
@@ -3142,7 +3142,7 @@ function upkeepEnergy(state) {
 }
 
 function upkeepPreview(state) {
-  return `${upkeepEnergy(state)} Open Upkeep for details.`;
+  return `${upkeepEnergy(state)} Open ${ROUND_START} for details.`;
 }
 
 function signed(amount) {
@@ -3262,8 +3262,8 @@ function renderUpkeep(state, view, upkeep, seat) {
   if (state.upkeepShown !== key) panel.open = false;
   state.upkeepShown = key;
   if (!upkeep) return;
-  element('upkeep-label').textContent = `Upkeep${upkeep.rows.length ? ` · ${upkeep.rows.length} ${upkeep.rows.length === 1 ? 'effect' : 'effects'}` : ''} ↗`;
-  element('upkeep-title').textContent = `Round ${upkeep.round} · Upkeep applied`;
+  element('upkeep-label').textContent = `${ROUND_START}${upkeep.rows.length ? ` · ${upkeep.rows.length} ${upkeep.rows.length === 1 ? 'effect' : 'effects'}` : ''} ↗`;
+  element('upkeep-title').textContent = inRound(upkeep.round, ROUND_START);
   element('upkeep-energy').textContent = upkeepEnergy(state);
   const applied = upkeepRows(state, view.board, upkeep.rows.filter(row => row.amount > 0), false);
   const empty = document.createElement('p');
@@ -3274,7 +3274,7 @@ function renderUpkeep(state, view, upkeep, seat) {
   const active = element('upkeep-conditions');
   active.hidden = lasting.length === 0;
   active.replaceChildren(...(lasting.length ? [
-    Object.assign(document.createElement('strong'), { textContent: 'Still active after upkeep' }),
+    Object.assign(document.createElement('strong'), { textContent: 'Still active after the round’s start' }),
     upkeepGrid(lasting),
   ] : []));
 }
@@ -3321,7 +3321,7 @@ function showPhaseNotice(state, entry, replay = false) {
 
 function noticeContext(state, step, replay) {
   const earlier = replay ? 'Earlier announcement · ' : '';
-  if (step) return `${earlier}Upkeep · ${state.noticeStep + 1} / ${state.noticeEntry.steps.length}`;
+  if (step) return `${earlier}${ROUND_START} · ${state.noticeStep + 1} / ${state.noticeEntry.steps.length}`;
   return replay ? 'Earlier announcement · review' : 'Phase update';
 }
 

@@ -81,7 +81,7 @@ function passive(t, lang) {
   const fr = lang === 'fr', p = t.passive;
   if (p.sunder) return fr ? `Chaque coup direct ignore jusqu’à ${p.sunder} points de défense.` : `Each direct hit bypasses up to ${p.sunder} defence.`;
   if (p.damageBonus) return fr ? `Chaque coup direct inflige ${p.damageBonus} dégâts supplémentaires.` : `Every direct hit deals ${p.damageBonus} additional damage.`;
-  if (p.upkeepEnergy && t.shared) return fr ? `Chaque créature alliée gagne ${p.upkeepEnergy} énergie de plus à chaque entretien.` : `Each allied creature gains ${p.upkeepEnergy} extra energy at each upkeep.`;
+  if (p.upkeepEnergy && t.shared) return fr ? `Chaque créature alliée gagne ${p.upkeepEnergy} énergie de plus au début de chaque round.` : `Each allied creature gains ${p.upkeepEnergy} extra energy at the start of each round.`;
   throw new Error(`No field note for passive ${t.id}`);
 }
 

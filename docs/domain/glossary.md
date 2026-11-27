@@ -96,7 +96,7 @@ prototypes, to be confirmed as it is re-implemented), or `open` (not yet defined
 | Term | Definition | Status |
 | --- | --- | --- |
 | Round | One cycle of play inside a Match, driven by Phases and Sub-phases (ADR 0010). | decided |
-| Phase | One of Start of round, Planning, Combat, End of round. Forward-only within a Round. A player reads them as Upkeep, Command, Combat and Aftermath ([player-terminology.md](player-terminology.md)). | decided |
+| Phase | One of Start of round, Planning, Combat, End of round. Forward-only within a Round. A player reads Command and Combat as the round's two phases, between its Round start and its Round end ([player-terminology.md](player-terminology.md)). | decided |
 | Sub-phase | A step inside a Phase with its own expected player actions and completion rule. | decided |
 | Progression gate | A pure domain service that says whether the current Sub-phase is complete and, if not, what is missing (which Creatures, how many picks). Shared by the engine, the UI, and bots. | decided |
 | Phase driver | The loop inside the Match that runs each automatic step or asks the Progression gate, advances the Sub-phase, and raises an event, until the Round waits on a Player or the Match ends. | decided |

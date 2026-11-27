@@ -18,12 +18,12 @@ function harness(view = finished) {
   return { control, connection, reads: () => reads, concessions: () => concessions };
 }
 test('round review uses applied ticks and authoritative cleanup round ids', () => {
-  const notes = roundNotes(feed, board).join('\n'); assert.match(notes, /Round 1.*Ongoing damage −2/); assert.match(notes, /Round 1.*Defense ends/); assert.match(notes, /Round 1.*Aftermath complete/);
+  const notes = roundNotes(feed, board).join('\n'); assert.match(notes, /Round 1.*Ongoing damage −2/); assert.match(notes, /Round 1.*Defense ends/); assert.match(notes, /^Round 1 complete$/m);
 });
 test('finished replay rereads the full seat and steps before and after actual frames', async () => {
   // The battle report has read the seat's whole feed once already; the replay reads it again for its frames.
   const h = harness(); assert.equal(h.reads(), 1); await h.control.replay(); assert.equal(h.reads(), 2);
-  assert.match(h.control.model().summary, /Upkeep/); assert.match(h.control.model().note, /Reference/);
+  assert.match(h.control.model().summary, /Round start/); assert.match(h.control.model().note, /Reference/);
   h.control.move(1); assert.match(h.control.model().summary, /Root mutation/);
   h.control.move(1); assert.equal(h.control.model().board.creatures[1].health, 20);
   h.control.move(1); assert.equal(h.control.model().board.creatures[1].health, 0);
@@ -33,7 +33,7 @@ test('finished replay rereads the full seat and steps before and after actual fr
 });
 test('each replay step is a card: an upkeep and a reveal under their titles, a cast as the reading bar draws it', async () => {
   const h = harness(); await h.control.replay();
-  let card = h.control.model().card; assert.equal(card.kind, 'summary'); assert.equal(card.title, 'Upkeep'); assert.equal(card.round, 1);
+  let card = h.control.model().card; assert.equal(card.kind, 'summary'); assert.equal(card.title, 'Round start'); assert.equal(card.round, 1);
   h.control.move(1); card = h.control.model().card; assert.equal(card.title, 'Mutations revealed'); assert.match(card.detail, /Root mutation/);
   h.control.move(1); card = h.control.model().card;
   assert.equal(card.kind, 'own'); assert.equal(card.caster, 'Creature 1'); assert.equal(card.groups[0].target, 'Creature 4');
@@ -88,7 +88,7 @@ test('the last recorded step has no next and an unknown round is not jumped to',
 });
 
 test('an upkeep without applied ticks says so instead of leaving an empty heading', () => {
-  assert.equal(replayText({ interlude: 'upkeep', ticks: [] }), 'Upkeep · No ongoing ticks applied');
+  assert.equal(replayText({ interlude: 'upkeep', ticks: [] }), 'Round start · No ongoing ticks applied');
   assert.match(replayText({ interlude: 'upkeep', ticks: [{ creature: 1, amount: 0, label: 'Healing over time', sign: '+', unit: 'HP' }] }), /Healing over time \+0 HP/);
 });
 
@@ -97,7 +97,7 @@ test('an ordinary zero-energy replay keeps its receipt instead of claiming no on
     { creature: 1, baseRequested: 0, passiveRequested: 0, gained: 0, before: 7, after: 7 },
   ] };
   const [step] = matchReplay([{ sequence: 1, event }], board, []);
-  assert.equal(replayText(step), 'Upkeep · round energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
+  assert.equal(replayText(step), 'Round start · energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
   assert.match(replayText({ ...step, ticks: [] }), /No recorded grant details/);
 });
 

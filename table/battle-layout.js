@@ -49,10 +49,21 @@ export function strikeApproach(actor, target) {
 }
 
 // Where a caster's `Crit!` stands (ADR 0208): beside its head on its open side, never off the top of the field nor
-// off either side, the word (`wordsWidth` wide) staying whole on a figure at the field's edge. `size` scales its type.
-export function calloutSpot(home, wordsWidth, fieldWidth) {
+// off either side, the word (`wordsWidth` wide) staying whole on a figure at the field's edge. `type` is its size:
+// 13% of the figure, from 14 to 20 px. With the figure measured (`head`: its `rise`, the acting rim's top above its
+// feet, and the word's own height), the word's bottom edge stands `CALLOUT_CLEAR` above that rim
+// (docs/art/storyboards/movement.md, "A critical's word").
+export const CALLOUT_CLEAR = 6;
+/**
+ * @param {{ x: number, y: number, size: number }} home
+ * @param {number} wordsWidth
+ * @param {number} fieldWidth
+ * @param {{ rise: number, wordsHeight: number } | null} [head]
+ */
+export function calloutSpot(home, wordsWidth, fieldWidth, head = null) {
   const size = Math.max(28, Math.min(46, home.size * .3));
   const half = wordsWidth / 2 + size * .15;
   const x = Math.min(Math.max(home.x + home.size * .42, half), Math.max(half, fieldWidth - half));
-  return { x, y: Math.max(size * .7, home.y - home.size * .92), size };
+  const y = head ? home.y - head.rise - CALLOUT_CLEAR - head.wordsHeight / 2 : home.y - home.size * .92;
+  return { x, y: Math.max(size * .7, y), size, type: Math.max(14, Math.min(20, Math.round(home.size * .13))) };
 }

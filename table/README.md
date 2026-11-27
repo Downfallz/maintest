@@ -92,7 +92,7 @@ Neither renderer may post from a historical view or make animation completion ad
 ## Player-facing words
 
 The page shows the player's words for what the host serves under the domain's names: tempo **Instinct** and
-**Precision** for the speeds `Quick` and `Standard`, the phases **Upkeep → Command → Combat → Aftermath** for
+**Precision** for the speeds `Quick` and `Standard`, **Round start**, **Command**, **Combat** and **Round end** for
 `StartOfRound`, `Planning`, `Combat` and `EndOfRound`, **mutation** for a Tier and **Stage N** for its level.
 They are spelled once, in `terms.js`; the commands it sends and the ids it reads are unchanged. The list is
 [docs/domain/player-terminology.md](../docs/domain/player-terminology.md).
@@ -138,7 +138,7 @@ not recorded matches. Card text and creature names in the actual app come from t
 - A finished match's result offers **Replay the match action by action**, which is the same review over every
   round: the page keeps only the last two rounds' events, so it asks the host for the seat's feed from its start,
   once. Each round reads in the order it happened: its upkeep (the round's energy and every tick), the packages
-  its Evolution revealed, then its casts. Upkeep and purchases are one step each, on the battlefield the round's
+  its Evolution revealed, then its casts. The round's start and its purchases are one step each, on the battlefield the round's
   combat began on, which is the only board a seat's feed lets them borrow. Cleanup is not replayed. A selector
   jumps to the first step of any round. A finished game opened from the lobby's **View game** lands on the same
   result, with the same replay.
@@ -276,7 +276,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   why (`You conceded · Player 2 wins.`, `You win · the last team standing.`, a draw), for every way a match
   ends. A seat a bot plays, a finished match and the practice table offer no concession. A recorded session
   writes it as a `Concession` note; the trace's `MatchEnded` carries the reason.
-- Automatic upkeep remains readable through the dock's Upkeep control for the current round. It shows the
+- Automatic upkeep remains readable through the dock's Round start control for the current round. It shows the
   configured energy allowance and the actual applied ongoing energy, healing and damage ticks as one row a
   creature of symbol chips (♥ health, ϟ energy; the legend is on the panel), in engine order, followed by the
   active conditions as chips (◇ defense, ↟ initiative, ⊘ stun, `2r` rounds left, `∞` permanent) with their
@@ -290,7 +290,7 @@ not recorded matches. Card text and creature names in the actual app come from t
   battlefield shows each opponent creature's public acquired packages beside its conditions and confirmed
   spell, with no inference from its known spells. After an observed evolution opportunity, one announcement
   recaps both teams' newly acquired packages; an initial load does not invent a purchase. A round announcement
-  steps through actual ongoing ticks and conditions still active on the current board, while Upkeep retains the
+  steps through actual ongoing ticks and conditions still active on the current board, while Round start retains the
   full tick list. The round bar and board already show resolved actions, so the duplicate decision box is gone.
 - Opponent spellbooks expand below their team and update from public known spells as unlocks appear.
   These reference cards never select an action and never expose the opponent's face-down choice.

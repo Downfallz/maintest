@@ -545,6 +545,7 @@ export class BattleScene extends Phaser.Scene implements Restful {
 
   private clearMotion() {
     this.onCancel();
+    this.critMark?.settle();
     this.tweens.killAll();
     this.cameras.main.resetFX();
     this.viewShake.clear();

@@ -5,7 +5,7 @@
 
 const TEMPO = { Quick: 'Instinct', Standard: 'Precision' };
 
-const PHASE = { StartOfRound: 'Upkeep', Planning: 'Command', Combat: 'Combat', EndOfRound: 'Aftermath' };
+const PHASE = { StartOfRound: 'Round start', Planning: 'Command', Combat: 'Combat', EndOfRound: 'Round end' };
 
 // The internal speed values, in the order the engine plays them: what a tempo chooser sends.
 export const SPEEDS = Object.freeze(Object.keys(TEMPO));
@@ -18,6 +18,16 @@ export function tempoLabel(speed) {
 // A served round phase as a player reads it.
 export function phaseLabel(phase) {
   return PHASE[phase] ?? phase ?? '';
+}
+
+// The round's two automatic moments, as a label reads them alone: the journal's categories and a receipt's title.
+export const ROUND_START = PHASE.StartOfRound;
+export const ROUND_END = PHASE.EndOfRound;
+
+// A label beside its round's number. A moment drops its "Round" there: `Round 3 · Start`, never `Round 3 · Round start`.
+const BESIDE_A_ROUND = { [ROUND_START]: 'Start', [ROUND_END]: 'End' };
+export function inRound(round, label) {
+  return `Round ${round ?? '—'} · ${BESIDE_A_ROUND[label] ?? label}`;
 }
 
 // A served decision kind (`waitingFor`) as a player reads it: only the speed question is renamed.

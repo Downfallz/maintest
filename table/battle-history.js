@@ -6,7 +6,7 @@ import { resolvedSince, roundEnergyGrants, roundEnergyText, roundUpkeep, turnove
 import { combatSnapshot, combatChanges } from './combat-fx.js';
 import { outcomeText } from './outcome.js';
 import { creatureLabel } from './battle-live.js';
-import { stepLabel, tempoLabel } from './terms.js';
+import { ROUND_END, ROUND_START, stepLabel, tempoLabel } from './terms.js';
 
 // This journal is public even though a seat feed also contains that seat's own hidden decisions.
 // Default deny mirrors SeatVisibility's public cases; unknown payloads are never copied to the UI.
@@ -82,16 +82,16 @@ function eventRow(entry, board, catalogue) {
   const event = entry.event;
   switch (event.kind) {
     case 'CombatActionResolved': return combatRow(entry, board, catalogue);
-    case 'RoundEnergyGranted': return { title: 'Upkeep · round energy', category: 'Upkeep', details: roundEnergyGrants(event).map(grant =>
+    case 'RoundEnergyGranted': return { title: `${ROUND_START} · energy`, category: ROUND_START, details: roundEnergyGrants(event).map(grant =>
       line(`${who(grant.creature, board)} · ${roundEnergyText(grant)}`, 'energy')) };
     case 'OngoingEffectsApplied': {
       const rows = roundUpkeep([entry], roundOf(entry))?.rows ?? [];
-      return { title: 'Upkeep · ongoing effects', category: 'Upkeep', details: rows.length
+      return { title: `${ROUND_START} · ongoing effects`, category: ROUND_START, details: rows.length
         ? rows.map(tick => line(`${who(tick.creature, board)} · ${upkeepText(tick)}`, tick.tone))
         : [line('No ongoing ticks applied. Ordinary round energy is separate from these ticks.')] };
     }
     case 'ConditionsExpired':
-    case 'StunImmunityGained': return { title: 'Aftermath · conditions', category: 'Aftermath',
+    case 'StunImmunityGained': return { title: `${ROUND_END} · conditions`, category: ROUND_END,
       details: turnoverSteps([entry], roundOf(entry), board).flatMap(step => [
         ...step.ended.map(one => line(`${who(one.creature.id, board)} · ${one.conditions.map(condition => condition?.effect?.kind ?? 'Condition').join(' + ')} ends`, 'condition')),
         ...step.immune.map(one => line(`${who(one.id, board)} · immune to stun`, 'condition'))]) };
@@ -109,8 +109,8 @@ function eventRow(entry, board, catalogue) {
     }
     case 'TimelineBuilt': return { title: 'Tempos revealed · initial turn order', category: 'Command', details: orderRows(event.timeline, board) };
     case 'TiesOrdered': return { title: 'Tied creatures ordered', category: 'Command', details: orderRows(event.timeline, board) };
-    case 'RoundStarted': return { title: 'Round begins', category: 'Upkeep', details: [] };
-    case 'RoundEnded': return { title: 'Round complete', category: 'Aftermath', details: [] };
+    case 'RoundStarted': return { title: 'Round begins', category: ROUND_START, details: [] };
+    case 'RoundEnded': return { title: 'Round complete', category: ROUND_END, details: [] };
     case 'SubPhaseEntered': return { title: stepLabel(event.subPhase) || 'Phase changed', category: 'Phase', details: [] };
     case 'MatchStarted': return { title: 'Match begins', category: 'Match', details: [] };
     case 'PlayerJoined': return { title: 'Player joined', category: 'Match', details: [] };

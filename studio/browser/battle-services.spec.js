@@ -426,7 +426,7 @@ test('the other player\'s move offers pop-ups by the page\'s card, and Turn on i
   const h = await mount(page, { over: false, opponent: person });
   await expect(page.locator('#push-offer')).toBeHidden();
   expect(await page.evaluate(() => window.serviceCalls)).toEqual([]);
-  h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  h.view = { ...h.view, board: { ...h.view.board, phase: 'Planning', subPhase: 'Evolution' } };
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#push-offer')).toBeVisible();
   await expect(page.locator('#push-offer-title')).toHaveText('Away from the game?');
@@ -445,7 +445,7 @@ test('the other player\'s move offers pop-ups by the page\'s card, and Turn on i
 test('a Turn on refused in the browser\'s prompt points to Match settings', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'person', name: 'Rook' } });
   await page.evaluate(() => { Notification.requestPermission = async () => { window.serviceCalls.push('permission'); Notification.permission = 'denied'; return 'denied'; }; });
-  h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  h.view = { ...h.view, board: { ...h.view.board, phase: 'Planning', subPhase: 'Evolution' } };
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#push-offer')).toBeVisible();
   await page.locator('#push-offer-on').click();
@@ -455,7 +455,7 @@ test('a Turn on refused in the browser\'s prompt points to Match settings', asyn
 test('the player\'s own turn takes an unanswered card away', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'person', name: 'Rook' } });
   const board = h.view.board;
-  h.view = { ...h.view, board: { ...board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  h.view = { ...h.view, board: { ...board, phase: 'Planning', subPhase: 'Evolution' } };
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#push-offer')).toBeVisible();
   h.view = { ...h.view, board };
@@ -565,7 +565,7 @@ test('the pop-ups offer reads what it covers again when the focus moves and when
 });
 test('a bot\'s move makes no offer of pop-ups', async ({ page }) => {
   const h = await mount(page, { over: false, opponent: { seat: 'player2', kind: 'bot', name: 'Greedy' } });
-  h.view = { ...h.view, board: { ...h.view.board, phase: 'Upkeep', subPhase: 'Evolution' } };
+  h.view = { ...h.view, board: { ...h.view.board, phase: 'Planning', subPhase: 'Evolution' } };
   await page.evaluate(() => window.notifyBattle());
   await expect(page.locator('#round-phase')).not.toHaveText('');
   await expect(page.locator('#push-offer')).toBeHidden();

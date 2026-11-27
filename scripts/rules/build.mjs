@@ -354,7 +354,7 @@ const bold = cell => [...(cell ?? '').matchAll(/\*\*([^*]+)\*\*/g)].map(match =>
 /**
  * The engine and legacy words of docs/domain/player-terminology.md, each with the player's word that replaced it.
  * In French (`fr`), the player's word is the French column's, and an English player's word the French one
- * replaced (Upkeep, Spellbook, Stage) is refused too.
+ * replaced (Round start, Spellbook, Stage) is refused too.
  */
 export function retiredWords(terminology, language = 'en') {
   const words = new Map();
@@ -382,7 +382,7 @@ function retireRow(words, candidates, player, language) {
   }
 }
 
-// In French, an English player's word the French column replaced (Upkeep for Entretien).
+// In French, an English player's word the French column replaced (Round start for Début du round).
 function retireEnglish(words, english, french) {
   if (english && french && english !== french && !words.has(english)) words.set(english, { player: french, pattern: wordPattern(english, 's?', 'u') });
 }
@@ -398,8 +398,8 @@ const BETWEEN = {
   fr: ['autres', 'prochains', 'prochaines', 'derniers', 'dernières', 'premiers', 'premières', 'nouveaux', 'nouvelles'],
 };
 const COUNTED = {
-  en: [['round', 'rounds'], ['turn', 'turns'], ['enemy', 'enemies'], ['ally', 'allies'], ['target', 'targets'], ['time', 'times'], ['Upkeep', 'Upkeeps']],
-  fr: [['tour', 'tours'], ['round', 'rounds'], ['ennemi', 'ennemis'], ['allié', 'alliés'], ['cible', 'cibles'], ['Entretien', 'Entretiens']],
+  en: [['round', 'rounds'], ['turn', 'turns'], ['enemy', 'enemies'], ['ally', 'allies'], ['target', 'targets'], ['time', 'times']],
+  fr: [['tour', 'tours'], ['round', 'rounds'], ['ennemi', 'ennemis'], ['allié', 'alliés'], ['cible', 'cibles']],
 };
 
 // A text rewritten with the offset in the source of each of its characters, so a refusal found in the rewritten

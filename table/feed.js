@@ -8,7 +8,7 @@
 // the other: what each creature actually gained is a recorded fact, never the rule's allowance or a difference
 // between two boards. So those two are formatted, and everything else is named.
 
-import { stepLabel } from './terms.js';
+import { ROUND_START, stepLabel } from './terms.js';
 
 export function feedLine(entry, cards) {
   const head = `${entry?.event?.roundId ?? entry?.round ?? '—'} · ${stepLabel(entry?.subPhase)} · ${entry?.event?.kind ?? ''}`;
@@ -266,12 +266,12 @@ export function turnoverSteps(entries, round, board) {
 
 // A turnover step as one line, for the round bar.
 export function turnoverText(step) {
-  if (step.ordinaryEnergy) return `Upkeep · round energy · ${step.ticks.length
+  if (step.ordinaryEnergy) return `${ROUND_START} · energy · ${step.ticks.length
     ? step.ticks.map(grant => `Creature ${grant.creature}: ${roundEnergyText(grant)}`).join('; ')
     : 'No recorded grant details'}`;
   if (step.interlude === 'upkeep') {
     const ticks = step.ticks.map(tick => `${tick.label} ${tick.sign}${tick.amount} ${tick.unit} → Creature ${tick.creature}`);
-    return `Upkeep · ${ticks.join(', ')}`;
+    return `${ROUND_START} · ${ticks.join(', ')}`;
   }
   const ended = step.ended.map(one => `${one.conditions.map(condition => condition?.effect?.kind ?? 'Condition').join(' + ')} ends → ${one.creature.label}`);
   const immune = step.immune.map(one => `${one.label} immune to stun`);

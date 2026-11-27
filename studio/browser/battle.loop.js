@@ -87,22 +87,22 @@ async function answerCombat(page, view, capture) {
 // Auto settles events received under a command dialog; their upkeep remains readable in the
 // standalone notice. A round can reach the page in either shape, depending on response timing.
 // The pacing suite separately asserts the exact closing-cast/aftermath/upkeep queue ordering.
-const upkeepShowing = async page => await page.locator('#playback-pacing').isVisible() && await page.locator('#reading-title').textContent() === 'Upkeep';
+const upkeepShowing = async page => await page.locator('#playback-pacing').isVisible() && await page.locator('#reading-title').textContent() === 'Round start';
 async function readTurnover(page, round, info) {
   const paced = page.locator('#playback-pacing'), notice = page.locator('#upkeep-dialog');
   // The opponent's closing actions wait for their OK before the turnover reads (ADR 0139), and in Step, the
   // default, the aftermath before the upkeep waits for its Next (ADR 0141).
   const title = page.locator('#reading-title');
-  await acknowledge(page, async () => (await paced.isVisible() && await title.textContent() === 'Upkeep') || await notice.isVisible());
+  await acknowledge(page, async () => (await paced.isVisible() && await title.textContent() === 'Round start') || await notice.isVisible());
   if (await notice.isVisible()) {
-    await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Upkeep`);
+    await expect(page.locator('#upkeep-title')).toHaveText(`Round ${round} · Start`);
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
     await expect(page.locator('#upkeep-body')).toContainText('energy');
     await fitsViewport(page, '#upkeep-close');
     await page.screenshot({ path: info.outputPath('paced-upkeep-real-host.jpg'), type: 'jpeg', quality: 85 });
     await page.locator('#upkeep-close').click();
   } else {
-    await expect(page.locator('#reading-title')).toHaveText('Upkeep', { timeout: 20000 });
+    await expect(page.locator('#reading-title')).toHaveText('Round start', { timeout: 20000 });
     await expect(page.locator('#round-number')).toHaveText(String(round).padStart(2, '0'));
     await expect(page.locator('#result-text')).toContainText('energy');
     await expect(page.locator('#actor-name')).toBeHidden();
@@ -215,7 +215,7 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
   try {
     const tokens = await enter(page, hostInfo.join); const origin = new URL(hostInfo.join).origin;
     await expect(page.locator('#upkeep-dialog')).toBeVisible();
-    await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Upkeep');
+    await expect(page.locator('#upkeep-title')).toHaveText('Round 1 · Start');
     await expect(page.locator('#upkeep-body')).toBeHidden();
     await expect(page.locator('#upkeep-intro')).toHaveText('+2 energy each · 6 creatures');
     await expect(page.locator('#upkeep-body .upkeep-rows li')).toHaveCount(6);

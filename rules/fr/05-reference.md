@@ -10,9 +10,9 @@ permanent, décompte au Nettoyage et se termine à zéro, et le premier décompt
 
 | État | Ce qu’il fait | Quand |
 | --- | --- | --- |
-| **Bleed** (saignement) | Inflige sa valeur, **en ignorant la Défense** | Entretien, après la Regeneration |
-| **Regeneration** (régénération) | Soigne sa valeur, jamais au-dessus de la Santé de départ | Entretien, avant le Bleed |
-| **Régénération d’Énergie** | Donne sa valeur en Énergie | Entretien, en premier |
+| **Bleed** (saignement) | Inflige sa valeur, **en ignorant la Défense** | Début du round, après la Regeneration |
+| **Regeneration** (régénération) | Soigne sa valeur, jamais au-dessus de la Santé de départ | Début du round, avant le Bleed |
+| **Régénération d’Énergie** | Donne sa valeur en Énergie | Début du round, en premier |
 | **Stun** (étourdissement) | Pas de tempo, pas de tour ; un second est ignoré, tout comme celui qui arrive au round suivant la fin d’un Stun | Tout le round |
 | **Renfort de Défense** | Augmente la Défense ; tous ensemble comptent pour {engine.defenseBuffCeiling} au plus | Chaque coup que la créature reçoit |
 | **Malus de Défense** | Diminue la Défense | Chaque coup que la créature reçoit |
@@ -39,9 +39,9 @@ sources: ADR 0019, ADR 0020, ADR 0035, ADR 0036, ADR 0041, ADR 0072, ADR 0076, A
 id: conditions
 title: États
 Un état, effet durable, a une valeur et un nombre de rounds.
-Il décompte aux Retombées et finit à zéro.
+Il décompte à chaque round et finit à zéro.
 Une créature étourdie passe le Stun, puis ne peut pas l’être pendant un round.
-> Le Bleed de Latch inflige {spell:latch:v1.bleed} à chaque Entretien pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, malgré toute Défense.
+> Le Bleed de Latch inflige {spell:latch:v1.bleed} par round pendant {spell:latch:v1.bleed.durationRounds|round|rounds}, malgré toute Défense.
 ```
 
 ## La fin d’une partie {#the-end-of-a-match}
@@ -73,7 +73,7 @@ de plus pour chaque exemplaire que possèdent ses coéquipières.
 
 - **Titan : chaque coup ignore {tier:titan:v1.sunder} de Défense.** Sa [brèche](#sunder) : chaque coup rencontre
   la Défense de la cible diminuée de {tier:titan:v1.sunder}, jamais en dessous de zéro.
-- **Archmage, partagé : Énergie +{tier:archmage:v1.upkeepEnergy} à chaque Entretien.** Le gain d’Énergie de
+- **Archmage, partagé : Énergie +{tier:archmage:v1.upkeepEnergy} au début de chaque round.** Le gain d’Énergie de
   chaque créature vivante de l’équipe augmente de {tier:archmage:v1.upkeepEnergy}, une fois pour chaque exemplaire
   que possède l’équipe, à partir du round suivant. Un exemplaire continue de donner après que la créature qui l’a acquis
   est vaincue.

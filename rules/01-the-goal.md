@@ -27,17 +27,17 @@ Healing never takes a creature above the Health it started the match with.
 
 ## A round {#a-round}
 
-A match is a sequence of rounds. Each round reads **Upkeep → Command → Combat → Aftermath**, and the app walks
-you through it:
+A match is a sequence of rounds. Each round reads **Command → Combat**: two phases, between two
+moments nobody decides. The app plays the start and the end of the round for you, and walks you through the rest:
 
-- **Upkeep.** Every living creature gains {rules.energyPerRound} Energy. Regeneration heals. Damage over time
+- **Round start.** Every living creature gains {rules.energyPerRound} Energy. Regeneration heals. Damage over time
   hurts.
 - **Command.** On the rounds that offer it, you first acquire mutations for your creatures. Then you choose a
   tempo for each of them, Instinct or Precision, and, where your creatures tie on the timeline, their order.
 - **Combat.** The timeline is walked once, slot by slot. When the slot of one of your creatures comes up, you
   choose its spell and its targets on the board as it stands. The spell resolves at once, before the next
   creature acts.
-- **Aftermath.** Conditions count down, and the next round begins.
+- **Round end.** Conditions count down, and the next round begins.
 
 sources: ADR 0010, ADR 0083, ADR 0112, game-rules#round-sequence-adr-0010
 

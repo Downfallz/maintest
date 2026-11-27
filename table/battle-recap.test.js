@@ -217,7 +217,7 @@ test('the recap carries the journal\'s public words only, never a raw event', ()
   assert.doesNotMatch(JSON.stringify(recap), /SpeedChoiceSubmitted|CombatActionResolved|spell:|tier:/);
 });
 
-test('a creature an Upkeep\'s bleed defeated while away is marked fallen and told in that round', () => {
+test('a creature a Round start\'s bleed defeated while away is marked fallen and told in that round', () => {
   const { sequence, board } = recorded.boards.round4Tempo;
   const bledBoard = { ...board, enemies: board.enemies.map(one => one.id === 4 ? { ...one, health: 0, isAlive: false } : one) };
   const feed = recorded.feed.filter(entry => entry.sequence <= sequence).map(entry => entry.sequence === 119
@@ -262,7 +262,7 @@ test('a purchase without a round does not hide the mutations the board holds', (
   assert.deepEqual(recap.chosen.mutations, { round: 4, picks: [{ creature: 'Creature 2', mutation: 'Brute' }] });
 });
 
-test('a creature that survived one bleed and fell to the next is told fallen at the later Upkeep', () => {
+test('a creature that survived one bleed and fell to the next is told fallen at the later Round start', () => {
   const { sequence, board } = recorded.boards.round4Tempo;
   const bledBoard = { ...board, enemies: board.enemies.map(one => one.id === 4 ? { ...one, health: 0, isAlive: false } : one) };
   const bleeding = entry => ({ ...entry, event: { ...entry.event, bleedTicks: [{ creature: 4, damage: 12 }] } });

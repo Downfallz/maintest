@@ -48,7 +48,7 @@ sources: ADR 0035, ADR 0083, ADR 0112, game-rules#round-sequence-adr-0010
 ## Une créature étourdie passe le round {#stunned}
 
 Une créature sous **Stun** ne prend pas de tempo, n’a pas de tour, et ne lance rien pendant chaque round que dure
-le Stun. Elle gagne encore son Énergie à l’Entretien et subit encore son Bleed et sa Regeneration. Elle peut encore
+le Stun. Elle gagne encore son Énergie au début de chaque round et subit encore son Bleed et sa Regeneration. Elle peut encore
 acquérir une mutation, puisque les mutations viennent avant les tempos. Elle peut encore être ciblée, soignée et
 vaincue.
 
@@ -72,7 +72,7 @@ sources: ADR 0041, ADR 0072, game-rules#round-sequence-adr-0010
 
 Lisez les rounds d’un état comme **autant de rounds suivants**. Un état appliqué ce round dure jusqu’à la fin de ce
 round, puis pendant les rounds qu’il indique : le premier décompte après son arrivée ne compte pas. Un Bleed d’un
-round inflige ses dégâts une fois, à l’Entretien suivant. Un Stun de 2 rounds retire les deux rounds suivants.
+round inflige ses dégâts une fois, au début du round suivant. Un Stun de 2 rounds retire les deux rounds suivants.
 
 Un état ne recommence jamais : un second du même type se place à côté du premier, et chacun décompte de son côté.
 Seul le Stun est différent : un second est [ignoré](#stunned).
@@ -80,7 +80,7 @@ Seul le Stun est différent : un second est [ignoré](#stunned).
 *Exemple.* Au round 5, la Créature 3 lance Infestation sur
 {spell:summon_minions:v1.targets|ennemi|ennemis}{?spell:summon_minions:v1.origin = 'Enemy'} : un Bleed de
 {spell:summon_minions:v1.bleed} pendant {spell:summon_minions:v1.bleed.durationRounds|round|rounds} sur chacun. Il
-n’inflige rien au round 5. Chaque cible subit ensuite {spell:summon_minions:v1.bleed} à l’Entretien de chacun des
+n’inflige rien au round 5. Chaque cible subit ensuite {spell:summon_minions:v1.bleed} au début de chacun des
 {spell:summon_minions:v1.bleed.durationRounds|round|rounds} suivants, quelle que soit sa Défense :
 {spell:summon_minions:v1.bleed * spell:summon_minions:v1.bleed.durationRounds} en tout.
 

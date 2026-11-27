@@ -536,7 +536,7 @@ test('a finished match replays every round from its result, and the round can be
   await expect(page.locator('#playback-action')).toContainText('+3 energy · 4 → 7 (base 2, passive 1)');
   await expect(page.locator('#playback-action')).toContainText('+2 energy · 1 → 3 (base 2, passive 0)');
   await page.locator('[data-focus="playback-next"]').click();
-  await expect(page.locator('#playback-title')).toHaveText('Round 2 · upkeep');
+  await expect(page.locator('#playback-title')).toHaveText('Round 2 · Start');
   await expect(page.locator('#playback-action')).toContainText('Ongoing damage −2 HP');
   await page.locator('[data-focus="playback-next"]').click();
   await expect(page.locator('#playback-title')).toHaveText('Round 2 · mutations acquired');
@@ -1029,7 +1029,7 @@ test('sound and haptics sit in the masthead beside the Round guide, one popover 
 });
 
 // A round that ends turns over in steps: once the action that ended it is read, its Cleanup says what ran out,
-// and the next Upkeep moves the bars by what its ticks dealt -- the float a hit gets, on the creature it bled.
+// and the next Round start moves the bars by what its ticks dealt -- the float a hit gets, on the creature it bled.
 test('the round turns over in steps after its last action, and the upkeep floats its bleed', async ({ page }) => {
   await page.addInitScript(() => {
     globalThis.floats = [];
@@ -1063,7 +1063,7 @@ test('the round turns over in steps after its last action, and the upkeep floats
   await expect(page.locator('#combat-step-action')).toContainText('Stun ends');
   expect(await page.evaluate(() => globalThis.floats)).toEqual([]);
   await page.locator('[data-focus="step-next"]').click();
-  await expect(step).toContainText('Round 4 · upkeep');
+  await expect(step).toContainText('Round 4 · start');
   await expect.poll(() => page.evaluate(() => globalThis.floats.length)).toBeGreaterThan(0);
   const floats = await page.evaluate(() => globalThis.floats);
   expect(floats.every(float => float.text === '-2' && float.id === '2' && float.struck)).toBe(true);

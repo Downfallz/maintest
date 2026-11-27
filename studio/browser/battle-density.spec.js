@@ -133,7 +133,8 @@ test('the round\'s bar keeps Settings clear of the site menu on every phone widt
   await signedInSeat(page);
   for (const width of [360, 375, 390, 393, 412, 419, 420, 430]) {
     await page.setViewportSize({ width, height: 844 });
-    for (const phase of ['Upkeep', 'Command', 'Combat', 'Aftermath']) {
+    // Every word the bar can say under 760 px: the phases, and the short forms of a round's start and end.
+    for (const phase of ['COMMAND', 'COMBAT', 'WAITING', '+12', 'ENERGY', 'START', '12 ENDED', '6 IMMUNE', 'END']) {
       const gap = await page.evaluate(phase => {
         document.getElementById('round-phase').textContent = phase;
         document.getElementById('round-number').textContent = '12';

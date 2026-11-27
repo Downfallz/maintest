@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBattleUpkeep, upkeepReceipt, upkeepDisplay, missingRoundEnergy } from './battle-upkeep.js';
+import { createBattleUpkeep, roundBar, upkeepReceipt, upkeepDisplay, missingRoundEnergy } from './battle-upkeep.js';
 import { roundNotes, replayText } from './battle-match.js';
 import { matchReplay } from './feed.js';
 import { createBattleHistory } from './battle-history.js';
@@ -116,4 +116,44 @@ test('a page opened while the round is still in its opening phases still announc
   const opening = createBattleUpkeep(storage()); opening.reset('seat');
   opening.receive(view(1, [energy(1), ongoing(1)], { board: { ...board, roundNumber: 1, phase: 'Planning', subPhase: 'Evolution' } }));
   assert.equal(opening.model().pending, true);
+});
+
+// The round's bar (docs/art/journeys/match.md, second-round; first-playtest-plan.md, F2): a phase only while a
+// player decides or watches a cast, and at a round's start or end what the moment gave or ended.
+test('the round\'s bar names a phase only while a player decides or watches a cast, and WAITING before both are seated', () => {
+  assert.deepEqual(roundBar({ phase: 'Planning' }), { short: 'COMMAND', full: 'COMMAND', icon: null, said: '', saidFull: '' });
+  assert.equal(roundBar({ phase: 'Combat' }).short, 'COMBAT');
+  assert.equal(roundBar({ waiting: true, phase: 'StartOfRound', moment: { moment: 'start', each: 2, given: true } }).full, 'WAITING');
+  assert.equal(roundBar({ phase: 'Match complete' }).full, 'MATCH COMPLETE');
+});
+
+test('at a round\'s start the bar says what the start gave: short under the number on a phone, the plan\'s words on a wide screen', () => {
+  const display = upkeepDisplay([{ creature: 1, amount: 2, sign: '+', unit: 'energy', tone: 'energy', label: 'Warden', side: 'Your team' },
+    { creature: 4, amount: 2, sign: '+', unit: 'energy', tone: 'energy', label: 'Stalker', side: 'Opponent' }], []);
+  assert.deepEqual(display.bar, { moment: 'start', each: 2, given: true });
+  assert.deepEqual(roundBar({ phase: 'StartOfRound', moment: display.bar }),
+    { short: '+2', full: '+2 ENERGY EACH', icon: 'energy-gain', said: 'Round start: +2 energy each', saidFull: 'Round start' });
+  const differing = upkeepDisplay([{ creature: 1, amount: 3, sign: '+', unit: 'energy', tone: 'energy', label: 'Warden', side: 'Your team' },
+    { creature: 4, amount: 2, sign: '+', unit: 'energy', tone: 'energy', label: 'Stalker', side: 'Opponent' }], []);
+  assert.deepEqual(roundBar({ phase: 'StartOfRound', moment: differing.bar }),
+    { short: 'ENERGY', full: 'ROUND ENERGY', icon: null, said: 'Round start: round energy', saidFull: 'Round start' });
+  // No grant recorded, or a start read with nothing of its own (a recorded replay): the moment's own word, never an old one.
+  assert.deepEqual(roundBar({ phase: 'StartOfRound', moment: upkeepDisplay([], [], missingRoundEnergy).bar }),
+    { short: 'START', full: 'ROUND START', icon: null, said: '', saidFull: '' });
+  assert.equal(roundBar({ phase: 'StartOfRound' }).full, 'ROUND START');
+});
+
+test('at a round\'s end the bar says what ended, or else who became immune, or the moment alone', () => {
+  assert.deepEqual(roundBar({ phase: 'EndOfRound', moment: { moment: 'end', ended: 2, immune: 1 } }),
+    { short: '2 ENDED', full: '2 CONDITIONS ENDED', icon: null, said: 'Round end: 2 conditions ended', saidFull: 'Round end' });
+  assert.equal(roundBar({ phase: 'EndOfRound', moment: { moment: 'end', ended: 1, immune: 0 } }).full, '1 CONDITION ENDED');
+  assert.deepEqual(roundBar({ phase: 'EndOfRound', moment: { moment: 'end', ended: 0, immune: 1 } }),
+    { short: '1 IMMUNE', full: '1 IMMUNE TO STUN', icon: null, said: 'Round end: 1 immune to stun', saidFull: 'Round end' });
+  assert.deepEqual(roundBar({ phase: 'EndOfRound' }), { short: 'END', full: 'ROUND END', icon: null, said: '', saidFull: '' });
+  for (const moment of [{ moment: 'start', each: 2, given: true }, { moment: 'end', ended: 12, immune: 0 }, null]) {
+    for (const phase of ['StartOfRound', 'EndOfRound']) {
+      const bar = roundBar({ phase, moment });
+      assert.doesNotMatch(`${bar.short} ${bar.full} ${bar.said}`, /upkeep|aftermath/i);
+    }
+  }
 });

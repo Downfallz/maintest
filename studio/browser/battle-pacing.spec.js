@@ -24,6 +24,16 @@ async function finishCast(page, sequence = 10) {
   await page.clock.runFor(WINDUP_MS + IMPACT_MS);
 }
 
+// The round's word at a round's start or end (docs/art/journeys/match.md, second-round): both forms are written,
+// each with what a screen reader hears after it, and the width shows one.
+async function roundWord(page, short, full) {
+  await expect(page.locator('#round-phase .round-short')).toHaveText(short);
+  await expect(page.locator('#round-phase .round-full')).toHaveText(full);
+  const wide = page.viewportSize().width >= 760;
+  await expect(page.locator(`#round-phase .round-${wide ? 'full' : 'short'}`)).toBeVisible();
+  await expect(page.locator(`#round-phase .round-${wide ? 'short' : 'full'}`)).toBeHidden();
+}
+
 test('Step reads the closing attack, aftermath and upkeep before showing the next live objective', async ({ page }, info) => {
   const h = await mount(page); await step(page);
   await h.publish([theirs(10), cleanup, energy, ongoing], { board: nextRound(h), waitingFor: 'Evolution', waitingAsked: 6,
@@ -44,13 +54,18 @@ test('Step reads the closing attack, aftermath and upkeep before showing the nex
   await page.getByRole('button', { name: 'Close inspection' }).click(); await fits(page);
   await page.locator('#playback-next').click();
   // The aftermath reads on the field (ADR 0143): the round's last frame, a plaque on what ended, one line in the card.
-  await expect(page.locator('#round-phase')).toHaveText('AFTERMATH');
-  await expect(page.locator('#reading-title')).toHaveText('Aftermath'); await expect(page.locator('#reading-detail')).toHaveText('1 condition ended');
+  // The bar names no phase at a round's end: it says what ended, short on a phone and in the plan's words from 760 px.
+  await roundWord(page, '1 ENDED, Round end: 1 condition ended', '1 CONDITION ENDED, Round end');
+  await expect(page.locator('#reading-title')).toHaveText('Round end'); await expect(page.locator('#reading-detail')).toHaveText('1 condition ended');
   await expect(page.locator('#result-text')).toContainText('DefenseBuff ends');
   await expect(page.locator('#actor-layer .creature')).toHaveCount(6);
   await page.locator('#playback-next').click();
-  await expect(page.locator('#round-number')).toHaveText('03'); await expect(page.locator('#round-phase')).toHaveText('UPKEEP');
-  await expect(page.locator('#reading-title')).toHaveText('Upkeep'); await expect(page.locator('#reading-detail')).toContainText('+2 energy');
+  await expect(page.locator('#round-number')).toHaveText('03');
+  // Nor at the next round's start: what the start gave, the plaques' energy drawing before the short form.
+  await roundWord(page, '+2, Round start: +2 energy each', '+2 ENERGY EACH, Round start');
+  await expect(page.locator('#round-phase .round-short .cue-icon')).toHaveCount(1);
+  await expect(page.locator('#recap-open')).not.toContainText(/upkeep|aftermath/i);
+  await expect(page.locator('#reading-title')).toHaveText('Round start'); await expect(page.locator('#reading-detail')).toContainText('+2 energy');
   await expect(page.locator('#result-text')).toContainText('Ongoing damage −2 HP');
   await expect(page.locator('#upkeep-dialog')).toBeHidden();
   // The upkeep reads on its own round's board, creatures included; the dock holds only the reading card.
@@ -137,7 +152,7 @@ test('rotation passes over a queued upkeep without hiding it: the upkeep notice 
   const h = await mount(page); await step(page); await h.publish([theirs(10), energy, ongoing], { board: nextRound(h) });
   await finishCast(page); await expect(page.locator('#playback-next')).toBeEnabled(); await rotate(page);
   await expect(page.locator('#playback-skip')).toBeHidden();
-  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Upkeep');
+  await expect(page.locator('#upkeep-dialog')).toBeVisible(); await expect(page.locator('#upkeep-title')).toHaveText('Round 3 · Start');
   expect(h.state.requests.filter(one => one.method !== 'GET' && one.path !== '/api/lobby/resume' && !one.path.endsWith('/seen'))).toEqual([]); expect(h.errors).toEqual([]);
 });
 
@@ -163,7 +178,7 @@ test('a receipt arriving under an open inspection leaves it open and takes the f
   const h = await mount(page); await h.publish([entry(10), cleanup]);
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '10'); await page.locator('[data-creature="1"]').click();
   await expect(page.locator('#inspect-dialog')).toBeVisible(); await finishCast(page); await page.clock.runFor(SETTLE_MS);
-  await expect(page.locator('#reading-title')).toHaveText('Aftermath'); await expect(page.locator('#inspect-dialog')).toBeVisible();
+  await expect(page.locator('#reading-title')).toHaveText('Round end'); await expect(page.locator('#inspect-dialog')).toBeVisible();
   await expect(page.locator('#inspect-name')).toHaveText(/\S/);
   // The aftermath reads on the round's last frame, so the creature inspected is still there to take the focus.
   await page.keyboard.press('Escape'); await expect(page.locator('#actor-layer [data-creature="1"]')).toBeFocused(); expect(h.errors).toEqual([]);
@@ -191,5 +206,5 @@ test('in Auto the own cast moves on by itself and an incoming one waits for its 
   await expect(page.locator('#battle')).toHaveAttribute('data-sequence', '11'); await expect(page.locator('#reading-kind')).toContainText("Opponent's action");
   await page.keyboard.press('Escape'); await expect(page.locator('#combat-dialog')).toBeHidden();
   await expect(page.locator('#playback-next')).toHaveText('Next'); await page.locator('#playback-next').click();
-  await expect(page.locator('#reading-title')).toHaveText('Aftermath'); expect(h.errors).toEqual([]);
+  await expect(page.locator('#reading-title')).toHaveText('Round end'); expect(h.errors).toEqual([]);
 });

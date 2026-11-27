@@ -33,7 +33,7 @@ public static class EffectLine
 
         if (passive.UpkeepEnergy > 0)
         {
-            lines.Add($"Energy +{passive.UpkeepEnergy} at every upkeep");
+            lines.Add($"Energy +{passive.UpkeepEnergy} at the start of each round");
         }
 
         if (passive.DamageBonus > 0)

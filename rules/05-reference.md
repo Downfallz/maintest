@@ -10,9 +10,9 @@ permanent one counts down at Cleanup and ends at zero, and the first countdown a
 
 | Condition | What it does | When |
 | --- | --- | --- |
-| **Bleed** | Deals its amount, **ignoring Defense** | Upkeep, after Regeneration |
-| **Regeneration** | Heals its amount, never above the starting Health | Upkeep, before Bleed |
-| **Energy regeneration** | Gives its amount of Energy | Upkeep, first |
+| **Bleed** | Deals its amount, **ignoring Defense** | Round start, after Regeneration |
+| **Regeneration** | Heals its amount, never above the starting Health | Round start, before Bleed |
+| **Energy regeneration** | Gives its amount of Energy | Round start, first |
 | **Stun** | No tempo, no turn; a second one is ignored, and so is one in the round after a Stun ends | The whole round |
 | **Defense buff** | Raises Defense; all of them count for {engine.defenseBuffCeiling} at most | Every hit the creature takes |
 | **Defense debuff** | Lowers Defense | Every hit the creature takes |
@@ -38,9 +38,9 @@ sources: ADR 0019, ADR 0020, ADR 0035, ADR 0036, ADR 0041, ADR 0072, ADR 0076, A
 id: conditions
 title: Conditions
 A condition is a lasting effect: an amount, for a number of rounds.
-It counts down each Aftermath, ending at zero.
+It counts down each round, ending at zero.
 A stunned creature sits out the Stun, then cannot be stunned for one round.
-> Latch's Bleed deals {spell:latch:v1.bleed} each Upkeep for the next {spell:latch:v1.bleed.durationRounds|round|rounds}, ignoring Defense.
+> Latch's Bleed deals {spell:latch:v1.bleed} in each of the next {spell:latch:v1.bleed.durationRounds|round|rounds}, ignoring Defense.
 ```
 
 ## The end of a match {#the-end-of-a-match}
@@ -70,7 +70,7 @@ creature holds every passive its own capstones give, and Archmage's once more fo
 
 - **Titan: every hit ignores {tier:titan:v1.sunder} Defense.** Its [sunder](#sunder): each hit meets the
   target's Defense less {tier:titan:v1.sunder}, never below zero.
-- **Archmage, shared: Energy +{tier:archmage:v1.upkeepEnergy} at every Upkeep.** Every living creature of the
+- **Archmage, shared: Energy +{tier:archmage:v1.upkeepEnergy} at the start of each round.** Every living creature of the
   team gains {tier:archmage:v1.upkeepEnergy} Energy more, once for each copy the team owns, from the next round.
   A copy keeps giving after the creature that acquired it is defeated.
 - **Apex: Damage +{tier:apex:v1.damageBonus} on every hit.** It adds {tier:apex:v1.damageBonus} to each hit,

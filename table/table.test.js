@@ -1131,7 +1131,7 @@ test('upkeep popup distinguishes applied ticks from conditions still active on t
   p.view.roundEvents = [{ sequence: 42, event: { kind: 'OngoingEffectsApplied', roundId: 2,
     regenerationTicks: [{ creature: 1, healed: 1 }], bleedTicks: [{ creature: 2, damage: 2 }] } }];
   p.draw();
-  assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 3/);
+  assert.match(p.nodes['phase-notice-context'].textContent, /Round start · 1 \/ 3/);
   assert.match(p.nodes['phase-notice-changes'].textContent, /1\+1 ♥/);
   assert.doesNotMatch(p.nodes['phase-notice-changes'].textContent, /−2/);
   assert.equal(p.nodes['phase-notice-changes'].children[0].children[0].children[1].title, '+1 HP · Healing over time', 'the words stay on the chip');
@@ -1141,7 +1141,7 @@ test('upkeep popup distinguishes applied ticks from conditions still active on t
   p.nodes['phase-notice-next'].click();
   assert.match(p.nodes['phase-notice-changes'].textContent, /2◇ −2 · 2r/);
   assert.equal(p.nodes['phase-notice-changes'].children[0].children[0].children[1].title, 'DefenseDebuff 2 · 2 rounds left');
-  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after upkeep2◇ −2 · 2r/);
+  assert.match(p.nodes['upkeep-conditions'].textContent, /Still active after the round’s start2◇ −2 · 2r/);
   p.nodes['phase-notice-next'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.view.board.enemies[0].conditions = []; p.view.board.roundNumber = 3; p.draw();
@@ -1161,11 +1161,11 @@ test('Skip leaves the upkeep steps at once and is gone on the last one', () => {
   assert.equal(p.nodes['phase-notice-skip'].hidden, false);
   p.nodes['phase-notice-skip'].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
-  assert.equal(p.nodes.upkeep.hidden, false, 'Upkeep keeps the list');
+  assert.equal(p.nodes.upkeep.hidden, false, 'Round start keeps the list');
 });
 
 // The seat's own action that closed the round is read as a step too: the host turned the round over before the
-// page heard of it, so without the step the last hit, the Cleanup and the next Upkeep would all land at once.
+// page heard of it, so without the step the last hit, the Cleanup and the next Round start would all land at once.
 test("a seat's own action that closed the round is read before the next round's notice", () => {
   const own = (sequence, round) => ({ sequence, round, event: { kind: 'CombatActionResolved', roundId: round, resolution: { action: { actor: 1, spell: 'one', targets: [2] } },
     appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 3 }] } });
@@ -1198,15 +1198,15 @@ test("the next round's notice waits until the opponent's actions are read, and i
   assert.equal(p.nodes['phase-notice'].hidden, true, 'no round 4 pop-up over a round 3 action');
   assert.match(p.nodes['phase-round'].textContent, /^Round 3 \//);
   assert.equal(p.nodes['phase-current'].textContent, 'Combat · Activation');
-  assert.equal(p.nodes.upkeep.hidden, true, 'nor round 4\'s Upkeep panel under a round 3 dock');
+  assert.equal(p.nodes.upkeep.hidden, true, 'nor round 4\'s Round start panel under a round 3 dock');
   p.nodes['combat-step-controls'].children[0].click();
   assert.equal(p.nodes['phase-notice'].hidden, true);
   p.nodes['combat-step-controls'].children[0].click();
   assert.equal(p.nodes['combat-step'].hidden, true);
   assert.match(p.nodes['phase-round'].textContent, /^Round 4 \//);
   assert.equal(p.nodes.upkeep.hidden, false);
-  assert.match(p.nodes['upkeep-title'].textContent, /Round 4 · Upkeep applied/);
-  assert.match(p.nodes['phase-notice-context'].textContent, /Upkeep · 1 \/ 2/);
+  assert.match(p.nodes['upkeep-title'].textContent, /Round 4 · Start$/);
+  assert.match(p.nodes['phase-notice-context'].textContent, /Round start · 1 \/ 2/);
   const delta = chip => chip.children.find(node => /mini-delta/.test(node.className));
   assert.equal(delta(p.nodes['mini-enemies'].children[0]).textContent, '+1', 'healing first, in the host\'s order');
   assert.equal(delta(p.nodes['mini-enemies'].children[0]).className, 'mini-delta recovery');
@@ -1237,7 +1237,7 @@ test('muted pop-ups still read the upkeep ticks, and only them', () => {
   assert.equal(p.nodes['phase-notice'].hidden, true, 'a round with nothing applied announces nothing');
   p.view.board.roundNumber = 4; p.view.board.enemies[0].conditions = [{ effect: { kind: 'DefenseDebuff', amount: 2 }, remainingRounds: 2 }];
   p.view.roundEvents = [{ sequence: 15, event: { kind: 'OngoingEffectsApplied', roundId: 4 } }]; p.draw();
-  assert.equal(p.nodes['phase-notice'].hidden, true, 'conditions still running are not a tick; the Upkeep panel lists them');
+  assert.equal(p.nodes['phase-notice'].hidden, true, 'conditions still running are not a tick; the Round start panel lists them');
   assert.equal(p.nodes['upkeep-conditions'].hidden, false);
 });
 
@@ -1250,7 +1250,7 @@ test('reopening an upkeep announcement restarts the tick sequence', () => {
   p.nodes['phase-notice-next'].click();
   assert.match(p.nodes['phase-notice-context'].textContent, /2 \/ 2/);
   p.nodes['announcement-list'].children[1].children[0].click();
-  assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement · Upkeep · 1 \/ 2/);
+  assert.match(p.nodes['phase-notice-context'].textContent, /Earlier announcement · Round start · 1 \/ 2/);
   assert.match(p.nodes['phase-notice-changes'].textContent, /1\+2 ♥/);
 });
 
@@ -1280,15 +1280,15 @@ test('the persistent phase guide distinguishes simultaneous speeds from sequenti
   assert.equal(p.nodes['phase-steps'].children[5].attributes['aria-current'], 'step');
   p.view.board.phase = 'StartOfRound'; p.draw();
   assert.equal(p.nodes['phase-steps'].children[0].attributes['aria-current'], 'step');
-  assert.equal(p.nodes['phase-current'].textContent, 'Upkeep');
+  assert.equal(p.nodes['phase-current'].textContent, 'Round start');
 });
 
-test('the round flow reads Upkeep, Command, Combat and Aftermath, each step under its phase', () => {
+test('the round flow reads Round start, Command, Combat and Round end, each step under its phase', () => {
   const p = page(); p.view.board.subPhase = 'Cleanup'; p.draw();
   const steps = p.nodes['phase-steps'].children;
-  assert.deepEqual(steps.map(step => step.textContent), ['Upkeep', 'Command: Evolve', 'Tempo', 'Tie order', 'Combat: Spells', 'Activation', 'Aftermath: Cleanup']);
-  assert.deepEqual([...new Set(steps.map(step => step.dataset.phase))], ['Upkeep', 'Command', 'Combat', 'Aftermath']);
-  assert.equal(p.nodes['phase-current'].textContent, 'Aftermath · Cleanup');
+  assert.deepEqual(steps.map(step => step.textContent), ['Round start', 'Command: Evolve', 'Tempo', 'Tie order', 'Combat: Spells', 'Activation', 'Round end: Cleanup']);
+  assert.deepEqual([...new Set(steps.map(step => step.dataset.phase))], ['Round start', 'Command', 'Combat', 'Round end']);
+  assert.equal(p.nodes['phase-current'].textContent, 'Round end · Cleanup');
 });
 
 test('turn order labels distinguish creature identity, play position and initiative', () => {
@@ -1627,7 +1627,7 @@ test('a match replay reads a round upkeep and the packages it revealed before it
   p.current.transport.seat = async () => ({ ok: true, body: { ...p.view, feed } });
 
   await p.nodes.choices.children[0].click();
-  assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · upkeep');
+  assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · Start');
   assert.match(p.nodes['playback-action'].textContent, /Creature 1 · yoursOngoing damage −2 HP/);
   p.nodes['playback-controls'].children[1].click();
   assert.equal(p.nodes['playback-title'].textContent, 'Round 2 · mutations acquired');
@@ -2083,7 +2083,7 @@ for (const seats of [[{ slot: 'player2', code: 'K7F2Q9XM', join: '/j/K7F2Q9XM' }
 
     p.view.waiting = null; p.view.waitingFor = 'Evolution'; p.draw();
     assert.equal(p.nodes['phase-notice'].hidden, false);
-    assert.match(p.nodes['phase-notice-title'].textContent, /Round 1 · Upkeep complete → Command · Evolve/);
+    assert.match(p.nodes['phase-notice-title'].textContent, /Round 1 started → Command · Evolve/);
     assert.equal(p.nodes.upkeep.hidden, false);
     assert.equal(p.state.announcements.get('player1').length, 1);
     p.draw();
@@ -2615,8 +2615,8 @@ test('a refused tempo is shown, not sent again on its own, and Confirm retries i
 });
 
 // After the seat's own closing action the round turns over in steps: the Cleanup ends a condition, the next
-// Upkeep bleeds a creature, each on the dock's own phase, and only then is the next round's question asked --
-// without its Upkeep announced a second time.
+// Round start bleeds a creature, each on the dock's own phase, and only then is the next round's question asked --
+// without its Round start announced a second time.
 function turnoverRound(p) {
   const own = { sequence: 30, round: 3, event: { kind: 'CombatActionResolved', roundId: 3, resolution: { action: { actor: 1, spell: 'one', targets: [2] } },
     appliedOutcomes: [{ kind: 'DamageOutcome', target: 2, amount: 3 }] } };
@@ -2643,19 +2643,19 @@ test("the round turns over in steps after the seat's closing action: its cleanup
   assert.match(p.nodes['phase-current'].textContent, /Cleanup/);
   assert.match(p.nodes['combat-step-action'].textContent, /Creature 2.*Stun ends/);
   assert.equal(p.nodes['combat-line'].textContent, 'Cleanup · Stun ends → Creature 2');
-  assert.equal(p.nodes['combat-step-controls'].children[0].textContent, 'OK · upkeep →');
+  assert.equal(p.nodes['combat-step-controls'].children[0].textContent, 'OK · start →');
 
   stepOk(p);
-  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · upkeep/);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · start/);
   assert.equal(p.nodes['decision-phase'].textContent, 'Round 4 begins');
   assert.match(p.nodes['phase-round'].textContent, /^Round 4 \//);
-  assert.match(p.nodes['phase-current'].textContent, /Upkeep/);
+  assert.match(p.nodes['phase-current'].textContent, /Round start/);
   assert.match(p.nodes['combat-step-action'].textContent, /Creature 2.*Ongoing damage −2 HP/);
   assert.match(p.nodes['mini-enemies'].textContent, /−2/, 'the tick is on the chip it moved');
 
   stepOk(p);
   assert.equal(p.nodes['combat-step'].hidden, true);
-  assert.doesNotMatch(p.nodes['phase-notice-title'].textContent, /Upkeep/, 'the upkeep was read as a step');
+  assert.doesNotMatch(p.nodes['phase-notice-title'].textContent, /started →/, 'the upkeep was read as a step');
 });
 
 test('Auto reads the turnover with the round it follows, and stops at the next round', () => {
@@ -2663,7 +2663,7 @@ test('Auto reads the turnover with the round it follows, and stops at the next r
   p.nodes['combat-step-controls'].children[1].click();
   assert.match(p.nodes['combat-step-count'].textContent, /^Round 3 · cleanup.* · auto$/);
   p.timers.get(p.state.stepTimer)();
-  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · upkeep · auto$/);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · start · auto$/);
   p.timers.get(p.state.stepTimer)();
   assert.equal(p.nodes['combat-step'].hidden, true);
 });
@@ -2686,7 +2686,7 @@ test("the next round's question waits under the action that ended the round befo
 });
 
 // A seat whose creatures are all stunned is asked nothing, so the other side can play into the next round before
-// its Upkeep is read: the Upkeep stands on the board that round's first action found, not on the live board.
+// its Round start is read: the Round start stands on the board that round's first action found, not on the live board.
 test('an upkeep read after the next round has begun stands on the board that round first found', () => {
   const p = page(); turnoverRound(p);
   const next = opponentAction(37, 6, 4);
@@ -2696,7 +2696,7 @@ test('an upkeep read after the next round has begun stands on the board that rou
   p.view.board.allies[0] = { ...p.view.board.allies[0], health: 14 };
   p.view.board.enemies[0] = { ...p.view.board.enemies[0], health: 8 };
   p.draw(); stepOk(p); stepOk(p);
-  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · upkeep/);
+  assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · start/);
   assert.match(p.nodes.allies.textContent, /20\/20 HP/, 'not the 14 the next action left');
   stepOk(p);
   assert.match(p.nodes['combat-step-count'].textContent, /^Round 4 · opponent action/);

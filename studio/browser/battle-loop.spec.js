@@ -135,7 +135,7 @@ test('recorded zero ordinary energy stays visible in replay before ongoing effec
     { creature: 1, baseRequested: 0, passiveRequested: 0, gained: 0, before: 7, after: 7 },
   ] } }, ...feed];
   await matchResult(page); await page.locator('#match-replay').click();
-  await expect(page.locator('#replay-text')).toHaveText('Upkeep · round energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
+  await expect(page.locator('#replay-text')).toHaveText('Round start · energy · Creature 1: +0 energy · 7 → 7 (base 0, passive 0)');
   await page.locator('#replay-next').click(); await expect(page.locator('#replay-text')).toContainText('Ongoing damage');
   await page.locator('#replay-previous').click(); await expect(page.locator('#replay-text')).toContainText('+0 energy');
   await fitsViewport(page, '#replay-next, #replay-previous, #replay-close');

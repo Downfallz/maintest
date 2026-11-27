@@ -223,7 +223,7 @@ public sealed class CatalogueProjectionTests
 
         var card = CatalogueProjection.Build(resources, Rules).Packages.Single(package => package.Id == banner);
 
-        card.PassiveLines.ShouldBe(["Energy +1 at every upkeep", "For every creature of the team"]);
+        card.PassiveLines.ShouldBe(["Energy +1 at the start of each round", "For every creature of the team"]);
         View.Packages.ShouldAllBe(package => !package.PassiveLines.Contains(CatalogueProjection.SharedLine));
     }
 

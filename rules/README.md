@@ -88,8 +88,8 @@ One to three lines.
   `min` and `floor` combine them. Never type a number the content holds. An example draws every value its
   arithmetic reads, the creature's base stats included (its base Defense, its own critical chance), and states
   no fact about the content that the build does not check.
-- **Counts.** A value before a count's noun (round, turn, enemy, ally, target, time, Upkeep; in French tour,
-  round, ennemi, allié, cible, Entretien), right after it or after one word of a closed list (more, next,
+- **Counts.** A value before a count's noun (round, turn, enemy, ally, target, time; in French tour,
+  round, ennemi, allié, cible), right after it or after one word of a closed list (more, next,
   additional, ...), names both forms, `{rules.evolutionInterval|round|rounds}`, so a value of 1 reads "1 round"
   (in French, 0 and 1 take the singular). The build refuses the bare `{...} rounds`, bold, italics and facts between them included.
 - **Facts.** `{?...}` checks a fact the text states and draws nothing: an effect the spell has
@@ -101,7 +101,7 @@ One to three lines.
   count (`{?creature.knows.count = 2}`), so a spell added is caught. Put it right after the word it checks:
   `for one{?...} ally{?...}`.
 - **Names.** A spell's or a mutation's name may be typed. Inside a sentence, a capitalised word must be a name in
-  `data/` or a word of `words.json` (Health, Defense, Upkeep, Creature, ...); the build refuses any other, so a
+  `data/` or a word of `words.json` (Health, Defense, Command, Creature, ...); the build refuses any other, so a
   renamed spell fails the book until the book follows. A word opening a sentence, a list item, a cell or a step
   label (*Command · Tie order.*) passes too when the edition writes it in lowercase elsewhere ("The", "Every") or `firstWords` lists it; a
   word after a colon, a semicolon, a dash or a quote is inside the sentence.
@@ -119,7 +119,7 @@ same order, the same `sources:` lines and the same cards (`id:` and `title:` sta
 written as in English (the build writes a decimal comma). `fr/changes.md` opens with `# Ce qui a changé` and
 translates `changes.md` line for line, with the same dates and ADRs. The build refuses any difference.
 
-- **Words.** The French column of `player-terminology.md`: Entretien, Commandement, Combat, Retombées, Stade,
+- **Words.** The French column of `player-terminology.md`: Début du round, Commandement, Combat, Fin du round, Stade,
   Grimoire, Précision, Évolution, Créature. The build refuses the English word where the French one differs, and the
   engine's words as in English.
 - **Names.** Spells and mutations keep the names the battle shows, in English, and so do the conditions the

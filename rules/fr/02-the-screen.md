@@ -31,13 +31,13 @@ sources: ADR 0011, ADR 0042, ADR 0089, game-rules#match-lifecycle
 
 Les étapes que personne ne décide sont jouées pour vous, et l’historique enregistre chacune d’elles :
 
-- **L’Entretien.** Le gain d’Énergie de chaque créature, sa Regeneration et son Bleed (saignement).
+- **Le début de chaque round.** Le gain d’Énergie de chaque créature, sa Regeneration et son Bleed (saignement).
 - **La frise.** L’ordre des tours, construit à partir des tempos et des initiatives. Une égalité entre les équipes
   est tranchée au hasard : la frise la marque, et toucher une place dit quelle équipe a obtenu la place la plus tôt.
 - **Les critiques.** Chaque chance de critique, quand son sort se résout. Un lancer qui obtient un critique montre
   **Crit!** à côté de son lanceur ; un lancer qui n’en obtient pas n’y montre rien. L’historique dit la chance
   qu’avait le lancer.
-- **Le décompte.** Chaque état décompte pendant les Retombées, et se termine à zéro.
+- **Le décompte.** Chaque état décompte à la fin du round, et se termine à zéro.
 - **La fin.** La partie se termine à l’instant où une équipe est vaincue, ou quand le dernier round se termine.
 
 Quand l’application vous demande quelque chose, elle ne propose que ce que les règles permettent : les mutations
@@ -57,7 +57,7 @@ et bouge donc avec eux.
 | Valeur | Ce qu’elle décide | Cette table |
 | --- | --- | --- |
 | Taille d’équipe | Les créatures que chaque joueur commande | {rules.teamSize} |
-| Énergie par round | L’Énergie que chaque créature vivante gagne à l’Entretien | {rules.energyPerRound} |
+| Énergie par round | L’Énergie que chaque créature vivante gagne au début de chaque round | {rules.energyPerRound} |
 | Choix par round de mutation | Les mutations qu’une équipe peut acquérir à un round de mutation | {rules.evolutionPicksPerOpportunity} |
 | Premier round de mutation | Le premier round qui propose des mutations | {rules.firstEvolutionRound} |
 | Rounds entre deux rounds de mutation | L’écart d’un round de mutation au suivant | {rules.evolutionInterval} |

@@ -42,7 +42,7 @@ export function badges(creature, timeline) {
   if (creature?.isStunImmune === true) found.push('immune to stun');
   if (Number.isInteger(creature?.damageBonus) && creature.damageBonus > 0) found.push(`damage +${creature.damageBonus} on every hit`);
   const upkeep = creature?.passive?.upkeepEnergy;
-  if (Number.isInteger(upkeep) && upkeep > 0) found.push(`energy +${upkeep} at every upkeep`);
+  if (Number.isInteger(upkeep) && upkeep > 0) found.push(`energy +${upkeep} at the start of each round`);
   const sunder = creature?.passive?.sunder;
   if (Number.isInteger(sunder) && sunder > 0) found.push(`every hit ignores ${sunder} defense`);
   const slot = (timeline ?? []).find(one => one?.creature === creature?.id);

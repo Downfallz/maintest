@@ -1,6 +1,7 @@
 import { roundEnergyGrants, upkeepTicks, upkeepText, retainRoundEvents } from './feed.js';
 import { creatureLabel } from './battle-live.js';
 import { tickChip } from './effect-chips.js';
+import { phaseLabel } from './terms.js';
 
 export const missingRoundEnergy = 'Ordinary round energy was not recorded. Its actual gain is unknown.';
 const roundOf = entry => entry.event?.roundId ?? entry.round;
@@ -74,10 +75,8 @@ export function upkeepDisplay(energy, ongoing, energyNote = '') {
   const count = energy.length;
   const subjects = count === 1 ? '1 creature' : `${count} creatures`;
   let energySummary = energyNote;
-  if (count) {
-    energySummary = energy.every(row => row.amount === energy[0].amount)
-      ? `+${energy[0].amount} energy each · ${subjects}` : `Round energy · ${subjects}`;
-  }
+  const each = count && energy.every(row => row.amount === energy[0].amount) ? energy[0].amount : null;
+  if (count) energySummary = `${each === null ? 'Round energy' : `+${each} energy each`} · ${subjects}`;
   const summary = [energySummary];
   const markers = new Map();
   for (const row of [...energy, ...ongoing]) {
@@ -87,5 +86,34 @@ export function upkeepDisplay(energy, ongoing, energyNote = '') {
   }
   if (ongoing.length === 1) summary.push(`${ongoing[0].label} · ${ongoing[0].text}`);
   if (ongoing.length > 1) summary.push(`${ongoing.length} ongoing effects`);
-  return { summary: summary.filter(Boolean).join(' · '), markers: [...markers.values()] };
+  // What the start gave, for the round's bar to word (roundBar below): the grant every creature had, or that they differed.
+  return { summary: summary.filter(Boolean).join(' · '), bar: { moment: 'start', each, given: count > 0 }, markers: [...markers.values()] };
+}
+
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+const barWord = (short, full = short, said = '', saidFull = '', icon = null) => ({ short, full, icon, said, saidFull });
+
+/**
+ * The small word under the round's number (docs/art/journeys/match.md, `second-round`). It names a phase only
+ * while a player decides or watches a cast. At a round's start it says what the start gave and at its end what
+ * ended: `short` under the number on a phone, `full` on a wide screen, `said` and `saidFull` what a screen reader
+ * hears after each. `moment` is the `bar` of the start's display above or of the end's reading (battle-playback.js).
+ * @param {{ waiting?: boolean, phase?: string, moment?: { moment: string, each?: number | null, given?: boolean, ended?: number, immune?: number } | null }} [state]
+ */
+export function roundBar({ waiting = false, phase = '', moment = null } = {}) {
+  if (waiting) return barWord('WAITING');
+  const at = { StartOfRound: 'start', EndOfRound: 'end' }[phase];
+  if (at === 'start') {
+    const given = moment?.moment === 'start' ? moment : null;
+    if (Number.isInteger(given?.each)) return barWord(`+${given.each}`, `+${given.each} ENERGY EACH`, `Round start: +${given.each} energy each`, 'Round start', 'energy-gain');
+    if (given?.given) return barWord('ENERGY', 'ROUND ENERGY', 'Round start: round energy', 'Round start');
+    return barWord('START', phaseLabel(phase).toUpperCase());
+  }
+  if (at === 'end') {
+    const over = moment?.moment === 'end' ? moment : null;
+    if (over?.ended) return barWord(`${over.ended} ENDED`, plural(over.ended, 'CONDITION ENDED', 'CONDITIONS ENDED'), `Round end: ${plural(over.ended, 'condition ended', 'conditions ended')}`, 'Round end');
+    if (over?.immune) return barWord(`${over.immune} IMMUNE`, `${over.immune} IMMUNE TO STUN`, `Round end: ${over.immune} immune to stun`, 'Round end');
+    return barWord('END', phaseLabel(phase).toUpperCase());
+  }
+  return barWord(phaseLabel(phase).toUpperCase());
 }

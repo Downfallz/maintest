@@ -1,9 +1,9 @@
 # Storyboards: the movement
 
 The body and camera language every action shares, whatever its spell: how a figure loads, strikes, is struck, falls,
-rests, and how the view answers a hit. It is BC5 of [the battle's craft plan](../battle-craft-plan.md). It stages no
-spell: BC6 to BC8 place each spell's own beats on top of these, and [Strike](base-actions.md) already names which
-of its beats are this file's. The numbers here are the defaults a staging does not repeat.
+rests, how the view answers a hit, and the word a critical leaves on its caster. It is BC5 of
+[the battle's craft plan](../battle-craft-plan.md). It stages no spell: BC6 to BC8 place each spell's own beats on
+top of these, and [Strike](base-actions.md) already names which of its beats are this file's. The numbers here are the defaults a staging does not repeat.
 
 The weight of a blow is read from the host's confirmed outcome, `cue.changes`: the health each recipient lost, in
 points. The scene does not know a creature's maximum health, so the scale is in absolute points (*house*). In
@@ -513,3 +513,128 @@ node scripts/battle/filmstrip.mjs spell:bone_ward:v1 --actor a1 --targets a1 --w
   tremor; the breath is unchanged), so a desktop shakes more pixels than a phone, the same share.
 - The book's rule changed: under "The hold before the number", **Here**, the bright beats now start within 120 ms
   of contact and are gone within 320 ms of it.
+
+## A critical's word
+
+### Intent
+
+The player reads which caster's cast crit, on the caster, as the blow lands: one word, `Crit!`, standing over the
+caster's place until the result leaves (ADR 0208). It is the caption the die used to carry, not an effect: it does
+not move, glow or flash, and it takes less of the eye than the blow it labels. A critical comes a few times a game,
+on any spell that can crit, so the word must read on every family without becoming one.
+
+### Today
+
+No film strip: the bench (`scripts/battle/filmstrip.mjs`) films a spell's look and does not play a critical, so the
+word has never been filmed frame by frame. What exists is one picture a project, at `97aea83`, from
+`studio/browser/battle-playback.spec.js` ("a cast that crit says Crit! beside the caster as it lands…"): creature 3,
+at the right edge of the ally row, strikes creature 4 for 7 with a critical; the picture is taken about 300 ms after
+the word was first drawn, near 1160 ms.
+
+- 320 by 740: `Crit!` in 13 px bold, pale gold (`#ffe2a6`, `--brand-gold-bright`) on the labels' dark plate, at the
+  field's right edge, above and to the right of creature 3. The plate's bottom edge almost touches the top of the gold
+  rim's spikes. `ACTING` sits across the body, the name and stats under the feet. The word is smaller than the
+  creature's name.
+- 390 by 844: the same, 13 px, clamped to the right edge; the plate's bottom edge about touches the rim.
+- On both, the target's chip reads `−7 CRIT` in gold and the dock's card `−7 CRIT` again: the critical is said three
+  times on one screen, twice in gold, and the caster's word in gold beside the gold acting rim reads as part of the
+  "whose turn" marker.
+- From the code (`battle/src/crit-mark.ts`): it settles in over 180 ms, linear (scale .8 to 1, alpha .4 to 1); it
+  stands over the caster's home, not its image, so it does not follow a lunge; it is gone when the frame's `crit` is.
+  No desktop picture was taken.
+
+### Beats
+
+The rows are a melee critical that took health (the spec's Strike, 7 lost, a heavy blow): the caster is at its target
+at 840 ms and back home by 1740 ms ("A melee blow"). A cast or a projectile keeps the same rows; its caster is home
+throughout.
+
+| At | Lasts | Window | Layer | Beat | Pattern |
+| --- | --- | --- | --- | --- | --- |
+| 840 | 200 | impact | the word | `Crit!` enters on the contact frame, on the first frame the scene draws it, over the caster's home: scale .8 to 1 and alpha .4 to 1 over 200 ms (*house*; 180 today), eased `Cubic.Out`, so it arrives fast and lands softly. No travel: it grows where it stays. | [Easing families](../battle-craft.md#easing-families), [The three parts of an effect](../battle-craft.md#the-three-parts-of-an-effect) |
+| 840 | 200 | impact | the camera | The punch zoom of "The camera" (3% in, back over 200 ms), not repeated here: the word is drawn in the world and rides it, and its entry ends with the punch, so the two land as one arrival. | [Punch zoom](../battle-craft.md#punch-zoom) |
+| 1040 | 1500 | impact | the word | Still, at scale 1 and alpha 1. It does not breathe, pulse, glow or follow the caster's image: on a melee blow the caster returns home under it (1020 to 1740 ms), so the return leads the eye from the target's number to the word. The result is read here. | [The hold before the number](../battle-craft.md#the-hold-before-the-number), [One effect, one meaning](../battle-craft.md#one-effect-one-meaning) |
+| 2540 | 500 | settle | the word | Still. It leaves with the result in one frame, no fade, when the playback leaves the action: at 3040 ms when the next action starts, later when an opponent's action waits for its OK. | [The hold before the number](../battle-craft.md#the-hold-before-the-number) |
+
+The numbers:
+
+- Size: the type is `clamp(14, round(home.size × .13), 20)` px (*house*), bold, on the plate as today (padding 6 by
+  2). At 320 px (`home.size` about 96) it is 14 px, one step above the creature's name (13 px); at 390 (about 117),
+  15 px; at 1440 by 1000 the figures are past 154 px, so 20 px, against a 16 px name. The text is drawn at twice its
+  size, as today, and drawn again only when the size changes.
+- Place: across, as `calloutSpot` places it today (`home.x + home.size × .42`, kept whole inside the field). Up: the
+  plate's bottom edge stands 6 px (*house*) above the acting rim's top at rest, which is the figure's height above its
+  feet at its own scale (`image.displayHeight × image.originY`, from `figureGeometry`'s scale, never the breathed or
+  stretched one) × 1.13 (the outer rim's growth in `battle/src/acting-halo.ts`). `calloutSpot`'s top limit
+  (`size × .7` from the field's top) still holds: never off the top of the field.
+- Colour: ivory (`--ink`, `#ece9dc`) on the dark plate (`#0b1519d9`), not pale gold. The word says "critical", the
+  rim says "acting": gold stays the acting and target marker's (`docs/art/creature-art-direction.md`, "Reserve bright
+  warm gold"), and a gold word over a gold rim reads as one marker. The shape (a word on a plate) carries the meaning,
+  as the book asks. A person may prefer the gold that matches the chip and the card: see **Left**.
+- Depth as today, 2000: above the figures and the motif.
+
+Flashes and light: none. The entry's alpha rise is one change, not a pair, on an area far under the book's limit; the
+word adds no light and no shake. The blow keeps its own one flash on the target.
+
+### Reduced motion
+
+The word is simply there, at scale 1 and alpha 1, on the frame the reduced playback shows after the action, in the
+same place and size, for that frame's 650 ms, and gone with it. No entry, no punch.
+
+### Cost
+
+- Objects: one `Phaser.GameObjects.Text`, as today. Draw calls: one (its own texture; on a phone each texture is its
+  own batch). Particles: none. Tweens: none; the entry is computed in `follow` from the scene's time, so `killAll`
+  has nothing of it to end.
+- The resting loop: `settling` keeps the field at its full rate for the 200 ms of the entry only (180 today); a word at
+  rest does not count in `busy()`.
+- The cancel path: the word is the frame's, so a skip to a board with no `crit` removes it. A skip that lands on the
+  same action's result while the word still enters must leave it settled: `clearMotion` sets a shown word to its
+  settled scale and alpha (one line).
+- What changes in `battle/src/crit-mark.ts`: the duration (200 ms), the ease (`Cubic.Out` on the progress), the size
+  rule, the colour, and the height above the rim (which `calloutSpot` takes, or `CritMark` computes). No primitive of
+  `docs/art/battle-craft-plan.md` is needed: stage F1 of `docs/tabletop/first-playtest-plan.md` builds it (#1304).
+
+### On the film strip
+
+No bench sheet: the bench does not play a critical (see **Left**). The frames are pictured from
+`studio/browser/battle-playback.spec.js`, "a cast that crit says Crit! beside the caster as it lands…" (creature 3
+strikes creature 4 for 7 with a critical), on the projects `small-phone` (320 by 740), `phone` (390 by 844) and
+`desktop` (1440 by 1000), the times in ms from the start of the action at 1×:
+
+- 860 ms (the spec's first wait): the word is there over creature 3's home, visibly smaller and fainter than at
+  1160 ms. Creature 3 is at or near creature 4, not under the word.
+- 900 ms: every figure and the word a little larger than at 1160 ms (the punch); the word still smaller than at
+  1160 ms.
+- 1040 ms and 1160 ms (the spec's picture today): the word at its full size and alpha, the same place on both.
+  At 320 px its type is 14 px, at 390 px 15 px, at 1440 px 20 px. Ivory on the dark plate, never gold.
+- 1160 ms: the plate's bottom edge clear of the gold rim's top by a few pixels at 320 and 390; it covers no part of
+  creature 3, its `ACTING` tag, its name, nor the caption of the row above. Whole inside the field at the right edge.
+- 1800 ms: creature 3 home under the word; the word where it was at 1160 ms.
+- 2600 ms and 3000 ms: the same word, the same place.
+- 3100 ms, or the spec's last wait: no word on the field, and `#battle` has no `data-crit`.
+- With reduced motion (a run of the same test under the reduced setting): the word at full size and alpha on the
+  first frame after the action, and gone with that frame.
+
+A picture cannot show the ease or the feel at full speed; the critique compares sizes between frames only.
+
+### Left
+
+- Three marks of one critical on one screen (the caster's word, the target's `−7 CRIT` chip, the dock card's `CRIT`
+  badge) is one too many on a phone. Recommended: the target's chip drops its `CRIT` while the action plays, and
+  says the number alone; the caster's word says the critical on the field (ADR 0208) and the card ties it to the
+  number in the dock, where it is kept. The chip and the card are the pages' and another brief's: the owner may
+  refuse, and the word is staged above as if all three stay.
+- Ivory, not gold, for the word. If the owner wants the three marks in one colour, the word goes back to
+  `#ffe2a6`; the rim beside it then makes the word read as part of the acting marker. The chip's and the card's gold
+  badges are the pages' question, under the same rule.
+- The word leaves in one frame, no fade: the scene cannot know when a held action's OK comes, and at 3040 ms the
+  next action moves the halo on the same frame, so the field changes all at once there. A fade over the settle is a
+  choice the film could ask for later.
+- The bench has no critical: `scripts/battle/filmstrip.mjs` would need a flag (a `--crit` that sets the frame's
+  `crit` at impact) for the word to have a film strip like every other beat. A tool's change, not a pattern.
+- The craft book has no entry for a word on the field (its size against the figure, its plate, its place). The entry
+  here leans on Easing families; if the word ever travels or other words join it, the book gains that entry first.
+- The spec pictures an ally at the right edge only: an opponent's caster (the top row, under the `OPPONENT` label) and
+  a figure in the middle of a row are not pictured. On a short stage (a mutation sheet open) the top limit may bring the
+  word onto the rim.

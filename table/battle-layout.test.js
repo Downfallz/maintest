@@ -111,3 +111,18 @@ test('a caster\'s Crit! stays inside the field, whichever edge its figure stands
   assert.equal(middle.x, 200 + 120 * .42);
   assert.ok(calloutSpot({ x: 200, y: 20, size: 120 }, 0, field).y > 0, 'never off the top');
 });
+
+// The word's storyboard (docs/art/storyboards/movement.md, "A critical's word").
+test('a caster\'s Crit! is sized on its figure and stands clear of the acting rim, still under the field\'s top', () => {
+  const field = 400;
+  // The type: 13% of the figure, never under 14 px nor over 20.
+  assert.deepEqual([96, 117, 154, 300].map(size => calloutSpot({ x: 200, y: 300, size }, 0, field).type), [14, 15, 20, 20]);
+  // The plate's bottom edge stands 6 px above the rim's top: the figure's height at rest, grown as the outer rim is.
+  const spot = calloutSpot({ x: 200, y: 300, size: 100 }, 50, field, { rise: 113, wordsHeight: 20 });
+  assert.equal(spot.y + 20 / 2, 300 - 113 - 6);
+  // A figure near the field's top keeps the word inside it, as before.
+  const high = calloutSpot({ x: 200, y: 60, size: 100 }, 50, field, { rise: 113, wordsHeight: 20 });
+  assert.equal(high.y, high.size * .7);
+  // With no figure measured, the word keeps the place it had beside the head.
+  assert.equal(calloutSpot({ x: 200, y: 300, size: 100 }, 50, field).y, 300 - 100 * .92);
+});

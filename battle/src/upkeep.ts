@@ -1,4 +1,5 @@
 import { createBattleUpkeep, upkeepDisplay } from '../../table/battle-upkeep.js';
+import { ROUND_START, inRound } from '../../table/terms.js';
 import { receiptDetails } from './receipt-details';
 import { onNextFrame } from './next-frame';
 
@@ -43,7 +44,7 @@ export function upkeepControls(controller: Controller, inspect: (id: string) => 
     if (nextKey !== key) {
       display = upkeepDisplay(receipt.energy, receipt.ongoing, receipt.energyNote);
       el('upkeep-intro').textContent = display.summary;
-      el('upkeep-title').textContent = `Round ${receipt.round} · Upkeep`;
+      el('upkeep-title').textContent = inRound(receipt.round, ROUND_START);
       const sections = [
         { title: 'Round energy', rows: receipt.energy, empty: receipt.energyNote },
         { title: 'Ongoing effects', rows: receipt.ongoing, empty: receipt.ongoingNote },
@@ -66,5 +67,6 @@ export function upkeepControls(controller: Controller, inspect: (id: string) => 
       expand(false); controller.presented(); dialog.showModal(); opening = false; onVisibility();
     }
   }
-  return { render, markers: (round: number | null) => dialog.open && round === renderedRound ? display?.markers : undefined };
+  const shown = (round: number | null) => dialog.open && round === renderedRound ? display : null;
+  return { render, markers: (round: number | null) => shown(round)?.markers, bar: (round: number | null) => shown(round)?.bar ?? null };
 }

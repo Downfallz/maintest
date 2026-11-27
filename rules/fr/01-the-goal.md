@@ -28,10 +28,11 @@ Un soin s’arrête à la Santé de départ.
 
 ## Un round {#a-round}
 
-Une partie est une suite de rounds. Chaque round se lit **Entretien → Commandement → Combat → Retombées**, et
-l’application vous y guide :
+Une partie est une suite de rounds. Chaque round se lit **Commandement → Combat** : deux phases, entre deux
+moments que personne ne décide. L’application joue pour vous le début et la fin du round, et vous guide dans le
+reste :
 
-- **Entretien.** L’Énergie de chaque créature vivante augmente de {rules.energyPerRound}. La Regeneration
+- **Début du round.** L’Énergie de chaque créature vivante augmente de {rules.energyPerRound}. La Regeneration
   (régénération) soigne. Les dégâts dans la durée blessent.
 - **Commandement.** Aux rounds qui le proposent, vous acquérez d’abord des mutations pour vos créatures. Puis vous
   choisissez un tempo pour chacune d’elles, Instinct ou Précision, et, là où vos créatures sont à égalité sur la
@@ -39,7 +40,7 @@ l’application vous y guide :
 - **Combat.** La frise est parcourue une fois, place par place. Quand vient la place d’une de vos créatures, vous
   choisissez son sort et ses cibles sur le plateau tel qu’il est. Le sort se résout aussitôt, avant que la
   créature suivante agisse.
-- **Retombées.** Les états décomptent, et le round suivant commence.
+- **Fin du round.** Les états décomptent, et le round suivant commence.
 
 sources: ADR 0010, ADR 0083, ADR 0112, game-rules#round-sequence-adr-0010
 

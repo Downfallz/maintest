@@ -21,7 +21,7 @@ One file a family. A family's stage of the plan (BC5 to BC9) adds its file here,
 | [physical.md](physical.md) | The physical family, the Brute's 14 spells, by the ladder: Stage I, then Stage II, then Stage III. | BC6 |
 | [ground.md](ground.md) | The ground, and no spell's look: the air at rest (fog and embers), the depth (parallax), the light that answers a cast. | BC9 |
 | [elemental.md](elemental.md) | The elemental family, the Wizard's line of the Sorcerer: 5 spells, by the ladder. | BC8 |
-| [movement.md](movement.md) | What every action shares, and no spell's look: a melee blow, a cast and a projectile, a death, the breath at rest, the camera. | BC5 |
+| [movement.md](movement.md) | What every action shares, and no spell's look: a melee blow, a cast and a projectile, a death, the breath at rest, the camera; and a critical's word, `Crit!` on the caster. | BC5; the word, F1 of the first playtest |
 
 ## The format
 

@@ -138,11 +138,11 @@
                   "text": "Une partie est une suite de rounds. Chaque round se lit "
                 },
                 {
-                  "text": "Entretien → Commandement → Combat → Retombées",
+                  "text": "Commandement → Combat",
                   "strong": true
                 },
                 {
-                  "text": ", et l’application vous y guide :"
+                  "text": " : deux phases, entre deux moments que personne ne décide. L’application joue pour vous le début et la fin du round, et vous guide dans le reste :"
                 }
               ]
             },
@@ -152,7 +152,7 @@
               "items": [
                 [
                   {
-                    "text": "Entretien.",
+                    "text": "Début du round.",
                     "strong": true
                   },
                   {
@@ -179,7 +179,7 @@
                 ],
                 [
                   {
-                    "text": "Retombées.",
+                    "text": "Fin du round.",
                     "strong": true
                   },
                   {
@@ -405,7 +405,7 @@
               "items": [
                 [
                   {
-                    "text": "L’Entretien.",
+                    "text": "Le début de chaque round.",
                     "strong": true
                   },
                   {
@@ -443,7 +443,7 @@
                     "strong": true
                   },
                   {
-                    "text": " Chaque état décompte pendant les Retombées, et se termine à zéro."
+                    "text": " Chaque état décompte à la fin du round, et se termine à zéro."
                   }
                 ],
                 [
@@ -550,7 +550,7 @@
                   ],
                   [
                     {
-                      "text": "L’Énergie que chaque créature vivante gagne à l’Entretien"
+                      "text": "L’Énergie que chaque créature vivante gagne au début de chaque round"
                     }
                   ],
                   [
@@ -676,14 +676,14 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "Chaque round parcourt les mêmes étapes, dans cet ordre, jamais à rebours : "
+              "text": "Chaque round parcourt les mêmes étapes, dans cet ordre, jamais à rebours. Un round a deux phases, "
             },
             {
-              "text": "Entretien → Commandement → Combat → Retombées",
+              "text": "Commandement → Combat",
               "strong": true
             },
             {
-              "text": ". Chaque section ci-dessous est une étape. Elle dit quand elle vient, qui décide, et ce qui se passe. Chaque exemple utilise les nombres de cette table et les vrais sorts."
+              "text": ". Avant elles, au début du round, l’application donne l’Énergie et applique les effets en cours ; après elles, à la fin du round, elle fait décompter les états et clôt le round. Personne ne décide rien à l’un ou l’autre de ces moments. Chaque section ci-dessous est une étape. Elle dit quand elle vient, qui décide, et ce qui se passe. Chaque exemple utilise les nombres de cette table et les vrais sorts."
             }
           ]
         }
@@ -698,7 +698,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Entretien.",
+                  "text": "Début du round.",
                   "emphasis": true
                 },
                 {
@@ -717,7 +717,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Archmage est partagé avec toute l’équipe : chaque exemplaire que possède une équipe ajoute 1 à l’Énergie que gagne chaque créature vivante de cette équipe à chaque Entretien, à partir du round qui suit son acquisition."
+                  "text": "Archmage est partagé avec toute l’équipe : chaque exemplaire que possède une équipe ajoute 1 à l’Énergie que gagne chaque créature vivante de cette équipe au début de chaque round, à partir du round qui suit son acquisition."
                 }
               ]
             },
@@ -745,10 +745,10 @@
             "id": "energy",
             "title": "Énergie",
             "lines": [
-              "Chaque créature vivante gagne de l’Énergie à l’Entretien, quand un round commence.",
+              "Chaque créature vivante gagne de l’Énergie au début de chaque round.",
               "Un sort coûte de l’Énergie, dépensée quand il se résout, jamais avant."
             ],
-            "example": "Une créature à 1 point d’Énergie en gagne 2 à l’Entretien et en a 3, assez pour un sort qui coûte 3."
+            "example": "Une créature à 1 point d’Énergie en gagne 2 au début du round et en a 3, assez pour un sort qui coûte 3."
           }
         },
         {
@@ -760,11 +760,11 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Entretien.",
+                  "text": "Début du round.",
                   "emphasis": true
                 },
                 {
-                  "text": " Juste après le gain d’Énergie, les états qui agissent à l’Entretien s’appliquent, en trois passes. L’ordre compte :"
+                  "text": " Juste après le gain d’Énergie, les états qui agissent au début du round s’appliquent, en trois passes. L’ordre compte :"
                 }
               ]
             },
@@ -1094,7 +1094,7 @@
                   ],
                   [
                     {
-                      "text": "Énergie +1 à chaque Entretien, pour chaque créature de l’équipe"
+                      "text": "Énergie +1 au début de chaque round, pour chaque créature de l’équipe"
                     }
                   ]
                 ],
@@ -1130,7 +1130,7 @@
                   "strong": true
                 },
                 {
-                  "text": " La créature qui l’acquiert le possède, et chaque créature de son équipe détient son passif. Il se cumule : un coéquipier peut acquérir son propre exemplaire, et chaque exemplaire donne une fois de plus son passif à chaque créature de l’équipe. Un exemplaire continue de donner après que la créature qui l’a acquis est vaincue : seuls s’arrêtent les gains d’Entretien propres à la créature vaincue."
+                  "text": " La créature qui l’acquiert le possède, et chaque créature de son équipe détient son passif. Il se cumule : un coéquipier peut acquérir son propre exemplaire, et chaque exemplaire donne une fois de plus son passif à chaque créature de l’équipe. Un exemplaire continue de donner après que la créature qui l’a acquis est vaincue : seule la créature vaincue ne gagne plus rien."
                 }
               ]
             },
@@ -1754,7 +1754,7 @@
             "lines": [
               "La Défense réduit les dégâts de chaque coup, jamais sous zéro.",
               "Ses renforts ajoutent au plus 10 en tout.",
-              "Seuls les dégâts dans la durée, à l’Entretien, l’ignorent."
+              "Seuls les dégâts dans la durée l’ignorent."
             ],
             "example": "Une créature commence à 0 de Défense. Un coup de 7 inflige 7, ou 5 à 2 de Défense."
           }
@@ -1873,7 +1873,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Retombées · Nettoyage.",
+                  "text": "Fin du round · Nettoyage.",
                   "emphasis": true
                 },
                 {
@@ -1927,7 +1927,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Retombées · Clôture.",
+                  "text": "Fin du round · Clôture.",
                   "emphasis": true
                 },
                 {
@@ -2131,7 +2131,7 @@
                   "strong": true
                 },
                 {
-                  "text": " ne prend pas de tempo, n’a pas de tour, et ne lance rien pendant chaque round que dure le Stun. Elle gagne encore son Énergie à l’Entretien et subit encore son Bleed et sa Regeneration. Elle peut encore acquérir une mutation, puisque les mutations viennent avant les tempos. Elle peut encore être ciblée, soignée et vaincue."
+                  "text": " ne prend pas de tempo, n’a pas de tour, et ne lance rien pendant chaque round que dure le Stun. Elle gagne encore son Énergie au début de chaque round et subit encore son Bleed et sa Regeneration. Elle peut encore acquérir une mutation, puisque les mutations viennent avant les tempos. Elle peut encore être ciblée, soignée et vaincue."
                 }
               ]
             },
@@ -2205,7 +2205,7 @@
                   "strong": true
                 },
                 {
-                  "text": ". Un état appliqué ce round dure jusqu’à la fin de ce round, puis pendant les rounds qu’il indique : le premier décompte après son arrivée ne compte pas. Un Bleed d’un round inflige ses dégâts une fois, à l’Entretien suivant. Un Stun de 2 rounds retire les deux rounds suivants."
+                  "text": ". Un état appliqué ce round dure jusqu’à la fin de ce round, puis pendant les rounds qu’il indique : le premier décompte après son arrivée ne compte pas. Un Bleed d’un round inflige ses dégâts une fois, au début du round suivant. Un Stun de 2 rounds retire les deux rounds suivants."
                 }
               ]
             },
@@ -2232,7 +2232,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Au round 5, la Créature 3 lance Infestation sur 3 ennemis : un Bleed de 2 pendant 3 rounds sur chacun. Il n’inflige rien au round 5. Chaque cible subit ensuite 2 à l’Entretien de chacun des 3 rounds suivants, quelle que soit sa Défense : 6 en tout."
+                  "text": " Au round 5, la Créature 3 lance Infestation sur 3 ennemis : un Bleed de 2 pendant 3 rounds sur chacun. Il n’inflige rien au round 5. Chaque cible subit ensuite 2 au début de chacun des 3 rounds suivants, quelle que soit sa Défense : 6 en tout."
                 }
               ]
             }
@@ -2457,7 +2457,7 @@
                   ],
                   [
                     {
-                      "text": "Entretien, après la Regeneration"
+                      "text": "Début du round, après la Regeneration"
                     }
                   ]
                 ],
@@ -2478,7 +2478,7 @@
                   ],
                   [
                     {
-                      "text": "Entretien, avant le Bleed"
+                      "text": "Début du round, avant le Bleed"
                     }
                   ]
                 ],
@@ -2496,7 +2496,7 @@
                   ],
                   [
                     {
-                      "text": "Entretien, en premier"
+                      "text": "Début du round, en premier"
                     }
                   ]
                 ],
@@ -2700,10 +2700,10 @@
             "title": "États",
             "lines": [
               "Un état, effet durable, a une valeur et un nombre de rounds.",
-              "Il décompte aux Retombées et finit à zéro.",
+              "Il décompte à chaque round et finit à zéro.",
               "Une créature étourdie passe le Stun, puis ne peut pas l’être pendant un round."
             ],
-            "example": "Le Bleed de Latch inflige 2 à chaque Entretien pendant 3 rounds, malgré toute Défense."
+            "example": "Le Bleed de Latch inflige 2 par round pendant 3 rounds, malgré toute Défense."
           }
         },
         {
@@ -2842,7 +2842,7 @@
                 ],
                 [
                   {
-                    "text": "Archmage, partagé : Énergie +1 à chaque Entretien.",
+                    "text": "Archmage, partagé : Énergie +1 au début de chaque round.",
                     "strong": true
                   },
                   {
@@ -2999,6 +2999,11 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-27",
+      "text": "Un round se lit **Commandement → Combat** : deux phases, entre le début du round et sa fin, où personne ne décide rien. Ces deux moments s’appellent Début du round et Fin du round. Aucune règle ne change.",
+      "adrs": []
+    },
     {
       "date": "2026-11-27",
       "text": "L’écran ne montre plus de dé : un lancer qui obtient un critique montre **Crit!** à côté de son lanceur, l’historique dit la chance qu’avait le lancer, et une égalité entre les équipes se lit comme tranchée au hasard. Le livre dit une chance de critique en pourcentage, comme les cartes. Aucune règle ne change (ADR 0208).",

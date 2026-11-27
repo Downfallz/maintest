@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildRules, evaluate, idsOf, linksFrom, linksIn, readInputs, render } from '../scripts/rules/build.mjs';
@@ -21,7 +21,7 @@ const terminology = `| Internal (domain, code, data) | Legacy player-facing | Pl
 | Speed (\`Speed\` choice) | Speed | **Tempo** | **Tempo** |
 | \`Speed.Quick\` | Quick | **Instinct** | **Instinct** |
 | Evolution | Evolution | **Evolution** | **Évolution** |
-| \`StartOfRound\` | Start | **Upkeep** | **Entretien** |
+| \`StartOfRound\` | Upkeep | **Round start** | **Début du round** |
 
 | Before | After |
 | --- | --- |
@@ -48,7 +48,7 @@ At zero Health a creature is defeated.
 
 ## A round {#a-round}
 
-- Upkeep: every creature gains {rules.energyPerRound} Energy.
+- Round start: every creature gains {rules.energyPerRound} Energy.
 - Combat: *at its slot*, a creature casts. See [winning](#winning).
 
 | Value | Reference |
@@ -75,8 +75,8 @@ function inputs(overrides = {}) {
     conceptIds: ['health', 'energy'],
     // The small book's capitalised words; the real book's are rules/words.json.
     words: {
-      en: ['Health', 'Energy', 'Defense', 'Upkeep', 'Evolution', 'Stage', 'What', 'Two', 'Defeat', 'Combat', 'See', 'Value', 'Reference', 'Critical'],
-      fr: ['Santé', 'Énergie', 'Précision', 'Stade', 'Évolution', 'Tempo', 'Battez', 'Ce', 'Combat', 'Deux', 'Entretien', 'Multiplicateur', 'Référence', 'Tous', 'Valeur', 'Voir', 'Au'],
+      en: ['Health', 'Energy', 'Defense', 'Evolution', 'Stage', 'What', 'Two', 'Defeat', 'Combat', 'See', 'Value', 'Reference', 'Critical'],
+      fr: ['Santé', 'Énergie', 'Précision', 'Stade', 'Évolution', 'Tempo', 'Battez', 'Ce', 'Combat', 'Deux', 'Début', 'Multiplicateur', 'Référence', 'Tous', 'Valeur', 'Voir', 'Au'],
     },
     engine: { defenseBuffCeiling: 10 },
     links: [],
@@ -249,7 +249,7 @@ test('a count is written with its noun, singular for one, so a value of 1 never 
   assert.ok(builtText(at(2)).includes('Every 2 rounds, two players'));
   assert.ok(builtText(at(1)).includes('Every 1 round, two players'));
   refuses(withGoal('Two players', 'For {rules.teamSize} rounds, two players'), /"\{rules\.teamSize\} rounds": a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
-  refuses(withGoal('Two players', 'At the next {rules.teamSize} Upkeeps, two players'), /a count takes its noun: \{rules\.teamSize\|Upkeep\|Upkeeps\}/);
+  refuses(withGoal('Two players', 'For the next {rules.teamSize} turns, two players'), /a count takes its noun: \{rules\.teamSize\|turn\|turns\}/);
   for (const written of ['{rules.teamSize} **rounds**', '{rules.teamSize} more rounds', '{rules.teamSize} additional rounds', '{rules.teamSize} consecutive rounds', '{rules.teamSize}{?rules.teamSize > 1} rounds', '{rules.teamSize} *more* rounds']) {
     refuses(withGoal('Two players', `For ${written}, two players`), /a count takes its noun: \{rules\.teamSize\|round\|rounds\}/);
   }
@@ -261,13 +261,13 @@ test('a capitalised name inside a sentence is a spell\'s or a mutation\'s name i
   const spells = new Map([['spell:pummel:v1', { id: 'spell:pummel:v1', name: 'Pummel', energyCost: 1, effects: [{ kind: 'Damage', amount: 2 }] }], bloodPrice]);
   const mutations = new Map([['tier:titan:v1', { id: 'tier:titan:v1', name: 'Titan', level: 4, initiativeBonus: 0 }]]);
   const book = text => inputs({ spells, mutations, parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', text) }] });
-  assert.deepEqual(errorsOf(book('A Titan casts Blood Price and Pummel at Upkeep for Energy. Every creature. Two players')), []);
+  assert.deepEqual(errorsOf(book('A Titan casts Blood Price and Pummel in Combat for Energy. Every creature. Two players')), []);
   assert.deepEqual(errorsOf(book('A creature casts Blood Price{?spell:hateful_sacrifice:v1.origin = \'Enemy\'} on an enemy. Two players')), [], 'a fact against a name');
   refuses(book('A Titan casts Fireball. Two players'), /rules\/01-the-goal\.md:\d+: "Fireball" is not the name of a spell or a mutation in data\/, nor a word of rules\/words\.json/);
   refuses(book('A creature casts Blood Prize. Two players'), /"Prize" is not the name/);
   refuses(book('A spell. Fireball deals damage. Two players'), /"Fireball" is not the name/);
   assert.deepEqual(errorsOf(book('A creature. Every creature. Two players')), [], 'a first word the book writes in lowercase elsewhere');
-  const opening = text => inputs({ words: { en: ['Health', 'Energy', 'Upkeep', 'What', 'Two', 'Defeat', 'Combat', 'See', 'Value', 'Reference', 'Critical'], firstWords: { en: ['Whereas'] } },
+  const opening = text => inputs({ words: { en: ['Health', 'Energy', 'What', 'Two', 'Defeat', 'Combat', 'See', 'Value', 'Reference', 'Critical'], firstWords: { en: ['Whereas'] } },
     parts: [{ file: '01-the-goal.md', text: goal.replace('Two players', text) }] });
   assert.deepEqual(errorsOf(opening('Whereas a creature waits. Two players')), [], 'a first word of firstWords opens a sentence');
   refuses(opening('A creature, Whereas it waits. Two players'), /"Whereas" is not the name/);
@@ -347,7 +347,7 @@ test('a fact states a mutation another one needs, read from its prerequisites in
 // #877: a paragraph or a list item joins its lines; a value that fails names its own line, not the first.
 test('a value that fails names the line that holds it, inside a paragraph or a list item', () => {
   const lines = goal.replace('Two players, each with {rules.teamSize} creatures.', "Two players,\neach with {rules.teamSize} creatures{?rules.teamSize = 4}.\nThen {?rules.teamSize = 5}more.")
-    .replace('- Upkeep: every creature gains {rules.energyPerRound} Energy.', '- Upkeep: every creature\n  gains {rules.energyPerRound} Energy{?rules.energyPerRound = 9}.\n- Command{?rules.teamSize = 6}: they plan.');
+    .replace('- Round start: every creature gains {rules.energyPerRound} Energy.', '- Round start: every creature\n  gains {rules.energyPerRound} Energy{?rules.energyPerRound = 9}.\n- Command{?rules.teamSize = 6}: they plan.');
   const errors = errorsOf(inputs({ parts: [{ file: '01-the-goal.md', text: lines }], words: { ...inputs().words, en: [...inputs().words.en, 'Then', 'Command'] } }));
   const at = fact => errors.find(error => error.includes(fact))?.split(': ')[0];
   assert.equal(at('rules.teamSize = 4'), 'rules/01-the-goal.md:4');
@@ -359,7 +359,7 @@ test('a value that fails names the line that holds it, inside a paragraph or a l
 // #884: an unknown capitalised word, a retired word and a count without its noun name their own line too.
 test('a word the book refuses names the line that holds it, inside a paragraph or a list item', () => {
   const lines = goal.replace('Two players, each with {rules.teamSize} creatures.', 'Two players,\neach with {rules.teamSize} **creatures** and a [Fireball](#winning).\nThey buy a Package for {rules.teamSize} rounds.')
-    .replace('- Upkeep: every creature gains {rules.energyPerRound} Energy.', '- Upkeep: every creature\n  gains {rules.energyPerRound} Energy and a Firebolt.');
+    .replace('- Round start: every creature gains {rules.energyPerRound} Energy.', '- Round start: every creature\n  gains {rules.energyPerRound} Energy and a Firebolt.');
   const errors = errorsOf(inputs({ parts: [{ file: '01-the-goal.md', text: lines }] }));
   const at = word => errors.filter(error => error.includes(word)).map(error => error.split(': ')[0]);
   assert.deepEqual(at('"Fireball"'), ['rules/01-the-goal.md:4']);
@@ -374,7 +374,9 @@ test('a word the book refuses names the line that holds it, inside a paragraph o
 
 test('refuses an engine word where the player\'s word exists, from the terminology page', () => {
   refuses(withGoal('Two players', 'Two players buy a Package'), /"Package": the player's word is Mutation/);
-  refuses(withGoal('Upkeep: every', 'StartOfRound: every'), /"StartOfRound": the player's word is Upkeep/);
+  refuses(withGoal('Round start: every', 'StartOfRound: every'), /"StartOfRound": the player's word is Round start/);
+  refuses(withGoal('Round start: every', 'Upkeep: every'), /"Upkeep": the player's word is Round start/);
+  refuses(withGoal('Round start: every', 'At each upkeep, every'), /"Upkeep": the player's word is Round start/);
   refuses(withGoal('*at its slot*', '*at its Quick slot*'), /"Quick": the player's word is Instinct/);
   refuses(withGoal('## A round {#a-round}', '## A Speed {#a-round}'), /"Speed": the player's word is Tempo/);
   refuses(withGoal('title: Health', 'title: Tier'), /"Tier": the player's word is Stage/);
@@ -465,7 +467,7 @@ title: Santé
 
 ## Un round {#a-round}
 
-- Entretien : chaque créature gagne {rules.energyPerRound} Énergie.
+- Début du round : chaque créature gagne {rules.energyPerRound} Énergie.
 - Combat : *à son tour*, une créature lance un sort. Voir [gagner](#winning).
 
 | Valeur | Référence |
@@ -513,7 +515,8 @@ test('refuses a French section citing other sources or carrying another card tha
 });
 
 test('refuses in French an English player\'s word the French replaced, and the engine\'s words as in English', () => {
-  refuses(withFrench('- Entretien :', '- Upkeep :'), /rules\/fr\/01-the-goal\.md:\d+: "Upkeep": the player's word is Entretien/);
+  refuses(withFrench('- Début du round :', '- Round start :'), /rules\/fr\/01-the-goal\.md:\d+: "Round start": the player's word is Début du round/);
+  refuses(withFrench('- Début du round :', '- Upkeep :'), /rules\/fr\/01-the-goal\.md:\d+: "Upkeep": the player's word is Début du round/);
   refuses(withFrench('Un round', 'Un Stage'), /"Stage": the player's word is Stade/);
   refuses(withFrench('Deux joueurs', 'Deux joueurs prennent un Tier'), /"Tier": the player's word is Stade/);
   assert.deepEqual(errorsOf(withFrench('Deux joueurs', 'Deux joueurs en Évolution, en Précision, avec un Tempo')), []);
@@ -597,4 +600,17 @@ test('a link to the rules is /rules#<id>, wherever it is written; the pages\' te
   assert.ok(conceptIds.includes('health') && conceptIds.includes('tempo'));
   const ceiling = /DefenseBuffCeiling = (\d+);/.exec(readFileSync(join(root, 'src/DownfallArena.Domain/Matches/Creatures/Creature.cs'), 'utf8'))[1];
   assert.deepEqual(engine, { defenseBuffCeiling: Number(ceiling) }, 'the engine\'s values are read from the domain\'s source');
+});
+
+// The round's start and its end lost their names of a phase (player-terminology.md, ## Round phases). The build
+// refuses the English ones from the page's legacy column; the French ones have no column, so the book is read here.
+test('neither edition names a round\'s start or end by the word it had: Upkeep, Aftermath, Entretien, Retombées', () => {
+  const old = /\b(upkeeps?|aftermaths?|entretiens?|retombées?)(?![\p{L}\d])/iu;
+  for (const folder of ['rules', 'rules/fr']) {
+    for (const file of readdirSync(join(root, folder)).filter(name => /^\d\d-.*\.md$/.test(name) || name === 'changes.md')) {
+      // A drawn value names the content's own field (`tier:archmage:v1.upkeepEnergy`): it is not a word of the book.
+      const lines = readFileSync(join(root, folder, file), 'utf8').replace(/\{[^{}]*\}/g, '').split('\n');
+      assert.deepEqual(lines.filter(line => old.test(line)), [], `${folder}/${file}`);
+    }
+  }
 });
