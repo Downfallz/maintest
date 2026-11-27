@@ -446,6 +446,11 @@ and the amount, a drop for damage with a CRIT mark when critical, a heart for he
 condition's own icon for a condition applied, the same dimmed for one ending. Spell outcomes at impact, upkeep
 ticks and aftermath ends all use it, above the creature and in the reading card, where they gather by the
 creature they landed on. The engine's words stay in each chip, unseen, for screen readers and History.
+While the caster's `Crit!` says the critical on the field, the chip over a creature says its number alone, with
+no CRIT mark and no gold edge (`fieldChips`, #1309): the word, the chip and the card were three marks of one critical
+on a phone. The reading card, the last result and History keep the mark beside the number. So does the field's chip
+when no word is drawn: a record that kept no roll, or a caster its own cast felled (`wordCaster`). A screen reader
+hears the critical once, in the result the live region tells; the field's chips are hidden from it.
 
 Received sequence, presented sequence and the last explicit **Next** are separate. Auto/Skip do not claim
 an item was explicitly read. A presented upkeep, or one the player passes over with Skip or by opening a live choice, suppresses the

@@ -3,7 +3,7 @@ import { openSpells } from './battle-spells-fixture.js';
 import { audioModule, probeAudio } from './battle-audio-probe.js';
 import { readFileSync } from 'node:fs';
 import { actionCue } from '../../table/battle-playback.js';
-import { WINDUP_MS, IMPACT_MS, SETTLE_MS } from '../../table/battle-timing.js';
+import { WINDUP_MS, IMPACT_MS, SETTLE_MS, REDUCED_MS } from '../../table/battle-timing.js';
 import { mountSpellScene, spellFrame, presentSpell, renderedEffects, actorPosition } from './battle-spell-scene.js';
 import { returningBattlePlayer } from './battle-help-fixture.js';
 import { fitsViewport } from './fit.js';
@@ -23,10 +23,65 @@ test('a cast that crit says Crit! beside the caster as it lands, with no die, an
   await page.clock.runFor(860);
   // The field names the caster whose critical landed and nothing of the roll (ADR 0208): no face, no threshold.
   await expect(page.locator('#battle')).toHaveAttribute('data-crit', '3');
-  // The word has settled in (180 ms) before it is pictured.
-  await page.clock.runFor(300);
-  await page.screenshot({ path: info.outputPath('critical-word.jpg'), type: 'jpeg', quality: 85 });
-  await page.clock.runFor(4000);
+  // The word says the critical on the field, so the chip over the target says the number alone (#1309); the dock's
+  // card keeps its mark beside the number, and the live region says "critical" once.
+  const chip = page.locator('[data-creature="4"] .creature-effect .effect-chip');
+  await expect(chip.locator('.chip-value')).toHaveText('−7'); await expect(chip.locator('.chip-crit')).toHaveCount(0);
+  await expect(chip).not.toHaveAttribute('data-critical', 'true'); await expect(chip).toContainText('Damage 7!');
+  await expect(page.locator('#reading-detail .chip-crit')).toHaveText('CRIT');
+  expect((await page.locator('#playback-announcement').textContent()).match(/critical/gi)).toHaveLength(1);
+  // The frames the word's storyboard reads (docs/art/storyboards/movement.md, "A critical's word"), in ms from the start
+  // of the cast: its entry with the view's punch, the word at rest (200 ms after the contact), the caster home under it,
+  // the settle, then the frame after the result left. The bench films the same times (`filmstrip.mjs --crit`).
+  const shot = ms => page.screenshot({ path: info.outputPath(ms === 1160 ? 'critical-word.jpg' : `critical-word-${ms}.jpg`), type: 'jpeg', quality: 85 });
+  await shot(860);
+  let at = 860;
+  for (const ms of [900, 1040, 1160, 1800, 2600, 3000]) {
+    await page.clock.runFor(ms - at); at = ms;
+    await expect(page.locator('#battle')).toHaveAttribute('data-crit', '3'); await shot(ms);
+  }
+  // The player's own cast waits for no OK: the word leaves with the result, one settle after the impact.
+  await page.clock.runFor(WINDUP_MS + IMPACT_MS + SETTLE_MS - at);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./);
+  await page.clock.runFor(60); await shot(3100);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./); expect(h.errors).toEqual([]);
+});
+// #1309: the word was pictured beside an ally at the right edge only. An opponent's caster stands in the top row, under
+// the OPPONENT label; a caster in the middle of a row has a neighbour on each side; and on a short screen the top row
+// is where the word's top limit (calloutSpot) can bring it down onto the acting rim.
+const CRIT_CASES = [['opponent', 'an opponent\'s caster in the top row', 6, 1, false], ['middle', 'a caster in the middle of a row', 2, 5, false],
+  ['short', 'an opponent\'s caster on a short screen', 6, 1, true]];
+for (const [name, where, actor, target, short] of CRIT_CASES) test(`Crit! is pictured beside ${where}`, async ({ page }, info) => {
+  test.setTimeout(60000);
+  if (short) await page.setViewportSize({ width: page.viewportSize().width, height: page.viewportSize().width < 900 ? 568 : 600 });
+  const h = await mount(page);
+  await h.publish([entry(12), entry(10, { actor, targets: [target], criticalRoll: 19, after: before.map(one => creature(one.id, one.id === target ? 13 : 20)) })]);
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
+  // The word at rest: 320 ms after the contact, as the first picture.
+  await page.clock.runFor(1160);
+  await expect(page.locator('#battle')).toHaveAttribute('data-crit', String(actor));
+  // The docked spell choice has stepped aside for the result: the field the word stands on is the whole one.
+  await expect(page.locator('#battle')).toHaveAttribute('data-docked', 'false');
+  await expect(page.locator(`[data-creature="${target}"] .creature-effect .chip-crit`)).toHaveCount(0);
+  await page.screenshot({ path: info.outputPath(`critical-word-${name}.jpg`), type: 'jpeg', quality: 85 });
+  expect(h.errors).toEqual([]);
+});
+test('with less motion Crit! is there on the frame after the action, with the number alone over the target, and leaves with the result', async ({ page }, info) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const h = await mount(page);
+  await h.publish([entry(12), entry(10, { actor: 3, criticalRoll: 19 })]);
+  // No windup: the frame after the action is shown at once, the word on it.
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'impact');
+  await expect(page.locator('#battle')).toHaveAttribute('data-crit', '3');
+  const chip = page.locator('[data-creature="4"] .creature-effect .effect-chip');
+  await expect(chip.locator('.chip-value')).toHaveText('−7'); await expect(chip.locator('.chip-crit')).toHaveCount(0);
+  // The field closed its docked sheet for the result and is blank until it is drawn again: a few frames, then the picture.
+  await page.clock.runFor(120);
+  await page.screenshot({ path: info.outputPath('critical-word-less-motion.jpg'), type: 'jpeg', quality: 85 });
+  // The rest of that frame's reading time, then the settle that holds the result: the word is the result's, and leaves with it.
+  await page.clock.fastForward(REDUCED_MS - 120);
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'resolved'); await expect(page.locator('#battle')).toHaveAttribute('data-crit', '3');
+  await page.clock.fastForward(SETTLE_MS);
   await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./); expect(h.errors).toEqual([]);
 });
 test('a cast that could crit and did not shows nothing on the caster', async ({ page }, info) => {
@@ -51,6 +106,8 @@ test('ordered confirmed frames reveal damage at impact and never replay duplicat
   await fits(page); await page.clock.runFor(860);
   await expect(page.locator('[data-creature="4"] .creature-stats')).toContainText('13/20');
   await expect(page.locator('[data-creature="4"] .creature-effect')).toContainText('Damage 7!');
+  // A record that kept no roll draws no word on the field (ADR 0208): the chip is the field's one mark, and keeps it.
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./); await expect(page.locator('[data-creature="4"] .creature-effect .chip-crit')).toHaveText('CRIT');
   await page.screenshot({ path: info.outputPath('confirmed-impact.jpg'), type: 'jpeg', quality: 85 });
   // From each of the playback's timers to the next, rather than every software frame of the scene between them (#784):
   // the 860 ms above are inside the impact, which ends one windup and one impact after the cast began.

@@ -173,6 +173,24 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
     struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes, roll };
 }
 
+// The caster the field says `Crit!` beside (ADR 0208): the caster of a cue that crit, once its result is on the field
+// (`landed`), and only one that stands, since the scene draws no word beside a fallen figure.
+export function wordCaster(cue, frame, landed) {
+  if (!landed || cue?.roll?.critical !== true || frame?.actor == null) return null;
+  return frame.creatures?.some(one => one.id === frame.actor && one.isAlive) ? frame.actor : null;
+}
+
+// The chips over one creature while an action's result is on the field. When the caster's `Crit!` says the critical
+// there (`word`), a chip says its number alone: the word, the mark in the dock's card and a mark on the chip were
+// three marks of one critical on a phone (docs/art/storyboards/movement.md, "A critical's word", settled 2026-11-27).
+// With no word on the field (a record that kept no roll, a caster its own cast felled), the chip keeps its mark.
+// The chip's words are left as they are: the field's chips are hidden from a screen reader, which hears the critical
+// once, in the live region's result.
+export function fieldChips(cue, creature, word = false) {
+  return (cue?.effects ?? []).filter(item => item.creature === creature)
+    .map(item => word && item.chip?.critical ? { ...item.chip, critical: false } : item.chip);
+}
+
 // The one live region tells each result once (#1267). When a new result reads word for word like the one before,
 // the region is cleared and written again later, because a screen reader does not repeat an unchanged text. `later`
 // waits long enough for a screen reader to hear the empty region (live.ts gives it 150 ms); until then the same

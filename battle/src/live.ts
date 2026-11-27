@@ -13,7 +13,7 @@ import { growthControls } from './growth';
 import { atlasControls } from './mutation-atlas';
 import { createBattleUpkeep, roundBar } from '../../table/battle-upkeep.js';
 import { upkeepControls } from './upkeep';
-import { createAnnouncer, createBattlePlayback } from '../../table/battle-playback.js';
+import { createAnnouncer, createBattlePlayback, fieldChips, wordCaster } from '../../table/battle-playback.js';
 import { createBattleHistory } from '../../table/battle-history.js';
 import { historyControls } from './history';
 import { buildRecap, recapOpensOnItsOwn } from '../../table/battle-recap.js';
@@ -705,13 +705,17 @@ function render() {
   // Every effect on a creature is a chip above it: a spell's outcomes at impact, an upkeep tick, a condition
   // ending. Only a turnover with no recorded board to stand on keeps its plaques in the scene, by name.
   const impact = Boolean(playbackState.cue) && (playbackState.stage === 'impact' || playbackState.stage === 'resolved');
+  // A caster's critical as its action lands (ADR 0208): the word `Crit!` beside it, never a die. A cast that could
+  // crit and did not shows nothing, and a tie's draw is said in the order's words alone.
+  const critCaster = wordCaster(playbackState.cue, frame, impact);
   type OrderRow = { id: string; position: number; tempo: string; speed: string; tie: string };
   const orderRows = new Map<string, OrderRow>(orderUI.isReading() && !replay.active ? (order.rows as OrderRow[]).map(row => [row.id, row]) : []);
   for (const one of creatures) {
     const node = nodes.get(one.id); if (!node) continue;
     const place = orderRows.get(one.id);
     const chips: EffectChip[] = place ? [{ kind: 'order', value: String(place.position), label: place.tempo, tempo: place.speed, text: `Turn ${place.position} · ${place.tempo}${place.tie ? ` · ${place.tie}` : ''}` }] : impact
-      ? (playbackState.cue?.effects ?? []).filter((item: { creature: string }) => item.creature === one.id).map((item: { chip: EffectChip }) => item.chip)
+      // While that word says the critical, the chip over the target says the number alone (#1309).
+      ? fieldChips(playbackState.cue, one.id, critCaster !== null) as EffectChip[]
       : (markers ?? []).filter((marker: { id: string }) => marker.id === one.id).flatMap((marker: { lines: { chip?: EffectChip; text: string }[] }) => marker.lines.map(line => line.chip ?? { kind: 'other', value: line.text, text: line.text }));
     effectChips(node, chips);
   }
@@ -726,10 +730,7 @@ function render() {
   if (unlocks) frame = { ...frame, reveal: { round: unlocks.round, inset, markers: unlocks.rows.map((row: GrowthRow) => ({
     id: String(row.creature), mutation: row.mutation, stage: row.stage, colour: row.colour, gains: row.spells,
     fallback: row.passives.length ? 'New passive' : row.initiative ? `${row.initiative > 0 ? '+' : ''}${row.initiative} initiative` : 'No new spell' })) } };
-  // A caster's critical as its action lands (ADR 0208): the word `Crit!` beside it, never a die. A cast that could
-  // crit and did not shows nothing, and a tie's draw is said in the order's words alone.
-  const landed = impact ? (playbackState.cue as { roll?: { critical: boolean } | null } | null)?.roll : null;
-  const crit = landed?.critical && frame.actor ? { id: frame.actor, key: `crit:${playbackState.sequence}` } : null;
+  const crit = critCaster === null ? null : { id: critCaster, key: `crit:${playbackState.sequence}` };
   // Each creature's lasting conditions as its badges name them, which the scene draws on its figure (battle-auras.js).
   frame = { ...frame, crit, creatures: frame.creatures.map(one => ({ ...one,
     statuses: conditionIcons(one as Parameters<typeof conditionIcons>[0], catalogue?.effects ?? []).map(icon => icon.key) })) };

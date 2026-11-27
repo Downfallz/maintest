@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { SETTLE_MS as SETTLE } from './battle-timing.js';
-import { createBattlePlayback, actionCue, createAnnouncer } from './battle-playback.js';
+import { createBattlePlayback, actionCue, createAnnouncer, fieldChips, wordCaster } from './battle-playback.js';
 const creature = (id, health = 20) => ({ id, health, maxHealth: 20, energy: 5, totalDefense: 2, isAlive: health > 0, name: `Creature ${id}` });
 const before = [creature(1), creature(2), creature(3)];
 const timeline = [1, 2, 3].map(creature => ({ creature, owner: creature === 1 ? 'Player1' : 'Player2', speed: 'Standard' }));
@@ -631,4 +631,36 @@ test('the announcer says a result again when the next one reads word for word th
   announce(7, ''); announce(7, 'Pummel'); assert.equal(region.textContent, 'Pummel', 'a windup, then its impact, write at once');
   announce(8, 'Pummel'); announce(9, 'Guard');
   frames.shift()(); assert.equal(region.textContent, 'Guard', 'a rewrite overtaken by a newer result does not replace it');
+});
+
+// #1309: three marks of one critical on a phone (the caster's word, the target's chip, the dock's card) was one too many.
+test('while the caster\'s Crit! says the critical on the field, the chip over the target says the number alone', () => {
+  const hit = { status: 'Critical', criticalRoll: 19, actor: { id: 1 }, effects: [
+    { target: { id: 2 }, tone: 'harm', kind: 'DamageOutcome', amount: 7, critical: true, text: 'Damage 7!' },
+    { target: { id: 2 }, tone: 'harm', kind: 'ConditionOutcome', effect: { kind: 'Bleed', amountPerRound: 2 }, text: 'Bleed 2' },
+    { target: { id: 3 }, tone: 'harm', kind: 'DamageOutcome', amount: 4, critical: true, text: 'Damage 4!' }] };
+  const cue = actionCue(hit);
+  // With no word on the field, the chip is the only mark there, and keeps it.
+  assert.deepEqual(fieldChips(cue, '2', false).map(chip => [chip.value, chip.critical]), [['−7', true], ['Bleed 2', undefined]]);
+  // With the word, the number alone; the engine's words stay as they were, for whoever reads them.
+  assert.deepEqual(fieldChips(cue, '2', true), [{ kind: 'damage', value: '−7', critical: false, text: 'Damage 7!' }, cue.effects[1].chip]);
+  assert.deepEqual(fieldChips(cue, '3', true).map(chip => [chip.value, chip.critical]), [['−4', false]]);
+  // The cue's own chips are not changed: the dock's card draws the same outcomes with their mark.
+  assert.equal(cue.effects[0].chip.critical, true);
+  assert.deepEqual(fieldChips(cue, '9', true), []);
+  assert.deepEqual(fieldChips(null, '2', true), []);
+});
+
+test('the field says Crit! beside the caster of a cue that crit, once it lands, and only one that stands', () => {
+  const frame = { actor: '1', creatures: [{ id: '1', isAlive: true }, { id: '2', isAlive: true }] };
+  const crit = { roll: { critical: true } };
+  assert.equal(wordCaster(crit, frame, true), '1');
+  // Not before the blow lands, not for a cast that did not crit or could not, and not without a caster.
+  assert.equal(wordCaster(crit, frame, false), null);
+  assert.equal(wordCaster({ roll: { critical: false } }, frame, true), null);
+  assert.equal(wordCaster({ roll: null }, frame, true), null);
+  assert.equal(wordCaster(null, frame, true), null);
+  assert.equal(wordCaster(crit, { ...frame, actor: null }, true), null);
+  // A caster its own cast felled has no word beside it (the scene draws none): the chip keeps the mark then.
+  assert.equal(wordCaster(crit, { actor: '1', creatures: [{ id: '1', isAlive: false }] }, true), null);
 });
