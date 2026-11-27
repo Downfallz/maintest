@@ -35,6 +35,22 @@ export function mutationReference(view, catalogue, selectedId) {
     next: !view?.over && Number.isInteger(board?.nextEvolutionRound) && board.nextEvolutionRound >= (board.roundNumber ?? 0) ? board.nextEvolutionRound : null };
 }
 
+const whole = value => (Number.isInteger(value) && value > 0 ? value : null);
+
+/**
+ * When the mutation rounds come, read from what the host serves and never worked out here (ADR 0056): the board's
+ * next mutation round, this one included, and the one after it; the rule set's gap between two and its picks.
+ * `now` is a mutation round, `soon` the round before one. Nothing is named before the match begins or once it is over.
+ */
+export function mutationSchedule(view, catalogue) {
+  const board = view?.board, live = Boolean(board) && !view.over && !view.waiting && Number.isInteger(board.roundNumber);
+  const round = live ? board.roundNumber : null;
+  const next = live && whole(board.nextEvolutionRound) >= round ? board.nextEvolutionRound : null;
+  const following = next !== null && whole(board.followingEvolutionRound) > next ? board.followingEvolutionRound : null;
+  return { round, now: next !== null && next === round, soon: next !== null && next === round + 1, next, following,
+    interval: whole(catalogue?.rules?.evolutionInterval), picks: whole(catalogue?.rules?.evolutionPicksPerOpportunity) };
+}
+
 const PAST_TEMPOS = ['TurnOrderResolution', 'TieOrder', 'IntentSelection', 'Activation', 'Cleanup', 'Finalization'];
 function tempoCommitted(board, round) {
   if ((board.roundNumber ?? 0) > round || PAST_TEMPOS.includes(board.subPhase)) return true;

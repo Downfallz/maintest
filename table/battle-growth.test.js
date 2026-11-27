@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crestInset, mutationReference, createBattleGrowth } from './battle-growth.js';
+import { crestInset, mutationReference, mutationSchedule, createBattleGrowth } from './battle-growth.js';
 const catalogue = { cards: [{ id: 'new', name: 'Devour' }], packages: [
   { id: 'root', name: 'Predator', level: 1, spells: ['old', 'new'] },
   { id: 'other', name: 'Brute', level: 1, spells: [] },
@@ -150,4 +150,28 @@ test('no crest inset without a receipt in view or a stage to stand on', () => {
   assert.equal(crestInset({ bottom: 120, height: 60 }, undefined, 'none'), 0);
   // A receipt above the stage leaves it whole.
   assert.equal(crestInset({ bottom: 20, height: 20 }, { top: 40 }, 'none'), 0);
+});
+
+// F3 of docs/tabletop/first-playtest-plan.md: when the mutation rounds come is the host's to say. The board names the
+// next one (this round included) and the one after it; the rule set names the gap and the picks.
+const scheduled = (roundNumber, nextEvolutionRound, followingEvolutionRound, extras = {}) => ({ board: { roundNumber, nextEvolutionRound, followingEvolutionRound, allies: [], enemies: [] }, ...extras });
+const rules = { rules: { evolutionInterval: 2, evolutionPicksPerOpportunity: 2 } };
+test('the schedule says a mutation round, the round before one, and the round the next one comes', () => {
+  assert.deepEqual(mutationSchedule(scheduled(3, 3, 5), rules), { round: 3, now: true, soon: false, next: 3, following: 5, interval: 2, picks: 2 });
+  assert.deepEqual(mutationSchedule(scheduled(4, 5, 7), rules), { round: 4, now: false, soon: true, next: 5, following: 7, interval: 2, picks: 2 });
+  const far = mutationSchedule(scheduled(2, 6, 10), rules);
+  assert.equal(far.now, false); assert.equal(far.soon, false); assert.equal(far.next, 6);
+});
+test('the schedule names nothing the host did not serve, and nothing once the match is over or not begun', () => {
+  const bare = mutationSchedule(scheduled(11, 11, null), {});
+  assert.deepEqual(bare, { round: 11, now: true, soon: false, next: 11, following: null, interval: null, picks: null });
+  const last = mutationSchedule(scheduled(12, null, null), rules);
+  assert.equal(last.now, false); assert.equal(last.soon, false); assert.equal(last.next, null);
+  for (const quiet of [null, {}, scheduled(3, 3, 5, { over: true }), scheduled(3, 3, 5, { waiting: { seats: [] } }), scheduled(undefined, 3, 5)]) {
+    assert.deepEqual(mutationSchedule(quiet, rules), { round: null, now: false, soon: false, next: null, following: null, interval: 2, picks: 2 });
+  }
+  // A board older than its field (a deploy in between) never reads as a schedule: a past round is not "next".
+  assert.equal(mutationSchedule(scheduled(4, 3, 5), rules).next, null);
+  assert.equal(mutationSchedule(scheduled(4, 5, 5), rules).following, null);
+  assert.equal(mutationSchedule(scheduled(4, 5, 7), { rules: { evolutionInterval: 0, evolutionPicksPerOpportunity: 1.5 } }).interval, null);
 });
