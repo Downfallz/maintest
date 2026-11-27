@@ -12,19 +12,17 @@ function availability(id, model, card, guide) {
 }
 
 // The crit chance as the card's chip shows it, and what it holds for: this turn's tempo, from the host's guide, or
-// the card's own stat, which says which tempo crits and the face of the d20 the table rolls.
-// `face` is what the chip keeps on a card in its column: the d20's face, which only the catalogue's chance has.
+// the card's own stat, which says which tempo crits. A chance is a percent and nothing else (ADR 0208).
 // At Instinct a spell never crits: the chip stays, `idle`, with the chance it would have at Precision, the host's
 // or else the card's own (UX12 P8). The page computes no chance.
 function critical(card, guide) {
   const stat = cardStats(card)[0];
-  const catalogued = hint => stat ? { value: stat.value, hint, face: card.criticalThreshold ? `d20 ${card.criticalThreshold}+` : '' } : null;
+  const catalogued = hint => stat ? { value: stat.value, hint } : null;
   if (guide?.chosenSpeed === 'Quick') {
     const value = guide.standardCriticalChance;
     if (Number.isFinite(value)) return value > 0 ? { value: chance(value), hint: 'at Precision', idle: true } : null;
-    // No die is rolled for a chance that does not hold this turn: the chip keeps no face.
     const own = catalogued('at Precision · catalogue');
-    return own ? { value: own.value, hint: own.hint, idle: true } : null;
+    return own ? { ...own, idle: true } : null;
   }
   const value = guide?.standardCriticalChance;
   if (Number.isFinite(value)) return value > 0 ? { value: chance(value), hint: 'at this tempo' } : null;

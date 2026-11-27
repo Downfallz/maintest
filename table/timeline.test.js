@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bands, cursorOf, rollText, side, speedReveal, withCursor } from './timeline.js';
+import { bands, cursorOf, tieText, side, speedReveal, withCursor } from './timeline.js';
 
 const timeline = [
   { owner: 'Player1', creature: 2, speed: 'Quick', initiative: 6 },
@@ -72,19 +72,19 @@ test('a strip pointing at nothing lights no slot', () => {
   assert.deepEqual(slots.map(slot => slot.isNow), [false, false]);
 });
 
-// ADR 0063: the dice are public, and a slot shows the rolls behind its place -- every roll, since a creature the
-// other side matched rolled again -- and nothing when it did not roll.
-test('a slot reads the rolls behind its place, and nothing when it did not roll', () => {
+// ADR 0208: the record keeps the faces (ADR 0063); a slot says only that a tie between the teams was settled at
+// random, the same words whatever was rolled and however often, and nothing when nothing was drawn for it.
+test('a slot a tie between the teams placed says it was settled at random, and nothing otherwise', () => {
   const rollOffs = [{ creature: 2, rolls: [17] }, { creature: 4, rolls: [11, 4] }];
 
-  assert.equal(rollText(rollOffs, 2), 'd20 17');
-  assert.equal(rollText(rollOffs, 4), 'd20 11 → 4');
-  assert.equal(rollText(rollOffs, 1), '');
-  assert.equal(rollText(undefined, 1), '');
+  assert.equal(tieText(rollOffs, 2), 'Tie settled at random');
+  assert.equal(tieText(rollOffs, 4), 'Tie settled at random');
+  assert.equal(tieText(rollOffs, 1), '');
+  assert.equal(tieText(undefined, 1), '');
 });
 
 // The pop-up that follows the reveal reads the host's timeline and nothing else: each side's speeds in the order
-// played, and every slot with its initiative and roll.
+// played, and every slot with its initiative and whether a random tie placed it.
 test('revealed speeds are read per side off the timeline, in the order played', () => {
   const reveal = speedReveal({ slot: 'Player1', timeline, rollOffs: [{ creature: 4, rolls: [11, 4] }], subPhase: 'Activation', activationCursor: 1 });
 
@@ -92,6 +92,7 @@ test('revealed speeds are read per side off the timeline, in the order played', 
   assert.deepEqual(reveal.mine, [{ creature: 2, speed: 'Quick' }, { creature: 1, speed: 'Standard' }]);
   assert.deepEqual(reveal.order.map(slot => [slot.position, slot.creature, slot.side, slot.isNow]),
     [[1, 2, 'ally', false], [2, 4, 'enemy', true], [3, 1, 'ally', false], [4, 3, 'enemy', false]]);
-  assert.equal(reveal.order[1].roll, 'd20 11 → 4');
+  assert.equal(reveal.order[1].tie, 'Tie settled at random');
+  assert.equal(reveal.order[0].tie, '');
   assert.deepEqual(speedReveal({ slot: 'Player1' }), { order: [], theirs: [], mine: [] });
 });

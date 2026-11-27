@@ -21,7 +21,7 @@
 .order-header h2 { margin: 0 0 8px; font: 25px var(--font-display); color: var(--gold); }
 #order-summary { margin: 0; font-size: 13px; line-height: 1.5; }
 #order-body { overflow: auto; min-height: 0; padding: 0 18px 14px; overscroll-behavior: contain; }
-#order-explanation, #order-roll-note { font-size: 13px; line-height: 1.5; color: #c2d1c9; }
+#order-explanation, #order-tie-note { font-size: 13px; line-height: 1.5; color: #c2d1c9; }
 #order-list { margin: 0; padding: 0; list-style: none; }
 .order-row { border-left: 3px solid #90bca6; padding: 8px 12px; margin-top: 8px; background: #1b3034; }
 .order-row[data-team="Opponent"] { border-left-color: #d39c85; }
@@ -31,7 +31,7 @@
 .order-heading button { min-height: 44px; flex: 1; min-width: 0; text-align: left; overflow-wrap: anywhere; }
 .order-position { font: 25px var(--font-display); color: var(--gold); }
 .order-state { font-size: 12px; }
-.order-roll { color: #e2c998; }
+.order-tie { color: #e2c998; }
 .order-band { font-size: 14px; color: var(--gold); margin: 0 0 6px; }
 .order-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; border-top: 1px solid #52695e; }
 .order-footer { justify-content: flex-start; font-size: 14px; letter-spacing: normal; }
@@ -1546,7 +1546,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
           mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='square' stroke-linejoin='miter'%3E%3Cpath d='M9.5 5l7 7-7 7'/%3E%3C/svg%3E") center / contain no-repeat; }
 
 /* The order sheet reads like the other sheets: an eyebrow over the round, each tempo band a chip, each creature a card
-   with its place as the tempo's badge, its state as a chip, its facts as chips and its d20 roll in gold. */
+   with its place as the tempo's badge, its state as a chip, its facts as chips and a tie settled at random in gold. */
 #order-dialog { border: 0; border-top: 2px solid var(--gold); border-radius: var(--radius-soft); background: var(--panel); box-shadow: 0 18px 60px #000a; }
 #order-dialog .order-header { padding: 16px 18px 12px; background: radial-gradient(120% 140% at 0% 0%, #eac88e1f, transparent 60%); }
 #order-dialog .order-header .eyebrow { margin: 0 0 4px; color: var(--gold); letter-spacing: 2px; }
@@ -1577,8 +1577,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 #order-dialog .order-row[data-team="Your team"] .order-team { border-color: #8cc7ad66; color: #a8dcc2; }
 #order-dialog .order-row[data-team="Opponent"] .order-team { border-color: #d98b6f66; color: #f0b39c; }
 #order-dialog .order-condition { border-color: #d98b6f55; }
-#order-dialog .order-roll { margin: 8px 0 0; color: #e2c998; font-size: 12px; }
-#order-dialog .order-roll-none { color: var(--muted); }
+#order-dialog .order-tie { margin: 8px 0 0; color: #e2c998; font-size: 12px; }
 #order-dialog .order-footer { justify-content: stretch; padding: 12px 18px 16px; border-top: 1px solid #82958233; background: transparent; }
 #order-dialog .order-footer #order-close { flex: 1; min-height: 46px; border-radius: var(--radius-sharp); font-weight: 600; }
 
@@ -1595,7 +1594,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 
 /* The order of tied creatures docks like the other planning sheets: each tie a card with its shared places as the
    order's gold badges and who takes each now, the creatures still to place as pills to tap in acting order, and the
-   dice and the opponent's fixed places in small type under them. History and Help stay in the field's header. */
+   random tie and the opponent's fixed places in small type under them. History and Help stay in the field's header. */
 #planning-dialog[data-kind="TieOrder"] .planning-header { grid-template-rows: minmax(44px, auto) auto; }
 #planning-dialog[data-kind="TieOrder"] #planning-heading { align-self: center; margin: 0; }
 #planning-dialog[data-kind="TieOrder"] #planning-help { grid-area: 2 / 1 / auto / -1; align-self: start; margin: 0 0 6px; color: #c9b88f; font-size: 11px; line-height: 1.4; }
@@ -1605,8 +1604,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
   background: linear-gradient(180deg, #17303a, #132429); }
 .tie-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tie-head h3 { margin: 0; font: 18px var(--font-display); color: var(--ink); }
-.tie-roll { padding: 3px 10px; border: 1px solid #52695e; border-radius: var(--radius-sharp); color: #b8c9bd; font: 600 11px/1.2 system-ui, sans-serif; }
-.tie-roll[data-rolled="true"] { border-color: #eac88e66; color: #e2c998; }
+.tie-kind { padding: 3px 10px; border: 1px solid #52695e; border-radius: var(--radius-sharp); color: #b8c9bd; font: 600 11px/1.2 system-ui, sans-serif; }
+.tie-kind[data-random="true"] { border-color: #eac88e66; color: #e2c998; }
 .tie-places { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
 .tie-place { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px 4px 4px; border: 1px solid #3f554d; border-radius: var(--radius-sharp); background: #0f1f24; color: var(--ink); font-size: 13px; }
 .tie-badge { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #eac88e; color: #142126; font: 800 12px/1 system-ui, sans-serif; }
@@ -1775,10 +1774,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 }
 
 /* The turn order, interactive: a strip entry lights its creature on the field in ice blue (never the acting gold),
-   says its initiative and whether a d20 placed it, and opens a card at the top of the field saying why it holds
+   says its initiative and whether a random tie placed it, and opens a card at the top of the field saying why it holds
    its place. The same blue numbers the tied creatures while the seat orders them. */
 #timeline .timeline-init { display: inline-flex; align-items: center; gap: 1px; margin-left: 6px; color: #b9d9f2; font-weight: 700; }
-#timeline .timeline-die { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #2b2619; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
+#timeline .timeline-tie { margin-left: 6px; padding: 0 4px; border-radius: 4px; background: #2b2619; color: #eac88e; font: 700 9px/1.5 system-ui, sans-serif; letter-spacing: .04em; vertical-align: 1px; }
 #timeline li[data-focused="true"] > button { border-radius: var(--radius-soft); background: linear-gradient(180deg, #6fc3ff2e, #6fc3ff10); box-shadow: inset 0 0 0 1.5px #6fc3ffcc, 0 0 14px #6fc3ff40; }
 #timeline li[data-focused="true"] .timeline-name { color: #dff1ff; }
 .order-why { position: absolute; top: 8px; left: 8px; z-index: 20; width: min(340px, calc(100% - 16px)); padding: 12px 14px 12px; border: 1px solid #6fc3ff66; border-left: 3px solid #6fc3ff;
@@ -1805,20 +1804,10 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
 .order-why-lines { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13px; line-height: 1.4; color: #d7e6ec; }
 .order-why-lines li { padding-left: 14px; position: relative; }
 .order-why-lines li::before { content: ''; position: absolute; left: 2px; top: .55em; width: 5px; height: 5px; border-radius: 50%; background: #6fc3ff; }
-.order-why-dice { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.order-why-dice[hidden] { display: none; }
-.order-why-die { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; border: 1px solid #eac88e44; border-radius: 999px; background: #0c1a1f; font-size: 11px; color: #d7e6ec; }
-.order-why-die[data-team="enemy"] { border-color: #d98b6f55; }
-.order-why-die.is-self { border-color: #6fc3ffcc; box-shadow: 0 0 10px #6fc3ff33; color: #e8f5ff; }
-/* A d20 face: a hexagon in gold, its last throw on it. */
-.order-why-face { display: grid; place-items: center; width: 22px; height: 22px; clip-path: polygon(50% 0, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%); background: #eac88e; color: #142126; font: 800 10px/1 system-ui, sans-serif; }
 .order-why-inspect { flex: none; min-height: 44px; margin: -6px 0; padding: 4px 12px; font-size: 12px; }
-.order-why-throws { margin-left: 5px; color: #eac88e; font-weight: 700; }
 @media (max-width: 619px) {
   .order-why { padding: 10px 12px; }
   .order-why-lines { margin-top: 8px; gap: 3px; font-size: 12px; }
-  .order-why-dice { margin-top: 8px; gap: 4px; }
-  .order-why-die { padding: 2px 7px 2px 2px; font-size: 10.5px; }
   .order-why-who strong { font-size: 15px; }
 }
 
@@ -2164,7 +2153,7 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
    order of play's side line keeps its tempo and initiative. */
 #battle .hud-top .round > span, #battle .hud-top .round small,
 #battle .round small, #battle .round:has(~ #opponent-open:not([hidden])) small,
-#battle #timeline .timeline-name, #battle #timeline .timeline-side, #battle #timeline .timeline-die, #battle #no-timeline,
+#battle #timeline .timeline-name, #battle #timeline .timeline-side, #battle #timeline .timeline-tie, #battle #no-timeline,
 #battle .team-label, #battle #history-preview,
 #battle .opponent-vs, #battle .opponent-badge, #battle #round-toast .eyebrow,
 #battle :is(#instruction, #connection, #reading-kind),
@@ -2219,8 +2208,8 @@ html[data-feedback-muted] #match-dialog .match-footer #feedback-open-match { dis
   .battle-page[data-home="member"] .home-header { height: 44px; }
 }
 
-/* The order row's side line: the side, its tempo and the initiative mark, at 11 px; under 360 px the side and a die
-   alone, the rest a tap away in `#order-why`. */
+/* The order row's side line: the side, its tempo and the initiative mark, at 11 px; under 360 px the side and a tie's
+   mark alone, the rest a tap away in `#order-why`. */
 #timeline .timeline-init .cue-icon { width: 10px; height: 10px; }
 @media (max-width: 359px) { #timeline :is(.timeline-tempo, .timeline-init) { display: none; } }
 #battle .creature-init .cue-icon { width: 11px; height: 11px; }

@@ -256,7 +256,7 @@
           "type": "paragraph",
           "spans": [
             {
-              "text": "The app is the table. It keeps the count of every number, rolls every die and walks every step nobody decides. You make the decisions; this Part says what you see while you make them."
+              "text": "The app is the table. It keeps the count of every number, settles every chance and walks every step nobody decides. You make the decisions; this Part says what you see while you make them."
             }
           ]
         }
@@ -418,16 +418,23 @@
                     "strong": true
                   },
                   {
-                    "text": " The order of the turns, built from the tempos and the initiatives, with the d20 roll-offs that break a tie between the teams."
+                    "text": " The order of the turns, built from the tempos and the initiatives. A tie between the teams is settled at random: the timeline marks it, and a tap on a place says which team got the earlier place."
                   }
                 ],
                 [
                   {
-                    "text": "The dice.",
+                    "text": "The criticals.",
                     "strong": true
                   },
                   {
-                    "text": " Every critical roll, on a d20 the screen shows."
+                    "text": " Every critical chance, when its spell resolves. A cast that crits shows "
+                  },
+                  {
+                    "text": "Crit!",
+                    "strong": true
+                  },
+                  {
+                    "text": " beside its caster; a cast that does not shows nothing there. The history says the chance the cast had."
                   }
                 ],
                 [
@@ -480,6 +487,7 @@
             "ADR 0083",
             "ADR 0112",
             "ADR 0154",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": null
@@ -642,14 +650,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "The die never changes: it is a "
-                },
-                {
-                  "text": "d20",
-                  "strong": true
-                },
-                {
-                  "text": ", for the critical roll and the roll-off alike. Every critical chance a spell prints is a whole number of twentieths, so every spell that rolls prints the face it needs."
+                  "text": "A spell prints its critical chance as a percent: Incinerate prints Crit 35%. Every critical chance in the game is a multiple of 5%."
                 }
               ]
             }
@@ -659,6 +660,7 @@
             "ADR 0056",
             "ADR 0100",
             "ADR 0105",
+            "ADR 0208",
             "game-rules#implemented"
           ],
           "card": null
@@ -1191,7 +1193,7 @@
                     "text": " acts before every Precision creature, and "
                   },
                   {
-                    "text": "cannot roll a critical this round",
+                    "text": "cannot crit this round",
                     "strong": true
                   },
                   {
@@ -1204,7 +1206,7 @@
                     "strong": true
                   },
                   {
-                    "text": " acts after every Instinct creature, and keeps its critical roll."
+                    "text": " acts after every Instinct creature, and keeps its critical chance."
                   }
                 ]
               ]
@@ -1213,7 +1215,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Choose Instinct to land a blow that does not need the dice, or to act before something that would defeat you. Choose Precision when the critical is what you hope for, or when you want the board to change before you act. A tempo chooses no spell: the spell is chosen when the creature's turn comes."
+                  "text": "Choose Instinct to land a blow that does not need a critical, or to act before something that would defeat you. Choose Precision when the critical is what you hope for, or when you want the board to change before you act. A tempo chooses no spell: the spell is chosen when the creature's turn comes."
                 }
               ]
             },
@@ -1246,6 +1248,7 @@
             "ADR 0010",
             "ADR 0072",
             "ADR 0112",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": {
@@ -1253,8 +1256,8 @@
             "title": "Tempo",
             "lines": [
               "Each round, every creature that is not stunned takes a tempo: Instinct or Precision.",
-              "Instinct acts before every Precision creature, but cannot roll a critical this round.",
-              "Precision acts after Instinct and keeps the critical roll."
+              "Instinct acts before every Precision creature, but cannot crit this round.",
+              "Precision acts after Instinct and keeps its critical chance."
             ],
             "example": "An Instinct creature at 5 initiative acts before a Precision creature at 9."
           }
@@ -1323,14 +1326,7 @@
                   "strong": true
                 },
                 {
-                  "text": " is settled by a "
-                },
-                {
-                  "text": "roll-off",
-                  "strong": true
-                },
-                {
-                  "text": ": each tied creature rolls a d20, and the highest takes the first place. Creatures on a number both teams rolled roll again; a number only one team rolled stands. The roll-off decides which places each team holds. How a team orders its own creatures in its places is "
+                  "text": " is settled at random: the app draws which team takes each place in the tie. The timeline marks the tie as settled at random, and a tap on a place says which team got the earlier place. How a team orders its own creatures in its places is "
                 },
                 {
                   "text": "the next step",
@@ -1349,7 +1345,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and roll 8 and 15: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5, then Creatures 3 and 6, which tie between the teams and roll off as well, and Creature 2 last."
+                  "text": " Creatures 1, 2, 4 and 5 have acquired Warped, and Creatures 1 and 4 have since acquired Stormborn. Creatures 1 and 4 read 10 initiative, Creatures 2 and 5 read 7, and Creatures 3 and 6 read 5. Last round, an Ice Grip lowered Creature 2's initiative by 3: it reads 4 this round. Creatures 1 and 4 chose Instinct, the rest Precision. Creatures 1 and 4 tie, and the tie is settled at random: Creature 4 acts first, then Creature 1. Then the Precision creatures, by their initiative: Creature 5, then Creatures 3 and 6, which tie between the teams and are settled at random as well, and Creature 2 last."
                 }
               ]
             }
@@ -1358,6 +1354,7 @@
             "ADR 0036",
             "ADR 0059",
             "ADR 0063",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": {
@@ -1366,7 +1363,7 @@
             "lines": [
               "Initiative orders the creatures inside their tempo: the highest acts first.",
               "Each mutation adds its bonus to the base initiative, for good.",
-              "A tie between the two teams is settled by a d20 roll-off."
+              "A tie between the two teams is settled at random."
             ],
             "example": "In Precision, the creature at 7 initiative acts before the one at 5."
           }
@@ -1384,7 +1381,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Where your team holds two places or more in one tie, you choose which of your tied creatures takes which place. The other team's places do not move. A tie your team holds alone is yours to order too, with no roll. Both players order in secret, and the orders are revealed together. A round with no such tie asks nobody."
+                  "text": " Where your team holds two places or more in one tie, you choose which of your tied creatures takes which place. The other team's places do not move. A tie your team holds alone is yours to order too, and nothing is drawn for it. Both players order in secret, and the orders are revealed together. A round with no such tie asks nobody."
                 }
               ]
             },
@@ -1396,13 +1393,14 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creatures 3, 5 and 6 tie in the Precision band and roll 11, 11 and 2. Both teams rolled 11, so Creatures 3 and 5 roll again: 4 and 17. The places go to the second player, then the first, then the second. The second player holds two of them and wants Creature 6 to act first: Creature 6 takes the first place, Creature 3 the second, Creature 5 the third."
+                  "text": " Creatures 3, 5 and 6 tie in the Precision band. The tie is settled at random, and the places go to the second player, then the first, then the second. The second player holds two of them and wants Creature 6 to act first: Creature 6 takes the first place, Creature 3 the second, Creature 5 the third."
                 }
               ]
             }
           ],
           "sources": [
             "ADR 0063",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": null
@@ -1598,14 +1596,14 @@
                 ],
                 [
                   {
-                    "text": "Roll for a critical",
+                    "text": "The critical",
                     "strong": true
                   },
                   {
-                    "text": ", once for the whole cast, if the caster is Precision and the spell prints a chance. See "
+                    "text": ", settled once for the whole cast, if the caster is Precision and the spell prints a chance. See "
                   },
                   {
-                    "text": "the critical roll",
+                    "text": "the critical chance",
                     "href": "#the-critical-roll"
                   },
                   {
@@ -1691,7 +1689,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 2 is Precision, at 4 Energy, and casts Incinerate on Creature 5: cost 3, damage 10, d20: 14+. Creature 5 cast Carapace last round: its Defense is 7."
+                  "text": " Creature 2 is Precision, at 4 Energy, and casts Incinerate on Creature 5: cost 3, damage 10, Crit 35%. Creature 5 cast Carapace last round: its Defense is 7."
                 }
               ]
             },
@@ -1706,7 +1704,7 @@
                 ],
                 [
                   {
-                    "text": "The d20 is a critical: 10 × 2 = 20."
+                    "text": "The cast crits: 10 × 2 = 20."
                   }
                 ],
                 [
@@ -1720,7 +1718,7 @@
               "type": "paragraph",
               "spans": [
                 {
-                  "text": "Had the roll missed, it would have lost 3. "
+                  "text": "Without a critical, it would have lost 3. "
                 },
                 {
                   "text": "Multiply first, subtract second",
@@ -1738,6 +1736,7 @@
             "ADR 0076",
             "ADR 0083",
             "ADR 0101",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": {
@@ -1786,7 +1785,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage 11, d20: 11+. Add the bonus: 16. On a critical, 32, less 3: Creature 1 loses 29. Without one, 13. "
+                  "text": " Creature 4 owns Apex, is Precision, and casts Blood Price on Creature 1, whose Defense is 3: damage 11, Crit 50%. Add the bonus: 16. On a critical, 32, less 3: Creature 1 loses 29. Without one, 13. "
                 },
                 {
                   "text": "Add, multiply, subtract",
@@ -1812,6 +1811,7 @@
           ],
           "sources": [
             "ADR 0101",
+            "ADR 0208",
             "game-rules#round-sequence-adr-0010"
           ],
           "card": null
@@ -2238,7 +2238,7 @@
         {
           "id": "the-critical-roll",
           "number": "4.5",
-          "title": "The critical roll",
+          "title": "The critical chance",
           "blocks": [
             {
               "type": "paragraph",
@@ -2251,21 +2251,28 @@
                   "strong": true
                 },
                 {
-                  "text": " creature's spell resolves and the spell prints a critical chance, a d20 is rolled "
+                  "text": " creature's spell resolves and the spell prints a critical chance, the app settles that chance "
                 },
                 {
                   "text": "once for the whole cast",
                   "strong": true
                 },
                 {
-                  "text": ". The spell prints the face it needs: d20: 11+ means 11 or more. An "
+                  "text": ": every target takes the critical, or none does. An "
                 },
                 {
                   "text": "Instinct",
                   "strong": true
                 },
                 {
-                  "text": " creature never rolls, and a spell that prints no chance never rolls. A creature's own chance, 0%, is added to the spell's."
+                  "text": " creature never crits, and a spell that prints no chance never crits. A creature's own chance, 0%, is added to the spell's. A cast that crits shows "
+                },
+                {
+                  "text": "Crit!",
+                  "strong": true
+                },
+                {
+                  "text": " beside its caster, and the history says the chance it had."
                 }
               ]
             },
@@ -2331,7 +2338,7 @@
                   "emphasis": true
                 },
                 {
-                  "text": " Creature 2 is Precision and casts Vital Surge on Creature 3, which has 18 of 30 Health: heal 10, d20: 11+. The d20 shows a critical: the heal becomes 20, and Creature 3 goes to 30. A heal never goes past the Health a creature started with."
+                  "text": " Creature 2 is Precision and casts Vital Surge on Creature 3, which has 18 of 30 Health: heal 10, Crit 50%. The cast crits: the heal becomes 20, and Creature 3 goes to 30. A heal never goes past the Health a creature started with."
                 }
               ]
             }
@@ -2341,6 +2348,7 @@
             "ADR 0042",
             "ADR 0100",
             "ADR 0154",
+            "ADR 0208",
             "game-rules#implemented",
             "game-rules#round-sequence-adr-0010"
           ],
@@ -2348,11 +2356,11 @@
             "id": "critical",
             "title": "Critical",
             "lines": [
-              "A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.",
+              "A Precision creature's spell crits at the chance it prints, settled once as it resolves.",
               "On a critical, the spell's damage and healing on its targets are multiplied.",
-              "Instinct never rolls."
+              "Instinct never crits."
             ],
-            "example": "A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes 14."
+            "example": "A spell prints Crit 50%. When it crits, its 7 damage becomes 14."
           }
         }
       ]
@@ -2973,6 +2981,13 @@
   ],
   "moved": {},
   "changes": [
+    {
+      "date": "2026-11-27",
+      "text": "The screen no longer shows a die: a cast that crits shows **Crit!** beside its caster, the history says the chance the cast had, and a tie between the teams reads as settled at random. The book says a critical chance as a percent, as the cards do. No rule changed (ADR 0208).",
+      "adrs": [
+        "0208"
+      ]
+    },
     {
       "date": "2026-11-23",
       "text": "In French, the Critical card's example names the d20 again, as the English one does, with no rule changed.",

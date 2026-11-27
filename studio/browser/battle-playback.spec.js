@@ -13,29 +13,32 @@ import { mount, entry, before, creature } from './battle-playback-fixture.js';
 // frame, where runFor would draw every software frame of the 1440 × 1000 scene between them (#749, #784).
 async function stages(page, steps = [WINDUP_MS, IMPACT_MS, SETTLE_MS]) { for (const step of steps) await page.clock.fastForward(step); }
 const fits = page => fitsViewport(page, '.creature, #playback-skip, #playback-result, #combat-open, #settings');
-test('a cast that tried to crit shows its d20 beside the caster as it lands, and the die leaves with the result', async ({ page }, info) => {
+test('a cast that crit says Crit! beside the caster as it lands, with no die, and the word leaves with the result', async ({ page }, info) => {
   test.setTimeout(60000);
+  // Cast by the creature at the field's right edge: the word stays on screen there (calloutSpot).
   const h = await mount(page);
-  await h.publish([entry(12), entry(10, { criticalRoll: 19 })]);
+  await h.publish([entry(12), entry(10, { actor: 3, criticalRoll: 19 })]);
   // The feed is fetched on the real clock: the lunge begins only once it has arrived, so the test clock waits for it.
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(860);
-  // The die says what the roll needed: Strike crits from 14 on a d20 (its card, ADR 0100).
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:19:crit:14+');
-  await page.screenshot({ path: info.outputPath('critical-die.jpg'), type: 'jpeg', quality: 85 });
+  // The field names the caster whose critical landed and nothing of the roll (ADR 0208): no face, no threshold.
+  await expect(page.locator('#battle')).toHaveAttribute('data-crit', '3');
+  // The word has settled in (180 ms) before it is pictured.
+  await page.clock.runFor(300);
+  await page.screenshot({ path: info.outputPath('critical-word.jpg'), type: 'jpeg', quality: 85 });
   await page.clock.runFor(4000);
-  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./); expect(h.errors).toEqual([]);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./); expect(h.errors).toEqual([]);
 });
-test('a cast that fell short of its crit says the face it needed under its die', async ({ page }, info) => {
+test('a cast that could crit and did not shows nothing on the caster', async ({ page }, info) => {
   test.setTimeout(60000);
-  // Cast by the creature at the field's right edge: its die and words stay on screen.
   const h = await mount(page), short = entry(10, { actor: 3, criticalRoll: 9 });
   short.event.resolution.isCritical = false;
   await h.publish([entry(12), short]);
   await expect(page.locator('#battle')).toHaveAttribute('data-playback', 'windup');
   await page.clock.runFor(1400);
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '3:9:miss:14+');
-  await page.screenshot({ path: info.outputPath('critical-miss-die.png') });
+  await expect(page.locator('#battle')).toHaveAttribute('data-playback', /impact|resolved/);
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./);
+  await page.screenshot({ path: info.outputPath('critical-miss.png') });
   expect(h.errors).toEqual([]);
 });
 test('ordered confirmed frames reveal damage at impact and never replay duplicate responses', async ({ page }, info) => {

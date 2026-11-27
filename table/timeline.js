@@ -44,23 +44,26 @@ function index(cursor) {
   return Number.isInteger(cursor) ? cursor : -1;
 }
 
-// The d20 rolls behind a slot's place, as the strip prints them (ADR 0063): "d20 17", or "d20 11 → 4" when the
-// creature rolled again after the other side matched it. Empty for a creature that did not roll -- a tie held
-// by one side alone, or no tie at all -- which is most of them, so the strip stays as short as it was.
-export function rollText(rollOffs, creature) {
+/** What a slot says of a tie between the two teams that placed it (ADR 0208). */
+export const RANDOM_TIE = 'Tie settled at random';
+
+// Whether a tie between the two teams placed a slot: the engine drew for it (ADR 0063), and the app says only that
+// the tie was settled at random (ADR 0208), never the faces the record keeps. Empty for a creature nothing was
+// drawn for -- a tie held by one side alone, or no tie at all -- which is most of them.
+export function tieText(rollOffs, creature) {
   const rolls = (rollOffs ?? []).find(rollOff => rollOff?.creature === creature)?.rolls ?? [];
-  return rolls.length === 0 ? '' : `d20 ${rolls.join(' → ')}`;
+  return rolls.length === 0 ? '' : RANDOM_TIE;
 }
 
 // The round's order once the speeds are revealed, as the pop-up reads it: each side's speeds, and every slot in
-// the order it is played with its initiative and any roll. Read off the host's timeline and nothing else -- the
+// the order it is played with its initiative and whether a tie placed it. Read off the host's timeline and nothing else -- the
 // opponent's speeds are public from the moment the timeline exists, and never before it.
 export function speedReveal(board) {
   const timeline = board?.timeline ?? [];
   const cursor = cursorOf(board);
   const order = timeline.map((slot, index) => ({
     position: index + 1, creature: slot.creature, side: side(slot, board.slot), speed: slot.speed ?? '',
-    initiative: slot.initiative, roll: rollText(board.rollOffs, slot.creature), isNow: index === cursor,
+    initiative: slot.initiative, tie: tieText(board.rollOffs, slot.creature), isNow: index === cursor,
   }));
   const of = which => order.filter(slot => slot.side === which).map(({ creature, speed }) => ({ creature, speed }));
   return { order, theirs: of('enemy'), mine: of('ally') };

@@ -82,12 +82,12 @@ deals nothing in round 5. Each target then takes {spell:summon_minions:v1.bleed}
 
 sources: ADR 0041, game-rules#implemented, game-rules#round-sequence-adr-0010
 
-## The critical roll {#the-critical-roll}
+## The critical chance {#the-critical-roll}
 
-When a **Precision** creature's spell resolves and the spell prints a critical chance, a d20 is rolled **once for
-the whole cast**. The spell prints the face it needs: d20: 11+ means 11 or more. An **Instinct** creature never
-rolls, and a spell that prints no chance never rolls. A creature's own chance,
-{creature.criticalChance * 100}%, is added to the spell's.
+When a **Precision** creature's spell resolves and the spell prints a critical chance, the app settles that chance
+**once for the whole cast**: every target takes the critical, or none does. An **Instinct** creature never crits,
+and a spell that prints no chance never crits. A creature's own chance, {creature.criticalChance * 100}%, is added
+to the spell's. A cast that crits shows **Crit!** beside its caster, and the history says the chance it had.
 
 A critical multiplies by {rules.criticalMultiplier}, dropping any fraction, **what the cast puts on a target's
 Health now**, and nothing else:
@@ -101,19 +101,19 @@ The order is the one of [resolving a spell](#resolving-a-spell): add the damage 
 the Defense.
 
 *Example.* Creature 2 is Precision and casts Vital Surge{?spell:restorative_gush:v1.origin = 'Ally'} on Creature 3, which has {creature.health - 12} of
-{creature.health} Health: heal {spell:restorative_gush:v1.heal}, d20:
-{21 - (creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 20}+. The d20 shows a critical: the heal becomes
+{creature.health} Health: heal {spell:restorative_gush:v1.heal}, Crit
+{(creature.criticalChance + spell:restorative_gush:v1.criticalChance) * 100}%. The cast crits: the heal becomes
 {floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier)}, and Creature 3 goes to
 {min(creature.health, creature.health - 12 + floor(spell:restorative_gush:v1.heal * rules.criticalMultiplier))}.
 A heal never goes past the Health a creature started with.
 
-sources: ADR 0033, ADR 0042, ADR 0100, ADR 0154, game-rules#implemented, game-rules#round-sequence-adr-0010
+sources: ADR 0033, ADR 0042, ADR 0100, ADR 0154, ADR 0208, game-rules#implemented, game-rules#round-sequence-adr-0010
 
 ```card
 id: critical
 title: Critical
-A Precision creature rolls a d20 when its spell resolves, against the number the spell prints.
+A Precision creature's spell crits at the chance it prints, settled once as it resolves.
 On a critical, the spell's damage and healing on its targets are multiplied.
-Instinct never rolls.
-> A spell prints d20: 11+. A roll of 14 is a critical: its 7 damage becomes {floor(7 * rules.criticalMultiplier)}.
+Instinct never crits.
+> A spell prints Crit 50%. When it crits, its 7 damage becomes {floor(7 * rules.criticalMultiplier)}.
 ```

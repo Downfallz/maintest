@@ -261,7 +261,8 @@ for (const declaration of ['at-activation', 'hidden-intent']) test(`${declaratio
           if (one.name === 'Main') return `Creature ${one.id}`;
           return creatures.filter(other => other.name === one.name).length > 1 ? `${one.name} · ${one.id}` : one.name;
         }));
-        for (const roll of view.board.rollOffs) await expect(page.locator('#order-list')).toContainText(`d20 ${roll.rolls.join(' → ')}`);
+        // A tie between the teams is said as settled at random, on each creature it placed, and never as a die (ADR 0208).
+        await expect(page.locator('#order-list .order-tie')).toHaveCount(view.board.rollOffs.length); await expect(page.locator('#order-list')).not.toContainText('d20');
         expect(shown).toEqual(beforeShown); expect(writes.length).toBe(beforeWrites);
         await page.locator('#order-close').click(); await page.locator('#order-continue').click(); orderRounds.add(view.board.roundNumber);
       };

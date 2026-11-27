@@ -1,5 +1,6 @@
 # Ce qui a changé
 
+- 2026-11-27: L’écran ne montre plus de dé : un lancer qui obtient un critique montre **Crit!** à côté de son lanceur, l’historique dit la chance qu’avait le lancer, et une égalité entre les équipes se lit comme tranchée au hasard. Le livre dit une chance de critique en pourcentage, comme les cartes. Aucune règle ne change (ADR 0208).
 - 2026-11-23: En français, l’exemple de la carte Critique nomme de nouveau le d20, comme en anglais, sans qu’aucune règle ne change.
 - 2026-11-23: Les cartes Santé, Tempo, Initiative, Choisir un sort, Défense, Un tour sauté et Critique sont plus courtes, et en français la carte Énergie aussi, sans qu’aucune règle ne change.
 - 2026-11-22: La référence a une section sur le classement : ce qu’est une partie classée, ce qui fait bouger une cote et de combien, qu’une partie nulle compte pour une demi-victoire et qu’une partie annulée ne compte jamais, ce que dit le ± et quand une cote est provisoire. Les cartes Mutation et États sont plus courtes, sans qu’aucune règle ne change (ADR 0124, ADR 0176).

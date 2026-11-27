@@ -36,7 +36,7 @@ What holds for every screen of the journey:
 - **The floor of text is 11 px** for everything the frame writes, in `rem`. Today under it: the round's word and
   phase (8 px), the order row's names (9) and side line (7), `OPPONENT` and `YOUR TEAM` (7), every caption badge
   (8: initiative, defense, health, energy), the caption's tag (8, `ACTING`), the dock's eyebrow (9,
-  `OPPONENT'S ACTION · 1 MORE`), the opponent's badge (8, `BOT`), the die (9, `d20`), the instruction and the
+  `OPPONENT'S ACTION · 1 MORE`), the opponent's badge (8, `BOT`), the tie's mark (9, `d20` then; `tie` since ADR 0208), the instruction and the
   connection line (10). Names stay in the display face at 12 px at least. No floor below 11 is proposed.
 - **The round's bar, under 360 px.** Signed in at 320 the bar held the round, the opponent, History, Help,
   Settings, then the site menu, the bell and the account that `table/navigation.js` folds into its right end:
@@ -77,8 +77,8 @@ What holds for every screen of the journey:
   creatures' heads; `YOUR TEAM` stays hidden there: mid-field, it lay under the tempo badges and those chips. A team is never told by colour alone: the label, the row and
   the order row's words say it.
 - **The order row.** Each entry: the place in its tempo's badge (`check` once played), the name at 12 px, and a
-  side line at 11 px. At 390 the side line is `You · Precision · ⌃ 6` and `d20` when a roll placed it. Under
-  360 px it is the side alone (`You`, `Opponent`) and `d20`: the tempo and the initiative stay one tap away in
+  side line at 11 px. At 390 the side line is `You · Precision · ⌃ 6` and `tie` when a tie settled at random placed it
+  (ADR 0208; `d20` before it). Under 360 px it is the side alone (`You`, `Opponent`) and `tie`: the tempo and the initiative stay one tap away in
   `#order-why`. The entry of the actor is first in view: the row scrolls to it at once, without a smooth scroll.
   The strip's `⚡5` drew initiative with energy's glyph: it becomes `initiative`.
 - **Icons in place of glyphs**, from `table/icons.js`, inside a control that keeps its name: ⚙ (`#settings`) is
@@ -151,7 +151,7 @@ in the order row, before the first action plays.
   dock's card: `TURN ORDER`, `Round 1`, the two teams' tempos, Continue.
 - **Budget**: 95 words at 320 px (93 today, 112 before), 110 at 390 (109; 114 before). At 390 the side line keeps
   its tempo and initiative, so 105 was short. The word INIT goes (6 words), and under 360 px the
-  order row's side line keeps the side alone. The dock's card keeps its lines; "Ties broken by d20" stays, the
+  order row's side line keeps the side alone. The dock's card keeps its lines; "Tie settled at random" stays ("Ties broken by d20" before ADR 0208), the
   rule behind it is the rulebook's (`/rules`), which Order opens.
 
 ### Pictures
@@ -348,7 +348,7 @@ estimate once a target is chosen, and confirms.
 ```text
 Creature 2 · Brace        ⚡1 → 1 left
 Choose a target to see its estimate.
-An estimate: rolls can change the result.
+An estimate: a critical can change the result.
 [Spells]  [Confirm cast]  [×]
 Choose 1 target
 ```

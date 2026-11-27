@@ -148,7 +148,7 @@ export function inspectionControls() {
       list.replaceChildren(...model.spells.map(spell => {
         const item = node('article', '', 'inspect-spell'); item.dataset.inspectSpell = String(spell.id);
         if (spell.colour) item.style.setProperty('--spell-accent', spell.colour);
-        // The crit chip names its tempo and the d20's face, as the catalogue does.
+        // The crit chip names its tempo, as the catalogue does.
         const face = spellCard(cards.get(String(spell.id)), String(spell.id), cues, { crit: spell.crit });
         // The spell choice answers [data-spell]; a reference card in a closed dialog must not.
         delete face.dataset.spell;

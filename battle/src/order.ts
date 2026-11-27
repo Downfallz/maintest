@@ -1,4 +1,5 @@
 import { battleOrder, createBattleOrderReveal, orderReason } from '../../table/battle-order.js';
+import { TIE_MARK } from '../../table/terms.js';
 import { iconElement } from './condition-icons';
 import { spellPortrait } from './spell-portrait';
 
@@ -58,7 +59,7 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
   }
   // A strip entry lights its creature on the field rather than opening its sheet: the card it opens offers the sheet.
   // Its name is the creature's as shown, then one sentence: the drawn place and line are silent (WCAG 2.5.3).
-  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.roll, row.state, row.condition, row.spell ? `revealed ${row.spell.name}` : '', 'highlight on the field'].filter(Boolean).join(', ');
+  const spoken = (row: Row) => [({ 'Your team': 'of your team', Opponent: 'of the opponent' } as Record<string, string>)[row.team] ?? row.team, `position ${row.position}`, row.tempo, initiative(row), row.tie, row.state, row.condition, row.spell ? `revealed ${row.spell.name}` : '', 'highlight on the field'].filter(Boolean).join(', ');
   function stripButton(row: Row) {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.orderCreature = row.id;
     button.disabled = !row.inspectable;
@@ -76,12 +77,12 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       const button = stripButton(row), rank = text('span', row.state === 'Completed' ? '✓' : String(row.position), 'timeline-rank');
       rank.dataset.tempo = row.speed; rank.setAttribute('aria-hidden', 'true');
       const words = text('span', '', 'timeline-words');
-      // Initiative on every entry, and a die on those a roll-off placed: the order reads at a glance.
+      // Initiative on every entry, and a mark on those a random tie placed (ADR 0208): the order reads at a glance.
       // The side, then its tempo and initiative, which leave the line under 360 px (battle.css): `#order-why` has them.
       const side = text('span', row.team === 'Your team' ? 'You' : row.team, 'timeline-side');
       side.append(text('span', ` · ${row.tempo}`, 'timeline-tempo'));
       if (Number.isFinite(row.initiative)) { const init = text('span', String(row.initiative), 'timeline-init'); init.prepend(iconElement('initiative-gain')); side.append(init); }
-      if (row.roll) side.append(text('span', 'd20', 'timeline-die'));
+      if (row.tie) side.append(text('span', TIE_MARK, 'timeline-tie'));
       side.setAttribute('aria-hidden', 'true');
       words.append(text('span', row.label, 'timeline-name'), text('span', spoken(row), 'unseen'), side);
       // A spell the host has turned face up, beside its creature, at 24 px (UX12 P7). Its name is in the entry's
@@ -94,13 +95,13 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
     el('no-timeline').textContent = available ? 'Set once both teams have picked their tempos' : 'Set once the match begins';
     el('order-title').textContent = `Round ${model.round ?? '—'}`;
     el('order-summary').textContent = model.rows.length ? model.summary.join(' / ') : model.empty;
-    el('order-context').textContent = model.provisional ? 'Team positions fixed · creature order still being chosen' : 'Exact order · recorded dice';
+    el('order-context').textContent = model.provisional ? 'Team positions fixed · creature order still being chosen' : 'Exact order';
     el('order-explanation').textContent = model.provisional
       ? 'Provisional creature order. The team positions are fixed; tied creatures within each team can still be reordered. Both choices reveal together.'
-      : 'Instinct acts before Precision; initiative ranks each band. Cross-team ties use d20 rolls, with rerolls when opposing rolls match. Each team can order its own creatures within its allocated places.';
-    el('order-roll-note').textContent = model.hasRolls
-      ? 'These are the actual recorded rolls. They determined team positions; a later same-team choice can move a creature within those positions.'
-      : 'No d20 rolls recorded for this order. Same-team ties do not need a roll.';
+      : 'Instinct acts before Precision; initiative ranks each band. A tie between the two teams is settled at random. Each team can order its own creatures within its places.';
+    el('order-tie-note').textContent = model.randomTie
+      ? 'A tie between the two teams was settled at random this round. It gave each team its places; a team can still order its own creatures within them.'
+      : 'No tie between the two teams this round.';
     let previousSpeed: string | null = null;
     el('order-list').replaceChildren(...model.rows.map((row: Row) => {
       const item = document.createElement('li'); item.className = 'order-row'; item.dataset.state = row.state; item.dataset.team = row.team;
@@ -118,18 +119,18 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
       facts.append(...[[row.team, 'order-team'], [initiative(row), 'order-initiative'], [row.condition, 'order-condition'], [row.spell ? `Revealed · ${row.spell.name}` : '', 'order-spell']]
         .filter(([value]) => value).map(([value, className]) => text('span', value as string, `order-fact ${className}`)));
       const card = text('div', '', 'order-card');
-      card.append(heading, facts, text('p', row.roll || 'No d20 roll recorded', row.roll ? 'order-roll' : 'order-roll order-roll-none'));
+      card.append(heading, facts, ...(row.tie ? [text('p', row.tie, 'order-tie')] : []));
       item.append(card); return item;
     }));
   }
   let shownTurn = '';
   // A newly revealed order is read on the field (a numbered badge on each creature) and in the dock's card,
-  // never in a dialog over the field; the full order, rules and rolls stay one tap away. Everything waits for
+  // never in a dialog over the field; the full order and its rules stay one tap away. Everything waits for
   // Continue, an opponent's action included.
   let reading = false;
   function finish() { if (!reading) return; reading = false; reveal.read(); onVisibility(); }
   // Why the lit creature holds its place: its rank, its tempo band, its initiative against its neighbours', and the
-  // tie that placed it, with the d20s a roll-off threw.
+  // tie that placed it, with the team a random tie gave the earlier place.
   function drawWhy(reason: Reason | null) {
     const card = el('order-why');
     card.hidden = !reason;
@@ -139,15 +140,6 @@ export function orderControls(reveal: ReturnType<typeof createBattleOrderReveal>
     el('order-why-name').textContent = reason.label;
     el('order-why-meta').textContent = `${reason.team} · ${reason.position} of ${reason.total}`;
     el('order-why-lines').replaceChildren(...reason.lines.map(line => text('li', line)));
-    el('order-why-dice').hidden = reason.dice.length === 0;
-    el('order-why-dice').replaceChildren(...reason.dice.map(die => {
-      const chip = text('span', '', `order-why-die${die.self ? ' is-self' : ''}`); chip.dataset.team = die.team === 'Your team' ? 'ally' : 'enemy';
-      const face = text('span', String(die.rolls.at(-1)), 'order-why-face'); face.setAttribute('aria-hidden', 'true');
-      const roll = text('span', die.label, 'order-why-roll'); roll.append(text('span', die.rolls.join(' → '), 'order-why-throws'));
-      chip.setAttribute('aria-label', `${die.label}: d20 ${die.rolls.join(' then ')}`);
-      chip.append(face, roll);
-      return chip;
-    }));
   }
   // On a narrow field the card takes the side of the field with more room beside the lit creature, and no more of it
   // than that room, so it never covers the creature it explains; the field's layout moves with the scene, so this is

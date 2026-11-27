@@ -3,7 +3,7 @@
 // belong here. Returned snapshots borrow the host's objects: consumers must treat them as immutable.
 import { askedKey, slotView } from './slot.js';
 import { playbackBoard } from './replay.js';
-import { cursorOf, rollText, side, withCursor } from './timeline.js';
+import { cursorOf, tieText, side, withCursor } from './timeline.js';
 
 // The current legal question, adapted for a local spell choice. Choosing or going back is a redraw, never a
 // fetch. A choice belongs to the seat AND the host's asking, regardless of which Action screen is displayed.
@@ -41,8 +41,7 @@ export function presentedView(latest, replay = null, entries = null) {
 export function boardPresentation(board) {
   const cursor = cursorOf(board);
   const timeline = withCursor(board?.timeline, cursor).map((slot, index) => ({
-    ...slot, position: index + 1, side: side(slot, board?.slot), roll: rollText(board?.rollOffs, slot.creature),
-    rolls: [...((board?.rollOffs ?? []).find(rollOff => rollOff?.creature === slot.creature)?.rolls ?? [])],
+    ...slot, position: index + 1, side: side(slot, board?.slot), tie: tieText(board?.rollOffs, slot.creature),
   }));
   return {
     allies: board?.allies ?? [],

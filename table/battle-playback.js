@@ -155,11 +155,9 @@ export function actionCue(action, cards = new Map(), harmful = new Set()) {
   if (action.status === 'Fizzled') kind = 'fizzle';
   const fizzled = action.status === 'Fizzled';
   const recipients = fizzled ? [] : [...new Set(effects.map(effect => effect.creature))];
-  // The caster's d20 when it tried to crit (ADR 0154): its face, and whether it reached the threshold.
-  // The face it needed comes with the card (ADR 0100: every chance is a twentieth, and only spells carry one).
-  const needed = cards?.get(action.action?.spell)?.criticalThreshold;
-  const roll = !fizzled && Number.isInteger(action.criticalRoll)
-    ? { value: action.criticalRoll, critical: action.status === 'Critical', needed: Number.isInteger(needed) ? needed : null } : null;
+  // A cast that could crit, and whether it did (ADR 0208): the record keeps the face it rolled (ADR 0154), the
+  // scene is told the outcome alone.
+  const roll = !fizzled && Number.isInteger(action.criticalRoll) ? { critical: action.status === 'Critical' } : null;
   return { kind, visual: spellVisual(action, cards),
     recipients, contact: recipients.filter(id => id !== String(action.actor?.id)),
     struck: fizzled ? [] : struck, effects: fizzled ? [] : effects, changes, roll };

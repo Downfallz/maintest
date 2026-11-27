@@ -411,6 +411,50 @@ test('a name of several words written as a phrase is found, its capitals and an 
   assert.deepEqual(miscased([{ path: 'script', texts }]), ['script: "Full mutation tree" writes mutation tree']);
 });
 
+// The app says a chance as a percent and a tie between the teams as settled at random; the die belongs to the print
+// edition (player-terminology.md, ## Chance and ties, ADR 0208). The record keeps the faces: no page prints one.
+const DIE_WORDS = /\bd20\b|\bdic?e\b|\broll[\s-]?offs?\b|\b(re)?roll(s|ed)?\b/i;
+const dieWords = files => files.flatMap(({ path, texts }) =>
+  texts.filter(text => DIE_WORDS.test(text)).map(text => `${path}: "${text.trim().slice(0, 100)}"`));
+
+// Every literal of a script, a single word included: a label handed to a helper (`text('span', 'd20', ...)`) or
+// held in a constant is a label all the same, and a die is never an engine value here. A literal that is one
+// identifier of the record (`rollOffs`, `criticalRoll`) is a field's name, not a word.
+const everyLiteral = source => literals(source)
+  .flatMap(({ text }) => text.includes('<') ? htmlText(text) : [text])
+  .filter(text => !/^[a-z]+[A-Z][A-Za-z]*$/.test(text.trim()));
+// The lines a tutorial's coach says, and its title and goal (scenarios/README.md): a player reads them in the match.
+const tutorialLines = value => Array.isArray(value) ? value.flatMap(tutorialLines)
+  : value && typeof value === 'object'
+    ? Object.entries(value).flatMap(([key, one]) => ['says', 'title', 'goal'].includes(key) ? [one].flat().filter(text => typeof text === 'string') : tutorialLines(one))
+    : [];
+const dieSources = () => [
+  ...files('table').filter(path => path.endsWith('.html')).map(path => ({ path, texts: htmlText(read(path)) })),
+  ...files('table').filter(path => path.endsWith('.js') && !path.endsWith('.test.js')).map(path => ({ path, texts: everyLiteral(read(path)) })),
+  ...files('battle/src').filter(path => /\.[jt]s$/.test(path)).map(path => ({ path, texts: everyLiteral(read(path)) })),
+  ...files('scenarios/tutorials').filter(path => path.endsWith('.json')).map(path => ({ path, texts: tutorialLines(JSON.parse(read(path))) })),
+];
+
+test('no page of the table, label of the battle or line of a tutorial speaks of a die, a roll or a roll-off', () => {
+  assert.ok(/^## Chance and ties$/m.test(terminology), 'the page says how a chance and a tie are worded');
+  assert.ok(dieSources().some(({ path, texts }) => path.startsWith('scenarios/tutorials/') && texts.length > 0), 'the tutorials\' lines were read');
+  assert.deepEqual(dieWords(dieSources()), []);
+});
+
+test('a die is found in a label, a sentence, a tooltip, a word handed to a helper and a tutorial\'s line, and a scroll or a field\'s name is not one', () => {
+  const texts = everyLiteral(
+    "a.textContent = `d20 ${face}+`; b.title = 'Ties broken by D20'; c.textContent = 'The dice gave your side its places'; d.textContent = 'A roll-off broke it'; " +
+    "e.textContent = 'Recorded rolls'; f.textContent = 'Rerolled once'; g.textContent = 'Scroll to the top'; h.title = 'A role of its own'; i.textContent = 'Enrolled players'; " +
+    "side.append(text('span', 'd20', 'timeline-tie')); export const RANDOM_TIE = 'Roll-off'; const rolls = board['rollOffs'], face = action['criticalRoll'];",
+  );
+  assert.deepEqual(dieWords([{ path: 'script', texts }]), [
+    'script: "d20  +"', 'script: "Ties broken by D20"', 'script: "The dice gave your side its places"', 'script: "A roll-off broke it"',
+    'script: "Recorded rolls"', 'script: "Rerolled once"', 'script: "d20"', 'script: "Roll-off"',
+  ]);
+  const lesson = tutorialLines({ title: 'Who acts first', steps: [{ at: { kind: 'Action' }, says: ['Pummel rolls for a critical.', 'It never crits at Instinct.'], concepts: ['critical'] }] });
+  assert.deepEqual(dieWords([{ path: 'lesson', texts: lesson }]), ['lesson: "Pummel rolls for a critical."']);
+});
+
 // The notification modules speak of "this table" and of a "notification service" (player-terminology.md,
 // ## Notifications, #1233, #1266): the host and the push service are the engineers' words.
 const NOTIFICATION_MODULES = ['table/push.js', 'table/devices.js', 'table/battle-services.js'];

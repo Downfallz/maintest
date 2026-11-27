@@ -11,7 +11,7 @@ const catalogue = { packages: roots.map((name, i) => ({ id: `root${i}`, name, vi
   { id: 'cap', name: 'Shared capstone', visual: { family: 'brute', portrait: 'titan' }, level: 4, anyOf: ['future'], spells: [], initiativeBonus: 0, passiveLines: ['Defense +2', 'For every creature of the team'] },
 ]), cards: roots.map((name, i) => ({ id: `spell${i}`, name: ['Strike', 'Devour', 'Death Wail'][i], creatureClass: name, cost: i,
   targeting: 'One enemy', effects: [`Recorded effect ${i}`], casterEffects: ['Recorded caster effect'], critical: i === 1 ? '15%' : '0%',
-  criticalThreshold: i === 1 ? 18 : null, criticalNote: i === 1 ? 'A natural 18 or more doubles the damage.' : null,
+  criticalThreshold: i === 1 ? 18 : null, criticalNote: i === 1 ? 'A critical doubles the damage.' : null,
   marks: [{ kind: 'DamageEffect', onCaster: false }, { kind: 'EnergyEffect', onCaster: true }] })),
 effects: [{ kind: 'DamageEffect', glyph: '♥', harmful: true }, { kind: 'EnergyEffect', glyph: 'ϟ', harmful: false }] };
 async function mount(page, { content = catalogue, allies = roster, picks = [], ids = ['root0', 'root1', 'root2'], remaining = 2, open = null } = {}) {
@@ -289,10 +289,10 @@ test('the full mutation tree opens over the pick on its offer, shows each spell 
   await expect(tree.locator('[data-status="available"]')).toHaveCount(3); await expect(tree.locator('[data-package="future"]')).toHaveAttribute('data-status', 'future');
   const card = detail.locator('.spell-card');
   await expect(card.locator('.spell-card-name')).toHaveText('Devour'); await expect(card.locator('.spell-chip-cost')).toHaveText('1 energy');
-  await expect(card.locator('.spell-chip-crit')).toContainText('15%'); await expect(card.locator('.spell-chip-crit')).toContainText('d20 18+');
+  await expect(card.locator('.spell-chip-crit')).toContainText('15%'); await expect(card.locator('.spell-chip-crit')).not.toContainText(/d20|18\+/);
   await expect(card.locator('.spell-card-effect').first()).toHaveAttribute('data-cue', 'health-loss');
   await expect(card.locator('.spell-card-effect').last()).toHaveAttribute('data-cue', 'energy-gain');
-  await expect(card.locator('.spell-card-note')).toHaveText('A natural 18 or more doubles the damage.');
+  await expect(card.locator('.spell-card-note')).toHaveText('A critical doubles the damage.');
   await expect(detail.locator('.atlas-chip-init')).toHaveText('+1 initiative');
   // Choose sits right under the offer's name, before its spells, and stays pinned at the top as the card scrolls.
   const bar = detail.locator('.atlas-choose-bar');

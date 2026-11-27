@@ -586,13 +586,13 @@ test('a page closed on a held upkeep that took in a later part resumes from its 
   assert.equal(h.queue.model().watermark, 3, 'neither part is read yet');
 });
 
-test('an action that tried to crit hands the scene its d20: the face and whether it reached the threshold', () => {
+test('an action that could crit tells the scene whether it did, and neither the face it rolled nor the one it needed', () => {
   const hit = { status: 'Critical', criticalRoll: 19, actor: { id: 1 }, effects: [{ target: { id: 2 }, tone: 'harm', text: 'Damage 6' }] };
-  assert.deepEqual(actionCue(hit).roll, { value: 19, critical: true, needed: null });
-  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { value: 4, critical: false, needed: null });
-  // The face to reach is the card's (ADR 0100), so the die can say what the roll needed.
+  assert.deepEqual(actionCue(hit).roll, { critical: true });
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 4 }).roll, { critical: false });
+  // The card still carries the face a print edition rolls on (ADR 0100); the scene is not handed it (ADR 0208).
   const cards = new Map([['bolt', { name: 'Bolt', criticalThreshold: 14 }]]);
-  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 9, action: { spell: 'bolt', targets: [2] } }, cards).roll, { value: 9, critical: false, needed: 14 });
+  assert.deepEqual(actionCue({ ...hit, status: 'Resolved', criticalRoll: 9, action: { spell: 'bolt', targets: [2] } }, cards).roll, { critical: false });
   assert.equal(actionCue({ ...hit, status: 'Resolved', criticalRoll: null }).roll, null);
   assert.equal(actionCue({ ...hit, status: 'Fizzled', criticalRoll: 12 }).roll, null);
 });

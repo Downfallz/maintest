@@ -53,13 +53,15 @@ async function mount(page, overrides = {}, { cards = [], art = true } = {}) {
   };
   return { state, publish };
 }
-test('exact order shows bands, initiative, rerolls and creature inspection with no command', async ({ page }, info) => {
+test('exact order shows bands, initiative, a tie settled at random and creature inspection with no command', async ({ page }, info) => {
   const h = await mount(page); await expect(page.locator('#order-dialog')).toBeHidden();
   await page.locator('#order-open').click();
   await expect(page.locator('#order-list [data-order-creature]')).toHaveText([1, 4, 2, 5, 3, 6].map(id => `Creature ${id}`));
   await expect(page.locator('#order-list .order-band')).toHaveText(['Instinct', 'Precision']);
   await expect(page.locator('#order-list li').first()).toContainText('Initiative 5');
-  await expect(page.locator('#order-list li').first()).toContainText('d20 11 → 18');
+  await expect(page.locator('#order-list li').first().locator('.order-tie')).toHaveText('Tie settled at random');
+  // The app speaks of no die (ADR 0208): no face, no reroll, and a creature no tie placed says nothing of one.
+  await expect(page.locator('#order-dialog')).not.toContainText(/d20|11 → 18|roll/i); await expect(page.locator('#order-list .order-tie')).toHaveCount(3);
   await expect(page.locator('#order-list [aria-current="step"]')).toContainText('Creature 4');
   await fitsViewport(page, '#order-close');
   await page.screenshot({ path: info.outputPath('turn-order.jpg'), type: 'jpeg', quality: 85 });
@@ -69,7 +71,7 @@ test('exact order shows bands, initiative, rerolls and creature inspection with 
   await page.keyboard.press('Escape'); await expect(page.locator('#order-open')).toBeFocused();
   expect(h.state.writes).toEqual([]); expect(h.state.shown).toEqual([]); expect(h.state.errors).toEqual([]);
 });
-test('unrevealed opponent tempos are absent and same-team ties describe no roll honestly', async ({ page }) => {
+test('unrevealed opponent tempos are absent and a same-team tie claims no random draw', async ({ page }) => {
   const h = await mount(page, { board: { ...board, subPhase: 'Speed', timeline: [], speedChoices: [{ creature: 4, speed: 'Quick' }] }, feed: [] });
   await page.locator('#order-open').click(); await expect(page.locator('#order-list li')).toHaveCount(0);
   await expect(page.locator('#order-summary')).toHaveText('Tempos stay private until the turn order is revealed.');
@@ -77,7 +79,8 @@ test('unrevealed opponent tempos are absent and same-team ties describe no roll 
   await h.publish({ board: { ...board, subPhase: 'TieOrder', timeline: [slot(1), slot(2)], rollOffs: [] },
     waitingFor: 'TieOrder', waitingAsked: 20, options: { tieOrder: { ties: [[1, 2]] } }, feed: [reveal(11)] });
   await page.locator('#planning-open').click();
-  await expect(page.locator('.tie-group')).toContainText('same-team-only tie needs none');
+  await expect(page.locator('.tie-group')).toContainText('Only your team is tied here: the order is yours.');
+  await expect(page.locator('.tie-group .tie-kind')).toHaveText('Same team');
   await expect(page.locator('.tie-group')).toContainText('Your fixed places: 1, 2');
   await expect(page.locator('#order-dialog')).toBeHidden(); expect(h.state.writes).toEqual([]);
 });
@@ -88,7 +91,8 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await page.locator('#planning-open').click(); await page.locator('[data-tie="2"]').click();
   await expect(page.locator('.tie-group').first()).toContainText('#1 → Creature 2 · #3 → Creature 1');
   await expect(page.locator('.tie-group').first()).toContainText('Opponent places stay fixed: #2 Creature 4');
-  await expect(page.locator('.tie-group').first()).toContainText('Recorded d20 rolls allocated these team places');
+  await expect(page.locator('.tie-group').first()).toContainText('Settled at random: your team got the earlier place. Your choice changes only who takes your places.');
+  await expect(page.locator('.tie-group').first().locator('.tie-kind')).toHaveText('Settled at random');
   await expect(page.locator('#order-dialog')).toBeHidden();
   // Read-only reference above the draft; no additional acknowledgement or decision.
   await page.locator('#planning-order').click();
@@ -103,7 +107,7 @@ test('a tie draft keeps its interleaved places through an order reference, and r
   await expect(page.locator('#order-dialog')).toBeHidden(); await expect(page.locator('#order-continue')).toBeHidden();
   await page.locator('#history-open').click();
   await page.locator('#history-list details').last().locator('summary').click();
-  await expect(page.locator('#history-list')).toContainText('d20 11 → 18');
+  await expect(page.locator('#history-list')).toContainText('Initiative 5 · Tie settled at random'); await expect(page.locator('#history-list')).not.toContainText(/d20|11 → 18/);
   await page.keyboard.press('Escape');
   // Read by hand, the order lets the seen mark pass it: coming back does not reveal it again.
   await page.reload(); await expect(page.locator('#battle')).toHaveAttribute('data-ready', 'true'); await expect(page.locator('#loading')).toBeHidden(); await expect(page.locator('#battle')).toHaveAttribute('data-connection', 'live');
@@ -121,13 +125,14 @@ test('a fresh reveal waits until tie ordering ends, opens once and never acknowl
   await expect(page.locator('#order-continue')).toBeVisible(); await expect(page.locator('#order-dialog')).toBeHidden();
   await expect(page.locator('#reading-detail')).toContainText('Your team: 2 Instinct');
   await expect(page.locator('#actor-layer [data-creature="4"] .effect-chip[data-kind="order"]')).toContainText('2');
-  // Each creature that rolled for the tie shows its last throw on a d20 beside it (ADR 0154), gone with the reading:
-  // the three rolled in one tie, joined on the field, and each die says where its creature finished in it.
-  await expect(page.locator('#battle')).toHaveAttribute('data-dice', '1:18:roll:tie1:1 4:8:roll:tie1:2 2:2:roll:tie1:3');
-  await page.clock.runFor(800); await page.screenshot({ path: info.outputPath('roll-off-dice.png') });
+  // A tie between the teams is settled at random (ADR 0208): the card says so, each tied creature's badge too, and
+  // the field draws no die.
+  await expect(page.locator('#reading-detail')).toContainText('Tie settled at random'); await expect(page.locator('#reading-detail')).not.toContainText(/d20/i);
+  await expect(page.locator('#actor-layer [data-creature="4"] .effect-chip[data-kind="order"] .unseen')).toHaveText('Turn 2 · Instinct · Tie settled at random');
+  await expect(page.locator('#battle')).not.toHaveAttribute('data-crit', /./);
+  await page.clock.runFor(800); await page.screenshot({ path: info.outputPath('random-tie-order.png') });
   expect(h.state.shown).toEqual([]); await page.locator('#order-continue').click();
   await expect(page.locator('#actor-layer .effect-chip[data-kind="order"]')).toHaveCount(0);
-  await expect(page.locator('#battle')).not.toHaveAttribute('data-dice', /./);
   await h.publish({ feed: [reveal(11), reveal(12, 'TiesOrdered')] });
   await expect(page.locator('#order-continue')).toBeHidden(); expect(h.state.errors).toEqual([]);
 });
@@ -219,9 +224,9 @@ test('a strip entry lights its creature in blue and says why it holds its place,
   test.setTimeout(60000);
   const h = await mount(page);
   const entry = page.locator('#timeline [data-order-creature="4"]');
-  // Each place says its initiative, and a d20 marks those a roll-off placed.
-  await expect(entry.locator('.timeline-init')).toHaveText('5'); await expect(entry.locator('.timeline-die')).toHaveText('d20');
-  await expect(page.locator('#timeline [data-order-creature="6"] .timeline-die')).toHaveCount(0);
+  // Each place says its initiative, and a mark on those a random tie placed.
+  await expect(entry.locator('.timeline-init')).toHaveText('5'); await expect(entry.locator('.timeline-tie')).toHaveText('tie');
+  await expect(page.locator('#timeline [data-order-creature="6"] .timeline-tie')).toHaveCount(0);
 
   await entry.click();
 
@@ -232,10 +237,8 @@ test('a strip entry lights its creature in blue and says why it holds its place,
   await expect(why).toBeVisible();
   await expect(page.locator('#order-why-meta')).toHaveText('Opponent · 2 of 6');
   await expect(page.locator('#order-why-lines li')).toHaveText(['Instinct: acts before every Precision creature.', 'Initiative 5, tied with Creature 1 and Creature 2.',
-    'A d20 roll-off broke it: highest first, matches roll again.']);
-  await expect(page.locator('.order-why-die')).toHaveText(['18Creature 111 → 18', '8Creature 411 → 8', '2Creature 22']);
-  await expect(page.locator('.order-why-die').first()).toHaveAttribute('aria-label', 'Creature 1: d20 11 then 18');
-  await expect(page.locator('.order-why-die.is-self')).toContainText('Creature 4');
+    'Settled at random: your team got the earlier place.']);
+  await expect(why).not.toContainText(/d20|roll|11|18/i);
   await fitsViewport(page, '#order-why-close, #order-why-inspect');
   // The card stands away from the creature it lights, so the creature stays in view. The field lays its creatures
   // out on the scene's own frames, so a loaded runner is given until it settles rather than one measure. Each pass

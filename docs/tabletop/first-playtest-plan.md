@@ -1,7 +1,7 @@
 # Plan: the first outside playtest, answered
 
-Status: accepted, 2026-11-27 (the owner settled the questions at the end). Nothing is built yet; each stage below
-is one pull request.
+Status: accepted, 2026-11-27 (the owner settled the questions at the end). F1 is built; F2 to F6 are not. Each
+stage below is one pull request.
 
 ## What the owner asked for
 
@@ -189,6 +189,19 @@ Each stage is one pull request that leaves the gate green.
    play and the tie window say "settled at random". `/rules` rewrites the critical roll, the tie and the concept
    cards `critical` and `initiative`, in both editions. ADR 0100's status line is set to what was built. Tests: the pages' tests on the card and chip strings, `battle-spellbook.spec.js`, `battle-targets.spec.js`,
    `battle-order.spec.js`, the rulebook's build.
+
+   *Built (2026-11-27)*: [ADR 0208](../adr/0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md).
+   A chip, a card and the target estimate say the chance as a percent; `criticalThreshold` is still served and no
+   page of the match prints it. `battle/src/dice.ts` is gone: the field says `Crit!` beside the caster of a cast
+   that crit (`battle/src/crit-mark.ts`, `#battle[data-crit]`) and nothing on one that did not, and the journal's
+   line says the chance the cast had (`Crit · 75%`, `No crit · 75%`). The order of play, its window, the dock's card
+   and the journal say `Tie settled at random`, and the reason card and the tie window add which team got the
+   earlier place, without faces or rerolls; the presented timeline carries `tie`, no longer `roll` and `rolls`. The archived
+   classic table says the same words. `docs/domain/player-terminology.md` gained "Chance and ties", and
+   `table/terminology.test.js` refuses "d20", "dice", "die", "roll" and "roll-off" in the table's pages, the
+   battle view's labels and the tutorials' lines; tutorial 2's step on the critical no longer says "rolls". The rulebook's two editions were rewritten through `/rules`. ADR 0100 is marked Accepted.
+   Left: the captures of `docs/tabletop/images/battle-order/` still show the rolls, and the `Crit!` word was not
+   staged by the `battle-designer` (it is the die's caption, kept where it stood).
 2. **F2, the round's start and end.** `player-terminology.md`, `terms.js`, `rules/words.json`, the rulebook's two
    editions through `/rules`, the tutorial line, the round's bar. Tests: `terminology.test.js` refuses the old words,
    `battle-upkeep.spec.js`, `battle-history.spec.js`, `battle-guidance.spec.js`, the journey walk's strings.

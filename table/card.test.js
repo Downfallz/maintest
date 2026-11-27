@@ -22,7 +22,7 @@ test('every line of a card comes from the card', () => {
     'Damage 7',
     'Bleed 4 a round, 2 rounds',
     'Caster: Heal 2',
-    'Crit 35% · d20 14+',
+    'Crit 35%',
   ]);
   assert.equal(cardTitle(card), 'Probe');
   assert.equal(cardCost(card), '2');
@@ -57,10 +57,10 @@ test('a card prints no gate, no tree depth and no unlock bonus, whatever it is h
   assert.equal(cardHead({ creatureClass: 'Scoundrel', tier: 3 }), 'Scoundrel');
 });
 
-// Until the catalogue is snapped to the d20 grid, a chance is a percentage and there is no face to roll. The
-// page shows whichever it is given, with no idea which case it is in.
-test('the die line appears only when the host computed a threshold', () => {
-  assert.equal(criticalLine({ critical: '35%', criticalThreshold: 14 }), 'Crit 35% · d20 14+');
+// ADR 0208: the app says a chance as a percent. The host still serves the face a print edition rolls it on, and the
+// card does not print it.
+test('the critical line is the chance as a percent, whatever threshold the host serves', () => {
+  assert.equal(criticalLine({ critical: '35%', criticalThreshold: 14 }), 'Crit 35%');
   assert.equal(criticalLine({ critical: '33%' }), 'Crit 33%');
   assert.equal(criticalLine({ critical: '0%' }), '');
 });
@@ -101,13 +101,14 @@ test('the catalogue itself is what the mat and the rule line are drawn from', as
   assert.equal(await loadCatalogue([]), null);
 });
 
-test('visual stat groups omit zero and preserve non-d20 chances without inventing absent stats', async () => {
+test('visual stat groups omit zero and say a chance as its percent and tempo, without inventing absent stats', async () => {
   const { cardStats, cardDetails } = await import('./card.js');
   assert.deepEqual(cardStats({}), []);
   const stats = cardStats({ initiative: 0, critical: '33%' });
   assert.equal(stats.length, 1);
   assert.equal(stats[0].value, '33%');
   assert.equal(stats[0].hint, 'Precision only');
+  assert.equal(cardStats({ critical: '35%', criticalThreshold: 14 })[0].hint, 'Precision only');
   assert.deepEqual(cardStats({ critical: '0%' }), []);
   assert.deepEqual(cardStats({ critical: '0.0%' }), []);
   assert.equal(cardDetails({ requires: 'retired spell gate' }).length, 0);

@@ -76,6 +76,8 @@ test('selected effects and cost stay beside a fixed explicit confirmation', asyn
   await expect(estimate.locator('.preview-chips').first().locator('.effect-chip[data-kind="damage"]')).toContainText('Damage 3');
   await expect(estimate.locator('.target-crit .effect-chip[data-kind="damage"]')).toContainText('Damage 6');
   await expect(preview(page).locator('.spell-chip-crit')).toContainText('25%');
+  // The estimate says the chance as a percent and speaks of no die or roll (ADR 0208).
+  await expect(preview(page)).not.toContainText(/d20|\broll|\bdic?e\b/i);
   await expect(preview(page).locator('.target-caster .effect-chip[data-kind="heal"]')).toContainText('Heal 2');
   await target(page, 5).click(); await expect(target(page, 6)).toContainText('Selection full');
   await expect(target(page, 6)).toBeDisabled(); await expect(target(page, 4)).toContainText('✓ Selected');

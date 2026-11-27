@@ -91,7 +91,7 @@ test('inspect allies, conditions, acquired passives and complete spell faces wit
   const strike = page.locator('#inspect-spells [data-inspect-spell="strike"]');
   await expect(strike.locator('.spell-card-name')).toHaveText('Strike'); await expect(strike.locator('.spell-card-target')).toHaveText('One enemy');
   await expect(strike.locator('.spell-card-effect[data-caster="true"]')).toHaveText('Gain 1 energy');
-  await expect(strike.locator('.spell-chip-crit')).toContainText('20%'); await expect(strike.locator('.spell-chip-crit small')).toHaveText('Precision only · d20 17+');
+  await expect(strike.locator('.spell-chip-crit')).toContainText('20%'); await expect(strike.locator('.spell-chip-crit small')).toHaveText('Precision only');
   await expect(strike.locator('.inspect-spell-source')).toHaveText('Learned from Brute');
   await expect(page.locator('#inspect-spells [data-inspect-spell="focus"] .spell-cost-value')).toHaveText('0');
   await expect(page.locator('#inspect-dialog [data-spell]')).toHaveCount(0);

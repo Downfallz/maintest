@@ -1433,7 +1433,7 @@ test('spell stats label cast cost and crit without reviving retired spell initia
   const parts = p.context.cardParts(p.state, 'one');
   assert.match(parts[0].textContent, /ϟ 0Energy/);
   assert.doesNotMatch(parts[2].textContent, /Initiative|On unlock/);
-  assert.match(parts[2].textContent, /Crit chance35%Precision only · d20 14\+/);
+  assert.match(parts[2].textContent, /Crit chance35%Precision only$/);
   p.state.cards.set('one', { name: 'Unknown stats' });
   const missing = p.context.cardParts(p.state, 'one');
   assert.equal(missing[0].children.length, 1);
@@ -1721,7 +1721,7 @@ test('recorded frames rewind stats, death, timeline and energy without replacing
   assert.match(p.nodes.allies.textContent, /17\/20 HP/);
   assert.match(p.nodes.enemies.textContent, /3\/20 HP/);
   assert.doesNotMatch(p.nodes['playback-action'].textContent, /Damage 3|Heal 3|Critical/);
-  assert.match(p.nodes.timeline.textContent, /d20 19/);
+  assert.match(p.nodes.timeline.textContent, /Tie settled at random/); assert.doesNotMatch(p.nodes.timeline.textContent, /d20|19/);
   assert.match(p.nodes['playback-board-note'].textContent, /Before action 1/);
   assert.equal(p.nodes['playback-controls'].children[0].disabled, true);
 
@@ -1835,7 +1835,7 @@ test('tie order shows rolls, supports arrow focus and number choices, then submi
   p.view.board.rollOffs = [{ creature: 1, rolls: [12, 19] }];
   p.view.options = { tieOrder: { ties: [[1, 3]] } };
   p.current.transport.decide = async decision => { sent.push(decision); return { ok: true }; }; p.draw();
-  assert.match(p.nodes.timeline.textContent, /d20 12 → 19/);
+  assert.match(p.nodes.timeline.textContent, /Tie settled at random/); assert.doesNotMatch(p.nodes.timeline.textContent, /d20|12 → 19/);
   assert.equal(p.nodes['phase-current'].textContent, 'Command · Tie order');
   assert.equal(p.nodes['decision-phase'].textContent, 'Order tied creatures');
   p.context.keyboardDecision(p.state, keyEvent('ArrowRight'));

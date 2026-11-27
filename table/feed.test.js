@@ -56,9 +56,9 @@ test('a fizzle says so and says why', () => {
   assert.equal(resolutionText(fizzled, cards), '4: Throwing Star · fizzled: Every target was invalid.');
 });
 
-// A fizzle never rolled, so it is the one resolution that says nothing about the die: reporting "no critical"
-// there would be reporting a roll that did not happen.
-test('a fizzle says nothing about the die, because no die was rolled', () => {
+// A fizzle never had its chance, so it is the one resolution that says nothing of a critical: reporting
+// "no critical" there would be reporting a chance that was never taken.
+test('a fizzle says nothing of a critical, because its chance was never taken', () => {
   const fizzled = {
     ...resolved,
     resolution: { ...resolved.resolution, fizzled: true, fizzleReason: { message: 'Nothing to hit.' } },
@@ -379,7 +379,7 @@ test('replay and round retention preserve the ordinary grant before the ongoing 
   assert.equal(replay[0].frame, undefined);
 });
 
-test('a resolved action carries the d20 face its critical roll showed, and a fizzle or an older record carries none', () => {
+test('a resolved action carries the face its critical roll showed as the record keeps it, and a fizzle or an older record carries none', () => {
   const rolled = { sequence: 3, round: 2, event: { ...resolved, roundId: 2, resolution: { ...resolved.resolution, isCritical: true, criticalRoll: 18 } } };
   const board = { subPhase: 'Activation', roundNumber: 2 };
   assert.equal(lastResolved([rolled], board, cards).criticalRoll, 18);

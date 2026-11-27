@@ -2,7 +2,7 @@ import { livePresentation } from './battle-live.js';
 import { orderOf, untapped } from './ties.js';
 import { tempoLabel } from './terms.js';
 
-// Consume the presented board, including its historical cursor/rolls during playback. Never rank locally.
+// Consume the presented board, including its historical cursor during playback. Never rank locally.
 function stateOf(index, board, finished) {
   if (finished || (board.cursor >= 0 && index < board.cursor)) return 'Completed';
   return index === board.cursor ? 'Now' : 'Upcoming';
@@ -30,7 +30,7 @@ export function battleOrder(board, catalogue = null) {
     const creature = board.creatures?.find(one => one.id === String(slot.creature));
     return { id: String(slot.creature), position: index + 1, label: creature?.label ?? `Creature ${slot.creature}`,
       team: teamOf(slot), speed: slot.speed, tempo: tempoLabel(slot.speed), initiative: slot.initiative,
-      roll: slot.roll || '', rolls: slot.rolls ?? [], state: stateOf(index, board, finished), condition: conditionOf(creature),
+      tie: slot.tie || '', state: stateOf(index, board, finished), condition: conditionOf(creature),
       inspectable: Boolean(creature), spell: revealedSpell(board, String(slot.creature), cards) };
   });
   const summary = team => {
@@ -39,7 +39,7 @@ export function battleOrder(board, catalogue = null) {
     return `${team}: ${[...counts].map(([tempo, count]) => `${count} ${tempo}`).join(' · ') || 'No slots'}`;
   };
   return { round: board?.round, rows, summary: [summary('Your team'), summary('Opponent')],
-    provisional: board?.subPhase === 'TieOrder', hasRolls: rows.some(row => row.roll),
+    provisional: board?.subPhase === 'TieOrder', randomTie: rows.some(row => row.tie),
     empty: 'Tempos stay private until the turn order is revealed.' };
 }
 
@@ -51,13 +51,21 @@ export function battleTieGroups(view, tapped = []) {
     const positions = rows.filter(row => group.some(id => String(id) === row.id));
     const ordered = orderOf([group], tapped);
     return { number: index + 1, places: positions.map(row => row.position),
-      rolled: positions.some(row => row.roll),
+      random: positions.some(row => row.tie),
       assignments: ordered.map((id, offset) => ({ id, position: positions[offset]?.position ?? null })),
       fixed: rows.filter(row => !group.some(id => String(id) === row.id) && positions.some(one =>
         one.speed === row.speed && one.initiative === row.initiative) && row.team === 'Opponent') };
   }).map(group => ({ ...group,
+    earlier: earlierTeam(group),
     // An opponent holding two or more of these places orders its own creatures too: only the places are known.
     opponentOrderOpen: group.fixed.length > 1 }));
+}
+
+// Which team the random draw gave a tie's earlier place (ADR 0208), read off the places the host served; null when
+// nothing was drawn or a side of the tie has no place in this snapshot.
+function earlierTeam(group) {
+  if (!group.random || !group.places.length || !group.fixed.length) return null;
+  return Math.min(...group.places) < Math.min(...group.fixed.map(row => row.position)) ? 'Your team' : 'Opponent';
 }
 
 // A first read/reconnect is a baseline, not a fresh reveal. Keep one pending public reveal, discard it on
@@ -95,28 +103,6 @@ export function createBattleOrderReveal() {
   return { receive, reset, model, presented, read };
 }
 
-// The roll-off dice the field shows while the order is read (ADR 0154), each told which tie it broke and where its
-// creature finished in it: creatures tied on the same tempo and initiative rolled against each other, and the
-// order the timeline gives them is the result. Groups are numbered in timeline order; a creature with no roll, or
-// a roll-off missing from the timeline, is left out rather than guessed.
-export function rollOffDice(board) {
-  const timeline = board?.timeline ?? [];
-  const rolls = new Map((board?.rollOffs ?? []).filter(one => Number.isInteger(one?.rolls?.at(-1)))
-    .map(one => [String(one.creature), one.rolls]));
-  const groups = new Map(), places = new Map();
-  const dice = [];
-  for (const slot of timeline) {
-    const id = String(slot.creature), rolled = rolls.get(id);
-    if (!rolled) continue;
-    const key = `${slot.speed}|${slot.initiative}`;
-    if (!groups.has(key)) groups.set(key, groups.size + 1);
-    const group = groups.get(key), place = (places.get(group) ?? 0) + 1;
-    places.set(group, place);
-    dice.push({ id, value: rolled.at(-1), rolls: [...rolled], group, place });
-  }
-  return dice.map(die => ({ ...die, rivals: places.get(die.group) - 1 }));
-}
-
 const sameTie = (a, b) => a.speed === b.speed && a.initiative === b.initiative;
 const names = rows => {
   const labels = rows.map(row => row.label);
@@ -126,9 +112,9 @@ const chooser = team => team === 'Your team' ? 'you chose' : 'your opponent chos
 
 /**
  * Why a creature holds its place in the order, from the presented board alone (game-rules.md, turn order): the
- * tempo band first, then initiative within the band, then a tie, which a d20 roll-off breaks between teams and the
- * owner orders within their own places. Null for a creature with no place. Never re-ranks: it explains the order
- * the host served, with the rolls it recorded.
+ * tempo band first, then initiative within the band, then a tie, which is settled at random between teams (ADR 0208)
+ * and which the owner orders within their own places. Null for a creature with no place. Never re-ranks: it explains
+ * the order the host served, and which team it gave the tie's earlier place.
  */
 export function orderReason(board, id) {
   const rows = battleOrder(board).rows;
@@ -137,9 +123,9 @@ export function orderReason(board, id) {
   const band = rows.filter(one => one.speed === row.speed);
   const tied = band.filter(one => one !== row && sameTie(one, row));
   const head = row.speed === 'Quick' ? `${row.tempo}: acts before every Precision creature.` : `${row.tempo}: acts after every Instinct creature.`;
-  const placed = tied.length === 0 ? { tie: 'none', dice: [], lines: [initiativeLine(row, band)] } : tieReason(row, tied);
+  const placed = tied.length === 0 ? { tie: 'none', lines: [initiativeLine(row, band)] } : tieReason(row, tied);
   return { id: row.id, label: row.label, team: row.team, position: row.position, total: rows.length,
-    speed: row.speed, tempo: row.tempo, initiative: row.initiative, tie: placed.tie, dice: placed.dice, lines: [head, ...placed.lines] };
+    speed: row.speed, tempo: row.tempo, initiative: row.initiative, tie: placed.tie, lines: [head, ...placed.lines] };
 }
 
 // A creature alone on its tempo and initiative: its initiative between its neighbours' in the band.
@@ -151,18 +137,17 @@ function initiativeLine(row, band) {
   return around.length ? `Initiative ${row.initiative}: ${around.join(', ')}.` : `Initiative ${row.initiative}, alone in its tempo.`;
 }
 
-// A creature tied on tempo and initiative: a roll-off between the teams, with its dice, or its owner's choice.
+// A creature tied on tempo and initiative: settled at random between the teams, with the team that got the
+// earlier place, or its owner's choice.
 function tieReason(row, tied) {
   const group = [row, ...tied].sort((a, b) => a.position - b.position);
   const lines = [`Initiative ${row.initiative}, tied with ${names(tied)}.`];
   if (!group.some(one => one.team !== row.team)) {
-    return { tie: 'own', dice: [], lines: [...lines, `Same team: ${chooser(row.team)} the order, no dice.`] };
+    return { tie: 'own', lines: [...lines, `Same team: ${chooser(row.team)} the order.`] };
   }
-  const dice = group.filter(one => one.rolls.length)
-    .map(one => ({ id: one.id, label: one.label, team: one.team, rolls: [...one.rolls], self: one === row }));
-  lines.push(dice.length ? 'A d20 roll-off broke it: highest first, matches roll again.' : 'A d20 roll-off between the teams broke the tie.');
+  lines.push(`Settled at random: ${group[0].team === 'Your team' ? 'your team' : 'the opponent'} got the earlier place.`);
   if (group.filter(one => one.team === row.team).length > 1) lines.push(`Within its team's places, ${chooser(row.team)} the order.`);
-  return { tie: 'rolled', dice, lines };
+  return { tie: 'random', lines };
 }
 
 /**

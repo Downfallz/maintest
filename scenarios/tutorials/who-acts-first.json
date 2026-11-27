@@ -49,8 +49,8 @@
           "creature": 1
         },
         "says": [
-          "In Precision, Pummel rolls for a critical: double damage.",
-          "This creature's other spells never roll."
+          "In Precision, Pummel can crit: double damage.",
+          "This creature's other spells never crit."
         ],
         "concepts": [
           "critical"

@@ -3,7 +3,9 @@
 Date: 2026-11-07
 
 Status: Accepted for the opt-in battle view. Amends AU11 and
-[ADR 0139](0139-confirm-every-action-before-the-next-choice.md).
+[ADR 0139](0139-confirm-every-action-before-the-next-choice.md). Amended by
+[0208](0208-say-a-chance-as-a-percent-in-the-app-and-leave-the-die-to-print.md): the card says a tie was settled at
+random, not that a d20 broke it.
 
 ## Context
 
