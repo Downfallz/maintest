@@ -1,6 +1,6 @@
 # Plan: the first outside playtest, answered
 
-Status: accepted, 2026-11-27 (the owner settled the questions at the end). F1 and F2 are built; F3 to F6 are not. Each
+Status: accepted, 2026-11-27 (the owner settled the questions at the end). F1 to F3 are built; F4 to F6 are not. Each
 stage below is one pull request.
 
 ## What the owner asked for
@@ -230,6 +230,36 @@ Each stage is one pull request that leaves the gate green.
 3. **F3, the mutation round announced.** The announcement, the bar's countdown, the tree's schedule line, the
    receipt's next round. Tests: `battle-mutations.spec.js`, `battle-growth.spec.js`, a host test if the board gains
    the interval.
+
+   *Built (2026-11-28)*: one name everywhere a player reads, **mutation round** (`docs/domain/player-terminology.md`;
+   `table/terminology.test.js` refuses "mutation opportunity" and "evolution round"). The new round's announcement
+   says `MUTATION ROUND` over the round's number, and "Round 3, mutation round" to a screen reader. From 760 px the
+   round's bar counts down beside the phase (`COMMAND · MUTATION NEXT ROUND`); under 760 px the bar has no room for
+   it, so a phone reads it in the round's start receipt (`This is a mutation round.`, `Next round is a mutation
+   round.`) and in Help (`Next mutation round: 5.`), and hears it in the round button's name. The pick's first line
+   says the schedule and the team's picks, as a sentence from 660 px tall and as a label under it
+   (`Mutation round every 2 rounds · 2 picks left`); it says "each for a different creature", the rulebook's words,
+   where this plan wrote "one a creature". The Mutation Tree's progress line says the same words, and the reveal's
+   receipt and its sheet say `Next mutation round: 5`, or `No more mutation rounds`; under 360 px the receipt's
+   counts give way to that line. The page computes nothing: the gap is the catalogue's `rules.evolutionInterval`, the
+   count the offer's `remainingPicks`, and the board gained `FollowingEvolutionRound`, the mutation round after the
+   next one, in place of the interval this plan foresaw; neither round is served past the round cap, where
+   `NextEvolutionRound` named round 13 of 12. The `ux-designer` briefed it in `docs/art/journeys/match.md` and
+   `windows.md`; no ADR, since no rule and no recorded game changes. The rulebook already said "mutation round":
+   `/rules` had nothing to rewrite.
+   In the same pull request, three loose ends of F2. The nested choice Sonar found in `table/battle-playback.js` is
+   unnested (#1307). The match's walk films a round's end, `round-end`, at round 3's end, the first with something to
+   say, and films `result-read` once Next is usable; `battle-density.spec.js` holds the bar's short words from 320 px
+   (#1308). The bench plays a critical (`node scripts/battle/filmstrip.mjs spell:pummel:v1 --crit`), the
+   `battle-designer` read the word's film against its storyboard and corrected four of its lines, and the owner's two
+   choices are settled: while the field says `Crit!` the target's chip says the number alone, and the word stays
+   ivory (#1309).
+   Left: the after film was taken of the match's walk alone, and the `ux-designer` did not read it against the brief
+   (the session ran out of budget): the windows' walk, the forms from 620 and 760 px and the bar's width there wait
+   for F5. `Pick sent.` after the last pick is never seen, since the sheet closes on it. On a 568 px tall screen the
+   `Crit!` plate stands on the caster's rim, and a caster in the middle of a row comes home under it: both are
+   written under the storyboard's **Left**. At 320 px a plaque of a round's end crosses the screen's left edge.
+   `/reviewers` was not run on this pull request.
 4. **F4, a spell's details in place.** `/ux-pass` on the spell choice: the brief, the (i) and its popover, hover
    where there is one, the film at 320, 390 and 1280 px. Tests: `battle-spellbook.spec.js`, `battle-tempo.spec.js`,
    `battle-mutations.spec.js`, `battle-windows.spec.js`, axe on the open popover.

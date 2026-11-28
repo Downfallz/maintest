@@ -632,3 +632,64 @@ records), only its eyebrow's word changing.
   mutation**), the round whose Command opens with the Evolution step (`NextEvolutionRound`), replacing "mutation
   opportunity" and "evolution round"; `table/terminology.test.js` may refuse "mutation opportunity" (my
   recommendation). The session adds both.
+
+## A round's end read (`round-end`)
+
+### Job
+
+A round ends and its end is read before the next round begins: the bar says what ended, the dock's card says the
+moment and waits for Next, and the plaques on the field say which condition ended on whom. The walk films it at round
+3's end, the first that has something to say: a condition laid in round 1 counts its rounds from round 2 (#1308).
+The words are briefed under [`second-round`](#a-new-round-the-frame-around-it-second-round); this screen is where
+they are seen.
+
+- **Filled action**: Next, in the dock's card. Skip all beside it is quiet.
+
+### Words
+
+- **Order**: the bar's `03` over `2 ENDED`; the order row, every place played; the plaques (`Defense Buff ends`);
+  the dock's card: `ROUND SUMMARY · 1 MORE`, `Round end`, `2 conditions ended`.
+- **Budget**: 79 words at 320 px and 95 at 390, as filmed on 2026-11-28; nothing is added here.
+
+### Pictures
+
+None: the field is the canvas.
+
+### States
+
+- **First paint**: not reached.
+- **Empty**: a round's end with nothing to say is not read: the page passes to the next round's start.
+- **Loaded**: as filmed: the short form in the bar under 760 px, the card and the plaques.
+- **Waiting**: the card waits for Next at the pace a new game starts with (Step).
+- **Error**: none of its own.
+- **Offline**: `#connection`; the field dims.
+
+### Motion
+
+None of its own: the bar's word is set at once (`second-round`, **Motion**); the plaques are the canvas's.
+
+### Less motion
+
+None: there is no beat of the frame's to reduce.
+
+### Accessibility
+
+- **Focus**: stays where it was; Next is reached in the dock.
+- **Names**: the round button speaks "Round 03 2 ended, Round end: 2 conditions ended, where you are".
+- **Announced**: the reading's summary, once, in `#playback-announcement`.
+- **Targets**: 44 px (0 under, of 22 at 320 and 23 at 390).
+
+### Cost
+
+- **Bytes**: none.
+- **Largest paint**: not this screen's.
+- **Shift**: 0.17 summed at 320 and 0.10 at 390 as the walk reaches it, two more rounds played since `second-round`
+  (0.04 and 0.03 there in the same film, where the brief said 0.07 and 0.06).
+
+### Left
+
+- At 320 px a plaque over the leftmost creature of a row (`Defense Buff ends`) crosses the screen's left edge and is
+  cut. The film shows it; nothing was changed here. It is the canvas's, for a pass of the battle craft.
+- The `ux-designer` did not read this screen's sheet: the session wrote this section from the film.
+- From 760 px the long form (`2 CONDITIONS ENDED`) is still read in the code: F5 walks the match at 1280 px.
+

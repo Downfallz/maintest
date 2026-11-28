@@ -259,6 +259,7 @@ At 320 by 568:
 | spell-choice | 568 px | 149 | 0 | 2 background, the canvas | 7 px | 64 | 0 of 27 | 0 | 7 | 0 | 0.03 | label-content-name-mismatch (11), target-size (2) |
 | targets | 568 px | 121 | 0 | 4 background, the canvas | 7 px | 66 | 0 of 21 | 0 | 7 | 0 | 0.03 | label-content-name-mismatch (12), target-size (2) |
 | second-round | 568 px | 133 | 0 | 4 background, the canvas | 8 px | 60 | 0 of 21 | 0 | 3 | 1 | 0.32 | label-content-name-mismatch (8), target-size (2) |
+| round-end | 568 px | 79 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 22 | 0 | 0 | 0 | 0.17 | nothing |
 | settings | 1051 px, a window | 150 | 0 | 1 background | 11 px | 0 | 3 of 8 | 3 | 0 | 0 | 0.32 | nothing |
 | concede | 326 px, a window | 15 | 0 | 1 background | 16 px | 0 | 0 of 2 | 0 | 0 | 0 | 0.32 | nothing |
 | match-result | 542 px, a window | 112 | 1 | 1 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 4 | 0 | 0.32 | nothing |
@@ -268,6 +269,8 @@ Out of a player's reach at this size. The walk's script made these choices so th
 - after mutation-tree: #planning-creatures [data-creature="1"] could not be pressed
 - after mutation-tree: #planning-creatures [data-creature="2"] could not be pressed
 - after second-round: #settings could not be pressed
+- round-end joined the walk on 2026-11-28 (#1308): its two lines are its first film, on the build of F3 of
+  `docs/tabletop/first-playtest-plan.md`, not on this page's commit.
 
 At 390 by 844:
 
@@ -282,6 +285,7 @@ At 390 by 844:
 | spell-choice | 844 px | 151 | 0 | 2 background, the canvas | 7 px | 66 | 0 of 27 | 0 | 1 | 0 | 0.04 | label-content-name-mismatch (11) |
 | targets | 844 px | 125 | 0 | 4 background, the canvas | 7 px | 70 | 0 of 21 | 0 | 1 | 0 | 0.04 | label-content-name-mismatch (12) |
 | second-round | 844 px | 135 | 0 | 4 background, the canvas | 7 px | 62 | 0 of 21 | 0 | 1 | 1 | 0.22 | label-content-name-mismatch (8) |
+| round-end | 844 px | 95 | 0 | 3 background, the canvas | 11 px | 0 | 0 of 23 | 0 | 0 | 0 | 0.10 | nothing |
 | settings | 933 px, a window | 150 | 0 | 1 background | 11 px | 0 | 3 of 8 | 3 | 0 | 1 | 0.22 | nothing |
 | concede | 228 px, a window | 15 | 0 | 1 background | 16 px | 0 | 0 of 2 | 0 | 0 | 1 | 0.22 | nothing |
 | match-result | 818 px, a window | 112 | 1 | 1 img, 2 background; 1 sent over twice their size | 9 px | 20 | 6 of 12 | 0 | 3 | 0 | 0.22 | nothing |
